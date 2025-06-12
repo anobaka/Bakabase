@@ -1519,12 +1519,12 @@ export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddReques
   json: string;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskAddInputModel {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
-  keyAndNames?: Record<string, string>;
+  keyAndNames?: Record<string, string | null>;
   /** @format int64 */
   interval?: number;
   /** @format int32 */
@@ -1533,9 +1533,20 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequest
   endPage?: number;
   checkpoint?: string;
   autoRetry: boolean;
-  forceCreating: boolean;
   /** @minLength 1 */
   downloadPath: string;
+  ignoreTasksWithSameKey: boolean;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskPutInputModel {
+  /** @format int64 */
+  interval?: number;
+  /** @format int32 */
+  startPage?: number;
+  /** @format int32 */
+  endPage?: number;
+  checkpoint?: string;
+  autoRetry: boolean;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
@@ -5187,21 +5198,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomProperty
-     * @name EnableAddingNewDataDynamicallyForCustomProperty
-     * @request PUT:/custom-property/{id}/options/adding-new-data-dynamically
-     */
-    enableAddingNewDataDynamicallyForCustomProperty: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/custom-property/${id}/options/adding-new-data-dynamically`,
-        method: "PUT",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags CustomProperty
      * @name GetCustomPropertyValueUsage
      * @request GET:/custom-property/{id}/value-usage
      */
@@ -5313,11 +5309,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
-     * @name CreateDownloadTask
+     * @name AddDownloadTask
      * @request POST:/download-task
      */
-    createDownloadTask: (
-      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskCreateRequestModel,
+    addDownloadTask: (
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskAddInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesDownloadTask, any>({
@@ -5391,7 +5387,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     putDownloadTask: (
       id: number,
-      data: BakabaseInsideWorldModelsModelsEntitiesDownloadTask,
+      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskPutInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

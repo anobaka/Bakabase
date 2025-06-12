@@ -40,8 +40,6 @@ import {
 import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
-
-import TaskCreation from '@/pages/Downloader/components/TaskDetail';
 import { GetAllThirdPartyRequestStatistics } from '@/sdk/apis';
 import {
   bilibiliDownloadTaskTypes,
@@ -131,7 +129,6 @@ export default () => {
   const [taskId, setTaskId] = useState<number | undefined>(undefined);
   const forceUpdate = useUpdate();
   const [form, setForm] = useState<SearchForm>({});
-  const [configurationsVisible, setConfigurationsVisible] = useState(false);
 
   const gettingRequestStatistics = useRef(false);
   const [requestStatistics, setRequestStatistics] = useState([]);
@@ -153,7 +150,6 @@ export default () => {
   useTraceUpdate({
     taskId,
     form,
-    configurationsVisible,
     requestStatistics,
     requestStatisticsChartVisible,
     tasks,
@@ -505,16 +501,6 @@ export default () => {
     <div>
       {renderRequestStatisticsChart()}
       {renderContextMenu()}
-      {configurationsVisible && (
-        <Configurations
-          onSaved={() => {
-            setConfigurationsVisible(false);
-          }}
-          onClose={() => {
-            setConfigurationsVisible(false);
-          }}
-        />
-      )}
       <div className="grid gap-4 items-center" style={{ gridTemplateColumns: 'auto 1fr' }}>
         <div>{t('Source')}</div>
         <div className="flex items-center gap-4">
@@ -552,44 +538,44 @@ export default () => {
         <div>{t('Status')}</div>
         <div className="flex items-center gap-4">
           {downloadTaskDtoStatuses.map(((s) => {
-    const count = tasks.filter((t) => t.status == s.value).length;
-    const color = DownloadTaskDtoStatusIceLabelStatusMap[s.value];
-    return (
-      <Checkbox
-        color={color}
-        // disabled={count == 0}
-        key={s.value}
-        onValueChange={(checked) => {
-          let statuses = form.statuses || [];
-          if (checked) {
-            if (statuses.every((a) => a != s.value)) {
-              statuses.push(s.value);
-            }
-          } else {
-            statuses = statuses.filter((a) => a != s.value);
-          }
-          setForm({
-            ...form,
-            statuses,
-          });
-        }}
-        size={'sm'}
-        isSelected={form.statuses?.some((a) => a == s.value)}
-      >
-        <Chip
-          // size={'sm'}
-          color={color}
-          variant={'light'}
-          classNames={{
-            base: 'pl-0',
-            content: 'pl-0',
-          }}
-        >
-          {t(s.label)}{count > 0 && <span className={'count'}>({count})</span>}
-        </Chip>
-      </Checkbox>
-    );
-  }))}
+            const count = tasks.filter((t) => t.status == s.value).length;
+            const color = DownloadTaskDtoStatusIceLabelStatusMap[s.value];
+            return (
+              <Checkbox
+                color={color}
+                // disabled={count == 0}
+                key={s.value}
+                onValueChange={(checked) => {
+                  let statuses = form.statuses || [];
+                  if (checked) {
+                    if (statuses.every((a) => a != s.value)) {
+                      statuses.push(s.value);
+                    }
+                  } else {
+                    statuses = statuses.filter((a) => a != s.value);
+                  }
+                  setForm({
+                    ...form,
+                    statuses,
+                  });
+                }}
+                size={'sm'}
+                isSelected={form.statuses?.some((a) => a == s.value)}
+              >
+                <Chip
+                  // size={'sm'}
+                  color={color}
+                  variant={'light'}
+                  classNames={{
+                    base: 'pl-0',
+                    content: 'pl-0',
+                  }}
+                >
+                  {t(s.label)}{count > 0 && <span className={'count'}>({count})</span>}
+                </Chip>
+              </Checkbox>
+            );
+          }))}
         </div>
         <div>{t('Keyword')}</div>
         <div>
@@ -599,9 +585,9 @@ export default () => {
             startContent={<AiOutlineSearch className={'text-medium'} />}
             size={'sm'}
             onValueChange={keyword => setForm({
-      ...form,
-      keyword,
-    })}
+              ...form,
+              keyword,
+            })}
           />
         </div>
       </div>
@@ -611,10 +597,8 @@ export default () => {
             color={'primary'}
             size={'small'}
             onPress={() => {
-              createPortal(TaskDetailModal, {
-
-              });
-      }}
+              createPortal(TaskDetailModal, {});
+            }}
           >
             <>
               <AiOutlinePlusCircle className={'text-medium'} />
@@ -626,8 +610,8 @@ export default () => {
             size={'small'}
             variant={'flat'}
             onPress={() => {
-        startTasksManually(undefined, DownloadTaskActionOnConflict.Ignore);
-      }}
+              startTasksManually(undefined, DownloadTaskActionOnConflict.Ignore);
+            }}
           >
             <AiOutlinePlayCircle className={'text-medium'} />
             {t('Start all')}
@@ -637,71 +621,71 @@ export default () => {
             size={'small'}
             variant={'flat'}
             onPress={() => {
-        BApi.downloadTask.stopDownloadTasks([]);
-      }}
+              BApi.downloadTask.stopDownloadTasks([]);
+            }}
           >
             <AiOutlineStop className={'text-medium'} />
             {t('Stop all')}
           </Button>
 
           {tasks?.length > 0 && (
-          <div
-            className="request-overview"
-            onClick={() => {
-          setRequestStatisticsChartVisible(true);
-        }}
-          >
-            <div className={'title'}>{t('Requests overview')}</div>
-            {requestStatistics?.map((rs) => {
-          let successCount = 0;
-          let failureCount = 0;
-          Object.keys(rs.counts || {})
-            .forEach((r) => {
-              switch (parseInt(r)) {
-                case ThirdPartyRequestResultType.Succeed:
-                  successCount += rs.counts[r];
-                  break;
-                default:
-                  failureCount += rs.counts[r];
-                  break;
-              }
-            });
-          return (
-            <div className={'third-party'}>
-              <SimpleLabel status={'info'}>
-                {ThirdPartyId[rs.id]}
-              </SimpleLabel>
-              <div className={'statistics'}>
-                <Balloon.Tooltip
-                  trigger={(
-                    <span className={'success-count'}>{successCount}</span>
-                  )}
-                  align={'t'}
-                >
-                  {t('Success')}
-                </Balloon.Tooltip>
-                /
-                <Balloon.Tooltip
-                  trigger={(
-                    <span className={'failure-count'}>{failureCount}</span>
-                  )}
-                  align={'t'}
-                >
-                  {t('failure')}
-                </Balloon.Tooltip>
-              </div>
+            <div
+              className="request-overview"
+              onClick={() => {
+                setRequestStatisticsChartVisible(true);
+              }}
+            >
+              <div className={'title'}>{t('Requests overview')}</div>
+              {requestStatistics?.map((rs) => {
+                let successCount = 0;
+                let failureCount = 0;
+                Object.keys(rs.counts || {})
+                  .forEach((r) => {
+                    switch (parseInt(r)) {
+                      case ThirdPartyRequestResultType.Succeed:
+                        successCount += rs.counts[r];
+                        break;
+                      default:
+                        failureCount += rs.counts[r];
+                        break;
+                    }
+                  });
+                return (
+                  <div className={'third-party'}>
+                    <SimpleLabel status={'info'}>
+                      {ThirdPartyId[rs.id]}
+                    </SimpleLabel>
+                    <div className={'statistics'}>
+                      <Balloon.Tooltip
+                        trigger={(
+                          <span className={'success-count'}>{successCount}</span>
+                        )}
+                        align={'t'}
+                      >
+                        {t('Success')}
+                      </Balloon.Tooltip>
+                      /
+                      <Balloon.Tooltip
+                        trigger={(
+                          <span className={'failure-count'}>{failureCount}</span>
+                        )}
+                        align={'t'}
+                      >
+                        {t('failure')}
+                      </Balloon.Tooltip>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
-        })}
-          </div>
-    )}
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Button
             size={'sm'}
             onPress={() => {
-        BApi.downloadTask.exportAllDownloadTasks();
-      }}
+              BApi.downloadTask.exportAllDownloadTasks();
+            }}
             variant={'flat'}
           >
             <AiOutlineExport className={'text-medium'} />
@@ -712,8 +696,8 @@ export default () => {
             size={'small'}
             variant={'flat'}
             onPress={() => {
-        setConfigurationsVisible(true);
-      }}
+              createPortal(Configurations, {});
+            }}
           >
             <AiOutlineSetting className={'text-medium'} />
             {t('Configurations')}
@@ -723,669 +707,669 @@ export default () => {
       <Listbox
         variant={'flat'}
         isVirtualized
-  // className="max-w-xs"
+        // className="max-w-xs"
         label={'Select from 1000 items'}
         virtualization={{
-    maxListboxHeight: 400,
-    itemHeight: 75,
-  }}
+          maxListboxHeight: 400,
+          itemHeight: 75,
+        }}
         selectionMode={'multiple'}
       >
         {filteredTasks.map((task, index) => {
-    const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
-    const selected = selectedTaskIds.indexOf(task.id) > -1;
-    return (
-      <ListboxItem key={index}>
-        <div
-          key={task.id}
-          onContextMenu={e => {
-            console.log(`Opening context menu from ${task.id}:${task.name}`);
-            e.preventDefault();
-            if (!selectedTaskIdsRef.current.includes(task.id)) {
-              setSelectedTaskIds([task.id]);
-            }
-            contextMenuAnchorPointRef.current = {
-              x: e.clientX,
-              y: e.clientY,
-            };
-            toggleMenu(true);
-            forceUpdate();
-          }}
-          // className={`${selected ? 'selected' : ''}`}
-          className={'flex flex-col gap-1'}
-          // style={style}
-          onClick={() => onTaskClick(task.id)}
-        >
-          <div className={'flex items-center justify-between'}>
-            <div className={'flex flex-col gap-1'}>
-              <div className={'flex items-center gap-1'}>
-                <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
-                <span className={'text-lg'}>{task.name ?? task.key}</span>
-              </div>
-              <div className={'flex items-center gap-1'}>
-                <span className={'opacity-60'}>{task.name && task.key}</span>
-                <Chip
-                  size={'sm'}
-                  color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
-                  variant={'light'}
-                >
-                  {t(DownloadTaskDtoStatus[task.status])}
-                  {task.current}
-                </Chip>
-                {task.status == DownloadTaskDtoStatus.Failed && (
-                  <Button
-                    size={'sm'}
-                    color={'danger'}
-                    variant={'light'}
-                    onPress={() => {
-                      if (hasErrorMessage) {
-                        createPortal(Modal, {
-                          defaultVisible: true,
-                          size: 'xl',
-                          title: t('Error'),
-                          children: (
-                            <pre>{task.message}</pre>
-                          ),
-                        });
-                      }
-                    }}
-                    isIconOnly
-                  >
-                    <AiOutlineWarning className={'text-medium'} />
-                    {task.failureTimes}
-                  </Button>
-                )}
-                {task.nextStartDt && (
-                  <Chip
-                    size={'sm'}
-                    color={'default'}
-                  >
-                    {t('Next start time')}:
-                    {moment(task.nextStartDt)
-                      .format('YYYY-MM-DD HH:mm:ss')}
-                  </Chip>
-                )}
-              </div>
-            </div>
-            <div className={'flex items-center'}>
-              {task.availableActions?.map((a, i) => {
-                const action = parseInt(a, 10);
-                switch (action) {
-                  case DownloadTaskAction.StartManually:
-                  case DownloadTaskAction.Restart:
-                    return (
-                      <Button
-                        variant={'light'}
-                        size={'sm'}
-                        isIconOnly
-                        onPress={() => {
-                          startTasksManually([task.id]);
-                        }}
-                      >
-                        {a == DownloadTaskAction.Restart ? (
-                          <AiOutlineRedo className={'text-lg'} />
-                        ) : (
-                          <AiOutlinePlayCircle className={'text-lg'} />
-                        )}
-                      </Button>
-                    );
-                  case DownloadTaskAction.Disable:
-                    return (
-                      <Button
-                        variant={'light'}
-                        size={'sm'}
-                        isIconOnly
-                        onPress={() => {
-                          BApi.downloadTask.stopDownloadTasks([task.id]);
-                        }}
-                      >
-                        <AiOutlineStop className={'text-lg'} />
-                      </Button>
-                    );
-                }
-                return;
-              })}
-              <Button
-                variant={'light'}
-                size={'sm'}
-                isIconOnly
-                onPress={() => {
-                  createPortal(TaskDetailModal, {
-                    id: task.id,
-                  });
-                }}
-              >
-                <AiOutlineEdit className={'text-lg'} />
-              </Button>
-              <Button
-                variant={'light'}
-                size={'sm'}
-                isIconOnly
-                onPress={() => {
-                  BApi.tool.openFileOrDirectory({ path: task.downloadPath });
-                }}
-              >
-                <AiOutlineFolderOpen className={'text-lg'} />
-              </Button>
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button
-                    variant={'light'}
-                    size={'sm'}
-                    isIconOnly
-                  >
-                    <AiOutlineEllipsis className={'text-lg'} />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownMenu onAction={key => {
-                  switch (key as string) {
-                    case 'delete':
-                      createPortal(Modal, {
-                        defaultVisible: true,
-                        title: t('Are you sure to delete it?'),
-                        onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }),
-                      });
-                      break;
+          const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
+          const selected = selectedTaskIds.indexOf(task.id) > -1;
+          return (
+            <ListboxItem key={index}>
+              <div
+                key={task.id}
+                onContextMenu={e => {
+                  console.log(`Opening context menu from ${task.id}:${task.name}`);
+                  e.preventDefault();
+                  if (!selectedTaskIdsRef.current.includes(task.id)) {
+                    setSelectedTaskIds([task.id]);
                   }
+                  contextMenuAnchorPointRef.current = {
+                    x: e.clientX,
+                    y: e.clientY,
+                  };
+                  toggleMenu(true);
+                  forceUpdate();
                 }}
-                >
-                  <DropdownItem
-                    key="delete"
-                    startContent={<AiOutlineDelete className={'text-lg'} />}
-                    color={'danger'}
-                  >
-                    {t('Delete')}
-                  </DropdownItem>
-                </DropdownMenu>
-              </Dropdown>
-            </div>
-          </div>
-          <div className="progress">
-            <Progress
-              // value={task.progress}
-              color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
-              size={'sm'}
-              // textRender={() => `${task.progress?.toFixed(2)}%`}
-              // progressive={t.status != DownloadTaskStatus.Failed}
-            />
-          </div>
-          {/* <CircularProgress */}
-          {/*   value={task.progress} */}
-          {/*   color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
-          {/*   size={'sm'} */}
-          {/* /> */}
-        </div>
-      </ListboxItem>
-    );
-  })}
+                // className={`${selected ? 'selected' : ''}`}
+                className={'flex flex-col gap-1'}
+                // style={style}
+                onClick={() => onTaskClick(task.id)}
+              >
+                <div className={'flex items-center justify-between'}>
+                  <div className={'flex flex-col gap-1'}>
+                    <div className={'flex items-center gap-1'}>
+                      <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
+                      <span className={'text-lg'}>{task.name ?? task.key}</span>
+                    </div>
+                    <div className={'flex items-center gap-1'}>
+                      <span className={'opacity-60'}>{task.name && task.key}</span>
+                      <Chip
+                        size={'sm'}
+                        color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
+                        variant={'light'}
+                      >
+                        {t(DownloadTaskDtoStatus[task.status])}
+                        {task.current}
+                      </Chip>
+                      {task.status == DownloadTaskDtoStatus.Failed && (
+                        <Button
+                          size={'sm'}
+                          color={'danger'}
+                          variant={'light'}
+                          onPress={() => {
+                            if (hasErrorMessage) {
+                              createPortal(Modal, {
+                                defaultVisible: true,
+                                size: 'xl',
+                                title: t('Error'),
+                                children: (
+                                  <pre>{task.message}</pre>
+                                ),
+                              });
+                            }
+                          }}
+                          isIconOnly
+                        >
+                          <AiOutlineWarning className={'text-medium'} />
+                          {task.failureTimes}
+                        </Button>
+                      )}
+                      {task.nextStartDt && (
+                        <Chip
+                          size={'sm'}
+                          color={'default'}
+                        >
+                          {t('Next start time')}:
+                          {moment(task.nextStartDt)
+                            .format('YYYY-MM-DD HH:mm:ss')}
+                        </Chip>
+                      )}
+                    </div>
+                  </div>
+                  <div className={'flex items-center'}>
+                    {task.availableActions?.map((a, i) => {
+                      const action = parseInt(a, 10);
+                      switch (action) {
+                        case DownloadTaskAction.StartManually:
+                        case DownloadTaskAction.Restart:
+                          return (
+                            <Button
+                              variant={'light'}
+                              size={'sm'}
+                              isIconOnly
+                              onPress={() => {
+                                startTasksManually([task.id]);
+                              }}
+                            >
+                              {a == DownloadTaskAction.Restart ? (
+                                <AiOutlineRedo className={'text-lg'} />
+                              ) : (
+                                <AiOutlinePlayCircle className={'text-lg'} />
+                              )}
+                            </Button>
+                          );
+                        case DownloadTaskAction.Disable:
+                          return (
+                            <Button
+                              variant={'light'}
+                              size={'sm'}
+                              isIconOnly
+                              onPress={() => {
+                                BApi.downloadTask.stopDownloadTasks([task.id]);
+                              }}
+                            >
+                              <AiOutlineStop className={'text-lg'} />
+                            </Button>
+                          );
+                      }
+                      return;
+                    })}
+                    <Button
+                      variant={'light'}
+                      size={'sm'}
+                      isIconOnly
+                      onPress={() => {
+                        createPortal(TaskDetailModal, {
+                          id: task.id,
+                        });
+                      }}
+                    >
+                      <AiOutlineEdit className={'text-lg'} />
+                    </Button>
+                    <Button
+                      variant={'light'}
+                      size={'sm'}
+                      isIconOnly
+                      onPress={() => {
+                        BApi.tool.openFileOrDirectory({ path: task.downloadPath });
+                      }}
+                    >
+                      <AiOutlineFolderOpen className={'text-lg'} />
+                    </Button>
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button
+                          variant={'light'}
+                          size={'sm'}
+                          isIconOnly
+                        >
+                          <AiOutlineEllipsis className={'text-lg'} />
+                        </Button>
+                      </DropdownTrigger>
+                      <DropdownMenu onAction={key => {
+                        switch (key as string) {
+                          case 'delete':
+                            createPortal(Modal, {
+                              defaultVisible: true,
+                              title: t('Are you sure to delete it?'),
+                              onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }),
+                            });
+                            break;
+                        }
+                      }}
+                      >
+                        <DropdownItem
+                          key="delete"
+                          startContent={<AiOutlineDelete className={'text-lg'} />}
+                          color={'danger'}
+                        >
+                          {t('Delete')}
+                        </DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
+                  </div>
+                </div>
+                <div className="progress">
+                  <Progress
+                    // value={task.progress}
+                    color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
+                    size={'sm'}
+                    // textRender={() => `${task.progress?.toFixed(2)}%`}
+                    // progressive={t.status != DownloadTaskStatus.Failed}
+                  />
+                </div>
+                {/* <CircularProgress */}
+                {/*   value={task.progress} */}
+                {/*   color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
+                {/*   size={'sm'} */}
+                {/* /> */}
+              </div>
+            </ListboxItem>
+          );
+        })}
       </Listbox>
       {/* {tasks?.length > 0 ? ( */
-}
+      }
       {/*   <div */
-}
+      }
       {/*     className={'tasks'} */
-}
+      }
       {/*   > */
-}
+      }
       {/*     <AutoSizer> */
-}
+      }
       {/*       {({ */
-}
+      }
       {/*         width, */
-}
+      }
       {/*         height, */
-}
+      }
       {/*       }) => ( */
-}
+      }
       {/*         <List */
-}
+      }
       {/*         // onScroll={onChildScroll} */
-}
+      }
       {/*         // isScrolling={isScrolling} */
-}
+      }
       {/*         // scrollTop={scrollTop} */
-}
+      }
       {/*           overscanRowCount={2} */
-}
+      }
       {/*         // scrollToIndex={scrollToIndex} */
-}
+      }
       {/*           width={width} */
-}
+      }
       {/*           height={height} */
-}
+      }
       {/*         // autoHeight */
-}
+      }
       {/*           rowCount={filteredTasks.length} */
-}
+      }
       {/*           rowHeight={75} */
-}
+      }
       {/*           rowRenderer={({ */
-}
+      }
       {/*                         index, */
-}
+      }
       {/*                         style, */
-}
+      }
       {/*                         isVisible, */
-}
+      }
       {/*                         isScrolling, */
-}
+      }
       {/*                       }) => { */
-}
+      }
       {/*           const task = filteredTasks[index]; */
-}
+      }
       {/*           const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message; */
-}
+      }
       {/*           const selected = selectedTaskIds.indexOf(task.id) > -1; */
-}
+      }
       {/*           return ( */
-}
+      }
       {/*             <div */
-}
+      }
       {/*               key={task.id} */
-}
+      }
       {/*               onContextMenu={e => { */
-}
+      }
       {/*                 console.log(`Opening context menu from ${task.id}:${task.name}`); */
-}
+      }
       {/*                 e.preventDefault(); */
-}
+      }
       {/*                 if (!selectedTaskIdsRef.current.includes(task.id)) { */
-}
+      }
       {/*                   setSelectedTaskIds([task.id]); */
-}
+      }
       {/*                 } */
-}
+      }
       {/*                 contextMenuAnchorPointRef.current = { */
-}
+      }
       {/*                   x: e.clientX, */
-}
+      }
       {/*                   y: e.clientY, */
-}
+      }
       {/*                 }; */
-}
+      }
       {/*                 toggleMenu(true); */
-}
+      }
       {/*                 forceUpdate(); */
-}
+      }
       {/*               }} */
-}
+      }
       {/*               className={`download-item ${selected ? 'selected' : ''}`} */
-}
+      }
       {/*               style={style} */
-}
+      }
       {/*               onClick={() => onTaskClick(task.id)} */
-}
+      }
       {/*             > */
-}
+      }
       {/*               <div className="icon"> */
-}
+      }
       {/*                 <img className={'max-w-[32px] max-h-[32px]'} src={NameIcon[task.thirdPartyId]} /> */
-}
+      }
       {/*               </div> */
-}
+      }
       {/*               <div className="content"> */
-}
+      }
       {/*                 <div className="name"> */
-}
+      }
       {/*                   <Balloon.Tooltip */
-}
+      }
       {/*                     trigger={( */
-}
+      }
       {/*                       <span onClick={() => { */
-}
+      }
       {/*                         setTaskId(task.id); */
-}
+      }
       {/*                       }} */
-}
+      }
       {/*                       > */
-}
+      }
       {/*                         {renderTaskName(task)} */
-}
+      }
       {/*                       </span> */
-}
+      }
       {/*                     )} */
-}
+      }
       {/*                     triggerType={'hover'} */
-}
+      }
       {/*                     align={'t'} */
-}
+      }
       {/*                   > */
-}
+      }
       {/*                     {task.key} */
-}
+      }
       {/*                   </Balloon.Tooltip> */
-}
+      }
       {/*                 </div> */
-}
+      }
       {/*                 <div className="info"> */
-}
+      }
       {/*                   <div className="left"> */
-}
+      }
       {/*                     <SimpleLabel */
-}
+      }
       {/*                       status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]} */
-}
+      }
       {/*                       className={hasErrorMessage ? 'has-error-message' : ''} */
-}
+      }
       {/*                     > */
-}
+      }
       {/*                       <span */
-}
+      }
       {/*                         onClick={() => { */
-}
+      }
       {/*                             if (hasErrorMessage) { */
-}
+      }
       {/*                               Dialog.error({ */
-}
+      }
       {/*                                 v2: true, */
-}
+      }
       {/*                                 width: 1000, */
-}
+      }
       {/*                                 title: t('Error'), */
-}
+      }
       {/*                                 content: ( */
-}
+      }
       {/*                                   <pre className={'select-text'}>{task.message}</pre> */
-}
+      }
       {/*                                 ), */
-}
+      }
       {/*                               }); */
-}
+      }
       {/*                             } */
-}
+      }
       {/*                           }} */
-}
+      }
       {/*                       > */
-}
+      }
       {/*                         {t(DownloadTaskDtoStatus[task.status])} */
-}
+      }
       {/*                       </span> */
-}
+      }
       {/*                     </SimpleLabel> */
-}
+      }
       {/*                     {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && ( */
-}
+      }
       {/*                       <Icon type={'loading'} size={'small'} /> */
-}
+      }
       {/*                     )} */
-}
+      }
       {/*                     <span>{task.current}</span> */
-}
+      }
       {/*                   </div> */
-}
+      }
       {/*                   <div className="right"> */
-}
+      }
       {/*                     {task.failureTimes > 0 && ( */
-}
+      }
       {/*                       <SimpleLabel */
-}
+      }
       {/*                         status={'danger'} */
-}
+      }
       {/*                         className={'failure-times'} */
-}
+      }
       {/*                       > */
-}
+      }
       {/*                         {t('Failure times')}: */
-}
+      }
       {/*                         <span>{task.failureTimes}</span> */
-}
+      }
       {/*                       </SimpleLabel> */
-}
+      }
       {/*                     )} */
-}
+      }
       {/*                     {task.nextStartDt && ( */
-}
+      }
       {/*                       <SimpleLabel */
-}
+      }
       {/*                         status={'info'} */
-}
+      }
       {/*                         className={'next-start-dt'} */
-}
+      }
       {/*                       > */
-}
+      }
       {/*                         {t('Next start time')}: */
-}
+      }
       {/*                         <span> */
-}
+      }
       {/*                           {moment(task.nextStartDt) */
-}
+      }
       {/*                               .format('YYYY-MM-DD HH:mm:ss')} */
-}
+      }
       {/*                         </span> */
-}
+      }
       {/*                       </SimpleLabel> */
-}
+      }
       {/*                     )} */
-}
+      }
       {/*                   </div> */
-}
+      }
       {/*                 </div> */
-}
+      }
       {/*                 <div className="progress"> */
-}
+      }
       {/*                   <Progress */
-}
+      }
       {/*                     // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'} */
-}
+      }
       {/*                     className={'bar'} */
-}
+      }
       {/*                     percent={task.progress} */
-}
+      }
       {/*                     color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */
-}
+      }
       {/*                     size={'small'} */
-}
+      }
       {/*                     textRender={() => `${task.progress.toFixed(2)}%`} */
-}
+      }
       {/*                     // progressive={t.status != DownloadTaskStatus.Failed} */
-}
+      }
       {/*                   /> */
-}
+      }
       {/*                 </div> */
-}
+      }
       {/*               </div> */
-}
+      }
       {/*               <div className="opt"> */
-}
+      }
       {/*                 {task.availableActions?.map((a, i) => { */
-}
+      }
       {/*                   const action = parseInt(a); */
-}
+      }
       {/*                   switch (action) { */
-}
+      }
       {/*                     case DownloadTaskAction.StartManually: */
-}
+      }
       {/*                     case DownloadTaskAction.Restart: */
-}
+      }
       {/*                       return ( */
-}
+      }
       {/*                         <CustomIcon */
-}
+      }
       {/*                           key={i} */
-}
+      }
       {/*                           type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'} */
-}
+      }
       {/*                           title={t('Start now')} */
-}
+      }
       {/*                           onClick={() => { */
-}
+      }
       {/*                             startTasksManually([task.id]); */
-}
+      }
       {/*                           }} */
-}
+      }
       {/*                         /> */
-}
+      }
       {/*                       ); */
-}
+      }
       {/*                     case DownloadTaskAction.Disable: */
-}
+      }
       {/*                       return ( */
-}
+      }
       {/*                         <CustomIcon */
-}
+      }
       {/*                           key={i} */
-}
+      }
       {/*                           type={'stop'} */
-}
+      }
       {/*                           title={t('Disable')} */
-}
+      }
       {/*                           onClick={() => { */
-}
+      }
       {/*                             BApi.downloadTask.stopDownloadTasks([task.id]); */
-}
+      }
       {/*                           }} */
-}
+      }
       {/*                         /> */
-}
+      }
       {/*                       ); */
-}
+      }
       {/*                   } */
-}
+      }
       {/*                   return; */
-}
+      }
       {/*                 })} */
-}
+      }
       {/*                 <CustomIcon */
-}
+      }
       {/*                   type={'folder-open'} */
-}
+      }
       {/*                   title={t('Open folder')} */
-}
+      }
       {/*                   onClick={() => { */
-}
+      }
       {/*                     OpenFileOrDirectory({ */
-}
+      }
       {/*                       path: task.downloadPath, */
-}
+      }
       {/*                     }) */
-}
+      }
       {/*                       .invoke(); */
-}
+      }
       {/*                   }} */
-}
+      }
       {/*                 /> */
-}
+      }
       {/*                 <Dropdown */
-}
+      }
       {/*                   className={'task-operations-dropdown'} */
-}
+      }
       {/*                   trigger={ */
-}
+      }
       {/*                     <CustomIcon */
-}
+      }
       {/*                       type={'ellipsis'} */
-}
+      }
       {/*                     /> */
-}
+      }
       {/*                   } */
-}
+      }
       {/*                   triggerType={['click']} */
-}
+      }
       {/*                 > */
-}
+      }
       {/*                   <Menu> */
-}
+      }
       {/*                     /!* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> *!/ */
-}
+      }
       {/*                     /!*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> *!/ */
-}
+      }
       {/*                     /!*     <CustomIcon *!/ */
-}
+      }
       {/*                     /!*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} *!/ */
-}
+      }
       {/*                     /!*       onClick={() => { *!/ */
-}
+      }
 
       {/*                     /!*       }} *!/ */
-}
+      }
       {/*                     /!*     /> *!/ */
-}
+      }
       {/*                     /!*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} *!/ */
-}
+      }
       {/*                     /!*   </div> *!/ */
-}
+      }
       {/*                     /!* </Menu.Item> *!/ */
-}
+      }
       {/*                     <Menu.Item> */
-}
+      }
       {/*                       <div */
-}
+      }
       {/*                         className={'remove'} */
-}
+      }
       {/*                         onClick={() => { */
-}
+      }
       {/*                           Dialog.confirm({ */
-}
+      }
       {/*                             title: t('Are you sure to delete it?'), */
-}
+      }
       {/*                             onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }), */
-}
+      }
       {/*                           }); */
-}
+      }
       {/*                         }} */
-}
+      }
       {/*                       > */
-}
+      }
       {/*                         <CustomIcon type={'delete'} /> */
-}
+      }
       {/*                         {t('Remove')} */
-}
+      }
       {/*                       </div> */
-}
+      }
       {/*                     </Menu.Item> */
-}
+      }
       {/*                   </Menu> */
-}
+      }
       {/*                 </Dropdown> */
-}
+      }
       {/*               </div> */
-}
+      }
       {/*             </div> */
-}
+      }
       {/*           ); */
-}
+      }
       {/*         }} */
-}
+      }
       {/*         /> */
-}
+      }
       {/*     )} */
-}
+      }
       {/*     </AutoSizer> */
-}
+      }
       {/*     /!* )} *!/ */
-}
+      }
       {/*     /!* </WindowScroller> *!/ */
-}
+      }
       {/*   </div> */
-}
+      }
 
       {/* ) : ( */
-}
+      }
       {/*   <div className={'no-task-yet'}> */
-}
+      }
       {/*     <Button */
-}
+      }
       {/*       color={'primary'} */
-}
+      }
       {/*       size={'large'} */
-}
+      }
       {/*       onPress={() => { */
-}
+      }
       {/*         setTaskId(0); */
-}
+      }
       {/*       }} */
-}
+      }
       {/*     > */
-}
+      }
       {/*       {t('Create download task')} */
-}
+      }
       {/*     </Button> */
-}
+      }
       {/*   </div> */
-}
+      }
       {/* )} */
-}
+      }
     </div>
-);
+  );
 };
 

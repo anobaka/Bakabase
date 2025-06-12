@@ -889,22 +889,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/custom-property/{id}/options/adding-new-data-dynamically": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["EnableAddingNewDataDynamicallyForCustomProperty"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/custom-property/{id}/value-usage": {
         parameters: {
             query?: never;
@@ -994,7 +978,7 @@ export interface paths {
         };
         get: operations["GetAllDownloadTasks"];
         put?: never;
-        post: operations["CreateDownloadTask"];
+        post: operations["AddDownloadTask"];
         delete: operations["DeleteDownloadTasks"];
         options?: never;
         head?: never;
@@ -4430,12 +4414,12 @@ export interface components {
             componentAssemblyQualifiedTypeName: string;
             json: string;
         };
-        "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel": {
+        "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel": {
             thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
             /** Format: int32 */
             type: number;
             keyAndNames?: {
-                [key: string]: string;
+                [key: string]: string | null;
             };
             /** Format: int64 */
             interval?: number;
@@ -4445,8 +4429,18 @@ export interface components {
             endPage?: number;
             checkpoint?: string;
             autoRetry: boolean;
-            forceCreating: boolean;
             downloadPath: string;
+            ignoreTasksWithSameKey: boolean;
+        };
+        "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel": {
+            /** Format: int64 */
+            interval?: number;
+            /** Format: int32 */
+            startPage?: number;
+            /** Format: int32 */
+            endPage?: number;
+            checkpoint?: string;
+            autoRetry: boolean;
         };
         "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel": {
             ids: number[];
@@ -7930,30 +7924,6 @@ export interface operations {
             };
         };
     };
-    EnableAddingNewDataDynamicallyForCustomProperty: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
     GetCustomPropertyValueUsage: {
         parameters: {
             query?: {
@@ -8090,7 +8060,7 @@ export interface operations {
             };
         };
     };
-    CreateDownloadTask: {
+    AddDownloadTask: {
         parameters: {
             query?: never;
             header?: never;
@@ -8099,10 +8069,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
             };
         };
         responses: {
@@ -8183,10 +8153,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.DownloadTask"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.DownloadTask"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.DownloadTask"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.DownloadTask"];
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
             };
         };
         responses: {

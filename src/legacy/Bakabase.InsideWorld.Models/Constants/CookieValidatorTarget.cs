@@ -8,8 +8,8 @@ namespace Bakabase.InsideWorld.Models.Constants
 {
     public enum CookieValidatorTarget
     {
-        BiliBili = 1,
-        ExHentai = 2,
-        Pixiv = 3
+        BiliBili = ThirdPartyId.Bilibili,
+        ExHentai = ThirdPartyId.ExHentai,
+        Pixiv = ThirdPartyId.Pixiv
     }
 }

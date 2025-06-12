@@ -1722,5 +1722,9 @@
   "Post links in {{source}}": "{{source}}帖子链接",
   "DownloadTaskParserSource.SoulPlus": "SoulPlus",
   "Current listening port is {{port}}": "当前监听端口为 {{port}}",
-  "The configurable port range is {{min}}-{{max}}": "可配置的端口范围是 {{min}}-{{max}}"
+  "The configurable port range is {{min}}-{{max}}": "可配置的端口范围是 {{min}}-{{max}}",
+  "DurationUnit.Day": "天",
+  "DurationUnit.Hour": "小时",
+  "DurationUnit.Minute": "分钟",
+  "DurationUnit.Second": "秒"
 }

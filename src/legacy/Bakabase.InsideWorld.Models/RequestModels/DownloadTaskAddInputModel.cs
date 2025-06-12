@@ -8,17 +8,17 @@ using Bakabase.InsideWorld.Models.Constants;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
-    public class DownloadTaskCreateRequestModel
+    public class DownloadTaskAddInputModel
     {
         [Required] public ThirdPartyId ThirdPartyId { get; set; }
         [Required] public int Type { get; set; }
-        public Dictionary<string, string>? KeyAndNames { get; set; }
+        public Dictionary<string, string?>? KeyAndNames { get; set; }
         public long? Interval { get; set; }
         public int? StartPage { get; set; }
         public int? EndPage { get; set; }
         public string? Checkpoint { get; set; }
         public bool AutoRetry { get; set; } = true;
-        public bool ForceCreating { get; set; }
         [Required] public string DownloadPath { get; set; } = string.Empty;
+        public bool IgnoreTasksWithSameKey { get; set; }
     }
 }

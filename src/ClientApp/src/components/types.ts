@@ -12,13 +12,13 @@ export type IdName<T = number> = {
   name: string;
 };
 
-export type KeyValue<TK, TV> = {
+export type KeyValue<TK = string, TV = number> = {
   key: TK;
   value: TV;
 };
 
-export type LabelValue<TK, TV> = {
-  label: TK;
+export type LabelValue<TL = string, TV = number> = {
+  label: TL;
   value: TV;
 };
 

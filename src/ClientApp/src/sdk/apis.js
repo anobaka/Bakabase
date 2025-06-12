@@ -3410,51 +3410,6 @@ export const ChangeCustomPropertyTypeURL = function(parameters = {}) {
 }
 /**
  * 
- * request: EnableAddingNewDataDynamicallyForCustomProperty
- * url: EnableAddingNewDataDynamicallyForCustomPropertyURL
- * method: EnableAddingNewDataDynamicallyForCustomProperty_TYPE
- * raw_url: EnableAddingNewDataDynamicallyForCustomProperty_RAW_URL
- * @param id - 
- */
-export const EnableAddingNewDataDynamicallyForCustomProperty = function(parameters = {}) {
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  const config = parameters.$config
-  let path = '/custom-property/{id}/options/adding-new-data-dynamically'
-  let body
-  let queryParameters = {}
-  let form = {}
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters['id'] === undefined) {
-    return Promise.reject(new Error('Missing required  parameter: id'))
-  }
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    });
-  }
-  return request('put', domain + path, body, queryParameters, form, config)
-}
-export const EnableAddingNewDataDynamicallyForCustomProperty_RAW_URL = function() {
-  return '/custom-property/{id}/options/adding-new-data-dynamically'
-}
-export const EnableAddingNewDataDynamicallyForCustomProperty_TYPE = function() {
-  return 'put'
-}
-export const EnableAddingNewDataDynamicallyForCustomPropertyURL = function(parameters = {}) {
-  let queryParameters = {}
-  const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/custom-property/{id}/options/adding-new-data-dynamically'
-  path = path.replace('{id}', `${parameters['id']}`)
-  if (parameters.$queryParameters) {
-    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
-      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
-    })
-  }
-  let keys = Object.keys(queryParameters)
-  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
-}
-/**
- * 
  * request: GetCustomPropertyValueUsage
  * url: GetCustomPropertyValueUsageURL
  * method: GetCustomPropertyValueUsage_TYPE
@@ -3702,13 +3657,13 @@ export const GetAllDownloadTasksURL = function(parameters = {}) {
 }
 /**
  * 
- * request: CreateDownloadTask
- * url: CreateDownloadTaskURL
- * method: CreateDownloadTask_TYPE
- * raw_url: CreateDownloadTask_RAW_URL
+ * request: AddDownloadTask
+ * url: AddDownloadTaskURL
+ * method: AddDownloadTask_TYPE
+ * raw_url: AddDownloadTask_RAW_URL
  * @param model - 
  */
-export const CreateDownloadTask = function(parameters = {}) {
+export const AddDownloadTask = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
   let path = '/download-task'
@@ -3725,13 +3680,13 @@ export const CreateDownloadTask = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const CreateDownloadTask_RAW_URL = function() {
+export const AddDownloadTask_RAW_URL = function() {
   return '/download-task'
 }
-export const CreateDownloadTask_TYPE = function() {
+export const AddDownloadTask_TYPE = function() {
   return 'post'
 }
-export const CreateDownloadTaskURL = function(parameters = {}) {
+export const AddDownloadTaskURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/download-task'

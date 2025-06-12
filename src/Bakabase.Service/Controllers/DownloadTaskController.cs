@@ -94,10 +94,10 @@ namespace Bakabase.Service.Controllers
         }
 
         [HttpPost]
-        [SwaggerOperation(OperationId = "CreateDownloadTask")]
-        public async Task<ListResponse<DownloadTask>> Create([FromBody] DownloadTaskCreateRequestModel model)
+        [SwaggerOperation(OperationId = "AddDownloadTask")]
+        public async Task<ListResponse<DownloadTask>> Add([FromBody] DownloadTaskAddInputModel model)
         {
-            var taskResult = model.CreateTasks(_localizer);
+            var taskResult = model.AddTasks(_localizer);
             if (taskResult.Code != 0)
             {
                 return taskResult;
@@ -107,7 +107,7 @@ namespace Bakabase.Service.Controllers
             var tasks = taskResult.Data;
             if (tasks.Any())
             {
-                if (!model.ForceCreating)
+                if (!model.IgnoreTasksWithSameKey)
                 {
                     var existedTasks = await _service.GetAllDto();
                     var similarTasks = tasks.ToDictionary(a => a, a =>
@@ -147,7 +147,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPut("{id}")]
         [SwaggerOperation(OperationId = "PutDownloadTask")]
-        public async Task<BaseResponse> Put(int id, [FromBody] DownloadTask task)
+        public async Task<BaseResponse> Put(int id, [FromBody] DownloadTaskPutInputModel task)
         {
             return await _service.StopAndUpdateByKey(id, t =>
             {
@@ -155,6 +155,7 @@ namespace Bakabase.Service.Controllers
                 t.Checkpoint = task.Checkpoint;
                 t.StartPage = task.StartPage;
                 t.EndPage = task.EndPage;
+                t.AutoRetry = task.AutoRetry;
             });
         }
 
@@ -192,7 +193,7 @@ namespace Bakabase.Service.Controllers
                 throw new Exception("Download path for exhentai is not set");
             }
 
-            var baseModel = new DownloadTaskCreateRequestModel
+            var baseModel = new DownloadTaskAddInputModel
             {
                 Type = (int)model.Type,
                 ThirdPartyId = ThirdPartyId.ExHentai,
@@ -202,7 +203,7 @@ namespace Bakabase.Service.Controllers
             };
 
 
-            var rsp = (await Create(baseModel));
+            var rsp = (await Add(baseModel));
             if (rsp.Code != 0)
             {
                 return rsp;

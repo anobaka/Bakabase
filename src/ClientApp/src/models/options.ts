@@ -26,17 +26,21 @@ import BApi from '@/sdk/BApi';
 import type { SignalRData } from '@/components/SignalR/models';
 
 
-interface OptionsStore<TOptions, TPatchModel> {
+export type OptionsStore<TOptions, TPatchModel> = {
   state: SignalRData<TOptions>;
   reducers: {
     update: (state: TOptions, payload: any) => any;
   };
   effects: (dispatch) => ({
-    save: (patches: TPatchModel) => Promise<any>;
+    patch: (patches: TPatchModel) => Promise<any>;
+    put: (options: TOptions) => Promise<any>;
   });
-}
+};
 
-const buildModel = <TOptions, TPatchModel>(patchHandler: (patches: TPatchModel) => Promise<BootstrapModelsResponseModelsBaseResponse>) => {
+const buildModel = <TOptions, TPatchModel>(
+  patchHandler: (patches: TPatchModel) => Promise<BootstrapModelsResponseModelsBaseResponse>,
+  putHandler?: (options: TOptions) => Promise<BootstrapModelsResponseModelsBaseResponse>,
+) => {
   return {
     state: {} as TOptions,
 
@@ -54,16 +58,19 @@ const buildModel = <TOptions, TPatchModel>(patchHandler: (patches: TPatchModel) 
 
     // 定义处理该模型副作用的函数
     effects: (dispatch) => ({
-      async save(patches: TPatchModel) {
+      async patch(patches: TPatchModel) {
         await patchHandler(patches);
+      },
+      async put(options: TOptions) {
+        await putHandler?.(options);
       },
     }),
   } as OptionsStore<TOptions, TPatchModel>;
 };
 
 export default {
-  appOptions: buildModel<BakabaseInfrastructuresComponentsConfigurationsAppAppOptions, BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel>(BApi.options.patchAppOptions),
-  uiOptions: buildModel<BakabaseInsideWorldModelsConfigsUIOptions, BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel>(BApi.options.patchUiOptions),
+  appOptions: buildModel<BakabaseInfrastructuresComponentsConfigurationsAppAppOptions, BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel>(BApi.options.patchAppOptions, BApi.options.putAppOptions),
+  uiOptions: buildModel<BakabaseInsideWorldModelsConfigsUIOptions, BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel>(BApi.options.patchUiOptions, BApi.options.putAiOptions),
   bilibiliOptions: buildModel<BakabaseInsideWorldModelsConfigsBilibiliOptions, BakabaseInsideWorldModelsConfigsBilibiliOptions>(BApi.options.patchBilibiliOptions),
   exHentaiOptions: buildModel<BakabaseInsideWorldModelsConfigsExHentaiOptions, BakabaseInsideWorldModelsConfigsExHentaiOptions>(BApi.options.patchExHentaiOptions),
   fileSystemOptions: buildModel<{

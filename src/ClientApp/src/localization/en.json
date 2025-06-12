@@ -254,5 +254,9 @@
   "Post links in {{source}}": "Post links in {{source}}",
   "DownloadTaskParserSource.SoulPlus": "SoulPlus",
   "Current listening port is {{port}}": "Current listening port is {{port}}",
-  "The configurable port range is {{min}}-{{max}}": "The configurable port range is {{min}}-{{max}}"
+  "The configurable port range is {{min}}-{{max}}": "The configurable port range is {{min}}-{{max}}",
+  "DurationUnit.Day": "days",
+  "DurationUnit.Hour": "hours",
+  "DurationUnit.Minute": "minutes",
+  "DurationUnit.Second": "seconds"
 }

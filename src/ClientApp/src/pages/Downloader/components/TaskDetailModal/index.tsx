@@ -1,146 +1,36 @@
 import React, { useEffect, useState } from 'react';
+import { Divider } from '@alifd/next';
+import { useTranslation } from 'react-i18next';
+import dayjs from 'dayjs';
+import { ButtonGroup, Textarea } from '@heroui/react';
+import ExHentai from './ExHentai';
+import { convertTaskToForm } from './helpers';
 import {
-  BilibiliDownloadTaskType,
   bilibiliDownloadTaskTypes,
-  DependentComponentStatus,
-  ExHentaiDownloadTaskType,
   exHentaiDownloadTaskTypes,
-  PixivDownloadTaskType,
   pixivDownloadTaskTypes,
-  ResponseCode,
   ThirdPartyId,
   thirdPartyIds,
 } from '@/sdk/constants';
-import NameIcon from '@/pages/Downloader/components/NameIcon';
 
-import './index.scss';
-import { Balloon, Dialog, Divider, Icon, Input, NumberPicker, Select, Tag } from '@alifd/next';
-import i18n from 'i18next';
-import { useUpdateEffect } from 'react-use';
-import {
-  CreateDownloadTask,
-  GetBiliBiliFavorites,
-  GetBilibiliOptions,
-  GetDownloadTask,
-  GetExHentaiOptions,
-  GetPixivOptions,
-  PutDownloadTask,
-} from '@/sdk/apis';
-import Configurations from '@/pages/Downloader/components/Configurations';
-import CustomIcon from '@/components/CustomIcon';
-import FileSelector from '@/components/FileSelector';
-import store from '@/store';
-import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
-import { useTranslation } from 'react-i18next';
-import { Checkbox, Modal, Button } from '@/components/bakaui';
-import ExHentai from './ExHentai';
+import { Button, Checkbox, Modal } from '@/components/bakaui';
 import type { components } from '@/sdk/BApi2';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import ThirdPartyIcon from '@/components/ThirdPartyIcon';
+import Pixiv from '@/pages/Downloader/components/TaskDetailModal/Pixiv';
+import Bilibili from '@/pages/Downloader/components/TaskDetailModal/Bilibili';
+import DurationInput from '@/components/DurationInput';
+import type { LabelValue } from '@/components/types';
+import BApi from '@/sdk/BApi';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
-type IntervalUnit = 'd' | 'h' | 'm' | 's';
-
-const timeUnits = [
-  {
-    label: 'Day',
-    value: 'd',
-    seconds: 60 * 60 * 24,
-  },
-  {
-    label: 'Hour',
-    value: 'h',
-    seconds: 60 * 60,
-  },
-  {
-    label: 'Minute',
-    value: 'm',
-    seconds: 60,
-  },
-  {
-    label: 'Second',
-    value: 's',
-    seconds: 1,
-  },
-].map((a) => ({
-  ...a,
-  label: `${i18n.t(a.label)}(s)`,
-  value: a.value as IntervalUnit,
-}));
-
-type TypeOptions = {
-  type: number;
-  name: string;
-  hasPageRange?: boolean;
+const ThirdPartyIdTaskTypesMap: { [key in ThirdPartyId]?: LabelValue[] } = {
+  [ThirdPartyId.Bilibili]: bilibiliDownloadTaskTypes,
+  [ThirdPartyId.ExHentai]: exHentaiDownloadTaskTypes,
+  [ThirdPartyId.Pixiv]: pixivDownloadTaskTypes,
 };
 
-const OptionsMap: {[key in ThirdPartyId]?: TypeOptions[]} = {
-  [ThirdPartyId.Bilibili]: [{
-    type: BilibiliDownloadTaskType.Favorites,
-    name: BilibiliDownloadTaskType[BilibiliDownloadTaskType.Favorites],
-    hasPageRange: true,
-  }],
-  [ThirdPartyId.ExHentai]: [ExHentaiDownloadTaskType.List, ExHentaiDownloadTaskType.Watched],
-  [ThirdPartyId.Pixiv]: [PixivDownloadTaskType.Search, PixivDownloadTaskType.Following],
-};
-
-const ThirdPartyIdTypeWithPageRangeMap: { [key in ThirdPartyId]?: number[] } = {
-
-};
-
-const hasPageRange = (thirdPartyId: ThirdPartyId, type: number) => {
-  return ThirdPartyIdTypeWithPageRangeMap[thirdPartyId]?.includes(type) || false;
-};
-
-const createIntervalFormItem = (value, onValueChange, unit, onUnitChange) => {
-  return {
-    label: 'Interval',
-    tip: 'Interval for checking for new contents. ',
-    component: (
-      <Input.Group addonAfter={(
-        <Select
-          style={{ width: 150 }}
-          dataSource={timeUnits}
-          value={unit}
-          onChange={onUnitChange}
-        />
-      )}
-      >
-        <NumberPicker
-          style={{ width: 200 }}
-          step={1}
-          value={value}
-          onChange={onValueChange}
-        />
-      </Input.Group>
-    ),
-    className: 'interval',
-  };
-};
-
-const convertTaskToForm = (task) => {
-  let intervalUnit = 'd';
-  let intervalValue;
-  if (task.interval > 0) {
-    for (const tu of timeUnits) {
-      const r = task.interval / tu.seconds;
-      if (r == Math.floor(r)) {
-        intervalUnit = tu.value;
-        intervalValue = r;
-        break;
-      }
-    }
-  }
-  return {
-    ...task,
-    intervalUnit,
-    intervalValue,
-    keyAndNames: {
-      [task.key]: task.name,
-    },
-  };
-};
-
-type Form = components['schemas']['Bakabase.InsideWorld.Models.RequestModels.DownloadTaskCreateRequestModel'];
+type Form = components['schemas']['Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel'];
 
 type Props = {
   id?: number;
@@ -149,646 +39,281 @@ type Props = {
 export default ({
                   // onCreatedOrUpdated,
                   // onClose,
-  onDestroyed,
+                  onDestroyed,
                   id,
                 }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
-  const isAdding = !(id > 0);
+  const isAdding = !(id && id > 0);
+  const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
 
-  const [type, setType] = useState<number | undefined>();
-  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>();
-  const [form, setForm] = useState<Form>({
-    autoRetry: true,
-  });
-
-  const [configurationsVisible, setConfigurationsVisible] = useState(false);
-
-  const [bilibiliFavorites, setBilibiliFavorites] = useState([]);
-  const [gettingBilibiliFavorites, setGettingBilibiliFavorites] = useState(false);
-
-  const [exHentaiOptions, setExHentaiOptions] = useState({});
-  const [pixivOptions, setPixivOptions] = useState({});
-  const [bilibiliOptions, setBilibiliOptions] = useState({});
-
-  const dependentComponentContexts = store.useModelState('dependentComponentContexts');
-  const luxState = dependentComponentContexts?.find(d => d.id == dependentComponentIds.Lux);
-  const ffmpegState = dependentComponentContexts?.find(d => d.id == dependentComponentIds.FFMpeg);
-
-  const createDefaultFormValue = () => {
-    let options;
-    switch (thirdPartyId) {
-      case ThirdPartyId.Pixiv:
-        options = pixivOptions;
-        break;
-      case ThirdPartyId.Bilibili:
-        options = bilibiliOptions;
-        break;
-      case ThirdPartyId.ExHentai:
-        options = exHentaiOptions;
-        break;
+  const init = async () => {
+    if (id != undefined && id > 0) {
+      const task = (await BApi.downloadTask.getDownloadTask(id)).data;
+      const form = convertTaskToForm(task!);
+      setForm(form);
     }
-
-    return {
-      intervalUnit: 'd',
-      downloadPath: options?.downloader?.defaultPath,
-      autoRetry: true,
-    };
   };
 
   useEffect(() => {
-    GetExHentaiOptions()
-      .invoke((a) => {
-        setExHentaiOptions(a.data);
-      });
-
-    GetPixivOptions()
-      .invoke((a) => {
-        setPixivOptions(a.data);
-      });
-
-    GetBilibiliOptions()
-      .invoke((a) => {
-        setBilibiliOptions(a.data);
-      });
-
-    if (id > 0) {
-      GetDownloadTask({
-        id: id,
-      })
-        .invoke((b) => {
-          if (!b.code) {
-            const task = b.data;
-            setThirdPartyId(task.thirdPartyId);
-            setType(task.type);
-            const f = convertTaskToForm(task);
-            setForm(f);
-          }
-        });
-    }
+    init();
   }, []);
 
-  useUpdateEffect(() => {
-    if (id == 0) {
-      setType(undefined);
-      setForm(createDefaultFormValue());
+  const validateForm = (form: Partial<Form>): boolean => {
+    if (form.thirdPartyId && form.downloadPath && _.keys(form.keyAndNames).length > 0 && form.type) {
+      return true;
     }
-  }, [thirdPartyId]);
-
-  const getBilibiliFavorites = (cb: any = undefined) => {
-    if (!gettingBilibiliFavorites) {
-      setGettingBilibiliFavorites(true);
-      // in case there is a delay after new options saving
-      setTimeout(() => {
-        GetBiliBiliFavorites({
-          $config: {
-            ignoreError: (rsp) => true,
-          },
-        })
-          .invoke((a) => {
-            if (!a.code) {
-              setBilibiliFavorites(a.data);
-              cb && cb();
-            }
-          })
-          .finally(() => {
-            setGettingBilibiliFavorites(false);
-          });
-      }, 500);
-    }
+    return false;
   };
 
-  useUpdateEffect(() => {
-    if (thirdPartyId == ThirdPartyId.Bilibili) {
-      if (type == BilibiliDownloadTaskType.Favorites) {
-        getBilibiliFavorites();
-      }
-    }
-    if (thirdPartyId == ThirdPartyId.ExHentai) {
-      form.key = type == ExHentaiDownloadTaskType.Watched ? 'https://exhentai.org/watched' : undefined;
-    }
-    setForm({ ...form });
-  }, [type]);
-
-  const renderTypes = () => {
-    let types: any[] = [];
-    switch (thirdPartyId) {
-      case ThirdPartyId.ExHentai:
-        types = exHentaiDownloadTaskTypes;
-        break;
-      case ThirdPartyId.Pixiv:
-        types = pixivDownloadTaskTypes;
-        break;
-      case ThirdPartyId.Bilibili:
-        types = bilibiliDownloadTaskTypes;
-        break;
-    }
-
-    if (types.length == 0) {
-      return t('Not supported');
-    }
-
-    return types.map((type) => {
-      console.log(type, type);
-      return (
-        <Tag.Selectable
-          className={'type'}
-          onChange={(checked) => {
-            if (checked) {
-              setType(type.value);
-            }
-          }}
-          checked={type == type.value}
-          disabled={!isAdding}
-        >
-          {t(type.label)}
-        </Tag.Selectable>
-      );
-    });
-  };
-
-  const createSimpleFormInput = (multiple, placeholder: string | undefined = undefined) => {
-    const Component = multiple ? Input.TextArea : Input;
-    const createKeyAndNamesOnChange = multiple ? (s) => {
-      const keyAndNames = {};
-      if (s) {
-        for (const u of s.split('\n')) {
-          keyAndNames[u] = null;
-        }
-      }
-      return keyAndNames;
-    } : (s) => {
-      return {
-        [s]: null,
-      };
-    };
-
-    const value = Object.keys(form.keyAndNames || {})
-      .join('\n');
-
-    const onChange = (s) => {
-      const kn = createKeyAndNamesOnChange(s);
-      console.log(kn);
-      setForm({
-        ...form,
-        keyAndNames: kn,
-      });
-    };
-
-    return (
-      <Component
-        className={'full'}
-        onChange={onChange}
-        value={value}
-        placeholder={placeholder == undefined ? undefined : t(placeholder)}
-        disabled={!isAdding}
-      />
-    );
-  };
 
   const renderFormItems = () => {
-    if (!thirdPartyId || !type) {
+    if (!form.thirdPartyId || !form.type) {
       return;
     }
 
     const items: any[] = [];
-    switch (thirdPartyId) {
+    switch (form.thirdPartyId) {
       case ThirdPartyId.ExHentai:
         items.push(
           <ExHentai
-            type={type}
+            type={form.type}
             isReadOnly={!isAdding}
-            onValueChange={v => {
-              setForm({
-                ...false,
-                keyAndNames: v,
-              });
+            onChange={v => {
+              setForm({ ...v });
             }}
-            value={form.keyAndNames}
+            form={form}
           />,
         );
         break;
       case ThirdPartyId.Pixiv: {
-        switch (type) {
-          case PixivDownloadTaskType.Search:
-            items.push({
-              label: 'Url',
-              component: createSimpleFormInput(false),
-              tip: (
-                <>
-                  {t('Novel is not supported now, please make sure your url likes: ')}
-                  <br />
-                  https://www.pixiv.net/tags/azurlane
-                  <br />
-                  https://www.pixiv.net/tags/azurlane/top
-                  <br />
-                  https://www.pixiv.net/tags/azurlane/illustrations
-                  <br />
-                  https://www.pixiv.net/tags/azurlane/manga
-                  <br />
-                  https://www.pixiv.net/tags/azurlane/artworks?order=popular_male_d&mode=safe
-                </>
-              ),
-            });
-            hasPages = true;
-            break;
-          case PixivDownloadTaskType.Ranking:
-            items.push({
-              label: 'Url',
-              component: createSimpleFormInput(false),
-              tip: (
-                <>
-                  {t('Novel is not supported now, please make sure your url likes: ')}
-                  <br />
-                  https://www.pixiv.net/ranking.php
-                  <br />
-                  https://www.pixiv.net/ranking.php?mode=daily_r18
-                </>
-              ),
-            });
-            break;
-          case PixivDownloadTaskType.Following:
-            items.push({
-              label: 'Url',
-              component: createSimpleFormInput(false),
-              tip: (
-                <>
-                  {t('Novel is not supported now, please make sure your url likes: ')}
-                  <br />
-                  https://www.pixiv.net/bookmark_new_illust.php
-                  <br />
-                  https://www.pixiv.net/bookmark_new_illust_r18.php
-                  <br />
-                  https://www.pixiv.net/bookmark_new_illust_r18.php?p=3
-                </>
-              ),
-            });
-            hasPages = true;
-            break;
-        }
+        items.push(
+          <Pixiv
+            form={form}
+            type={form.type}
+            isReadOnly={!isAdding}
+            onChange={v => {
+              setForm({ ...v });
+            }}
+          />,
+        );
         break;
       }
       case ThirdPartyId.Bilibili: {
-        switch (type) {
-          case BilibiliDownloadTaskType.Favorites: {
-            items.push({
-              label: 'Favorites',
-              component: (
-                gettingBilibiliFavorites ? (
-                  <Icon type={'loading'} />
-                  )
-                  : bilibiliFavorites.length > 0 ? bilibiliFavorites.map((f: any) => {
-                    return (
-                      <Tag.Selectable
-                        onChange={(c) => {
-                          const kn = form.keyAndNames || {};
-                          if (c) {
-                            kn[f.id] = f.title;
-                          } else {
-                            delete kn[f.id];
-                          }
-                          setForm({
-                            ...form,
-                            keyAndNames: kn,
-                          });
-                        }}
-                        checked={f.id in (form.keyAndNames || {})}
-                        disabled={!isAdding}
-                      >
-                        {f.title}({f.media_count})
-                      </Tag.Selectable>
-                    );
-                  }) : (
-                    <div>
-                      {t('Unable to get bilibili favorites, make sure your cookie is set properly')}
-                      <Button
-                        onClick={() => {
-                          setConfigurationsVisible(true);
-                        }}
-                        style={{ marginLeft: 5 }}
-                        type={'primary'}
-                        text
-                      >{t('Set now')}
-                      </Button>
-                    </div>
-                  )
-              ),
-            });
-            hasPages = true;
-            break;
-          }
-        }
+        items.push(
+          <Bilibili
+            type={form.type}
+            form={form}
+            isReadOnly={!isAdding}
+            onChange={v => {
+              setForm({ ...v });
+            }}
+          />,
+        );
       }
     }
 
-    items.push({
-      label: 'Download path',
-      component: (
-        <FileSelector
-          type={'folder'}
-          value={form.downloadPath}
-          multiple={false}
-          onChange={(downloadPath) => {
-            setForm({
-              ...form,
-              downloadPath,
-            });
-          }}
-        />
-      ),
-    });
+    items.push(
+      <>
+        <div>{t('Duration')}</div>
+        <div className={'w-[200px]'}>
+          <DurationInput
+            // className={'col-span-2'}
+            duration={form.interval == undefined ? undefined : dayjs.duration({ seconds: form.interval })}
+            onDurationChange={d => {
+              setForm({
+                ...form,
+                interval: d.asSeconds(),
+              });
+            }}
+          />
+        </div>
+      </>,
+    );
 
-    const intervalComponent = createIntervalFormItem(form.intervalValue, (v) => {
-      setForm({
-        ...form,
-        intervalValue: v,
-      });
-    }, form.intervalUnit, (u) => {
-      setForm({
-        ...form,
-        intervalUnit: u,
-      });
-    });
-    items.push(intervalComponent);
-
-    if (hasPageRange(thirdPartyId, type)) {
-      items.push({
-        label: 'Pages',
-        tip: 'Set a page range if you don\'t want to download them all. The minimal page number is 1.',
-        className: 'pages',
-        component: (
-          <>
-            <NumberPicker
-              min={1}
-              step={1}
-              value={form.startPage}
-              onChange={(v) => {
-                setForm({
-                  ...form,
-                  startPage: v,
-                });
-              }}
-            />
-            ~
-            <NumberPicker
-              min={form.startPage || 1}
-              step={1}
-              value={form.endPage}
-              onChange={(v) => {
-                setForm({
-                  ...form,
-                  endPage: v,
-                });
-              }}
-            />
-          </>
-        ),
-      });
-    }
-
-    items.push({
-      label: 'Checkpoint',
-      tip: 'You can set the previous downloading checkpoint manually to make the downloader start the downloading task from it. ' +
-        'In most cases, you should let this field set by downloader automatically. ' +
-        'Each downloader has its own checkpoint format, and invalid checkpoint data will be ignored. You can find samples on our online document.',
-      component: (
-        <Input.TextArea
-          className={'full'}
+    items.push(
+      <>
+        <div>{t('Checkpoint')}</div>
+        <Textarea
+          size={'sm'}
+          // className={'col-span-2'}
+          // label={t('Checkpoint')}
+          description={(
+            <div>
+              <div>{t('You can set the previous downloading checkpoint manually to make the downloader start the downloading task from it.')}</div>
+              <div>{t('In most cases, you should let this field set by downloader automatically.')}</div>
+              <div>{t('Each downloader has its own checkpoint format, and invalid checkpoint data will be ignored. You can find samples on our online document.')}</div>
+            </div>
+          )}
           value={form.checkpoint}
-          onChange={(v) => {
+          onValueChange={(v) => {
             setForm({
               ...form,
               checkpoint: v,
             });
           }}
         />
-      ),
-    });
+      </>,
+    );
 
-    items.push({
-      label: 'Global configurations',
-      component: (
-        <Button
-          type={'primary'}
-          text
-          onClick={() => {
-            setConfigurationsVisible(true);
-          }}
-        >
-          {t('Check')}
-        </Button>
-      ),
-    });
+    // items.push({
+    //   label: 'Global configurations',
+    //   component: (
+    //     <Button
+    //       type={'primary'}
+    //       text
+    //       onClick={() => {
+    //         setConfigurationsVisible(true);
+    //       }}
+    //     >
+    //       {t('Check')}
+    //     </Button>
+    //   ),
+    // });
 
-    items.push({
-      label: 'Auto retry',
-      tip: 'Retry automatically when the downloading task failed.',
-      component: (
-        <Checkbox
-          isSelected={form.autoRetry}
-          onValueChange={(v) => {
-            setForm({
-              ...form,
-              autoRetry: v,
-            });
-          }}
-        />
-      ),
-    });
+    items.push(
+      <>
+        <div>{t('Auto retry')}</div>
+        <div>
+          <div>
+            <Checkbox
+              defaultSelected
+              isSelected={form.autoRetry}
+              onValueChange={(v) => {
+                setForm({
+                  ...form,
+                  autoRetry: v,
+                });
+              }}
+            />
+            &nbsp;
+            <span className={'opacity-60 text-xs'}>{t('Retry automatically when the downloading task failed.')}</span>
+          </div>
+        </div>
+      </>,
+    );
+
+    items.push(
+      <>
+        <div>{t('Ignore tasks with same key')}</div>
+        <div>
+          <div>
+            <Checkbox
+              isSelected={form.ignoreTasksWithSameKey}
+              onValueChange={(v) => {
+                setForm({
+                  ...form,
+                  ignoreTasksWithSameKey: v,
+                });
+              }}
+            />
+            &nbsp;
+            <span className={'opacity-60 text-xs'}>{t('In general, it\'s not necessary to create identical tasks.')}</span>
+          </div>
+        </div>
+      </>,
+    );
 
     // console.log(form);
 
     return (
       <>
-        <Divider />
-        <div className={'grid form'}>
-          {items.map((i) => {
-            const tipIsString = typeof i.tip === 'string' || i.tip instanceof String;
-            return (
-              <>
-                <div className={'label'}>
-                  {t(i.label)}
-                  {i.tip && (
-                    <Balloon.Tooltip
-                      align={'t'}
-                      // needAdjust
-                      // shouldUpdatePosition
-                      // autoAdjust
-                      // v2
-                      trigger={(
-                        <CustomIcon type={'question-circle'} />
-                      )}
-                      triggerType={'hover'}
-                    >{tipIsString ? t(i.tip) : i.tip}
-                    </Balloon.Tooltip>
-                  )}
-                </div>
-                <div className={`value ${i.className}`}>
-                  {i.component}
-                </div>
-              </>
-            );
-          })}
-        </div>
+        {items}
       </>
     );
   };
 
-  const buildTask = () => {
-    let interval;
-    if (form.intervalValue && form.intervalUnit) {
-      const tu = timeUnits.find((a) => a.value == form.intervalUnit);
-      if (tu) {
-        interval = parseInt(form.intervalValue) * tu.seconds;
-      }
-    }
-    return {
-      ...form,
-      interval,
-      thirdPartyId,
-      type,
-    };
-  };
-
-  const createDownloadTask = (forceCreating = false, onSuccess: any = undefined, onFail: any = undefined) => {
-    const model = buildTask();
-    model.forceCreating = forceCreating;
-    console.log(model, JSON.stringify(model));
-    CreateDownloadTask({
-      model,
-    })
-      .invoke((a) => {
-        if (!a.code) {
-          onSuccess && onSuccess();
-          onCreatedOrUpdated && onCreatedOrUpdated();
-        } else if (a.code == ResponseCode.Conflict) {
-          Dialog.confirm({
-            title: t('Duplicates are found'),
-            content: (
-              <pre>
-                {a.message}
-              </pre>
-            ),
-            onOk: () => new Promise((resolve, reject) => {
-              createDownloadTask(true, resolve, reject);
-            }),
-          });
-        }
-        onFail && onFail();
-      });
-  };
-
-  console.log(thirdPartyId, type, form);
+  console.log(form);
 
   return (
     <>
-      {configurationsVisible && (
-        <Configurations
-          onSaved={() => {
-            if (thirdPartyId == ThirdPartyId.Bilibili && type == BilibiliDownloadTaskType.Favorites) {
-              getBilibiliFavorites();
-            }
-            setConfigurationsVisible(false);
-          }}
-          onClose={() => {
-            setConfigurationsVisible(false);
-          }}
-        />
-      )}
       <Modal
         onDestroyed={onDestroyed}
         size={'xl'}
         defaultVisible
         title={isAdding ? t('Creating download task') : t('Download task')}
         className={'download-task-detail'}
-        onOk={() => {
+        onOk={async () => {
+          const validForm = form as Form;
           if (isAdding) {
-            createDownloadTask();
+            const r = await BApi.downloadTask.addDownloadTask(validForm);
+            if (r.code) {
+              throw new Error(r.message);
+            }
           } else {
-            PutDownloadTask({
-              id: id,
-              model: buildTask(),
-            })
-              .invoke((a) => {
-                if (!a.code) {
-                  onCreatedOrUpdated();
-                }
-              });
+            const r = await BApi.downloadTask.putDownloadTask(id, validForm);
+            if (r.code) {
+              throw new Error(r.message);
+            }
           }
         }}
-        onCancel={onClose}
-        onClose={onClose}
+        footer={{
+          actions: ['ok', 'cancel'],
+          okProps: {
+            isDisabled: !validateForm(form),
+          },
+        }}
       >
-        <div className={'grid'}>
-          <div className="label">
-            {t('Site')}
+        <div className={'grid gap-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr' }}>
+          <div>{t('Site')}</div>
+          <div>
+            <ButtonGroup>
+              {thirdPartyIds.filter(x => x.value in ThirdPartyIdTaskTypesMap).map((tpId) => {
+                const isSelected = form.thirdPartyId == tpId.value;
+
+                return (
+                  <Button
+                    onPress={() => {
+                      if (form.thirdPartyId != tpId.value) {
+                        setForm({
+                          thirdPartyId: tpId.value,
+                        });
+                      }
+                    }}
+                    color={isSelected ? 'primary' : undefined}
+                    isDisabled={!isAdding}
+                  >
+                    <ThirdPartyIcon thirdPartyId={tpId.value} />
+                    {t(tpId.label)}
+                  </Button>
+                );
+              })}
+            </ButtonGroup>
           </div>
-          <div className="sources value">
-            {thirdPartyIds.map((tpId) => {
-              let blockChanging = false;
-              let disabledTip: string | undefined;
-              if (tpId.value == ThirdPartyId.Bilibili) {
-                if (luxState?.status != DependentComponentStatus.Installed || ffmpegState?.status != DependentComponentStatus.Installed) {
-                  blockChanging = true;
-                  disabledTip = (
-                    t('This function is not working because lux or ffmpeg is not found, check them in system configurations')
-                  );
-                }
-              }
-
-              const isSelected = form.thirdPartyId == tpId.value;
-
-              const tag1 = (
-                <Button color={isSelected ? 'primary' : undefined} isDisabled={}>
-                  <ThirdPartyIcon thirdPartyId={tpId.value} />
-                </Button>
-              );
-
-              const tag = (
-                <Tag.Selectable
-                  className={'source'}
-                  size={'large'}
-                  onChange={(checked) => {
-                    if (blockChanging) {
-                      return;
-                    }
-                    if (checked) {
-                      setThirdPartyId(tpId.value);
-                    }
-                  }}
-                  disabled={!isAdding}
-                  checked={thirdPartyId == tpId.value}
-                >
-                  <img src={NameIcon[tpId.value]} alt="" />
-                  <span>{tpId.label}</span>
-                  {disabledTip && (
-                    <Balloon.Tooltip
-                      trigger={(
-                        <CustomIcon type={'warning-circle'} />
-                      )}
-                      triggerType={'hover'}
-                      align={'t'}
-                    >
-                      {disabledTip}
-                    </Balloon.Tooltip>
-                  )}
-                </Tag.Selectable>
-              );
-              return tag;
-            })}
-          </div>
-          {thirdPartyId && (
+          {form.thirdPartyId && (
             <>
-              <div className="label">
-                {t('Type')}
+              <div>
+                {t('Task type')}
               </div>
-              <div className="types value">
-                {renderTypes()}
+              <div>
+                <ButtonGroup>
+                  {ThirdPartyIdTaskTypesMap[form.thirdPartyId]?.map((type) => {
+                    const isSelected = form.type == type.value;
+                    return (
+                      <Button
+                        key={type.value}
+                        onPress={() => {
+                          if (!isSelected) {
+                            setForm({
+                              thirdPartyId: form.thirdPartyId,
+                              type: type.value,
+                            });
+                          }
+                        }}
+                        color={isSelected ? 'primary' : undefined}
+                        isDisabled={!isAdding}
+                      >
+                        {type.label}
+                      </Button>
+                    );
+                  })}
+                </ButtonGroup>
               </div>
             </>
           )}
+          {renderFormItems()}
         </div>
-        {renderFormItems()}
       </Modal>
     </>
   );

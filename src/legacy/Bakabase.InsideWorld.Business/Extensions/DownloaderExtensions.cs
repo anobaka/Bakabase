@@ -16,7 +16,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class DownloaderExtensions
     {
-        public static ListResponse<DownloadTask> CreateTasks(this DownloadTaskCreateRequestModel model,
+        public static ListResponse<DownloadTask> AddTasks(this DownloadTaskAddInputModel model,
             IStringLocalizer localizer)
         {
             if (!SpecificEnumUtils<ThirdPartyId>.Values.Contains(model.ThirdPartyId))

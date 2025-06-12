@@ -168,6 +168,8 @@ export enum StandardValueType {String = 1, ListString = 2, Decimal = 3, Link = 4
 export const standardValueTypes = Object.keys(StandardValueType).filter(k => typeof StandardValueType[k] === 'number').map(t => ({label: t, value: StandardValueType[t]}));
 export enum TextProcessingOperation {Delete = 1, SetWithFixedValue = 2, AddToStart = 3, AddToEnd = 4, AddToAnyPosition = 5, RemoveFromStart = 6, RemoveFromEnd = 7, RemoveFromAnyPosition = 8, ReplaceFromStart = 9, ReplaceFromEnd = 10, ReplaceFromAnyPosition = 11, ReplaceWithRegex = 12}
 export const textProcessingOperations = Object.keys(TextProcessingOperation).filter(k => typeof TextProcessingOperation[k] === 'number').map(t => ({label: t, value: TextProcessingOperation[t]}));
+export enum BTaskDuplicateIdHandling {Reject = 1, Ignore = 2, Replace = 3}
+export const bTaskDuplicateIdHandlings = Object.keys(BTaskDuplicateIdHandling).filter(k => typeof BTaskDuplicateIdHandling[k] === 'number').map(t => ({label: t, value: BTaskDuplicateIdHandling[t]}));
 export enum BTaskResourceType {FileSystemEntry = 1, Resource = 2, Any = 1000}
 export const bTaskResourceTypes = Object.keys(BTaskResourceType).filter(k => typeof BTaskResourceType[k] === 'number').map(t => ({label: t, value: BTaskResourceType[t]}));
 export enum BTaskType {Decompress = 1, MoveFiles = 2, MoveResources = 3, Any = 1000}

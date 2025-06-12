@@ -1,149 +1,149 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 import { Balloon, Input, NumberPicker } from '@alifd/next';
 import i18n from 'i18next';
 import { useUpdateEffect } from 'react-use';
+import { useTranslation } from 'react-i18next';
+import { Textarea } from '@heroui/react';
 import CookieValidator from '@/components/CookieValidator';
-import { CookieValidatorTarget, ThirdPartyId } from '@/sdk/constants';
+import type { CookieValidatorTarget } from '@/sdk/constants';
+import { ThirdPartyId } from '@/sdk/constants';
 import FileSelector from '@/components/FileSelector';
 import CustomIcon from '@/components/CustomIcon';
+import { NumberInput } from '@/components/bakaui';
+import type { components } from '@/sdk/BApi2';
+import store from '@/store';
+import type { OptionsStore } from '@/models/options';
 
-type VisibleKey = 'cookie' | 'threads' | 'interval' | 'defaultdownloadpath' | 'namingconvention';
+type ConfigurableKey = 'cookie' | 'threads' | 'interval' | 'defaultDownloadPath' | 'namingConvention';
 
-// todo: extract abstractions
-const getCookieValidatorTarget = (tpId: ThirdPartyId) => {
-  switch (tpId) {
-    case ThirdPartyId.Bilibili:
-      return CookieValidatorTarget.BiliBili;
-    case ThirdPartyId.Pixiv:
-      return CookieValidatorTarget.Pixiv;
-    case ThirdPartyId.ExHentai:
-      return CookieValidatorTarget.ExHentai;
-  }
+type NamingDefinition = components['schemas']['Bakabase.InsideWorld.Models.Models.Aos.DownloaderNamingDefinitions'];
+
+type Options = {
+  cookie?: string;
+  downloader?: {
+    defaultPath?: string;
+    threads?: number;
+    interval?: number;
+    namingConvention?: string;
+  };
+};
+
+type Props = {
+  thirdPartyId: ThirdPartyId;
+  options: Options;
+  namingDefinition?: NamingDefinition;
+  configurableKeys: ConfigurableKey[];
+  onChange: (patches: Partial<Options>) => void;
 };
 
 export default ({
-  GetApi, thirdPartyId, visibleKeys = [],
-  namingDefinitions,
-  onChange = (options) => {},
-}: any & {visibleKeys: VisibleKey[]}) => {
-  const [options, setOptions] = useState();
-
-  useEffect(() => {
-    if (GetApi) {
-      GetApi().invoke((a) => {
-        setOptions(a.data);
-      });
-    }
-  }, []);
-
-  useUpdateEffect(() => {
-  }, [namingDefinitions]);
-
-  useUpdateEffect(() => {
-    onChange(options);
-  }, [options]);
-
-  const patchOptionsLocally = (patches = {}) => {
-    const newOptions = {
-      ...(options || {}),
-      ...patches,
-    };
-    setOptions(newOptions);
-  };
+  thirdPartyId,
+  options,
+  configurableKeys = [],
+  namingDefinition,
+  onChange,
+}: Props) => {
+  const { t } = useTranslation();
 
   const renderOptions = () => {
-    const items = [];
-    console.log(options);
-    for (const k of visibleKeys) {
-      switch (k.toLowerCase()) {
+    const items: any[] = [];
+    for (const k of configurableKeys) {
+      switch (k) {
         case 'cookie':
         {
-          items.push({
-            label: 'Cookie',
-            component: (
-              <CookieValidator
-                cookie={options?.cookie}
-                onChange={(cookie) => {
-                  patchOptionsLocally({ cookie });
-                }}
-                target={getCookieValidatorTarget(thirdPartyId)}
-              />
-            ),
-          });
+          items.push(
+            <>
+              <div>{t('Cookie')}</div>
+              <div>
+                <CookieValidator
+                  cookie={options?.cookie}
+                  onChange={(cookie) => {
+                    onChange({ cookie });
+                  }}
+                  target={thirdPartyId as unknown as CookieValidatorTarget}
+                />
+              </div>
+            </>,
+          );
           break;
         }
-        case 'defaultdownloadpath':
+        case 'defaultDownloadPath':
         {
-          items.push({
-            label: 'Default download path',
-            component: (
-              <FileSelector
-                size={'small'}
-                type={'folder'}
-                value={options?.downloader?.defaultPath}
-                multiple={false}
-                onChange={(defaultPath) => patchOptionsLocally({
-                  downloader: {
-                    ...(options?.downloader || {}),
-                    defaultPath,
-                  },
-                })}
-              />
-            ),
-          });
+          items.push(
+            <>
+              <div>{t('Default download path')}</div>
+              <div>
+                <FileSelector
+                  size={'small'}
+                  type={'folder'}
+                  value={options?.downloader?.defaultPath}
+                  multiple={false}
+                  onChange={(defaultPath) => onChange({
+                    downloader: {
+                      ...(options?.downloader || {}),
+                      defaultPath: defaultPath as string,
+                    },
+                  })}
+                />
+              </div>
+            </>,
+          );
           break;
         }
         case 'threads':
         {
-          items.push({
-            label: 'Threads',
-            tip: i18n.t('If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.', { lowerCasedThirdPartyName: ThirdPartyId[thirdPartyId].toLowerCase() }),
-            component: (
-              <NumberPicker
-                min={0}
-                max={5}
-                step={1}
-                value={options?.downloader?.threads}
-                onChange={(threads) => patchOptionsLocally({
+          items.push(
+            <>
+              <div>{t('Threads')}</div>
+              <div>
+                <NumberInput
+                  min={0}
+                  max={5}
+                  step={1}
+                  value={options?.downloader?.threads}
+                  onChange={(threads) => onChange({
                   downloader: {
                     ...(options?.downloader || {}),
                     threads,
                   },
                 })}
-              />
-            ),
-          });
+                  description={t('If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.', { lowerCasedThirdPartyName: ThirdPartyId[thirdPartyId].toLowerCase() })}
+                />
+              </div>
+            </>,
+        );
           break;
         }
         case 'interval':
         {
-          items.push({
-            label: 'Request interval',
-            component: (
-              <NumberPicker
-                style={{ width: 250 }}
-                min={0}
-                max={9999999}
-                innerAfter={i18n.t('ms')}
-                value={options?.downloader?.interval}
-                onChange={(interval) => patchOptionsLocally({
-                  downloader: {
-                    ...(options?.downloader || {}),
-                    interval,
-                  },
-                })}
-              />
-            ),
-          });
+          items.push(
+            <>
+              <div>{t('Request interval')}</div>
+              <div>
+                <NumberInput
+                  style={{ width: 250 }}
+                  min={0}
+                  max={9999999}
+                  endContent={t('ms')}
+                  value={options?.downloader?.interval}
+                  onChange={(interval) => onChange({
+                    downloader: {
+                      ...(options?.downloader || {}),
+                      interval,
+                    },
+                  })}
+                />
+              </div>
+            </>,
+          );
           break;
         }
-        case 'namingconvention':
+        case 'namingConvention':
         {
-          const { fields: namingFields = [], defaultConvention } = namingDefinitions || {};
-
+          const { fields: namingFields = [], defaultConvention } = namingDefinition || {};
           const currentConvention = options?.downloader?.namingConvention ?? defaultConvention;
-          let namingPathSegments = [];
+          let namingPathSegments: string[] = [];
           if (currentConvention) {
             namingPathSegments = namingFields.reduce((s, t) => {
               if (t.example) {
@@ -152,46 +152,44 @@ export default ({
               return s;
             }, currentConvention).replace(/\\/g, '/').split('/');
           }
-          items.push({
-            label: 'Naming convention',
-            className: 'naming-convention',
-            tip: i18n.t('You can select fields to build a naming convention template, and \'/\' to create directory.'),
-            component: (
-              <>
-                <Input.TextArea
-                  autoHeight
+          items.push(
+            <>
+              <div>{t('Naming convention')}</div>
+              <div>
+                <Textarea
                   placeholder={defaultConvention}
                   style={{ width: '100%' }}
                   value={options?.downloader?.namingConvention}
                   onChange={(v) => {
-                    patchOptionsLocally({
+                    onChange({
                       downloader: {
                         ...(options?.downloader || {}),
                         namingConvention: v,
                       },
                     });
                   }}
+                  description={t('You can select fields to build a naming convention template, and \'/\' to create directory.')}
                 />
                 {currentConvention && (
-                <div className="example">
-                  {i18n.t('Example')}:&nbsp;
-                  <div>
-                    {namingPathSegments.map((t, i) => {
-                      if (i == namingPathSegments.length - 1) {
-                        return (
-                          <span className={'segment'}>{t}</span>
-                        );
-                      } else {
-                        return (
-                          <>
+                  <div className="example">
+                    {t('Example')}:&nbsp;
+                    <div>
+                      {namingPathSegments.map((t, i) => {
+                        if (i == namingPathSegments.length - 1) {
+                          return (
                             <span className={'segment'}>{t}</span>
-                            <span className={'separator'}>/</span>
-                          </>
-                        );
-                      }
-                    })}
+                          );
+                        } else {
+                          return (
+                            <>
+                              <span className={'segment'}>{t}</span>
+                              <span className={'separator'}>/</span>
+                            </>
+                          );
+                        }
+                      })}
+                    </div>
                   </div>
-                </div>
                 )}
                 <div className={'fields'}>
                   {namingFields.map((f) => {
@@ -200,10 +198,14 @@ export default ({
                         className={'field'}
                         onClick={() => {
                           const value = `{${f.key}}`;
-                          patchOptionsLocally({
+                          let nc = value;
+                          if (options?.downloader?.namingConvention && options.downloader.namingConvention.length > 0) {
+                            nc = `${options?.downloader?.namingConvention}${value}`;
+                          }
+                          onChange({
                             downloader: {
                               ...(options?.downloader || {}),
-                              namingConvention: options?.downloader?.namingConvention?.length > 0 ? `${options?.downloader?.namingConvention}${value}` : value,
+                              namingConvention: nc,
                             },
                           });
                         }}
@@ -212,8 +214,8 @@ export default ({
                           {f.key}
                         </div>
                         {f.example?.length > 0 && (
-                        <div className={'example'}>{f.example}</div>
-                          )}
+                          <div className={'example'}>{f.example}</div>
+                        )}
                       </div>
                     );
                     if (f.description) {
@@ -223,7 +225,7 @@ export default ({
                           triggerType={'hover'}
                           trigger={tag}
                         >
-                          {i18n.t(f.description)}
+                          {t(f.description)}
                         </Balloon.Tooltip>
                       );
                     } else {
@@ -231,60 +233,20 @@ export default ({
                     }
                   })}
                 </div>
-              </>
-            ),
-          });
+              </div>
+            </>,
+          );
           break;
         }
       }
     }
-
-    if (items.length > 0) {
-      return (
-        <div className={'form'}>
-          <div className="items">
-            {items.map((t) => {
-              let { tip } = t;
-              if (typeof tip === 'string' || tip instanceof String) {
-                tip = i18n.t(tip);
-              }
-              return (
-                <>
-                  <div className="label">
-                    {i18n.t(t.label)}
-                    {tip && (
-                      <Balloon
-                        closable={false}
-                        trigger={(
-                          <CustomIcon type={'question-circle'} size={'small'} />
-                            )}
-                        triggerType={'hover'}
-                        align={'r'}
-                      >
-                        {tip}
-                      </Balloon>
-                    )}
-                  </div>
-                  <div className={`value ${t.className ? t.className : ''}`}>{t.component}</div>
-                </>
-              );
-            })}
-          </div>
-        </div>
-      );
-    } else {
-      return i18n.t('For now, there is nothing to set');
-    }
+    return items;
   };
 
   // console.log(namingDefinitions, options);
 
   return (
-    <div className={'downloader-options'}>
-      {/* <div className="title"> */}
-      {/*   <div className="placeholder" /> */}
-      {/*   {i18n.t(ThirdPartyId[thirdPartyId])} */}
-      {/* </div> */}
+    <div className={'grid gap-x-2 gap-y-1'} style={{ gridTemplateColumns: 'auto 1fr' }}>
       {renderOptions()}
     </div>
   );
