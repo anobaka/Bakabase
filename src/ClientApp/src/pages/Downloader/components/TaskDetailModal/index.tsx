@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Divider } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'dayjs';
 import { ButtonGroup, Textarea } from '@heroui/react';
+import _ from 'lodash';
 import ExHentai from './ExHentai';
-import { convertTaskToForm } from './helpers';
 import {
   bilibiliDownloadTaskTypes,
   exHentaiDownloadTaskTypes,
@@ -48,10 +47,15 @@ export default ({
   const isAdding = !(id && id > 0);
   const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
 
+  console.log(id);
+
   const init = async () => {
-    if (id != undefined && id > 0) {
+    if (!isAdding) {
       const task = (await BApi.downloadTask.getDownloadTask(id)).data;
-      const form = convertTaskToForm(task!);
+      const form: Partial<Form> = {
+        ...task,
+        keyAndNames: { [task!.key]: task!.name },
+      };
       setForm(form);
     }
   };
@@ -194,26 +198,28 @@ export default ({
       </>,
     );
 
-    items.push(
-      <>
-        <div>{t('Ignore tasks with same key')}</div>
-        <div>
+    if (isAdding) {
+      items.push(
+        <>
+          <div>{t('Allow duplicate submission')}</div>
           <div>
-            <Checkbox
-              isSelected={form.ignoreTasksWithSameKey}
-              onValueChange={(v) => {
-                setForm({
-                  ...form,
-                  ignoreTasksWithSameKey: v,
-                });
-              }}
-            />
-            &nbsp;
-            <span className={'opacity-60 text-xs'}>{t('In general, it\'s not necessary to create identical tasks.')}</span>
+            <div>
+              <Checkbox
+                isSelected={form.isDuplicateAllowed}
+                onValueChange={(v) => {
+                  setForm({
+                    ...form,
+                    isDuplicateAllowed: v,
+                  });
+                }}
+              />
+              &nbsp;
+              <span className={'opacity-60 text-xs'}>{t('In general, it\'s not necessary to create identical tasks.')}</span>
+            </div>
           </div>
-        </div>
-      </>,
-    );
+        </>,
+      );
+    }
 
     // console.log(form);
 
@@ -258,7 +264,7 @@ export default ({
         <div className={'grid gap-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr' }}>
           <div>{t('Site')}</div>
           <div>
-            <ButtonGroup>
+            <ButtonGroup size={'sm'}>
               {thirdPartyIds.filter(x => x.value in ThirdPartyIdTaskTypesMap).map((tpId) => {
                 const isSelected = form.thirdPartyId == tpId.value;
 
@@ -287,7 +293,7 @@ export default ({
                 {t('Task type')}
               </div>
               <div>
-                <ButtonGroup>
+                <ButtonGroup size={'sm'}>
                   {ThirdPartyIdTaskTypesMap[form.thirdPartyId]?.map((type) => {
                     const isSelected = form.type == type.value;
                     return (

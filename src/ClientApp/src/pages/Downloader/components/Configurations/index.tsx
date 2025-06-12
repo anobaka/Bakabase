@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import './index.scss';
 import { useTranslation } from 'react-i18next';
 import _ from 'lodash';
 import DownloaderOptions from './DownloaderOptions';
@@ -55,12 +54,13 @@ export default ({
 
   useEffect(() => {
     BApi.downloadTask.getAllDownloaderNamingDefinitions().then(r => {
-      setAllNamingDefinitions(r.data);
+      setAllNamingDefinitions(r.data ?? {});
     });
   }, []);
 
   return (
     <Modal
+      size={'xl'}
       defaultVisible
       title={t('Configurations')}
       onDestroyed={onDestroyed}
@@ -76,7 +76,7 @@ export default ({
         onSubmitted?.();
       }}
     >
-      <Tabs>
+      <Tabs >
         {_.keys(thirdPartyOptionsMap).map((d, i) => {
           const thirdPartyId = parseInt(d, 10) as ThirdPartyId;
           const options = thirdPartyOptionsMap[thirdPartyId]!;

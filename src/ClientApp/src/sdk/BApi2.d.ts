@@ -4430,7 +4430,7 @@ export interface components {
             checkpoint?: string;
             autoRetry: boolean;
             downloadPath: string;
-            ignoreTasksWithSameKey: boolean;
+            isDuplicateAllowed: boolean;
         };
         "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel": {
             /** Format: int64 */

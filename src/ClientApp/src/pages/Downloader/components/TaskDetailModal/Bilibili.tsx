@@ -61,62 +61,63 @@ export default ({
   const renderOptions = () => {
     switch (type as BilibiliDownloadTaskType) {
       case BilibiliDownloadTaskType.Favorites: {
-        if (loadingFavorites) {
-          return (
-            <Spinner size="sm" />
-          );
-        }
-        if (favorites.length === 0) {
-          return (
-            <div>
-              {t('Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.')}
-              <Button
-                size={'sm'}
-                onClick={() => {
-                  createPortal(Configurations, {
-                    onSubmitted: async () => {
-                      await loadFavorites();
-                    },
-                  });
-                }}
-                color={'primary'}
-              >{t('Setup now')}
-              </Button>
-            </div>
-          );
-        }
         return (
           <>
-            <CheckboxGroup
-              // color="secondary"
-              label={t('Select favorites')}
-              orientation="horizontal"
-              isDisabled={isReadOnly}
-              onChange={(values) => {
-                const kn = form?.keyAndNames || {};
-                if (values.length === 0) {
-                  Object.keys(kn).forEach(k => delete kn[k]);
-                } else {
-                  favorites.forEach(f => {
-                    if (values.includes(f.id)) {
-                      kn[f.id] = f.title;
+            <div>{t('Favorites')}</div>
+            <div>
+              {loadingFavorites ? (
+                <Spinner size="sm" />
+              ) : favorites.length === 0 ? (
+                <div className={''}>
+                  {t('Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.')}
+                  <Button
+                    variant={'light'}
+                    size={'sm'}
+                    onPress={() => {
+                      createPortal(Configurations, {
+                        onSubmitted: async () => {
+                          await loadFavorites();
+                        },
+                      });
+                    }}
+                    color={'primary'}
+                  >{t('Setup now')}
+                  </Button>
+                </div>
+              ) : (
+                <CheckboxGroup
+                  // color="secondary"
+                  label={t('Select favorites')}
+                  orientation="horizontal"
+                  size={'sm'}
+                  isDisabled={isReadOnly}
+                  onChange={(values) => {
+                    const kn = form?.keyAndNames || {};
+                    if (values.length === 0) {
+                      Object.keys(kn).forEach(k => delete kn[k]);
                     } else {
-                      delete kn[f.id];
+                      favorites.forEach(f => {
+                        if (values.includes(f.id)) {
+                          kn[f.id] = f.title;
+                        } else {
+                          delete kn[f.id];
+                        }
+                      });
                     }
-                  });
-                }
-                onChange({
-                  ...form,
-                  keyAndNames: kn,
-                });
-              }}
-            >
-              {favorites.map(f => {
-                return (
-                  <Checkbox value={f.id.toString()}>{f.title}({f.mediaCount})</Checkbox>
-                );
-              })}
-            </CheckboxGroup>
+                    onChange({
+                      ...form,
+                      keyAndNames: kn,
+                    });
+                  }}
+                >
+                  {favorites.map(f => {
+                    return (
+                      <Checkbox value={f.id.toString()}>{f.title}({f.mediaCount})</Checkbox>
+                    );
+                  })}
+                </CheckboxGroup>
+              )}
+            </div>
             <PageRange
               start={form?.startPage}
               end={form?.endPage}

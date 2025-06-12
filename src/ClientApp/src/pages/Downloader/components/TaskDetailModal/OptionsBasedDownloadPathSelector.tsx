@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUpdateEffect } from 'react-use';
 import { Button } from '@/components/bakaui';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -42,7 +41,7 @@ export default ({
           size={'sm'}
           color={'primary'}
           variant={'light'}
-          onClick={() => {
+          onPress={() => {
              createPortal(FileSystemSelectorDialog, {
                onSelected: e => {
                  onChange?.(e.path);

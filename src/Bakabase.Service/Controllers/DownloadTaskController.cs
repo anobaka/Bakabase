@@ -107,7 +107,7 @@ namespace Bakabase.Service.Controllers
             var tasks = taskResult.Data;
             if (tasks.Any())
             {
-                if (!model.IgnoreTasksWithSameKey)
+                if (!model.IsDuplicateAllowed)
                 {
                     var existedTasks = await _service.GetAllDto();
                     var similarTasks = tasks.ToDictionary(a => a, a =>

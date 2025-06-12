@@ -1,19 +1,13 @@
-import React, { useEffect, useRef, useState } from 'react';
-import './index.scss';
-import { Balloon, Input, NumberPicker } from '@alifd/next';
-import i18n from 'i18next';
-import { useUpdateEffect } from 'react-use';
+import React from 'react';
+import { Balloon } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { Textarea } from '@heroui/react';
 import CookieValidator from '@/components/CookieValidator';
 import type { CookieValidatorTarget } from '@/sdk/constants';
 import { ThirdPartyId } from '@/sdk/constants';
 import FileSelector from '@/components/FileSelector';
-import CustomIcon from '@/components/CustomIcon';
-import { NumberInput } from '@/components/bakaui';
+import { Chip, NumberInput, Tooltip } from '@/components/bakaui';
 import type { components } from '@/sdk/BApi2';
-import store from '@/store';
-import type { OptionsStore } from '@/models/options';
 
 type ConfigurableKey = 'cookie' | 'threads' | 'interval' | 'defaultDownloadPath' | 'namingConvention';
 
@@ -38,20 +32,19 @@ type Props = {
 };
 
 export default ({
-  thirdPartyId,
-  options,
-  configurableKeys = [],
-  namingDefinition,
-  onChange,
-}: Props) => {
+                  thirdPartyId,
+                  options,
+                  configurableKeys = [],
+                  namingDefinition,
+                  onChange,
+                }: Props) => {
   const { t } = useTranslation();
 
   const renderOptions = () => {
     const items: any[] = [];
     for (const k of configurableKeys) {
       switch (k) {
-        case 'cookie':
-        {
+        case 'cookie': {
           items.push(
             <>
               <div>{t('Cookie')}</div>
@@ -68,14 +61,14 @@ export default ({
           );
           break;
         }
-        case 'defaultDownloadPath':
-        {
+        case 'defaultDownloadPath': {
           items.push(
             <>
               <div>{t('Default download path')}</div>
               <div>
                 <FileSelector
-                  size={'small'}
+                  size={'medium'}
+                  // size={'small'}
                   type={'folder'}
                   value={options?.downloader?.defaultPath}
                   multiple={false}
@@ -91,38 +84,39 @@ export default ({
           );
           break;
         }
-        case 'threads':
-        {
+        case 'threads': {
           items.push(
             <>
               <div>{t('Threads')}</div>
               <div>
                 <NumberInput
+                  size={'sm'}
+                  fullWidth={false}
                   min={0}
                   max={5}
                   step={1}
                   value={options?.downloader?.threads}
                   onChange={(threads) => onChange({
-                  downloader: {
-                    ...(options?.downloader || {}),
-                    threads,
-                  },
-                })}
+                    downloader: {
+                      ...(options?.downloader || {}),
+                      threads,
+                    },
+                  })}
                   description={t('If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.', { lowerCasedThirdPartyName: ThirdPartyId[thirdPartyId].toLowerCase() })}
                 />
               </div>
             </>,
-        );
+          );
           break;
         }
-        case 'interval':
-        {
+        case 'interval': {
           items.push(
             <>
               <div>{t('Request interval')}</div>
-              <div>
+              <div className={'w-[200px]'}>
                 <NumberInput
-                  style={{ width: 250 }}
+                  size={'sm'}
+                  fullWidth={false}
                   min={0}
                   max={9999999}
                   endContent={t('ms')}
@@ -139,9 +133,11 @@ export default ({
           );
           break;
         }
-        case 'namingConvention':
-        {
-          const { fields: namingFields = [], defaultConvention } = namingDefinition || {};
+        case 'namingConvention': {
+          const {
+            fields: namingFields = [],
+            defaultConvention,
+          } = namingDefinition || {};
           const currentConvention = options?.downloader?.namingConvention ?? defaultConvention;
           let namingPathSegments: string[] = [];
           if (currentConvention) {
@@ -155,7 +151,7 @@ export default ({
           items.push(
             <>
               <div>{t('Naming convention')}</div>
-              <div>
+              <div className={'flex flex-col gap-2'}>
                 <Textarea
                   placeholder={defaultConvention}
                   style={{ width: '100%' }}
@@ -168,34 +164,43 @@ export default ({
                       },
                     });
                   }}
-                  description={t('You can select fields to build a naming convention template, and \'/\' to create directory.')}
+                  description={(
+                    <div>{t('You can select fields to build a naming convention template, and \'/\' to create directory.')}</div>
+
+                  )}
                 />
                 {currentConvention && (
-                  <div className="example">
-                    {t('Example')}:&nbsp;
-                    <div>
-                      {namingPathSegments.map((t, i) => {
-                        if (i == namingPathSegments.length - 1) {
-                          return (
-                            <span className={'segment'}>{t}</span>
-                          );
-                        } else {
-                          return (
-                            <>
-                              <span className={'segment'}>{t}</span>
-                              <span className={'separator'}>/</span>
-                            </>
-                          );
-                        }
-                      })}
-                    </div>
+                  <div className={'flex items-center gap-1'}>
+                    <Chip
+                      size={'sm'}
+                      color={'secondary'}
+                      radius={'sm'}
+                      variant={'flat'}
+                    >{t('Example')}</Chip>
+                    {namingPathSegments.map((t, i) => {
+                      if (i == namingPathSegments.length - 1) {
+                        return (
+                          <span className={'text-primary'}>{t}</span>
+                        );
+                      } else {
+                        return (
+                          <>
+                            <span className={'text-primary'}>{t}</span>
+                            <span className={''}>/</span>
+                          </>
+                        );
+                      }
+                    })}
                   </div>
                 )}
-                <div className={'fields'}>
+                <div className={'flex items-center gap-1 flex-wrap'}>
                   {namingFields.map((f) => {
                     const tag = (
-                      <div
-                        className={'field'}
+                      <Chip
+                        size={'sm'}
+                        variant={'faded'}
+                        radius={'sm'}
+                        className={'flex flex-col h-auto'}
                         onClick={() => {
                           const value = `{${f.key}}`;
                           let nc = value;
@@ -210,23 +215,21 @@ export default ({
                           });
                         }}
                       >
-                        <div className="key">
+                        <div className="text-xs text-primary">
                           {f.key}
                         </div>
                         {f.example?.length > 0 && (
-                          <div className={'example'}>{f.example}</div>
+                          <div className={''}>{f.example}</div>
                         )}
-                      </div>
+                      </Chip>
                     );
                     if (f.description) {
                       return (
-                        <Balloon.Tooltip
-                          align={'t'}
-                          triggerType={'hover'}
-                          trigger={tag}
+                        <Tooltip
+                          content={t(f.description)}
                         >
-                          {t(f.description)}
-                        </Balloon.Tooltip>
+                          {tag}
+                        </Tooltip>
                       );
                     } else {
                       return tag;
@@ -246,7 +249,7 @@ export default ({
   // console.log(namingDefinitions, options);
 
   return (
-    <div className={'grid gap-x-2 gap-y-1'} style={{ gridTemplateColumns: 'auto 1fr' }}>
+    <div className={'grid gap-x-2 gap-y-1 items-center'} style={{ gridTemplateColumns: 'auto 1fr' }}>
       {renderOptions()}
     </div>
   );

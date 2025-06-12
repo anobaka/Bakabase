@@ -13,6 +13,6 @@ namespace Bakabase.InsideWorld.Models.Models.Aos
         /// <summary>
         /// Result type - count
         /// </summary>
-        public Dictionary<int, int> Counts { get; set; }
+        public Dictionary<int, int>? Counts { get; set; }
     }
 }

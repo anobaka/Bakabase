@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Button, Message } from '@alifd/next';
-import type { ButtonProps } from '@alifd/next/types/button';
+import { Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
+import type { ButtonProps } from '@/components/bakaui';
+import { Button } from '@/components/bakaui';
 
 
 interface Props {
@@ -48,10 +49,10 @@ export default ({
 
   return (
     <Button
-      text={!!value}
       size={size}
-      type={value ? 'primary' : 'normal'}
-      onClick={() => {
+      color={value ? 'primary' : 'default'}
+      variant={'light'}
+      onPress={() => {
         switch (type) {
           case 'file':
             if (multiple) {

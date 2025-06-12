@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-
-import './index.scss';
-import { Balloon, Dialog } from '@alifd/next';
 import moment from 'moment';
-import { Axis, Chart, Interval, Legend, Tooltip } from 'bizcharts';
 import { ControlledMenu, MenuItem, useMenuState } from '@szhsin/react-menu';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { useTranslation } from 'react-i18next';
@@ -40,45 +36,40 @@ import {
 import CustomIcon from '@/components/CustomIcon';
 import '@szhsin/react-menu/dist/index.css';
 import '@szhsin/react-menu/dist/transitions/slide.css';
-import { GetAllThirdPartyRequestStatistics } from '@/sdk/apis';
+import type {
+  ThirdPartyId } from '@/sdk/constants';
 import {
-  bilibiliDownloadTaskTypes,
   DownloadTaskAction,
   DownloadTaskActionOnConflict,
   DownloadTaskDtoStatus,
   downloadTaskDtoStatuses,
-  ExHentaiDownloadTaskType,
-  exHentaiDownloadTaskTypes,
-  pixivDownloadTaskTypes,
   ResponseCode,
-  ThirdPartyId,
   thirdPartyIds,
-  ThirdPartyRequestResultType,
 } from '@/sdk/constants';
 import Configurations from '@/pages/Downloader/components/Configurations';
 import BApi from '@/sdk/BApi';
 import { buildLogger, useTraceUpdate } from '@/components/utils';
-import SimpleLabel from '@/components/SimpleLabel';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import ThirdPartyIcon from '@/components/ThirdPartyIcon';
-import type { DownloadTask } from '@/core/models/DownloadTask';
+import store from '@/store';
+import RequestStatistics from '@/pages/Downloader/components/RequestStatistics';
 
-const testTasks: DownloadTask[] = [
-  {
-    key: '123121232312321321',
-    thirdPartyId: ThirdPartyId.Bilibili,
-    name: 'eeeeeeee',
-    progress: 80,
-    status: DownloadTaskDtoStatus.Downloading,
-  },
-  {
-    key: 'cxzkocnmaqwkodn wkjodas1',
-    name: 'pppppppppppp',
-    progress: 30,
-    status: DownloadTaskDtoStatus.Failed,
-    message: 'dawsdasda',
-  },
-];
+// const testTasks: DownloadTask[] = [
+//   {
+//     key: '123121232312321321',
+//     thirdPartyId: ThirdPartyId.Bilibili,
+//     name: 'eeeeeeee',
+//     progress: 80,
+//     status: DownloadTaskDtoStatus.Downloading,
+//   },
+//   {
+//     key: 'cxzkocnmaqwkodn wkjodas1',
+//     name: 'pppppppppppp',
+//     progress: 30,
+//     status: DownloadTaskDtoStatus.Failed,
+//     message: 'dawsdasda',
+//   },
+// ];
 
 const DownloadTaskDtoStatusIceLabelStatusMap: Record<DownloadTaskDtoStatus, ChipProps['color']> = {
   [DownloadTaskDtoStatus.Idle]: 'default',
@@ -102,13 +93,6 @@ const DownloadTaskDtoStatusProgressBarColorMap: Record<DownloadTaskDtoStatus, Ci
   [DownloadTaskDtoStatus.Disabled]: 'default',
 };
 
-const RequestResultTypeIntervalColorMap = {
-  [ThirdPartyRequestResultType.Succeed]: '#46bc15',
-  [ThirdPartyRequestResultType.Failed]: '#ff3000',
-  [ThirdPartyRequestResultType.Banned]: '#993300',
-  [ThirdPartyRequestResultType.Canceled]: '#666',
-  [ThirdPartyRequestResultType.TimedOut]: '#ff9300',
-};
 
 enum SelectionMode {
   Default,
@@ -124,19 +108,14 @@ type SearchForm = {
 
 const log = buildLogger('DownloadPage');
 
+
 export default () => {
   const { t } = useTranslation();
-  const [taskId, setTaskId] = useState<number | undefined>(undefined);
   const forceUpdate = useUpdate();
   const [form, setForm] = useState<SearchForm>({});
 
-  const gettingRequestStatistics = useRef(false);
-  const [requestStatistics, setRequestStatistics] = useState([]);
-  const requestStatisticsRef = useRef(requestStatistics);
-  const [requestStatisticsChartVisible, setRequestStatisticsChartVisible] = useState(false);
-
-  // const tasks = store.useModelState('downloadTasks');
-  const tasks = testTasks;
+  const tasks = store.useModelState('downloadTasks');
+  // const tasks = testTasks;
 
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const selectedTaskIdsRef = useRef(selectedTaskIds);
@@ -147,11 +126,10 @@ export default () => {
   const [menuProps, toggleMenu] = useMenuState();
   const { createPortal } = useBakabaseContext();
 
+  const [taskListHeight, setTaskListHeight] = useState(0);
+
   useTraceUpdate({
-    taskId,
     form,
-    requestStatistics,
-    requestStatisticsChartVisible,
     tasks,
     selectedTaskIds,
     menuProps,
@@ -168,17 +146,18 @@ export default () => {
       ignoreError: rsp => rsp.code == ResponseCode.Conflict,
     });
     if (rsp.code == ResponseCode.Conflict) {
-      Dialog.show({
+      createPortal(Modal, {
+        defaultVisible: true,
+        size: 'lg',
         title: t('Found some conflicted tasks'),
-        content: rsp.message,
-        v2: true,
-        width: 'auto',
-        closeMode: ['mask', 'esc', 'close'],
-        okProps: {
-          children: t('Download selected tasks firstly'),
-        },
-        cancelProps: {
-          children: t('Add selected tasks to the queue'),
+        children: rsp.message,
+        footer: {
+          okProps: {
+            children: t('Download selected tasks firstly'),
+          },
+          cancelProps: {
+            children: t('Add selected tasks to the queue'),
+          },
         },
         onOk: async () => {
           return await BApi.downloadTask.startDownloadTasks({
@@ -186,17 +165,13 @@ export default () => {
             actionOnConflict: DownloadTaskActionOnConflict.StopOthers,
           });
         },
-        onCancel: async () => await BApi.downloadTask.startDownloadTasks({
+        onClose: async () => await BApi.downloadTask.startDownloadTasks({
           ids,
           actionOnConflict: DownloadTaskActionOnConflict.Ignore,
         }),
       });
     }
   };
-
-  useUpdateEffect(() => {
-    requestStatisticsRef.current = requestStatistics;
-  }, [requestStatistics]);
 
   useUpdateEffect(() => {
     selectedTaskIdsRef.current = selectedTaskIds;
@@ -285,21 +260,6 @@ export default () => {
   }, [tasks]);
 
   useEffect(() => {
-    const getRequestStatisticsInterval = setInterval(() => {
-      if (!gettingRequestStatistics.current) {
-        gettingRequestStatistics.current = true;
-        GetAllThirdPartyRequestStatistics()
-          .invoke((a) => {
-            if (JSON.stringify(a.data) != JSON.stringify(requestStatisticsRef.current)) {
-              setRequestStatistics(a.data);
-            }
-          })
-          .finally(() => {
-            gettingRequestStatistics.current = false;
-          });
-      }
-    }, 1000);
-
     const onMouseDown = (e) => {
       // console.log(e.target, clearTaskSelectionTargetsRef.current);
     };
@@ -338,15 +298,14 @@ export default () => {
       }
     };
 
-    window.addEventListener('keydown', onKeydown);
-    window.addEventListener('keyup', onKeyUp);
-    window.addEventListener('mousedown', onMouseDown);
+    // window.addEventListener('keydown', onKeydown);
+    // window.addEventListener('keyup', onKeyUp);
+    // window.addEventListener('mousedown', onMouseDown);
 
     return () => {
-      window.removeEventListener('keydown', onKeydown);
-      window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('mousedown', onMouseDown);
-      clearInterval(getRequestStatisticsInterval);
+      // window.removeEventListener('keydown', onKeydown);
+      // window.removeEventListener('keyup', onKeyUp);
+      // window.removeEventListener('mousedown', onMouseDown);
     };
   }, []);
 
@@ -385,35 +344,6 @@ export default () => {
     }
   };
 
-  const renderTaskName = (task) => {
-    let types;
-    let taskNameShouldBeTranslated = false;
-    switch (task.thirdPartyId) {
-      case ThirdPartyId.ExHentai:
-        types = exHentaiDownloadTaskTypes;
-        if (task.type == ExHentaiDownloadTaskType.Watched) {
-          taskNameShouldBeTranslated = true;
-        }
-        break;
-      case ThirdPartyId.Pixiv:
-        types = pixivDownloadTaskTypes;
-        break;
-      case ThirdPartyId.Bilibili:
-        types = bilibiliDownloadTaskTypes;
-        break;
-    }
-
-    const type = types?.find((t) => t.value == task.type).label || 'Unknown';
-
-    const displayTaskName = (taskNameShouldBeTranslated ? t(task.name) : task.name) ?? task.key;
-
-    if (displayTaskName) {
-      return `${t(type)}: ${displayTaskName ?? task.key}`;
-    } else {
-      return t(type);
-    }
-  };
-
   const taskFilters: ((task: any) => boolean)[] = [];
   if (form.thirdPartyIds && form.thirdPartyIds.length > 0) {
     taskFilters.push(t => form.thirdPartyIds!.includes(t.thirdPartyId));
@@ -427,81 +357,14 @@ export default () => {
     taskFilters.push(t => t.name?.toLowerCase().includes(lowerCaseKeyword) || t.key.toLowerCase().includes(lowerCaseKeyword));
   }
 
-  const renderRequestStatisticsChart = () => {
-    if (requestStatisticsChartVisible) {
-      const thirdPartyRequestCounts = (requestStatistics || []).reduce<any[]>((s, t) => {
-        Object.keys(t.counts || {})
-          .forEach((r) => {
-            s.push({
-              id: t.id.toString(),
-              name: ThirdPartyId[t.id],
-              result: ThirdPartyRequestResultType[r],
-              count: t.counts[r],
-            });
-          });
-        return s;
-      }, []);
-
-      // console.log(dv.rows, data, thirdPartyRequestCounts);
-
-      return (
-        <Dialog
-          visible
-          onClose={() => setRequestStatisticsChartVisible(false)}
-          onCancel={() => setRequestStatisticsChartVisible(false)}
-          onOk={() => setRequestStatisticsChartVisible(false)}
-          closeable
-          footerActions={['ok']}
-          title={t('Requests overview')}
-          style={{ minWidth: 800 }}
-        >
-          <Chart
-            height={300}
-            data={thirdPartyRequestCounts}
-            autoFit
-          >
-            <Interval
-              adjust={[
-                {
-                  type: 'stack',
-                },
-              ]}
-              color={[
-                'result',
-                (result) => RequestResultTypeIntervalColorMap[ThirdPartyRequestResultType[result]],
-              ]}
-              position={'id*count'}
-            />
-            <Axis
-              name={'id'}
-              label={{
-                formatter: (id, item, index) => {
-                  return ThirdPartyId[id];
-                },
-              }}
-            />
-            <Tooltip
-              shared
-              title={'name'}
-            />
-            <Legend name={'result'} />
-          </Chart>
-        </Dialog>
-      );
-    } else {
-
-    }
-  };
-
-  console.log(form);
-
   const filteredTasks = tasks.filter(x => taskFilters.every(f => f(x)));
 
+  console.log(form, filteredTasks);
+
   return (
-    <div>
-      {renderRequestStatisticsChart()}
+    <div className={'h-full flex flex-col gap-1'}>
       {renderContextMenu()}
-      <div className="grid gap-4 items-center" style={{ gridTemplateColumns: 'auto 1fr' }}>
+      <div className="grid gap-x-4 gap-y-1 items-center" style={{ gridTemplateColumns: 'auto 1fr' }}>
         <div>{t('Source')}</div>
         <div className="flex items-center gap-4">
           {thirdPartyIds.map((s) => {
@@ -591,7 +454,7 @@ export default () => {
           />
         </div>
       </div>
-      <div className="flex items-center justify-between gap-2 mt-2">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
           <Button
             color={'primary'}
@@ -627,60 +490,9 @@ export default () => {
             <AiOutlineStop className={'text-medium'} />
             {t('Stop all')}
           </Button>
-
-          {tasks?.length > 0 && (
-            <div
-              className="request-overview"
-              onClick={() => {
-                setRequestStatisticsChartVisible(true);
-              }}
-            >
-              <div className={'title'}>{t('Requests overview')}</div>
-              {requestStatistics?.map((rs) => {
-                let successCount = 0;
-                let failureCount = 0;
-                Object.keys(rs.counts || {})
-                  .forEach((r) => {
-                    switch (parseInt(r)) {
-                      case ThirdPartyRequestResultType.Succeed:
-                        successCount += rs.counts[r];
-                        break;
-                      default:
-                        failureCount += rs.counts[r];
-                        break;
-                    }
-                  });
-                return (
-                  <div className={'third-party'}>
-                    <SimpleLabel status={'info'}>
-                      {ThirdPartyId[rs.id]}
-                    </SimpleLabel>
-                    <div className={'statistics'}>
-                      <Balloon.Tooltip
-                        trigger={(
-                          <span className={'success-count'}>{successCount}</span>
-                        )}
-                        align={'t'}
-                      >
-                        {t('Success')}
-                      </Balloon.Tooltip>
-                      /
-                      <Balloon.Tooltip
-                        trigger={(
-                          <span className={'failure-count'}>{failureCount}</span>
-                        )}
-                        align={'t'}
-                      >
-                        {t('failure')}
-                      </Balloon.Tooltip>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
         <div className="flex items-center gap-1">
+          <RequestStatistics />
           <Button
             size={'sm'}
             onPress={() => {
@@ -704,205 +516,218 @@ export default () => {
           </Button>
         </div>
       </div>
-      <Listbox
-        variant={'flat'}
-        isVirtualized
-        // className="max-w-xs"
-        label={'Select from 1000 items'}
-        virtualization={{
-          maxListboxHeight: 400,
-          itemHeight: 75,
-        }}
-        selectionMode={'multiple'}
+      <div
+        className={'grow overflow-hidden'}
+        ref={r => {
+        if (r && taskListHeight == 0) {
+          setTaskListHeight(r.clientHeight);
+        }
+      }}
       >
-        {filteredTasks.map((task, index) => {
-          const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
-          const selected = selectedTaskIds.indexOf(task.id) > -1;
-          return (
-            <ListboxItem key={index}>
-              <div
-                key={task.id}
-                onContextMenu={e => {
-                  console.log(`Opening context menu from ${task.id}:${task.name}`);
-                  e.preventDefault();
-                  if (!selectedTaskIdsRef.current.includes(task.id)) {
-                    setSelectedTaskIds([task.id]);
-                  }
-                  contextMenuAnchorPointRef.current = {
-                    x: e.clientX,
-                    y: e.clientY,
-                  };
-                  toggleMenu(true);
-                  forceUpdate();
-                }}
-                // className={`${selected ? 'selected' : ''}`}
-                className={'flex flex-col gap-1'}
-                // style={style}
-                onClick={() => onTaskClick(task.id)}
-              >
-                <div className={'flex items-center justify-between'}>
-                  <div className={'flex flex-col gap-1'}>
-                    <div className={'flex items-center gap-1'}>
-                      <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
-                      <span className={'text-lg'}>{task.name ?? task.key}</span>
-                    </div>
-                    <div className={'flex items-center gap-1'}>
-                      <span className={'opacity-60'}>{task.name && task.key}</span>
-                      <Chip
-                        size={'sm'}
-                        color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
-                        variant={'light'}
-                      >
-                        {t(DownloadTaskDtoStatus[task.status])}
-                        {task.current}
-                      </Chip>
-                      {task.status == DownloadTaskDtoStatus.Failed && (
+        {taskListHeight > 0 && (
+          <Listbox
+            variant={'flat'}
+            isVirtualized
+            className={'p-0'}
+            // className="max-w-xs"
+            label={'Select from 1000 items'}
+            virtualization={{
+              maxListboxHeight: taskListHeight,
+              itemHeight: 75,
+            }}
+            selectionMode={'multiple'}
+          >
+            {filteredTasks.map((task, index) => {
+              const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
+              const selected = selectedTaskIds.indexOf(task.id) > -1;
+              return (
+                <ListboxItem key={index}>
+                  <div
+                    key={task.id}
+                    onContextMenu={e => {
+                      console.log(`Opening context menu from ${task.id}:${task.name}`);
+                      e.preventDefault();
+                      if (!selectedTaskIdsRef.current.includes(task.id)) {
+                        setSelectedTaskIds([task.id]);
+                      }
+                      contextMenuAnchorPointRef.current = {
+                        x: e.clientX,
+                        y: e.clientY,
+                      };
+                      toggleMenu(true);
+                      forceUpdate();
+                    }}
+                    // className={`${selected ? 'selected' : ''}`}
+                    className={'flex flex-col gap-1'}
+                    // style={style}
+                    onClick={() => onTaskClick(task.id)}
+                  >
+                    <div className={'flex items-center justify-between'}>
+                      <div className={'flex flex-col gap-1'}>
+                        <div className={'flex items-center gap-1'}>
+                          <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
+                          <span className={'text-lg'}>{task.name ?? task.key}</span>
+                        </div>
+                        <div className={'flex items-center gap-1'}>
+                          <span className={'opacity-60'}>{task.name && task.key}</span>
+                          <Chip
+                            size={'sm'}
+                            color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
+                            variant={'light'}
+                          >
+                            {t(DownloadTaskDtoStatus[task.status])}
+                            {task.current}
+                          </Chip>
+                          {task.status == DownloadTaskDtoStatus.Failed && (
+                            <Button
+                              size={'sm'}
+                              color={'danger'}
+                              variant={'light'}
+                              onPress={() => {
+                                if (hasErrorMessage) {
+                                  createPortal(Modal, {
+                                    defaultVisible: true,
+                                    size: 'xl',
+                                    title: t('Error'),
+                                    children: (
+                                      <pre>{task.message}</pre>
+                                    ),
+                                  });
+                                }
+                              }}
+                              isIconOnly
+                            >
+                              <AiOutlineWarning className={'text-medium'} />
+                              {task.failureTimes}
+                            </Button>
+                          )}
+                          {task.nextStartDt && (
+                            <Chip
+                              size={'sm'}
+                              color={'default'}
+                            >
+                              {t('Next start time')}:
+                              {moment(task.nextStartDt)
+                                .format('YYYY-MM-DD HH:mm:ss')}
+                            </Chip>
+                          )}
+                        </div>
+                      </div>
+                      <div className={'flex items-center'}>
+                        {task.availableActions?.map((a, i) => {
+                          const action = parseInt(a, 10);
+                          switch (action) {
+                            case DownloadTaskAction.StartManually:
+                            case DownloadTaskAction.Restart:
+                              return (
+                                <Button
+                                  variant={'light'}
+                                  size={'sm'}
+                                  isIconOnly
+                                  onPress={() => {
+                                    startTasksManually([task.id]);
+                                  }}
+                                >
+                                  {a == DownloadTaskAction.Restart ? (
+                                    <AiOutlineRedo className={'text-lg'} />
+                                  ) : (
+                                    <AiOutlinePlayCircle className={'text-lg'} />
+                                  )}
+                                </Button>
+                              );
+                            case DownloadTaskAction.Disable:
+                              return (
+                                <Button
+                                  variant={'light'}
+                                  size={'sm'}
+                                  isIconOnly
+                                  onPress={() => {
+                                    BApi.downloadTask.stopDownloadTasks([task.id]);
+                                  }}
+                                >
+                                  <AiOutlineStop className={'text-lg'} />
+                                </Button>
+                              );
+                          }
+                          return;
+                        })}
                         <Button
-                          size={'sm'}
-                          color={'danger'}
                           variant={'light'}
+                          size={'sm'}
+                          isIconOnly
                           onPress={() => {
-                            if (hasErrorMessage) {
-                              createPortal(Modal, {
-                                defaultVisible: true,
-                                size: 'xl',
-                                title: t('Error'),
-                                children: (
-                                  <pre>{task.message}</pre>
-                                ),
-                              });
+                            createPortal(TaskDetailModal, {
+                              id: task.id,
+                            });
+                          }}
+                        >
+                          <AiOutlineEdit className={'text-lg'} />
+                        </Button>
+                        <Button
+                          variant={'light'}
+                          size={'sm'}
+                          isIconOnly
+                          onPress={() => {
+                            BApi.tool.openFileOrDirectory({ path: task.downloadPath });
+                          }}
+                        >
+                          <AiOutlineFolderOpen className={'text-lg'} />
+                        </Button>
+                        <Dropdown>
+                          <DropdownTrigger>
+                            <Button
+                              variant={'light'}
+                              size={'sm'}
+                              isIconOnly
+                            >
+                              <AiOutlineEllipsis className={'text-lg'} />
+                            </Button>
+                          </DropdownTrigger>
+                          <DropdownMenu onAction={key => {
+                            switch (key as string) {
+                              case 'delete':
+                                createPortal(Modal, {
+                                  defaultVisible: true,
+                                  title: t('Are you sure to delete it?'),
+                                  onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }),
+                                });
+                                break;
                             }
                           }}
-                          isIconOnly
-                        >
-                          <AiOutlineWarning className={'text-medium'} />
-                          {task.failureTimes}
-                        </Button>
-                      )}
-                      {task.nextStartDt && (
-                        <Chip
-                          size={'sm'}
-                          color={'default'}
-                        >
-                          {t('Next start time')}:
-                          {moment(task.nextStartDt)
-                            .format('YYYY-MM-DD HH:mm:ss')}
-                        </Chip>
-                      )}
+                          >
+                            <DropdownItem
+                              key="delete"
+                              startContent={<AiOutlineDelete className={'text-lg'} />}
+                              color={'danger'}
+                            >
+                              {t('Delete')}
+                            </DropdownItem>
+                          </DropdownMenu>
+                        </Dropdown>
+                      </div>
                     </div>
+                    <div className="progress">
+                      <Progress
+                        // value={task.progress}
+                        color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
+                        size={'sm'}
+                        value={task.progress}
+                        // textRender={() => `${task.progress?.toFixed(2)}%`}
+                        // progressive={t.status != DownloadTaskStatus.Failed}
+                      />
+                    </div>
+                    {/* <CircularProgress */}
+                    {/*   value={task.progress} */}
+                    {/*   color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
+                    {/*   size={'sm'} */}
+                    {/* /> */}
                   </div>
-                  <div className={'flex items-center'}>
-                    {task.availableActions?.map((a, i) => {
-                      const action = parseInt(a, 10);
-                      switch (action) {
-                        case DownloadTaskAction.StartManually:
-                        case DownloadTaskAction.Restart:
-                          return (
-                            <Button
-                              variant={'light'}
-                              size={'sm'}
-                              isIconOnly
-                              onPress={() => {
-                                startTasksManually([task.id]);
-                              }}
-                            >
-                              {a == DownloadTaskAction.Restart ? (
-                                <AiOutlineRedo className={'text-lg'} />
-                              ) : (
-                                <AiOutlinePlayCircle className={'text-lg'} />
-                              )}
-                            </Button>
-                          );
-                        case DownloadTaskAction.Disable:
-                          return (
-                            <Button
-                              variant={'light'}
-                              size={'sm'}
-                              isIconOnly
-                              onPress={() => {
-                                BApi.downloadTask.stopDownloadTasks([task.id]);
-                              }}
-                            >
-                              <AiOutlineStop className={'text-lg'} />
-                            </Button>
-                          );
-                      }
-                      return;
-                    })}
-                    <Button
-                      variant={'light'}
-                      size={'sm'}
-                      isIconOnly
-                      onPress={() => {
-                        createPortal(TaskDetailModal, {
-                          id: task.id,
-                        });
-                      }}
-                    >
-                      <AiOutlineEdit className={'text-lg'} />
-                    </Button>
-                    <Button
-                      variant={'light'}
-                      size={'sm'}
-                      isIconOnly
-                      onPress={() => {
-                        BApi.tool.openFileOrDirectory({ path: task.downloadPath });
-                      }}
-                    >
-                      <AiOutlineFolderOpen className={'text-lg'} />
-                    </Button>
-                    <Dropdown>
-                      <DropdownTrigger>
-                        <Button
-                          variant={'light'}
-                          size={'sm'}
-                          isIconOnly
-                        >
-                          <AiOutlineEllipsis className={'text-lg'} />
-                        </Button>
-                      </DropdownTrigger>
-                      <DropdownMenu onAction={key => {
-                        switch (key as string) {
-                          case 'delete':
-                            createPortal(Modal, {
-                              defaultVisible: true,
-                              title: t('Are you sure to delete it?'),
-                              onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }),
-                            });
-                            break;
-                        }
-                      }}
-                      >
-                        <DropdownItem
-                          key="delete"
-                          startContent={<AiOutlineDelete className={'text-lg'} />}
-                          color={'danger'}
-                        >
-                          {t('Delete')}
-                        </DropdownItem>
-                      </DropdownMenu>
-                    </Dropdown>
-                  </div>
-                </div>
-                <div className="progress">
-                  <Progress
-                    // value={task.progress}
-                    color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
-                    size={'sm'}
-                    // textRender={() => `${task.progress?.toFixed(2)}%`}
-                    // progressive={t.status != DownloadTaskStatus.Failed}
-                  />
-                </div>
-                {/* <CircularProgress */}
-                {/*   value={task.progress} */}
-                {/*   color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
-                {/*   size={'sm'} */}
-                {/* /> */}
-              </div>
-            </ListboxItem>
-          );
-        })}
-      </Listbox>
+                </ListboxItem>
+              );
+            })}
+          </Listbox>
+        )}
+      </div>
       {/* {tasks?.length > 0 ? ( */
       }
       {/*   <div */

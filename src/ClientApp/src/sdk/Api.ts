@@ -1535,7 +1535,7 @@ export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskAddInputModel
   autoRetry: boolean;
   /** @minLength 1 */
   downloadPath: string;
-  ignoreTasksWithSameKey: boolean;
+  isDuplicateAllowed: boolean;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskPutInputModel {

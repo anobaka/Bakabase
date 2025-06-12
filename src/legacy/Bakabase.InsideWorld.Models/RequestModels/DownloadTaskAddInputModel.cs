@@ -19,6 +19,6 @@ namespace Bakabase.InsideWorld.Models.RequestModels
         public string? Checkpoint { get; set; }
         public bool AutoRetry { get; set; } = true;
         [Required] public string DownloadPath { get; set; } = string.Empty;
-        public bool IgnoreTasksWithSameKey { get; set; }
+        public bool IsDuplicateAllowed { get; set; }
     }
 }

@@ -33,6 +33,7 @@ export default ({ cookie, target, onChange = (v) => {} }: {cookie: string | unde
     <div className={'cookie-validator'}>
       <div>
         <Textarea
+          size={'sm'}
           label={'Cookie'}
           value={cookie}
           onValueChange={(v) => {
