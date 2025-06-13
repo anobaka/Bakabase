@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Models.Models.Entities
+namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain
 {
     public class DownloadTask
     {
         public int Id { get; set; }
-        [Required] public string Key { get; set; } = string.Empty;
+        public string Key { get; set; } = null!;
+
         /// <summary>
         /// Populated during downloading
         /// </summary>
@@ -27,10 +25,18 @@ namespace Bakabase.InsideWorld.Models.Models.Entities
         public int? EndPage { get; set; }
         public string? Message { get; set; }
         public string? Checkpoint { get; set; }
-        public DownloadTaskStatus Status { get; set; } = DownloadTaskStatus.InProgress;
+        public DownloadTaskDtoStatus Status { get; set; }
+        public string DownloadPath { get; set; } = null!;
+        public string? Current { get; set; }
+        public int FailureTimes { get; set; }
         public bool AutoRetry { get; set; }
-        [Required]
-        public string DownloadPath { get; set; } = string.Empty;
+        public DateTime? NextStartDt { get; set; }
+        public HashSet<DownloadTaskAction> AvailableActions { get; set; } = new();
+
         [NotMapped] public string DisplayName => Name ?? Key;
+
+        public bool CanStart => AvailableActions.Contains(DownloadTaskAction.StartManually) ||
+                                AvailableActions.Contains(DownloadTaskAction.Restart) ||
+                                AvailableActions.Contains(DownloadTaskAction.StartAutomatically);
     }
 }

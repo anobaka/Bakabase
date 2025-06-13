@@ -231,7 +231,7 @@ export default ({
               description={(
                 <div>
                   <div>
-                    {t('Current listening port is {{port}}', { port: appContext?.serverAddresses?.[0]?.split(':').slice(-1)[0] })}
+                    {t('Current listening port is {{port}}', { port: appContext?.listeningAddresses?.[0]?.split(':').slice(-1)[0] })}
                   </div>
                   <div>
                     {t('The configurable port range is {{min}}-{{max}}', {
@@ -254,20 +254,6 @@ export default ({
               });
             }}
           />
-        );
-      },
-    },
-    {
-      label: '123',
-      renderValue: () => {
-        return (
-          <Link
-            onPress={e => {
-            e.preventDefault();
-            window.open('http://baidu.com', '_blank');
-          }}
-            href={'http://baidu.com'}
-          >123</Link>
         );
       },
     },

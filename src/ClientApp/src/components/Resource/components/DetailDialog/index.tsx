@@ -7,12 +7,13 @@ import {
   CloseCircleOutlined,
   DisconnectOutlined,
   FolderOpenOutlined,
-  PlayCircleOutlined, ProfileOutlined,
+  PlayCircleOutlined,
+  ProfileOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
 import { history } from 'ice';
 import _ from 'lodash';
-import { reloadResources } from 'i18next';
+import { MdCalendarMonth } from 'react-icons/md';
 import BasicInfo from './BasicInfo';
 import Properties from './Properties';
 import ResourceCover from '@/components/Resource/components/ResourceCover';
@@ -27,6 +28,7 @@ import PropertyValueScopePicker from '@/components/Resource/components/DetailDia
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 import CategoryPropertySortModal from '@/components/Resource/components/DetailDialog/CategoryPropertySortModal';
 import CustomPropertySortModal from '@/components/CustomPropertySortModal';
+import store from '@/store';
 
 
 interface Props extends DestroyableProps {
@@ -42,6 +44,7 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [resource, setResource] = useState<ResourceModel>();
+  const uiOptions = store.useModelState('uiOptions');
 
   const loadResource = async () => {
     // @ts-ignore
@@ -72,6 +75,8 @@ export default ({
   }, []);
 
   console.log(resource);
+
+  const hideTimeInfo = !!uiOptions.resource?.hideResourceTimeInfo;
 
   return (
     <Modal
@@ -105,42 +110,67 @@ export default ({
                   propertyInnerDirection={'ver'}
                 />
               </div>
-              <div className={'flex items-center justify-center'}>
-                <ButtonGroup size={'sm'}>
-                  <PlayableFiles
-                    PortalComponent={({ onClick }) => (
-                      <Button
-                        color="primary"
-                        onClick={onClick}
-                      >
-                        <PlayCircleOutlined />
-                        {t('Play')}
-                      </Button>
-                    )}
-                    resource={resource}
-                    autoInitialize
-                  />
+              <div className={'flex items-center justify-between relative'}>
+                <div className={'absolute flex justify-center left-0 right-0 w-full '}>
+                  <ButtonGroup size={'sm'}>
+                    <PlayableFiles
+                      PortalComponent={({ onClick }) => (
+                        <Button
+                          color="primary"
+                          onPress={onClick}
+                        >
+                          <PlayCircleOutlined />
+                          {t('Play')}
+                        </Button>
+                      )}
+                      resource={resource}
+                      autoInitialize
+                    />
+                    <Button
+                      color="default"
+                      onPress={() => {
+                        BApi.resource.openResourceDirectory({
+                          id: resource.id,
+                        });
+                      }}
+                    >
+                      <FolderOpenOutlined />
+                      {t('Open')}
+                    </Button>
+                    {/* <Button */}
+                    {/*   color={'danger'} */}
+                    {/*   onClick={() => onRemoved?.()} */}
+                    {/* > */}
+                    {/*   <DeleteOutlined /> */}
+                    {/*   {t('Remove')} */}
+                    {/* </Button> */}
+                  </ButtonGroup>
+                </div>
+                <div />
+                <div>
                   <Button
+                    className={hideTimeInfo ? 'opacity-20' : undefined}
+                    isIconOnly
+                    size={'sm'}
+                    variant={'light'}
                     color="default"
-                    onClick={() => {
-                      BApi.resource.openResourceDirectory({
-                        id: resource.id,
-                      });
-                    }}
+                    onPress={() => {
+                        BApi.options.patchUiOptions({
+                          ...uiOptions,
+                          resource: {
+                            ...uiOptions.resource,
+                            hideResourceTimeInfo: !hideTimeInfo,
+                          },
+                        });
+                      }}
                   >
-                    <FolderOpenOutlined />
-                    {t('Open')}
+                    <MdCalendarMonth className={'text-lg'} />
                   </Button>
-                  {/* <Button */}
-                  {/*   color={'danger'} */}
-                  {/*   onClick={() => onRemoved?.()} */}
-                  {/* > */}
-                  {/*   <DeleteOutlined /> */}
-                  {/*   {t('Remove')} */}
-                  {/* </Button> */}
-                </ButtonGroup>
+                </div>
               </div>
-              <BasicInfo resource={resource} />
+              {!hideTimeInfo && (
+                <BasicInfo resource={resource} />
+              )}
             </div>
             <div className="overflow-auto grow">
               <Properties

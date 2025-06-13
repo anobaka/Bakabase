@@ -27,7 +27,9 @@ export default ({ onAdded }: Props) => {
 
   useEffect(() => {
     BApi.property.getPropertiesByPool(PropertyPool.Internal).then(r => {
-      setProperties((r.data || []).filter(x => x.id in quickFilterMap));
+      setProperties((r.data || []).filter(x => x.id in quickFilterMap).sort((a, b) => {
+        return b.id - a.id;
+      }));
       setLoading(false);
     });
   }, []);

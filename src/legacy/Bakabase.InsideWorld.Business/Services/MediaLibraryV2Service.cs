@@ -55,6 +55,27 @@ public class MediaLibraryV2Service<TDbContext>(
         });
     }
 
+    public async Task Patch(int id, MediaLibraryV2PatchInputModel model)
+    {
+        await orm.UpdateByKey(id, data =>
+        {
+            if (model.Path.IsNotEmpty())
+            {
+                data.Path = model.Path;
+            }
+
+            if (model.Name.IsNotEmpty())
+            {
+                data.Name = model.Name;
+            }
+
+            if (model.ResourceCount.HasValue)
+            {
+                data.ResourceCount = model.ResourceCount.Value;
+            }
+        });
+    }
+
     public async Task SaveAll(MediaLibraryV2[] models)
     {
         var newData = models.Where(x => x.Id == 0).ToArray();
@@ -190,6 +211,9 @@ public class MediaLibraryV2Service<TDbContext>(
             }
 
             await resourceService.AddOrPutRange(changedResources.ToList());
+            await Patch(ml.Id,
+                new MediaLibraryV2PatchInputModel
+                    {ResourceCount = mlResources.Count - resourcesToBeDeleted.Count + newTempSyncResources.Count});
 
             // clean cache
             await cacheOrm.RemoveByKeys(conflictDbResources.Select(r => r.Id));
@@ -225,7 +249,7 @@ public class MediaLibraryV2Service<TDbContext>(
                         localizer.SyncMediaLibrary(mlMap?.GetValueOrDefault(id)?.Name ?? localizer.Unknown()),
                     ResourceType = BTaskResourceType.Any,
                     Type = BTaskType.Any,
-                    DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore
+                    DuplicateIdHandling = BTaskDuplicateIdHandling.Replace
                 };
                 await btm.Enqueue(taskHandlerBuilder);
             }

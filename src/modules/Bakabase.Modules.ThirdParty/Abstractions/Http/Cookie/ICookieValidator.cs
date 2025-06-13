@@ -1,8 +1,7 @@
-﻿using System.Threading.Tasks;
-using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 
-namespace Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures
+namespace Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie
 {
     public interface ICookieValidator
     {

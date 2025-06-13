@@ -4,21 +4,17 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
-using Bakabase.InsideWorld.Business.Resources;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.ThirdParty.Components.Http.Cookie;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.CookieValidation
+namespace Bakabase.Modules.ThirdParty.ThirdParties.Bilibili
 {
-    public class BilibiliCookieValidator : JsonBasedInsideWorldCookieValidator<DataWrapper<UserCredential>>
+    public class BilibiliCookieValidator(IHttpClientFactory httpClientFactory, IBakabaseLocalizer localizer)
+        : JsonBasedInsideWorldCookieValidator<DataWrapper<UserCredential>>(httpClientFactory, localizer)
     {
-        public BilibiliCookieValidator(IHttpClientFactory httpClientFactory, InsideWorldLocalizer localizer) : base(
-            httpClientFactory, localizer)
-        {
-        }
-
         public override CookieValidatorTarget Target => CookieValidatorTarget.BiliBili;
 
         protected override string Url => BiliBiliApiUrls.Session;

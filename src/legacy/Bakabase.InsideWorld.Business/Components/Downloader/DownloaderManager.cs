@@ -20,6 +20,8 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Resources;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
@@ -106,7 +108,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             }
         }
 
-        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts)
+        private async Task<BaseResponse> _tryStart(DownloadTaskDbModel task, bool stopConflicts)
         {
             if (!_validators.TryGetValue(task.ThirdPartyId, out var optionsValidator))
             {
@@ -141,8 +143,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
                     var service = scope.ServiceProvider.GetRequiredService<DownloadTaskService>();
                     var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
                     var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
-                        $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.DisplayName))}"];
-                    var fullMessage = _insideWorldLocalizer.Downloader_FailedToStart(task.DisplayName, message);
+                        $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.Name ?? a.Key))}"];
+                    var fullMessage = _insideWorldLocalizer.Downloader_FailedToStart(task.Name ?? task.Key, message);
                     return BaseResponseBuilder.Build(ResponseCode.Conflict, fullMessage);
                 }
             }
@@ -181,7 +183,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
+        public async Task<BaseResponse> Start(DownloadTaskDbModel task, bool stopConflicts)
         {
             return await _tryStart(task, stopConflicts);
         }

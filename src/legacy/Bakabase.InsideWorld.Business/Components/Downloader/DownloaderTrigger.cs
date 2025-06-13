@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Jobs;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.DependencyInjection;

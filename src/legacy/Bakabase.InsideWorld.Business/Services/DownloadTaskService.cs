@@ -12,6 +12,9 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Resources;
@@ -34,10 +37,11 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using NPOI.SS.Formula.Functions;
 using NPOI.XSSF.UserModel;
+using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class DownloadTaskService : ResourceService<InsideWorldDbContext, DownloadTask, int>
+    public class DownloadTaskService : ResourceService<InsideWorldDbContext, DownloadTaskDbModel, int>
     {
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
 
@@ -55,19 +59,19 @@ namespace Bakabase.InsideWorld.Business.Services
             _guiAdapter = guiAdapter;
         }
 
-        public async Task<DownloadTaskDto> GetDto(int id)
+        public async Task<DownloadTask> GetDto(int id)
         {
             var task = await GetByKey(id);
             return ToDto(new[] {task})[0];
         }
 
-        private DownloadTaskDto[] ToDto(IEnumerable<DownloadTask> tasks)
+        private DownloadTask[] ToDto(IEnumerable<DownloadTaskDbModel> tasks)
         {
             return tasks.Select(task => task.ToDto(DownloaderManager)).ToArray();
         }
 
-        protected async Task OnChange(int taskId, object value, Func<DownloadTask, object> getter,
-            Action<DownloadTask, object> setter)
+        protected async Task OnChange(int taskId, object value, Func<DownloadTaskDbModel, object> getter,
+            Action<DownloadTaskDbModel, object> setter)
         {
             try
             {
@@ -78,7 +82,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     // Logger.LogInformation(
                     //     $"Use new value: {value} to update download task to: {JsonConvert.SerializeObject(task)}");
                     await Update(task);
-                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
+                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTaskDbModel),
                         ToDto(new[] {task}).FirstOrDefault()!);
                 }
             }
@@ -89,7 +93,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<BaseResponse> Start(Expression<Func<DownloadTask, bool>>? exp = null,
+        public async Task<BaseResponse> Start(Expression<Func<DownloadTaskDbModel, bool>>? exp = null,
             DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.Ignore)
         {
             var tasks = await GetAll(exp);
@@ -109,7 +113,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return rsp;
         }
 
-        public async Task Stop(Expression<Func<DownloadTask, bool>>? exp = null)
+        public async Task Stop(Expression<Func<DownloadTaskDbModel, bool>>? exp = null)
         {
             var tasks = await GetAll(exp);
             var notDisabledTasks = tasks.Where(a => a.Status != DownloadTaskStatus.Disabled).ToArray();
@@ -197,7 +201,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
+            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTaskDbModel),
                 ToDto(new[] {task}).FirstOrDefault()!);
         }
 
@@ -219,7 +223,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 }).ToArray();
 
             var filteredTasks = targetTasks.GroupBy(a => a.ThirdPartyId).Select(a => a.FirstOrDefault()!).ToArray();
-            var startedTasks = new List<DownloadTaskDto>();
+            var startedTasks = new List<DownloadTask>();
 
             foreach (var tt in filteredTasks)
             {
@@ -263,13 +267,13 @@ namespace Bakabase.InsideWorld.Business.Services
             (t, s) => { t.Progress = (decimal) s; });
 
         public async Task OnCurrentChanged(int taskId) =>
-            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), await GetDto(taskId));
+            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTaskDbModel), await GetDto(taskId));
 
         public async Task OnCheckpointChanged(int taskId, string checkpoint) => await OnChange(taskId, checkpoint,
             t => t.Checkpoint,
             (t, s) => { t.Checkpoint = s?.ToString(); });
 
-        public async Task<DownloadTaskDto[]> GetAllDto()
+        public async Task<DownloadTask[]> GetAllDto()
         {
             var tasks = await GetAll();
             return ToDto(tasks);
@@ -317,11 +321,11 @@ namespace Bakabase.InsideWorld.Business.Services
                 await using var scope = ServiceProvider.CreateAsyncScope();
                 var tasks = await scope.ServiceProvider.GetRequiredService<DownloadTaskService>().GetAllDto();
                 var uiHub = scope.ServiceProvider.GetRequiredService<IHubContext<WebGuiHub, IWebGuiClient>>();
-                await uiHub.Clients.All.GetData(nameof(DownloadTask), tasks);
+                await uiHub.Clients.All.GetData(nameof(DownloadTaskDbModel), tasks);
             });
         }
 
-        public async Task<SingletonResponse<DownloadTask>> StopAndUpdateByKey(int id, Action<DownloadTask> modify)
+        public async Task<SingletonResponse<DownloadTaskDbModel>> StopAndUpdateByKey(int id, Action<DownloadTaskDbModel> modify)
         {
             await DownloaderManager.Stop(id, DownloaderStopBy.ManuallyStop);
             var rsp = await base.UpdateByKey(id, modify);
@@ -329,7 +333,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return rsp;
         }
 
-        public override Task<ListResponse<DownloadTask>> AddRange(IEnumerable<DownloadTask> resources)
+        public override Task<ListResponse<DownloadTaskDbModel>> AddRange(IEnumerable<DownloadTaskDbModel> resources)
         {
             var rsp = base.AddRange(resources);
             PushAllDataToUi();
@@ -369,7 +373,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var bytes = ExcelUtils.CreateExcel(new ExcelData(lines));
             var path = Path.Combine(_guiAdapter.GetDownloadsDirectory(),
-                $"{nameof(DownloadTask)}-{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+                $"{nameof(DownloadTaskDbModel)}-{DateTime.Now:yyyyMMddHHmmss}.xlsx");
             await File.WriteAllBytesAsync(path, bytes);
         }
     }

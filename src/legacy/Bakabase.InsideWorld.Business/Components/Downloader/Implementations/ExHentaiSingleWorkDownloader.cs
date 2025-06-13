@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
@@ -20,7 +21,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         {
         }
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
         {
             await DownloadSingleWork(task.Key, task.Checkpoint, task.DownloadPath, OnNameAcquiredInternal,
                 async current =>

@@ -12,6 +12,18 @@ export enum IwFsEntryChangeType {Created = 1, Renamed = 2, Changed = 3, Deleted 
 export const iwFsEntryChangeTypes = Object.keys(IwFsEntryChangeType).filter(k => typeof IwFsEntryChangeType[k] === 'number').map(t => ({label: t, value: IwFsEntryChangeType[t]}));
 export enum IwFsType {Unknown = 0, Directory = 100, Image = 200, CompressedFileEntry = 300, CompressedFilePart = 400, Symlink = 500, Video = 600, Audio = 700, Drive = 1000, Invalid = 10000}
 export const iwFsTypes = Object.keys(IwFsType).filter(k => typeof IwFsType[k] === 'number').map(t => ({label: t, value: IwFsType[t]}));
+export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
+export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
+export enum DownloadTaskAction {StartManually = 1, Restart = 2, Disable = 3, StartAutomatically = 4}
+export const downloadTaskActions = Object.keys(DownloadTaskAction).filter(k => typeof DownloadTaskAction[k] === 'number').map(t => ({label: t, value: DownloadTaskAction[t]}));
+export enum DownloadTaskActionOnConflict {NotSet = 0, StopOthers = 1, Ignore = 2}
+export const downloadTaskActionOnConflicts = Object.keys(DownloadTaskActionOnConflict).filter(k => typeof DownloadTaskActionOnConflict[k] === 'number').map(t => ({label: t, value: DownloadTaskActionOnConflict[t]}));
+export enum DownloadTaskDtoStatus {Idle = 100, InQueue = 200, Starting = 300, Downloading = 400, Stopping = 500, Complete = 600, Failed = 700, Disabled = 800}
+export const downloadTaskDtoStatuses = Object.keys(DownloadTaskDtoStatus).filter(k => typeof DownloadTaskDtoStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskDtoStatus[t]}));
+export enum DownloadTaskStartMode {AutoStart = 1, ManualStart = 2}
+export const downloadTaskStartModes = Object.keys(DownloadTaskStartMode).filter(k => typeof DownloadTaskStartMode[k] === 'number').map(t => ({label: t, value: DownloadTaskStartMode[t]}));
+export enum DownloadTaskStatus {InProgress = 100, Disabled = 200, Complete = 300, Failed = 400}
+export const downloadTaskStatuses = Object.keys(DownloadTaskStatus).filter(k => typeof DownloadTaskStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskStatus[t]}));
 export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200, Complete = 300, Failed = 400, Stopping = 500, Stopped = 600}
 export const downloaderStatuses = Object.keys(DownloaderStatus).filter(k => typeof DownloaderStatus[k] === 'number').map(t => ({label: t, value: DownloaderStatus[t]}));
 export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installing = 3}
@@ -54,18 +66,6 @@ export enum CoverSelectOrder {FilenameAscending = 1, FileModifyDtDescending = 2}
 export const coverSelectOrders = Object.keys(CoverSelectOrder).filter(k => typeof CoverSelectOrder[k] === 'number').map(t => ({label: t, value: CoverSelectOrder[t]}));
 export enum CustomDataType {String = 1, DateTime = 2, Number = 3, Enum = 4}
 export const customDataTypes = Object.keys(CustomDataType).filter(k => typeof CustomDataType[k] === 'number').map(t => ({label: t, value: CustomDataType[t]}));
-export enum DownloaderStopBy {ManuallyStop = 1, AppendToTheQueue = 2}
-export const downloaderStopBies = Object.keys(DownloaderStopBy).filter(k => typeof DownloaderStopBy[k] === 'number').map(t => ({label: t, value: DownloaderStopBy[t]}));
-export enum DownloadTaskAction {StartManually = 1, Restart = 2, Disable = 3, StartAutomatically = 4}
-export const downloadTaskActions = Object.keys(DownloadTaskAction).filter(k => typeof DownloadTaskAction[k] === 'number').map(t => ({label: t, value: DownloadTaskAction[t]}));
-export enum DownloadTaskActionOnConflict {NotSet = 0, StopOthers = 1, Ignore = 2}
-export const downloadTaskActionOnConflicts = Object.keys(DownloadTaskActionOnConflict).filter(k => typeof DownloadTaskActionOnConflict[k] === 'number').map(t => ({label: t, value: DownloadTaskActionOnConflict[t]}));
-export enum DownloadTaskDtoStatus {Idle = 100, InQueue = 200, Starting = 300, Downloading = 400, Stopping = 500, Complete = 600, Failed = 700, Disabled = 800}
-export const downloadTaskDtoStatuses = Object.keys(DownloadTaskDtoStatus).filter(k => typeof DownloadTaskDtoStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskDtoStatus[t]}));
-export enum DownloadTaskStartMode {AutoStart = 1, ManualStart = 2}
-export const downloadTaskStartModes = Object.keys(DownloadTaskStartMode).filter(k => typeof DownloadTaskStartMode[k] === 'number').map(t => ({label: t, value: DownloadTaskStartMode[t]}));
-export enum DownloadTaskStatus {InProgress = 100, Disabled = 200, Complete = 300, Failed = 400}
-export const downloadTaskStatuses = Object.keys(DownloadTaskStatus).filter(k => typeof DownloadTaskStatus[k] === 'number').map(t => ({label: t, value: DownloadTaskStatus[t]}));
 export enum ExHentaiDownloadTaskType {SingleWork = 1, Watched = 2, List = 3, Torrent = 4}
 export const exHentaiDownloadTaskTypes = Object.keys(ExHentaiDownloadTaskType).filter(k => typeof ExHentaiDownloadTaskType[k] === 'number').map(t => ({label: t, value: ExHentaiDownloadTaskType[t]}));
 export enum MatchResultType {Layer = 1, Regex = 2}
@@ -130,7 +130,7 @@ export enum CategoryResourceDisplayNameSegmentType {StaticText = 1, Property = 2
 export const categoryResourceDisplayNameSegmentTypes = Object.keys(CategoryResourceDisplayNameSegmentType).filter(k => typeof CategoryResourceDisplayNameSegmentType[k] === 'number').map(t => ({label: t, value: CategoryResourceDisplayNameSegmentType[t]}));
 export enum BTaskLevel {Default = 1, Critical = 2}
 export const bTaskLevels = Object.keys(BTaskLevel).filter(k => typeof BTaskLevel[k] === 'number').map(t => ({label: t, value: BTaskLevel[t]}));
-export enum BTaskStatus {NotStarted = 1, Running = 2, Paused = 3, Error = 4, Completed = 5, Stopped = 6}
+export enum BTaskStatus {NotStarted = 1, Running = 2, Paused = 3, Error = 4, Completed = 5, Cancelled = 6}
 export const bTaskStatuses = Object.keys(BTaskStatus).filter(k => typeof BTaskStatus[k] === 'number').map(t => ({label: t, value: BTaskStatus[t]}));
 export enum EnhancementRecordStatus {ContextCreated = 1, ContextApplied = 2}
 export const enhancementRecordStatuses = Object.keys(EnhancementRecordStatus).filter(k => typeof EnhancementRecordStatus[k] === 'number').map(t => ({label: t, value: EnhancementRecordStatus[t]}));

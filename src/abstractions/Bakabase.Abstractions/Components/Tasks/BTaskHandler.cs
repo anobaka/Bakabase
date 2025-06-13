@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bootstrap.Components.Tasks;
+using Bootstrap.Extensions;
 using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.Abstractions.Components.Tasks;
@@ -37,7 +38,7 @@ public class BTaskHandler
             }
 
             if ((Task.Status != BTaskStatus.Completed && Task.Status != BTaskStatus.Error &&
-                 Task.Status != BTaskStatus.Stopped) ||
+                 Task.Status != BTaskStatus.Cancelled) ||
                 !Task.IsPersistent)
             {
                 return null;
@@ -206,13 +207,13 @@ public class BTaskHandler
             {
                 if (e is OperationCanceledException oce && oce.CancellationToken == _cts.Token)
                 {
-                    await UpdateTask(t => t.Status = BTaskStatus.Stopped);
+                    await UpdateTask(t => t.Status = BTaskStatus.Cancelled);
                 }
                 else
                 {
                     await UpdateTask(t =>
                     {
-                        t.SetError((e as BTaskException)?.BriefMessage, string.Join('\n', e.Message, e.StackTrace));
+                        t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());
                         Task.Status = BTaskStatus.Error;
                     });
                 }

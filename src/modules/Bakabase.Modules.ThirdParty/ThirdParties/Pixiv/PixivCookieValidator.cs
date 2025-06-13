@@ -4,21 +4,16 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.CookieValidation.Infrastructures;
-using Bakabase.InsideWorld.Business.Resources;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
+using Bakabase.Modules.ThirdParty.Components.Http.Cookie;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models;
 
-namespace Bakabase.InsideWorld.Business.Components.CookieValidation
+namespace Bakabase.Modules.ThirdParty.ThirdParties.Pixiv
 {
-    public class PixivCookieValidator : JsonBasedInsideWorldCookieValidator<PixivBaseResponse>
+    public class PixivCookieValidator(IHttpClientFactory httpClientFactory, IBakabaseLocalizer localizer)
+        : JsonBasedInsideWorldCookieValidator<PixivBaseResponse>(httpClientFactory, localizer)
     {
-        public PixivCookieValidator(IHttpClientFactory httpClientFactory, InsideWorldLocalizer localizer) : base(
-            httpClientFactory, localizer)
-        {
-        }
-
         public override CookieValidatorTarget Target => CookieValidatorTarget.Pixiv;
         protected override string Url => PixivClient.LoginStateCheckUrl;
 

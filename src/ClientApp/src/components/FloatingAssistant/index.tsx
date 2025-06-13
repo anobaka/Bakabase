@@ -185,11 +185,11 @@ enum TaskAction {
 }
 
 const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
-  [TaskAction.Start]: task => task.isPersistent && (task.status == BTaskStatus.Stopped || task.status == BTaskStatus.Error || task.status == BTaskStatus.Completed),
+  [TaskAction.Start]: task => task.isPersistent && (task.status == BTaskStatus.Cancelled || task.status == BTaskStatus.Error || task.status == BTaskStatus.Completed),
   [TaskAction.Pause]: task => task.status == BTaskStatus.Running,
   [TaskAction.Resume]: task => task.status == BTaskStatus.Paused,
   [TaskAction.Stop]: task => task.status == BTaskStatus.Running,
-  [TaskAction.Clean]: task => !task.isPersistent && (task.status == BTaskStatus.Completed || task.status == BTaskStatus.Error || task.status == BTaskStatus.Stopped),
+  [TaskAction.Clean]: task => !task.isPersistent && (task.status == BTaskStatus.Completed || task.status == BTaskStatus.Error || task.status == BTaskStatus.Cancelled),
   [TaskAction.Config]: task => task.isPersistent,
 };
 
@@ -308,7 +308,7 @@ export default () => {
             <ClockCircleOutlined className={'text-base'} />
           </Chip>
         );
-      case BTaskStatus.Stopped:
+      case BTaskStatus.Cancelled:
         return (
           <Chip
             variant={'light'}
@@ -613,7 +613,7 @@ export default () => {
     );
   };
 
-  const clearableTasks = bTasks.filter((t) => !t.isPersistent && (t.status == BTaskStatus.Completed || t.status == BTaskStatus.Error || t.status == BTaskStatus.Stopped));
+  const clearableTasks = bTasks.filter((t) => !t.isPersistent && (t.status == BTaskStatus.Completed || t.status == BTaskStatus.Error || t.status == BTaskStatus.Cancelled));
 
   // log(tasks);
 

@@ -132,8 +132,11 @@ namespace Bakabase.InsideWorld.Business.Components
         public string BTask_FailedToRunTaskDueToUnknownTaskId(string id) =>
             this[nameof(BTask_FailedToRunTaskDueToUnknownTaskId), id];
 
-        public string BTask_FailedToRunTaskDueToIdExisting(string id) =>
-            this[nameof(BTask_FailedToRunTaskDueToIdExisting), id];
+        public string BTask_FailedToRunTaskDueToIdExisting(string id, string name) =>
+            this[nameof(BTask_FailedToRunTaskDueToIdExisting), id, name];
+
+        public string BTask_CanNotReplaceAnActiveTask(string id, string name) =>
+            this[nameof(BTask_CanNotReplaceAnActiveTask), id, name];
 
         public string Property_DescriptorIsNotFound(PropertyPool type, int propertyId)
         {

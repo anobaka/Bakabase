@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Extensions;
@@ -106,7 +108,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
 
         protected CancellationTokenSource Cts;
 
-        public async Task Start(DownloadTask task)
+        public async Task Start(DownloadTaskDbModel task)
         {
             if (Status is DownloaderStatus.Stopped or DownloaderStatus.JustCreated or DownloaderStatus.Failed or DownloaderStatus.Complete)
             {
@@ -162,7 +164,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
             }
         }
 
-        protected abstract Task StartCore(DownloadTask task, CancellationToken ct);
+        protected abstract Task StartCore(DownloadTaskDbModel task, CancellationToken ct);
 
         public virtual void Dispose()
         {

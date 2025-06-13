@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Bakabase.InsideWorld.Models.Constants;
 
-namespace Bakabase.InsideWorld.Models.RequestModels
+namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Input
 {
     public class DownloadTaskAddInputModel
     {

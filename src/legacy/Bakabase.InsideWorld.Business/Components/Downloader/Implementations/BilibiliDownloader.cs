@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
 using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Models.Constants;
@@ -67,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
             return Math.Floor(globalProgress * 100) / 100;
         }
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
         {
             //var p = 0m;
             //var unit = 100m / 23;

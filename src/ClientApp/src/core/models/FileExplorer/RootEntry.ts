@@ -108,7 +108,7 @@ class RootEntry extends Entry {
             case BTaskStatus.NotStarted:
               return 2;
             case BTaskStatus.Completed:
-            case BTaskStatus.Stopped:
+            case BTaskStatus.Cancelled:
               return 999;
           }
         })[0];

@@ -1,6 +1,7 @@
 ﻿using System;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -53,7 +54,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
         public DbSet<CategoryComponent> CategoryComponents { get; set; }
 
-        public DbSet<DownloadTask> DownloadTasks { get; set; }
+        public DbSet<DownloadTaskDbModel> DownloadTasks { get; set; }
 
         public DbSet<Password> Passwords { get; set; }
 
@@ -167,7 +168,7 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(a => a.Name);
             });
 
-            modelBuilder.Entity<DownloadTask>(t =>
+            modelBuilder.Entity<DownloadTaskDbModel>(t =>
             {
                 t.HasIndex(a => a.ThirdPartyId);
                 t.HasIndex(a => new {a.ThirdPartyId, a.Type});
@@ -199,7 +200,10 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => new {x.ResourceId, x.Scope}).IsUnique();
             });
 
-            modelBuilder.Entity<ResourceDbModel>(r => { r.HasIndex(x => x.Path).IsUnique(); });
+            modelBuilder.Entity<ResourceDbModel>(r =>
+            {
+                r.HasIndex(x => x.Path);
+            });
 
             modelBuilder.Entity<EnhancementRecord>(er =>
             {

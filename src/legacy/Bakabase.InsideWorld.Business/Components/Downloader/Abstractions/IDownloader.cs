@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -18,7 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions
         string Current { get; }
         Task Stop(DownloaderStopBy stopBy);
         DownloaderStopBy? StoppedBy { get; set; }
-        Task Start(DownloadTask task);
+        Task Start(DownloadTaskDbModel task);
         string Message { get; }
         int FailureTimes { get; }
         string Checkpoint { get; }

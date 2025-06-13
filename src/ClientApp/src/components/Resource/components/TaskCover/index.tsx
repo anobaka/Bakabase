@@ -92,7 +92,7 @@ export default ({
       case BTaskStatus.NotStarted:
         return 2;
       case BTaskStatus.Completed:
-      case BTaskStatus.Stopped:
+      case BTaskStatus.Cancelled:
         return 999;
     }
   }).filter(t => t.status == BTaskStatus.Running || t.status == BTaskStatus.Paused || t.status == BTaskStatus.Error || t.status == BTaskStatus.NotStarted)[0];

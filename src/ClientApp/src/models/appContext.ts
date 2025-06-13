@@ -1,12 +1,13 @@
 import BApi, { BApi as BApiType } from '@/sdk/BApi';
 
 interface IAppContext {
-  serverAddresses: string[];
+  listeningAddresses: string[];
+  apiEndpoint?: string;
   bApi2: BApiType;
 }
 export default {
   state: {
-    serverAddresses: [],
+    listeningAddresses: [],
     bApi2: BApi,
   } as IAppContext,
 

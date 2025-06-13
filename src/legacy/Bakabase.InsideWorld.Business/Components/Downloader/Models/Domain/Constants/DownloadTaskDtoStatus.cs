@@ -1,4 +1,4 @@
-﻿namespace Bakabase.InsideWorld.Models.Constants
+﻿namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants
 {
     public enum DownloadTaskDtoStatus
     {

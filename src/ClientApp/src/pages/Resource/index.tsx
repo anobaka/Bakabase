@@ -1,7 +1,5 @@
-import { MouseEvent, useCallback } from 'react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { DisconnectOutlined } from '@ant-design/icons';
 import type { ResourcesRef } from './components/Resources';

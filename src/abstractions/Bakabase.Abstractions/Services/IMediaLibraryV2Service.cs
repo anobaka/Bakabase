@@ -10,6 +10,7 @@ public interface IMediaLibraryV2Service
 {
     Task Add(MediaLibraryV2AddOrPutInputModel model);
     Task Put(int id, MediaLibraryV2AddOrPutInputModel model);
+    Task Patch(int id, MediaLibraryV2PatchInputModel model);
     Task SaveAll(MediaLibraryV2[] models);
     Task<MediaLibraryV2> Get(int id);
 

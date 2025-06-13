@@ -11,12 +11,13 @@ public static class PathFilterExtensions
     public static Dictionary<string, ResourcePathInfo> Filter(this List<PathFilter> filters, string rootPath,
         string[]? subPaths = null)
     {
+        rootPath = rootPath.StandardizePath()!;
         subPaths ??= Directory.GetFileSystemEntries(rootPath, "*", new EnumerationOptions
         {
             IgnoreInaccessible = true,
             RecurseSubdirectories = true,
             ReturnSpecialDirectories = false
-        });
+        }).Select(x => x.StandardizePath()!).ToArray();
         var subRelativePaths =
             subPaths.Select(x => x.Replace(rootPath, null).Trim(InternalOptions.DirSeparator)).ToList();
         var subPathRelativeSegments = subRelativePaths.Select(x => x.Split(InternalOptions.DirSeparator)).ToList();

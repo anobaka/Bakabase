@@ -1,6 +1,5 @@
 import { FolderOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from 'react';
-import { Message } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import { Button, Chip, Modal } from '@/components/bakaui';

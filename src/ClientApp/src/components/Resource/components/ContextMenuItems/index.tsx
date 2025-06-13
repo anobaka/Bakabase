@@ -1,8 +1,7 @@
 import { MenuItem } from '@szhsin/react-menu';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { ApiOutlined, BuildOutlined, DeleteOutlined,
-  ExportOutlined, FileSyncOutlined, ProfileOutlined, SendOutlined, SnippetsOutlined } from '@ant-design/icons';
+import { ApiOutlined, DeleteOutlined, ExportOutlined, FileSyncOutlined, SendOutlined } from '@ant-design/icons';
 import { history } from 'ice';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';

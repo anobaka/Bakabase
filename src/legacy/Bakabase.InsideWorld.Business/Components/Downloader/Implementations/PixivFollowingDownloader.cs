@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Web;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
@@ -35,7 +36,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         {
         }
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
         {
             if (UrlKeywords.Any(a => task.Key.Contains(a) && !task.Key.Contains($"novel/{a}")))
             {

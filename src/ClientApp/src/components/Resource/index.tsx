@@ -268,6 +268,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
               <HistoryOutlined />
             </Tooltip>
           )}
+          {uiOptions.resource?.displayResourceId && (
+            <Tooltip content={t('Resource ID')}>
+              <Chip
+                size={'sm'}
+                variant={'flat'}
+                radius={'sm'}
+              >{resource.id}</Chip>
+            </Tooltip>
+          )}
         </div>
         <PlayableFiles
           afterPlaying={reload}

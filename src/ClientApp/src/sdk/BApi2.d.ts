@@ -3418,6 +3418,8 @@ export interface components {
             path: string;
             /** Format: int32 */
             templateId?: number;
+            /** Format: int32 */
+            resourceCount: number;
             template?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryTemplate"];
         };
         "Bakabase.Abstractions.Models.Domain.PathConfiguration": {
@@ -3807,9 +3809,121 @@ export interface components {
             description?: string;
             canUpdate: boolean;
         };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel": {
+            /** Format: int32 */
+            id: number;
+            key: string;
+            name?: string;
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            /** Format: int32 */
+            type: number;
+            /** Format: double */
+            progress: number;
+            /** Format: date-time */
+            downloadStatusUpdateDt: string;
+            /** Format: int64 */
+            interval?: number;
+            /** Format: int32 */
+            startPage?: number;
+            /** Format: int32 */
+            endPage?: number;
+            message?: string;
+            checkpoint?: string;
+            status: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskStatus"];
+            autoRetry: boolean;
+            downloadPath: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskAction": 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [0: NotSet, 1: StopOthers, 2: Ignore]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskActionOnConflict": 0 | 1 | 2;
+        /**
+         * Format: int32
+         * @description [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskDtoStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
+        /**
+         * Format: int32
+         * @description [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400;
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask": {
+            /** Format: int32 */
+            id: number;
+            key: string;
+            name?: string;
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            /** Format: int32 */
+            type: number;
+            /** Format: double */
+            progress: number;
+            /** Format: date-time */
+            downloadStatusUpdateDt: string;
+            /** Format: int64 */
+            interval?: number;
+            /** Format: int32 */
+            startPage?: number;
+            /** Format: int32 */
+            endPage?: number;
+            message?: string;
+            checkpoint?: string;
+            status: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskDtoStatus"];
+            downloadPath: string;
+            current?: string;
+            /** Format: int32 */
+            failureTimes: number;
+            autoRetry: boolean;
+            /** Format: date-time */
+            nextStartDt?: string;
+            availableActions: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskAction"][];
+            readonly displayName: string;
+            readonly canStart: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskAddInputModel": {
+            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+            /** Format: int32 */
+            type: number;
+            keyAndNames?: {
+                [key: string]: string | null;
+            };
+            /** Format: int64 */
+            interval?: number;
+            /** Format: int32 */
+            startPage?: number;
+            /** Format: int32 */
+            endPage?: number;
+            checkpoint?: string;
+            autoRetry: boolean;
+            downloadPath: string;
+            isDuplicateAllowed: boolean;
+        };
         "Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskDeleteInputModel": {
             ids?: number[];
             thirdPartyId?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskPutInputModel": {
+            /** Format: int64 */
+            interval?: number;
+            /** Format: int32 */
+            startPage?: number;
+            /** Format: int32 */
+            endPage?: number;
+            checkpoint?: string;
+            autoRetry: boolean;
+        };
+        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskStartRequestModel": {
+            ids: number[];
+            actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants.DownloadTaskActionOnConflict"];
         };
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
@@ -4053,6 +4167,8 @@ export interface components {
             coverFit: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverFit"];
             displayContents: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ResourceDisplayContent"];
             disableCoverCarousel: boolean;
+            displayResourceId: boolean;
+            hideResourceTimeInfo: boolean;
         };
         /**
          * Format: int32
@@ -4140,30 +4256,6 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.CoverSelectOrder": 1 | 2;
         /**
          * Format: int32
-         * @description [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.DownloadTaskAction": 1 | 2 | 3 | 4;
-        /**
-         * Format: int32
-         * @description [0: NotSet, 1: StopOthers, 2: Ignore]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.DownloadTaskActionOnConflict": 0 | 1 | 2;
-        /**
-         * Format: int32
-         * @description [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.DownloadTaskDtoStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
-        /**
-         * Format: int32
-         * @description [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400;
-        /**
-         * Format: int32
          * @description [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
          * @enum {integer}
          */
@@ -4240,7 +4332,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics": {
             id: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
-            counts: {
+            counts?: {
                 [key: string]: number;
             };
         };
@@ -4309,38 +4401,6 @@ export interface components {
             /** Format: int32 */
             count: number;
         };
-        "Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto": {
-            /** Format: int32 */
-            id: number;
-            key: string;
-            name: string;
-            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
-            /** Format: int32 */
-            type: number;
-            /** Format: double */
-            progress: number;
-            /** Format: date-time */
-            downloadStatusUpdateDt: string;
-            /** Format: int64 */
-            interval?: number;
-            /** Format: int32 */
-            startPage?: number;
-            /** Format: int32 */
-            endPage?: number;
-            message: string;
-            checkpoint: string;
-            status: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskDtoStatus"];
-            downloadPath: string;
-            current: string;
-            /** Format: int32 */
-            failureTimes: number;
-            autoRetry: boolean;
-            /** Format: date-time */
-            nextStartDt?: string;
-            availableActions: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskAction"][];
-            readonly displayName: string;
-            readonly canStart: boolean;
-        };
         "Bakabase.InsideWorld.Models.Models.Dtos.PlaylistDto": {
             /** Format: int32 */
             id: number;
@@ -4376,31 +4436,6 @@ export interface components {
             description?: string;
             json: string;
         };
-        "Bakabase.InsideWorld.Models.Models.Entities.DownloadTask": {
-            /** Format: int32 */
-            id: number;
-            key: string;
-            name?: string;
-            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
-            /** Format: int32 */
-            type: number;
-            /** Format: double */
-            progress: number;
-            /** Format: date-time */
-            downloadStatusUpdateDt: string;
-            /** Format: int64 */
-            interval?: number;
-            /** Format: int32 */
-            startPage?: number;
-            /** Format: int32 */
-            endPage?: number;
-            message?: string;
-            checkpoint?: string;
-            status: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskStatus"];
-            autoRetry: boolean;
-            downloadPath: string;
-            readonly displayName: string;
-        };
         "Bakabase.InsideWorld.Models.Models.Entities.Password": {
             text: string;
             /** Format: int32 */
@@ -4413,38 +4448,6 @@ export interface components {
             description?: string;
             componentAssemblyQualifiedTypeName: string;
             json: string;
-        };
-        "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel": {
-            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
-            /** Format: int32 */
-            type: number;
-            keyAndNames?: {
-                [key: string]: string | null;
-            };
-            /** Format: int64 */
-            interval?: number;
-            /** Format: int32 */
-            startPage?: number;
-            /** Format: int32 */
-            endPage?: number;
-            checkpoint?: string;
-            autoRetry: boolean;
-            downloadPath: string;
-            isDuplicateAllowed: boolean;
-        };
-        "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel": {
-            /** Format: int64 */
-            interval?: number;
-            /** Format: int32 */
-            startPage?: number;
-            /** Format: int32 */
-            endPage?: number;
-            checkpoint?: string;
-            autoRetry: boolean;
-        };
-        "Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel": {
-            ids: number[];
-            actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Models.Constants.DownloadTaskActionOnConflict"];
         };
         "Bakabase.InsideWorld.Models.RequestModels.ExHentaiDownloadTaskAddInputModel": {
             type: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ExHentaiDownloadTaskType"];
@@ -4993,6 +4996,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask]": {
             /** Format: int32 */
             code: number;
@@ -5005,23 +5020,11 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Aos.PreviewerItem"][];
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto"][];
-        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.PlaylistDto]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.PlaylistDto"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.DownloadTask"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.Password]": {
             /** Format: int32 */
@@ -5287,6 +5290,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.FileExplorer.Information.IwFsEntryLazyInfo]": {
             /** Format: int32 */
             code: number;
@@ -5394,12 +5403,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.PlaylistDto]": {
             /** Format: int32 */
@@ -8053,9 +8056,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]"];
                 };
             };
         };
@@ -8069,10 +8072,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskAddInputModel"];
             };
         };
         responses: {
@@ -8082,9 +8085,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Models.Models.Entities.DownloadTask]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]"];
                 };
             };
         };
@@ -8135,9 +8138,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Dtos.DownloadTaskDto]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask]"];
                 };
             };
         };
@@ -8153,10 +8156,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskPutInputModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskPutInputModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskPutInputModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskPutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskPutInputModel"];
             };
         };
         responses: {
@@ -8206,10 +8209,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel"];
-                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel"];
-                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel"];
-                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskStartRequestModel"];
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskStartRequestModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskStartRequestModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskStartRequestModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskStartRequestModel"];
             };
         };
         responses: {

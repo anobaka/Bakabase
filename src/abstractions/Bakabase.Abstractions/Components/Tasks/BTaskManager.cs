@@ -86,14 +86,24 @@ public class BTaskManager : IAsyncDisposable
             switch (taskBuilder.DuplicateIdHandling)
             {
                 case BTaskDuplicateIdHandling.Reject:
-                    throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(handler.Task.Name));
+                    throw new Exception(_localizer.BTask_FailedToRunTaskDueToIdExisting(handler.Id, handler.Task.Name));
                 case BTaskDuplicateIdHandling.Ignore:
                     return;
                 case BTaskDuplicateIdHandling.Replace:
-                    await Stop(taskBuilder.Id);
-                    await Clean(taskBuilder.Id);
-                    await Enqueue(taskBuilder);
-                    return;
+                {
+                    var currentTask = _taskMap[handler.Id];
+                    if (currentTask.Task.Status is BTaskStatus.Error or BTaskStatus.Completed or BTaskStatus.Cancelled)
+                    {
+                        await Clean(taskBuilder.Id);
+                        await Enqueue(taskBuilder);
+                    }
+                    else
+                    {
+                        throw new Exception(_localizer.BTask_CanNotReplaceAnActiveTask(handler.Id, handler.Task.Name));
+                    }
+
+                    break;
+                }
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -182,7 +192,7 @@ public class BTaskManager : IAsyncDisposable
             case BTaskStatus.NotStarted:
             case BTaskStatus.Error:
             case BTaskStatus.Completed:
-            case BTaskStatus.Stopped:
+            case BTaskStatus.Cancelled:
             {
                 if (!_getConflictTasks(d).Any())
                 {
@@ -285,7 +295,7 @@ public class BTaskManager : IAsyncDisposable
                  {
                      Task:
                      {
-                         IsPersistent: false, Status: BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Stopped
+                         IsPersistent: false, Status: BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.Cancelled
                      }
                  }))
         {

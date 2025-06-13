@@ -6,10 +6,14 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
 using Bootstrap.Extensions;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.InsideWorld.Models.Models.Entities;
+using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 {
@@ -19,7 +23,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             downloader.Status is DownloaderStatus.Downloading or DownloaderStatus.Starting
                 or DownloaderStatus.Stopping;
 
-        public static DownloadTaskDto? ToDto(this DownloadTask? task, DownloaderManager downloaderManager)
+        public static DownloadTask? ToDto(this DownloadTaskDbModel? task, DownloaderManager downloaderManager)
         {
             if (task == null)
             {
@@ -131,7 +135,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 }
             }
 
-            var dto = new DownloadTaskDto
+            var dto = new DownloadTask
             {
                 Id = task.Id,
                 DownloadStatusUpdateDt = task.DownloadStatusUpdateDt,

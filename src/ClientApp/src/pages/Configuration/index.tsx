@@ -9,6 +9,7 @@ import Functional from '@/pages/Configuration/components/Functional';
 import Others from '@/pages/Configuration/components/Others';
 import BApi from '@/sdk/BApi';
 import type { BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo } from '@/sdk/Api';
+import Development from '@/pages/Configuration/components/Development';
 
 const ConfigurationPage = function (props) {
   const { t } = useTranslation();
@@ -37,6 +38,7 @@ const ConfigurationPage = function (props) {
       <Functional applyPatches={applyPatches} />
       <Others applyPatches={applyPatches} />
       <AppInfo appInfo={appInfo} />
+      <Development />
       <ContactUs />
     </div>
   );

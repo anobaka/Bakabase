@@ -1,15 +1,12 @@
-import { Button, Message, Overlay } from '@alifd/next';
+import { Message, Overlay } from '@alifd/next';
 import React from 'react';
 import * as dayjs from 'dayjs';
 import * as duration from 'dayjs/plugin/duration';
 import type ReactPlayer from 'react-player/lazy';
 import MediaPlayer from '@/components/MediaPlayer';
-import { MediaType, PlaylistItemType } from '@/sdk/constants';
-import CustomIcon from '@/components/CustomIcon';
+import { MediaType } from '@/sdk/constants';
 import { captureVideoFrame } from '@/components/utils';
-import { PlaylistCollection } from '@/components/Playlist';
 import BApi from '@/sdk/BApi';
-import FavoritesSelector from '@/pages/Resource/components/FavoritesSelector';
 import CoverSaveButton from '@/components/Resource/components/CoverSaveButton';
 
 dayjs.extend(duration);

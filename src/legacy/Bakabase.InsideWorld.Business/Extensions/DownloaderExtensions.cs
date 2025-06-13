@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.InsideWorld.Models.RequestModels;
@@ -16,12 +19,12 @@ namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class DownloaderExtensions
     {
-        public static ListResponse<DownloadTask> AddTasks(this DownloadTaskAddInputModel model,
+        public static ListResponse<DownloadTaskDbModel> AddTasks(this DownloadTaskAddInputModel model,
             IStringLocalizer localizer)
         {
             if (!SpecificEnumUtils<ThirdPartyId>.Values.Contains(model.ThirdPartyId))
             {
-                return ListResponseBuilder<DownloadTask>.BuildBadRequest(
+                return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(
                     localizer[SharedResource.Downloader_UnknownThirdPartyId, model.ThirdPartyId]);
             }
 
@@ -46,7 +49,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
 
             if (!validTypes.Contains(model.Type))
             {
-                return ListResponseBuilder<DownloadTask>.BuildBadRequest(
+                return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(
                     localizer[SharedResource.Downloader_UnknownType, model.Type]);
             }
 
@@ -65,7 +68,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                         if (model.KeyAndNames?.Any() != true ||
                             model.KeyAndNames.Any(a => !long.TryParse(a.Key, out _)))
                         {
-                            return ListResponseBuilder<DownloadTask>.BuildBadRequest(
+                            return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(
                                 localizer[SharedResource.Downloader_BilibiliFavoritesIsMissing]);
                         }
 
@@ -84,7 +87,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                         case ExHentaiDownloadTaskType.Torrent:
                             if (model.KeyAndNames.IsNullOrEmpty())
                             {
-                                return ListResponseBuilder<DownloadTask>.BuildBadRequest(
+                                return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(
                                     localizer[SharedResource.Downloader_KeyIsMissing]);
                             }
 
@@ -95,7 +98,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                         case ExHentaiDownloadTaskType.List:
                             if (model.KeyAndNames.IsNullOrEmpty())
                             {
-                                return ListResponseBuilder<DownloadTask>.BuildBadRequest(
+                                return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(
                                     localizer[SharedResource.Downloader_KeyIsMissing]);
                             }
 
@@ -117,7 +120,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                             case PixivDownloadTaskType.Ranking:
                                 if (model.KeyAndNames.IsNullOrEmpty())
                                 {
-                                    return ListResponseBuilder<DownloadTask>.BuildBadRequest(
+                                    return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(
                                         localizer[SharedResource.Downloader_KeyIsMissing]);
                                 }
 
@@ -135,7 +138,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
 
             if (model.KeyAndNames?.Any() == true)
             {
-                var tasks = model.KeyAndNames.Select(sn => new DownloadTask
+                var tasks = model.KeyAndNames.Select(sn => new DownloadTaskDbModel
                 {
                     ThirdPartyId = model.ThirdPartyId,
                     Interval = model.Interval,
@@ -146,12 +149,12 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     DownloadPath = model.DownloadPath,
                     AutoRetry = model.AutoRetry
                 }).ToList();
-                return new ListResponse<DownloadTask>(tasks);
+                return new ListResponse<DownloadTaskDbModel>(tasks);
             }
 
             if (doNotNeedKey)
             {
-                var task = new DownloadTask
+                var task = new DownloadTaskDbModel
                 {
                     ThirdPartyId = model.ThirdPartyId,
                     Interval = model.Interval,
@@ -160,10 +163,10 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     DownloadPath = model.DownloadPath,
                     AutoRetry = model.AutoRetry
                 };
-                return new ListResponse<DownloadTask>([task]);
+                return new ListResponse<DownloadTaskDbModel>([task]);
             }
 
-            return ListResponseBuilder<DownloadTask>.BuildBadRequest(localizer[SharedResource.Downloader_KeyIsMissing]);
+            return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(localizer[SharedResource.Downloader_KeyIsMissing]);
         }
     }
 }

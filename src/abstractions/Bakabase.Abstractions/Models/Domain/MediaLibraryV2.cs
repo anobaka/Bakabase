@@ -6,6 +6,7 @@ public record MediaLibraryV2
     public string Name { get; set; } = null!;
     public string Path { get; set; } = null!;
     public int? TemplateId { get; set; }
+    public int ResourceCount { get; set; }
 
     public MediaLibraryTemplate? Template { get; set; }
 }

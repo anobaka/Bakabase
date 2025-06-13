@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdateEffect } from 'react-use';
 import { ApiOutlined, DeleteOutlined, DisconnectOutlined } from '@ant-design/icons';
+import { AiOutlineClose } from 'react-icons/ai';
+import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from 'react-icons/md';
 import type { ResourceSearchFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';
 import { PropertyPool, SearchOperation } from '@/sdk/constants';
@@ -94,13 +96,16 @@ export default ({
                 <DropdownItem
                   key={operation}
                   onClick={() => {
-                    refreshValue({
-                      ...filter,
-                      operation: operation,
-                    });
-                  }}
+                      refreshValue({
+                        ...filter,
+                        operation: operation,
+                      });
+                    }}
                 >
                   {t(`SearchOperation.${SearchOperation[operation]}`)}
+                  <Tooltip content={t('123')}>
+                    123
+                  </Tooltip>
                 </DropdownItem>
               );
             })}
@@ -155,109 +160,108 @@ export default ({
   };
 
   return (
-    <div
-      className={`flex rounded p-1 items-center ${filter.disabled ? '' : 'group/filter-operations'} relative rounded`}
-      style={{ backgroundColor: 'var(--bakaui-overlap-background)' }}
-    >
-      {filter.disabled && (
-        <div
-          className={'absolute top-0 left-0 w-full h-full flex items-center justify-center z-20 group/filter-disable-cover rounded cursor-not-allowed'}
-          style={{ backgroundColor: 'hsla(from var(--bakaui-color) h s l / 50%)' }}
-        >
-          <Tooltip
-            content={t('Click to enable')}
-          >
+    <Tooltip
+      showArrow
+      offset={0}
+      placement={'top'}
+      content={(
+        <>
+          <div className={'flex items-center'}>
             <Button
               size={'sm'}
               variant={'light'}
+              color={filter.disabled ? 'success' : 'warning'}
               isIconOnly
-              onClick={() => {
+              // className={'w-auto min-w-fit px-1'}
+              onPress={() => {
                 changeFilter({
                   ...filter,
-                  disabled: false,
+                  disabled: !filter.disabled,
                 });
               }}
             >
-              <ApiOutlined className={'text-base group-hover/filter-disable-cover:block text-success hidden'} />
-              <DisconnectOutlined className={'text-base group-hover/filter-disable-cover:hidden block'} />
+              {filter.disabled ? (
+                <MdOutlineFilterAlt className={'text-lg'} />
+              ) : (
+                <MdOutlineFilterAltOff className={'text-lg'} />
+              )}
             </Button>
-          </Tooltip>
-        </div>
+            <Button
+              size={'sm'}
+              variant={'light'}
+              color={'danger'}
+              isIconOnly
+              // className={'w-auto min-w-fit px-1'}
+              onPress={onRemove}
+            >
+              <AiOutlineClose className={'text-base'} />
+            </Button>
+          </div>
+        </>
       )}
+    >
       <div
-        className={'group-hover/filter-operations:flex hidden absolute top-[-10px] right-[-10px] z-10'}
+        className={`flex rounded p-1 items-center ${filter.disabled ? '' : 'group/filter-operations'} relative rounded`}
+        style={{ backgroundColor: 'var(--bakaui-overlap-background)' }}
       >
-        <Button
-          size={'sm'}
-          variant={'light'}
-          color={'warning'}
-          isIconOnly
-          className={'w-auto min-w-fit px-1'}
-          onClick={() => {
-            changeFilter({
-              ...filter,
-              disabled: true,
-            });
-          }}
+        {filter.disabled && (
+          <div
+            className={'absolute top-0 left-0 w-full h-full flex items-center justify-center z-20 group/filter-disable-cover rounded cursor-not-allowed'}
+          >
+            <MdOutlineFilterAltOff className={'text-lg text-warning'} />
+          </div>
+        )}
+        <div
+          className={`flex items-center ${filter.disabled ? 'opacity-60' : ''}`}
         >
-          <DisconnectOutlined className={'text-base'} />
-        </Button>
-        <Button
-          size={'sm'}
-          variant={'light'}
-          color={'danger'}
-          isIconOnly
-          className={'w-auto min-w-fit px-1'}
-          onClick={onRemove}
-        >
-          <DeleteOutlined className={'text-base'} />
-        </Button>
+          <div className={''}>
+            <Button
+              className={'min-w-fit pl-2 pr-2'}
+              color={'primary'}
+              variant={'light'}
+              size={'sm'}
+              onPress={() => {
+                PropertySelector.show({
+                  v2: true,
+                  selection: filter.propertyId == undefined
+                    ? undefined
+                    : [{
+                      id: filter.propertyId,
+                      pool: filter.propertyPool!,
+                    }],
+                  onSubmit: async (selectedProperties) => {
+                    const property = selectedProperties[0]!;
+                    const availableOperations = (await BApi.resource.getSearchOperationsForProperty({
+                      propertyPool: property.pool,
+                      propertyId: property.id,
+                    })).data || [];
+                    const nf = {
+                      ...filter,
+                      propertyId: property.id,
+                      propertyPool: property.pool,
+                      dbValue: undefined,
+                      bizValue: undefined,
+                      property,
+                      availableOperations,
+                    };
+                    refreshValue(nf);
+                  },
+                  multiple: false,
+                  pool: PropertyPool.All,
+                  addable: false,
+                  editable: false,
+                });
+              }}
+            >
+              {filter.property ? filter.property.name ?? t('Unknown property') : t('Property')}
+            </Button>
+          </div>
+          <div className={''}>
+            {renderOperations()}
+          </div>
+          {renderValue()}
+        </div>
       </div>
-      <div className={''}>
-        <Button
-          className={'min-w-fit pl-2 pr-2'}
-          color={'primary'}
-          variant={'light'}
-          size={'sm'}
-          onClick={() => {
-            PropertySelector.show({
-              selection: filter.propertyId == undefined
-                ? undefined
-                : [{
-                  id: filter.propertyId,
-                  pool: filter.propertyPool!,
-                }],
-              onSubmit: async (selectedProperties) => {
-                const property = selectedProperties[0]!;
-                const availableOperations = (await BApi.resource.getSearchOperationsForProperty({
-                  propertyPool: property.pool,
-                  propertyId: property.id,
-                })).data || [];
-                const nf = {
-                  ...filter,
-                  propertyId: property.id,
-                  propertyPool: property.pool,
-                  dbValue: undefined,
-                  bizValue: undefined,
-                  property,
-                  availableOperations,
-                };
-                refreshValue(nf);
-              },
-              multiple: false,
-              pool: PropertyPool.All,
-              addable: false,
-              editable: false,
-            });
-          }}
-        >
-          {filter.property ? filter.property.name ?? t('Unknown property') : t('Property')}
-        </Button>
-      </div>
-      <div className={''}>
-        {renderOperations()}
-      </div>
-      {renderValue()}
-    </div>
+    </Tooltip>
   );
 };

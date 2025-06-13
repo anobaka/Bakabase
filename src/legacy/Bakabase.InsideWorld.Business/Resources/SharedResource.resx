@@ -388,7 +388,7 @@ The version of lux is not limited.</value>
     <value>Failed to run task: task id [{0}] is not found</value>
   </data>
   <data name="BTask_FailedToRunTaskDueToIdExisting" xml:space="preserve">
-    <value>Failed to run task: task id [{0}] exists</value>
+    <value>Failed to run task: task [{0}]{1} exists</value>
   </data>
   <data name="MoveFile" xml:space="preserve">
     <value>Move [{0}] to [{1}]</value>
@@ -410,5 +410,8 @@ The version of lux is not limited.</value>
   </data>
   <data name="SyncMediaLibrary" xml:space="preserve">
     <value>Sync media library: {0}</value>
+  </data>
+  <data name="BTask_CanNotReplaceAnActiveTask" xml:space="preserve">
+    <value>An active task [{0}]{1} can not be replaced</value>
   </data>
 </root>

@@ -158,33 +158,10 @@ export default ({
     );
   }
 
-  if (actions.length > 0) {
-    return (
-      <Tooltip content={(
-        <div className={'flex items-center gap-1'}>
-          {actions}
-        </div>
-      )}
-      >
-        <Card isPressable onPress={onClick}>
-          <CardBody className={'flex flex-col gap-1'}>
-            {(hidePool || hideType) && (
-              <div className="flex items-center gap-1">
-                {!hideType && <PropertyTypeIcon type={property.type} />}
-                {!hidePool && <PropertyPoolIcon pool={property.pool} />}
-              </div>
-            )}
-            <div className={'text-medium text-left'}>{property.name}</div>
-          </CardBody>
-        </Card>
-      </Tooltip>
-    );
-  }
-
-  return (
+  const card = (
     <Card isPressable onPress={onClick}>
       <CardBody className={'flex flex-col gap-1'}>
-        {(hidePool || hideType) && (
+        {(!hidePool || !hideType) && (
           <div className="flex items-center gap-1">
             {!hideType && <PropertyTypeIcon type={property.type} />}
             {!hidePool && <PropertyPoolIcon pool={property.pool} />}
@@ -194,5 +171,20 @@ export default ({
       </CardBody>
     </Card>
   );
+
+  if (actions.length > 0) {
+    return (
+      <Tooltip content={(
+        <div className={'flex items-center gap-1'}>
+          {actions}
+        </div>
+      )}
+      >
+        {card}
+      </Tooltip>
+    );
+  }
+
+  return card;
 };
 

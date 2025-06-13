@@ -90,7 +90,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, [useCache]);
 
   const loadCover = useCallback((disableBrowserCache: boolean) => {
-    const serverAddresses = appContext.serverAddresses ?? [serverConfig.apiEndpoint];
+    const serverAddresses = appContext.listeningAddresses ?? [serverConfig.apiEndpoint];
     const serverAddress = serverAddresses[serverAddresses.length - 1];
     const urls: string[] = [];
 

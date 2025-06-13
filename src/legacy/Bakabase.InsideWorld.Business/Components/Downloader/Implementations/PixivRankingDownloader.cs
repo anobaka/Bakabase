@@ -11,6 +11,7 @@ using System.Web;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.InsideWorld.Business.Services;
@@ -36,7 +37,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         {
         }
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
         {
             // Illustrations in ranking will be changed on every day and there is not so many of them, so we do not use any checkpoint.
             var page = 0;

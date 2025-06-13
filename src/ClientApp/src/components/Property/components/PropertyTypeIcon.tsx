@@ -59,7 +59,7 @@ export default ({ type, textVariant = 'default', ...props }: Props) => {
             className={'text-medium'}
             {...props}
           />
-          {t(PropertyType[type])}
+          <div className={'text-xs'}>{t(PropertyType[type])}</div>
         </div>
       );
     case 'tooltip':

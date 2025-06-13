@@ -24,6 +24,8 @@ namespace Bakabase.InsideWorld.Models.Configs
             public CoverFit CoverFit { get; set; } = CoverFit.Contain;
             public ResourceDisplayContent DisplayContents { get; set; } = ResourceDisplayContent.All;
             public bool DisableCoverCarousel { get; set; }
+            public bool DisplayResourceId { get; set; }
+            public bool HideResourceTimeInfo { get; set; }
         }
     }
 }

@@ -24,6 +24,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Pixiv;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using System.Web;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
 {
@@ -37,7 +38,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         {
         }
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
         {
             // Categories: https://www.pixiv.net/tags/%E6%B1%8E%E7%94%A8%E5%9E%8B%E3%83%96%E3%83%AA/{(top)?/illustrations/manga/novels/artworks}?order=popular_male_d&mode=safe&wlt=3000&hlt=3000
             // User not supported: https://www.pixiv.net/search_user.php?nick=%E6%B1%8E%E7%94%A8%E5%9E%8B%E3%83%96%E3%83%AA&s_mode=s_usr

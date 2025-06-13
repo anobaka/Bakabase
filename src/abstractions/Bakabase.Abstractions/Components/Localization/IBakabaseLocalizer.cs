@@ -36,7 +36,8 @@ public interface IBakabaseLocalizer
     string? MessageOnInterruption_MoveFiles();
     string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames);
     string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
-    string BTask_FailedToRunTaskDueToIdExisting(string id);
+    string BTask_FailedToRunTaskDueToIdExisting(string id, string name);
+    string BTask_CanNotReplaceAnActiveTask(string id, string name);
     string? WrongPassword();
     string DeletingInvalidResources(int count);
     string PostParser_ParseAll_TaskName();

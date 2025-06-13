@@ -10,6 +10,7 @@ import {
   SnippetsOutlined,
 } from '@ant-design/icons';
 import toast from 'react-hot-toast';
+import { AiOutlineSearch } from 'react-icons/ai';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
@@ -191,23 +192,22 @@ export default ({
           <Button
             color={'primary'}
             size={'sm'}
-            onClick={async () => {
-              search({
-                ...searchForm,
-                page: 1,
-              });
+            onPress={async () => {
+              await search({ ...searchForm, page: 1 });
             }}
             isLoading={searching}
           >
+            <AiOutlineSearch className={'text-medium'} />
             {t('Search')}
           </Button>
           <Tooltip
             content={t('Save current search to quick search')}
+            placement={'right'}
           >
             <Button
               size={'sm'}
               isIconOnly
-              onClick={() => {
+              onPress={() => {
                 let name = `${t('Untitled search')}1`;
                 createPortal(Modal, {
                   defaultVisible: true,

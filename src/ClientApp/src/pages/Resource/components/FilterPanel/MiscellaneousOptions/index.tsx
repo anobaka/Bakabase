@@ -5,12 +5,13 @@ import {
   FullscreenOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
-  RightSquareOutlined,
   ZoomInOutlined,
 } from '@ant-design/icons';
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { history } from 'ice';
+import { AiOutlineFieldNumber } from 'react-icons/ai';
+import { BiCarousel } from 'react-icons/bi';
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tooltip } from '@/components/bakaui';
 import { CoverFit, ResourceDisplayContent, resourceDisplayContents } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
@@ -31,7 +32,13 @@ type Item = {
   tip?: any;
 };
 
-type ListBoxItemKey = 'FillCover' | 'ShowLargerCoverOnHover' | 'PreviewOnHover' | 'UseCache' | 'CoverCarousel';
+type ListBoxItemKey =
+  'FillCover'
+  | 'ShowLargerCoverOnHover'
+  | 'PreviewOnHover'
+  | 'UseCache'
+  | 'CoverCarousel'
+  | 'DisplayResourceId';
 
 export default ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
@@ -88,7 +95,12 @@ export default ({ rearrangeResources }: Props) => {
     {
       key: 'CoverCarousel',
       label: t('Cover carousel'),
-      Icon: RightSquareOutlined,
+      Icon: BiCarousel,
+    },
+    {
+      key: 'DisplayResourceId',
+      label: t('Display resource ID'),
+      Icon: AiOutlineFieldNumber,
     },
   ];
 
@@ -111,9 +123,11 @@ export default ({ rearrangeResources }: Props) => {
         keys.push(`DisplayContent-${d.value}` as ListBoxItemKey);
       }
     }
-
     if (!options?.disableCoverCarousel) {
       keys.push('CoverCarousel');
+    }
+    if (options?.displayResourceId) {
+      keys.push('DisplayResourceId');
     }
 
     return keys;
@@ -160,6 +174,7 @@ export default ({ rearrangeResources }: Props) => {
               disableMediaPreviewer: !stringKeys.includes('PreviewOnHover'),
               displayContents: dc,
               disableCoverCarousel: !stringKeys.includes('CoverCarousel'),
+              displayResourceId: stringKeys.includes('DisplayResourceId'),
             };
 
             log(keys, newOptions);

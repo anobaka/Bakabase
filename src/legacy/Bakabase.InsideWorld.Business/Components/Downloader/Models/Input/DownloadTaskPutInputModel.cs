@@ -1,9 +1,4 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using System;
-
-namespace Bakabase.InsideWorld.Models.RequestModels;
+﻿namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
 
 public record DownloadTaskPutInputModel
 {

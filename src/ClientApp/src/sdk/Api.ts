@@ -337,6 +337,8 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   path: string;
   /** @format int32 */
   templateId?: number;
+  /** @format int32 */
+  resourceCount: number;
   template?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
@@ -802,10 +804,150 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDepe
   canUpdate: boolean;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
+  /** @format int32 */
+  id: number;
+  /** @minLength 1 */
+  key: string;
+  name?: string;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type: number;
+  /** @format double */
+  progress: number;
+  /** @format date-time */
+  downloadStatusUpdateDt: string;
+  /** @format int64 */
+  interval?: number;
+  /** @format int32 */
+  startPage?: number;
+  /** @format int32 */
+  endPage?: number;
+  message?: string;
+  checkpoint?: string;
+  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
+  status: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskStatus;
+  autoRetry: boolean;
+  /** @minLength 1 */
+  downloadPath: string;
+}
+
+/**
+ * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
+
+/**
+ * [0: NotSet, 1: StopOthers, 2: Ignore]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskActionOnConflict =
+  | 0
+  | 1
+  | 2;
+
+/**
+ * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskDtoStatus =
+  | 100
+  | 200
+  | 300
+  | 400
+  | 500
+  | 600
+  | 700
+  | 800;
+
+/**
+ * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskStatus =
+  | 100
+  | 200
+  | 300
+  | 400;
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask {
+  /** @format int32 */
+  id: number;
+  key: string;
+  name?: string;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type: number;
+  /** @format double */
+  progress: number;
+  /** @format date-time */
+  downloadStatusUpdateDt: string;
+  /** @format int64 */
+  interval?: number;
+  /** @format int32 */
+  startPage?: number;
+  /** @format int32 */
+  endPage?: number;
+  message?: string;
+  checkpoint?: string;
+  /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
+  status: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskDtoStatus;
+  downloadPath: string;
+  current?: string;
+  /** @format int32 */
+  failureTimes: number;
+  autoRetry: boolean;
+  /** @format date-time */
+  nextStartDt?: string;
+  /** @uniqueItems true */
+  availableActions: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskAction[];
+  displayName: string;
+  canStart: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskAddInputModel {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type: number;
+  keyAndNames?: Record<string, string | null>;
+  /** @format int64 */
+  interval?: number;
+  /** @format int32 */
+  startPage?: number;
+  /** @format int32 */
+  endPage?: number;
+  checkpoint?: string;
+  autoRetry: boolean;
+  /** @minLength 1 */
+  downloadPath: string;
+  isDuplicateAllowed: boolean;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskPutInputModel {
+  /** @format int64 */
+  interval?: number;
+  /** @format int32 */
+  startPage?: number;
+  /** @format int32 */
+  endPage?: number;
+  checkpoint?: string;
+  autoRetry: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskStartRequestModel {
+  ids: number[];
+  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
+  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskActionOnConflict;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
@@ -1110,6 +1252,8 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** [1: MediaLibrary, 2: Category, 4: Tags, 7: All] */
   displayContents: BakabaseInsideWorldModelsConstantsResourceDisplayContent;
   disableCoverCarousel: boolean;
+  displayResourceId: boolean;
+  hideResourceTimeInfo: boolean;
 }
 
 /**
@@ -1207,30 +1351,6 @@ export type BakabaseInsideWorldModelsConstantsCoverSaveMode = 1 | 2;
 export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
 
 /**
- * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
-
-/**
- * [0: NotSet, 1: StopOthers, 2: Ignore]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict = 0 | 1 | 2;
-
-/**
- * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus = 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
-
-/**
- * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsDownloadTaskStatus = 100 | 200 | 300 | 400;
-
-/**
  * [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
  * @format int32
  */
@@ -1315,7 +1435,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
   /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  counts: Record<string, number>;
+  counts?: Record<string, number>;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatistics {
@@ -1392,42 +1512,6 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount
   count: number;
 }
 
-export interface BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
-  /** @format int32 */
-  id: number;
-  key: string;
-  name: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
-  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  /** @format int32 */
-  type: number;
-  /** @format double */
-  progress: number;
-  /** @format date-time */
-  downloadStatusUpdateDt: string;
-  /** @format int64 */
-  interval?: number;
-  /** @format int32 */
-  startPage?: number;
-  /** @format int32 */
-  endPage?: number;
-  message: string;
-  checkpoint: string;
-  /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
-  status: BakabaseInsideWorldModelsConstantsDownloadTaskDtoStatus;
-  downloadPath: string;
-  current: string;
-  /** @format int32 */
-  failureTimes: number;
-  autoRetry: boolean;
-  /** @format date-time */
-  nextStartDt?: string;
-  /** @uniqueItems true */
-  availableActions: BakabaseInsideWorldModelsConstantsDownloadTaskAction[];
-  displayName: string;
-  canStart: boolean;
-}
-
 export interface BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   id: number;
@@ -1470,36 +1554,6 @@ export interface BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
   json: string;
 }
 
-export interface BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
-  /** @format int32 */
-  id: number;
-  /** @minLength 1 */
-  key: string;
-  name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
-  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  /** @format int32 */
-  type: number;
-  /** @format double */
-  progress: number;
-  /** @format date-time */
-  downloadStatusUpdateDt: string;
-  /** @format int64 */
-  interval?: number;
-  /** @format int32 */
-  startPage?: number;
-  /** @format int32 */
-  endPage?: number;
-  message?: string;
-  checkpoint?: string;
-  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
-  status: BakabaseInsideWorldModelsConstantsDownloadTaskStatus;
-  autoRetry: boolean;
-  /** @minLength 1 */
-  downloadPath: string;
-  displayName: string;
-}
-
 export interface BakabaseInsideWorldModelsModelsEntitiesPassword {
   /** @maxLength 64 */
   text: string;
@@ -1517,42 +1571,6 @@ export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddReques
   componentAssemblyQualifiedTypeName: string;
   /** @minLength 1 */
   json: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskAddInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
-  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  /** @format int32 */
-  type: number;
-  keyAndNames?: Record<string, string | null>;
-  /** @format int64 */
-  interval?: number;
-  /** @format int32 */
-  startPage?: number;
-  /** @format int32 */
-  endPage?: number;
-  checkpoint?: string;
-  autoRetry: boolean;
-  /** @minLength 1 */
-  downloadPath: string;
-  isDuplicateAllowed: boolean;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskPutInputModel {
-  /** @format int64 */
-  interval?: number;
-  /** @format int32 */
-  startPage?: number;
-  /** @format int32 */
-  endPage?: number;
-  checkpoint?: string;
-  autoRetry: boolean;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel {
-  ids: number[];
-  /** [0: NotSet, 1: StopOthers, 2: Ignore] */
-  actionOnConflict: BakabaseInsideWorldModelsConstantsDownloadTaskActionOnConflict;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsExHentaiDownloadTaskAddInputModel {
@@ -2252,6 +2270,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
   /** @format int32 */
   code: number;
@@ -2266,25 +2298,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesDownloadTask {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsEntitiesDownloadTask[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
@@ -2590,6 +2608,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo {
   /** @format int32 */
   code: number;
@@ -2714,13 +2739,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosDashboardStatistics;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsDtosDownloadTaskDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
@@ -5298,7 +5316,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/download-task
      */
     getAllDownloadTasks: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask,
+        any
+      >({
         path: `/download-task`,
         method: "GET",
         format: "json",
@@ -5313,10 +5334,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/download-task
      */
     addDownloadTask: (
-      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskAddInputModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskAddInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesDownloadTask, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel,
+        any
+      >({
         path: `/download-task`,
         method: "POST",
         body: data,
@@ -5354,7 +5378,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getDownloadTask: (id: number, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosDownloadTaskDto,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask,
         any
       >({
         path: `/download-task/${id}`,
@@ -5387,7 +5411,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     putDownloadTask: (
       id: number,
-      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskPutInputModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskPutInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5407,7 +5431,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/download-task/download
      */
     startDownloadTasks: (
-      data: BakabaseInsideWorldModelsRequestModelsDownloadTaskStartRequestModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskStartRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

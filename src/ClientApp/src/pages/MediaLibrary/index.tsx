@@ -3,22 +3,19 @@ import { useEffect, useRef, useState } from 'react';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { FaRegSave, FaSort } from 'react-icons/fa';
 import toast from 'react-hot-toast';
-import { AiOutlineEdit, AiOutlinePlusCircle } from 'react-icons/ai';
+import { AiOutlineEdit, AiOutlinePlusCircle, AiOutlineProduct } from 'react-icons/ai';
 import { MdOutlineDelete } from 'react-icons/md';
 import { IoIosSync, IoMdExit } from 'react-icons/io';
 import { TbTemplate } from 'react-icons/tb';
 import type { MediaLibraryTemplate } from '../MediaLibraryTemplate/models';
-import { Button, Chip, Divider, Input, Modal, Select } from '@/components/bakaui';
+import SyncStatus from './components/SyncStatus';
+import { Button, Chip, Input, Modal, Select } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import BApi from '@/sdk/BApi';
 import { isNotEmpty } from '@/components/utils';
+import type { components } from '@/sdk/BApi2';
 
-type MediaLibrary = {
-  id: number;
-  name: string;
-  path: string;
-  templateId: number;
-};
+type MediaLibrary = components['schemas']['Bakabase.Abstractions.Models.Domain.MediaLibraryV2'];
 
 enum SortBy {
   Path = 1,
@@ -66,7 +63,7 @@ export default () => {
         mediaLibraries.sort((a, b) => a.path.localeCompare(b.path));
         break;
       case SortBy.Template:
-        mediaLibraries.sort((a, b) => (templatesRef.current[a.templateId]?.name ?? '').localeCompare(templatesRef.current[b.templateId]?.name ?? ''));
+        mediaLibraries.sort((a, b) => (templatesRef.current[a.templateId ?? 0]?.name ?? '').localeCompare(templatesRef.current[b.templateId ?? 0]?.name ?? ''));
         break;
     }
     forceUpdate();
@@ -74,12 +71,14 @@ export default () => {
 
   const renderPath = (ml: MediaLibrary) => {
     return (
-      <Chip
-        // variant={'flat'}
-        radius={'sm'}
+      <Button
+        size={'sm'}
+        color={'default'}
+        variant={'flat'}
+        onPress={() => BApi.tool.openFileOrDirectory({ path: ml.path })}
       >
         {ml.path}
-      </Chip>
+      </Button>
     );
   };
 
@@ -251,31 +250,40 @@ export default () => {
         </div>
       ) : (
         mediaLibraries && mediaLibraries.length > 0 && (
-          <div className={'inline-grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto auto auto auto' }}>
+          <div
+            className={'inline-grid gap-1 mt-2 items-center'}
+            style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
+          >
             {mediaLibraries.map(ml => {
               return (
                 <>
-                  <div className={''}>{ml.name}</div>
+                  <div>{ml.name}</div>
+                  <Chip
+                    size={'sm'}
+                    variant={'light'}
+                    color={'success'}
+                    startContent={<AiOutlineProduct className={'text-lg'} />}
+                  >
+                    {ml.resourceCount}
+                  </Chip>
                   {renderPath(ml)}
                   <Chip
                     radius={'sm'}
                     className={''}
                     startContent={<TbTemplate className={'text-medium'} />}
                     variant={'light'}
-                  >{templates.find(t => t.id == ml.templateId)?.name ?? t('Unknown')}</Chip>
-                  <div>
-                    <Button
-                      isIconOnly
-                      variant={'light'}
-                      size={'sm'}
-                      color={'secondary'}
-                      onPress={() => {
-                        BApi.mediaLibraryV2.syncMediaLibraryV2(ml.id);
-                      }}
-                    >
-                      <IoIosSync className={'text-lg'} />
-                    </Button>
-                  </div>
+                  >
+                    {templates.find(t => t.id == ml.templateId)?.name ?? t('Unknown')}
+                  </Chip>
+                  <SyncStatus
+                    id={ml.id}
+                    onSyncCompleted={() => {
+                      BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then(r => {
+                        const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data : m));
+                        setMediaLibraries(updatedMediaLibraries);
+                      });
+                    }}
+                  />
                 </>
               );
             })}

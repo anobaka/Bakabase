@@ -282,6 +282,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("ResourceCount")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int?>("TemplateId")
                         .HasColumnType("INTEGER");
 
@@ -385,8 +388,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Path")
-                        .IsUnique();
+                    b.HasIndex("Path");
 
                     b.ToTable("ResourcesV2");
                 });
@@ -412,6 +414,67 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SpecialTexts");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AutoRetry")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Checkpoint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DownloadPath")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("DownloadStatusUpdateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("EndPage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("Interval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Message")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Progress")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("StartPage")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ThirdPartyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("ThirdPartyId");
+
+                    b.HasIndex("ThirdPartyId", "Type");
+
+                    b.ToTable("DownloadTasks");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.Legacy.Models.LegacyDbResource", b =>
@@ -684,67 +747,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CustomResourceProperties");
-                });
-
-            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.DownloadTask", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("AutoRetry")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Checkpoint")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("DownloadPath")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("DownloadStatusUpdateDt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("EndPage")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<long?>("Interval")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Message")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("Progress")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("StartPage")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("ThirdPartyId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("ThirdPartyId");
-
-                    b.HasIndex("ThirdPartyId", "Type");
-
-                    b.ToTable("DownloadTasks");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Favorites", b =>

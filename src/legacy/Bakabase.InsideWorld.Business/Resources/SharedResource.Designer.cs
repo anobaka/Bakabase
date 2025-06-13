@@ -97,6 +97,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to An active task [{0}]{1} can not be replaced.
+        /// </summary>
+        internal static string BTask_CanNotReplaceAnActiveTask {
+            get {
+                return ResourceManager.GetString("BTask_CanNotReplaceAnActiveTask", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Check and enhance all unenhanced resources.
         /// </summary>
         internal static string BTask_Description_Enhancement {
@@ -124,7 +133,7 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Failed to run task: task id [{0}] exists.
+        ///   Looks up a localized string similar to Failed to run task: task [{0}]{1} exists.
         /// </summary>
         internal static string BTask_FailedToRunTaskDueToIdExisting {
             get {

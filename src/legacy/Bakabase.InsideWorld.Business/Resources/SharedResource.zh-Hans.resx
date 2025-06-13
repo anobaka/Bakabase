@@ -388,7 +388,7 @@
     <value>无法运行任务：任务id [{0}]不存在</value>
   </data>
   <data name="BTask_FailedToRunTaskDueToIdExisting" xml:space="preserve">
-    <value>无法运行任务：任务id [{0}]已存在</value>
+    <value>无法运行任务：任务[{0}]{1}已存在</value>
   </data>
   <data name="MoveFile" xml:space="preserve">
     <value>移动 [{0}] 至 [{1}] </value>
@@ -410,5 +410,8 @@
   </data>
   <data name="SyncMediaLibrary" xml:space="preserve">
     <value>同步媒体库：{0}</value>
+  </data>
+  <data name="BTask_CanNotReplaceAnActiveTask" xml:space="preserve">
+    <value>未完成的任务[{0}]{1}无法被替换</value>
   </data>
 </root>

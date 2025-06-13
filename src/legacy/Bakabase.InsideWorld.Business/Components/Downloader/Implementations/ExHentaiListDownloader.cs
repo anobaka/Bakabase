@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
@@ -28,7 +29,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         {
         }
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
         {
             var checkpointContext = new RangeCheckpointContext(task.Checkpoint);
 

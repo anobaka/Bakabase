@@ -1,22 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
 import type { Property, Resource } from '@/core/models/Resource';
-import { PropertyValueScope, propertyValueScopes, PropertyPool } from '@/sdk/constants';
+import { PropertyPool, PropertyValueScope, propertyValueScopes } from '@/sdk/constants';
 import store from '@/store';
 import type {
   PropertyContainerProps,
