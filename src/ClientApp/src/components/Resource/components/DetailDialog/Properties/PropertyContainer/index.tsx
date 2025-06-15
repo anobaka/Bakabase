@@ -11,6 +11,7 @@ import PropertyValueRenderer from '@/components/Property/components/PropertyValu
 import type { IProperty } from '@/components/Property/models';
 import { buildLogger } from '@/components/utils';
 import { serializeStandardValue } from '@/components/StandardValue/helpers';
+import { PropertyLabel } from '@/components/Property/v2';
 
 export type PropertyContainerProps = {
   valueScopePriority: PropertyValueScope[];
@@ -81,7 +82,7 @@ export default (props: PropertyContainerProps) => {
               <div>
                 <div>{`${t(PropertyPool[property.pool])}${t('Property')}`}</div>
                 <div className={'flex items-center gap-1'}>
-                  {isLinked ? t('This property is linked to the current category') : t('This property is not yet linked to the current category')}
+                  {isLinked ? t('This property is linked to the current media library template or category(deprecated)') : t('This property is not yet linked to the current media library template or category(deprecated)')}
                   {isLinked ? (
                     <Button
                       size={'sm'}
@@ -114,14 +115,24 @@ export default (props: PropertyContainerProps) => {
             )}
           >
             <Chip
-              className={'whitespace-break-spaces py-1 h-auto break-all'}
               size={'sm'}
               radius={'sm'}
               color={property.pool == PropertyPool.Custom ? 'secondary' : 'default'}
               // variant={'light'}
             >
-              {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id]!)}
+              <div className={'flex items-center'}>
+                <PropertyLabel property={property} />
+              </div>
             </Chip>
+            {/* <Chip */}
+            {/*   className={'whitespace-break-spaces py-1 h-auto break-all'} */}
+            {/*   size={'sm'} */}
+            {/*   radius={'sm'} */}
+            {/*   color={property.pool == PropertyPool.Custom ? 'secondary' : 'default'} */}
+            {/*   // variant={'light'} */}
+            {/* > */}
+            {/*   {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id]!)} */}
+            {/* </Chip> */}
           </Tooltip>
         </div>
       )}

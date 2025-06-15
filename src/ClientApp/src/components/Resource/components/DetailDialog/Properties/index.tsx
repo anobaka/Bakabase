@@ -97,7 +97,7 @@ export default (props: Props) => {
   if (!cps || Object.keys(cps).length == 0) {
     return (
       <div className={'opacity-60'}>
-        {t('There is no property bound yet, you can bind properties to category first.')}
+        {t('There is no property bound yet, you can bind properties to media library template or category(deprecated) first.')}
       </div>
     );
   }
@@ -235,7 +235,7 @@ export default (props: Props) => {
             size={'sm'}
             color={'primary'}
           >
-            {t('Show properties not bound to categories')}
+            {t('Show properties not bound to media library templates or categories(deprecated)')}
           </Button>
         </div>
       )}

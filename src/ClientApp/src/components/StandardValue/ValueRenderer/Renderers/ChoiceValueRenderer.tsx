@@ -71,6 +71,7 @@ export default (props: ChoiceValueRendererProps) => {
           }
           return (
             <Chip
+              className={'h-auto whitespace-break-spaces py-1'}
               style={styles}
               size={'sm'}
               radius={'sm'}

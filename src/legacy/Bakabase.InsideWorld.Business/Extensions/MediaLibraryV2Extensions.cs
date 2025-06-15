@@ -24,14 +24,15 @@ public static class MediaLibraryV2Extensions
         return list;
     }
 
-    public static Resource ToDomainModel(this TempSyncResource tempSyncResource)
+    public static Resource ToDomainModel(this TempSyncResource tempSyncResource, int mediaLibraryId)
     {
         return new Resource
         {
+            MediaLibraryId = mediaLibraryId,
             Path = tempSyncResource.Path,
             Directory = Path.GetDirectoryName(tempSyncResource.Path)!,
             IsFile = tempSyncResource.IsFile,
-            Parent = tempSyncResource.Parent != null ? ToDomainModel(tempSyncResource.Parent) : null,
+            Parent = tempSyncResource.Parent != null ? ToDomainModel(tempSyncResource.Parent, mediaLibraryId) : null,
             FileCreatedAt = tempSyncResource.FileCreatedAt,
             FileModifiedAt = tempSyncResource.FileModifiedAt,
             CreatedAt = DateTime.Now,

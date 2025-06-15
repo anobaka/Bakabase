@@ -47,27 +47,25 @@ using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class ResourceService : IResourceService
+    public class ResourceService : ScopedService, IResourceService
     {
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel,
-                int>
-            _orm;
-
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>
-            _resourceCacheOrm;
-
+        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceDbModel, int> _orm;
+        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
         private readonly ISpecialTextService _specialTextService;
         private readonly IMediaLibraryService _mediaLibraryService;
+        private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
@@ -90,7 +88,9 @@ namespace Bakabase.InsideWorld.Business.Services
             ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
             IPropertyService propertyService,
             FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
-            IFileManager fileManager, IPlayHistoryService playHistoryService, ISystemPlayer systemPlayer)
+            FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int> orm,
+            IFileManager fileManager, IPlayHistoryService playHistoryService,
+            ISystemPlayer systemPlayer) : base(serviceProvider)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -107,9 +107,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _fileManager = fileManager;
             _playHistoryService = playHistoryService;
             _systemPlayer = systemPlayer;
-            _orm =
-                new FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int>(
-                    serviceProvider);
+            _orm = orm;
         }
 
         public InsideWorldDbContext DbContext => _orm.DbContext;
@@ -399,9 +397,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     switch (i)
                     {
-                        case ResourceAdditionalItem.ReservedProperties:
+                        case ResourceAdditionalItem.Properties:
                         {
-                            var reservedPropertyValueMap =
+                                var reservedPropertyValueMap =
                                 (await _reservedPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId)))
                                 .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
 
@@ -413,20 +411,20 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 r.Properties ??= [];
                                 var reservedProperties =
-                                    r.Properties.GetOrAdd((int) PropertyPool.Reserved, () => []);
+                                    r.Properties.GetOrAdd((int)PropertyPool.Reserved, () => []);
                                 var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
-                                reservedProperties[(int) ResourceProperty.Rating] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Rating)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Rating)?.Type ??
+                                reservedProperties[(int)ResourceProperty.Rating] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Type ??
                                     default,
                                     StandardValueType.Decimal,
                                     StandardValueType.Decimal,
                                     dbReservedProperties?.Select(s =>
                                         new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
                                             s.Rating)).ToList(), true);
-                                reservedProperties[(int) ResourceProperty.Introduction] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Introduction)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Introduction)?.Type ??
+                                reservedProperties[(int)ResourceProperty.Introduction] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Type ??
                                     default,
                                     StandardValueType.String,
                                     StandardValueType.String,
@@ -434,9 +432,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                         new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
                                             s.Introduction)).ToList(), true);
 
-                                reservedProperties[(int) ResourceProperty.Cover] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Cover)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int) ResourceProperty.Cover)?.Type ??
+                                reservedProperties[(int)ResourceProperty.Cover] = new Resource.Property(
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Name,
+                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Type ??
                                     default,
                                     StandardValueType.ListString,
                                     StandardValueType.ListString,
@@ -450,11 +448,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             SortPropertyValuesByScope(doList);
 
-                            break;
-                        }
-                        case ResourceAdditionalItem.CustomProperties:
-                        {
-                            var categoryIds = resources.Select(r => r.CategoryId).ToHashSet();
+                            var categoryIds = resources.Where(x => x.CategoryId > 0).Select(r => r.CategoryId).ToHashSet();
                             // ResourceId - PropertyId - Values
                             var customPropertiesValuesMap = (await _customPropertyValueService.GetAll(
                                 x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
@@ -465,6 +459,15 @@ namespace Bakabase.InsideWorld.Business.Services
                                 .ToDictionary(d => d.Id, d => d);
                             var categoryIdCustomPropertiesMap = categoryMap.ToDictionary(d => d.Key,
                                 d => d.Value.CustomProperties);
+
+                            var mediaLibraryV2Ids = resources.Where(d => d.CategoryId == 0)
+                                .Select(d => d.MediaLibraryId).Distinct().ToArray();
+                            var mediaLibrariesV2 = (await MediaLibraryV2Service.GetByKeys(mediaLibraryV2Ids,
+                                MediaLibraryV2AdditionalItem.Template));
+                            var mediaLibraryV2IdCustomPropertyIdsMap = mediaLibrariesV2.Where(x => x.Template != null)
+                                .ToDictionary(d => d.Id,
+                                    d => d.Template!.Properties?.Where(f => f.Pool == PropertyPool.Custom)
+                                        .Select(p => p.Id).Distinct().ToArray() ?? []);
 
                             var propertyIdsOfNotEmptyProperties =
                                 customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
@@ -488,17 +491,29 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 r.Properties ??= [];
                                 var customProperties =
-                                    r.Properties.GetOrAdd((int) PropertyPool.Custom, () => []);
+                                    r.Properties.GetOrAdd((int)PropertyPool.Custom, () => []);
 
                                 var propertyIds = new List<int>();
-                                HashSet<int>? boundPropertyIds = null;
-                                if (categoryIdCustomPropertiesMap.TryGetValue(r.CategoryId,
-                                        out var boundProperties) && boundProperties != null)
+                                if (r.CategoryId > 0)
                                 {
-                                    var bPIds = boundProperties.Select(p => p.Id).ToArray();
-                                    boundPropertyIds = bPIds.ToHashSet();
-                                    propertyIds.AddRange(bPIds);
+                                    if (categoryIdCustomPropertiesMap.TryGetValue(r.CategoryId, out var boundProperties) && boundProperties != null)
+                                    {
+                                        var bPIds = boundProperties.Select(p => p.Id).ToArray();
+                                        propertyIds.AddRange(bPIds);
+                                    }
                                 }
+                                else
+                                {
+                                    if (mediaLibraryV2IdCustomPropertyIdsMap.TryGetValue(r.MediaLibraryId,
+                                            out var bPIds))
+                                    {
+                                        propertyIds.AddRange(bPIds);
+                                    }
+                                }
+
+                                var boundPropertyIds = propertyIds.ToHashSet();
+
+                                propertyIds = propertyIds.Distinct().ToList();
 
                                 if (customPropertiesValuesMap.TryGetValue(r.Id, out var pValues))
                                 {
@@ -524,7 +539,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     var visible = boundPropertyIds?.Contains(pId) == true;
 
                                     var p = customProperties.GetOrAdd(pId,
-                                        () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
+                                        () => new Resource.Property(property.Name, property.Type,
+                                            property.Type.GetDbValueType(),
                                             property.Type.GetBizValueType(), [], visible, propertyOrderMap[pId]));
                                     if (values != null)
                                     {
@@ -592,14 +608,26 @@ namespace Bakabase.InsideWorld.Business.Services
                             break;
                         case ResourceAdditionalItem.MediaLibraryName:
                         {
-                            var mediaLibraryIds = doList.Select(d => d.MediaLibraryId).ToHashSet();
+                            var mediaLibraryIds = doList.Where(d => d.CategoryId > 0).Select(d => d.MediaLibraryId)
+                                .ToHashSet();
                             var mediaLibraryMap =
                                 (await _mediaLibraryService.GetAll(x => mediaLibraryIds.Contains(x.Id))).ToDictionary(
                                     d => d.Id, d => d);
+                            var mediaLibraryV2Ids = doList.Where(d => d.CategoryId == 0).Select(d => d.MediaLibraryId)
+                                .ToHashSet();
+                            Dictionary<int, MediaLibraryV2>? mediaLibraryV2Map = null;
+                            if (mediaLibraryV2Ids.Any())
+                            {
+                                mediaLibraryV2Map =
+                                    (await MediaLibraryV2Service.GetByKeys(mediaLibraryV2Ids.ToArray())).ToDictionary(
+                                        d => d.Id, d => d);
+                            }
+
                             foreach (var resource in doList)
                             {
-                                resource.MediaLibraryName =
-                                    mediaLibraryMap.GetValueOrDefault(resource.MediaLibraryId)?.Name;
+                                resource.MediaLibraryName = resource.CategoryId > 0
+                                    ? mediaLibraryMap.GetValueOrDefault(resource.MediaLibraryId)?.Name
+                                    : mediaLibraryV2Map?.GetValueOrDefault(resource.MediaLibraryId)?.Name;
                             }
 
                             break;
@@ -1448,9 +1476,12 @@ namespace Bakabase.InsideWorld.Business.Services
 
             var categoryIds = categories.Select(c => c.Id).ToHashSet();
             var mediaLibraryIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+            var mediaLibraryV2Ids = (await MediaLibraryV2Service.GetAll()).Select(d => d.Id).ToHashSet();
 
             var unknownResources = await GetAllDbModels(x =>
-                !categoryIds.Contains(x.CategoryId) || !mediaLibraryIds.Contains(x.MediaLibraryId) || (x.Tags & ResourceTag.PathDoesNotExist) > 0);
+                (x.CategoryId > 0
+                    ? !categoryIds.Contains(x.CategoryId) || !mediaLibraryIds.Contains(x.MediaLibraryId)
+                    : !mediaLibraryV2Ids.Contains(x.MediaLibraryId)) || (x.Tags & ResourceTag.PathDoesNotExist) > 0);
             return unknownResources;
         }
 

@@ -414,4 +414,19 @@
   <data name="BTask_CanNotReplaceAnActiveTask" xml:space="preserve">
     <value>未完成的任务[{0}]{1}无法被替换</value>
   </data>
+  <data name="SyncMediaLibrary_TaskProcess_DiscoverResources" xml:space="preserve">
+    <value>发现资源</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_CleanupResources" xml:space="preserve">
+    <value>清理资源</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_AddResources" xml:space="preserve">
+    <value>添加资源</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_UpdateResources" xml:space="preserve">
+    <value>更新资源</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_AlmostComplete" xml:space="preserve">
+    <value>即将完成</value>
+  </data>
 </root>

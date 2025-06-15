@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
@@ -22,6 +23,7 @@ using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,7 +45,7 @@ public class MediaLibraryV2Service<TDbContext>(
 {
     public async Task Add(MediaLibraryV2AddOrPutInputModel model)
     {
-        await orm.Add(new MediaLibraryV2DbModel {Path = model.Path, Name = model.Name});
+        await orm.Add(new MediaLibraryV2DbModel { Path = model.Path, Name = model.Name });
     }
 
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
@@ -141,12 +143,16 @@ public class MediaLibraryV2Service<TDbContext>(
         await orm.RemoveByKey(id);
     }
 
-    public async Task Sync(int id)
+    public async Task Sync(int id, Func<int, Task>? onProgressChange, Func<string?, Task>? onProcessChange,
+        PauseToken pt,
+        CancellationToken ct)
     {
-        await SyncAll([id]);
+        await SyncAll([id], onProgressChange, onProcessChange, pt, ct);
     }
 
-    public async Task SyncAll(int[]? ids = null)
+    public async Task SyncAll(int[]? ids, Func<int, Task>? onProgressChange, Func<string?, Task>? onProcessChange,
+        PauseToken pt,
+        CancellationToken ct)
     {
         var data = await (ids == null ? GetAll() : GetByKeys(ids));
         var templateIds = data.Select(d => d.TemplateId).OfType<int>().ToHashSet();
@@ -154,69 +160,139 @@ public class MediaLibraryV2Service<TDbContext>(
         var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2(ids)).GroupBy(d => d.MediaLibraryId)
             .ToDictionary(d => d.Key, d => d.ToList());
         var syncOptions = resourceOptions.Value.SynchronizationOptions;
-        foreach (var ml in data)
+
+        var progressPerMediaLibrary = ids?.Length > 0 ? 100m / ids.Length : 0;
+        var baseProgress = 0m;
+        for (var index = 0; index < data.Count; index++)
         {
-            var template = templateMap.GetValueOrDefault(ml.Id);
-            if (template == null)
+            var ml = data[index];
+            if (ml.TemplateId.HasValue && templateMap.TryGetValue(ml.TemplateId.Value, out var template))
             {
-                continue;
-            }
+                #region Discovery
 
-            var treeTempSyncResources = template.DiscoverResources(ml.Path);
-            var flattenTempSyncResources = treeTempSyncResources.SelectMany(d => d.Flatten()).ToList();
-            var flattenTempResources = flattenTempSyncResources.Select(x => x.ToDomainModel()).ToList();
-            var tempSyncResourcePaths = flattenTempResources.Select(d => d.Path).ToHashSet();
-
-            var mlResources = mlResourceMap.GetValueOrDefault(ml.Id) ?? [];
-
-            var unknownDbResources = mlResources.Where(r => !tempSyncResourcePaths.Contains(r.Path)).ToList();
-            var conflictDbResources = mlResources.Except(unknownDbResources).ToList();
-            var dbResourcePaths = mlResources.Select(x => x.Path).ToHashSet();
-            var newTempSyncResources = flattenTempResources.Where(c => !dbResourcePaths.Contains(c.Path)).ToList();
-            var tempSyncResourceMap = flattenTempResources.ToDictionary(d => d.Path);
-
-            // delete
-            var resourcesToBeDeleted =
-                unknownDbResources.Where(x => x.ShouldBeDeletedSinceFileNotFound(syncOptions)).ToList();
-            if (resourcesToBeDeleted.Any())
-            {
-                await resourceService.DeleteByKeys(resourcesToBeDeleted.Select(r => r.Id).ToArray(), false);
-            }
-
-            // add
-            await resourceService.AddOrPutRange(newTempSyncResources);
-            var allPathIdMap = mlResources.Concat(newTempSyncResources).ToDictionary(d => d.Path, d => d.Id);
-
-            // merge and update
-            var changedResources = new HashSet<Resource>();
-            foreach (var cr in conflictDbResources)
-            {
-                var tmpResource = tempSyncResourceMap[cr.Path];
-                if (cr.MergeOnSynchronization(tmpResource))
+                if (onProcessChange != null)
                 {
-                    cr.UpdatedAt = DateTime.Now;
-                    changedResources.Add(cr);
+                    await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_DiscoverResources(ml.Name));
+                }
+
+                var progressForDiscovering = progressPerMediaLibrary * 0.5m;
+                var treeTempSyncResources = await template.DiscoverResources(ml.Path,
+                    onProgressChange.ScaleInSubTask(baseProgress, progressForDiscovering), null, pt, ct);
+                var flattenTempSyncResources = treeTempSyncResources.SelectMany(d => d.Flatten()).ToList();
+                var flattenTempResources = flattenTempSyncResources.Select(x => x.ToDomainModel(ml.Id)).ToList();
+                var tempSyncResourcePaths = flattenTempResources.Select(d => d.Path).ToHashSet();
+
+                var mlResources = mlResourceMap.GetValueOrDefault(ml.Id) ?? [];
+
+                var unknownDbResources = mlResources.Where(r => !tempSyncResourcePaths.Contains(r.Path)).ToList();
+                var conflictDbResources = mlResources.Except(unknownDbResources).ToList();
+                var dbResourcePaths = mlResources.Select(x => x.Path).ToHashSet();
+                var newTempSyncResources = flattenTempResources.Where(c => !dbResourcePaths.Contains(c.Path)).ToList();
+                var tempSyncResourceMap = flattenTempResources.ToDictionary(d => d.Path);
+                baseProgress = await onProgressChange.TriggerWithStep1(baseProgress, progressForDiscovering);
+
+                #endregion
+
+                #region Clean
+
+                if (onProcessChange != null)
+                {
+                    await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_CleanupResources(ml.Name));
+                }
+
+                var progressForCleaningResources = progressPerMediaLibrary * 0.1m;
+                var resourcesToBeDeleted =
+                    unknownDbResources.Where(x => x.ShouldBeDeletedSinceFileNotFound(syncOptions)).ToList();
+                if (resourcesToBeDeleted.Any())
+                {
+                    await resourceService.DeleteByKeys(resourcesToBeDeleted.Select(r => r.Id).ToArray(), false);
+                }
+
+                baseProgress = await onProgressChange.TriggerWithStep1(baseProgress, progressForCleaningResources);
+
+                #endregion
+
+                #region Add
+
+                if (onProcessChange != null)
+                {
+                    await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_AddResources(ml.Name));
+                }
+
+                var progressForAddingResources = progressPerMediaLibrary * 0.1m;
+                await resourceService.AddOrPutRange(newTempSyncResources);
+                var allPathIdMap = mlResources.Concat(newTempSyncResources).ToDictionary(d => d.Path, d => d.Id);
+
+                if (onProcessChange != null)
+                {
+                    await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_UpdateResources(ml.Name));
+                }
+
+                baseProgress = await onProgressChange.TriggerWithStep1(baseProgress, progressForAddingResources);
+
+                #endregion
+
+                #region Merge and update
+
+                var progressForUpdatingResources = progressPerMediaLibrary * 0.2m;
+                var changedResources = new HashSet<Resource>();
+                foreach (var cr in conflictDbResources)
+                {
+                    var tmpResource = tempSyncResourceMap[cr.Path];
+                    if (cr.MergeOnSynchronization(tmpResource))
+                    {
+                        cr.UpdatedAt = DateTime.Now;
+                        changedResources.Add(cr);
+                    }
+                }
+
+                foreach (var dbResource in newTempSyncResources.Concat(conflictDbResources))
+                {
+                    var tmpResource = tempSyncResourceMap[dbResource.Path];
+                    int? parentId = tmpResource.Parent == null ? null : allPathIdMap[tmpResource.Parent.Path];
+                    if (parentId != dbResource.ParentId)
+                    {
+                        dbResource.ParentId = parentId;
+                        changedResources.Add(dbResource);
+                    }
+                }
+
+                baseProgress = await onProgressChange.TriggerWithStep1(baseProgress, progressForUpdatingResources);
+
+                #endregion
+
+                #region Finishing up
+
+                if (onProcessChange != null)
+                {
+                    await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_AlmostComplete(ml.Name));
+                }
+
+                var progressForFinishingUp = progressPerMediaLibrary * 0.1m;
+                await resourceService.AddOrPutRange(changedResources.ToList());
+                await Patch(ml.Id,
+                    new MediaLibraryV2PatchInputModel
+                    {
+                        ResourceCount = mlResources.Count - resourcesToBeDeleted.Count + newTempSyncResources.Count
+                    });
+
+                // clean cache
+                await cacheOrm.RemoveByKeys(conflictDbResources.Select(r => r.Id));
+                baseProgress = await onProgressChange.TriggerWithStep1(baseProgress, progressForFinishingUp);
+
+                #endregion
+
+                if (onProcessChange != null)
+                {
+                    await onProcessChange(null);
                 }
             }
 
-            foreach (var dbResource in newTempSyncResources.Concat(conflictDbResources))
+            baseProgress = (index + 1) * progressPerMediaLibrary;
+            if (onProgressChange != null)
             {
-                var tmpResource = tempSyncResourceMap[dbResource.Path];
-                int? parentId = tmpResource.Parent == null ? null : allPathIdMap[tmpResource.Parent.Path];
-                if (parentId != dbResource.ParentId)
-                {
-                    dbResource.ParentId = parentId;
-                    changedResources.Add(dbResource);
-                }
+                await onProgressChange((int)baseProgress);
             }
-
-            await resourceService.AddOrPutRange(changedResources.ToList());
-            await Patch(ml.Id,
-                new MediaLibraryV2PatchInputModel
-                    {ResourceCount = mlResources.Count - resourcesToBeDeleted.Count + newTempSyncResources.Count});
-
-            // clean cache
-            await cacheOrm.RemoveByKeys(conflictDbResources.Select(r => r.Id));
         }
     }
 
@@ -243,7 +319,9 @@ public class MediaLibraryV2Service<TDbContext>(
                     {
                         var scope = args.RootServiceProvider.CreateAsyncScope();
                         var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
-                        await service.Sync(id);
+                        await service.Sync(id, async p => await args.UpdateTask(t => t.Percentage = p),
+                            async p => await args.UpdateTask(t => t.Process = p), args.PauseToken,
+                            args.CancellationToken);
                     },
                     GetName = () =>
                         localizer.SyncMediaLibrary(mlMap?.GetValueOrDefault(id)?.Name ?? localizer.Unknown()),

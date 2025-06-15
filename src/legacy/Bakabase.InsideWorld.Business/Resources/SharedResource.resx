@@ -414,4 +414,19 @@ The version of lux is not limited.</value>
   <data name="BTask_CanNotReplaceAnActiveTask" xml:space="preserve">
     <value>An active task [{0}]{1} can not be replaced</value>
   </data>
+  <data name="SyncMediaLibrary_TaskProcess_DiscoverResources" xml:space="preserve">
+    <value>Discover resources</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_CleanupResources" xml:space="preserve">
+    <value>Cleanup resources</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_AddResources" xml:space="preserve">
+    <value>Add resources</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_UpdateResources" xml:space="preserve">
+    <value>Update resources</value>
+  </data>
+  <data name="SyncMediaLibrary_TaskProcess_AlmostComplete" xml:space="preserve">
+    <value>Almost complete</value>
+  </data>
 </root>

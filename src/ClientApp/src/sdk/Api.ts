@@ -1287,7 +1287,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAddit
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
 
 /**
- * [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All]
+ * [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -1297,10 +1297,9 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 160
   | 416
   | 512
-  | 1024
   | 2048
   | 4096
-  | 8160;
+  | 7136;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -5740,7 +5739,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All] */
+        /** [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},

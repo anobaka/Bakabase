@@ -12,7 +12,7 @@ interface IProps {
 export default ({ property, showPool }: IProps) => {
 const { t } = useTranslation();
   return (
-    <>
+    <div className={'inline-flex items-center'}>
       {showPool && (
         <Chip
           size={'sm'}
@@ -24,6 +24,6 @@ const { t } = useTranslation();
       )}
       <PropertyTypeIcon type={property.type} textVariant={'none'} />
       <span>{property.name}</span>
-    </>
+    </div>
   );
 };

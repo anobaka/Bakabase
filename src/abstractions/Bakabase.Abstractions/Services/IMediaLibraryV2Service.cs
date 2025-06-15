@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
+using Bootstrap.Components.Tasks;
 
 namespace Bakabase.Abstractions.Services;
 
@@ -21,7 +22,12 @@ public interface IMediaLibraryV2Service
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
 
     Task Delete(int id);
-    Task Sync(int id);
-    Task SyncAll(int[]? ids = null);
+
+    Task Sync(int id, Func<int, Task>? onProgressChange, Func<string?, Task>? onProcessChange, PauseToken pt,
+        CancellationToken ct);
+
+    Task SyncAll(int[]? ids, Func<int, Task>? onProgressChange, Func<string?, Task>? onProcessChange, PauseToken pt,
+        CancellationToken ct);
+
     Task StartSyncAll(int[]? ids = null);
 }

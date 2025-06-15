@@ -904,6 +904,51 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Add resources.
+        /// </summary>
+        internal static string SyncMediaLibrary_TaskProcess_AddResources {
+            get {
+                return ResourceManager.GetString("SyncMediaLibrary_TaskProcess_AddResources", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Almost complete.
+        /// </summary>
+        internal static string SyncMediaLibrary_TaskProcess_AlmostComplete {
+            get {
+                return ResourceManager.GetString("SyncMediaLibrary_TaskProcess_AlmostComplete", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Cleanup resources.
+        /// </summary>
+        internal static string SyncMediaLibrary_TaskProcess_CleanupResources {
+            get {
+                return ResourceManager.GetString("SyncMediaLibrary_TaskProcess_CleanupResources", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Discover resources.
+        /// </summary>
+        internal static string SyncMediaLibrary_TaskProcess_DiscoverResources {
+            get {
+                return ResourceManager.GetString("SyncMediaLibrary_TaskProcess_DiscoverResources", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Update resources.
+        /// </summary>
+        internal static string SyncMediaLibrary_TaskProcess_UpdateResources {
+            get {
+                return ResourceManager.GetString("SyncMediaLibrary_TaskProcess_UpdateResources", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Type {0} is not found.
         /// </summary>
         internal static string TypeIsNotFound {

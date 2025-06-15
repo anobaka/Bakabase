@@ -84,11 +84,85 @@ export default ({
       footer={false}
       defaultVisible
       onDestroyed={props.onDestroyed}
-      title={resource?.displayName}
+      title={
+        <div className={'flex items-center justify-between'}>
+          <div>{resource?.displayName}</div>
+          <Popover
+            trigger={(
+              <Button
+                size={'sm'}
+                isIconOnly
+                variant={'light'}
+                // className={'absolute left-0 top-0'}
+              >
+                <SettingOutlined className={'text-base'} />
+              </Button>
+            )}
+            shouldCloseOnBlur
+            placement={'left-start'}
+          >
+            <Listbox
+              aria-label="Actions"
+              onAction={(key) => {
+                switch (key) {
+                  case 'AdjustPropertyScopePriority': {
+                    createPortal(PropertyValueScopePicker, {
+                      resource,
+                    });
+                    break;
+                  }
+                  case 'SortPropertiesInCategory': {
+                    const propertyMap = resource?.properties?.[PropertyPool.Custom] ?? {};
+                    const properties = _.keys(propertyMap).map(x => {
+                      const id = parseInt(x, 10);
+                      const p = propertyMap[id]!;
+                      if (p.visible) {
+                        return {
+                          id,
+                          name: p.name!,
+                        };
+                      }
+                      return null;
+                    }).filter(x => x != null);
+                    createPortal(CategoryPropertySortModal, {
+                      categoryId: resource.categoryId,
+                      properties,
+                      onDestroyed: loadResource,
+                    });
+                    break;
+                  }
+                  case 'SortPropertiesGlobally': {
+                    BApi.customProperty.getAllCustomProperties().then(r => {
+                      const properties = (r.data || []).sort((a, b) => a.order - b.order);
+                      createPortal(CustomPropertySortModal, {
+                        properties,
+                        onDestroyed: loadResource,
+                      });
+                    });
+                  }
+                }
+              }}
+            >
+              <ListboxItem
+                key="AdjustPropertyScopePriority"
+                startContent={<AppstoreOutlined className={'text-small'} />}
+              >
+                {t('Adjust the display priority of property scopes')}
+              </ListboxItem>
+              <ListboxItem key="SortPropertiesInCategory" startContent={<ProfileOutlined className={'text-small'} />}>
+                {t('Adjust orders of linked properties for current category')}
+              </ListboxItem>
+              <ListboxItem key="SortPropertiesGlobally" startContent={<ProfileOutlined className={'text-small'} />}>
+                {t('Adjust orders of properties globally')}
+              </ListboxItem>
+            </Listbox>
+          </Popover>
+        </div>
+      }
     >
       {resource && (
         <>
-          <div className="flex gap-4 relative">
+          <div className="flex gap-4">
             <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
               <div
                 className={'h-[400px] max-h-[400px] overflow-hidden rounded flex items-center justify-center border-1'}
@@ -155,14 +229,14 @@ export default ({
                     variant={'light'}
                     color="default"
                     onPress={() => {
-                        BApi.options.patchUiOptions({
-                          ...uiOptions,
-                          resource: {
-                            ...uiOptions.resource,
-                            hideResourceTimeInfo: !hideTimeInfo,
-                          },
-                        });
-                      }}
+                      BApi.options.patchUiOptions({
+                        ...uiOptions,
+                        resource: {
+                          ...uiOptions.resource,
+                          hideResourceTimeInfo: !hideTimeInfo,
+                        },
+                      });
+                    }}
                   >
                     <MdCalendarMonth className={'text-lg'} />
                   </Button>
@@ -172,7 +246,7 @@ export default ({
                 <BasicInfo resource={resource} />
               )}
             </div>
-            <div className="overflow-auto grow">
+            <div className="overflow-auto relative grow">
               <Properties
                 resource={resource}
                 reload={loadResource}
@@ -238,72 +312,6 @@ export default ({
                 )}
               </div>
             </div>
-            <Popover
-              trigger={(
-                <Button
-                  size={'sm'}
-                  isIconOnly
-                  variant={'light'}
-                  className={'absolute top-0 right-[-24px]'}
-                >
-                  <SettingOutlined className={'text-base'} />
-                </Button>
-              )}
-              shouldCloseOnBlur
-            >
-              <Listbox
-                aria-label="Actions"
-                onAction={(key) => {
-                    switch (key) {
-                      case 'AdjustPropertyScopePriority': {
-                        createPortal(PropertyValueScopePicker, {
-                          resource,
-                        });
-                        break;
-                      }
-                      case 'SortPropertiesInCategory': {
-                        const propertyMap = resource?.properties?.[PropertyPool.Custom] ?? {};
-                        const properties = _.keys(propertyMap).map(x => {
-                          const id = parseInt(x, 10);
-                          const p = propertyMap[id]!;
-                          if (p.visible) {
-                            return {
-                              id,
-                              name: p.name!,
-                            };
-                          }
-                          return null;
-                        }).filter(x => x != null);
-                        createPortal(CategoryPropertySortModal, {
-                          categoryId: resource.categoryId,
-                          properties,
-                          onDestroyed: loadResource,
-                        });
-                        break;
-                      }
-                      case 'SortPropertiesGlobally': {
-                        BApi.customProperty.getAllCustomProperties().then(r => {
-                          const properties = (r.data || []).sort((a, b) => a.order - b.order);
-                          createPortal(CustomPropertySortModal, {
-                            properties,
-                            onDestroyed: loadResource,
-                          });
-                        });
-                      }
-                    }
-                  }}
-              >
-                <ListboxItem key="AdjustPropertyScopePriority" startContent={<AppstoreOutlined className={'text-small'} />}>
-                  {t('Adjust the display priority of property scopes')}
-                </ListboxItem>
-                <ListboxItem key="SortPropertiesInCategory" startContent={<ProfileOutlined className={'text-small'} />}>
-                  {t('Adjust orders of linked properties for current category')}
-                </ListboxItem>
-                <ListboxItem key="SortPropertiesGlobally" startContent={<ProfileOutlined className={'text-small'} />}>
-                  {t('Adjust orders of properties globally')}
-                </ListboxItem>
-              </Listbox>
-            </Popover>
           </div>
           <div className={'mt-2'}>
             <Properties

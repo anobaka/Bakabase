@@ -10322,7 +10322,7 @@ export const SearchResourcesURL = function(parameters = {}) {
  * method: GetResourcesByKeys_TYPE
  * raw_url: GetResourcesByKeys_RAW_URL
  * @param ids - 
- * @param additionalItems - [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All]
+ * @param additionalItems - [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
  */
 export const GetResourcesByKeys = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()

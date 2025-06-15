@@ -4202,10 +4202,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalItems.MediaLibraryAdditionalItem": 0 | 1 | 2 | 4;
         /**
          * Format: int32
-         * @description [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All]
+         * @description [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 64 | 128 | 160 | 416 | 512 | 1024 | 2048 | 4096 | 8160;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 64 | 128 | 160 | 416 | 512 | 2048 | 4096 | 7136;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -11911,7 +11911,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 64: Alias, 128: Category, 160: CustomProperties, 416: DisplayName, 512: HasChildren, 1024: ReservedProperties, 2048: MediaLibraryName, 4096: Cache, 8160: All] */
+                /** @description [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;

@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -18,6 +21,7 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bootstrap.Components.Orm;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,10 +63,23 @@ public static class MediaLibraryTemplateExtensions
         };
     }
 
-    public static List<TempSyncResource> DiscoverResources(this MediaLibraryTemplate template, string rootPath)
+    public static async Task<List<TempSyncResource>> DiscoverResources(this MediaLibraryTemplate template,
+        string rootPath, Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt,
+        CancellationToken ct)
     {
+        if (template.ResourceFilters == null || template.ResourceFilters.Count == 0)
+        {
+            return [];
+        }
+
         var resources = new List<TempSyncResource>();
-        var rpiMap = template.ResourceFilters?.Filter(rootPath) ?? [];
+        const decimal progressForFiltering = 50;
+        const decimal progressForInitializing = 50;
+
+        var rpiMap = await template.ResourceFilters.Filter(rootPath, null,
+            onProgressChange.ScaleInSubTask(0, progressForFiltering), null, pt, ct);
+        var currentProgress = progressForFiltering;
+        var progressPerPath = rpiMap.Count == 0 ? 0 : progressForInitializing / rpiMap.Count;
         foreach (var (path, rpi) in rpiMap)
         {
             var resource = new TempSyncResource(path);
@@ -105,7 +122,9 @@ public static class MediaLibraryTemplateExtensions
 
             if (template.Child != null)
             {
-                resource.Children = DiscoverResources(template.Child, resource.Path);
+                resource.Children = await DiscoverResources(template.Child, resource.Path, onProgressChange,
+                    onProcessChange,
+                    pt, ct);
                 if (resource.Children != null)
                 {
                     foreach (var c in resource.Children)
@@ -116,6 +135,8 @@ public static class MediaLibraryTemplateExtensions
             }
 
             resources.Add(resource);
+            currentProgress = await onProgressChange.TriggerWithStep1(currentProgress, progressPerPath);
+
         }
 
         return resources;

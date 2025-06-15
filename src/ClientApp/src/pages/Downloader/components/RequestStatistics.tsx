@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { Axis, Chart, Interval, Legend, Tooltip as ChartsTooltip } from 'bizcharts';
+import { AiOutlineBarChart } from 'react-icons/ai';
 import { ThirdPartyId, ThirdPartyRequestResultType } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Chip, Modal, Tooltip } from '@/components/bakaui';
+import { Button, Chip, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { components } from '@/sdk/BApi2';
 import ThirdPartyIcon from '@/components/ThirdPartyIcon';
@@ -48,9 +49,11 @@ export default () => {
   }, []);
 
   return (
-    <div
-      className="flex items-center gap-1"
-      onClick={() => {
+    <div className="flex items-center gap-1" >
+      <Button
+        size={'sm'}
+        variant={'light'}
+        onPress={() => {
         const thirdPartyRequestCounts = (requestStatistics || []).reduce<any[]>((s, t) => {
           Object.keys(t.counts || {})
             .forEach((r) => {
@@ -58,7 +61,7 @@ export default () => {
                 id: t.id.toString(),
                 name: ThirdPartyId[t.id],
                 result: ThirdPartyRequestResultType[r],
-                count: t.counts[r],
+                count: t.counts?.[r],
               });
             });
           return s;
@@ -76,23 +79,23 @@ export default () => {
               >
                 <Interval
                   adjust={[
-                      {
-                        type: 'stack',
-                      },
-                    ]}
+                    {
+                      type: 'stack',
+                    },
+                  ]}
                   color={[
-                      'result',
-                      (result) => RequestResultTypeIntervalColorMap[ThirdPartyRequestResultType[result]!],
-                    ]}
+                    'result',
+                    (result) => RequestResultTypeIntervalColorMap[ThirdPartyRequestResultType[result]!],
+                  ]}
                   position={'id*count'}
                 />
                 <Axis
                   name={'id'}
                   label={{
-                      formatter: (id, item, index) => {
-                        return ThirdPartyId[id];
-                      },
-                    }}
+                    formatter: (id, item, index) => {
+                      return ThirdPartyId[id];
+                    },
+                  }}
                 />
                 <ChartsTooltip
                   shared
@@ -100,7 +103,7 @@ export default () => {
                 />
                 <Legend name={'result'} />
               </Chart>
-              ),
+            ),
             footer: {
               actions: ['ok'],
             },
@@ -108,58 +111,62 @@ export default () => {
           },
         );
       }}
-    >
-      <div className={'title'}>{t('Requests overview')}</div>
-      {requestStatistics?.map((rs) => {
-        let successCount = 0;
-        let failureCount = 0;
-        Object.keys(rs.counts || {})
-          .forEach((r) => {
-            const rt = parseInt(r, 10) as ThirdPartyRequestResultType;
-            switch (rt) {
-              case ThirdPartyRequestResultType.Succeed:
-                successCount += rs.counts[r]!;
-                break;
-              default:
-                failureCount += rs.counts[r]!;
-                break;
-            }
-          });
-        return (
-          <div className="flex items-center">
-            <ThirdPartyIcon
-              thirdPartyId={rs.id}
-              size={'sm'}
-            />
-            <div className={'statistics'}>
-              <Tooltip
-                content={t('Success')}
-              >
-                <Chip
+      >
+        <div className="flex items-center gap-1">
+          <AiOutlineBarChart className={'text-base'} />
+          {t('Requests overview')}
+          {requestStatistics?.map((rs) => {
+            let successCount = 0;
+            let failureCount = 0;
+            Object.keys(rs.counts || {})
+              .forEach((r) => {
+                const rt = parseInt(r, 10) as ThirdPartyRequestResultType;
+                switch (rt) {
+                  case ThirdPartyRequestResultType.Succeed:
+                    successCount += rs.counts![r]!;
+                    break;
+                  default:
+                    failureCount += rs.counts![r]!;
+                    break;
+                }
+              });
+            return (
+              <div className="flex items-center">
+                <ThirdPartyIcon
+                  thirdPartyId={rs.id}
                   size={'sm'}
-                  variant={'light'}
-                  color={'success'}
+                />
+                <Tooltip
+                  content={t('Success')}
                 >
-                  {successCount}
-                </Chip>
-              </Tooltip>
-              /
-              <Tooltip
-                content={t('failure')}
-              >
-                <Chip
-                  size={'sm'}
-                  variant={'light'}
-                  color={'danger'}
+                  <Chip
+                    size={'sm'}
+                    variant={'light'}
+                    color={'success'}
+                    className={'p-0'}
+                  >
+                    {successCount}
+                  </Chip>
+                </Tooltip>
+                /
+                <Tooltip
+                  content={t('Failure')}
                 >
-                  {failureCount}
-                </Chip>
-                {}
-              </Tooltip>
-            </div>
-          </div>
-        );
-      })}
+                  <Chip
+                    size={'sm'}
+                    variant={'light'}
+                    color={'danger'}
+                    className={'p-0'}
+                  >
+                    {failureCount}
+                  </Chip>
+                  {}
+                </Tooltip>
+              </div>
+            );
+          })}
+        </div>
+      </Button>
     </div>
   );
 };

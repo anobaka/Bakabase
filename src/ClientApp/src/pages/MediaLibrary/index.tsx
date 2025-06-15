@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { FaRegSave, FaSort } from 'react-icons/fa';
 import toast from 'react-hot-toast';
-import { AiOutlineEdit, AiOutlinePlusCircle, AiOutlineProduct } from 'react-icons/ai';
+import { AiOutlineEdit, AiOutlineFolderOpen, AiOutlinePlusCircle, AiOutlineProduct } from 'react-icons/ai';
 import { MdOutlineDelete } from 'react-icons/md';
 import { IoIosSync, IoMdExit } from 'react-icons/io';
 import { TbTemplate } from 'react-icons/tb';
@@ -77,6 +77,7 @@ export default () => {
         variant={'flat'}
         onPress={() => BApi.tool.openFileOrDirectory({ path: ml.path })}
       >
+        <AiOutlineFolderOpen className={'text-base'} />
         {ml.path}
       </Button>
     );

@@ -115,7 +115,7 @@ namespace Bakabase.InsideWorld.Business.Components
         public string? BTask_Description(string key)
         {
             var r = this[$"{nameof(BTask_Description)}_{key}"];
-            return r.ResourceNotFound ? null : (string?) r;
+            return r.ResourceNotFound ? null : (string?)r;
         }
 
         public string? BTask_MessageOnInterruption(string key)
@@ -146,19 +146,19 @@ namespace Bakabase.InsideWorld.Business.Components
         public string? Dependency_Component_Name(string key)
         {
             var d = this[$"Dependency_Component_{key}_Name"];
-            return d.ResourceNotFound ? null : (string?) d;
+            return d.ResourceNotFound ? null : (string?)d;
         }
 
         public string? Dependency_Component_Description(string key)
         {
             var d = this[$"Dependency_Component_{key}_Description"];
-            return d.ResourceNotFound ? null : (string?) d;
+            return d.ResourceNotFound ? null : (string?)d;
         }
 
         public string? Name(BackgroundTaskName name)
         {
             var d = this[$"BackgroundTask_{name}_Name"];
-            return d.ResourceNotFound ? null : (string?) d;
+            return d.ResourceNotFound ? null : (string?)d;
         }
 
         public string? WrongPassword()
@@ -179,6 +179,31 @@ namespace Bakabase.InsideWorld.Business.Components
         public string SyncMediaLibrary(string name)
         {
             return this[nameof(SyncMediaLibrary), name];
+        }
+
+        public string SyncMediaLibrary_TaskProcess_DiscoverResources(string name)
+        {
+            return this[nameof(SyncMediaLibrary_TaskProcess_DiscoverResources), name];
+        }
+
+        public string SyncMediaLibrary_TaskProcess_CleanupResources(string name)
+        {
+            return this[nameof(SyncMediaLibrary_TaskProcess_CleanupResources), name];
+        }
+
+        public string SyncMediaLibrary_TaskProcess_AddResources(string name)
+        {
+            return this[nameof(SyncMediaLibrary_TaskProcess_AddResources), name];
+        }
+
+        public string SyncMediaLibrary_TaskProcess_UpdateResources(string name)
+        {
+            return this[nameof(SyncMediaLibrary_TaskProcess_UpdateResources), name];
+        }
+
+        public string SyncMediaLibrary_TaskProcess_AlmostComplete(string name)
+        {
+            return this[nameof(SyncMediaLibrary_TaskProcess_AlmostComplete), name];
         }
     }
 }

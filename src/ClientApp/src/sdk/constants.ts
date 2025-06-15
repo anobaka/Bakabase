@@ -120,7 +120,7 @@ export enum CustomPropertyValueAdditionalItem {None = 0, BizValue = 1}
 export const customPropertyValueAdditionalItems = Object.keys(CustomPropertyValueAdditionalItem).filter(k => typeof CustomPropertyValueAdditionalItem[k] === 'number').map(t => ({label: t, value: CustomPropertyValueAdditionalItem[t]}));
 export enum MediaLibraryAdditionalItem {None = 0, Category = 1, FileSystemInfo = 2, PathConfigurationBoundProperties = 4}
 export const mediaLibraryAdditionalItems = Object.keys(MediaLibraryAdditionalItem).filter(k => typeof MediaLibraryAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryAdditionalItem[t]}));
-export enum ResourceAdditionalItem {None = 0, Alias = 64, Category = 128, CustomProperties = 160, DisplayName = 416, HasChildren = 512, ReservedProperties = 1024, MediaLibraryName = 2048, Cache = 4096, All = 8160}
+export enum ResourceAdditionalItem {None = 0, Alias = 64, Category = 128, Properties = 160, DisplayName = 416, HasChildren = 512, MediaLibraryName = 2048, Cache = 4096, All = 7136}
 export const resourceAdditionalItems = Object.keys(ResourceAdditionalItem).filter(k => typeof ResourceAdditionalItem[k] === 'number').map(t => ({label: t, value: ResourceAdditionalItem[t]}));
 export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));

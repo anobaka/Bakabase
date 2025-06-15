@@ -124,7 +124,7 @@ public class MediaLibraryTemplateService<TDbContext>(
             throw new ArgumentNullException(nameof(template.ResourceFilters));
         }
 
-        var resourcePathInfoMap = template.ResourceFilters?.Filter(rootPath, subPaths) ?? [];
+        var resourcePathInfoMap = await template.ResourceFilters.Filter(rootPath, subPaths) ?? [];
         var resourcesMap = resourcePathInfoMap.ToDictionary(d => d.Key, d => new Resource
         {
             Path = d.Key

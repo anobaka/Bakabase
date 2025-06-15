@@ -1726,5 +1726,7 @@
   "DurationUnit.Day": "天",
   "DurationUnit.Hour": "小时",
   "DurationUnit.Minute": "分钟",
-  "DurationUnit.Second": "秒"
+  "DurationUnit.Second": "秒",
+  "SearchOperation.In.description": "属性值在指定的值列表中",
+  "SearchOperation.NotIn.description": "属性值不在指定的值列表中"
 }

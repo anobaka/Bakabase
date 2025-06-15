@@ -29,6 +29,8 @@ export default ({
                 }: IProps) => {
   const { t } = useTranslation();
 
+  const a = t('a');
+
   const [filter, setFilter] = useState<ResourceSearchFilter>(propsFilter);
 
   useUpdateEffect(() => {
@@ -92,6 +94,8 @@ export default ({
           </DropdownTrigger>
           <DropdownMenu>
             {operations.map((operation) => {
+              const descriptionKey = `SearchOperation.${SearchOperation[operation]}.description`;
+              const description = t(descriptionKey);
               return (
                 <DropdownItem
                   key={operation}
@@ -101,11 +105,9 @@ export default ({
                         operation: operation,
                       });
                     }}
+                  description={description == descriptionKey ? undefined : description}
                 >
                   {t(`SearchOperation.${SearchOperation[operation]}`)}
-                  <Tooltip content={t('123')}>
-                    123
-                  </Tooltip>
                 </DropdownItem>
               );
             })}

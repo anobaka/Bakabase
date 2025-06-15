@@ -10,16 +10,14 @@ namespace Bakabase.InsideWorld.Models.Constants.AdditionalItems
     public enum ResourceAdditionalItem
     {
         None = 0,
-        CustomProperties = 1 << 5 | Category,
+        Properties = 1 << 5 | Category,
         Alias = 1 << 6,
         Category = 1 << 7,
-        DisplayName = 1 << 8 | CustomProperties | Category,
+        DisplayName = 1 << 8 | Properties | Category,
         HasChildren = 1 << 9,
-        ReservedProperties = 1 << 10,
         MediaLibraryName = 1 << 11,
         Cache = 1 << 12,
 
-        All = CustomProperties | DisplayName | Alias | HasChildren | Category | ReservedProperties | MediaLibraryName |
-              Cache
+        All = Properties | DisplayName | Alias | HasChildren | Category | MediaLibraryName | Cache
     }
 }
