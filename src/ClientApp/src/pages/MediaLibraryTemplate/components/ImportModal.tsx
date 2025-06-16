@@ -33,7 +33,7 @@ type ExtensionGroupConversion = {
   toExtensionGroupId: number;
 };
 
-type Validation = components['schemas']['Bakabase.Modules.MediaLibraryTemplate.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel'];
+type Validation = components['schemas']['Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel'];
 
 const MissingDataMessage = 'The current template contains data missing from the application. Please configure how to handle this data before proceeding with the import.';
 
@@ -54,7 +54,7 @@ export default ({ onImported }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [shareCode, setShareCode] = useState<string>('{"name":"视频类（状态/资源）","author":"anobaka@qq.com","description":"asdasdsdasdas","resourceFilters":[{"fsType":2,"extensionGroups":[],"extensions":[],"positioner":1,"layer":2}],"properties":[{"property":{"pool":2,"id":12,"name":"介绍","type":2,"order":2147483647},"valueLocators":[]},{"property":{"pool":2,"id":13,"name":"评分","type":7,"order":2147483647},"valueLocators":[]},{"property":{"pool":2,"id":22,"name":"封面","type":10,"order":2147483647},"valueLocators":[]},{"property":{"pool":4,"id":12,"name":"标题","type":1,"order":0},"valueLocators":[]},{"property":{"pool":4,"id":31,"name":"状态","type":3,"options":{"choices":[],"allowAddingNewDataDynamically":true},"order":0},"valueLocators":[{"positioner":1,"layer":1}]},{"property":{"pool":4,"id":32,"name":"分类","type":3,"options":{"choices":[],"allowAddingNewDataDynamically":false},"order":0},"valueLocators":[{"positioner":1,"layer":0}]}],"playableFileLocator":{"extensionGroups":[{"id":1,"name":"视频文件","extensions":[".mp4",".mkv",".avi",".rmvb",".ts"]},{"id":2,"name":"audio","extensions":[]}],"extensions":[".mkv",".mp10"]},"enhancers":[{"enhancerId":1}],"displayNameTemplate":"{文件名}"}');
+  const [shareCode, setShareCode] = useState<string>();
   const [validation, setValidation] = useState<Validation>();
 
   const [propertyConversionsMap, setPropertyConversionsMap] = useState<Record<number, PropertyConversion>>();

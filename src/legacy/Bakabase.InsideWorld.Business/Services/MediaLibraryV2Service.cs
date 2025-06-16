@@ -29,6 +29,7 @@ using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using NPOI.SS.Formula.Functions;
 using Org.BouncyCastle.Asn1.Sec;
 
 namespace Bakabase.InsideWorld.Business.Services;
@@ -334,7 +335,15 @@ public class MediaLibraryV2Service<TDbContext>(
                         var scope = args.RootServiceProvider.CreateAsyncScope();
                         var service = scope.ServiceProvider.GetRequiredService<IMediaLibraryV2Service>();
                         var result = await service.Sync(id,
-                            async p => { await args.UpdateTask(t => t.Percentage = p); },
+                            async p =>
+                            {
+                                // if (p == 24)
+                                // {
+                                //
+                                // }
+                                // Console.WriteLine($"{DateTime.Now:HH:mm:ss}-{p}");
+                                await args.UpdateTask(t => t.Percentage = p);
+                            },
                             async p => await args.UpdateTask(t => t.Process = p), args.PauseToken,
                             args.CancellationToken);
                         await args.UpdateTask(t =>

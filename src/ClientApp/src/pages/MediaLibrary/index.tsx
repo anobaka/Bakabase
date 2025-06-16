@@ -72,6 +72,7 @@ export default () => {
   const renderPath = (ml: MediaLibrary) => {
     return (
       <Button
+        className={'justify-start'}
         size={'sm'}
         color={'default'}
         variant={'flat'}

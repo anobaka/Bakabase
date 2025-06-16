@@ -9,6 +9,8 @@ import {
   AiOutlineWarning,
 } from 'react-icons/ai';
 import { useEffect, useRef } from 'react';
+import dayjs from 'dayjs';
+import moment from 'moment';
 import { Button, Chip, CircularProgress, Modal } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { BTask } from '@/core/models/BTask';
@@ -181,14 +183,51 @@ export default ({
           </Chip>
         );
       case 'result':
-        return data && (
+      {
+        if (!data) {
+          return null;
+        }
+        const items: {value: any; tip?: any; icon?: any}[] = [
+          {
+            value: dayjs.duration(Math.ceil(moment.duration(task.elapsed).asSeconds()) * 1000).format('HH:mm:ss'),
+            tip: undefined,
+            icon: <AiOutlineFieldTime className={'text-base'} />,
+          },
+          {
+            value: data?.added,
+            tip: 'Added',
+            icon: <AiOutlinePlusCircle className={'text-base'} />,
+          },
+          {
+            value: data?.deleted,
+            tip: 'Deleted',
+            icon: <AiOutlineMinusCircle className={'text-base'} />,
+          },
+          {
+            value: data?.updated,
+            tip: 'Updated',
+            icon: <AiOutlineSync className={'text-base'} />,
+          },
+        ];
+        return (
           <>
-            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlineFieldTime className={'text-base'} />} >{task.elapsed}</Chip>
-            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlinePlusCircle className={'text-base'} />} >{data.added}</Chip>
-            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlineMinusCircle className={'text-base'} />} >{data.deleted}</Chip>
-            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlineSync className={'text-base'} />} >{data.updated}</Chip>
+            {items.map((item, idx) => {
+              return (
+                <Chip
+                  key={idx}
+                  variant={'light'}
+                  radius={'sm'}
+                  size={'sm'}
+                  startContent={item.icon}
+                  title={item.tip}
+                >
+                  {item.value}
+                </Chip>
+              );
+            })}
           </>
         );
+      }
       default:
         return null;
     }
