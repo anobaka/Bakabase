@@ -1,7 +1,13 @@
 import { MdOutlineStopCircle } from 'react-icons/md';
 import { GrResume } from 'react-icons/gr';
 import { FaRegCircleCheck, FaRegCirclePause } from 'react-icons/fa6';
-import { AiOutlineSync, AiOutlineWarning } from 'react-icons/ai';
+import {
+  AiOutlineFieldTime, AiOutlineMinusCircle,
+  AiOutlineMinusSquare,
+  AiOutlinePlusCircle,
+  AiOutlineSync,
+  AiOutlineWarning,
+} from 'react-icons/ai';
 import { useEffect, useRef } from 'react';
 import { Button, Chip, CircularProgress, Modal } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
@@ -18,7 +24,7 @@ type Props = {
 const SyncTaskPrefix = 'SyncMediaLibrary_';
 const BuildTaskId = (id: number) => `${SyncTaskPrefix}${id}`;
 
-type ElementType = 'progress' | 'cancel' | 'pause' | 'resume' | 'start' | 'error' | 'completed';
+type ElementType = 'progress' | 'cancel' | 'pause' | 'resume' | 'start' | 'error' | 'completed' | 'result';
 
 export default ({
                   id,
@@ -31,6 +37,8 @@ export default ({
   const task = bTasks?.find(d => d.id == taskId) as BTask;
 
   const prevStatusRef = useRef(task?.status);
+
+  const data = task?.data;
 
   useEffect(() => {
     if (prevStatusRef.current != undefined &&
@@ -64,6 +72,7 @@ export default ({
       case BTaskStatus.Completed:
         elementTypes.push('completed');
         elementTypes.push('start');
+        elementTypes.push('result');
         break;
       case BTaskStatus.Cancelled:
         elementTypes.push('start');
@@ -170,6 +179,15 @@ export default ({
           <Chip variant={'light'} color={'success'}>
             <FaRegCircleCheck className={'text-lg'} />
           </Chip>
+        );
+      case 'result':
+        return data && (
+          <>
+            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlineFieldTime className={'text-base'} />} >{task.elapsed}</Chip>
+            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlinePlusCircle className={'text-base'} />} >{data.added}</Chip>
+            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlineMinusCircle className={'text-base'} />} >{data.deleted}</Chip>
+            <Chip variant={'light'} radius={'sm'} size={'sm'} startContent={<AiOutlineSync className={'text-base'} />} >{data.updated}</Chip>
+          </>
         );
       default:
         return null;

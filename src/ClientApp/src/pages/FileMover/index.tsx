@@ -374,7 +374,7 @@ export default () => {
                     <Menu>
                       <Menu.Item onClick={() => {
                         createPortal(MediaLibraryPathSelectorV2, {
-                          onSelect: (id, path) => {
+                          onSelect: (id, path, isLegacyMediaLibrary) => {
                             if (!target) {
                               addTarget(path);
                             } else {

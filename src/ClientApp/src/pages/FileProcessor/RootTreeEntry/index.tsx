@@ -238,7 +238,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
             case 'm': {
               if (selectedEntriesRef.current.length > 0) {
                 createPortal(MediaLibraryPathSelectorV2, {
-                  onSelect: (id, path) => {
+                  onSelect: (id, path, isLegacyMediaLibrary) => {
                     return BApi.file.moveEntries({
                       destDir: path,
                       entryPaths: selectedEntriesRef.current.map(e => e.path),

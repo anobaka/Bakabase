@@ -57,6 +57,7 @@ namespace Bakabase.Service.Controllers
         ICustomPropertyService customPropertyService,
         IPropertyLocalizer propertyLocalizer,
         IMediaLibraryService mediaLibraryService,
+        IMediaLibraryV2Service mediaLibraryV2Service,
         IBakabaseLocalizer localizer,
         BTaskManager taskManager,
         IBOptionsManager<FileSystemOptions> fsOptionsManager)
@@ -273,9 +274,23 @@ namespace Bakabase.Service.Controllers
                 return BaseResponseBuilder.BuildBadRequest($"Resources [{string.Join(',', model.Ids)}] are not found");
             }
 
-            var mediaLibrary = await mediaLibraryService.Get(model.MediaLibraryId, MediaLibraryAdditionalItem.Category);
+            string? mediaLibraryName;
+            if (model.IsLegacyMediaLibrary)
+            {
+                var mediaLibrary = await mediaLibraryService.Get(model.MediaLibraryId, MediaLibraryAdditionalItem.Category);
+                mediaLibraryName = mediaLibrary?.Name;
+                if (mediaLibrary?.Category != null)
+                {
+                    mediaLibraryName = $"[{mediaLibrary.Category.Name}]{mediaLibrary.Name}";
+                }
+            }
+            else
+            {
+                var mediaLibrary = await mediaLibraryV2Service.Get(model.MediaLibraryId);
+                mediaLibraryName = mediaLibrary?.Name;
+            }
 
-            if (mediaLibrary == null)
+            if (mediaLibraryName.IsNullOrEmpty())
             {
                 return BaseResponseBuilder.BuildBadRequest($"Invalid {nameof(model.MediaLibraryId)}");
             }
@@ -283,25 +298,20 @@ namespace Bakabase.Service.Controllers
             if (model.Path.IsNullOrEmpty())
             {
                 await resourceOptionsManager.SaveAsync(x => x.AddIdOfMediaLibraryRecentlyMovedTo(model.MediaLibraryId));
-                await service.ChangeMediaLibrary(model.Ids, mediaLibrary.Id);
+                await service.ChangeMediaLibrary(model.Ids, model.MediaLibraryId, model.IsLegacyMediaLibrary);
                 return BaseResponseBuilder.Ok;
             }
 
             await fsOptionsManager.SaveAsync(x => x.AddRecentMovingDestination(model.Path.StandardizePath()!));
 
             var taskName = $"Resource:BulkMove:{CryptographyUtils.Md5(string.Join(',', resources.Keys))}";
-            var mediaLibraryName = mediaLibrary.Name;
-            if (mediaLibrary.Category != null)
-            {
-                mediaLibraryName = $"[{mediaLibrary.Category.Name}]{mediaLibrary.Name}";
-            }
 
             var rand = new Random();
             foreach (var (id, resource) in resources)
             {
                 var targetPath = Path.Combine(model.Path, resource.FileName).StandardizePath()!;
 
-                taskManager.Enqueue(new BTaskHandlerBuilder
+                await taskManager.Enqueue(new BTaskHandlerBuilder
                 {
                     ConflictKeys = [taskName],
                     ResourceType = BTaskResourceType.Resource,
@@ -334,18 +344,17 @@ namespace Bakabase.Service.Controllers
                                 args.CancellationToken);
                         }
 
-                        if (resource.MediaLibraryId != mediaLibrary.Id)
+                        if (resource.MediaLibraryId != model.MediaLibraryId)
                         {
                             await using var scope = args.RootServiceProvider.CreateAsyncScope();
                             var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
-                            await resourceService.ChangeMediaLibrary([resource.Id], mediaLibrary.Id,
-                                new Dictionary<int, string> { { resource.Id, targetPath } });
+                            await resourceService.ChangeMediaLibrary([resource.Id], model.MediaLibraryId,
+                                model.IsLegacyMediaLibrary,
+                                new Dictionary<int, string> {{resource.Id, targetPath}});
                         }
                     }
                 });
             }
-
-            
 
             return BaseResponseBuilder.Ok;
         }

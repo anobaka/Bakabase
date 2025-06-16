@@ -23,4 +23,5 @@ export type BTask = {
   type: BTaskType;
   resourceType: BTaskResourceType;
   resourceKeys?: any[];
+  data?: any;
 };

@@ -33,6 +33,7 @@ public record BTaskViewModel
     public object[]? ResourceKeys { get; set; }
     public BTaskResourceType ResourceType { get; set; }
     public DateTime CreatedAt { get; set; }
+    public object? Data { get; set; }
 
     public BTaskViewModel(BTaskHandler handler, string? reasonForUnableToStart)
     {
@@ -57,6 +58,7 @@ public record BTaskViewModel
         ResourceKeys = handler.Task.ResourceKeys;
         ResourceType = handler.Task.ResourceType;
         CreatedAt = handler.Task.CreatedAt;
+        Data = handler.Task.Data;
 
         Elapsed = handler.Sw.Elapsed == TimeSpan.Zero ? null : handler.Sw.Elapsed;
         ReasonForUnableToStart = reasonForUnableToStart;

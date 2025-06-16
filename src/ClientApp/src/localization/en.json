@@ -258,5 +258,7 @@
   "DurationUnit.Day": "days",
   "DurationUnit.Hour": "hours",
   "DurationUnit.Minute": "minutes",
-  "DurationUnit.Second": "seconds"
+  "DurationUnit.Second": "seconds",
+  "SearchOperation.In.description": "Property value is in the specified value list",
+  "SearchOperation.NotIn.description": "Property value is not in the specified value list"
 }

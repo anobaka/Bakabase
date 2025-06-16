@@ -36,7 +36,7 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const backgroundTasks = store.useModelState('bTasks');
-  const sortedTasks = backgroundTasks.slice().sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  const sortedTasks = backgroundTasks.slice().sort((a, b) => b.startedAt?.localeCompare(a.startedAt));
   const taskInfo = sortedTasks.find((t) => t.name == 'MediaLibraryService:Sync');
 
   const prevTaskInfo = usePrevious(taskInfo);

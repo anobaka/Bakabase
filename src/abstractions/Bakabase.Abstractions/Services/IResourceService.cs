@@ -99,7 +99,7 @@ public interface IResourceService
     Task<int> GetUnknownCount();
     Task DeleteUnknown();
 
-    Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
+    Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false, Dictionary<int, string>? newPaths = null);
 
     Task Pin(int id, bool pin);
 

@@ -4492,6 +4492,7 @@ export interface components {
             ids: number[];
             /** Format: int32 */
             mediaLibraryId: number;
+            isLegacyMediaLibrary: boolean;
             path?: string;
         };
         "Bakabase.InsideWorld.Models.RequestModels.SoulPlusOptionsPatchInputModel": {

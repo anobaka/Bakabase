@@ -399,7 +399,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         case ResourceAdditionalItem.Properties:
                         {
-                                var reservedPropertyValueMap =
+                            var reservedPropertyValueMap =
                                 (await _reservedPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId)))
                                 .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
 
@@ -409,6 +409,11 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             foreach (var r in doList)
                             {
+                                if (r.Id == 168)
+                                {
+
+                                }
+
                                 r.Properties ??= [];
                                 var reservedProperties =
                                     r.Properties.GetOrAdd((int)PropertyPool.Reserved, () => []);
@@ -1497,7 +1502,7 @@ namespace Bakabase.InsideWorld.Business.Services
             await DeleteByKeys(unknownResources.Select(x => x.Id).ToArray(), false);
         }
 
-        public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId,
+        public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false,
             Dictionary<int, string>? newPaths = null)
         {
             var resources = await _orm.GetByKeys(ids);
@@ -1513,17 +1518,30 @@ namespace Bakabase.InsideWorld.Business.Services
                 return BaseResponseBuilder.Ok;
             }
 
-            var library = await _mediaLibraryService.Get(mediaLibraryId, MediaLibraryAdditionalItem.None);
-
-            if (library == null)
+            int categoryId = 0;
+            if (isLegacyMediaLibrary)
             {
-                return BaseResponseBuilder.NotFound;
+                var library = await _mediaLibraryService.Get(mediaLibraryId, MediaLibraryAdditionalItem.None);
+                if (library == null)
+                {
+                    return BaseResponseBuilder.NotFound;
+                }
+
+                categoryId = library.CategoryId;
+            }
+            else
+            {
+                var library = await MediaLibraryV2Service.Get(mediaLibraryId);
+                if (library == null)
+                {
+                    return BaseResponseBuilder.NotFound;
+                }
             }
 
             foreach (var resource in resourcesToBeChanged)
             {
-                resource.CategoryId = library.CategoryId;
-                resource.MediaLibraryId = library.Id;
+                resource.CategoryId = categoryId;
+                resource.MediaLibraryId = mediaLibraryId;
                 var newPath = newPaths?.GetValueOrDefault(resource.Id);
                 if (newPath.IsNotEmpty())
                 {

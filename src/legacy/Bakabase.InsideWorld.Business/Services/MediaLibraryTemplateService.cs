@@ -187,7 +187,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                 .Concat(template.PlayableFileLocator.Extensions ?? []).ToHashSet();
             foreach (var rpi in resourcePathInfoMap.Values)
             {
-                var playableFilePaths = rpi.InsidePaths.Where(ip => extensions.Contains(pathExtMap[ip]!)).ToList();
+                var playableFilePaths = rpi.InnerPaths.Where(ip => extensions.Contains(pathExtMap[ip]!)).ToList();
                 if (playableFilePaths.Any())
                 {
                     var r = resourcesMap[rpi.Path];

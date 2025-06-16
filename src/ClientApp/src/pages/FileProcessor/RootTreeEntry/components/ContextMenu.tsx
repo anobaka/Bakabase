@@ -139,10 +139,11 @@ export default ({
         label: t('Move {{count}} items', { count: selectedEntries.length }),
         onClick: () => {
           createPortal(MediaLibraryPathSelectorV2, {
-            onSelect: (id, path) => {
+            onSelect: (id, path, isLegacyMediaLibrary) => {
               return BApi.file.moveEntries({
                 destDir: path,
                 entryPaths: selectedEntries.map(e => e.path),
+                isLegacyMediaLibrary,
               });
             },
           });

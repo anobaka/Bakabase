@@ -264,6 +264,7 @@ export default () => {
       }}
     >
       <FilterPanel
+        resourceCount={resources.length}
         selectedResourceIds={selectedIds}
         onSearch={f => search({
           ...f,

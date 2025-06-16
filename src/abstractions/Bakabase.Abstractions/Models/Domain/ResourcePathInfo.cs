@@ -4,4 +4,4 @@ public record ResourcePathInfo(
     string Path,
     string RelativePath,
     string[] RelativePathSegments,
-    string[] InsidePaths);
+    string[] InnerPaths);

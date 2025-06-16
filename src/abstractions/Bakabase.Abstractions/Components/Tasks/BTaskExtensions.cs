@@ -25,24 +25,19 @@ public static class BTaskExtensions
         }
     }
 
-    public static Func<int, Task>? ScaleInSubTask(this Func<int, Task>? onProgressChange, decimal baseOverallProgress,
-        decimal subTaskTotalProgress)
+    public static Func<int, Task>? ScaleInSubTask(this Func<int, Task>? onProgressChange, float baseOverallProgress,
+        float subTaskTotalProgress)
     {
         if (onProgressChange == null)
         {
             return null;
         }
 
-        var currentProgress = (int)baseOverallProgress;
+        var currentProgress = baseOverallProgress;
         return async p =>
         {
-            var progressOverall = (int)(baseOverallProgress + p / subTaskTotalProgress);
-            if (progressOverall > currentProgress)
-            {
-                currentProgress = progressOverall;
-            }
-
-            await onProgressChange(progressOverall);
+            var progressOverall = baseOverallProgress + p * subTaskTotalProgress / 100;
+            currentProgress = await onProgressChange.TriggerOnJumpingOver(currentProgress, progressOverall - currentProgress);
         };
     }
 
@@ -52,19 +47,19 @@ public static class BTaskExtensions
     /// <param name="onProgressChange"></param>
     /// <param name="currentProgress"></param>
     /// <param name="addingProgress"></param>
+    /// <param name="stepLength"></param>
     /// <returns>New progress</returns>
-    public static async Task<decimal> TriggerWithStep1(this Func<int, Task>? onProgressChange, decimal currentProgress,
-        decimal addingProgress)
+    public static async Task<float> TriggerOnJumpingOver(this Func<int, Task>? onProgressChange, float currentProgress,
+        float addingProgress, int stepLength = 1)
     {
         var np = currentProgress + addingProgress;
         if (onProgressChange != null)
         {
-            var intNp = (int)np;
-            var intCurrent = (int)currentProgress;
-            if (intNp != intCurrent)
+            var intNp = (int) np;
+            var intCurrent = (int) currentProgress;
+            if (intNp - intCurrent >= stepLength)
             {
                 await onProgressChange(intNp);
-                
             }
         }
 

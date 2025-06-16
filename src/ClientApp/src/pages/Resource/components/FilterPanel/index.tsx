@@ -10,7 +10,7 @@ import {
   SnippetsOutlined,
 } from '@ant-design/icons';
 import toast from 'react-hot-toast';
-import { AiOutlineSearch } from 'react-icons/ai';
+import { AiOutlineDatabase, AiOutlineSearch } from 'react-icons/ai';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
@@ -38,6 +38,7 @@ interface IProps {
   multiSelection?: boolean;
   rearrangeResources?: () => any;
   onSelectAllChange: (selected: boolean) => any;
+  resourceCount?: number;
 }
 
 const MinResourceColCount = 3;
@@ -57,6 +58,7 @@ export default ({
                   multiSelection = false,
                   rearrangeResources,
                   onSelectAllChange,
+                  resourceCount,
                 }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -269,6 +271,12 @@ export default ({
             >{selectedAll ? t('{{count}} items selected', { count: selectedResourceIds?.length }) : t('Select all')}</Checkbox>
           </Tooltip>
           <HandleUnknownResources onHandled={() => search({})} />
+          {(resourceCount && resourceCount > 0) ? (
+            <div className={'flex items-center gap-1'}>
+              <AiOutlineDatabase className={'text-medium'} />
+              {resourceCount}
+            </div>
+          ) : null}
           <OrderSelector
             className={'mr-2'}
             value={searchForm.orders}

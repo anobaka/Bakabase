@@ -33,6 +33,7 @@ public record BTask
     public BTaskType Type { get; set; }
     public BTaskResourceType ResourceType { get; set; }
     public object[]? ResourceKeys { get; set; }
+    public object? Data { get; set; }
 
     public void ClearError()
     {

@@ -68,11 +68,6 @@ const asideMenuConfig: IMenuItem[] = [
         icon: AiOutlineRadarChart,
       },
       {
-        name: 'Custom component',
-        path: '/customcomponent',
-        icon: AiOutlineControl,
-      },
-      {
         name: 'Extension group',
         path: '/extensiongroup',
         icon: AiOutlineUngroup,
@@ -112,6 +107,11 @@ const asideMenuConfig: IMenuItem[] = [
       //   path: '/enhancementrecord',
       //   icon: AiOutlineThunderbolt,
       // },
+      {
+        name: 'Custom component',
+        path: '/customcomponent',
+        icon: AiOutlineControl,
+      },
       {
         name: 'Media library(Deprec)',
         icon: AiOutlineProduct,

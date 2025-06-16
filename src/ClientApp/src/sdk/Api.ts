@@ -1627,6 +1627,7 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel 
   ids: number[];
   /** @format int32 */
   mediaLibraryId: number;
+  isLegacyMediaLibrary: boolean;
   path?: string;
 }
 

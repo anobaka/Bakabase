@@ -33,12 +33,13 @@ export default ({
           log('inner', 'click');
           createPortal(MediaLibraryPathSelectorV2, {
             confirmation: true,
-            onSelect: (id, path) => {
+            onSelect: (id, path, isLegacyMediaLibrary) => {
               if (selectedResourceIds.length > 0) {
                 BApi.resource.moveResources({
                   ids: selectedResourceIds,
                   path,
                   mediaLibraryId: id,
+                  isLegacyMediaLibrary,
                 }).then(r => {
                   // todo: moving files is a asynchronized operation, we need some way to update other resources after moving
                   // onSelectedResourcesChanged?.(selectedResourceIds);

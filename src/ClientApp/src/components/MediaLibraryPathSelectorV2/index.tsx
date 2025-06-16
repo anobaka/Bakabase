@@ -14,9 +14,10 @@ import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Chip, Divider, Input, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { IdName } from '@/components/types';
 
 type Props = {
-  onSelect: (id: number, path: string) => (Promise<any> | any);
+  onSelect: (id: number, path: string, isLegacyMediaLibrary: boolean) => (Promise<any> | any);
   confirmation?: boolean;
 } & DestroyableProps;
 
@@ -46,30 +47,37 @@ export default (props: Props) => {
 
   // log(fsOptions);
 
-  useEffect(() => {
-    BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })
-      .then((a) => {
-        const data: Record<number, Category> = {};
-        for (const ml of a.data || []) {
-          const paths: string[] | undefined = ml.pathConfigurations?.map(pc => pc.path).filter((x): x is string => x != null);
-          if (paths && paths.length > 0) {
-            if (!(ml.categoryId in data)) {
-              data[ml.categoryId] = {
-                id: ml.categoryId,
-                name: ml.category!.name,
-                libraries: [],
-              };
-            }
-            const { libraries } = data[ml.categoryId];
-            libraries.push({
-              id: ml.id,
-              name: ml.name,
-              paths: paths,
-            });
-          }
+  const init = async () => {
+    const mls = (await BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })).data ?? [];
+    const data: Record<number, Category> = {};
+    for (const ml of mls) {
+      const paths: string[] | undefined = ml.pathConfigurations?.map(pc => pc.path).filter((x): x is string => x != null);
+      if (paths && paths.length > 0) {
+        if (!(ml.categoryId in data)) {
+          data[ml.categoryId] = {
+            id: ml.categoryId,
+            name: ml.category!.name,
+            libraries: [],
+          };
         }
-        setCategories(Object.values(data));
-      });
+        const { libraries } = data[ml.categoryId]!;
+        libraries.push({
+          id: ml.id,
+          name: ml.name,
+          paths: paths,
+        });
+      }
+    }
+    const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
+    if (mlv2s.length > 0) {
+      data[0] = { id: 0, name: t('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: [ml.path] })) };
+    }
+    setCategories(Object.values(data));
+  };
+
+  useEffect(() => {
+    init();
+
     return () => {
     };
   }, []);
@@ -141,6 +149,7 @@ export default (props: Props) => {
                 >
                   <div>
                     {c.name}
+                    {c.id != 0 && `(${t('Deprecated')})`}
                   </div>
                   <div>
                     {c.libraries
@@ -164,7 +173,7 @@ export default (props: Props) => {
                                       size={'sm'}
                                       variant={'light'}
                                       color={selectedRecently ? 'success' : 'primary'}
-                                      onClick={() => {
+                                      onPress={() => {
                                         if (confirmation) {
                                           createPortal(Modal, {
                                             defaultVisible: true,
@@ -193,12 +202,12 @@ export default (props: Props) => {
                                               </div>
                                             ),
                                             onOk: async () => {
-                                              onSelect?.(l.id, path);
+                                              onSelect?.(l.id, path, c.id != 0);
                                               setVisible(false);
                                             },
                                           });
                                         } else {
-                                          onSelect?.(l.id, path);
+                                          onSelect?.(l.id, path, c.id != 0);
                                           setVisible(false);
                                         }
                                       }}

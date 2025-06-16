@@ -1,10 +1,11 @@
 import React, { useEffect, useReducer, useRef, useState } from 'react';
-import { Loading, Menu } from '@alifd/next';
+import { Loading } from '@alifd/next';
 import './index.scss';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { DisconnectOutlined, SettingOutlined } from '@ant-design/icons';
 import { history } from 'ice';
+import { TbPackageExport } from 'react-icons/tb';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import { GetComponentDescriptors } from '@/sdk/apis';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
@@ -14,7 +15,16 @@ import BApi from '@/sdk/BApi';
 import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { Alert, Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input, Modal } from '@/components/bakaui';
+import {
+  Alert,
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Modal,
+} from '@/components/bakaui';
 import HandleUnknownResources from '@/components/HandleUnknownResources';
 
 export default () => {
@@ -113,13 +123,22 @@ export default () => {
 
   return (
     <div className={'category-page'}>
-      <div>
+      <Modal
+        title={t('Current media library feature will be removed soon')}
+        size={'lg'}
+        defaultVisible
+        footer={{ actions: ['cancel'] }}
+      >
         <Alert
           color={'danger'}
           title={t('Please note that the categorization feature will be removed soon. Please switch to the new media library function as soon as possible.')}
-          description={t('You can use the export button on the right side of the path to export the current media library configuration as a new media library template and bind it to the new media library.')}
         />
-      </div>
+        <Alert
+          icon={<TbPackageExport className={'text-lg'} />}
+          color={'primary'}
+          title={t('You can use this button in your path configuration to export the current media library configuration as a new media library template and bind it to the new media library.')}
+        />
+      </Modal>
       <div className="header mb-1">
         <div className="left">
           <Button
@@ -183,7 +202,7 @@ export default () => {
                 }}
               >
                 {categories?.map((c) => (
-                  <DropdownItem key={c.id} >
+                  <DropdownItem key={c.id}>
                     {c.name}
                   </DropdownItem>
                 ))}

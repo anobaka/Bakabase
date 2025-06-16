@@ -73,8 +73,8 @@ public static class MediaLibraryTemplateExtensions
         }
 
         var resources = new List<TempSyncResource>();
-        const decimal progressForFiltering = 50;
-        const decimal progressForInitializing = 50;
+        const float progressForFiltering = 70;
+        const float progressForInitializing = 100 - progressForFiltering;
 
         var rpiMap = await template.ResourceFilters.Filter(rootPath, null,
             onProgressChange.ScaleInSubTask(0, progressForFiltering), null, pt, ct);
@@ -135,7 +135,7 @@ public static class MediaLibraryTemplateExtensions
             }
 
             resources.Add(resource);
-            currentProgress = await onProgressChange.TriggerWithStep1(currentProgress, progressPerPath);
+            currentProgress = await onProgressChange.TriggerOnJumpingOver(currentProgress, progressPerPath);
 
         }
 
