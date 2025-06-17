@@ -64,6 +64,22 @@ namespace Bakabase.Abstractions.Components.Configuration
             ".txt"
         );
 
+        public static readonly Dictionary<MediaType, ImmutableHashSet<string>> MediaTypeExtensions = new()
+        {
+            {
+                MediaType.Image, ImageExtensions
+            },
+            {
+                MediaType.Audio, AudioExtensions
+            },
+            {
+                MediaType.Video, VideoExtensions
+            },
+            {
+                MediaType.Text, TextExtensions
+            }
+        };
+
         public const string SevenZipCompressedFileExtension = ".7z";
         public const string IcoFileExtension = ".ico";
 

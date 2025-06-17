@@ -31,23 +31,7 @@ namespace Bakabase.Service.Controllers
         [HttpGet("extension-media-types")]
         public SingletonResponse<Dictionary<string, MediaType>> GetAllExtensionMediaTypes()
         {
-            var map = new Dictionary<MediaType, ImmutableHashSet<string>>
-            {
-                {
-                    MediaType.Image, InternalOptions.ImageExtensions
-                },
-                {
-                    MediaType.Audio, InternalOptions.AudioExtensions
-                },
-                {
-                    MediaType.Video, InternalOptions.VideoExtensions
-                },
-                {
-                    MediaType.Text, InternalOptions.TextExtensions
-                }
-            };
-
-            return new SingletonResponse<Dictionary<string, MediaType>>(map
+            return new SingletonResponse<Dictionary<string, MediaType>>(InternalOptions.MediaTypeExtensions
                 .SelectMany(t => t.Value.Select(a => (a, t.Key))).ToDictionary(t => t.a, t => t.Item2));
         }
     }

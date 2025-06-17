@@ -6,7 +6,6 @@ using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.Enhancer;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;

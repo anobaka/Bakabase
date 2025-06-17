@@ -5,6 +5,7 @@ using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Services;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
@@ -15,20 +16,15 @@ namespace Bakabase.Modules.Enhancer.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddEnhancers<TDbContext, TEnhancementService, TEnhancerService,
-        TCategoryEnhancerOptionsService, TEnhancementRecordService>(this IServiceCollection services)
-        where TEnhancerService : class, IEnhancerService
-        where TEnhancementService : class, IEnhancementService
-        where TCategoryEnhancerOptionsService : class, ICategoryEnhancerOptionsService
+    public static IServiceCollection AddEnhancers<TDbContext>(this IServiceCollection services)
         where TDbContext : DbContext
-        where TEnhancementRecordService : class, IEnhancementRecordService
     {
-        services.TryAddScoped<IEnhancerService, TEnhancerService>();
-        services.TryAddScoped<IEnhancementService, TEnhancementService>();
+        services.TryAddScoped<IEnhancerService, EnhancerService>();
+        services.TryAddScoped<IEnhancementService, EnhancementService<TDbContext>>();
         services.TryAddScoped<ResourceService<TDbContext, CategoryEnhancerOptions, int>>();
-        services.TryAddScoped<ICategoryEnhancerOptionsService, TCategoryEnhancerOptionsService>();
+        services.TryAddScoped<ICategoryEnhancerOptionsService, AbstractCategoryEnhancerOptionsService<TDbContext>>();
         services.TryAddScoped<ResourceService<TDbContext, EnhancementRecord, int>>();
-        services.TryAddScoped<IEnhancementRecordService, TEnhancementRecordService>();
+        services.TryAddScoped<IEnhancementRecordService, EnhancementRecordService<TDbContext>>();
         services.AddTransient<IEnhancerLocalizer, EnhancerLocalizer>();
 
 

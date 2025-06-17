@@ -24,6 +24,7 @@ using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
@@ -36,16 +37,18 @@ namespace Bakabase.InsideWorld.Business.Services;
 
 public class MediaLibraryV2Service<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, MediaLibraryV2DbModel, int> orm,
-    IMediaLibraryTemplateService templateService,
     IResourceService resourceService,
     IPropertyService propertyService,
     FullMemoryCacheResourceService<TDbContext, ResourceCacheDbModel, int> cacheOrm,
     IBOptions<ResourceOptions> resourceOptions,
     BTaskManager btm,
-    IBakabaseLocalizer localizer
+    IBakabaseLocalizer localizer,
+    IServiceProvider serviceProvider
 )
-    : IMediaLibraryV2Service where TDbContext : DbContext
+    : ScopedService(serviceProvider), IMediaLibraryV2Service where TDbContext : DbContext
 {
+    protected IMediaLibraryTemplateService TemplateService => GetRequiredService<IMediaLibraryTemplateService>();
+
     public async Task Add(MediaLibraryV2AddOrPutInputModel model)
     {
         await orm.Add(new MediaLibraryV2DbModel {Path = model.Path, Name = model.Name});
@@ -106,7 +109,7 @@ public class MediaLibraryV2Service<TDbContext>(
                     {
                         var templateIds = models.Select(d => d.TemplateId).OfType<int>().ToHashSet();
                         var templates =
-                            (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id);
+                            (await TemplateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id);
                         foreach (var model in models)
                         {
                             if (model.TemplateId.HasValue)
@@ -161,7 +164,7 @@ public class MediaLibraryV2Service<TDbContext>(
     {
         var data = await (ids == null ? GetAll() : GetByKeys(ids));
         var templateIds = data.Select(d => d.TemplateId).OfType<int>().ToHashSet();
-        var templateMap = (await templateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id, d => d);
+        var templateMap = (await TemplateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id, d => d);
         var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2(ids, ResourceAdditionalItem.All))
             .GroupBy(d => d.MediaLibraryId)
             .ToDictionary(d => d.Key, d => d.ToList());

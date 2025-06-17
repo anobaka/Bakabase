@@ -260,5 +260,8 @@
   "DurationUnit.Minute": "minutes",
   "DurationUnit.Second": "seconds",
   "SearchOperation.In.description": "Property value is in the specified value list",
-  "SearchOperation.NotIn.description": "Property value is not in the specified value list"
+  "SearchOperation.NotIn.description": "Property value is not in the specified value list",
+  "Deleting template {{name}}": "Deleting template {{name}}",
+  "Are you sure to delete variable {{name}}?": "Are you sure to delete variable {{name}}?",
+  "If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.": "If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading."
 }

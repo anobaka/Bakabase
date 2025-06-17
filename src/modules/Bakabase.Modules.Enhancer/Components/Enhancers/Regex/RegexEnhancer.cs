@@ -28,7 +28,7 @@ public class RegexEnhancer(
     protected override async Task<RegexEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
         CancellationToken ct)
     {
-        var expressions = enhancerOptions.Value.RegexEnhancer?.Expressions ?? [];
+        var expressions = options.Expressions ?? enhancerOptions.Value.RegexEnhancer?.Expressions ?? [];
         if (!expressions.Any())
         {
             return null;

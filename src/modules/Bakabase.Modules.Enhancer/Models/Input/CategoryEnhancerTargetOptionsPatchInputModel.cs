@@ -5,7 +5,6 @@ namespace Bakabase.Modules.Enhancer.Models.Input;
 
 public record CategoryEnhancerTargetOptionsPatchInputModel
 {
-    public bool? AutoMatchMultilevelString { get; set; }
     public bool? AutoBindProperty { get; set; }
     public CoverSelectOrder? CoverSelectOrder { get; set; }
     public int? PropertyId { get; set; }

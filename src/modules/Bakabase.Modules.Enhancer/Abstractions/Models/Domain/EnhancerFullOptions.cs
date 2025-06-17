@@ -8,4 +8,5 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 public record EnhancerFullOptions
 {
     public List<EnhancerTargetFullOptions>? TargetOptions { get; set; }
+    public List<string>? Expressions { get; set; }
 }
