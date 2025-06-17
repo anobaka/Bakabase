@@ -19,4 +19,5 @@ public interface IMediaLibraryTemplateService
     Task<byte[]> AppendShareCodeToPng(int id, byte[] png);
     Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName);
     Task Duplicate(int id);
+    Task AddBuiltinTemplates();
 }

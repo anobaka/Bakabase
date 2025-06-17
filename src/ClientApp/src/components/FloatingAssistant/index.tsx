@@ -45,128 +45,6 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import { buildLogger } from '@/components/utils';
 import type { BTask } from '@/core/models/BTask';
 
-const testTasks: BTask[] = [
-  {
-    id: 'Enhancement1',
-    name: 'BTask_Name_Enhancement',
-    description: 'BTask_Description_Enhancement',
-    percentage: 0,
-    process: 'process1',
-    interval: '00:02:00',
-    enableAfter: '2025-03-26T11:13:24',
-    status: 1,
-    error: 'error1',
-    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
-    conflictWithTaskKeys: [
-      'Enhancement',
-    ],
-    estimateRemainingTime: '01:02:03',
-    startedAt: '2025-03-26T15:19:27.697964+08:00',
-    reasonForUnableToStart: 'conflict with aaa',
-    isPersistent: true,
-    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
-  },
-  {
-    id: 'Enhancement2',
-    name: 'BTask_Name_Enhancement',
-    description: 'BTask_Description_Enhancement',
-    percentage: 0,
-    process: 'process1',
-    interval: '00:02:00',
-    enableAfter: '2025-03-26T11:13:24',
-    status: 2,
-    error: 'error1',
-    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
-    conflictWithTaskKeys: [
-      'Enhancement',
-    ],
-    estimateRemainingTime: '01:02:03',
-    startedAt: '2025-03-26T15:19:27.697964+08:00',
-    reasonForUnableToStart: 'conflict with aaa',
-    isPersistent: true,
-    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
-  },
-  {
-    id: 'Enhancement3',
-    name: 'BTask_Name_Enhancement',
-    description: 'BTask_Description_Enhancement',
-    percentage: 0,
-    process: 'process1',
-    interval: '00:02:00',
-    enableAfter: '2025-03-26T11:13:24',
-    status: 3,
-    error: 'error1',
-    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
-    conflictWithTaskKeys: [
-      'Enhancement',
-    ],
-    estimateRemainingTime: '01:02:03',
-    startedAt: '2025-03-26T15:19:27.697964+08:00',
-    reasonForUnableToStart: 'conflict with aaa',
-    isPersistent: true,
-    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
-  },
-  {
-    id: 'Enhancement4',
-    name: 'BTask_Name_Enhancement',
-    description: 'BTask_Description_Enhancement',
-    percentage: 0,
-    process: 'process1',
-    interval: '00:02:00',
-    enableAfter: '2025-03-26T11:13:24',
-    status: 4,
-    error: 'error1',
-    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
-    conflictWithTaskKeys: [
-      'Enhancement',
-    ],
-    estimateRemainingTime: '01:02:03',
-    startedAt: '2025-03-26T15:19:27.697964+08:00',
-    reasonForUnableToStart: 'conflict with aaa',
-    isPersistent: true,
-    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
-  },
-  {
-    id: 'Enhancement5',
-    name: 'BTask_Name_Enhancement',
-    description: 'BTask_Description_Enhancement',
-    percentage: 0,
-    process: 'process1',
-    interval: '00:02:00',
-    enableAfter: '2025-03-26T11:13:24',
-    status: 5,
-    error: 'error1',
-    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
-    conflictWithTaskKeys: [
-      'Enhancement',
-    ],
-    estimateRemainingTime: '01:02:03',
-    startedAt: '2025-03-26T15:19:27.697964+08:00',
-    reasonForUnableToStart: 'conflict with aaa',
-    isPersistent: true,
-    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
-  },
-  {
-    id: 'Enhancement6',
-    name: 'BTask_Name_Enhancement',
-    description: 'BTask_Description_Enhancement',
-    percentage: 0,
-    process: 'process1',
-    interval: '00:02:00',
-    enableAfter: '2025-03-26T11:13:24',
-    status: 6,
-    error: 'error1',
-    messageOnInterruption: 'BTask_MessageOnInterruption_Enhancement',
-    conflictWithTaskKeys: [
-      'Enhancement',
-    ],
-    estimateRemainingTime: '01:02:03',
-    startedAt: '2025-03-26T15:19:27.697964+08:00',
-    reasonForUnableToStart: 'conflict with aaa',
-    isPersistent: true,
-    nextTimeStartAt: '2025-03-26T15:22:18.4050482+08:00',
-  },
-];
 
 const AssistantStatus = {
   Idle: 0,
@@ -288,7 +166,7 @@ export default () => {
           }, 300);
         }
       }
-    }, 100);
+    }, 1000);
 
     return () => {
       log('Destroying...');
@@ -524,18 +402,8 @@ export default () => {
                 >
                   <TableCell>
                     <div className={'flex items-center gap-1'}>
-                      {task.isPersistent ? (
-                        <Badge
-                          isOneChar
-                          variant={'faded'}
-                          color="default"
-                          size={'sm'}
-                          content={<PushpinOutlined className={'text-xs opacity-60'} />}
-                          placement="top-left"
-                        >
-                          &nbsp;{task.name}
-                        </Badge>
-                      ) : task.name}
+                      {task.name}
+                      {task.isPersistent && (<PushpinOutlined className={'text-base opacity-40'} />)}
                       {task.description && (
                         <Tooltip
                           color={'secondary'}

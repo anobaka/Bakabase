@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using System;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.Infrastructures.Components.Orm.Log;
-using Bakabase.InsideWorld.Business.Components.Modules.Alias;
 using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.Alias.Extensions;
 using Bootstrap.Components.Configuration;
@@ -44,7 +43,7 @@ public class HostUtils
                 sp.GetRequiredService<IOptionsMonitor<FileSystemOptions>>(),
                 sp.GetRequiredService<ILogger<AspNetCoreOptionsManager<FileSystemOptions>>>()));
         sc.AddSingleton<TestFileMover>();
-        sc.AddAlias<InsideWorldDbContext, AliasService>();
+        sc.AddAlias<InsideWorldDbContext>();
         var sp = sc.BuildServiceProvider();
         var scope = sp.CreateAsyncScope();
         var scopeSp = scope.ServiceProvider;

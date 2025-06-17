@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Bootstrap.Extensions;
 using Newtonsoft.Json;
 
 namespace Bakabase.Abstractions.Extensions;
@@ -45,7 +46,8 @@ public static class MediaLibraryTemplateExtensions
         return new MediaLibraryTemplateEnhancerOptionsDbModel
         {
             EnhancerId = options.EnhancerId,
-            TargetOptions = options.TargetOptions?.Select(t => t.ToDbModel()).ToList()
+            TargetOptions = options.TargetOptions?.Select(t => t.ToDbModel()).ToList(),
+            Expressions = options.Expressions?.Any() == true ? JsonConvert.SerializeObject(options.Expressions) : null
         };
     }
 
@@ -121,7 +123,10 @@ public static class MediaLibraryTemplateExtensions
         return new MediaLibraryTemplateEnhancerOptions
         {
             EnhancerId = dbModel.EnhancerId,
-            TargetOptions = dbModel.TargetOptions?.Select(t => t.ToDomainModel()).ToList()
+            TargetOptions = dbModel.TargetOptions?.Select(t => t.ToDomainModel()).ToList(),
+            Expressions = dbModel.Expressions.IsNullOrEmpty()
+                ? null
+                : JsonConvert.DeserializeObject<List<string>>(dbModel.Expressions)
         };
     }
 

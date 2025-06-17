@@ -406,13 +406,13 @@ export default () => {
                 </Button>
               </div>
               <div className={'flex items-center gap-1'}>
-                {t('2. Please make sure that categories have been created, the media library has been configured, and synchronization has been completed.')}
+                {t('2. Please ensure that media libraries are created, bound to a template, and fully synchronized.')}
                 <Link
                   size={'sm'}
                   isBlock
                   underline={'none'}
-                  href={'#/category'}
-                >{t('Go to category page')}</Link>
+                  href={'#/medialibrary'}
+                >{t('Go to media library page')}</Link>
               </div>
             </div>
           </div>

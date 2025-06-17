@@ -121,7 +121,7 @@ https://xxxxxxx
               createPortal(Modal, {
                 defaultVisible: true,
                 size: 'xl',
-                title: t('Instructions for Use'),
+                title: t('Instructions for use'),
                 children: (
                   <div>
                     <Alert
@@ -162,7 +162,7 @@ https://xxxxxxx
             }}
           >
             <AiOutlineQuestionCircle className={'text-medium'} />
-            {t('Instructions for Use')}
+            {t('Instructions for use')}
           </Button>
         </div>
       </div>

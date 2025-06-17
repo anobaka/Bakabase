@@ -1,7 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useState } from 'react';
 import { ImportOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { AiOutlineDelete, AiOutlineEdit, AiOutlinePlusCircle, AiOutlineSisternode } from 'react-icons/ai';
+import {
+  AiOutlineDelete,
+  AiOutlineEdit,
+  AiOutlineImport,
+  AiOutlinePlusCircle,
+  AiOutlineSisternode,
+} from 'react-icons/ai';
 import { useUpdate } from 'react-use';
 import _ from 'lodash';
 import { IoDuplicateOutline, IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
@@ -11,6 +17,7 @@ import { GoShareAndroid } from 'react-icons/go';
 import { MdDeleteOutline, MdOutlineSubtitles } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { TbDatabase } from 'react-icons/tb';
+import { PiEmpty } from 'react-icons/pi';
 import type { MediaLibraryTemplate } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
 import testData from './data.json';
@@ -38,7 +45,7 @@ export default () => {
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const [templates, setTemplates] = useState<MediaLibraryTemplate[]>(testData);
+  const [templates, setTemplates] = useState<MediaLibraryTemplate[]>([]);
   const [extensionGroups, setExtensionGroups] = useState<IdName[]>([]);
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
@@ -119,7 +126,7 @@ export default () => {
   };
 
   return (
-    <div>
+    <div className={'h-full flex flex-col'}>
       <div className={'flex items-center gap-2 justify-between'}>
         <Button
           size={'sm'}
@@ -165,400 +172,208 @@ export default () => {
           {t('Import a template')}
         </Button>
       </div>
-      <div className={'mt-2'}>
-        <Accordion
-          variant="splitted"
-          defaultSelectedKeys={templates.map(t => t.id.toString())}
-        >
-          {templates.map((tpl, i) => {
-            return (
-              <AccordionItem
-                key={tpl.id}
-                title={(
-                  <div className={'flex items-center justify-between'}>
-                    <div className={'flex items-center gap-1'}>
-                      <div className={'font-bold'}>
-                        {tpl.name}
-                      </div>
-                      {tpl.author && (
-                        <div className={'opacity-60'}>
-                          {tpl.author}
+      <div className={'mt-2 grow'}>
+        {templates.length == 0 ? (
+          <div className={'flex items-center gap-2 w-full h-full justify-center'}>
+            <PiEmpty className={'text-2xl'} />
+            {t('No templates found. You can create a template or import one from a share code.')}
+            {t('Or')}
+            <Button color={'primary'}>
+              <AiOutlineImport className={'text-lg'} />
+              {t('Import builtin templates')}</Button>
+          </div>
+        ) : (
+          <Accordion
+            variant="splitted"
+            defaultSelectedKeys={templates.map(t => t.id.toString())}
+          >
+            {templates.map((tpl, i) => {
+              return (
+                <AccordionItem
+                  key={tpl.id}
+                  title={(
+                    <div className={'flex items-center justify-between'}>
+                      <div className={'flex items-center gap-1'}>
+                        <div className={'font-bold'}>
+                          {tpl.name}
                         </div>
-                      )}
-                      {tpl.description && (
-                        <Tooltip placement={'bottom'} content={tpl.description}>
-                          <QuestionCircleOutlined className={'text-medium'} />
-                        </Tooltip>
-                      )}
-                      <Button
-                        size={'sm'}
-                        isIconOnly
-                        onPress={() => {
-                        let { name, author, description } = tpl;
-                        createPortal(Modal, {
-                          defaultVisible: true,
-                          title: t('Edit template'),
-                          children: (
-                            <div className={'flex flex-col gap-2'}>
-                              <Input
-                                label={t('Name')}
-                                placeholder={t('Enter template name')}
-                                isRequired
-                                defaultValue={name}
-                                onValueChange={v => {
-                                  name = v;
-                                }}
-                              />
-                              <Input
-                                label={`${t('Author')}${t('(optional)')}`}
-                                placeholder={t('Enter author name')}
-                                defaultValue={author}
-                                onValueChange={v => {
-                                  author = v;
-                                }}
-                              />
-                              <Textarea
-                                label={`${t('Description')}${t('(optional)')}`}
-                                placeholder={t('Enter description')}
-                                defaultValue={description}
-                                onValueChange={v => {
-                                  description = v;
-                                }}
-                              />
-                            </div>
-                          ),
-                          size: 'lg',
-                          onOk: async () => {
-                            tpl.name = name;
-                            tpl.author = author;
-                            tpl.description = description;
-                            await putTemplate(tpl);
-                            forceUpdate();
-                          },
-                        });
-                      }}
-                        variant={'light'}
-                      >
-                        <AiOutlineEdit className={'text-medium'} />
-                      </Button>
-                    </div>
-                    <div className={'flex items-center gap-1'}>
-                      <Chip variant={'light'} className={'opacity-60'}>
-                        {tpl.createdAt}
-                      </Chip>
-                      <Button
-                        size={'sm'}
-                        isIconOnly
-                        variant={'light'}
-                        onPress={async () => {
-                          const r = await BApi.mediaLibraryTemplate.getMediaLibraryTemplateShareCode(tpl.id);
-                          if (!r.code && r.data) {
-                            const shareText = r.data;
-                            await navigator.clipboard.writeText(shareText);
+                        {tpl.author && (
+                          <div className={'opacity-60'}>
+                            {tpl.author}
+                          </div>
+                        )}
+                        {tpl.description && (
+                          <Tooltip placement={'bottom'} content={tpl.description}>
+                            <QuestionCircleOutlined className={'text-medium'} />
+                          </Tooltip>
+                        )}
+                        <Button
+                          size={'sm'}
+                          isIconOnly
+                          onPress={() => {
+                            let { name, author, description } = tpl;
                             createPortal(Modal, {
                               defaultVisible: true,
-                              title: t('Share code has been copied'),
-                              children: t('Share code has been copied to your clipboard, you can send it to your friends. (ctrl+v)'),
-                              footer: {
-                                actions: ['ok'],
-                                okProps: {
-                                  children: t('I got it'),
-                                },
+                              title: t('Edit template'),
+                              children: (
+                                <div className={'flex flex-col gap-2'}>
+                                  <Input
+                                    label={t('Name')}
+                                    placeholder={t('Enter template name')}
+                                    isRequired
+                                    defaultValue={name}
+                                    onValueChange={v => {
+                                      name = v;
+                                    }}
+                                  />
+                                  <Input
+                                    label={`${t('Author')}${t('(optional)')}`}
+                                    placeholder={t('Enter author name')}
+                                    defaultValue={author}
+                                    onValueChange={v => {
+                                      author = v;
+                                    }}
+                                  />
+                                  <Textarea
+                                    label={`${t('Description')}${t('(optional)')}`}
+                                    placeholder={t('Enter description')}
+                                    defaultValue={description}
+                                    onValueChange={v => {
+                                      description = v;
+                                    }}
+                                  />
+                                </div>
+                              ),
+                              size: 'lg',
+                              onOk: async () => {
+                                tpl.name = name;
+                                tpl.author = author;
+                                tpl.description = description;
+                                await putTemplate(tpl);
+                                forceUpdate();
                               },
                             });
-                          }
-                        }}
-                      >
-                        <GoShareAndroid className={'text-large'} />
-                      </Button>
-                      <Button
-                        color={'default'}
-                        variant={'light'}
-                        size={'sm'}
-                        isIconOnly
-                        onPress={() => {
-                          let newName = '';
-                          createPortal(
-                            Modal, {
+                          }}
+                          variant={'light'}
+                        >
+                          <AiOutlineEdit className={'text-medium'} />
+                        </Button>
+                      </div>
+                      <div className={'flex items-center gap-1'}>
+                        <Chip variant={'light'} className={'opacity-60'}>
+                          {tpl.createdAt}
+                        </Chip>
+                        <Button
+                          size={'sm'}
+                          isIconOnly
+                          variant={'light'}
+                          onPress={async () => {
+                            const r = await BApi.mediaLibraryTemplate.getMediaLibraryTemplateShareCode(tpl.id);
+                            if (!r.code && r.data) {
+                              const shareText = r.data;
+                              await navigator.clipboard.writeText(shareText);
+                              createPortal(Modal, {
+                                defaultVisible: true,
+                                title: t('Share code has been copied'),
+                                children: t('Share code has been copied to your clipboard, you can send it to your friends. (ctrl+v)'),
+                                footer: {
+                                  actions: ['ok'],
+                                  okProps: {
+                                    children: t('I got it'),
+                                  },
+                                },
+                              });
+                            }
+                          }}
+                        >
+                          <GoShareAndroid className={'text-large'} />
+                        </Button>
+                        <Button
+                          color={'default'}
+                          variant={'light'}
+                          size={'sm'}
+                          isIconOnly
+                          onPress={() => {
+                            let newName = '';
+                            createPortal(
+                              Modal, {
+                                defaultVisible: true,
+                                title: t('Duplicate current template'),
+                                // children: (
+                                //
+                                // ),
+                                onOk: async () => {
+                                  const r = await BApi.mediaLibraryTemplate.duplicateMediaLibraryTemplate(tpl.id);
+                                  if (!r.code) {
+                                    loadTemplates();
+                                  }
+                                },
+                              },
+                            );
+                          }}
+                        >
+                          <IoDuplicateOutline className={'text-medium'} />
+                        </Button>
+                        <Button
+                          size={'sm'}
+                          color={'danger'}
+                          isIconOnly
+                          variant={'light'}
+                          onPress={() => {
+                            createPortal(Modal, {
                               defaultVisible: true,
-                              title: t('Duplicate current template'),
-                              // children: (
-                              //
-                              // ),
+                              title: t('Deleting template {{name}}', { name: tpl.name }),
+                              children: t('This action cannot be undone. Are you sure you want to delete this template?'),
                               onOk: async () => {
-                                const r = await BApi.mediaLibraryTemplate.duplicateMediaLibraryTemplate(tpl.id);
+                                const r = await BApi.mediaLibraryTemplate.deleteMediaLibraryTemplate(tpl.id);
                                 if (!r.code) {
                                   loadTemplates();
                                 }
                               },
+                            });
+                          }}
+                        >
+                          <MdDeleteOutline className={'text-large'} />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                >
+                  <div className={'flex flex-col gap-2'}>
+                    <Block
+                      leftIcon={<IoLocate className={'text-large'} />}
+                      title={t('Resource filter')}
+                      description={t('Determine which files or folders will be considered as resources')}
+                      rightIcon={<AiOutlinePlusCircle className={'text-large'} />}
+                      onRightIconPress={() => {
+                        createPortal(
+                          PathFilterModal, {
+                            onSubmit: async f => {
+                              (tpl.resourceFilters ??= []).push(f);
+                              await putTemplate(tpl);
+                              forceUpdate();
                             },
-                          );
-                        }}
-                      >
-                        <IoDuplicateOutline className={'text-medium'} />
-                      </Button>
-                      <Button
-                        size={'sm'}
-                        color={'danger'}
-                        isIconOnly
-                        variant={'light'}
-                        onPress={() => {
-                          createPortal(Modal, {
-                            defaultVisible: true,
-                            title: t('Deleting template {{name}}', { name: tpl.name }),
-                            children: t('This action cannot be undone. Are you sure you want to delete this template?'),
-                            onOk: async () => {
-                              const r = await BApi.mediaLibraryTemplate.deleteMediaLibraryTemplate(tpl.id);
-                              if (!r.code) {
-                                loadTemplates();
-                              }
-                            },
-                          });
-                        }}
-                      >
-                        <MdDeleteOutline className={'text-large'} />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              >
-                <div className={'flex flex-col gap-2'}>
-                  <Block
-                    leftIcon={<IoLocate className={'text-large'} />}
-                    title={t('Resource filter')}
-                    description={t('Determine which files or folders will be considered as resources')}
-                    rightIcon={<AiOutlinePlusCircle className={'text-large'} />}
-                    onRightIconPress={() => {
-                      createPortal(
-                        PathFilterModal, {
-                          onSubmit: async f => {
-                            (tpl.resourceFilters ??= []).push(f);
-                            await putTemplate(tpl);
-                            forceUpdate();
                           },
-                        },
-                      );
-                    }}
-                  >
-                    <div>
-                      {tpl.resourceFilters?.map((f, i) => {
-                        return (
-                          <div className={'flex items-center gap-1'}>
-                            <CiFilter className={'text-medium'} />
-                            <PathFilterDemonstrator filter={f} />
-                            <Button
-                              color={'default'}
-                              variant={'light'}
-                              size={'sm'}
-                              isIconOnly
-                              onPress={() => {
-                                createPortal(
-                                  PathFilterModal, {
-                                    filter: f,
-                                    onSubmit: async nf => {
-                                      Object.assign(f, nf);
-                                      await putTemplate(tpl);
-                                      forceUpdate();
-                                    },
-                                  },
-                                );
-                              }}
-                            >
-                              <AiOutlineEdit className={'text-medium'} />
-                            </Button>
-                            <Button
-                              color={'danger'}
-                              variant={'light'}
-                              size={'sm'}
-                              isIconOnly
-                              onPress={() => {
-                                createPortal(Modal, {
-                                  defaultVisible: true,
-                                  title: t('Delete resource filter'),
-                                  children: t('Sure to delete?'),
-                                  onOk: async () => {
-                                    tpl.resourceFilters?.splice(i, 1);
-                                    await putTemplate(tpl);
-                                    forceUpdate();
-                                  },
-                                });
-                              }}
-                            >
-                              <AiOutlineDelete className={'text-medium'} />
-                            </Button>
-                          </div>
                         );
-                      })}
-                    </div>
-                  </Block>
-                  <Block
-                    title={t('Playable(Runnable) files')}
-                    description={t('Determine which files be considered as playable files')}
-                    leftIcon={<IoPlayCircleOutline className={'text-large'} />}
-                    rightIcon={<AiOutlineEdit className={'text-medium'} />}
-                    onRightIconPress={() => {
-                      createPortal(
-                        PlayableFileSelectorModal, {
-                          selection: tpl.playableFileLocator,
-                          onSubmit: async selection => {
-                            tpl.playableFileLocator = selection;
-                            await putTemplate(tpl);
-                            forceUpdate();
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    <div className={'flex items-center gap-1'}>
-                      {tpl.playableFileLocator?.extensionGroups?.map(group => {
-                        return (
-                          <Chip size={'sm'} variant={'flat'}>
-                            {group?.name}
-                          </Chip>
-                        );
-                      })}
-                      {tpl.playableFileLocator?.extensions?.map(ext => {
-                        return (
-                          <Chip size={'sm'} variant={'flat'}>
-                            {ext}
-                          </Chip>
-                        );
-                      })}
-                    </div>
-                  </Block>
-                  <Block
-                    title={t('Properties')}
-                    description={t('You can configure which properties your resource includes')}
-                    leftIcon={<TbDatabase className={'text-large'} />}
-                    rightIcon={<AiOutlineEdit className={'text-large'} />}
-                    onRightIconPress={() => {
-                      createPortal(
-                        PropertySelector, {
-                          v2: true,
-                          selection: tpl.properties,
-                          pool: PropertyPool.Reserved | PropertyPool.Custom,
-                          editable: true,
-                          addable: true,
-                          onSubmit: async properties => {
-                            tpl.properties = properties.map(p => ({
-                              pool: p.pool,
-                              id: p.id,
-                              property: p,
-                              valueLocators: [],
-                            }));
-                            await putTemplate(tpl);
-                            forceUpdate();
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    <div className={'flex flex-col gap-1'}>
-                      {tpl.properties?.map((p, i) => {
-                        return (
-                          <div className={'flex items-center gap-2'}>
-                            <BriefProperty property={p.property} />
+                      }}
+                    >
+                      <div>
+                        {tpl.resourceFilters?.map((f, i) => {
+                          return (
                             <div className={'flex items-center gap-1'}>
-                              {p.valueLocators?.map(v => {
-                                return (
-                                  <Chip
-                                    size={'sm'}
-                                    radius={'sm'}
-                                    variant={'bordered'}
-                                  >
-                                    <PathLocatorDemonstrator locator={v} />
-                                  </Chip>
-                                );
-                              })}
-                            </div>
-                            <div className={'flex items-center gap-1'}>
+                              <CiFilter className={'text-medium'} />
+                              <PathFilterDemonstrator filter={f} />
                               <Button
+                                color={'default'}
                                 variant={'light'}
                                 size={'sm'}
                                 isIconOnly
                                 onPress={() => {
                                   createPortal(
-                                    PathLocatorModal, {
-                                      locators: p.valueLocators,
-                                      onSubmit: async vls => {
-                                        p.valueLocators = vls;
-                                        await putTemplate(tpl);
-                                        forceUpdate();
-                                      },
-                                    },
-                                  );
-                                }}
-                              >
-                                <IoLocate className={'text-medium'} />
-                              </Button>
-                              <Button
-                                isIconOnly
-                                size={'sm'}
-                                color={'danger'}
-                                variant={'light'}
-                                onPress={() => {
-                                  createPortal(Modal, {
-                                    defaultVisible: true,
-                                    title: t('Delete resource filter'),
-                                    children: t('Sure to delete?'),
-                                    onOk: async () => {
-                                      tpl.properties?.splice(i, 1);
-                                      await putTemplate(tpl);
-                                      forceUpdate();
-                                    },
-                                  });
-                                }}
-                              >
-                                <AiOutlineDelete className={'text-medium'} />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Block>
-                  <Block
-                    title={t('Enhancers')}
-                    description={t('You can use enhancers to automatically populate resource information or files')}
-                    leftIcon={<IoRocketOutline className={'text-large'} />}
-                    rightIcon={<AiOutlineEdit className={'text-large'} />}
-                    onRightIconPress={() => {
-                      createPortal(
-                        EnhancerSelectorModal, {
-                          selectedIds: tpl.enhancers?.map(e => e.enhancerId),
-                          onSubmit: async ids => {
-                            tpl.enhancers = ids.map(id => ({
-                              enhancerId: id,
-                              options: tpl.enhancers?.find(x => x.enhancerId == id)?.options,
-                            }));
-                            await putTemplate(tpl);
-                            forceUpdate();
-                          },
-                        },
-                      );
-                    }}
-                  >
-                    <div className={'flex flex-col gap-1'}>
-                      {tpl.enhancers?.map((e, i) => {
-                        const enhancer = enhancers.find(x => x.id == e.enhancerId);
-                        if (!enhancer) {
-                          return t('Unknown enhancer');
-                        }
-                        return (
-                          <div>
-                            <div className={'flex items-center gap-1'}>
-                              <BriefEnhancer enhancer={enhancer} />
-                              <Button
-                                variant={'light'}
-                                size={'sm'}
-                                isIconOnly
-                                onPress={async () => {
-                                  createPortal(
-                                    EnhancerOptionsModal, {
-                                      enhancer,
-                                      options: e.options,
-                                      onSubmit: async options => {
-                                        e.options = options;
+                                    PathFilterModal, {
+                                      filter: f,
+                                      onSubmit: async nf => {
+                                        Object.assign(f, nf);
                                         await putTemplate(tpl);
                                         forceUpdate();
                                       },
@@ -569,17 +384,17 @@ export default () => {
                                 <AiOutlineEdit className={'text-medium'} />
                               </Button>
                               <Button
-                                isIconOnly
-                                size={'sm'}
                                 color={'danger'}
                                 variant={'light'}
+                                size={'sm'}
+                                isIconOnly
                                 onPress={() => {
                                   createPortal(Modal, {
                                     defaultVisible: true,
                                     title: t('Delete resource filter'),
                                     children: t('Sure to delete?'),
                                     onOk: async () => {
-                                      tpl.enhancers?.splice(i, 1);
+                                      tpl.resourceFilters?.splice(i, 1);
                                       await putTemplate(tpl);
                                       forceUpdate();
                                     },
@@ -589,69 +404,237 @@ export default () => {
                                 <AiOutlineDelete className={'text-medium'} />
                               </Button>
                             </div>
+                          );
+                        })}
+                      </div>
+                    </Block>
+                    <Block
+                      title={t('Playable(Runnable) files')}
+                      description={t('Determine which files be considered as playable files')}
+                      leftIcon={<IoPlayCircleOutline className={'text-large'} />}
+                      rightIcon={<AiOutlineEdit className={'text-medium'} />}
+                      onRightIconPress={() => {
+                        createPortal(
+                          PlayableFileSelectorModal, {
+                            selection: tpl.playableFileLocator,
+                            onSubmit: async selection => {
+                              tpl.playableFileLocator = selection;
+                              await putTemplate(tpl);
+                              forceUpdate();
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <div className={'flex items-center gap-1'}>
+                        {tpl.playableFileLocator?.extensionGroups?.map(group => {
+                          return (
+                            <Chip size={'sm'} variant={'flat'}>
+                              {group?.name}
+                            </Chip>
+                          );
+                        })}
+                        {tpl.playableFileLocator?.extensions?.map(ext => {
+                          return (
+                            <Chip size={'sm'} variant={'flat'}>
+                              {ext}
+                            </Chip>
+                          );
+                        })}
+                      </div>
+                    </Block>
+                    <Block
+                      title={t('Properties')}
+                      description={t('You can configure which properties your resource includes')}
+                      leftIcon={<TbDatabase className={'text-large'} />}
+                      rightIcon={<AiOutlineEdit className={'text-large'} />}
+                      onRightIconPress={() => {
+                        createPortal(
+                          PropertySelector, {
+                            v2: true,
+                            selection: tpl.properties,
+                            pool: PropertyPool.Reserved | PropertyPool.Custom,
+                            editable: true,
+                            addable: true,
+                            onSubmit: async properties => {
+                              tpl.properties = properties.map(p => ({
+                                pool: p.pool,
+                                id: p.id,
+                                property: p,
+                                valueLocators: [],
+                              }));
+                              await putTemplate(tpl);
+                              forceUpdate();
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <div className={'flex flex-col gap-1'}>
+                        {tpl.properties?.map((p, i) => {
+                          return (
+                            <div className={'flex items-center gap-2'}>
+                              <BriefProperty property={p.property} />
+                              <div className={'flex items-center gap-1'}>
+                                {p.valueLocators?.map(v => {
+                                  return (
+                                    <Chip
+                                      size={'sm'}
+                                      radius={'sm'}
+                                      variant={'bordered'}
+                                    >
+                                      <PathLocatorDemonstrator locator={v} />
+                                    </Chip>
+                                  );
+                                })}
+                              </div>
+                              <div className={'flex items-center gap-1'}>
+                                <Button
+                                  variant={'light'}
+                                  size={'sm'}
+                                  isIconOnly
+                                  onPress={() => {
+                                    createPortal(
+                                      PathLocatorModal, {
+                                        locators: p.valueLocators,
+                                        onSubmit: async vls => {
+                                          p.valueLocators = vls;
+                                          await putTemplate(tpl);
+                                          forceUpdate();
+                                        },
+                                      },
+                                    );
+                                  }}
+                                >
+                                  <IoLocate className={'text-medium'} />
+                                </Button>
+                                <Button
+                                  isIconOnly
+                                  size={'sm'}
+                                  color={'danger'}
+                                  variant={'light'}
+                                  onPress={() => {
+                                    createPortal(Modal, {
+                                      defaultVisible: true,
+                                      title: t('Delete resource filter'),
+                                      children: t('Sure to delete?'),
+                                      onOk: async () => {
+                                        tpl.properties?.splice(i, 1);
+                                        await putTemplate(tpl);
+                                        forceUpdate();
+                                      },
+                                    });
+                                  }}
+                                >
+                                  <AiOutlineDelete className={'text-medium'} />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </Block>
+                    <Block
+                      title={t('Enhancers')}
+                      description={t('You can use enhancers to automatically populate resource information or files')}
+                      leftIcon={<IoRocketOutline className={'text-large'} />}
+                      rightIcon={<AiOutlineEdit className={'text-large'} />}
+                      onRightIconPress={() => {
+                        createPortal(
+                          EnhancerSelectorModal, {
+                            selectedIds: tpl.enhancers?.map(e => e.enhancerId),
+                            onSubmit: async ids => {
+                              tpl.enhancers = ids.map(id => ({
+                                enhancerId: id,
+                                options: tpl.enhancers?.find(x => x.enhancerId == id),
+                              }));
+                              await putTemplate(tpl);
+                              forceUpdate();
+                            },
+                          },
+                        );
+                      }}
+                    >
+                      <div className={'flex flex-col gap-1'}>
+                        {tpl.enhancers?.map((e, i) => {
+                          const enhancer = enhancers.find(x => x.id == e.enhancerId);
+                          if (!enhancer) {
+                            return t('Unknown enhancer');
+                          }
+                          return (
                             <div>
-                              {e.options?.targetOptions ? (
-                                <div className={'flex flex-col gap-1'}>
-                                  {enhancer?.targets?.map(target => {
-                                    const tos = e.options?.targetOptions?.filter(x => x.target == target.id);
-                                    if (!tos || tos.length == 0) {
-                                      return null;
-                                    }
-                                    if (target.isDynamic) {
-                                      const mainOptions = tos.find(x => x.dynamicTarget == undefined);
-                                      const otherOptions = tos.filter(x => x != mainOptions);
-                                      return (
-                                        <>
-                                          <div
-                                            className={'flex items-center gap-1'}
-                                          >
-                                            <Chip
-                                              size={'sm'}
-                                              radius={'sm'}
-                                              variant={'flat'}
-                                            >
-                                              {target.name}
-                                            </Chip>
-                                            {target.description && (
-                                              <Tooltip content={target.description}>
-                                                <QuestionCircleOutlined className={'text-medium'} />
-                                              </Tooltip>
-                                            )}
-                                            {mainOptions?.autoBindProperty && t('Auto bind property')}
-                                            {mainOptions?.autoMatchMultilevelString && t('Auto match multilevel string')}
-                                          </div>
-                                          {otherOptions.map(to => {
-                                            const property = (to.propertyPool != undefined && to.propertyId != undefined)
-                                              ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
-                                            return (
-                                              <div className={'flex items-center gap-1'}>
-                                                <AiOutlineSisternode className={'text-medium'} />
-                                                <Chip
-                                                  size={'sm'}
-                                                  radius={'sm'}
-                                                  variant={'flat'}
-                                                >
-                                                  {to.dynamicTarget}
-                                                </Chip>
-                                                <TiChevronRightOutline className={'text-medium'} />
-                                                {to.autoBindProperty ? t('Auto bind property') : property ? (
-                                                  <BriefProperty property={property} />
-                                                ) : t('Unknown property')}
-                                                {to.autoMatchMultilevelString && t('Auto match multilevel string')}
-                                              </div>
-                                            );
-                                          })}
-                                        </>
-                                      );
-                                    } else {
-                                      const to = tos[0]!;
-                                      const property = (to.propertyPool != undefined && to.propertyId != undefined)
-                                        ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
-                                      return (
-                                        <div className={'flex items-center gap-1'}>
-                                          {target.description ? (
-                                            <Tooltip
-                                              content={target.description}
+                              <div className={'flex items-center gap-1'}>
+                                <BriefEnhancer enhancer={enhancer} />
+                                <Button
+                                  variant={'light'}
+                                  size={'sm'}
+                                  isIconOnly
+                                  onPress={async () => {
+                                    createPortal(
+                                      EnhancerOptionsModal, {
+                                        enhancer,
+                                        options: e,
+                                        onSubmit: async options => {
+                                          Object.assign(e, options);
+                                          await putTemplate(tpl);
+                                          forceUpdate();
+                                        },
+                                      },
+                                    );
+                                  }}
+                                >
+                                  <AiOutlineEdit className={'text-medium'} />
+                                </Button>
+                                <Button
+                                  isIconOnly
+                                  size={'sm'}
+                                  color={'danger'}
+                                  variant={'light'}
+                                  onPress={() => {
+                                    createPortal(Modal, {
+                                      defaultVisible: true,
+                                      title: t('Delete resource filter'),
+                                      children: t('Sure to delete?'),
+                                      onOk: async () => {
+                                        tpl.enhancers?.splice(i, 1);
+                                        await putTemplate(tpl);
+                                        forceUpdate();
+                                      },
+                                    });
+                                  }}
+                                >
+                                  <AiOutlineDelete className={'text-medium'} />
+                                </Button>
+                              </div>
+                              {(e.expressions && e.expressions.length > 0) && (
+                                <div>
+                                  <Chip
+                                    size={'sm'}
+                                    radius={'sm'}
+                                    variant={'flat'}
+                                  >
+                                    {t('Expressions')}
+                                  </Chip>
+                                  {e.expressions.map(x => (
+                                    <div>{x}</div>
+                                  ))}
+                                </div>
+                              )}
+                              <div>
+                                {e.targetOptions ? (
+                                  <div className={'flex flex-col gap-1'}>
+                                    {enhancer?.targets?.map(target => {
+                                      const tos = e.targetOptions!.filter(x => x.target == target.id);
+                                      if (!tos || tos.length == 0) {
+                                        return null;
+                                      }
+                                      if (target.isDynamic) {
+                                        const mainOptions = tos.find(x => x.dynamicTarget == undefined);
+                                        const otherOptions = tos.filter(x => x != mainOptions);
+                                        return (
+                                          <>
+                                            <div
+                                              className={'flex items-center gap-1'}
                                             >
                                               <Chip
                                                 size={'sm'}
@@ -660,132 +643,181 @@ export default () => {
                                               >
                                                 {target.name}
                                               </Chip>
-                                            </Tooltip>
-                                          ) : (
-                                            <Chip
-                                              size={'sm'}
-                                              radius={'sm'}
-                                              variant={'flat'}
-                                            >
-                                              {target.name}
-                                            </Chip>
-                                          )}
-                                          <TiChevronRightOutline className={'text-medium'} />
-                                          {to.autoBindProperty ? t('Auto bind property') : property ? (
-                                            <BriefProperty property={property} />
-                                          ) : t('Unknown property')}
-                                          {to.autoMatchMultilevelString && t('Auto match multilevel string')}
-                                        </div>
-                                      );
-                                    }
-                                  })}
-                                </div>
-                              ) : t('Not configured')}
+                                              {target.description && (
+                                                <Tooltip content={target.description}>
+                                                  <QuestionCircleOutlined className={'text-medium'} />
+                                                </Tooltip>
+                                              )}
+                                              {mainOptions?.autoBindProperty && t('Auto bind property')}
+                                              {mainOptions?.autoMatchMultilevelString && t('Auto match multilevel string')}
+                                            </div>
+                                            {otherOptions.map(to => {
+                                              const property = (to.propertyPool != undefined && to.propertyId != undefined)
+                                                ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
+                                              return (
+                                                <div className={'flex items-center gap-1'}>
+                                                  <AiOutlineSisternode className={'text-medium'} />
+                                                  <Chip
+                                                    size={'sm'}
+                                                    radius={'sm'}
+                                                    variant={'flat'}
+                                                  >
+                                                    {to.dynamicTarget}
+                                                  </Chip>
+                                                  <TiChevronRightOutline className={'text-medium'} />
+                                                  {to.autoBindProperty ? t('Auto bind property') : property ? (
+                                                    <BriefProperty property={property} />
+                                                  ) : t('Unknown property')}
+                                                  {to.autoMatchMultilevelString && t('Auto match multilevel string')}
+                                                </div>
+                                              );
+                                            })}
+                                          </>
+                                        );
+                                      } else {
+                                        const to = tos[0]!;
+                                        const property = (to.propertyPool != undefined && to.propertyId != undefined)
+                                          ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
+                                        return (
+                                          <div className={'flex items-center gap-1'}>
+                                            {target.description ? (
+                                              <Tooltip
+                                                content={target.description}
+                                              >
+                                                <Chip
+                                                  size={'sm'}
+                                                  radius={'sm'}
+                                                  variant={'flat'}
+                                                >
+                                                  {target.name}
+                                                </Chip>
+                                              </Tooltip>
+                                            ) : (
+                                              <Chip
+                                                size={'sm'}
+                                                radius={'sm'}
+                                                variant={'flat'}
+                                              >
+                                                {target.name}
+                                              </Chip>
+                                            )}
+                                            <TiChevronRightOutline className={'text-medium'} />
+                                            {to.autoBindProperty ? t('Auto bind property') : property ? (
+                                              <BriefProperty property={property} />
+                                            ) : t('Unknown property')}
+                                            {to.autoMatchMultilevelString && t('Auto match multilevel string')}
+                                          </div>
+                                        );
+                                      }
+                                    })}
+                                  </div>
+                                ) : t('Not configured')}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Block>
-                  <Block
-                    title={t('Display name template')}
-                    description={t('You can customize the display name of the resource')}
-                    leftIcon={<MdOutlineSubtitles className={'text-large'} />}
-                    rightIcon={<AiOutlineEdit className={'text-large'} />}
-                    onRightIconPress={() => {
-                      createPortal(
-                        DisplayNameTemplateEditorModal, {
-                          properties: tpl.properties?.map(p => p.property!) ?? [],
-                          template: tpl.displayNameTemplate,
-                          onSubmit: async template => {
-                            tpl.displayNameTemplate = template;
-                            await putTemplate(tpl);
-                            forceUpdate();
+                          );
+                        })}
+                      </div>
+                    </Block>
+                    <Block
+                      title={t('Display name template')}
+                      description={t('You can customize the display name of the resource')}
+                      leftIcon={<MdOutlineSubtitles className={'text-large'} />}
+                      rightIcon={<AiOutlineEdit className={'text-large'} />}
+                      onRightIconPress={() => {
+                        createPortal(
+                          DisplayNameTemplateEditorModal, {
+                            properties: tpl.properties?.map(p => p.property!) ?? [],
+                            template: tpl.displayNameTemplate,
+                            onSubmit: async template => {
+                              tpl.displayNameTemplate = template;
+                              await putTemplate(tpl);
+                              forceUpdate();
+                            },
                           },
-                        },
-                      );
-                    }}
-                  >
-                    {tpl.displayNameTemplate}
-                  </Block>
-                  <Block
-                    title={t('Subresource')}
-                    description={t('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
-                    descriptionPlacement={'bottom'}
-                    leftIcon={<TiFlowChildren className={'text-large'} />}
-                    // rightIcon={<AiOutlineEdit className={'text-large'} />}
-                    // onRightIconPress={() => {
-                    //   createPortal(
-                    //     DisplayNameTemplateEditorModal, {
-                    //       properties: tpl.properties?.map(p => p.property!) ?? [],
-                    //       template: tpl.displayNameTemplate,
-                    //       onSubmit: async template => {
-                    //         tpl.displayNameTemplate = template;
-                    //         await putTemplate(tpl);
-                    //         forceUpdate();
-                    //       },
-                    //     },
-                    //   );
-                    // }}
-                  >
-                    {renderChildSelector(tpl)}
-                  </Block>
-                  {/* <Block */}
-                  {/*   title={t('Preview')} */}
-                  {/*   icon={<AiOutlineEdit className={'text-medium'} />} */}
-                  {/*   onIconPress={() => { */}
-                  {/*     let { samplePaths } = tpl; */}
-                  {/*     createPortal( */}
-                  {/*       Modal, { */}
-                  {/*         defaultVisible: true, */}
-                  {/*         title: t('Setup paths for preview'), */}
-                  {/*         children: ( */}
-                  {/*           <div> */}
-                  {/*             <div className={'opacity-60'}> */}
-                  {/*               <div>{t('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div> */}
-                  {/*               <div>{t('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div> */}
-                  {/*             </div> */}
-                  {/*             <div> */}
-                  {/*               <Textarea */}
-                  {/*                 defaultValue={samplePaths?.join('\n')} */}
-                  {/*                 onValueChange={v => samplePaths = v.split('\n')} */}
-                  {/*                 placeholder={t('Paths separated by line')} */}
-                  {/*                 fullWidth */}
-                  {/*                 isMultiline */}
-                  {/*               /> */}
-                  {/*             </div> */}
-                  {/*           </div> */}
-                  {/*         ), */}
-                  {/*         size: 'lg', */}
-                  {/*         onOk: () => { */}
-                  {/*           tpl.samplePaths = samplePaths; */}
-                  {/*           forceUpdate(); */}
-                  {/*         }, */}
-                  {/*       }, */}
-                  {/*     ); */}
-                  {/*   }} */}
-                  {/* > */}
-                  {/*   {(!tpl.samplePaths || tpl.samplePaths.length == 0) ? ( */}
-                  {/*     <div>{t('This template cannot be previewed because no sample path has been configured.')}</div> */}
-                  {/*   ) : ( */}
-                  {/*     <div> */}
-                  {/*       <Button */}
-                  {/*         size={'sm'} */}
-                  {/*         isIconOnly */}
-                  {/*         variant={'light'} */}
-                  {/*         color={'secondary'} */}
-                  {/*       > */}
-                  {/*         <AiOutlineSync className={'text-medium'} /> */}
-                  {/*       </Button> */}
-                  {/*     </div> */}
-                  {/*   )} */}
-                  {/* </Block> */}
-                </div>
-              </AccordionItem>
-            );
-          })}
-        </Accordion>
-        {/* <div className={'select-text'}>{JSON.stringify(templates)}</div> */}
+                        );
+                      }}
+                    >
+                      {tpl.displayNameTemplate}
+                    </Block>
+                    <Block
+                      title={t('Subresource')}
+                      description={t('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
+                      descriptionPlacement={'bottom'}
+                      leftIcon={<TiFlowChildren className={'text-large'} />}
+                      // rightIcon={<AiOutlineEdit className={'text-large'} />}
+                      // onRightIconPress={() => {
+                      //   createPortal(
+                      //     DisplayNameTemplateEditorModal, {
+                      //       properties: tpl.properties?.map(p => p.property!) ?? [],
+                      //       template: tpl.displayNameTemplate,
+                      //       onSubmit: async template => {
+                      //         tpl.displayNameTemplate = template;
+                      //         await putTemplate(tpl);
+                      //         forceUpdate();
+                      //       },
+                      //     },
+                      //   );
+                      // }}
+                    >
+                      {renderChildSelector(tpl)}
+                    </Block>
+                    {/* <Block */}
+                    {/*   title={t('Preview')} */}
+                    {/*   icon={<AiOutlineEdit className={'text-medium'} />} */}
+                    {/*   onIconPress={() => { */}
+                    {/*     let { samplePaths } = tpl; */}
+                    {/*     createPortal( */}
+                    {/*       Modal, { */}
+                    {/*         defaultVisible: true, */}
+                    {/*         title: t('Setup paths for preview'), */}
+                    {/*         children: ( */}
+                    {/*           <div> */}
+                    {/*             <div className={'opacity-60'}> */}
+                    {/*               <div>{t('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div> */}
+                    {/*               <div>{t('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div> */}
+                    {/*             </div> */}
+                    {/*             <div> */}
+                    {/*               <Textarea */}
+                    {/*                 defaultValue={samplePaths?.join('\n')} */}
+                    {/*                 onValueChange={v => samplePaths = v.split('\n')} */}
+                    {/*                 placeholder={t('Paths separated by line')} */}
+                    {/*                 fullWidth */}
+                    {/*                 isMultiline */}
+                    {/*               /> */}
+                    {/*             </div> */}
+                    {/*           </div> */}
+                    {/*         ), */}
+                    {/*         size: 'lg', */}
+                    {/*         onOk: () => { */}
+                    {/*           tpl.samplePaths = samplePaths; */}
+                    {/*           forceUpdate(); */}
+                    {/*         }, */}
+                    {/*       }, */}
+                    {/*     ); */}
+                    {/*   }} */}
+                    {/* > */}
+                    {/*   {(!tpl.samplePaths || tpl.samplePaths.length == 0) ? ( */}
+                    {/*     <div>{t('This template cannot be previewed because no sample path has been configured.')}</div> */}
+                    {/*   ) : ( */}
+                    {/*     <div> */}
+                    {/*       <Button */}
+                    {/*         size={'sm'} */}
+                    {/*         isIconOnly */}
+                    {/*         variant={'light'} */}
+                    {/*         color={'secondary'} */}
+                    {/*       > */}
+                    {/*         <AiOutlineSync className={'text-medium'} /> */}
+                    {/*       </Button> */}
+                    {/*     </div> */}
+                    {/*   )} */}
+                    {/* </Block> */}
+                  </div>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
+          // <div className={'select-text'}>{JSON.stringify(templates)}</div>
+        )}
       </div>
     </div>
   );

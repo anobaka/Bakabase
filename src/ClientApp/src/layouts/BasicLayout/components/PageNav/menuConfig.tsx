@@ -48,15 +48,15 @@ const asideMenuConfig: IMenuItem[] = [
     path: '/medialibrary',
   },
   {
+    name: 'Media library template',
+    icon: AiOutlineAppstoreAdd,
+    path: '/medialibrarytemplate',
+  },
+  {
     name: 'Data',
     icon: AiOutlineDatabase,
     path: '/expandable-2',
     children: [
-      {
-        name: 'Media library template',
-        icon: AiOutlineAppstoreAdd,
-        path: '/medialibrarytemplate',
-      },
       {
         name: 'Synchronization options',
         path: '/synchronizationoptions',

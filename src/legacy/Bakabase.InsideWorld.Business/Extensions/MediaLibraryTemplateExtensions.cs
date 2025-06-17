@@ -13,9 +13,11 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
@@ -25,6 +27,7 @@ using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Bakabase.InsideWorld.Business.Extensions;
 
@@ -143,7 +146,7 @@ public static class MediaLibraryTemplateExtensions
     }
 
     public static void InitFromMediaLibraryV1(this MediaLibraryTemplate template, MediaLibrary mediaLibrary, int pcIdx,
-        Category category, IPlayableFileSelector? playableFileSelector)
+        Category category, IPlayableFileSelector? playableFileSelector, IOptions<EnhancerOptions> enhancerOptions)
     {
         if (!(mediaLibrary.PathConfigurations?.Count > pcIdx))
         {
@@ -194,6 +197,9 @@ public static class MediaLibraryTemplateExtensions
         {
             Extensions = playableFileSelector?.TryGetExtensions()
         };
+
+
+
         template.Enhancers = category.EnhancerOptions?.Select(eo =>
         {
             var ceo = eo as CategoryEnhancerFullOptions;
@@ -202,11 +208,13 @@ public static class MediaLibraryTemplateExtensions
                 return null;
             }
 
+            var isRegexEnhancer = eo.EnhancerId == (int) EnhancerId.Regex;
+
             return new MediaLibraryTemplateEnhancerOptions
             {
                 EnhancerId = eo.EnhancerId,
                 TargetOptions = ceo?.Options?.TargetOptions
-                    ?.Where(to => to is { PropertyPool: not null, PropertyId: not null }).Select(to =>
+                    ?.Where(to => to is {PropertyPool: not null, PropertyId: not null}).Select(to =>
                         new MediaLibraryTemplateEnhancerTargetAllInOneOptions
                         {
                             CoverSelectOrder = to.CoverSelectOrder,
@@ -214,7 +222,8 @@ public static class MediaLibraryTemplateExtensions
                             DynamicTarget = to.DynamicTarget,
                             PropertyId = to.PropertyId!.Value,
                             PropertyPool = to.PropertyPool!.Value,
-                        }).ToList()
+                        }).ToList(),
+                Expressions = isRegexEnhancer ? enhancerOptions.Value.RegexEnhancer?.Expressions : null
             };
         }).OfType<MediaLibraryTemplateEnhancerOptions>().ToList();
         template.DisplayNameTemplate = category.ResourceDisplayNameTemplate;

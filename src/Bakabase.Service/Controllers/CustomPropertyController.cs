@@ -6,7 +6,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
-using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;

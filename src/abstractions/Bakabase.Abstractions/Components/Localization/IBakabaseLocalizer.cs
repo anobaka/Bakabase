@@ -47,4 +47,7 @@ public interface IBakabaseLocalizer
     string SyncMediaLibrary_TaskProcess_AddResources(string name);
     string SyncMediaLibrary_TaskProcess_UpdateResources(string name);
     string SyncMediaLibrary_TaskProcess_AlmostComplete(string name);
+    string BuiltinMediaLibraryTemplate_Name(int type);
+    string? BuiltinMediaLibraryTemplate_Description(int type);
+    string BuiltinMediaLibraryTemplate_PropertyName(int property);
 }

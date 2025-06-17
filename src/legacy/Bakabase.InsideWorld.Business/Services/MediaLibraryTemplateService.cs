@@ -16,15 +16,19 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Domain;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
+using Bootstrap.Components.Configuration.Abstractions;
+using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
 using SixLabors.ImageSharp.PixelFormats;
@@ -35,17 +39,19 @@ namespace Bakabase.InsideWorld.Business.Services;
 public class MediaLibraryTemplateService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, MediaLibraryTemplateDbModel, int> orm,
     IStandardValueService standardValueService,
-    IEnhancerService enhancerService,
     ICategoryService categoryService,
     ISpecialTextService specialTextService,
     IExtensionGroupService extensionGroupService,
     IPropertyService propertyService,
     ICustomPropertyService customPropertyService,
-    IMediaLibraryService mediaLibraryService
-)
-    : IMediaLibraryTemplateService
+    IMediaLibraryService mediaLibraryService,
+    IBOptions<EnhancerOptions> enhancerOptions,
+    IServiceProvider serviceProvider)
+    : ScopedService(serviceProvider), IMediaLibraryTemplateService
     where TDbContext : DbContext
 {
+    protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
+
     protected async Task Populate(Abstractions.Models.Domain.MediaLibraryTemplate[] templates)
     {
         var propertyKeysMap = templates.SelectMany(x => x.Properties ?? []).GroupBy(d => d.Pool)
@@ -209,7 +215,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                 .ToDictionary(d => d.EnhancerId, d => d.ToEnhancerFullOptions());
             foreach (var r in resourcesMap.Values)
             {
-                await enhancerService.Enhance(r, optionsMap);
+                await EnhancerService.Enhance(r, optionsMap);
             }
         }
 
@@ -390,7 +396,7 @@ public class MediaLibraryTemplateService<TDbContext>(
             (await categoryService.GetFirstComponent<IPlayableFileSelector>(category.Id,
                 ComponentType.PlayableFileSelector)).Data;
         var template = await Add(new MediaLibraryTemplateAddInputModel(templateName));
-        template.InitFromMediaLibraryV1(ml, pcIdx, category, playableFilesSelector);
+        template.InitFromMediaLibraryV1(ml, pcIdx, category, playableFilesSelector, enhancerOptions);
         await Put(template.Id, template);
     }
 
@@ -403,5 +409,10 @@ public class MediaLibraryTemplateService<TDbContext>(
             Name = @new.Name,
             CreatedAt = @new.CreatedAt,
         });
+    }
+
+    public async Task AddBuiltinTemplates()
+    {
+
     }
 }

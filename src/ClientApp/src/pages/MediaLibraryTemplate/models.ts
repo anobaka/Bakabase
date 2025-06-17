@@ -1,7 +1,8 @@
 import type { IdName } from '@/components/types';
 import type { PropertyPool } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
-import type {
+import type { EnhancerTargetFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import {
   EnhancerFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 
@@ -60,5 +61,6 @@ export type MediaLibraryTemplatePlayableFileLocator = {
 
 export type MediaLibraryTemplateEnhancerOptions = {
   enhancerId: number;
-  options?: EnhancerFullOptions;
+  targetOptions?: EnhancerTargetFullOptions[];
+  expressions?: string[];
 };
