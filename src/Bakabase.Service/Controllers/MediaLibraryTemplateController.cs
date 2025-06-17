@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +12,9 @@ namespace Bakabase.Service.Controllers;
 
 [ApiController]
 [Route("~/media-library-template")]
-public class MediaLibraryTemplateController(IMediaLibraryTemplateService service) : ControllerBase
+public class MediaLibraryTemplateController(
+    IMediaLibraryTemplateService service,
+    BuiltinMediaLibraryTemplateService builtinMediaLibraryTemplateService) : ControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryTemplates")]
@@ -102,5 +105,12 @@ public class MediaLibraryTemplateController(IMediaLibraryTemplateService service
     {
         await service.Duplicate(id);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("builtin")]
+    [SwaggerOperation(OperationId = "GetBuiltinMediaLibraryTemplates")]
+    public async Task<ListResponse<BuiltinMediaLibraryTemplateDescriptor>> GetBuiltinTemplates()
+    {
+        return new ListResponse<BuiltinMediaLibraryTemplateDescriptor>(builtinMediaLibraryTemplateService.GetAll());
     }
 }

@@ -1931,5 +1931,10 @@
   "Or": "或者",
   "Import builtin templates": "导入内置模板",
   "Please ensure that media libraries are created, bound to a template, and fully synchronized.": "请确保媒体库已创建、绑定到模板并完全同步。",
-  "Go to media library page": "前往媒体库页面"
+  "Go to media library page": "前往媒体库页面",
+  "MediaType.Video": "视频",
+  "MediaType.Audio": "音频",
+  "MediaType.Text": "文本",
+  "MediaType.Image": "图片",
+  "Set the {{layer}}th layer after the media library path to {{propertyName}}": "将媒体库路径后第 {{layer}} 层设为 {{propertyName}}"
 }

@@ -39,6 +39,7 @@ import BriefProperty from '@/components/Chips/Property/BriefProperty';
 import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 import { willCauseCircleReference } from '@/components/utils';
 import { animals } from '@/pages/Test/nextui';
+import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/BuiltinTemplateSelector';
 
 export default () => {
   const { t } = useTranslation();
@@ -131,20 +132,36 @@ export default () => {
         <Button
           size={'sm'}
           color={'primary'}
-          onPress={() => {
+          onPress={async () => {
             let name = '';
             createPortal(Modal, {
               defaultVisible: true,
               title: t('Create a template'),
               children: (
-                <Input
-                  label={t('Template name')}
-                  placeholder={t('Enter template name')}
-                  isRequired
-                  onValueChange={v => {
-                    name = v;
+                <div className={'flex flex-col gap-1'}>
+                  <Input
+                    label={t('Template name')}
+                    placeholder={t('Enter template name')}
+                    isRequired
+                    onValueChange={v => {
+                      name = v;
+                    }}
+                  />
+                  <Button
+                    variant={'light'}
+                    onPress={() => {
+                    createPortal(
+                      BuiltinTemplateSelector, {
+                        onSelect: id => {
+
+                        },
+                      },
+                    );
                   }}
-                />
+                  >
+                    {t('Select a builtin template')}
+                  </Button>
+                </div>
               ),
               onOk: async () => {
                 const r = await BApi.mediaLibraryTemplate.addMediaLibraryTemplate({ name });

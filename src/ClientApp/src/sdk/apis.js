@@ -7388,6 +7388,45 @@ export const DuplicateMediaLibraryTemplateURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: GetBuiltinMediaLibraryTemplates
+ * url: GetBuiltinMediaLibraryTemplatesURL
+ * method: GetBuiltinMediaLibraryTemplates_TYPE
+ * raw_url: GetBuiltinMediaLibraryTemplates_RAW_URL
+ */
+export const GetBuiltinMediaLibraryTemplates = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-template/builtin'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetBuiltinMediaLibraryTemplates_RAW_URL = function() {
+  return '/media-library-template/builtin'
+}
+export const GetBuiltinMediaLibraryTemplates_TYPE = function() {
+  return 'get'
+}
+export const GetBuiltinMediaLibraryTemplatesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-template/builtin'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetAllMediaLibraryV2
  * url: GetAllMediaLibraryV2URL
  * method: GetAllMediaLibraryV2_TYPE

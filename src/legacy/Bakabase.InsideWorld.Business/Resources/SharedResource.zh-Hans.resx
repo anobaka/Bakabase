@@ -429,4 +429,55 @@
   <data name="SyncMediaLibrary_TaskProcess_AlmostComplete" xml:space="preserve">
     <value>即将完成</value>
   </data>
+  <data name="MediaType_Image" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="MediaType_Audio" xml:space="preserve">
+    <value>音频</value>
+  </data>
+  <data name="MediaType_Video" xml:space="preserve">
+    <value>视频</value>
+  </data>
+  <data name="MediaType_Text" xml:space="preserve">
+    <value>文本</value>
+  </data>
+  <data name="Resource" xml:space="preserve">
+    <value>资源</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Movie" xml:space="preserve">
+    <value>电影</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Anime" xml:space="preserve">
+    <value>动漫</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Series" xml:space="preserve">
+    <value>剧集</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Manga" xml:space="preserve">
+    <value>漫画</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Audio" xml:space="preserve">
+    <value>音频</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_ReleaseDate" xml:space="preserve">
+    <value>发行日期</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Author" xml:space="preserve">
+    <value>作者</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Publisher" xml:space="preserve">
+    <value>发行方</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Year" xml:space="preserve">
+    <value>年份</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Series" xml:space="preserve">
+    <value>剧集</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Tag" xml:space="preserve">
+    <value>标签</value>
+  </data>
 </root>

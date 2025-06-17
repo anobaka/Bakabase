@@ -28,6 +28,10 @@ export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200
 export const downloaderStatuses = Object.keys(DownloaderStatus).filter(k => typeof DownloaderStatus[k] === 'number').map(t => ({label: t, value: DownloaderStatus[t]}));
 export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installing = 3}
 export const dependentComponentStatuses = Object.keys(DependentComponentStatus).filter(k => typeof DependentComponentStatus[k] === 'number').map(t => ({label: t, value: DependentComponentStatus[t]}));
+export enum BuiltinMediaLibraryTemplateProperty {Name = 1, ReleaseDate = 2, Author = 3, Publisher = 4, Year = 5, Series = 6, Tag = 7}
+export const builtinMediaLibraryTemplateProperties = Object.keys(BuiltinMediaLibraryTemplateProperty).filter(k => typeof BuiltinMediaLibraryTemplateProperty[k] === 'number').map(t => ({label: t, value: BuiltinMediaLibraryTemplateProperty[t]}));
+export enum BuiltinMediaLibraryTemplateType {Movie = 1, Anime = 2, Series = 3, Manga = 4, Audio = 5}
+export const builtinMediaLibraryTemplateTypes = Object.keys(BuiltinMediaLibraryTemplateType).filter(k => typeof BuiltinMediaLibraryTemplateType[k] === 'number').map(t => ({label: t, value: BuiltinMediaLibraryTemplateType[t]}));
 export enum CloseBehavior {Prompt = 0, Exit = 1, Minimize = 2, Cancel = 1000}
 export const closeBehaviors = Object.keys(CloseBehavior).filter(k => typeof CloseBehavior[k] === 'number').map(t => ({label: t, value: CloseBehavior[t]}));
 export enum IconType {UnknownFile = 1, Directory = 2, Dynamic = 3}

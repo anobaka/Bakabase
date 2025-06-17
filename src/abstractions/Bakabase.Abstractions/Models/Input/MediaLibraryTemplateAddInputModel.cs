@@ -1,3 +1,3 @@
 namespace Bakabase.Abstractions.Models.Input;
 
-public record MediaLibraryTemplateAddInputModel(string Name);
+public record MediaLibraryTemplateAddInputModel(string Name, string? BuiltinTemplateId = null);
