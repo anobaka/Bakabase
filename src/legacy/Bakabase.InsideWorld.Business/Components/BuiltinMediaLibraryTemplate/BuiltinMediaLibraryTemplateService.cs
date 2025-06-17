@@ -1,45 +1,61 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Extensions;
+using NPOI.Util.Collections;
 
 namespace Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 
 public class BuiltinMediaLibraryTemplateService(
     IMediaLibraryTemplateService mlTemplateService,
-    IBakabaseLocalizer localizer)
+    IBuiltinMediaLibraryTemplateLocalizer localizer,
+    IBakabaseLocalizer bakabaseLocalizer)
 {
+    private string BuildName(BuiltinMediaLibraryTemplateType type,
+        List<BuiltinMediaLibraryTemplateProperty>? properties)
+    {
+        var name = $"[{localizer.BuiltinMediaLibraryTemplate_TypeName(type)}]";
+        if (properties?.Any() == true)
+        {
+            name +=
+                $"{string.Join("/", properties.Select(localizer.BuiltinMediaLibraryTemplate_PropertyName))}/";
+        }
+
+        name += bakabaseLocalizer.Resource();
+        return name;
+    }
+
     public BuiltinMediaLibraryTemplateDescriptor[] GetAll()
     {
         var types = SpecificEnumUtils<BuiltinMediaLibraryTemplateType>.Values;
-
         var descriptors = types.SelectMany(t =>
         {
-            var attr = t.GetType().GetCustomAttribute<BuiltinMediaLibraryTemplateAttribute>()!;
-            var builders = t.GetType().GetCustomAttributes<BuiltinMediaLibraryTemplateBuilderAttribute>();
+            var attr = t.GetAttribute<BuiltinMediaLibraryTemplateAttribute>()!;
+            var builders = t.GetAttributes<BuiltinMediaLibraryTemplateBuilderAttribute>();
 
             return builders.Select(b =>
             {
                 var d = new BuiltinMediaLibraryTemplateDescriptor
                 {
-                    Name = localizer.BuiltinMediaLibraryTemplate_Name((int) t),
-                    Description = localizer.BuiltinMediaLibraryTemplate_Description((int) t),
-                    Properties = attr.Properties
-                        .Select(p => localizer.BuiltinMediaLibraryTemplate_PropertyName((int) p)).ToArray()
+                    Id = b.Id,
+                    Type = t,
+                    MediaType = attr.MediaType,
+                    Name = BuildName(t, b.Properties),
+                    // Description = "将视频类文件视为可播放文件。包含媒体库路径后第1级是xxx，第2级是xxx，",
+                    Properties = attr.Properties,
+                    PropertyNames =
+                        attr.Properties.Select(localizer.BuiltinMediaLibraryTemplate_PropertyName).ToArray(),
+                    LayeredProperties = b.Properties,
+                    LayeredPropertyNames = b.Properties?.Select(localizer.BuiltinMediaLibraryTemplate_PropertyName)
+                        .ToArray()
                 };
-
-                if (b.Properties?.Any() == true)
-                {
-                    d.LayerProperties = [];
-                    for (var index = 0; index < b.Properties.Length; index++)
-                    {
-                        var p = b.Properties[index];
-                        d.LayerProperties[index] = localizer.BuiltinMediaLibraryTemplate_PropertyName((int) p);
-                    }
-                }
-
                 return d;
             });
         }).ToArray();
@@ -47,10 +63,47 @@ public class BuiltinMediaLibraryTemplateService(
         return descriptors;
     }
 
-    public async Task Add(BuiltinMediaLibraryTemplateType type, int builderIdx)
+    public async Task AddMediaLibraryTemplate(string builtinTemplateId)
     {
-        var attr = type.GetType().GetCustomAttribute<BuiltinMediaLibraryTemplateAttribute>()!;
-        var builder =
-            type.GetType().GetCustomAttributes<BuiltinMediaLibraryTemplateBuilderAttribute>().ToArray()[builderIdx];
+        var descriptor = GetAll().First(x => x.Id == builtinTemplateId);
+
+        var template = new MediaLibraryTemplate
+        {
+            Name = BuildName(descriptor.Type, descriptor.LayeredProperties),
+            // Description = localizer.BuiltinMediaLibraryTemplate_Description(type, builder.Name),
+            PlayableFileLocator = new MediaLibraryTemplatePlayableFileLocator
+            {
+                ExtensionGroups =
+                [
+                    new ExtensionGroup(0, bakabaseLocalizer.MediaType(descriptor.MediaType),
+                        InternalOptions.MediaTypeExtensions[descriptor.MediaType].ToHashSet())
+                ]
+            },
+            Properties = descriptor.Properties.Select(p =>
+            {
+                var mp = new MediaLibraryTemplateProperty
+                {
+                    Property = BuiltinMediaLibraryTemplateData.PropertyMap[p]
+                };
+                if (descriptor.LayeredProperties?.Any() == true)
+                {
+                    var idx = descriptor.LayeredProperties.IndexOf(p);
+                    if (idx >= 0)
+                    {
+                        mp.ValueLocators = [new PathFilter { Positioner = PathPositioner.Layer, Layer = idx + 1 }];
+                    }
+                }
+
+                return mp;
+            }).ToList(),
+            ResourceFilters =
+            [
+                new PathFilter
+                    { Positioner = PathPositioner.Layer, Layer = (descriptor.LayeredProperties?.Count ?? 0) + 1 }
+            ]
+        };
+
+        var data = await mlTemplateService.Add(new MediaLibraryTemplateAddInputModel(template.Name));
+        await mlTemplateService.Put(data.Id, template);
     }
 }

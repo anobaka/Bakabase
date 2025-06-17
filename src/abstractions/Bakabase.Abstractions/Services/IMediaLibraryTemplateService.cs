@@ -7,11 +7,11 @@ namespace Bakabase.Abstractions.Services;
 public interface IMediaLibraryTemplateService
 {
     Task GeneratePreview(int id);
-    Task<Models.Domain.MediaLibraryTemplate> Get(int id);
-    Task<Models.Domain.MediaLibraryTemplate[]> GetByKeys(int[] ids);
-    Task<Models.Domain.MediaLibraryTemplate[]> GetAll();
+    Task<MediaLibraryTemplate> Get(int id);
+    Task<MediaLibraryTemplate[]> GetByKeys(int[] ids);
+    Task<MediaLibraryTemplate[]> GetAll();
     Task<MediaLibraryTemplate> Add(MediaLibraryTemplateAddInputModel model);
-    Task Put(int id, Models.Domain.MediaLibraryTemplate template);
+    Task Put(int id, MediaLibraryTemplate template);
     Task Delete(int id);
     Task<string> GenerateShareCode(int id);
     Task Import(MediaLibraryTemplateImportInputModel model);
@@ -19,5 +19,4 @@ public interface IMediaLibraryTemplateService
     Task<byte[]> AppendShareCodeToPng(int id, byte[] png);
     Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName);
     Task Duplicate(int id);
-    Task AddBuiltinTemplates();
 }

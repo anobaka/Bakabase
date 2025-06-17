@@ -298,6 +298,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerOpt
   /** @format int32 */
   enhancerId: number;
   targetOptions?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions[];
+  expressions?: string[];
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions {
@@ -604,6 +605,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLi
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel {
   name: string;
+  builtinTemplateId?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel {
@@ -789,6 +791,43 @@ export type BakabaseInfrastructuresComponentsGuiIconType = 1 | 2 | 3;
  * @format int32
  */
 export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
+
+export interface BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor {
+  id: string;
+  /** [1: Movie, 2: Anime, 3: Series, 4: Manga, 5: Audio] */
+  type: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateType;
+  /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
+  mediaType: BakabaseInsideWorldModelsConstantsMediaType;
+  name: string;
+  properties: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty[];
+  propertyNames: string[];
+  layeredPropertyNames?: string[];
+  layeredProperties?: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty[];
+}
+
+/**
+ * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Year, 6: Series, 7: Tag]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7;
+
+/**
+ * [1: Movie, 2: Anime, 3: Series, 4: Manga, 5: Audio]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateType =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
 
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   path: string;
@@ -1613,6 +1652,29 @@ export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatc
   credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
 }
 
+export interface BakabaseInsideWorldModelsRequestModelsOptionsSoulPlusOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  autoBuyThreshold?: number;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInput {
+  simpleSearchEngines?: BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
+  curlExecutable?: string;
+  automaticallyParsingPosts?: boolean;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput {
+  name?: string;
+  urlTemplate?: string;
+}
+
+export interface BakabaseInsideWorldModelsRequestModelsOptionsUIOptionsPatchRequestModel {
+  resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
+  /** [0: Default, 1: Resource] */
+  startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
+}
+
 export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
   /** @format int32 */
   index: number;
@@ -1629,29 +1691,6 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel 
   mediaLibraryId: number;
   isLegacyMediaLibrary: boolean;
   path?: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsSoulPlusOptionsPatchInputModel {
-  cookie?: string;
-  /** @format int32 */
-  autoBuyThreshold?: number;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInput {
-  simpleSearchEngines?: BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
-  curlExecutable?: string;
-  automaticallyParsingPosts?: boolean;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput {
-  name?: string;
-  urlTemplate?: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel {
-  resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
-  /** [0: Default, 1: Resource] */
-  startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
 }
 
 export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
@@ -1709,13 +1748,14 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
   targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[];
+  expressions?: string[];
 }
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions {
   /** @format int32 */
   target: number;
   dynamicTarget?: string;
-  autoMatchMultilevelString?: boolean;
+  /** @deprecated */
   autoBindProperty?: boolean;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
@@ -1731,7 +1771,6 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchI
 }
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel {
-  autoMatchMultilevelString?: boolean;
   autoBindProperty?: boolean;
   /** [1: FilenameAscending, 2: FileModifyDtDescending] */
   coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
@@ -2261,6 +2300,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
@@ -7330,6 +7376,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetBuiltinMediaLibraryTemplates
+     * @request GET:/media-library-template/builtin
+     */
+    getBuiltinMediaLibraryTemplates: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor,
+        any
+      >({
+        path: `/media-library-template/builtin`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   mediaLibraryV2 = {
     /**
@@ -7551,7 +7615,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/ui
      */
     patchUiOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsUIOptionsPatchRequestModel,
+      data: BakabaseInsideWorldModelsRequestModelsOptionsUIOptionsPatchRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -7797,7 +7861,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/thirdparty
      */
     patchThirdPartyOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsThirdPartyOptionsPatchInput,
+      data: BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInput,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -8010,7 +8074,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/soulplus
      */
     patchSoulPlusOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsSoulPlusOptionsPatchInputModel,
+      data: BakabaseInsideWorldModelsRequestModelsOptionsSoulPlusOptionsPatchInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Ai;
+using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Legacy;
@@ -138,6 +139,8 @@ namespace Bakabase.Service.Extensions
             services.AddPostParser<InsideWorldDbContext>();
             services.AddSingleton<OllamaApiClientAccessor>();
             services.AddSingleton<TampermonkeyService>();
+
+            services.AddBuiltinMediaLibraryTemplates();
 
             #endregion
 

@@ -187,6 +187,114 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Author.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_Author {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_Author", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Name.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_Name {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_Name", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Publisher.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_Publisher {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_Publisher", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Release date.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_ReleaseDate {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_ReleaseDate", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Series.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_Series {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_Series", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Tag.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_Tag {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_Tag", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Year.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_PropertyName_Year {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_PropertyName_Year", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Anime.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_TypeName_Anime {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_TypeName_Anime", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Audio.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_TypeName_Audio {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_TypeName_Audio", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Manga.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_TypeName_Manga {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_TypeName_Manga", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Movie.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_TypeName_Movie {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_TypeName_Movie", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Series.
+        /// </summary>
+        internal static string BuiltinMediaLibraryTemplate_TypeName_Series {
+            get {
+                return ResourceManager.GetString("BuiltinMediaLibraryTemplate_TypeName_Series", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Filename.
         /// </summary>
         internal static string BuiltinPropertyForDisplayName_Filename {
@@ -580,6 +688,42 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Audio.
+        /// </summary>
+        internal static string MediaType_Audio {
+            get {
+                return ResourceManager.GetString("MediaType_Audio", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Image.
+        /// </summary>
+        internal static string MediaType_Image {
+            get {
+                return ResourceManager.GetString("MediaType_Image", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Text.
+        /// </summary>
+        internal static string MediaType_Text {
+            get {
+                return ResourceManager.GetString("MediaType_Text", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Video.
+        /// </summary>
+        internal static string MediaType_Video {
+            get {
+                return ResourceManager.GetString("MediaType_Video", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Cover.
         /// </summary>
         internal static string Migration_V190_DefaultPropertyName_Cover {
@@ -792,6 +936,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         internal static string Reserved_Resource_Property_Name_Rating {
             get {
                 return ResourceManager.GetString("Reserved_Resource_Property_Name_Rating", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Resource.
+        /// </summary>
+        internal static string Resource {
+            get {
+                return ResourceManager.GetString("Resource", resourceCulture);
             }
         }
         

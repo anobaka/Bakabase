@@ -429,4 +429,55 @@ The version of lux is not limited.</value>
   <data name="SyncMediaLibrary_TaskProcess_AlmostComplete" xml:space="preserve">
     <value>Almost complete</value>
   </data>
+  <data name="MediaType_Image" xml:space="preserve">
+    <value>Image</value>
+  </data>
+  <data name="MediaType_Audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="MediaType_Video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="MediaType_Text" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="Resource" xml:space="preserve">
+    <value>Resource</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Movie" xml:space="preserve">
+    <value>Movie</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Anime" xml:space="preserve">
+    <value>Anime</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Series" xml:space="preserve">
+    <value>Series</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Manga" xml:space="preserve">
+    <value>Manga</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_TypeName_Audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_ReleaseDate" xml:space="preserve">
+    <value>Release date</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Author" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Publisher" xml:space="preserve">
+    <value>Publisher</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Year" xml:space="preserve">
+    <value>Year</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Series" xml:space="preserve">
+    <value>Series</value>
+  </data>
+  <data name="BuiltinMediaLibraryTemplate_PropertyName_Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
 </root>

@@ -410,9 +410,4 @@ public class MediaLibraryTemplateService<TDbContext>(
             CreatedAt = @new.CreatedAt,
         });
     }
-
-    public async Task AddBuiltinTemplates()
-    {
-
-    }
 }
