@@ -33,6 +33,14 @@ public record BuiltinMediaLibraryTemplateData
             )
         },
         {
+            BuiltinMediaLibraryTemplateProperty.Publisher,
+            new Property(
+                Pool: PropertyPool.Custom,
+                Id: 0,
+                Type: PropertyType.SingleChoice
+            )
+        },
+        {
             BuiltinMediaLibraryTemplateProperty.Year,
             new Property(
                 Pool: PropertyPool.Custom,
@@ -56,10 +64,5 @@ public record BuiltinMediaLibraryTemplateData
                 Type: PropertyType.Tags
             )
         }
-    };
-
-    public static Dictionary<BuiltinMediaLibraryTemplateProperty, Property[]> TypePropertiesMap = new()
-    {
-
     };
 }

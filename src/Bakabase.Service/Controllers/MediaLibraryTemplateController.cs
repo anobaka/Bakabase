@@ -34,10 +34,10 @@ public class MediaLibraryTemplateController(
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddMediaLibraryTemplate")]
-    public async Task<BaseResponse> Add([FromBody] MediaLibraryTemplateAddInputModel model)
+    public async Task<SingletonResponse<int>> Add([FromBody] MediaLibraryTemplateAddInputModel model)
     {
-        await service.Add(model);
-        return BaseResponseBuilder.Ok;
+        var data = await service.Add(model);
+        return new SingletonResponse<int>(data: data.Id);
     }
 
     [HttpPut("{id:int}")]
@@ -64,22 +64,21 @@ public class MediaLibraryTemplateController(
         return new SingletonResponse<string>(text);
     }
 
-    [HttpPost("share-code/validate")]
-    [SwaggerOperation(OperationId = "ValidateMediaLibraryTemplateShareCode")]
-    public async Task<SingletonResponse<MediaLibraryTemplateValidationViewModel>> ValidateShareCode(
+    [HttpPost("share-code/import-configuration")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryTemplateImportConfiguration")]
+    public async Task<SingletonResponse<MediaLibraryTemplateImportConfigurationViewModel>> GetImportConfiguration(
         [FromBody] string shareCode)
     {
-        var r = await service.Validate(shareCode);
-        return new SingletonResponse<MediaLibraryTemplateValidationViewModel>(r);
+        var r = await service.GetImportConfiguration(shareCode);
+        return new SingletonResponse<MediaLibraryTemplateImportConfigurationViewModel>(r);
     }
 
     [HttpPost("share-code/import")]
     [SwaggerOperation(OperationId = "ImportMediaLibraryTemplate")]
-    public async Task<BaseResponse> Import(
+    public async Task<SingletonResponse<int>> Import(
         [FromBody] MediaLibraryTemplateImportInputModel model)
     {
-        await service.Import(model);
-        return BaseResponseBuilder.Ok;
+        return new(data: await service.Import(model));
     }
 
     // [HttpPut("{id:int}/share-png/code")]

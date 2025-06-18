@@ -1929,7 +1929,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/media-library-template/share-code/validate": {
+    "/media-library-template/share-code/import-configuration": {
         parameters: {
             query?: never;
             header?: never;
@@ -1938,7 +1938,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["ValidateMediaLibraryTemplateShareCode"];
+        post: operations["GetMediaLibraryTemplateImportConfiguration"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3663,6 +3663,7 @@ export interface components {
             builtinTemplateId?: string;
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel": {
+            name?: string;
             shareCode: string;
             customPropertyConversionsMap?: {
                 [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TCustomPropertyConversion"];
@@ -3670,6 +3671,7 @@ export interface components {
             extensionGroupConversionsMap?: {
                 [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TExtensionGroupConversion"];
             };
+            automaticallyCreateMissingData: boolean;
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TCustomPropertyConversion": {
             toPropertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -3746,10 +3748,10 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Abstractions.Models.View.Constants.CategoryResourceDisplayNameSegmentType": 1 | 2 | 3 | 4;
-        "Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel": {
-            readonly passed: boolean;
-            unhandledProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
-            unhandledExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
+        "Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel": {
+            readonly noNeedToConfigure: boolean;
+            uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
+            uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.AppOptionsPatchRequestModel": {
             language?: string;
@@ -3818,6 +3820,7 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor": {
             id: string;
             type: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateType"];
+            typeName: string;
             mediaType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
             name: string;
             properties: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateProperty"][];
@@ -5307,11 +5310,11 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel"];
         };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]": {
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel"];
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Infrastructures.Components.App.Models.ResponseModels.AppInfo]": {
             /** Format: int32 */
@@ -10000,9 +10003,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                 };
             };
         };
@@ -10110,7 +10113,7 @@ export interface operations {
             };
         };
     };
-    ValidateMediaLibraryTemplateShareCode: {
+    GetMediaLibraryTemplateImportConfiguration: {
         parameters: {
             query?: never;
             header?: never;
@@ -10132,9 +10135,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel]"];
                 };
             };
         };
@@ -10161,9 +10164,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                 };
             };
         };

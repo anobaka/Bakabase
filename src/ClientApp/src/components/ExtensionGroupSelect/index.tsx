@@ -28,8 +28,8 @@ export default ({ value = [], onSelectionChange }: Props) => {
   return (
     <Select
       selectionMode={'multiple'}
-      label={t('Limit file type groups')}
-      placeholder={t('Select from predefined file type groups')}
+      label={t('Limit file extension groups')}
+      placeholder={t('Select from extension groups')}
       dataSource={extensionGroups?.map(l => ({
         label: l.name,
         value: l.id.toString(),

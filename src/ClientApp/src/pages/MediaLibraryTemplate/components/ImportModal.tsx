@@ -9,13 +9,12 @@ import { MdAutoFixHigh } from 'react-icons/md';
 import _ from 'lodash';
 import { Alert, Button, Chip, Modal, Select, Textarea, Tooltip } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import type { IProperty } from '@/components/Property/models';
 import type { ExtensionGroup } from '@/pages/ExtensionGroup';
 import BApi from '@/sdk/BApi';
 import PropertyPoolIcon from '@/components/Property/components/PropertyPoolIcon';
 import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
+import type { PropertyType } from '@/sdk/constants';
 import { PropertyPool } from '@/sdk/constants';
-import type { PropertyMap } from '@/components/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import PropertySelector from '@/components/PropertySelector';
 import type { components } from '@/sdk/BApi2';
@@ -25,29 +24,56 @@ type Props = {
 } & DestroyableProps;
 
 type PropertyConversion = {
-  toPropertyPool: PropertyPool;
   toPropertyId: number;
+  toPropertyPool: PropertyPool;
 };
 
 type ExtensionGroupConversion = {
   toExtensionGroupId: number;
 };
 
-type Validation = components['schemas']['Bakabase.Abstractions.Models.View.MediaLibraryTemplateValidationViewModel'];
+type Configuration = components['schemas']['Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel'];
+type SimpleProperty = {
+  pool: PropertyPool;
+  id: number;
+  name: string;
+  type: PropertyType;
+};
+type SimplePropertyMap = { [key in PropertyPool]?: Record<number, SimpleProperty> };
 
 const MissingDataMessage = 'The current template contains data missing from the application. Please configure how to handle this data before proceeding with the import.';
 
-const findProperProperty = (property: IProperty, propertyMap: PropertyMap): IProperty | undefined => {
+const findProperProperty = (property: SimpleProperty, propertyMap: SimplePropertyMap): SimpleProperty | undefined => {
   const candidates = _.values(propertyMap[PropertyPool.Reserved]).concat(_.values(propertyMap[PropertyPool.Custom]))
     .filter(p => p.type == property.type);
   const best = candidates.find(p => p.name == property.name);
   return best ?? candidates[0];
 };
 
-const findProperExtensionGroup = (extensionGroup: ExtensionGroup, extensionGroups: ExtensionGroup[]): ExtensionGroup | undefined => {
+const findProperExtensionGroup = (extensionGroup: ExtensionGroup,
+                                  extensionGroups: ExtensionGroup[]): ExtensionGroup | undefined => {
   const candidates = extensionGroups.filter(eg => _.xor(extensionGroup.extensions, eg.extensions).length === 0);
   const best = candidates.find(eg => eg.name === extensionGroup.name);
   return best ?? candidates[0];
+};
+
+const validate = (
+  propertyConversionMap?: Record<number, PropertyConversion>,
+  extensionGroupConversionMap?: Record<number, ExtensionGroupConversion>,
+  configuration?: Configuration): boolean => {
+  if (!configuration || !configuration.noNeedToConfigure) {
+    return true;
+  }
+  if (configuration.uniqueExtensionGroups &&
+    configuration.uniqueExtensionGroups.length > _.keys(extensionGroupConversionMap).length) {
+    return false;
+  }
+  if (configuration.uniqueCustomProperties &&
+    configuration.uniqueCustomProperties.length > _.keys(propertyConversionMap).length) {
+    return false;
+  }
+
+  return true;
 };
 
 export default ({ onImported }: Props) => {
@@ -55,19 +81,20 @@ export default ({ onImported }: Props) => {
   const { createPortal } = useBakabaseContext();
 
   const [shareCode, setShareCode] = useState<string>();
-  const [validation, setValidation] = useState<Validation>();
+  const [configuration, setConfiguration] = useState<Configuration>();
 
   const [propertyConversionsMap, setPropertyConversionsMap] = useState<Record<number, PropertyConversion>>();
-  const [extensionGroupConversionsMap, setExtensionGroupConversionsMap] = useState<Record<number, ExtensionGroupConversion>>();
+  const [extensionGroupConversionsMap,
+    setExtensionGroupConversionsMap] = useState<Record<number, ExtensionGroupConversion>>();
 
-  const [propertyMap, setPropertyMap] = useState<PropertyMap | undefined>(undefined);
+  const [propertyMap, setPropertyMap] = useState<SimplePropertyMap | undefined>(undefined);
   const [extensionGroups, setExtensionGroups] = useState<ExtensionGroup[] | undefined>(undefined);
 
   const initDataForImport = async () => {
     if (!propertyMap) {
       // @ts-ignore
       const pr = await BApi.property.getPropertiesByPool(PropertyPool.Custom | PropertyPool.Reserved);
-      const pm = (pr.data ?? []).reduce<PropertyMap>((s, t) => {
+      const pm = (pr.data ?? []).reduce<SimplePropertyMap>((s, t) => {
         const m = (s[t.pool] ??= {});
         m[t.id] = t;
         return s;
@@ -82,9 +109,10 @@ export default ({ onImported }: Props) => {
 
   const $import = async () => {
     const model = {
-      shareCode: shareCode,
+      shareCode: shareCode!,
       customPropertyConversionsMap: propertyConversionsMap,
       extensionGroupConversionsMap,
+      automaticallyCreateMissingData: false,
     };
     return await BApi.mediaLibraryTemplate.importMediaLibraryTemplate(model);
   };
@@ -97,19 +125,21 @@ export default ({ onImported }: Props) => {
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
+          isDisabled: !shareCode && !validate(propertyConversionsMap, extensionGroupConversionsMap, configuration),
           children: t('Import'),
         },
       }}
       onOk={async () => {
-        if (!validation) {
-          const validationResult = await BApi.mediaLibraryTemplate.validateMediaLibraryTemplateShareCode(shareCode);
-          if (validationResult.code) {
-            const msg = `${t('Failed to validate media library template')}:${validationResult.message}`;
+        if (!configuration) {
+          const importConfigurationResp = await BApi.mediaLibraryTemplate
+            .getMediaLibraryTemplateImportConfiguration(shareCode!);
+          if (importConfigurationResp.code) {
+            const msg = `${t('Failed to get media library template import configuration')}:${importConfigurationResp.message}`;
             toast.error(msg);
             throw new Error(msg);
           } else {
-            setValidation(validationResult.data!);
-            if (!validationResult.data!.passed) {
+            setConfiguration(importConfigurationResp.data!);
+            if (!importConfigurationResp.data!.noNeedToConfigure) {
               await initDataForImport();
               throw new Error(t(MissingDataMessage));
             }
@@ -128,20 +158,20 @@ export default ({ onImported }: Props) => {
       <div>
         <Textarea
           value={shareCode}
-          isDisabled={!!validation}
+          isDisabled={!!configuration}
           isRequired
           onValueChange={setShareCode}
           label={t('Share code')}
           placeholder={t('Paste share code here')}
         />
-        {validation && (
+        {configuration && (
           <Button
             className={'mt-2'}
             size={'sm'}
             color={'default'}
             onPress={() => {
               setShareCode('');
-              setValidation(undefined);
+              setConfiguration(undefined);
             }}
           >
             <IoSync />
@@ -149,12 +179,12 @@ export default ({ onImported }: Props) => {
           </Button>
         )}
       </div>
-      {validation && !validation.passed && (
+      {configuration && !configuration.noNeedToConfigure && (
         <div className={'flex flex-col gap-2'}>
           <div>
-            <Alert color={'warning'} title={MissingDataMessage} />
+            <Alert color={'warning'} title={t(MissingDataMessage)} />
           </div>
-          {validation.unhandledProperties && validation.unhandledProperties.length > 0 && (
+          {configuration.uniqueCustomProperties && configuration.uniqueCustomProperties.length > 0 && (
             <div className={'flex flex-col gap-2'}>
               <div className={'flex items-center gap-1 text-lg font-bold'}>
                 <TbSectionSign className={''} />
@@ -165,8 +195,8 @@ export default ({ onImported }: Props) => {
                   className={'inline-grid gap-1 items-center'}
                   style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
                 >
-                  {validation.unhandledProperties.map(p => {
-                    const conversion = propertyConversionsMap?.[p.id];
+                  {configuration.uniqueCustomProperties.map((p, pIdx) => {
+                    const conversion = propertyConversionsMap?.[pIdx];
                     const property = (conversion?.toPropertyPool && conversion?.toPropertyId)
                       ? propertyMap?.[conversion.toPropertyPool]?.[conversion.toPropertyId] : undefined;
                     const isSet = !!property;
@@ -194,11 +224,11 @@ export default ({ onImported }: Props) => {
                             isIconOnly
                             variant={'light'}
                             onPress={async () => {
-                              const candidate = findProperProperty(p, propertyMap ?? []);
+                              const candidate = findProperProperty(p, propertyMap ?? {});
                               if (candidate) {
                                 setPropertyConversionsMap({
                                   ...propertyConversionsMap,
-                                  [p.id]: {
+                                  [pIdx]: {
                                     toPropertyPool: candidate.pool,
                                     toPropertyId: candidate.id,
                                   },
@@ -227,7 +257,7 @@ export default ({ onImported }: Props) => {
                                     });
                                     setPropertyConversionsMap({
                                       ...propertyConversionsMap,
-                                      [p.id]: {
+                                      [pIdx]: {
                                         toPropertyPool: np.pool,
                                         toPropertyId: np.id,
                                       },
@@ -279,7 +309,7 @@ export default ({ onImported }: Props) => {
               </div>
             </div>
           )}
-          {validation.unhandledExtensionGroups && validation.unhandledExtensionGroups.length > 0 && (
+          {configuration.uniqueExtensionGroups && configuration.uniqueExtensionGroups.length > 0 && (
             <div className={'flex flex-col gap-2'}>
               <div className={'flex items-center gap-1 text-lg font-bold'}>
                 <TbSectionSign className={''} />
@@ -290,8 +320,8 @@ export default ({ onImported }: Props) => {
                   className={'inline-grid gap-1 items-center'}
                   style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
                 >
-                  {validation.unhandledExtensionGroups.map(eg => {
-                    const conversion = extensionGroupConversionsMap?.[eg.id];
+                  {configuration.uniqueExtensionGroups.map((eg, egIdx) => {
+                    const conversion = extensionGroupConversionsMap?.[egIdx];
                     const leg = conversion?.toExtensionGroupId
                       ? extensionGroups?.find(g => g.id == conversion.toExtensionGroupId) : undefined;
                     const isSet = !!leg;
@@ -326,7 +356,7 @@ export default ({ onImported }: Props) => {
                               if (candidate) {
                                 setExtensionGroupConversionsMap({
                                   ...extensionGroupConversionsMap,
-                                  [eg.id]: {
+                                  [egIdx]: {
                                     toExtensionGroupId: candidate.id,
                                   },
                                 });
@@ -347,7 +377,7 @@ export default ({ onImported }: Props) => {
                                       setExtensionGroups([...extensionGroups!, newEg]);
                                       setExtensionGroupConversionsMap({
                                         ...extensionGroupConversionsMap,
-                                        [eg.id]: {
+                                        [egIdx]: {
                                           toExtensionGroupId: newEg.id,
                                         },
                                       });
@@ -373,7 +403,7 @@ export default ({ onImported }: Props) => {
                               const id = parseInt(Array.from(selection)[0] as string, 10);
                               setExtensionGroupConversionsMap({
                                 ...extensionGroupConversionsMap,
-                                [eg.id]: {
+                                [egIdx]: {
                                   ...conversion,
                                   toExtensionGroupId: id,
                                 },

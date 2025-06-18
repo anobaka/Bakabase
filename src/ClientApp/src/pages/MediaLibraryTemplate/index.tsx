@@ -20,7 +20,6 @@ import { TbDatabase } from 'react-icons/tb';
 import { PiEmpty } from 'react-icons/pi';
 import type { MediaLibraryTemplate } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
-import testData from './data.json';
 import Block from './components/Block';
 import { Accordion, AccordionItem, Button, Chip, Input, Modal, Select, Textarea, Tooltip } from '@/components/bakaui';
 import { PropertyPool } from '@/sdk/constants';
@@ -40,6 +39,7 @@ import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 import { willCauseCircleReference } from '@/components/utils';
 import { animals } from '@/pages/Test/nextui';
 import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/BuiltinTemplateSelector';
+import AddModal from '@/pages/MediaLibraryTemplate/components/AddModal';
 
 export default () => {
   const { t } = useTranslation();
@@ -132,45 +132,7 @@ export default () => {
         <Button
           size={'sm'}
           color={'primary'}
-          onPress={async () => {
-            let name = '';
-            createPortal(Modal, {
-              defaultVisible: true,
-              title: t('Create a template'),
-              children: (
-                <div className={'flex flex-col gap-1'}>
-                  <Input
-                    label={t('Template name')}
-                    placeholder={t('Enter template name')}
-                    isRequired
-                    onValueChange={v => {
-                      name = v;
-                    }}
-                  />
-                  <Button
-                    variant={'light'}
-                    onPress={() => {
-                    createPortal(
-                      BuiltinTemplateSelector, {
-                        onSelect: id => {
-
-                        },
-                      },
-                    );
-                  }}
-                  >
-                    {t('Select a builtin template')}
-                  </Button>
-                </div>
-              ),
-              onOk: async () => {
-                const r = await BApi.mediaLibraryTemplate.addMediaLibraryTemplate({ name });
-                if (!r.code) {
-                  loadTemplates();
-                }
-              },
-            });
-          }}
+          onPress={() => createPortal(AddModal, { onDestroyed: loadTemplates })}
         >{t('Create a template')}</Button>
         <Button
           size={'sm'}
@@ -194,10 +156,6 @@ export default () => {
           <div className={'flex items-center gap-2 w-full h-full justify-center'}>
             <PiEmpty className={'text-2xl'} />
             {t('No templates found. You can create a template or import one from a share code.')}
-            {t('Or')}
-            <Button color={'primary'}>
-              <AiOutlineImport className={'text-lg'} />
-              {t('Import builtin templates')}</Button>
           </div>
         ) : (
           <Accordion

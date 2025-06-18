@@ -22,7 +22,12 @@ public class ExtensionGroupService(FullMemoryCacheResourceService<InsideWorldDbC
 
     public async Task<ExtensionGroup[]> AddRange(ExtensionGroupAddInputModel[] groups)
     {
-        var domainModels = groups.Select(g => new ExtensionGroup(0, g.Name, g.Extensions)).ToArray();
+        var domainModels = groups.Select(g => new ExtensionGroup
+        {
+            Id = 0,
+            Name = g.Name,
+            Extensions = g.Extensions
+        }).ToArray();
         var dbModels = domainModels.Select(d => d.ToDbModel()).ToList();
         var data = (await orm.AddRange(dbModels)).Data!;
         return data.Select(d => d.ToDomainModel()).ToArray();

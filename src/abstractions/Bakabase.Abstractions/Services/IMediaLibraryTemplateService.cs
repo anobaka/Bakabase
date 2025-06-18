@@ -14,8 +14,15 @@ public interface IMediaLibraryTemplateService
     Task Put(int id, MediaLibraryTemplate template);
     Task Delete(int id);
     Task<string> GenerateShareCode(int id);
-    Task Import(MediaLibraryTemplateImportInputModel model);
-    Task<MediaLibraryTemplateValidationViewModel?> Validate(string shareCode);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="model"></param>
+    /// <returns>Media library template id</returns>
+    Task<int> Import(MediaLibraryTemplateImportInputModel model);
+
+    Task<MediaLibraryTemplateImportConfigurationViewModel> GetImportConfiguration(string shareCode);
     Task<byte[]> AppendShareCodeToPng(int id, byte[] png);
     Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName);
     Task Duplicate(int id);

@@ -129,7 +129,7 @@ export default ({
           isRequired
         >
           {pathPositioners.map(p => (
-            <Radio value={p.value.toString()}>{p.label}</Radio>
+            <Radio value={p.value.toString()}>{t(p.label)}</Radio>
           ))}
         </RadioGroup>
         {filter.positioner && (
@@ -182,7 +182,7 @@ export default ({
             )}
           </>
         )}
-        <pre>{JSON.stringify(filter)}</pre>
+        {/* <pre>{JSON.stringify(filter)}</pre> */}
       </div>
     </Modal>
   );

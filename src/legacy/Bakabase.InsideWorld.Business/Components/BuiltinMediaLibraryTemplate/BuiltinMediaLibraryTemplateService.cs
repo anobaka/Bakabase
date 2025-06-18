@@ -14,7 +14,6 @@ using NPOI.Util.Collections;
 namespace Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 
 public class BuiltinMediaLibraryTemplateService(
-    IMediaLibraryTemplateService mlTemplateService,
     IBuiltinMediaLibraryTemplateLocalizer localizer,
     IBakabaseLocalizer bakabaseLocalizer)
 {
@@ -46,6 +45,7 @@ public class BuiltinMediaLibraryTemplateService(
                 {
                     Id = b.Id,
                     Type = t,
+                    TypeName = localizer.BuiltinMediaLibraryTemplate_TypeName(t),
                     MediaType = attr.MediaType,
                     Name = BuildName(t, b.Properties),
                     // Description = "将视频类文件视为可播放文件。包含媒体库路径后第1级是xxx，第2级是xxx，",
@@ -63,7 +63,7 @@ public class BuiltinMediaLibraryTemplateService(
         return descriptors;
     }
 
-    public async Task AddMediaLibraryTemplate(string builtinTemplateId)
+    public MediaLibraryTemplate GenerateTemplate(string builtinTemplateId)
     {
         var descriptor = GetAll().First(x => x.Id == builtinTemplateId);
 
@@ -75,22 +75,29 @@ public class BuiltinMediaLibraryTemplateService(
             {
                 ExtensionGroups =
                 [
-                    new ExtensionGroup(0, bakabaseLocalizer.MediaType(descriptor.MediaType),
-                        InternalOptions.MediaTypeExtensions[descriptor.MediaType].ToHashSet())
+                    new ExtensionGroup
+                    {
+                        Id = 0,
+                        Name = bakabaseLocalizer.MediaType(descriptor.MediaType),
+                        Extensions = InternalOptions.MediaTypeExtensions[descriptor.MediaType].ToHashSet()
+                    }
                 ]
             },
-            Properties = descriptor.Properties.Select(p =>
+            Properties = descriptor.Properties.Select((p, pIdx) =>
             {
                 var mp = new MediaLibraryTemplateProperty
                 {
-                    Property = BuiltinMediaLibraryTemplateData.PropertyMap[p]
+                    Property = BuiltinMediaLibraryTemplateData.PropertyMap[p] with
+                    {
+                        Name = descriptor.PropertyNames[pIdx]
+                    }
                 };
                 if (descriptor.LayeredProperties?.Any() == true)
                 {
                     var idx = descriptor.LayeredProperties.IndexOf(p);
                     if (idx >= 0)
                     {
-                        mp.ValueLocators = [new PathFilter { Positioner = PathPositioner.Layer, Layer = idx + 1 }];
+                        mp.ValueLocators = [new PathFilter {Positioner = PathPositioner.Layer, Layer = idx + 1}];
                     }
                 }
 
@@ -99,11 +106,10 @@ public class BuiltinMediaLibraryTemplateService(
             ResourceFilters =
             [
                 new PathFilter
-                    { Positioner = PathPositioner.Layer, Layer = (descriptor.LayeredProperties?.Count ?? 0) + 1 }
+                    {Positioner = PathPositioner.Layer, Layer = (descriptor.LayeredProperties?.Count ?? 0) + 1}
             ]
         };
 
-        var data = await mlTemplateService.Add(new MediaLibraryTemplateAddInputModel(template.Name));
-        await mlTemplateService.Put(data.Id, template);
+        return template;
     }
 }
