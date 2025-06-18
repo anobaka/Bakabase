@@ -609,6 +609,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputMode
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel {
+  name?: string;
   shareCode: string;
   customPropertyConversionsMap?: Record<
     string,
@@ -618,6 +619,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputM
     string,
     BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModelTExtensionGroupConversion
   >;
+  automaticallyCreateMissingData: boolean;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModelTCustomPropertyConversion {
@@ -710,10 +712,10 @@ export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewMo
  */
 export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType = 1 | 2 | 3 | 4;
 
-export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateValidationViewModel {
-  passed: boolean;
-  unhandledProperties?: BakabaseAbstractionsModelsDomainProperty[];
-  unhandledExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
+export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel {
+  noNeedToConfigure: boolean;
+  uniqueCustomProperties?: BakabaseAbstractionsModelsDomainProperty[];
+  uniqueExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
@@ -796,6 +798,7 @@ export interface BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplat
   id: string;
   /** [1: Movie, 2: Anime, 3: Series, 4: Manga, 5: Audio] */
   type: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateType;
+  typeName: string;
   /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
   mediaType: BakabaseInsideWorldModelsConstantsMediaType;
   name: string;
@@ -2619,11 +2622,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsViewCacheOverviewViewModel;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateValidationViewModel {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseAbstractionsModelsViewMediaLibraryTemplateValidationViewModel;
+  data?: BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
@@ -7224,7 +7227,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
         path: `/media-library-template`,
         method: "POST",
         body: data,
@@ -7306,15 +7309,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name ValidateMediaLibraryTemplateShareCode
-     * @request POST:/media-library-template/share-code/validate
+     * @name GetMediaLibraryTemplateImportConfiguration
+     * @request POST:/media-library-template/share-code/import-configuration
      */
-    validateMediaLibraryTemplateShareCode: (data: string, params: RequestParams = {}) =>
+    getMediaLibraryTemplateImportConfiguration: (data: string, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateValidationViewModel,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel,
         any
       >({
-        path: `/media-library-template/share-code/validate`,
+        path: `/media-library-template/share-code/import-configuration`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -7333,7 +7336,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
         path: `/media-library-template/share-code/import`,
         method: "POST",
         body: data,

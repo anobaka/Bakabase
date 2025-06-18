@@ -10,9 +10,11 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Sharable;
+using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Domain;
@@ -51,6 +53,7 @@ public class MediaLibraryTemplateService<TDbContext>(
     where TDbContext : DbContext
 {
     protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
+    protected BuiltinMediaLibraryTemplateService BuiltinMediaLibraryTemplateService => GetRequiredService<BuiltinMediaLibraryTemplateService>();
 
     protected async Task Populate(Abstractions.Models.Domain.MediaLibraryTemplate[] templates)
     {
@@ -236,7 +239,7 @@ public class MediaLibraryTemplateService<TDbContext>(
         #endregion
     }
 
-    public async Task<Abstractions.Models.Domain.MediaLibraryTemplate> Get(int id)
+    public async Task<MediaLibraryTemplate> Get(int id)
     {
         var dbData = await orm.GetByKey(id);
         var domainModel = dbData.ToDomainModel();
@@ -252,7 +255,7 @@ public class MediaLibraryTemplateService<TDbContext>(
         return domainModels;
     }
 
-    public async Task<Abstractions.Models.Domain.MediaLibraryTemplate[]> GetAll()
+    public async Task<MediaLibraryTemplate[]> GetAll()
     {
         var templates = (await orm.GetAll()).OrderByDescending(d => d.Id);
         var domainModels = templates.Select(x => x.ToDomainModel()).ToArray();
@@ -262,12 +265,26 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     public async Task<MediaLibraryTemplate> Add(MediaLibraryTemplateAddInputModel model)
     {
+        if (model.BuiltinTemplateId.IsNotEmpty())
+        {
+            var builtinTemplate = BuiltinMediaLibraryTemplateService.GenerateTemplate(model.BuiltinTemplateId);
+            builtinTemplate.Name = model.Name;
+            var shareCode = builtinTemplate.ToSharable().ToShareCode();
+            var newId = await Import(new MediaLibraryTemplateImportInputModel
+            {
+                ShareCode = shareCode,
+                AutomaticallyCreateMissingData = true
+            });
+            return await Get(newId);
+        }
+
         var dbModel = (await orm.Add(new MediaLibraryTemplateDbModel
-            { Name = model.Name, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now })).Data!;
+            {Name = model.Name, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now})).Data!;
+
         return dbModel.ToDomainModel();
     }
 
-    public async Task Put(int id, Abstractions.Models.Domain.MediaLibraryTemplate template)
+    public async Task Put(int id, MediaLibraryTemplate template)
     {
         template.Id = id;
         await orm.Update(template.ToDbModel() with { UpdatedAt = DateTime.Now });
@@ -284,71 +301,150 @@ public class MediaLibraryTemplateService<TDbContext>(
         return template.ToSharable().ToShareCode();
     }
 
-    public async Task Import(MediaLibraryTemplateImportInputModel model)
+    public async Task<int> Import(MediaLibraryTemplateImportInputModel model)
     {
-        var err = await Import(model, false);
-        if (err != null)
+        var shared = SharableMediaLibraryTemplate.FromShareCode(model.ShareCode);
+        if (model.Name.IsNotEmpty())
         {
-            throw new Exception("Import failed because validation was unsuccessful.");
+            shared.Name = model.Name;
         }
-    }
 
-    public async Task<MediaLibraryTemplateValidationViewModel?> Validate(string shareCode)
-    {
-        var shared = SharableMediaLibraryTemplate.FromShareCode(shareCode);
         var flat = shared.Flat();
+        var uniqueCustomProperties = flat.ExtractUniqueCustomProperties();
+        var uniqueExtensionGroups = flat.ExtractUniqueExtensionGroups();
 
-        var refProperties = flat.ExtractProperties();
-        var unhandledProperties = refProperties.Where(r => r.Pool == PropertyPool.Custom).ToList();
-        if (refProperties.Any())
+        var propertyMap = (await propertyService.GetProperties(PropertyPool.Reserved | PropertyPool.Custom)).ToMap();
+        var extensionGroupMap = (await extensionGroupService.GetAll()).ToDictionary(d => d.Id, d => d);
+
+        if (model.AutomaticallyCreateMissingData)
         {
-            var localPropertiesMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
-            foreach (var p in refProperties)
+            for (var index = 0; index < uniqueExtensionGroups.Count; index++)
             {
-                if (p.Pool != PropertyPool.Custom)
+                if (model.ExtensionGroupConversionsMap?.ContainsKey(index) != true)
                 {
-                    var rp = localPropertiesMap.GetValueOrDefault(p.Pool)?.GetValueOrDefault(p.Id);
-                    if (rp == null)
+                    var ueg = uniqueExtensionGroups[index];
+                    var candidate =
+                        extensionGroupMap.Values.FirstOrDefault(x => ExtensionGroup.BizComparer.Equals(x, ueg[0]));
+                    if (candidate != null)
                     {
-                        throw new Exception(
-                            $"{p.Pool} property with id:{p.Id} is not found. The template is not compatible with current version of application.");
+                        model.ExtensionGroupConversionsMap ??= [];
+                        model.ExtensionGroupConversionsMap[index] =
+                            new MediaLibraryTemplateImportInputModel.TExtensionGroupConversion
+                                {ToExtensionGroupId = candidate.Id};
+                    }
+                }
+            }
+
+            var missingExtensionGroups = uniqueExtensionGroups
+                .Where((g, i) => model.ExtensionGroupConversionsMap?.ContainsKey(i) != true).ToList();
+            if (missingExtensionGroups?.Any() == true)
+            {
+                var newExtensionGroups = await extensionGroupService.AddRange(missingExtensionGroups
+                    .Select(g => new ExtensionGroupAddInputModel(g[0].Name, g[0].Extensions)).ToArray());
+                foreach (var neg in newExtensionGroups)
+                {
+                    extensionGroupMap.TryAdd(neg.Id, neg);
+                }
+
+                var newIdx = 0;
+                for (var i = 0; i < uniqueExtensionGroups.Count; i++)
+                {
+                    if (model.ExtensionGroupConversionsMap?.ContainsKey(i) != true)
+                    {
+                        model.ExtensionGroupConversionsMap ??= [];
+                        model.ExtensionGroupConversionsMap[i] =
+                            new MediaLibraryTemplateImportInputModel.TExtensionGroupConversion
+                                {ToExtensionGroupId = newExtensionGroups[newIdx++].Id};
+                    }
+                }
+            }
+
+            for (var index = 0; index < uniqueCustomProperties.Count; index++)
+            {
+                if (model.CustomPropertyConversionsMap?.ContainsKey(index) != true)
+                {
+                    var ucp = uniqueCustomProperties[index][0];
+                    var candidate =
+                        propertyMap.SelectMany(p => p.Value.Values)
+                            .FirstOrDefault(x => x.Name == ucp.Name && x.Type == ucp.Type);
+                    if (candidate != null)
+                    {
+                        model.CustomPropertyConversionsMap ??= [];
+                        model.CustomPropertyConversionsMap[index] =
+                            new MediaLibraryTemplateImportInputModel.TCustomPropertyConversion()
+                                {ToPropertyId = candidate.Id, ToPropertyPool = candidate.Pool};
+                    }
+                }
+            }
+
+            var missingCustomProperties = uniqueCustomProperties
+                .Where((p, i) => model.CustomPropertyConversionsMap?.ContainsKey(i) != true).ToList();
+            if (missingCustomProperties?.Any() == true)
+            {
+                var newProperties = await customPropertyService.AddRange(missingCustomProperties.Select(p =>
+                    new CustomPropertyAddOrPutDto
+                    {
+                        Name = p[0].Name,
+                        Type = p[0].Type
+                    }).ToArray());
+                foreach (var np in newProperties)
+                {
+                    propertyMap.GetOrAdd(PropertyPool.Custom, () => []).TryAdd(np.Id, np.ToProperty());
+                }
+
+                var newIdx = 0;
+                for (var i = 0; i < uniqueCustomProperties.Count; i++)
+                {
+                    if (model.CustomPropertyConversionsMap?.ContainsKey(i) != true)
+                    {
+                        model.CustomPropertyConversionsMap ??= [];
+                        model.CustomPropertyConversionsMap[i] =
+                            new MediaLibraryTemplateImportInputModel.TCustomPropertyConversion()
+                                {ToPropertyId = newProperties[newIdx++].Id, ToPropertyPool = PropertyPool.Custom};
                     }
                 }
             }
         }
 
-        var unhandledExtensionGroups = flat.ExtractExtensionGroups();
-
-        if (unhandledExtensionGroups.Any() || unhandledProperties.Any())
+        if (uniqueCustomProperties.Any())
         {
-            return new MediaLibraryTemplateValidationViewModel
+            for (var index = 0; index < uniqueCustomProperties.Count; index++)
             {
-                UnhandledProperties = unhandledProperties,
-                UnhandledExtensionGroups = unhandledExtensionGroups
-            };
+                var ucps = uniqueCustomProperties[index];
+                var sampleProperty = ucps[0];
+                var conversion = model.CustomPropertyConversionsMap?.GetValueOrDefault(index);
+                if (conversion == null)
+                {
+                    throw new Exception($"Conversion is not set for unknown property {sampleProperty}");
+                }
+
+                foreach (var ucp in ucps)
+                {
+                    ucp.Id = conversion.ToPropertyId;
+                }
+            }
         }
 
-        return null;
-    }
-
-    protected async Task<MediaLibraryTemplateValidationViewModel?> Import(MediaLibraryTemplateImportInputModel model,
-        bool validateOnly)
-    {
-        var shared = SharableMediaLibraryTemplate.FromShareCode(model.ShareCode);
-        var flat = shared.Flat();
-
-
-        var customPropertyIdConversion =
-            model.CustomPropertyConversionsMap?.ToDictionary(d => d.Key,
-                d => (d.Value.ToPropertyPool, d.Value.ToPropertyId));
-        var propertyMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
-        var extensionGroupMap = (await extensionGroupService.GetAll()).ToDictionary(d => d.Id, d => d);
-        var extensionGroupConversionsMap = model.ExtensionGroupConversionsMap?.ToDictionary(
-            d => d.Key,
-            d => extensionGroupMap[d.Value.ToExtensionGroupId]);
+        if (uniqueExtensionGroups.Any())
+        {
+            for (var index = 0; index < uniqueExtensionGroups.Count; index++)
+            {
+                var uegs = uniqueExtensionGroups[index];
+                var sampleGroup = uegs[0];
+                var conversion = model.ExtensionGroupConversionsMap?.GetValueOrDefault(index);
+                if (conversion == null)
+                {
+                    throw new Exception($"Conversion is not set for unknown extension group {sampleGroup}");
+                }
+                foreach (var ueg in uegs)
+                {
+                    ueg.Id = conversion.ToExtensionGroupId;
+                }
+            }
+        }
 
         var templates = flat
-            .Select(f => f.ToDomainModel(customPropertyIdConversion, extensionGroupConversionsMap, propertyMap) with
+            .Select(f => f.ToDomainModel(extensionGroupMap, propertyMap) with
             {
                 CreatedAt = DateTime.Now,
                 UpdatedAt = DateTime.Now
@@ -370,7 +466,22 @@ public class MediaLibraryTemplateService<TDbContext>(
             await orm.UpdateRange(addedDbModels);
         }
 
-        return null;
+        return addedDbModels[0].Id;
+    }
+
+    public async Task<MediaLibraryTemplateImportConfigurationViewModel> GetImportConfiguration(string shareCode)
+    {
+        var shared = SharableMediaLibraryTemplate.FromShareCode(shareCode);
+        var flat = shared.Flat();
+
+        var uniqueProperties = flat.ExtractUniqueCustomProperties();
+        var uniqueExtensionGroups = flat.ExtractUniqueExtensionGroups();
+
+        return new MediaLibraryTemplateImportConfigurationViewModel
+        {
+            UniqueCustomProperties = uniqueProperties.Select(p => p.First()).ToList(),
+            UniqueExtensionGroups = uniqueExtensionGroups.Select(g => g.First()).ToList()
+        };
     }
 
     public async Task<byte[]> AppendShareCodeToPng(int id, byte[] png)

@@ -7214,16 +7214,16 @@ export const GetMediaLibraryTemplateShareCodeURL = function(parameters = {}) {
 }
 /**
  * 
- * request: ValidateMediaLibraryTemplateShareCode
- * url: ValidateMediaLibraryTemplateShareCodeURL
- * method: ValidateMediaLibraryTemplateShareCode_TYPE
- * raw_url: ValidateMediaLibraryTemplateShareCode_RAW_URL
+ * request: GetMediaLibraryTemplateImportConfiguration
+ * url: GetMediaLibraryTemplateImportConfigurationURL
+ * method: GetMediaLibraryTemplateImportConfiguration_TYPE
+ * raw_url: GetMediaLibraryTemplateImportConfiguration_RAW_URL
  * @param model - 
  */
-export const ValidateMediaLibraryTemplateShareCode = function(parameters = {}) {
+export const GetMediaLibraryTemplateImportConfiguration = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/media-library-template/share-code/validate'
+  let path = '/media-library-template/share-code/import-configuration'
   let body
   let queryParameters = {}
   let form = {}
@@ -7237,16 +7237,16 @@ export const ValidateMediaLibraryTemplateShareCode = function(parameters = {}) {
   }
   return request('post', domain + path, body, queryParameters, form, config)
 }
-export const ValidateMediaLibraryTemplateShareCode_RAW_URL = function() {
-  return '/media-library-template/share-code/validate'
+export const GetMediaLibraryTemplateImportConfiguration_RAW_URL = function() {
+  return '/media-library-template/share-code/import-configuration'
 }
-export const ValidateMediaLibraryTemplateShareCode_TYPE = function() {
+export const GetMediaLibraryTemplateImportConfiguration_TYPE = function() {
   return 'post'
 }
-export const ValidateMediaLibraryTemplateShareCodeURL = function(parameters = {}) {
+export const GetMediaLibraryTemplateImportConfigurationURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library-template/share-code/validate'
+  let path = '/media-library-template/share-code/import-configuration'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

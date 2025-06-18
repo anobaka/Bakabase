@@ -1,12 +1,20 @@
 import { useTranslation } from 'react-i18next';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import { FaRegSave, FaSort } from 'react-icons/fa';
 import toast from 'react-hot-toast';
-import { AiOutlineEdit, AiOutlineFolderOpen, AiOutlinePlusCircle, AiOutlineProduct } from 'react-icons/ai';
+import {
+  AiOutlineEdit,
+  AiOutlineFolderOpen,
+  AiOutlineImport,
+  AiOutlinePlusCircle,
+  AiOutlineProduct,
+} from 'react-icons/ai';
 import { MdOutlineDelete } from 'react-icons/md';
 import { IoIosSync, IoMdExit } from 'react-icons/io';
 import { TbTemplate } from 'react-icons/tb';
+import { PiEmpty } from 'react-icons/pi';
+import type { Key } from '@react-types/shared';
 import type { MediaLibraryTemplate } from '../MediaLibraryTemplate/models';
 import SyncStatus from './components/SyncStatus';
 import { Button, Chip, Input, Modal, Select } from '@/components/bakaui';
@@ -14,6 +22,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import BApi from '@/sdk/BApi';
 import { isNotEmpty } from '@/components/utils';
 import type { components } from '@/sdk/BApi2';
+import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/BuiltinTemplateSelector';
 
 type MediaLibrary = components['schemas']['Bakabase.Abstractions.Models.Domain.MediaLibraryV2'];
 
@@ -87,7 +96,7 @@ export default () => {
   // console.log(mediaLibraries);
 
   return (
-    <div>
+    <div className={'h-full flex flex-col'}>
       <div className={'flex items-center justify-between'}>
         <div className={'flex items-center gap-1'}>
           {editingMediaLibraries ? (
@@ -206,9 +215,19 @@ export default () => {
                   label={t('Template')}
                   placeholder={t('Template for media library')}
                   dataSource={templates.map(t => ({
+                    textValue: t.name,
                     label: t.name,
                     value: t.id,
-                  }))}
+                  }) as { label?: any; value: Key; textValue?: string; isDisabled?: boolean }).concat([{
+                    label: (
+                      <div className={'flex items-center gap-1'}>
+                        <AiOutlineImport className={'text-lg'} />
+                        {t('Import builtin templates')}
+                      </div>
+                    ),
+                    value: -1,
+                    textValue: t('Import builtin templates'),
+                  }])}
                   variant="underlined"
                   isInvalid={e.templateId == undefined || e.templateId <= 0}
                   isRequired
@@ -217,8 +236,22 @@ export default () => {
                     const arr = Array.from(keys);
                     if (arr.length > 0) {
                       const idStr = arr[0] as string;
-                      e.templateId = parseInt(idStr, 10);
-                      forceUpdate();
+                      const value = parseInt(idStr, 10);
+                      if (value == -1) {
+                        createPortal(BuiltinTemplateSelector, {
+                          onSelect: async (template) => {
+                            e.templateId = (await BApi.mediaLibraryTemplate
+                              .addMediaLibraryTemplate({
+                                name: template.name,
+                                builtinTemplateId: template.id,
+                              })).data;
+                            await loadTemplates();
+                          },
+                        });
+                      } else {
+                        e.templateId = value;
+                        forceUpdate();
+                      }
                     }
                   }}
                 />
@@ -251,7 +284,7 @@ export default () => {
           </div>
         </div>
       ) : (
-        mediaLibraries && mediaLibraries.length > 0 && (
+        (mediaLibraries && mediaLibraries.length > 0) ? (
           <div
             className={'inline-grid gap-1 mt-2 items-center'}
             style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
@@ -289,6 +322,11 @@ export default () => {
                 </>
               );
             })}
+          </div>
+        ) : (
+          <div className={'flex items-center gap-2 grow justify-center'}>
+            <PiEmpty className={'text-2xl'} />
+            {t('No media libraries found. You must add at least one media library and synchronize it to manage your resources.')}
           </div>
         )
       )}

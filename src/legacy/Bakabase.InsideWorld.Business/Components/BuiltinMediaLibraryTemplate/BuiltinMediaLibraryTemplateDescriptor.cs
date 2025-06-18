@@ -7,6 +7,7 @@ public record BuiltinMediaLibraryTemplateDescriptor
 {
     public string Id { get; set; } = null!;
     public BuiltinMediaLibraryTemplateType Type { get; set; }
+    public string TypeName { get; set; } = null!;
     public MediaType MediaType { get; set; }
     public string Name { get; set; } = null!;
     // public string? Description { get; set; }
