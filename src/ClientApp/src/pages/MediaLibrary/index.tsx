@@ -285,43 +285,45 @@ export default () => {
         </div>
       ) : (
         (mediaLibraries && mediaLibraries.length > 0) ? (
-          <div
-            className={'inline-grid gap-1 mt-2 items-center'}
-            style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
-          >
-            {mediaLibraries.map(ml => {
-              return (
-                <>
-                  <div>{ml.name}</div>
-                  <Chip
-                    size={'sm'}
-                    variant={'light'}
-                    color={'success'}
-                    startContent={<AiOutlineProduct className={'text-lg'} />}
-                  >
-                    {ml.resourceCount}
-                  </Chip>
-                  {renderPath(ml)}
-                  <Chip
-                    radius={'sm'}
-                    className={''}
-                    startContent={<TbTemplate className={'text-medium'} />}
-                    variant={'light'}
-                  >
-                    {templates.find(t => t.id == ml.templateId)?.name ?? t('Unknown')}
-                  </Chip>
-                  <SyncStatus
-                    id={ml.id}
-                    onSyncCompleted={() => {
-                      BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then(r => {
-                        const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data : m));
-                        setMediaLibraries(updatedMediaLibraries);
-                      });
-                    }}
-                  />
-                </>
-              );
-            })}
+          <div>
+            <div
+              className={'inline-grid gap-1 mt-2 items-center'}
+              style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
+            >
+              {mediaLibraries.map(ml => {
+                return (
+                  <>
+                    <div>{ml.name}</div>
+                    <Chip
+                      size={'sm'}
+                      variant={'light'}
+                      color={'success'}
+                      startContent={<AiOutlineProduct className={'text-lg'} />}
+                    >
+                      {ml.resourceCount}
+                    </Chip>
+                    {renderPath(ml)}
+                    <Chip
+                      radius={'sm'}
+                      className={''}
+                      startContent={<TbTemplate className={'text-medium'} />}
+                      variant={'light'}
+                    >
+                      {templates.find(t => t.id == ml.templateId)?.name ?? t('Unknown')}
+                    </Chip>
+                    <SyncStatus
+                      id={ml.id}
+                      onSyncCompleted={() => {
+                        BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then(r => {
+                          const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data : m));
+                          setMediaLibraries(updatedMediaLibraries);
+                        });
+                      }}
+                    />
+                  </>
+                );
+              })}
+            </div>
           </div>
         ) : (
           <div className={'flex items-center gap-2 grow justify-center'}>
