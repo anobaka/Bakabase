@@ -99,43 +99,7 @@ export default () => {
     <div className={'h-full flex flex-col'}>
       <div className={'flex items-center justify-between'}>
         <div className={'flex items-center gap-1'}>
-          {editingMediaLibraries ? (
-            <>
-              <Button
-                size={'sm'}
-                color={'primary'}
-                onPress={async () => {
-                  createPortal(Modal, {
-                    defaultVisible: true,
-                    title: t('Save all media libraries'),
-                    children: t('Deleted media libraries will not be restored. Are you sure you want to save?'),
-                    onOk: async () => {
-                      const data = editingMediaLibraries as MediaLibrary[];
-                      const r = await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(data);
-                      if (!r.code) {
-                        setEditingMediaLibraries(undefined);
-                        toast.success(t('Saved'));
-                        await loadMediaLibraries();
-                      }
-                    },
-                  });
-                }}
-                isDisabled={!validate(editingMediaLibraries)}
-              >
-                <FaRegSave className={'text-medium'} />
-                {t('Save')}
-              </Button>
-              <Button
-                variant={'flat'}
-                size={'sm'}
-                color={'default'}
-                onPress={() => setEditingMediaLibraries(undefined)}
-              >
-                <IoMdExit className={'text-medium'} />
-                {t('Exit editing mode')}
-              </Button>
-            </>
-          ) : (
+          {editingMediaLibraries ? null : (
             <>
               <Button
                 size={'sm'}
@@ -169,14 +133,15 @@ export default () => {
               onPress={() => setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)}
             >
               <FaSort className={'text-medium'} />
-              {t('Sort by {{sortBy}}', { sortBy: SortBy[sortBy] })}
+              {t('Sort by {{sortBy}}', { sortBy: t(SortBy[sortBy]) })}
             </Button>
           </div>
         )}
       </div>
       {editingMediaLibraries ? (
-        <div className={'grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr auto' }}>
-          {editingMediaLibraries.map((e, i) => {
+        <>
+          <div className={'inline-grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr auto' }}>
+            {editingMediaLibraries.map((e, i) => {
             return (
               <>
                 <div className={'flex justify-center items-center'}>
@@ -271,18 +236,51 @@ export default () => {
               </>
             );
           })}
-          <div>
+          </div>
+          <div className={'flex items-center gap-2 mt-2'}>
             <Button
               size={'sm'}
               color={'default'}
-              className={'mr-4'}
               onPress={() => setEditingMediaLibraries(editingMediaLibraries!.concat([{}]))}
             >
               <AiOutlinePlusCircle className={'text-medium'} />
               {t('Add')}
             </Button>
+            <Button
+              size={'sm'}
+              color={'primary'}
+              onPress={async () => {
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t('Save all media libraries'),
+                children: t('Deleted media libraries will not be restored. Are you sure you want to save?'),
+                onOk: async () => {
+                  const data = editingMediaLibraries as MediaLibrary[];
+                  const r = await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(data);
+                  if (!r.code) {
+                    setEditingMediaLibraries(undefined);
+                    toast.success(t('Saved'));
+                    await loadMediaLibraries();
+                  }
+                },
+              });
+            }}
+              isDisabled={!validate(editingMediaLibraries)}
+            >
+              <FaRegSave className={'text-medium'} />
+              {t('Save')}
+            </Button>
+            <Button
+              variant={'flat'}
+              size={'sm'}
+              color={'default'}
+              onPress={() => setEditingMediaLibraries(undefined)}
+            >
+              <IoMdExit className={'text-medium'} />
+              {t('Exit editing mode')}
+            </Button>
           </div>
-        </div>
+        </>
       ) : (
         (mediaLibraries && mediaLibraries.length > 0) ? (
           <div>

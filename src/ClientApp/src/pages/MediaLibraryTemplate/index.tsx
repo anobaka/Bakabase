@@ -157,6 +157,7 @@ export default () => {
           </Button>
           <Input
             size={'sm'}
+            fullWidth={false}
             startContent={<AiOutlineSearch className={'text-base'} />}
             placeholder={t('Search templates')}
             value={searchForm.keyword}

@@ -1936,7 +1936,7 @@
   "MediaType.Audio": "音频",
   "MediaType.Text": "文本",
   "MediaType.Image": "图片",
-  "The {{layer}}th layer in media library -> {{propertyName}}": "媒体库内的第 {{layer}} 层 -> {{propertyName}}",
+  "The {{layer}}th layer of path -> {{propertyName}}": "路径第 {{layer}} 层 -> {{propertyName}}",
   "Builtin media library templates": "内置媒体库模板",
   "Select a builtin template": "选择一个内置模板",
   "Use base template": "使用基础模板",
@@ -1946,5 +1946,13 @@
   "Optional": "可选",
   "The current template contains data missing from the application. Please configure how to handle this data before proceeding with the import.": "当前模板包含应用程序中缺失的数据。请在继续导入之前配置如何处理这些数据。",
   "Limit file extension groups": "限制文件扩展名组",
-  "Select from extension groups": "从扩展组中选择"
+  "Select from extension groups": "从扩展组中选择",
+  "enhance": "增强",
+  "Resource type": "资源类型",
+  "Media type": "媒体类型",
+  "No built-in media library templates found": "未找到内置媒体库模板",
+  "No enhancer configured": "未配置增强器",
+  "Search templates": "搜索模板",
+  "Collapse all": "全部折叠",
+  "Expand all": "全部展开"
 }

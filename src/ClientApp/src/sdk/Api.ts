@@ -692,20 +692,6 @@ export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCac
   resourceCount: number;
 }
 
-export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
-  /** @format int32 */
-  resourceId: number;
-  resourcePath: string;
-  segments: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModelSegment[];
-}
-
-export interface BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModelSegment {
-  /** [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper] */
-  type: BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType;
-  text: string;
-  wrapperPairId?: string;
-}
-
 /**
  * [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper]
  * @format int32
@@ -716,6 +702,20 @@ export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigu
   noNeedToConfigure: boolean;
   uniqueCustomProperties?: BakabaseAbstractionsModelsDomainProperty[];
   uniqueExtensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
+}
+
+export interface BakabaseAbstractionsModelsViewResourceDisplayNameViewModel {
+  /** @format int32 */
+  resourceId: number;
+  resourcePath: string;
+  segments: BakabaseAbstractionsModelsViewResourceDisplayNameViewModelSegment[];
+}
+
+export interface BakabaseAbstractionsModelsViewResourceDisplayNameViewModelSegment {
+  /** [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper] */
+  type: BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType;
+  text: string;
+  wrapperPairId?: string;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
@@ -806,6 +806,16 @@ export interface BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplat
   propertyNames: string[];
   layeredPropertyNames?: string[];
   layeredProperties?: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty[];
+  enhancerTargets?: Record<
+    string,
+    BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptorEnhancerTarget[]
+  >;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptorEnhancerTarget {
+  /** @format int32 */
+  target: number;
+  property: BakabaseAbstractionsModelsDomainProperty;
 }
 
 /**
@@ -2298,11 +2308,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainResource[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel {
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewResourceDisplayNameViewModel {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel[];
+  data?: BakabaseAbstractionsModelsViewResourceDisplayNameViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor {
@@ -4660,7 +4670,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewCategoryResourceDisplayNameViewModel,
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewResourceDisplayNameViewModel,
         any
       >({
         path: `/category/${id}/resource/resource-display-name-template/preview`,
