@@ -3731,17 +3731,6 @@ export interface components {
             /** Format: int32 */
             resourceCount: number;
         };
-        "Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel": {
-            /** Format: int32 */
-            resourceId: number;
-            resourcePath: string;
-            segments: components["schemas"]["Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel+Segment"][];
-        };
-        "Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel+Segment": {
-            type: components["schemas"]["Bakabase.Abstractions.Models.View.Constants.CategoryResourceDisplayNameSegmentType"];
-            text: string;
-            wrapperPairId?: string;
-        };
         /**
          * Format: int32
          * @description [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper]
@@ -3752,6 +3741,17 @@ export interface components {
             readonly noNeedToConfigure: boolean;
             uniqueCustomProperties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"][];
             uniqueExtensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
+        };
+        "Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel": {
+            /** Format: int32 */
+            resourceId: number;
+            resourcePath: string;
+            segments: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel+Segment"][];
+        };
+        "Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel+Segment": {
+            type: components["schemas"]["Bakabase.Abstractions.Models.View.Constants.CategoryResourceDisplayNameSegmentType"];
+            text: string;
+            wrapperPairId?: string;
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.AppOptionsPatchRequestModel": {
             language?: string;
@@ -3827,6 +3827,14 @@ export interface components {
             propertyNames: string[];
             layeredPropertyNames?: string[];
             layeredProperties?: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateProperty"][];
+            enhancerTargets?: {
+                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor+EnhancerTarget"][];
+            };
+        };
+        "Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor+EnhancerTarget": {
+            /** Format: int32 */
+            target: number;
+            property: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
         };
         /**
          * Format: int32
@@ -5028,11 +5036,11 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"][];
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel]": {
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]": {
             /** Format: int32 */
             code: number;
             message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel"][];
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor]": {
             /** Format: int32 */
@@ -7328,9 +7336,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel]"];
                 };
             };
         };

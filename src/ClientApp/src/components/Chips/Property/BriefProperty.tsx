@@ -6,16 +6,19 @@ import { Chip } from '@/components/bakaui';
 
 type Props = {
   property?: Pick<IProperty, 'pool' | 'type' | 'name'>;
+  hideType?: boolean;
 };
 
-export default ({ property }: Props) => {
+export default ({ property, hideType }: Props) => {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1">
       {property ? (
         <>
           <PropertyPoolIcon pool={property.pool} />
-          <PropertyTypeIcon type={property.type} />
+          {!hideType && (
+            <PropertyTypeIcon type={property.type} />
+          )}
           <Chip
             size="sm"
             variant={'flat'}

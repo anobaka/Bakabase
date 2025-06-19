@@ -4,8 +4,10 @@ import { Chip } from '@/components/bakaui';
 import { PropertyPool } from '@/sdk/constants';
 import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
 
+type SimpleProperty = Pick<IProperty, 'name' | 'type' | 'pool'>;
+
 interface IProps {
-  property: IProperty;
+  property: SimpleProperty;
   showPool?: boolean;
 }
 

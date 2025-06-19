@@ -38,6 +38,15 @@ export default ({ onDestroyed }: Props) => {
       }}
     >
       <div className={'flex flex-col gap-1'}>
+        <div>
+          <Input
+            label={t('Template name')}
+            placeholder={t('Enter template name')}
+            isRequired
+            onValueChange={setName}
+            value={name}
+          />
+        </div>
         <div className={'flex items-center gap-1'}>
           <Button
             variant={'light'}
@@ -61,14 +70,6 @@ export default ({ onDestroyed }: Props) => {
               </div>
             ) : `${t('Select a base template')}(${t('Optional')})`}
           </Button>
-        </div>
-        <div>
-          <Input
-            label={t('Template name')}
-            placeholder={t('Enter template name')}
-            isRequired
-            onValueChange={setName}
-          />
         </div>
       </div>
     </Modal>

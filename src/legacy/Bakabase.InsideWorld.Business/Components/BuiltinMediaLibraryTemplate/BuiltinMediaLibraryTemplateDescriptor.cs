@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
-using OllamaSharp.Models.Chat;
 
 namespace Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 
@@ -20,5 +20,8 @@ public record BuiltinMediaLibraryTemplateDescriptor
     public string[] PropertyNames { get; set; } = [];
     public string[]? LayeredPropertyNames { get; set; }
     public List<BuiltinMediaLibraryTemplateProperty>? LayeredProperties { get; set; }
-    public Dictionary<int, List<Property>>? EnhancerProperties { get; set; }
+
+    public record EnhancerTarget(int Target, Property Property);
+
+    public Dictionary<int, List<EnhancerTarget>>? EnhancerTargets { get; set; }
 }

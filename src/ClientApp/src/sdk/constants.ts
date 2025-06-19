@@ -104,8 +104,6 @@ export enum SearchableReservedProperty {Introduction = 12, Rating = 13, FileName
 export const searchableReservedProperties = Object.keys(SearchableReservedProperty).filter(k => typeof SearchableReservedProperty[k] === 'number').map(t => ({label: t, value: SearchableReservedProperty[t]}));
 export enum StartupPage {Default = 0, Resource = 1}
 export const startupPages = Object.keys(StartupPage).filter(k => typeof StartupPage[k] === 'number').map(t => ({label: t, value: StartupPage[t]}));
-export enum SubscriptionType {ExHentai = 1, Jav = 2, SoulPlus = 4}
-export const subscriptionTypes = Object.keys(SubscriptionType).filter(k => typeof SubscriptionType[k] === 'number').map(t => ({label: t, value: SubscriptionType[t]}));
 export enum ThirdPartyId {Bilibili = 1, ExHentai = 2, Pixiv = 3, Bangumi = 4, SoulPlus = 5}
 export const thirdPartyIds = Object.keys(ThirdPartyId).filter(k => typeof ThirdPartyId[k] === 'number').map(t => ({label: t, value: ThirdPartyId[t]}));
 export enum PasswordSearchOrder {Latest = 1, Frequency = 2}
