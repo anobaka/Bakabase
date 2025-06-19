@@ -2,7 +2,7 @@
 
 namespace Bakabase.Abstractions.Models.View;
 
-public record CategoryResourceDisplayNameViewModel()
+public record ResourceDisplayNameViewModel()
 {
     public int ResourceId { get; set; }
     public string ResourcePath { get; set; } = null!;

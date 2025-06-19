@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Models.ResponseModels;
+using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
 
 namespace Bakabase.Abstractions.Services;
 
@@ -119,4 +120,9 @@ public interface IResourceService
     Task MarkAsNotPlayed(int id);
 
     Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+
+    Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
+        (string Left, string Right)[] wrappers);
+
+    string BuildDisplayNameForResource(Resource resource, string template, (string Left, string Right)[] wrappers);
 }

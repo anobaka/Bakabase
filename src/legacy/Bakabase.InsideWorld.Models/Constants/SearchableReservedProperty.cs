@@ -1,4 +1,6 @@
-﻿namespace Bakabase.InsideWorld.Models.Constants;
+﻿using System;
+
+namespace Bakabase.InsideWorld.Models.Constants;
 
 public enum SearchableReservedProperty
 {
@@ -7,8 +9,10 @@ public enum SearchableReservedProperty
 	CreatedAt = ResourceProperty.CreatedAt,
 	FileCreatedAt = ResourceProperty.FileCreatedAt,
 	FileModifiedAt = ResourceProperty.FileModifiedAt,
+	[Obsolete]
 	Category = ResourceProperty.Category,
-	MediaLibrary = ResourceProperty.MediaLibrary,
+    [Obsolete]
+    MediaLibrary = ResourceProperty.MediaLibrary,
 	Introduction = ResourceProperty.Introduction,
 	Rating = ResourceProperty.Rating,
 	Cover = ResourceProperty.Cover,

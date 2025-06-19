@@ -95,8 +95,7 @@ public class PostParserTaskService<TDbContext>(
             {
                 foreach (var t in g.Value)
                 {
-                    await pt.WaitWhilePausedAsync();
-                    ct.ThrowIfCancellationRequested();
+                    await pt.WaitWhilePausedAsync(ct);
                     var data = t;
                     try
                     {

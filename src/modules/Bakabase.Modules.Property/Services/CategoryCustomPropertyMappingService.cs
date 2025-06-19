@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.Modules.Property.Services
 {
+    [Obsolete]
     public class CategoryCustomPropertyMappingService<TDbContext>(IServiceProvider serviceProvider)
         : FullMemoryCacheResourceService<
                 TDbContext, CategoryCustomPropertyMapping, int>(serviceProvider),

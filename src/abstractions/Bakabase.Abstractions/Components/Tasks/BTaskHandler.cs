@@ -171,13 +171,13 @@ public class BTaskHandler
             ct = _cts.Token;
         }
 
-        _pts = new PauseTokenSource(ct);
-        _pts.OnWaitPauseStart += async () =>
+        _pts = new PauseTokenSource();
+        _pts.OnPause += async (_) =>
         {
             await UpdateTask(t => { t.Status = BTaskStatus.Paused; });
             Sw.Stop();
         };
-        _pts.OnWaitPauseEnd += async () =>
+        _pts.OnResume += async (_) =>
         {
             await UpdateTask(t => { t.Status = BTaskStatus.Running; });
             Sw.Start();
