@@ -62,10 +62,7 @@ public interface ICategoryService
     Task<BaseResponse> BindCustomProperties(int id, CategoryCustomPropertyBindInputModel model);
     //
     // CategoryResourceDisplayNameViewModel.Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template, (string Left, string Right)[] wrappers);
-    string BuildDisplayNameForResource(Resource resource, string template, (string Left, string Right)[] wrappers);
 
-    Task<List<CategoryResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id, string template, int maxCount = 100);
-    //
     // /// <summary>
     // /// 获取单条默认资源
     // /// </summary>

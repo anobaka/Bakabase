@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\Db\**" />
+    <EmbeddedResource Remove="Models\Db\**" />
+    <None Remove="Models\Db\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
   </ItemGroup>
@@ -29,7 +35,6 @@
 
   <ItemGroup>
     <Folder Include="Abstractions\Models\Domain\" />
-    <Folder Include="Models\Db\" />
   </ItemGroup>
 
 </Project>

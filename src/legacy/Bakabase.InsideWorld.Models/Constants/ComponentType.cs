@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Constants
 {
+    [Obsolete]
     public enum ComponentType
     {
         // [CategoryComponentTypeProperty(Required = false, MaxCount = int.MaxValue)]

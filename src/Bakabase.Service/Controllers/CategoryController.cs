@@ -1,15 +1,20 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Services;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -25,7 +30,9 @@ namespace Bakabase.Service.Controllers
         ICategoryService service,
         ICategoryEnhancerOptionsService categoryEnhancerOptionsService,
         IMediaLibraryService mediaLibraryService,
-        ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService
+        ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService,
+        IResourceService resourceService,
+        ISpecialTextService specialTextService
     )
         : Controller
     {
@@ -138,11 +145,58 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("{id:int}/resource/resource-display-name-template/preview")]
         [SwaggerOperation(OperationId = "PreviewCategoryDisplayNameTemplate")]
-        public async Task<ListResponse<CategoryResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
+        public async Task<ListResponse<ResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
             string template, int maxCount = 100)
         {
-            var result = await service.PreviewResourceDisplayNameTemplate(id, template, maxCount);
-            return new ListResponse<CategoryResourceDisplayNameViewModel>(result);
+            var resourcesSearchResult = await resourceService.Search(new ResourceSearch
+            {
+                Group = new ResourceSearchFilterGroup
+                {
+                    Combinator = SearchCombinator.And,
+                    Filters =
+                    [
+                        new ResourceSearchFilter
+                        {
+                            PropertyPool = PropertyPool.Internal,
+                            Operation = SearchOperation.In,
+                            PropertyId = (int) ResourceProperty.Category,
+                            DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)
+                        }
+                    ]
+                },
+                // Orders = [new ResourceSearchOrderInputModel
+                //             {
+                //                 Asc = false,
+                // 	Property = 
+                //             }]
+                PageIndex = 0,
+                PageSize = maxCount
+            });
+            var resources = resourcesSearchResult.Data ?? [];
+
+            var wrapperPairs = (await specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
+                .GroupBy(d => d.Value1)
+                .Select(d => (Left: d.Key,
+                    Rights: d.Select(c => c.Value2).Where(s => !string.IsNullOrEmpty(s)).Distinct().OfType<string>()
+                        .First()))
+                .OrderByDescending(d => d.Left.Length)
+                .ToArray();
+
+            var result = new List<ResourceDisplayNameViewModel>();
+
+            foreach (var r in resources)
+            {
+                var segments = resourceService.BuildDisplayNameSegmentsForResource(r, template, wrapperPairs);
+
+                result.Add(new ResourceDisplayNameViewModel
+                {
+                    ResourceId = r.Id,
+                    ResourcePath = r.Path,
+                    Segments = segments
+                });
+            }
+
+            return new ListResponse<ResourceDisplayNameViewModel>(result);
         }
 
         [HttpGet("{id:int}/enhancer/{enhancerId:int}/options")]

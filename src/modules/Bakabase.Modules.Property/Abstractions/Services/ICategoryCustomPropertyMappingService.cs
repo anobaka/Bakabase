@@ -4,6 +4,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Modules.Property.Abstractions.Services;
 
+[Obsolete]
 public interface ICategoryCustomPropertyMappingService
 {
     Task BindCustomPropertiesToCategory(int categoryId, int[]? customPropertyIds);

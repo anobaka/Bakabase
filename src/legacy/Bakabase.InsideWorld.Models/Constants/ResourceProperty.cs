@@ -19,7 +19,9 @@ namespace Bakabase.InsideWorld.Models.Constants
         CreatedAt = 17,
         FileCreatedAt = 18,
         FileModifiedAt = 19,
+        [Obsolete]
         Category = 20,
+        [Obsolete]
         MediaLibrary = 21,
         Cover = 22,
         PlayedAt = 23,

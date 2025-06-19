@@ -7,6 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Components\**" />
+    <EmbeddedResource Remove="Components\**" />
+    <None Remove="Components\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.Property\Bakabase.Modules.Property.csproj" />
   </ItemGroup>
@@ -15,7 +21,6 @@
     <Folder Include="Abstractions\Components\" />
     <Folder Include="Abstractions\Configuration\" />
     <Folder Include="Abstractions\Services\" />
-    <Folder Include="Components\" />
     <Folder Include="Extensions\" />
   </ItemGroup>
 

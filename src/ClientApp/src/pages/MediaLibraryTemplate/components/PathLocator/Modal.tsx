@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { useUpdate } from 'react-use';
-import { Accordion, AccordionItem, CardBody } from '@heroui/react';
-import { AiOutlineDelete } from 'react-icons/ai';
-import { Button, Card, Input, Modal, Radio, RadioGroup, Select } from '@/components/bakaui';
+import { Accordion, AccordionItem } from '@heroui/react';
+import { AiOutlineDelete, AiOutlinePlusCircle } from 'react-icons/ai';
+import { Button, Input, Modal, Radio, RadioGroup, Select } from '@/components/bakaui';
 import type { PathLocator } from '@/pages/MediaLibraryTemplate/models';
 import { PathPositioner, pathPositioners } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -36,8 +36,7 @@ export default ({
             }))}
             selectedKeys={locator.layer == undefined ? undefined : [locator.layer.toString()]}
             onSelectionChange={keys => {
-              const layer = parseInt(Array.from(keys)[0] as string, 10);
-              locator.layer = layer;
+              locator.layer = parseInt(Array.from(keys)[0] as string, 10);
               forceUpdate();
             }}
             description={t('Layer 0 is directory of media library')}
@@ -86,7 +85,7 @@ export default ({
           isDisabled: !isValid(),
         },
       }}
-      onOk={() => onSubmit?.(locators!)}
+      onOk={() => onSubmit?.(locators as PathLocator[])}
     >
       <div className={'flex flex-col gap-2 min-h-0 overflow-auto'}>
         <Accordion variant="splitted" selectedKeys={locators.map((l, i) => i.toString())}>
@@ -127,7 +126,7 @@ export default ({
                     isRequired
                   >
                     {pathPositioners.map(p => (
-                      <Radio value={p.value.toString()}>{p.label}</Radio>
+                      <Radio value={p.value.toString()}>{t(p.label)}</Radio>
                     ))}
                   </RadioGroup>
                   {locator.positioner && renderPositioner(locator)}
@@ -140,6 +139,7 @@ export default ({
       <div className={'flex flex-col gap-0.5 '}>
         <div>
           <Button
+            color={'primary'}
             size={'sm'}
             onPress={() => {
               setLocators([
@@ -147,12 +147,15 @@ export default ({
                 { positioner: PathPositioner.Layer },
               ]);
             }}
-          >{t('Add a rule')}</Button>
+          >
+            <AiOutlinePlusCircle className={'text-base'} />
+            {t('Add a rule')}
+          </Button>
         </div>
         <div>{t('For layer-based rules, level 0 represents the current directory; for regex rules, the text to be matched starts from the next level under the current directory up to the resource path portion.')}</div>
         <div>{t('All rules will be run independently, and the results will be merged')}</div>
       </div>
-      <div>{JSON.stringify(locators)}</div>
+      {/* <div>{JSON.stringify(locators)}</div> */}
     </Modal>
   );
 };

@@ -104,8 +104,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
                         {
                             foreach (var (source, dest) in tasks)
                             {
-                                await pt.WaitWhilePausedAsync();
-                                ct.ThrowIfCancellationRequested();
+                                await pt.WaitWhilePausedAsync(ct);
                                 var count = doneItemCount;
                                 try
                                 {

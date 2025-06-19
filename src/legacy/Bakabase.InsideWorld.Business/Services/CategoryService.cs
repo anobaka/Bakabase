@@ -13,7 +13,7 @@ using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Helpers;
+using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Models.Input;
@@ -39,7 +39,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Newtonsoft.Json;
-using static Bakabase.Abstractions.Models.View.CategoryResourceDisplayNameViewModel;
+using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
 using Category = Bakabase.Abstractions.Models.Domain.Category;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Domain.CategoryEnhancerOptions;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
@@ -570,123 +570,6 @@ namespace Bakabase.InsideWorld.Business.Services
             await CategoryCustomPropertyMappingService.BindCustomPropertiesToCategory(id,
                 model.CustomPropertyIds);
             return BaseResponseBuilder.Ok;
-        }
-
-        public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
-            (string Left, string Right)[] wrappers)
-        {
-            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int) PropertyPool.Custom)?.Values
-                .GroupBy(d => d.Name)
-                .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
-
-            var replacements = matcherPropertyMap.ToDictionary(d => d.Key,
-                d =>
-                {
-                    var value = d.Value.Values?.FirstOrDefault()?.BizValue;
-                    if (value != null)
-                    {
-                        var stdValueHandler = StandardValueInternals.HandlerMap[d.Value.BizValueType];
-                        return stdValueHandler.BuildDisplayValue(value);
-                    }
-
-                    return null;
-                });
-
-            foreach (var b in SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values)
-            {
-                var name = PropertyLocalizer.BuiltinPropertyName((ResourceProperty) b);
-                var key = $"{{{name}}}";
-                replacements[key] = b switch
-                {
-                    BuiltinPropertyForDisplayName.Filename => resource.FileName,
-                    _ => throw new ArgumentOutOfRangeException()
-                };
-            }
-
-            var segments =
-                CategoryHelpers.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
-
-            return segments;
-        }
-
-        public string BuildDisplayNameForResource(Resource resource, string template,
-            (string Left, string Right)[] wrappers)
-        {
-            var segments = BuildDisplayNameSegmentsForResource(resource, template, wrappers);
-            var displayName = string.Join("", segments.Select(a => a.Text));
-            return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
-        }
-
-        public async Task<List<CategoryResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
-            string template,
-            int maxCount = 100)
-        {
-            var resourcesSearchResult = await ResourceService.Search(new ResourceSearch
-            {
-                Group = new ResourceSearchFilterGroup
-                {
-                    Combinator = SearchCombinator.And, Filters =
-                    [
-                        new ResourceSearchFilter
-                        {
-                            PropertyPool = PropertyPool.Internal,
-                            Operation = SearchOperation.In,
-                            PropertyId = (int) ResourceProperty.Category,
-                            DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)
-                        }
-                    ]
-                },
-                // Orders = [new ResourceSearchOrderInputModel
-                //             {
-                //                 Asc = false,
-                // 	Property = 
-                //             }]
-                PageIndex = 0,
-                PageSize = maxCount
-            });
-
-            var resources = resourcesSearchResult.Data ?? [];
-
-            var wrapperPairs = (await SpecialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
-                .GroupBy(d => d.Value1)
-                .Select(d => (Left: d.Key,
-                    Rights: d.Select(c => c.Value2).Where(s => !string.IsNullOrEmpty(s)).Distinct().OfType<string>()
-                        .First()))
-                .OrderByDescending(d => d.Left.Length)
-                .ToArray();
-
-            var result = new List<CategoryResourceDisplayNameViewModel>();
-
-            foreach (var r in resources)
-            {
-                // var replacements = matcherPropertyMap.ToDictionary(d => d.Key,
-                //     d =>
-                //     {
-                //         var value = r.CustomPropertyValues?.FirstOrDefault(a => a?.PropertyId == d.Value.Id);
-                //         if (value != null)
-                //         {
-                //             var displayValue = CustomPropertyDescriptorMap[d.Value.Type]
-                //                 .ConvertDbValueToBizValue(d.Value, value);
-                //             var stdValueHandler = StandardValueHandlerMap[d.Value.DbValueType];
-                //             return stdValueHandler.BuildDisplayValue(displayValue);
-                //         }
-                //
-                //         return null;
-                //     });
-                //
-                // var segments =
-                //     CategoryHelpers.SplitDisplayNameTemplateIntoSegments(template, replacements, wrapperPairs);
-                var segments = BuildDisplayNameSegmentsForResource(r, template, wrapperPairs);
-
-                result.Add(new CategoryResourceDisplayNameViewModel
-                {
-                    ResourceId = r.Id,
-                    ResourcePath = r.Path,
-                    Segments = segments
-                });
-            }
-
-            return result;
         }
 
         public async Task<List<Abstractions.Models.Domain.Category>> GetByKeys(IEnumerable<int> keys,

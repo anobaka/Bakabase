@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
@@ -36,7 +37,6 @@ namespace Bakabase.Modules.Enhancer.Services
         private readonly IEnhancementService _enhancementService;
         private readonly ICategoryEnhancerOptionsService _categoryEnhancerService;
         private readonly IStandardValueService _standardValueService;
-        private readonly LogService _logService;
         private readonly IEnhancerDescriptors _enhancerDescriptors;
         private readonly IBakabaseLocalizer _bakabaseLocalizer;
         private readonly IEnhancerLocalizer _enhancerLocalizer;
@@ -53,7 +53,7 @@ namespace Bakabase.Modules.Enhancer.Services
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
             ICustomPropertyValueService customPropertyValueService,
             IEnhancementService enhancementService, ICategoryEnhancerOptionsService categoryEnhancerService,
-            IStandardValueService standardValueService, LogService logService, IEnhancerLocalizer enhancerLocalizer,
+            IStandardValueService standardValueService, IEnhancerLocalizer enhancerLocalizer,
             IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger,
             ICategoryService categoryService, IEnhancementRecordService enhancementRecordService,
             IBakabaseLocalizer bakabaseLocalizer, IReservedPropertyValueService reservedPropertyValueService,
@@ -65,7 +65,6 @@ namespace Bakabase.Modules.Enhancer.Services
             _enhancementService = enhancementService;
             _categoryEnhancerService = categoryEnhancerService;
             _standardValueService = standardValueService;
-            _logService = logService;
             _enhancerLocalizer = enhancerLocalizer;
             _enhancerDescriptors = enhancerDescriptors;
             _logger = logger;
@@ -81,14 +80,13 @@ namespace Bakabase.Modules.Enhancer.Services
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
-        protected async Task ApplyEnhancementsToResources(List<Enhancement> enhancements, CancellationToken ct)
+        protected async Task<Dictionary<Enhancement, EnhancerTargetFullOptions>> GetEnhancementOptions(List<Enhancement> enhancements, Dictionary<int, Resource> resourceMap, Dictionary<int, CustomProperty> propertyMap)
         {
-            var resourceIds = enhancements.Select(s => s.ResourceId).ToHashSet();
-            var resourceMap = (await _resourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id, d => d);
             var categoryIds = resourceMap.Values.Where(r => r.CategoryId > 0).Select(v => v.CategoryId).ToHashSet();
             var enhancerIds = enhancements.Select(s => s.EnhancerId).ToHashSet();
             var enhancerOptions = await _categoryEnhancerService.GetAll(x =>
                 enhancerIds.Contains(x.EnhancerId) && categoryIds.Contains(x.CategoryId));
+
             var mediaLibraryV2Ids =
                 resourceMap.Values.Where(r => r.CategoryId == 0).Select(r => r.MediaLibraryId).ToHashSet();
             var mediaLibraryV2List =
@@ -111,13 +109,6 @@ namespace Bakabase.Modules.Enhancer.Services
             // CategoryId - EnhancerId - Options
             var categoryEnhancerOptionsMap = enhancerOptions.GroupBy(d => d.CategoryId)
                 .ToDictionary(d => d.Key, d => d.ToDictionary(c => c.EnhancerId, c => c));
-
-            var propertyMap = (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
-            var currentPropertyValues =
-                await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
-                    CustomPropertyValueAdditionalItem.None, true);
-            var currentPropertyValuesMap = currentPropertyValues.ToDictionary(d => d.BizKey, d => d);
-
             var enhancementTargetOptionsMap = new Dictionary<Enhancement, EnhancerTargetFullOptions>();
             var changedCategoryEnhancerOptions = new HashSet<CategoryEnhancerFullOptions>();
             var newPropertyAddModels =
@@ -135,7 +126,7 @@ namespace Bakabase.Modules.Enhancer.Services
                         ?.GetValueOrDefault(enhancement.EnhancerId)
                     : categoryEnhancerOptionsMap.GetValueOrDefault(resource.CategoryId)
                         ?.GetValueOrDefault(enhancement.EnhancerId)?.Options;
-                
+
                 var categoryOptions = categoryEnhancerOptionsMap.GetValueOrDefault(resource.CategoryId)
                     ?.GetValueOrDefault(enhancement.EnhancerId);
 
@@ -186,37 +177,37 @@ namespace Bakabase.Modules.Enhancer.Services
                 }
 
                 // match property
-                if (targetOptions is {PropertyId: not null, PropertyPool: not null})
+                if (targetOptions is { PropertyId: not null, PropertyPool: not null })
                 {
                     switch (targetOptions.PropertyPool.Value)
                     {
                         case PropertyPool.Reserved:
-                        {
-                            if (!SpecificEnumUtils<ReservedProperty>.Values
-                                    .Contains(
-                                        (ReservedProperty) targetOptions
-                                            .PropertyId))
                             {
-                                throw new Exception(
-                                    _enhancerLocalizer
-                                        .Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties(
-                                            targetOptions.PropertyId.Value));
-                            }
+                                if (!SpecificEnumUtils<ReservedProperty>.Values
+                                        .Contains(
+                                            (ReservedProperty)targetOptions
+                                                .PropertyId))
+                                {
+                                    throw new Exception(
+                                        _enhancerLocalizer
+                                            .Enhancer_Target_Options_PropertyIdIsNotFoundInReservedResourceProperties(
+                                                targetOptions.PropertyId.Value));
+                                }
 
-                            break;
-                        }
+                                break;
+                            }
                         case PropertyPool.Custom:
-                        {
-                            if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
                             {
-                                throw new Exception(
-                                    _enhancerLocalizer
-                                        .Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties(
-                                            targetOptions.PropertyId.Value));
-                            }
+                                if (!propertyMap.TryGetValue(targetOptions.PropertyId.Value, out var property))
+                                {
+                                    throw new Exception(
+                                        _enhancerLocalizer
+                                            .Enhancer_Target_Options_PropertyIdIsNotFoundInCustomResourceProperties(
+                                                targetOptions.PropertyId.Value));
+                                }
 
-                            break;
-                        }
+                                break;
+                            }
                         case PropertyPool.Internal:
                         case PropertyPool.All:
                         default:
@@ -252,7 +243,7 @@ namespace Bakabase.Modules.Enhancer.Services
                         if (targetDescriptor.ReservedPropertyCandidate.HasValue)
                         {
                             targetOptions.PropertyId =
-                                (int) targetDescriptor.ReservedPropertyCandidate.Value;
+                                (int)targetDescriptor.ReservedPropertyCandidate.Value;
                             targetOptions.PropertyPool = PropertyPool.Reserved;
                             changedCategoryEnhancerOptions.Add(categoryOptions!);
                         }
@@ -283,24 +274,24 @@ namespace Bakabase.Modules.Enhancer.Services
                                         switch (targetDescriptor.PropertyType)
                                         {
                                             case PropertyType.SingleChoice:
-                                            {
-                                                options = new SingleChoicePropertyOptions();
+                                                {
+                                                    options = new SingleChoicePropertyOptions();
                                                     // {AllowAddingNewDataDynamically = true};
-                                                kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
-                                                break;
-                                            }
+                                                    kv.PropertyAddModel.Options = JsonConvert.SerializeObject(options);
+                                                    break;
+                                                }
                                             case PropertyType.MultipleChoice:
-                                            {
-                                                options = new MultipleChoicePropertyOptions();
+                                                {
+                                                    options = new MultipleChoicePropertyOptions();
                                                     // {AllowAddingNewDataDynamically = true};
-                                                break;
-                                            }
+                                                    break;
+                                                }
                                             case PropertyType.Multilevel:
-                                            {
-                                                options = new MultilevelPropertyOptions();
+                                                {
+                                                    options = new MultilevelPropertyOptions();
                                                     // {AllowAddingNewDataDynamically = true};
-                                                break;
-                                            }
+                                                    break;
+                                                }
                                         }
 
                                         if (options != null)
@@ -359,6 +350,23 @@ namespace Bakabase.Modules.Enhancer.Services
                 await _categoryEnhancerService.PutAll(changedCategoryEnhancerOptions.ToArray());
             }
 
+            return enhancementTargetOptionsMap;
+        }
+
+        protected async Task ApplyEnhancementsToResources(List<Enhancement> enhancements, CancellationToken ct)
+        {
+            var resourceIds = enhancements.Select(s => s.ResourceId).ToHashSet();
+            var resourceMap = (await _resourceService.GetByKeys(resourceIds.ToArray())).ToDictionary(d => d.Id, d => d);
+  
+
+            var propertyMap = (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
+            var currentPropertyValues =
+                await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId),
+                    CustomPropertyValueAdditionalItem.None, true);
+            var currentPropertyValuesMap = currentPropertyValues.ToDictionary(d => d.BizKey, d => d);
+
+            var enhancementTargetOptionsMap = await GetEnhancementOptions(enhancements, resourceMap, propertyMap);
+
             // var enhancementsIntegratedWithAlias = enhancementTargetOptionsMap
             //     .Where(v => v.Value.IntegrateWithAlias == true && v.Key.Value != null)
             //     .Select(v => v.Key).ToList();
@@ -378,7 +386,6 @@ namespace Bakabase.Modules.Enhancer.Services
 
             var pvs = new List<CustomPropertyValue>();
             var addedPvKeys = new HashSet<string>();
-            var enhancementCpvMap = enhancements.ToDictionary(d => d, d => (CustomPropertyValue?) null);
             var scopedRpvMap = new Dictionary<PropertyValueScope, Dictionary<int, ReservedPropertyValue>>();
 
             var changedProperties = new HashSet<CustomProperty>();
@@ -485,7 +492,6 @@ namespace Bakabase.Modules.Enhancer.Services
                                 }
 
                                 pvs.Add(pv);
-                                enhancementCpvMap[enhancement] = pv;
                                 if (propertyChanged)
                                 {
                                     changedProperties.Add(property);
@@ -581,9 +587,10 @@ namespace Bakabase.Modules.Enhancer.Services
             await _enhancementRecordService.Update(records);
         }
 
-        protected async Task CreateEnhancementContext(List<Resource> targetResources,
-            HashSet<int>? restrictedEnhancerIds, bool apply, Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt,
-            CancellationToken ct)
+        protected async
+            Task<Dictionary<IEnhancer,
+                Dictionary<EnhancerFullOptions, List<(Resource Resource, EnhancementRecord? Record)>>>>
+            CreateEnhanceTasks(List<Resource> targetResources, HashSet<int>? restrictedEnhancerIds)
         {
             var categoryIds = targetResources.Where(r => r.CategoryId > 0).Select(c => c.CategoryId).ToHashSet();
             var categoryIdEnhancerOptionsMap =
@@ -609,7 +616,9 @@ namespace Bakabase.Modules.Enhancer.Services
                         Expressions = x.Expressions
                     }));
 
-            var tasks = new Dictionary<IEnhancer, Dictionary<EnhancerFullOptions, List<Resource>>>();
+            var tasks =
+                new Dictionary<IEnhancer,
+                    Dictionary<EnhancerFullOptions, List<(Resource Resource, EnhancementRecord? Record)>>>();
 
             var resourceIds = targetResources.Select(r => r.Id).ToHashSet();
             // ResourceId - EnhancerId - Record
@@ -647,7 +656,7 @@ namespace Bakabase.Modules.Enhancer.Services
                                         optionsAndResources[eo.Options] = resources = [];
                                     }
 
-                                    resources.Add(tr);
+                                    resources.Add((tr, resourceEnhancementRecordMap.GetValueOrDefault(eo.EnhancerId)?.GetValueOrDefault(tr.Id)));
                                 }
                             }
                         }
@@ -674,13 +683,21 @@ namespace Bakabase.Modules.Enhancer.Services
                                     optionsAndResources[eos] = resources = [];
                                 }
 
-                                resources.Add(tr);
+                                resources.Add((tr, resourceEnhancementRecordMap.GetValueOrDefault(eId)?.GetValueOrDefault(tr.Id)));
                             }
                         }
                     }
                 }
             }
 
+            return tasks;
+        }
+
+        protected async Task CreateEnhancementContext(List<Resource> targetResources,
+            HashSet<int>? restrictedEnhancerIds, bool apply, Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt,
+            CancellationToken ct)
+        {
+            var tasks = await CreateEnhanceTasks(targetResources, restrictedEnhancerIds);
             var taskCount = tasks.Sum(x => x.Value.Sum(y => y.Value.Count));
             var doneCount = 0;
             var currentPercentage = 0;
@@ -688,13 +705,12 @@ namespace Bakabase.Modules.Enhancer.Services
             {
                 foreach (var (options, resources) in optionsAndResources)
                 {
-                    foreach (var resource in resources)
+                    foreach (var rr in resources)
                     {
-                        await pt.WaitWhilePausedAsync();
-                        ct.ThrowIfCancellationRequested();
+                        await pt.WaitWhilePausedAsync(ct);
 
-                        var record = resourceEnhancementRecordMap.GetValueOrDefault(resource.Id)
-                            ?.GetValueOrDefault(enhancer.Id);
+                        var resource = rr.Resource;
+                        var record = rr.Record;
 
                         List<Enhancement>? enhancements = null;
 

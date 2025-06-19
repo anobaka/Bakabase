@@ -8,14 +8,17 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bootstrap.Extensions;
 using NPOI.Util.Collections;
+using Org.BouncyCastle.Asn1;
 
 namespace Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 
 public class BuiltinMediaLibraryTemplateService(
     IBuiltinMediaLibraryTemplateLocalizer localizer,
-    IBakabaseLocalizer bakabaseLocalizer)
+    IBakabaseLocalizer bakabaseLocalizer,
+    IEnhancerDescriptors enhancerDescriptors)
 {
     private string BuildName(BuiltinMediaLibraryTemplateType type,
         List<BuiltinMediaLibraryTemplateProperty>? properties)
@@ -39,7 +42,7 @@ public class BuiltinMediaLibraryTemplateService(
             var attr = t.GetAttribute<BuiltinMediaLibraryTemplateAttribute>()!;
             var builders = t.GetAttributes<BuiltinMediaLibraryTemplateBuilderAttribute>();
 
-            return builders.Select(b =>
+            return builders.SelectMany(b =>
             {
                 var d = new BuiltinMediaLibraryTemplateDescriptor
                 {
@@ -56,7 +59,47 @@ public class BuiltinMediaLibraryTemplateService(
                     LayeredPropertyNames = b.Properties?.Select(localizer.BuiltinMediaLibraryTemplate_PropertyName)
                         .ToArray()
                 };
-                return d;
+
+                var list = new List<BuiltinMediaLibraryTemplateDescriptor> {d};
+
+                if (attr.EnhancerIds?.Any() == true)
+                {
+                    var enhancerCombinations = attr.EnhancerIds!.GetAllCombinations();
+                    list.AddRange(enhancerCombinations.Select(es => d with
+                    {
+                        EnhancerProperties = es.ToDictionary(x => (int) x,
+                            x =>
+                            {
+                                var ed = enhancerDescriptors[(int) x];
+                                var properties = new List<Property>();
+                                foreach (var td in ed.Targets)
+                                {
+                                    if (td.ReservedPropertyCandidate.HasValue)
+                                    {
+                                        properties.Add(new Property(PropertyPool.Reserved, td.Name));
+                                    }
+                                    else
+                                    {
+                                        var p = (b.Properties ?? []).FirstOrDefault(a =>
+                                        {
+                                            var pd = BuiltinMediaLibraryTemplateData.PropertyMap[a];
+                                            var pn = localizer.BuiltinMediaLibraryTemplate_PropertyName(a);
+                                            return pd.Type == td.PropertyType && pn == td.Name;
+                                        });
+
+                                        if (p != default)
+                                        {
+                                            properties.Add((PropertyPool.Custom, td.Name));
+                                        }
+                                    }
+                                }
+
+                                return properties;
+                            })
+                    }));
+                }
+
+                return list;
             });
         }).ToArray();
 
@@ -107,7 +150,53 @@ public class BuiltinMediaLibraryTemplateService(
             [
                 new PathFilter
                     {Positioner = PathPositioner.Layer, Layer = (descriptor.LayeredProperties?.Count ?? 0) + 1}
-            ]
+            ],
+            Enhancers = descriptor.EnhancerProperties?.Select(e =>
+            {
+                var (eId, properties) = e;
+                var ed = enhancerDescriptors[eId];
+                return new MediaLibraryTemplateEnhancerOptions
+                {
+                    EnhancerId = eId,
+                    TargetOptions = properties.Select(pn =>
+                    {
+                        PropertyPool? pool = null;
+                        int? id = null;
+
+                        if (td.ReservedPropertyCandidate.HasValue)
+                        {
+                            pool = PropertyPool.Reserved;
+                            id = (int) td.ReservedPropertyCandidate.Value;
+                        }
+                        else
+                        {
+                            var p = descriptor.Properties.FirstOrDefault(x =>
+                            {
+                                var pd = BuiltinMediaLibraryTemplateData.PropertyMap[x];
+                                var pn = localizer.BuiltinMediaLibraryTemplate_PropertyName(x);
+                                if (pd.Type == td.PropertyType && pn == td.Name)
+                                {
+                                    return true;
+                                }
+
+                                return false;
+                            });
+
+                            if (p != default)
+                            {
+                                var pd = BuiltinMediaLibraryTemplateData.PropertyMap[p];
+                                pool = pd.Pool;
+                                id = pd.Id;
+                            }
+                        }
+
+                        return pool.HasValue && id.HasValue
+                            ? new MediaLibraryTemplateEnhancerTargetAllInOneOptions
+                                {Property = new Property(pool.Value, id.Value, td.PropertyType, td.Name)}
+                            : null;
+                    }).OfType<MediaLibraryTemplateEnhancerTargetAllInOneOptions>().ToList()
+                };
+            }).ToList(),
         };
 
         return template;

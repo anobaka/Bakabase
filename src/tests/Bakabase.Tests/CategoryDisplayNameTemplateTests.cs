@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Bakabase.InsideWorld.Business.Helpers;
+using Bakabase.InsideWorld.Business.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 
@@ -33,7 +33,7 @@ public class CategoryDisplayNameTemplateTests
             ("{", "}"),
         };
 
-        var segments = CategoryHelpers.SplitDisplayNameTemplateIntoSegments(template, propertyMatchers, wrappers);
+        var segments = ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, propertyMatchers, wrappers);
         TestContext.WriteLine(JsonConvert.SerializeObject(segments, Formatting.Indented));
     }
 }

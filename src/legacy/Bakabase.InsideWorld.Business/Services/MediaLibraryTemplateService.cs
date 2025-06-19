@@ -54,6 +54,7 @@ public class MediaLibraryTemplateService<TDbContext>(
 {
     protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
     protected BuiltinMediaLibraryTemplateService BuiltinMediaLibraryTemplateService => GetRequiredService<BuiltinMediaLibraryTemplateService>();
+    protected IResourceService ResourceService => GetRequiredService<IResourceService>();
 
     protected async Task Populate(Abstractions.Models.Domain.MediaLibraryTemplate[] templates)
     {
@@ -232,7 +233,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                 .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
             foreach (var r in resourcesMap.Values)
             {
-                r.DisplayName = categoryService.BuildDisplayNameForResource(r, template.DisplayNameTemplate, wrappers);
+                r.DisplayName = ResourceService.BuildDisplayNameForResource(r, template.DisplayNameTemplate, wrappers);
             }
         }
 

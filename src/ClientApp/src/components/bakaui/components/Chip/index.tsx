@@ -1,5 +1,5 @@
-import type { ChipProps as NextUIChipProps } from "@heroui/react";
-import { Chip as NextUIChip } from "@heroui/react";
+import type { ChipProps as NextUIChipProps } from '@heroui/react';
+import { Chip as NextUIChip } from '@heroui/react';
 import React, { forwardRef } from 'react';
 
 
@@ -15,7 +15,7 @@ export interface ChipProps extends NextUIChipProps{
 
 const Chip = forwardRef<any, ChipProps>((props: ChipProps, ref) => {
   return (
-    <NextUIChip ref={ref} {...props} />
+    <NextUIChip radius={'sm'} ref={ref} {...props} />
   );
 });
 

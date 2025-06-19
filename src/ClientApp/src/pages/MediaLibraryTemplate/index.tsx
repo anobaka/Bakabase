@@ -4,8 +4,8 @@ import { ImportOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import {
   AiOutlineDelete,
   AiOutlineEdit,
-  AiOutlineImport,
   AiOutlinePlusCircle,
+  AiOutlineSearch,
   AiOutlineSisternode,
 } from 'react-icons/ai';
 import { useUpdate } from 'react-use';
@@ -18,6 +18,7 @@ import { MdDeleteOutline, MdOutlineSubtitles } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { TbDatabase } from 'react-icons/tb';
 import { PiEmpty } from 'react-icons/pi';
+import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import type { MediaLibraryTemplate } from './models';
 import { PathFilterDemonstrator, PathFilterModal } from './components/PathFilter';
 import Block from './components/Block';
@@ -37,9 +38,11 @@ import ImportModal from '@/pages/MediaLibraryTemplate/components/ImportModal';
 import BriefProperty from '@/components/Chips/Property/BriefProperty';
 import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 import { willCauseCircleReference } from '@/components/utils';
-import { animals } from '@/pages/Test/nextui';
-import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/BuiltinTemplateSelector';
 import AddModal from '@/pages/MediaLibraryTemplate/components/AddModal';
+
+type SearchForm = {
+  keyword?: string;
+};
 
 export default () => {
   const { t } = useTranslation();
@@ -47,9 +50,10 @@ export default () => {
   const forceUpdate = useUpdate();
 
   const [templates, setTemplates] = useState<MediaLibraryTemplate[]>([]);
-  const [extensionGroups, setExtensionGroups] = useState<IdName[]>([]);
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
+  const [searchForm, setSearchForm] = useState<SearchForm>({});
+  const [expandedTemplateIds, setExpandedTemplateIds] = useState<string[]>([]);
 
 
   const loadProperties = async () => {
@@ -60,9 +64,12 @@ export default () => {
 
   const loadTemplates = async () => {
     const r = await BApi.mediaLibraryTemplate.getAllMediaLibraryTemplates();
+    const templates = r.data || [];
     if (!r.code) {
-      setTemplates(r.data || []);
+      setTemplates(templates);
+      return templates;
     }
+    return [];
   };
 
   // load one template
@@ -83,7 +90,7 @@ export default () => {
       setEnhancers(r.data || []);
     });
     loadProperties();
-    loadTemplates();
+    loadTemplates().then(tpls => setExpandedTemplateIds(tpls.map(tpl => tpl.id.toString())));
   }, []);
 
   const putTemplate = async (tpl: MediaLibraryTemplate) => {
@@ -116,7 +123,7 @@ export default () => {
           dataSource={templates.map(t1 => {
             const hasLoop = willCauseLoopKeys.has(t1.id.toString());
             return {
-              label: t1.name + (hasLoop ? ` (${t('Loop detected')})` : ''),
+              label: `[#${t1.id}] ${t1.name}${hasLoop ? ` (${t('Loop detected')})` : ''}`,
               value: t1.id.toString(),
             };
           })}
@@ -126,30 +133,77 @@ export default () => {
     );
   };
 
+  const filteredTemplates = templates.filter(tpl => {
+    if (!searchForm.keyword || searchForm.keyword.length == 0) {
+      return true;
+    }
+    const keyword = searchForm.keyword.toLowerCase();
+    return tpl.name.toLowerCase().includes(keyword) ||
+      (tpl.author && tpl.author.toLowerCase().includes(keyword)) ||
+      (tpl.description && tpl.description.toLowerCase().includes(keyword));
+  });
+
   return (
     <div className={'h-full flex flex-col'}>
       <div className={'flex items-center gap-2 justify-between'}>
-        <Button
-          size={'sm'}
-          color={'primary'}
-          onPress={() => createPortal(AddModal, { onDestroyed: loadTemplates })}
-        >{t('Create a template')}</Button>
-        <Button
-          size={'sm'}
-          color={'default'}
-          onPress={() => {
-            createPortal(ImportModal, {
-              onImported: async () => {
-                await loadProperties();
-                await loadTemplates();
-                // await loadExtensionGroups();
-              },
-            });
-          }}
-        >
-          <ImportOutlined />
-          {t('Import a template')}
-        </Button>
+        <div className={'flex items-center gap-2'}>
+          <Button
+            size={'sm'}
+            color={'primary'}
+            onPress={() => createPortal(AddModal, { onDestroyed: loadTemplates })}
+          >
+            <AiOutlinePlusCircle className={'text-base'} />
+            {t('Create a template')}
+          </Button>
+          <Input
+            size={'sm'}
+            startContent={<AiOutlineSearch className={'text-base'} />}
+            placeholder={t('Search templates')}
+            value={searchForm.keyword}
+            onValueChange={keyword => setSearchForm({
+              ...searchForm,
+              keyword,
+            })}
+            endContent={filteredTemplates.length == templates.length ? filteredTemplates.length : `${filteredTemplates.length}/${templates.length}`}
+          />
+          {templates.length > 0 ? expandedTemplateIds.length < templates.length ? (
+            <Button
+              size={'sm'}
+              color={'default'}
+              onPress={() => setExpandedTemplateIds(templates.map(tpl => tpl.id.toString()))}
+            >
+              <BiExpandVertical className={'text-base'} />
+              {t('Expand all')}
+            </Button>
+          ) : (
+            <Button
+              size={'sm'}
+              color={'default'}
+              onPress={() => setExpandedTemplateIds([])}
+            >
+              <BiCollapseVertical className={'text-base'} />
+              {t('Collapse all')}
+            </Button>
+          ) : null}
+        </div>
+        <div>
+          <Button
+            size={'sm'}
+            color={'default'}
+            onPress={() => {
+              createPortal(ImportModal, {
+                onImported: async () => {
+                  await loadProperties();
+                  await loadTemplates();
+                  // await loadExtensionGroups();
+                },
+              });
+            }}
+          >
+            <ImportOutlined />
+            {t('Import a template')}
+          </Button>
+        </div>
       </div>
       <div className={'mt-2 grow'}>
         {templates.length == 0 ? (
@@ -160,15 +214,22 @@ export default () => {
         ) : (
           <Accordion
             variant="splitted"
-            defaultSelectedKeys={templates.map(t => t.id.toString())}
+            selectedKeys={expandedTemplateIds}
+            onSelectionChange={keys => {
+              const ids = Array.from(keys).map(k => k as string);
+              setExpandedTemplateIds(ids);
+            }}
           >
-            {templates.map((tpl, i) => {
+            {filteredTemplates.map((tpl) => {
               return (
                 <AccordionItem
                   key={tpl.id}
                   title={(
                     <div className={'flex items-center justify-between'}>
                       <div className={'flex items-center gap-1'}>
+                        <Chip className={''} variant={'flat'} size={'sm'}>
+                          #{tpl.id}
+                        </Chip>
                         <div className={'font-bold'}>
                           {tpl.name}
                         </div>
@@ -186,7 +247,11 @@ export default () => {
                           size={'sm'}
                           isIconOnly
                           onPress={() => {
-                            let { name, author, description } = tpl;
+                            let {
+                              name,
+                              author,
+                              description,
+                            } = tpl;
                             createPortal(Modal, {
                               defaultVisible: true,
                               title: t('Edit template'),
@@ -404,7 +469,7 @@ export default () => {
                       <div className={'flex items-center gap-1'}>
                         {tpl.playableFileLocator?.extensionGroups?.map(group => {
                           return (
-                            <Chip size={'sm'} variant={'flat'}>
+                            <Chip radius={'sm'} size={'sm'} variant={'flat'}>
                               {group?.name}
                             </Chip>
                           );

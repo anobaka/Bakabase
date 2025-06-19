@@ -56,6 +56,9 @@ using Microsoft.Extensions.DependencyInjection;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -79,6 +82,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IFileManager _fileManager;
         private readonly IPlayHistoryService _playHistoryService;
         private readonly ISystemPlayer _systemPlayer;
+        private readonly IPropertyLocalizer _propertyLocalizer;
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -90,7 +94,7 @@ namespace Bakabase.InsideWorld.Business.Services
             FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
             FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int> orm,
             IFileManager fileManager, IPlayHistoryService playHistoryService,
-            ISystemPlayer systemPlayer) : base(serviceProvider)
+            ISystemPlayer systemPlayer, IPropertyLocalizer propertyLocalizer) : base(serviceProvider)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -107,6 +111,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _fileManager = fileManager;
             _playHistoryService = playHistoryService;
             _systemPlayer = systemPlayer;
+            _propertyLocalizer = propertyLocalizer;
             _orm = orm;
         }
 
@@ -409,11 +414,6 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             foreach (var r in doList)
                             {
-                                if (r.Id == 168)
-                                {
-
-                                }
-
                                 r.Properties ??= [];
                                 var reservedProperties =
                                     r.Properties.GetOrAdd((int)PropertyPool.Reserved, () => []);
@@ -597,13 +597,21 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             var wrappers = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
                                 .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
+
+                            var mlV2Ids = doList.Where(d => d.CategoryId == 0).Select(d => d.MediaLibraryId).Distinct()
+                                .ToArray();
+                            var mlV2TemplateMap =
+                                (await MediaLibraryV2Service.GetByKeys(mlV2Ids, MediaLibraryV2AdditionalItem.Template))
+                                .ToDictionary(d => d.Id, d => d.Template?.DisplayNameTemplate);
+
                             foreach (var resource in doList)
                             {
-                                var tpl = resource.Category?.ResourceDisplayNameTemplate;
+                                var tpl = resource.IsMediaLibraryV2
+                                    ? mlV2TemplateMap.GetValueOrDefault(resource.MediaLibraryId)
+                                    : resource.Category?.ResourceDisplayNameTemplate;
                                 if (!string.IsNullOrEmpty(tpl))
                                 {
-                                    resource.DisplayName =
-                                        _categoryService.BuildDisplayNameForResource(resource, tpl, wrappers);
+                                    resource.DisplayName = BuildDisplayNameForResource(resource, tpl, wrappers);
                                 }
                             }
 
@@ -940,8 +948,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 if (!cache.CachedTypes.HasFlag(cacheType))
                                 {
-                                    await pt.WaitWhilePausedAsync();
-                                    ct.ThrowIfCancellationRequested();
+                                    await pt.WaitWhilePausedAsync(ct);
                                     switch (cacheType)
                                     {
                                         case ResourceCacheType.Covers:
@@ -1572,6 +1579,106 @@ namespace Bakabase.InsideWorld.Business.Services
         private async Task DeleteRelatedData(List<int> ids)
         {
             await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
+        }
+
+        public string BuildDisplayNameForResource(Resource resource, string template,
+            (string Left, string Right)[] wrappers)
+        {
+            var segments = BuildDisplayNameSegmentsForResource(resource, template, wrappers);
+            var displayName = string.Join("", segments.Select(a => a.Text));
+            return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
+        }
+
+        public async Task<List<ResourceDisplayNameViewModel>> PreviewResourceDisplayNameTemplate(int id,
+            string template,
+            int maxCount = 100)
+        {
+            var resourcesSearchResult = await Search(new ResourceSearch
+            {
+                Group = new ResourceSearchFilterGroup
+                {
+                    Combinator = SearchCombinator.And,
+                    Filters =
+                    [
+                        new ResourceSearchFilter
+                        {
+                            PropertyPool = PropertyPool.Internal,
+                            Operation = SearchOperation.In,
+                            PropertyId = (int) ResourceProperty.Category,
+                            DbValue = new[] {id.ToString()}.SerializeAsStandardValue(StandardValueType.ListString)
+                        }
+                    ]
+                },
+                // Orders = [new ResourceSearchOrderInputModel
+                //             {
+                //                 Asc = false,
+                // 	Property = 
+                //             }]
+                PageIndex = 0,
+                PageSize = maxCount
+            });
+
+            var resources = resourcesSearchResult.Data ?? [];
+
+            var wrapperPairs = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
+                .GroupBy(d => d.Value1)
+                .Select(d => (Left: d.Key,
+                    Rights: d.Select(c => c.Value2).Where(s => !string.IsNullOrEmpty(s)).Distinct().OfType<string>()
+                        .First()))
+                .OrderByDescending(d => d.Left.Length)
+                .ToArray();
+
+            var result = new List<ResourceDisplayNameViewModel>();
+
+            foreach (var r in resources)
+            {
+                var segments = BuildDisplayNameSegmentsForResource(r, template, wrapperPairs);
+
+                result.Add(new ResourceDisplayNameViewModel
+                {
+                    ResourceId = r.Id,
+                    ResourcePath = r.Path,
+                    Segments = segments
+                });
+            }
+
+            return result;
+        }
+
+        public Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template, (string Left, string Right)[] wrappers)
+        {
+            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.Values
+                .GroupBy(d => d.Name)
+                .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
+
+            var replacements = matcherPropertyMap.ToDictionary(d => d.Key,
+                d =>
+                {
+                    var value = d.Value.Values?.FirstOrDefault()?.BizValue;
+                    if (value != null)
+                    {
+                        var stdValueHandler = StandardValueInternals.HandlerMap[d.Value.BizValueType];
+                        return stdValueHandler.BuildDisplayValue(value);
+                    }
+
+                    return null;
+                });
+
+            foreach (var b in SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values)
+            {
+                var name = _propertyLocalizer.BuiltinPropertyName((ResourceProperty)b);
+                var key = $"{{{name}}}";
+                replacements[key] = b switch
+                {
+                    BuiltinPropertyForDisplayName.Filename => resource.FileName,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+
+            var segments =
+                ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
+
+            return segments;
         }
     }
 }
