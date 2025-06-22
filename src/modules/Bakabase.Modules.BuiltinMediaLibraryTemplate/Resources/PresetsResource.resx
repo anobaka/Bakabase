@@ -1,0 +1,351 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="PresetProperty_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="PresetProperty_ReleaseDate" xml:space="preserve">
+    <value>ReleaseDate</value>
+  </data>
+  <data name="PresetProperty_Author" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="PresetProperty_Publisher" xml:space="preserve">
+    <value>Publisher</value>
+  </data>
+  <data name="PresetProperty_Series" xml:space="preserve">
+    <value>Series</value>
+  </data>
+  <data name="PresetProperty_Tag" xml:space="preserve">
+    <value>Tag</value>
+  </data>
+  <data name="PresetProperty_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="PresetProperty_Original" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="PresetProperty_Actor" xml:space="preserve">
+    <value>Actor</value>
+  </data>
+  <data name="PresetProperty_VoiceActor" xml:space="preserve">
+    <value>VoiceActor</value>
+  </data>
+  <data name="PresetProperty_Duration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="PresetProperty_Director" xml:space="preserve">
+    <value>Director</value>
+  </data>
+  <data name="PresetProperty_Singer" xml:space="preserve">
+    <value>Singer</value>
+  </data>
+  <data name="PresetProperty_EpisodeCount" xml:space="preserve">
+    <value>EpisodeCount</value>
+  </data>
+  <data name="PresetProperty_Resolution" xml:space="preserve">
+    <value>Resolution</value>
+  </data>
+  <data name="PresetProperty_AspectRatio" xml:space="preserve">
+    <value>AspectRatio</value>
+  </data>
+  <data name="PresetProperty_SubtitleLanguage" xml:space="preserve">
+    <value>SubtitleLanguage</value>
+  </data>
+  <data name="PresetProperty_VideoCodec" xml:space="preserve">
+    <value>VideoCodec</value>
+  </data>
+  <data name="PresetProperty_IsCensored" xml:space="preserve">
+    <value>IsCensored</value>
+  </data>
+  <data name="PresetProperty_Is3D" xml:space="preserve">
+    <value>Is3D</value>
+  </data>
+  <data name="PresetProperty_ImageCount" xml:space="preserve">
+    <value>ImageCount</value>
+  </data>
+  <data name="PresetProperty_IsAi" xml:space="preserve">
+    <value>IsAi</value>
+  </data>
+  <data name="PresetProperty_Developer" xml:space="preserve">
+    <value>Developer</value>
+  </data>
+  <data name="PresetProperty_Character" xml:space="preserve">
+    <value>Character</value>
+  </data>
+  <data name="PresetProperty_AudioFormat" xml:space="preserve">
+    <value>AudioFormat</value>
+  </data>
+  <data name="PresetProperty_Bitrate" xml:space="preserve">
+    <value>Bitrate</value>
+  </data>
+  <data name="PresetProperty_Platform" xml:space="preserve">
+    <value>Platform</value>
+  </data>
+  <data name="PresetProperty_SubscriptionPlatform" xml:space="preserve">
+    <value>SubscriptionPlatform</value>
+  </data>
+  <data name="PresetProperty_Type" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="PresetResourceType_Video" xml:space="preserve">
+    <value>Video</value>
+  </data>
+  <data name="PresetResourceType_Movie" xml:space="preserve">
+    <value>Movie</value>
+  </data>
+  <data name="PresetResourceType_Anime" xml:space="preserve">
+    <value>Anime</value>
+  </data>
+  <data name="PresetResourceType_Ova" xml:space="preserve">
+    <value>Ova</value>
+  </data>
+  <data name="PresetResourceType_TvSeries" xml:space="preserve">
+    <value>TvSeries</value>
+  </data>
+  <data name="PresetResourceType_TvShow" xml:space="preserve">
+    <value>TvShow</value>
+  </data>
+  <data name="PresetResourceType_Documentary" xml:space="preserve">
+    <value>Documentary</value>
+  </data>
+  <data name="PresetResourceType_Clip" xml:space="preserve">
+    <value>Clip</value>
+  </data>
+  <data name="PresetResourceType_LiveStream" xml:space="preserve">
+    <value>LiveStream</value>
+  </data>
+  <data name="PresetResourceType_VideoSubscription" xml:space="preserve">
+    <value>VideoSubscription</value>
+  </data>
+  <data name="PresetResourceType_Av" xml:space="preserve">
+    <value>AV</value>
+  </data>
+  <data name="PresetResourceType_AvClip" xml:space="preserve">
+    <value>AVClip</value>
+  </data>
+  <data name="PresetResourceType_AvSubscription" xml:space="preserve">
+    <value>AVSubscription</value>
+  </data>
+  <data name="PresetResourceType_Mmd" xml:space="preserve">
+    <value>MMD</value>
+  </data>
+  <data name="PresetResourceType_AdultMmd" xml:space="preserve">
+    <value>AdultMmd</value>
+  </data>
+  <data name="PresetResourceType_Vr" xml:space="preserve">
+    <value>VR</value>
+  </data>
+  <data name="PresetResourceType_VrAv" xml:space="preserve">
+    <value>VR AV</value>
+  </data>
+  <data name="PresetResourceType_VrAnime" xml:space="preserve">
+    <value>VR Anime</value>
+  </data>
+  <data name="PresetResourceType_AiVideo" xml:space="preserve">
+    <value>AiVideo</value>
+  </data>
+  <data name="PresetResourceType_AsmrVideo" xml:space="preserve">
+    <value>AsmrVideo</value>
+  </data>
+  <data name="PresetResourceType_Image" xml:space="preserve">
+    <value>Image</value>
+  </data>
+  <data name="PresetResourceType_Manga" xml:space="preserve">
+    <value>Manga</value>
+  </data>
+  <data name="PresetResourceType_Comic" xml:space="preserve">
+    <value>Comic</value>
+  </data>
+  <data name="PresetResourceType_Doushijin" xml:space="preserve">
+    <value>Doushijin</value>
+  </data>
+  <data name="PresetResourceType_Artbook" xml:space="preserve">
+    <value>Artbook</value>
+  </data>
+  <data name="PresetResourceType_Illustration" xml:space="preserve">
+    <value>Illustration</value>
+  </data>
+  <data name="PresetResourceType_ArtistCg" xml:space="preserve">
+    <value>ArtistCg</value>
+  </data>
+  <data name="PresetResourceType_GameCg" xml:space="preserve">
+    <value>GameCg</value>
+  </data>
+  <data name="PresetResourceType_ImageSubscription" xml:space="preserve">
+    <value>ImageSubscription</value>
+  </data>
+  <data name="PresetResourceType_IllustrationSubscription" xml:space="preserve">
+    <value>IllustrationSubscription</value>
+  </data>
+  <data name="PresetResourceType_MangaSubscription" xml:space="preserve">
+    <value>MangaSubscription</value>
+  </data>
+  <data name="PresetResourceType_Manga3D" xml:space="preserve">
+    <value>Manga3D</value>
+  </data>
+  <data name="PresetResourceType_Photograph" xml:space="preserve">
+    <value>Photograph</value>
+  </data>
+  <data name="PresetResourceType_Cosplay" xml:space="preserve">
+    <value>Cosplay</value>
+  </data>
+  <data name="PresetResourceType_AiImage" xml:space="preserve">
+    <value>AiImage</value>
+  </data>
+  <data name="PresetResourceType_Audio" xml:space="preserve">
+    <value>Audio</value>
+  </data>
+  <data name="PresetResourceType_AsmrAudio" xml:space="preserve">
+    <value>AsmrAudio</value>
+  </data>
+  <data name="PresetResourceType_Music" xml:space="preserve">
+    <value>Music</value>
+  </data>
+  <data name="PresetResourceType_Podcast" xml:space="preserve">
+    <value>Podcast</value>
+  </data>
+  <data name="PresetResourceType_Application" xml:space="preserve">
+    <value>Application</value>
+  </data>
+  <data name="PresetResourceType_Game" xml:space="preserve">
+    <value>Game</value>
+  </data>
+  <data name="PresetResourceType_Galgame" xml:space="preserve">
+    <value>Galgame</value>
+  </data>
+  <data name="PresetResourceType_VrGame" xml:space="preserve">
+    <value>VR Game</value>
+  </data>
+  <data name="PresetResourceType_Text" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="PresetResourceType_Novel" xml:space="preserve">
+    <value>Novel</value>
+  </data>
+  <data name="PresetResourceType_MotionManga" xml:space="preserve">
+    <value>MotionManga</value>
+  </data>
+  <data name="PresetResourceType_Mod" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="PresetResourceType_Tool" xml:space="preserve">
+    <value>Tool</value>
+  </data>
+</root>

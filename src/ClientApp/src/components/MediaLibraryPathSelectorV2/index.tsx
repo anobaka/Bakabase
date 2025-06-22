@@ -149,7 +149,15 @@ export default (props: Props) => {
                 >
                   <div>
                     {c.name}
-                    {c.id != 0 && `(${t('Deprecated')})`}
+                    {c.id != 0 && (
+                      <Chip
+                        size={'sm'}
+                        variant={'flat'}
+                        radius={'sm'}
+                      >
+                        {t('Deprecated')}
+                      </Chip>
+                    )}
                   </div>
                   <div>
                     {c.libraries

@@ -165,7 +165,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     model.Tags.Any(t => resourceMap.GetValueOrDefault(r)?.Tags?.Contains(t) != true));
             }
 
-            Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? exp = resourceIds == null
+            Expression<Func<ResourceDbModel, bool>>? exp = resourceIds == null
                 ? null
                 : r => resourceIds.Contains(r.Id);
 
@@ -184,6 +184,13 @@ namespace Bakabase.InsideWorld.Business.Services
             var dtoList = await ToDomainModel(resources.Data!.ToArray(), ResourceAdditionalItem.All);
 
             return model.BuildResponse(dtoList, resources.TotalCount);
+        }
+
+        public async Task<int[]> GetAllIds(ResourceSearch model)
+        {
+            var resources = await Search(model with { PageIndex = 0, PageSize = int.MaxValue });
+            var ids = resources.Data?.Select(r => r.Id).ToArray() ?? [];
+            return ids;
         }
 
         private async Task PreparePropertyDbValues(ResourceSearchContext context, ResourceSearchFilterGroup? group)
@@ -385,7 +392,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<Resource> ToDomainModel(Abstractions.Models.Db.ResourceDbModel resource,
+        public async Task<Resource> ToDomainModel(ResourceDbModel resource,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             return (await ToDomainModel([resource], additionalItems)).FirstOrDefault()!;

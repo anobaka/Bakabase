@@ -64,6 +64,7 @@ export default ({ onAdded }: Props) => {
                   property: p,
                   valueProperty: vp,
                   availableOperations,
+                  disabled: false,
                 };
                 onAdded(newFilter);
               }}

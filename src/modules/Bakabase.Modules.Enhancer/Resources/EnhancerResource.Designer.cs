@@ -259,7 +259,7 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Will be scaled correspoding the range of target rating property.
+        ///   Looks up a localized string similar to 0~10, Will be scaled correspoding the range of target rating property.
         /// </summary>
         public static string Enhancer_Bangumi_Target_Rating_Description {
             get {
@@ -268,7 +268,7 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Rating(0~10).
+        ///   Looks up a localized string similar to Rating.
         /// </summary>
         public static string Enhancer_Bangumi_Target_Rating_Name {
             get {
@@ -396,7 +396,16 @@ namespace Bakabase.Modules.Enhancer.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Rating(0~5).
+        ///   Looks up a localized string similar to 0~5.
+        /// </summary>
+        public static string Enhancer_ExHentai_Target_Rating_Description {
+            get {
+                return ResourceManager.GetString("Enhancer_ExHentai_Target_Rating_Description", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Rating.
         /// </summary>
         public static string Enhancer_ExHentai_Target_Rating_Name {
             get {

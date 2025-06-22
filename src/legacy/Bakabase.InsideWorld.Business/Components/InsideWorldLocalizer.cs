@@ -4,7 +4,6 @@ using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
@@ -21,8 +20,7 @@ namespace Bakabase.InsideWorld.Business.Components
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
     public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
-        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IDependencyLocalizer,
-            IBuiltinMediaLibraryTemplateLocalizer
+        : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IDependencyLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
             localizer.GetAllStrings(includeParentCultures);
@@ -216,16 +214,6 @@ namespace Bakabase.InsideWorld.Business.Components
         public string Resource()
         {
             return this[nameof(Resource)];
-        }
-
-        public string BuiltinMediaLibraryTemplate_TypeName(BuiltinMediaLibraryTemplateType type)
-        {
-            return this[$"BuiltinMediaLibraryTemplate_TypeName_{type}"];
-        }
-
-        public string BuiltinMediaLibraryTemplate_PropertyName(BuiltinMediaLibraryTemplateProperty property)
-        {
-            return this[$"BuiltinMediaLibraryTemplate_PropertyName_{property}"];
         }
     }
 }

@@ -18,15 +18,15 @@ public interface IResourceService
     Task DeleteByKeys(int[] ids, bool deleteFiles);
 
     // Task LogicallyRemoveByCategoryId(int categoryId);
-    Task<List<Abstractions.Models.Domain.Resource>> GetAll(
-        Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? selector = null,
+    Task<List<Resource>> GetAll(Expression<Func<Models.Db.ResourceDbModel, bool>>? selector = null,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
     //
     // Task<List<Abstractions.Models.Db.Resource>> GetAll(Expression<Func<Abstractions.Models.Db.Resource, bool>> selector = null,
     //     bool asNoTracking = true);
     //
-    Task<SearchResponse<Abstractions.Models.Domain.Resource>> Search(ResourceSearch model);
+    Task<SearchResponse<Resource>> Search(ResourceSearch model);
+    Task<int[]> GetAllIds(ResourceSearch model);
 
     // Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool asNoTracking);
     Task<Abstractions.Models.Domain.Resource?> Get(int id,

@@ -38,6 +38,7 @@ import ImportModal from '@/pages/MediaLibraryTemplate/components/ImportModal';
 import BriefProperty from '@/components/Chips/Property/BriefProperty';
 import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 import { willCauseCircleReference } from '@/components/utils';
+import PresetTemplateBuilder from '@/pages/MediaLibraryTemplate/components/PresetTemplateBuilder';
 import AddModal from '@/pages/MediaLibraryTemplate/components/AddModal';
 
 type SearchForm = {

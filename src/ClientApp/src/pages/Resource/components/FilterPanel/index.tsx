@@ -37,8 +37,9 @@ interface IProps {
   reloadResources: (ids: number[]) => any;
   multiSelection?: boolean;
   rearrangeResources?: () => any;
-  onSelectAllChange: (selected: boolean) => any;
+  onSelectAllChange: (selected: boolean, includeNotLoaded?: boolean) => any;
   resourceCount?: number;
+  totalFilteredResourceCount?: number;
 }
 
 const MinResourceColCount = 3;
@@ -59,6 +60,7 @@ export default ({
                   rearrangeResources,
                   onSelectAllChange,
                   resourceCount,
+                  totalFilteredResourceCount,
                 }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -195,7 +197,10 @@ export default ({
             color={'primary'}
             size={'sm'}
             onPress={async () => {
-              await search({ ...searchForm, page: 1 });
+              await search({
+                ...searchForm,
+                page: 1,
+              });
             }}
             isLoading={searching}
           >
@@ -260,9 +265,25 @@ export default ({
             </div>
           </Popover>
           <Tooltip
-            content={t('Resources loaded in current page')}
+            content={(
+              <div className={'flex items-center gap-1'}>
+                {t('Resources loaded in current page')}
+                {totalFilteredResourceCount != resourceCount && (
+                  <Button
+                    size={'sm'}
+                    variant={'light'}
+                    color={'primary'}
+                    onPress={async () => {
+                      setSelectedAll(true);
+                      onSelectAllChange(true, true);
+                    }}
+                  >{t('Select all {{count}} filtered resources (including those not currently loaded).', { count: totalFilteredResourceCount })}</Button>
+                )}
+              </div>
+            )}
           >
             <Checkbox
+              isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
               onValueChange={isSelected => {
                 onSelectAllChange(isSelected);
                 setSelectedAll(isSelected);

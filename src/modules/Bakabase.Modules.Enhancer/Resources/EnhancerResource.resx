@@ -175,7 +175,7 @@
     <value>Tags</value>
   </data>
   <data name="Enhancer_ExHentai_Target_Rating_Name" xml:space="preserve">
-    <value>Rating(0~5)</value>
+    <value>Rating</value>
   </data>
   <data name="Enhancer_ExHentai_Target_Introduction_Name" xml:space="preserve">
     <value>Introduction</value>
@@ -198,7 +198,7 @@
     <value>Introduction</value>
   </data>
   <data name="Enhancer_Bangumi_Target_Rating_Name" xml:space="preserve">
-    <value>Rating(0~10)</value>
+    <value>Rating</value>
   </data>
   <data name="Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name" xml:space="preserve">
     <value>Other properties in left panel</value>
@@ -213,7 +213,7 @@
     <value>Cover</value>
   </data>
   <data name="Enhancer_Bangumi_Target_Rating_Description" xml:space="preserve">
-    <value>Will be scaled correspoding the range of target rating property</value>
+    <value>0~10, Will be scaled correspoding the range of target rating property</value>
   </data>
   <data name="Enhancer_DLsite_Name" xml:space="preserve">
     <value>DLsite</value>
@@ -265,5 +265,8 @@
   </data>
   <data name="Enhancer_ReApplyingEnhancements" xml:space="preserve">
     <value>ReApplying {0} enhancements</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Rating_Description" xml:space="preserve">
+    <value>0~5</value>
   </data>
 </root>

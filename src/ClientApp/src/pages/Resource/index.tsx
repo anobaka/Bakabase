@@ -264,6 +264,7 @@ export default () => {
       }}
     >
       <FilterPanel
+        totalFilteredResourceCount={pageable?.totalCount}
         resourceCount={resources.length}
         selectedResourceIds={selectedIds}
         onSearch={f => search({
@@ -284,9 +285,16 @@ export default () => {
           });
         }}
         rearrangeResources={() => resourcesComponentRef.current?.rearrange()}
-        onSelectAllChange={selected => {
+        onSelectAllChange={(selected, includeNotLoaded) => {
           if (selected) {
-            setSelectedIds(resources.map(r => r.id));
+            if (includeNotLoaded) {
+              BApi.resource.searchAllResourceIds(searchForm).then(r => {
+                const ids = r.data || [];
+                setSelectedIds(ids);
+              });
+            } else {
+              setSelectedIds(resources.map(r => r.id));
+            }
           } else {
             setSelectedIds([]);
           }

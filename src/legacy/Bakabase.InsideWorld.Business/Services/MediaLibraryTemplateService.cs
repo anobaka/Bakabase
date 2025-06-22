@@ -14,7 +14,6 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Domain;
@@ -22,6 +21,7 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Presets.Abstractions;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
@@ -53,7 +53,7 @@ public class MediaLibraryTemplateService<TDbContext>(
     where TDbContext : DbContext
 {
     protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
-    protected BuiltinMediaLibraryTemplateService BuiltinMediaLibraryTemplateService => GetRequiredService<BuiltinMediaLibraryTemplateService>();
+    protected IPresetsService BuiltinMediaLibraryTemplateService => GetRequiredService<IPresetsService>();
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
 
     protected async Task Populate(Abstractions.Models.Domain.MediaLibraryTemplate[] templates)
@@ -266,19 +266,6 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     public async Task<MediaLibraryTemplate> Add(MediaLibraryTemplateAddInputModel model)
     {
-        if (model.BuiltinTemplateId.IsNotEmpty())
-        {
-            var builtinTemplate = BuiltinMediaLibraryTemplateService.GenerateTemplate(model.BuiltinTemplateId);
-            builtinTemplate.Name = model.Name;
-            var shareCode = builtinTemplate.ToSharable().ToShareCode();
-            var newId = await Import(new MediaLibraryTemplateImportInputModel
-            {
-                ShareCode = shareCode,
-                AutomaticallyCreateMissingData = true
-            });
-            return await Get(newId);
-        }
-
         var dbModel = (await orm.Add(new MediaLibraryTemplateDbModel
             {Name = model.Name, CreatedAt = DateTime.Now, UpdatedAt = DateTime.Now})).Data!;
 

@@ -68,6 +68,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.BulkModifi
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.Search", "modules\Bakabase.Modules.Search\Bakabase.Modules.Search.csproj", "{24FEC1DD-F0E7-40FD-8330-732EF59DE795}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Presets", "modules\Bakabase.Modules.BuiltinMediaLibraryTemplate\Bakabase.Modules.Presets.csproj", "{31B23806-C781-46C1-BF91-33E266CD331A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Company|Any CPU = Company|Any CPU
@@ -213,6 +215,12 @@ Global
 		{24FEC1DD-F0E7-40FD-8330-732EF59DE795}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{24FEC1DD-F0E7-40FD-8330-732EF59DE795}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{24FEC1DD-F0E7-40FD-8330-732EF59DE795}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31B23806-C781-46C1-BF91-33E266CD331A}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{31B23806-C781-46C1-BF91-33E266CD331A}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{31B23806-C781-46C1-BF91-33E266CD331A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31B23806-C781-46C1-BF91-33E266CD331A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31B23806-C781-46C1-BF91-33E266CD331A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31B23806-C781-46C1-BF91-33E266CD331A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -245,6 +253,7 @@ Global
 		{CE119E81-02F6-4E55-9F96-F234CA97ABAA} = {4E98F6DA-3438-4C6C-8354-B24B5B9D0EB0}
 		{837DB2B3-A163-482E-A405-278C48080EBA} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
 		{24FEC1DD-F0E7-40FD-8330-732EF59DE795} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
+		{31B23806-C781-46C1-BF91-33E266CD331A} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EDB2DE5-2794-4737-A47F-105A2CCFFD16}

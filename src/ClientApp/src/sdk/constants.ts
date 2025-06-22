@@ -28,10 +28,6 @@ export enum DownloaderStatus {JustCreated = 0, Starting = 100, Downloading = 200
 export const downloaderStatuses = Object.keys(DownloaderStatus).filter(k => typeof DownloaderStatus[k] === 'number').map(t => ({label: t, value: DownloaderStatus[t]}));
 export enum DependentComponentStatus {NotInstalled = 1, Installed = 2, Installing = 3}
 export const dependentComponentStatuses = Object.keys(DependentComponentStatus).filter(k => typeof DependentComponentStatus[k] === 'number').map(t => ({label: t, value: DependentComponentStatus[t]}));
-export enum BuiltinMediaLibraryTemplateProperty {Name = 1, ReleaseDate = 2, Author = 3, Publisher = 4, Year = 5, Series = 6, Tag = 7}
-export const builtinMediaLibraryTemplateProperties = Object.keys(BuiltinMediaLibraryTemplateProperty).filter(k => typeof BuiltinMediaLibraryTemplateProperty[k] === 'number').map(t => ({label: t, value: BuiltinMediaLibraryTemplateProperty[t]}));
-export enum BuiltinMediaLibraryTemplateType {Movie = 1, Anime = 2, Series = 3, Manga = 4, Audio = 5}
-export const builtinMediaLibraryTemplateTypes = Object.keys(BuiltinMediaLibraryTemplateType).filter(k => typeof BuiltinMediaLibraryTemplateType[k] === 'number').map(t => ({label: t, value: BuiltinMediaLibraryTemplateType[t]}));
 export enum CloseBehavior {Prompt = 0, Exit = 1, Minimize = 2, Cancel = 1000}
 export const closeBehaviors = Object.keys(CloseBehavior).filter(k => typeof CloseBehavior[k] === 'number').map(t => ({label: t, value: CloseBehavior[t]}));
 export enum IconType {UnknownFile = 1, Directory = 2, Dynamic = 3}
@@ -78,7 +74,7 @@ export enum MediaLibraryFileSystemError {InvalidVolume = 1, FreeSpaceNotEnough =
 export const mediaLibraryFileSystemErrors = Object.keys(MediaLibraryFileSystemError).filter(k => typeof MediaLibraryFileSystemError[k] === 'number').map(t => ({label: t, value: MediaLibraryFileSystemError[t]}));
 export enum MediaLibrarySyncStep {Filtering = 0, AcquireFileSystemInfo = 1, CleanResources = 2, CompareResources = 3, SaveResources = 4}
 export const mediaLibrarySyncSteps = Object.keys(MediaLibrarySyncStep).filter(k => typeof MediaLibrarySyncStep[k] === 'number').map(t => ({label: t, value: MediaLibrarySyncStep[t]}));
-export enum MediaType {Image = 1, Audio = 2, Video = 3, Text = 4, Unknown = 1000}
+export enum MediaType {Image = 1, Audio = 2, Video = 3, Text = 4, Application = 5, Unknown = 1000}
 export const mediaTypes = Object.keys(MediaType).filter(k => typeof MediaType[k] === 'number').map(t => ({label: t, value: MediaType[t]}));
 export enum PixivDownloadTaskType {Search = 1, Ranking = 2, Following = 3}
 export const pixivDownloadTaskTypes = Object.keys(PixivDownloadTaskType).filter(k => typeof PixivDownloadTaskType[k] === 'number').map(t => ({label: t, value: PixivDownloadTaskType[t]}));
@@ -240,6 +236,10 @@ export enum ThirdPartyRequestResultType {Succeed = 1, TimedOut = 2, Banned = 3, 
 export const thirdPartyRequestResultTypes = Object.keys(ThirdPartyRequestResultType).filter(k => typeof ThirdPartyRequestResultType[k] === 'number').map(t => ({label: t, value: ThirdPartyRequestResultType[t]}));
 export enum StandardValueConversionRule {Directly = 1, Incompatible = 2, ValuesWillBeMerged = 4, DateWillBeLost = 8, StringToTag = 16, OnlyFirstValidRemains = 64, StringToDateTime = 128, StringToTime = 256, UrlWillBeLost = 1024, StringToNumber = 2048, Trim = 8192, StringToLink = 16384, ValueWillBeSplit = 32768, BooleanToNumber = 65536, TimeToDateTime = 131072, TagGroupWillBeLost = 262144, ValueToBoolean = 524288}
 export const standardValueConversionRules = Object.keys(StandardValueConversionRule).filter(k => typeof StandardValueConversionRule[k] === 'number').map(t => ({label: t, value: StandardValueConversionRule[t]}));
+export enum PresetProperty {Name = 1, ReleaseDate = 2, Author = 3, Publisher = 4, Series = 5, Tag = 6, Language = 7, Original = 8, Actor = 9, VoiceActor = 10, Duration = 11, Director = 12, Singer = 13, EpisodeCount = 14, Resolution = 15, AspectRatio = 16, SubtitleLanguage = 17, VideoCodec = 18, IsCensored = 19, Is3D = 20, ImageCount = 21, IsAi = 22, Developer = 23, Character = 24, AudioFormat = 25, Bitrate = 26, Platform = 27, SubscriptionPlatform = 28, Type = 29}
+export const presetProperties = Object.keys(PresetProperty).filter(k => typeof PresetProperty[k] === 'number').map(t => ({label: t, value: PresetProperty[t]}));
+export enum PresetResourceType {Video = 1000, Movie = 1001, Anime = 1002, Ova = 1003, TvSeries = 1004, TvShow = 1005, Documentary = 1006, Clip = 1007, LiveStream = 1008, VideoSubscription = 1009, Av = 1010, AvClip = 1011, AvSubscription = 1012, Mmd = 1013, AdultMmd = 1014, Vr = 1015, VrAv = 1016, VrAnime = 1017, AiVideo = 1018, AsmrVideo = 1019, Image = 2000, Manga = 2001, Comic = 2002, Doushijin = 2003, Artbook = 2004, Illustration = 2005, ArtistCg = 2006, GameCg = 2007, ImageSubscription = 2008, IllustrationSubscription = 2009, MangaSubscription = 2010, Manga3D = 2011, Photograph = 2012, Cosplay = 2013, AiImage = 2014, Audio = 3000, AsmrAudio = 3001, Music = 3002, Podcast = 3003, Application = 4000, Game = 4001, Galgame = 4002, VrGame = 4003, Text = 5000, Novel = 5001, MotionManga = 10000, Mod = 10001, Tool = 10002}
+export const presetResourceTypes = Object.keys(PresetResourceType).filter(k => typeof PresetResourceType[k] === 'number').map(t => ({label: t, value: PresetResourceType[t]}));
 export enum LegacyResourceProperty {ReleaseDt = 4, Publisher = 5, Name = 6, Language = 7, Volume = 8, Original = 9, Series = 10, Tag = 11, CustomProperty = 14, Favorites = 22, Cover = 23}
 export const legacyResourceProperties = Object.keys(LegacyResourceProperty).filter(k => typeof LegacyResourceProperty[k] === 'number').map(t => ({label: t, value: LegacyResourceProperty[t]}));
 export enum LogLevel {Trace = 0, Debug = 1, Information = 2, Warning = 3, Error = 4, Critical = 5, None = 6}

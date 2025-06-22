@@ -11,6 +11,7 @@ import MediaPreviewer from './cases/MediaPreviewer';
 import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog';
 import ResourceFilter from './cases/ResourceFilter';
 import Properties from './cases/Properties';
+import PresetMediaLibraryTemplateBuilderTest from './cases/PresetMediaLibraryTemplateBuilderTest';
 import { Button, Listbox, Card, CardBody, CardHeader, CardFooter, Divider } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
@@ -24,6 +25,7 @@ import { StandardValueType } from '@/sdk/constants';
 
 
 const components = {
+  PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <Properties />,
   BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransfer />,
