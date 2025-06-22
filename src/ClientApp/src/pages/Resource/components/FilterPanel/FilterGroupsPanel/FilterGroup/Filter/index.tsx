@@ -8,7 +8,7 @@ import { AiOutlineClose } from 'react-icons/ai';
 import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from 'react-icons/md';
 import type { ResourceSearchFilter } from '../../models';
 import PropertySelector from '@/components/PropertySelector';
-import { PropertyPool, SearchOperation } from '@/sdk/constants';
+import { PropertyPool, PropertyType, SearchOperation } from '@/sdk/constants';
 import { Button, Dropdown, Tooltip, DropdownItem, DropdownMenu, DropdownTrigger } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
@@ -150,6 +150,7 @@ export default ({
         bizValue={filter.bizValue}
         dbValue={filter.dbValue}
         onValueChange={(dbValue, bizValue) => {
+          console.log('123', dbValue, bizValue);
           changeFilter({
             ...filter,
             dbValue: dbValue,

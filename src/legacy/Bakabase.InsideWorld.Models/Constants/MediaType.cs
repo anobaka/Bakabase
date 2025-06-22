@@ -12,6 +12,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         Audio = 2,
         Video = 3,
         Text = 4,
+        Application = 5,
         Unknown = 1000
     }
 }

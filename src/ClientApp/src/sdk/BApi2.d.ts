@@ -1993,16 +1993,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/media-library-template/builtin": {
+    "/media-library-template/preset-data-pool": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetBuiltinMediaLibraryTemplates"];
+        get: operations["GetMediaLibraryTemplatePresetDataPool"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library-template/from-preset-builder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddMediaLibraryTemplateFromPresetBuilder"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2643,6 +2659,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["SearchResources"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/search/ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SearchAllResourceIds"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3660,7 +3692,6 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateAddInputModel": {
             name: string;
-            builtinTemplateId?: string;
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel": {
             name?: string;
@@ -3817,37 +3848,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Infrastructures.Components.Gui.UiTheme": 0 | 1 | 2;
-        "Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor": {
-            id: string;
-            type: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateType"];
-            typeName: string;
-            mediaType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
-            name: string;
-            properties: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateProperty"][];
-            propertyNames: string[];
-            layeredPropertyNames?: string[];
-            layeredProperties?: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateProperty"][];
-            enhancerTargets?: {
-                [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor+EnhancerTarget"][];
-            };
-        };
-        "Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor+EnhancerTarget": {
-            /** Format: int32 */
-            target: number;
-            property: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
-        };
-        /**
-         * Format: int32
-         * @description [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Year, 6: Series, 7: Tag]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateProperty": 1 | 2 | 3 | 4 | 5 | 6 | 7;
-        /**
-         * Format: int32
-         * @description [1: Movie, 2: Anime, 3: Series, 4: Manga, 5: Audio]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateType": 1 | 2 | 3 | 4 | 5;
         "Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry": {
             path: string;
             /** Format: int64 */
@@ -4319,10 +4319,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.MediaLibraryFileSystemError": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown]
+         * @description [1: Image, 2: Audio, 3: Video, 4: Text, 5: Application, 1000: Unknown]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.MediaType": 1 | 2 | 3 | 4 | 1000;
+        "Bakabase.InsideWorld.Models.Constants.MediaType": 1 | 2 | 3 | 4 | 5 | 1000;
         /**
          * Format: int32
          * @description [1: Resource, 2: Video, 3: Image, 4: Audio]
@@ -4621,6 +4621,12 @@ export interface components {
             /** Format: int32 */
             propertyId?: number;
         };
+        /**
+         * Format: int32
+         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5;
         "Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel": {
             options?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerFullOptions"];
             active?: boolean;
@@ -4632,6 +4638,57 @@ export interface components {
             propertyId?: number;
             propertyPool?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             dynamicTarget?: string;
+        };
+        /**
+         * Format: int32
+         * @description [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29;
+        /**
+         * Format: int32
+         * @description [1000: Video, 1001: Movie, 1002: Anime, 1003: Ova, 1004: TvSeries, 1005: TvShow, 1006: Documentary, 1007: Clip, 1008: LiveStream, 1009: VideoSubscription, 1010: Av, 1011: AvClip, 1012: AvSubscription, 1013: Mmd, 1014: AdultMmd, 1015: Vr, 1016: VrAv, 1017: VrAnime, 1018: AiVideo, 1019: AsmrVideo, 2000: Image, 2001: Manga, 2002: Comic, 2003: Doushijin, 2004: Artbook, 2005: Illustration, 2006: ArtistCg, 2007: GameCg, 2008: ImageSubscription, 2009: IllustrationSubscription, 2010: MangaSubscription, 2011: Manga3D, 2012: Photograph, 2013: Cosplay, 2014: AiImage, 3000: Audio, 3001: AsmrAudio, 3002: Music, 3003: Podcast, 4000: Application, 4001: Game, 4002: Galgame, 4003: VrGame, 5000: Text, 5001: Novel, 10000: MotionManga, 10001: Mod, 10002: Tool]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetResourceType": 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007 | 1008 | 1009 | 1010 | 1011 | 1012 | 1013 | 1014 | 1015 | 1016 | 1017 | 1018 | 1019 | 2000 | 2001 | 2002 | 2003 | 2004 | 2005 | 2006 | 2007 | 2008 | 2009 | 2010 | 2011 | 2012 | 2013 | 2014 | 3000 | 3001 | 3002 | 3003 | 4000 | 4001 | 4002 | 4003 | 5000 | 5001 | 10000 | 10001 | 10002;
+        "Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder": {
+            name: string;
+            resourceType: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetResourceType"];
+            properties: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty"][];
+            /** Format: int32 */
+            resourceLayer: number;
+            layeredProperties?: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty"][];
+            enhancerIds?: components["schemas"]["Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId"][];
+        };
+        "Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool": {
+            resourceTypes: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool+ResourceType"][];
+            properties: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool+Property"][];
+            enhancers: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool+Enhancer"][];
+            resourceTypePresetPropertyIds: {
+                [key: string]: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty"][];
+            };
+            resourceTypeEnhancerIds: {
+                [key: string]: components["schemas"]["Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId"][];
+            };
+        };
+        "Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool+Enhancer": {
+            id: components["schemas"]["Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId"];
+            name: string;
+            description?: string;
+            reservedProperties: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty"][];
+            presetProperties: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty"][];
+        };
+        "Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool+Property": {
+            id: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty"];
+            name: string;
+            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
+            description?: string;
+        };
+        "Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool+ResourceType": {
+            type: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetResourceType"];
+            name: string;
+            mediaType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
+            description?: string;
         };
         "Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel": {
             results?: components["schemas"]["Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel+Tin"][];
@@ -5042,12 +5099,6 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel"][];
         };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor"][];
-        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry]": {
             /** Format: int32 */
             code: number;
@@ -5173,6 +5224,12 @@ export interface components {
             code: number;
             message?: string;
             data?: string[][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: number[];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[System.String]": {
             /** Format: int32 */
@@ -5473,6 +5530,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Property.Models.View.CustomPropertyTypeConversionExampleViewModel]": {
             /** Format: int32 */
@@ -10232,7 +10295,7 @@ export interface operations {
             };
         };
     };
-    GetBuiltinMediaLibraryTemplates: {
+    GetMediaLibraryTemplatePresetDataPool: {
         parameters: {
             query?: never;
             header?: never;
@@ -10247,9 +10310,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]"];
+                };
+            };
+        };
+    };
+    AddMediaLibraryTemplateFromPresetBuilder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder"];
+                "application/json": components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder"];
+                "text/json": components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                 };
             };
         };
@@ -11983,6 +12075,35 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SearchResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
+                };
+            };
+        };
+    };
+    SearchAllResourceIds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
                 };
             };
         };

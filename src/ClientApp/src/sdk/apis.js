@@ -7388,15 +7388,15 @@ export const DuplicateMediaLibraryTemplateURL = function(parameters = {}) {
 }
 /**
  * 
- * request: GetBuiltinMediaLibraryTemplates
- * url: GetBuiltinMediaLibraryTemplatesURL
- * method: GetBuiltinMediaLibraryTemplates_TYPE
- * raw_url: GetBuiltinMediaLibraryTemplates_RAW_URL
+ * request: GetMediaLibraryTemplatePresetDataPool
+ * url: GetMediaLibraryTemplatePresetDataPoolURL
+ * method: GetMediaLibraryTemplatePresetDataPool_TYPE
+ * raw_url: GetMediaLibraryTemplatePresetDataPool_RAW_URL
  */
-export const GetBuiltinMediaLibraryTemplates = function(parameters = {}) {
+export const GetMediaLibraryTemplatePresetDataPool = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   const config = parameters.$config
-  let path = '/media-library-template/builtin'
+  let path = '/media-library-template/preset-data-pool'
   let body
   let queryParameters = {}
   let form = {}
@@ -7407,16 +7407,59 @@ export const GetBuiltinMediaLibraryTemplates = function(parameters = {}) {
   }
   return request('get', domain + path, body, queryParameters, form, config)
 }
-export const GetBuiltinMediaLibraryTemplates_RAW_URL = function() {
-  return '/media-library-template/builtin'
+export const GetMediaLibraryTemplatePresetDataPool_RAW_URL = function() {
+  return '/media-library-template/preset-data-pool'
 }
-export const GetBuiltinMediaLibraryTemplates_TYPE = function() {
+export const GetMediaLibraryTemplatePresetDataPool_TYPE = function() {
   return 'get'
 }
-export const GetBuiltinMediaLibraryTemplatesURL = function(parameters = {}) {
+export const GetMediaLibraryTemplatePresetDataPoolURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
-  let path = '/media-library-template/builtin'
+  let path = '/media-library-template/preset-data-pool'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: AddMediaLibraryTemplateFromPresetBuilder
+ * url: AddMediaLibraryTemplateFromPresetBuilderURL
+ * method: AddMediaLibraryTemplateFromPresetBuilder_TYPE
+ * raw_url: AddMediaLibraryTemplateFromPresetBuilder_RAW_URL
+ * @param model - 
+ */
+export const AddMediaLibraryTemplateFromPresetBuilder = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/media-library-template/from-preset-builder'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const AddMediaLibraryTemplateFromPresetBuilder_RAW_URL = function() {
+  return '/media-library-template/from-preset-builder'
+}
+export const AddMediaLibraryTemplateFromPresetBuilder_TYPE = function() {
+  return 'post'
+}
+export const AddMediaLibraryTemplateFromPresetBuilderURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/media-library-template/from-preset-builder'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -10346,6 +10389,49 @@ export const SearchResourcesURL = function(parameters = {}) {
   if (parameters['saveSearch'] !== undefined) {
     queryParameters['saveSearch'] = parameters['saveSearch']
   }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: SearchAllResourceIds
+ * url: SearchAllResourceIdsURL
+ * method: SearchAllResourceIds_TYPE
+ * raw_url: SearchAllResourceIds_RAW_URL
+ * @param model - 
+ */
+export const SearchAllResourceIds = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/resource/search/ids'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const SearchAllResourceIds_RAW_URL = function() {
+  return '/resource/search/ids'
+}
+export const SearchAllResourceIds_TYPE = function() {
+  return 'post'
+}
+export const SearchAllResourceIdsURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/resource/search/ids'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

@@ -203,6 +203,17 @@ namespace Bakabase.Service.Controllers
             return await service.Search(domainModel);
         }
 
+        [HttpPost("search/ids")]
+        [SwaggerOperation(OperationId = "SearchAllResourceIds")]
+        public async Task<ListResponse<int>> SearchAllIds([FromBody] ResourceSearchInputModel model)
+        {
+            model.StandardPageable();
+
+            var domainModel = await model.ToDomainModel(propertyService);
+
+            return new ListResponse<int>(await service.GetAllIds(domainModel));
+        }
+
         [HttpGet("keys")]
         [SwaggerOperation(OperationId = "GetResourcesByKeys")]
         public async Task<ListResponse<Resource>> GetByKeys([FromQuery] int[] ids,

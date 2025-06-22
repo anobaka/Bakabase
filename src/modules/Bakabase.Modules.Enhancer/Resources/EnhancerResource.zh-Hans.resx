@@ -130,10 +130,10 @@
     <value>语言</value>
   </data>
   <data name="Enhancer_Bakabase_Target_Name_Description" xml:space="preserve">
-    <value>资源标题</value>
+    <value>资源名称</value>
   </data>
   <data name="Enhancer_Bakabase_Target_Name_Name" xml:space="preserve">
-    <value>标题</value>
+    <value>名称</value>
   </data>
   <data name="Enhancer_Bakabase_Target_Originals_Description" xml:space="preserve">
     <value>资源涉及的原作</value>
@@ -148,7 +148,7 @@
     <value>资源发布时间</value>
   </data>
   <data name="Enhancer_Bakabase_Target_ReleaseDt_Name" xml:space="preserve">
-    <value>发布时间</value>
+    <value>发行日期</value>
   </data>
   <data name="Enhancer_Bakabase_Target_VolumeName_Description" xml:space="preserve">
     <value>资源的期数名称，如：第2话</value>
@@ -175,10 +175,10 @@
     <value>标签</value>
   </data>
   <data name="Enhancer_ExHentai_Target_Rating_Name" xml:space="preserve">
-    <value>评分(0~5)</value>
+    <value>评分</value>
   </data>
   <data name="Enhancer_ExHentai_Target_Introduction_Name" xml:space="preserve">
-    <value>简介</value>
+    <value>介绍</value>
   </data>
   <data name="Enhancer_ExHentai_Description" xml:space="preserve">
     <value>1. 必须先在系统设置里设置ExHentai的Cookie
@@ -195,10 +195,10 @@
     <value>标签</value>
   </data>
   <data name="Enhancer_Bangumi_Target_Introduction_Name" xml:space="preserve">
-    <value>简介</value>
+    <value>介绍</value>
   </data>
   <data name="Enhancer_Bangumi_Target_Rating_Name" xml:space="preserve">
-    <value>评分(0~10)</value>
+    <value>评分</value>
   </data>
   <data name="Enhancer_Bangumi_Target_OtherPropertiesInLeftPanel_Name" xml:space="preserve">
     <value>左边栏其他属性</value>
@@ -213,7 +213,7 @@
     <value>封面</value>
   </data>
   <data name="Enhancer_Bangumi_Target_Rating_Description" xml:space="preserve">
-    <value>将会随着目标属性的评分范围缩放</value>
+    <value>0~10, 将会随着目标属性的评分范围缩放</value>
   </data>
   <data name="Enhancer_DLsite_Name" xml:space="preserve">
     <value>DLsite</value>
@@ -228,7 +228,7 @@
     <value>封面右侧属性</value>
   </data>
   <data name="Enhancer_DLsite_Target_Introduction_Name" xml:space="preserve">
-    <value>简介</value>
+    <value>介绍</value>
   </data>
   <data name="Enhancer_DLsite_Target_Rating_Name" xml:space="preserve">
     <value>评分</value>
@@ -265,5 +265,8 @@
   </data>
   <data name="Enhancer_ReApplyingEnhancements" xml:space="preserve">
     <value>正在重新应用{0}条增强数据</value>
+  </data>
+  <data name="Enhancer_ExHentai_Target_Rating_Description" xml:space="preserve">
+    <value>0~5</value>
   </data>
 </root>

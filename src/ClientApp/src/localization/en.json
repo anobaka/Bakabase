@@ -264,5 +264,8 @@
   "Deleting template {{name}}": "Deleting template {{name}}",
   "Are you sure to delete variable {{name}}?": "Are you sure to delete variable {{name}}?",
   "If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.": "If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.",
-  "The {{layer}}th layer in media library -> {{propertyName}}": "The {{layer}}th layer in media library -> {{propertyName}}"
+  "The {{layer}}th layer in media library -> {{propertyName}}": "The {{layer}}th layer in media library -> {{propertyName}}",
+  "The {{layer}}th layer": "The {{layer}}th layer",
+  "media-library-template.use-preset-template-builder": "We recommend using our <1>Preset Template Builder</1> the first time you create a media library template",
+  "Select all {{count}} filtered resources (including those not currently loaded).": "Select all {{count}} filtered resources (including those not currently loaded)."
 }

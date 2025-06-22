@@ -605,7 +605,6 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLi
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel {
   name: string;
-  builtinTemplateId?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel {
@@ -793,54 +792,6 @@ export type BakabaseInfrastructuresComponentsGuiIconType = 1 | 2 | 3;
  * @format int32
  */
 export type BakabaseInfrastructuresComponentsGuiUiTheme = 0 | 1 | 2;
-
-export interface BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor {
-  id: string;
-  /** [1: Movie, 2: Anime, 3: Series, 4: Manga, 5: Audio] */
-  type: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateType;
-  typeName: string;
-  /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
-  mediaType: BakabaseInsideWorldModelsConstantsMediaType;
-  name: string;
-  properties: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty[];
-  propertyNames: string[];
-  layeredPropertyNames?: string[];
-  layeredProperties?: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty[];
-  enhancerTargets?: Record<
-    string,
-    BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptorEnhancerTarget[]
-  >;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptorEnhancerTarget {
-  /** @format int32 */
-  target: number;
-  property: BakabaseAbstractionsModelsDomainProperty;
-}
-
-/**
- * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Year, 6: Series, 7: Tag]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateProperty =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7;
-
-/**
- * [1: Movie, 2: Anime, 3: Series, 4: Manga, 5: Audio]
- * @format int32
- */
-export type BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateType =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5;
 
 export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   path: string;
@@ -1414,10 +1365,10 @@ export type BakabaseInsideWorldModelsConstantsExHentaiDownloadTaskType = 1 | 2 |
 export type BakabaseInsideWorldModelsConstantsMediaLibraryFileSystemError = 1 | 2 | 3;
 
 /**
- * [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown]
+ * [1: Image, 2: Audio, 3: Video, 4: Text, 5: Application, 1000: Unknown]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 1000;
+export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 5 | 1000;
 
 /**
  * [1: Resource, 2: Video, 3: Image, 4: Audio]
@@ -1477,7 +1428,7 @@ export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInforma
 
 export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
   filePath: string;
-  /** [1: Image, 2: Audio, 3: Video, 4: Text, 1000: Unknown] */
+  /** [1: Image, 2: Audio, 3: Video, 4: Text, 5: Application, 1000: Unknown] */
   type: BakabaseInsideWorldModelsConstantsMediaType;
   /** @format int32 */
   duration: number;
@@ -1778,6 +1729,12 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
   propertyId?: number;
 }
 
+/**
+ * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex]
+ * @format int32
+ */
+export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId = 1 | 2 | 3 | 4 | 5;
+
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
   options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
   active?: boolean;
@@ -1792,6 +1749,141 @@ export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptions
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   dynamicTarget?: string;
+}
+
+/**
+ * [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type]
+ * @format int32
+ */
+export type BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13
+  | 14
+  | 15
+  | 16
+  | 17
+  | 18
+  | 19
+  | 20
+  | 21
+  | 22
+  | 23
+  | 24
+  | 25
+  | 26
+  | 27
+  | 28
+  | 29;
+
+/**
+ * [1000: Video, 1001: Movie, 1002: Anime, 1003: Ova, 1004: TvSeries, 1005: TvShow, 1006: Documentary, 1007: Clip, 1008: LiveStream, 1009: VideoSubscription, 1010: Av, 1011: AvClip, 1012: AvSubscription, 1013: Mmd, 1014: AdultMmd, 1015: Vr, 1016: VrAv, 1017: VrAnime, 1018: AiVideo, 1019: AsmrVideo, 2000: Image, 2001: Manga, 2002: Comic, 2003: Doushijin, 2004: Artbook, 2005: Illustration, 2006: ArtistCg, 2007: GameCg, 2008: ImageSubscription, 2009: IllustrationSubscription, 2010: MangaSubscription, 2011: Manga3D, 2012: Photograph, 2013: Cosplay, 2014: AiImage, 3000: Audio, 3001: AsmrAudio, 3002: Music, 3003: Podcast, 4000: Application, 4001: Game, 4002: Galgame, 4003: VrGame, 5000: Text, 5001: Novel, 10000: MotionManga, 10001: Mod, 10002: Tool]
+ * @format int32
+ */
+export type BakabaseModulesPresetsAbstractionsModelsConstantsPresetResourceType =
+  | 1000
+  | 1001
+  | 1002
+  | 1003
+  | 1004
+  | 1005
+  | 1006
+  | 1007
+  | 1008
+  | 1009
+  | 1010
+  | 1011
+  | 1012
+  | 1013
+  | 1014
+  | 1015
+  | 1016
+  | 1017
+  | 1018
+  | 1019
+  | 2000
+  | 2001
+  | 2002
+  | 2003
+  | 2004
+  | 2005
+  | 2006
+  | 2007
+  | 2008
+  | 2009
+  | 2010
+  | 2011
+  | 2012
+  | 2013
+  | 2014
+  | 3000
+  | 3001
+  | 3002
+  | 3003
+  | 4000
+  | 4001
+  | 4002
+  | 4003
+  | 5000
+  | 5001
+  | 10000
+  | 10001
+  | 10002;
+
+export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplateCompactBuilder {
+  name: string;
+  /** [1000: Video, 1001: Movie, 1002: Anime, 1003: Ova, 1004: TvSeries, 1005: TvShow, 1006: Documentary, 1007: Clip, 1008: LiveStream, 1009: VideoSubscription, 1010: Av, 1011: AvClip, 1012: AvSubscription, 1013: Mmd, 1014: AdultMmd, 1015: Vr, 1016: VrAv, 1017: VrAnime, 1018: AiVideo, 1019: AsmrVideo, 2000: Image, 2001: Manga, 2002: Comic, 2003: Doushijin, 2004: Artbook, 2005: Illustration, 2006: ArtistCg, 2007: GameCg, 2008: ImageSubscription, 2009: IllustrationSubscription, 2010: MangaSubscription, 2011: Manga3D, 2012: Photograph, 2013: Cosplay, 2014: AiImage, 3000: Audio, 3001: AsmrAudio, 3002: Music, 3003: Podcast, 4000: Application, 4001: Game, 4002: Galgame, 4003: VrGame, 5000: Text, 5001: Novel, 10000: MotionManga, 10001: Mod, 10002: Tool] */
+  resourceType: BakabaseModulesPresetsAbstractionsModelsConstantsPresetResourceType;
+  properties: BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty[];
+  /** @format int32 */
+  resourceLayer: number;
+  layeredProperties?: BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty[];
+  enhancerIds?: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId[];
+}
+
+export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
+  resourceTypes: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolResourceType[];
+  properties: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolProperty[];
+  enhancers: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer[];
+  resourceTypePresetPropertyIds: Record<string, BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty[]>;
+  resourceTypeEnhancerIds: Record<string, BakabaseModulesEnhancerModelsDomainConstantsEnhancerId[]>;
+}
+
+export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer {
+  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex] */
+  id: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId;
+  name: string;
+  description?: string;
+  reservedProperties: BakabaseAbstractionsModelsDomainConstantsReservedProperty[];
+  presetProperties: BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty[];
+}
+
+export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolProperty {
+  /** [1: Name, 2: ReleaseDate, 3: Author, 4: Publisher, 5: Series, 6: Tag, 7: Language, 8: Original, 9: Actor, 10: VoiceActor, 11: Duration, 12: Director, 13: Singer, 14: EpisodeCount, 15: Resolution, 16: AspectRatio, 17: SubtitleLanguage, 18: VideoCodec, 19: IsCensored, 20: Is3D, 21: ImageCount, 22: IsAi, 23: Developer, 24: Character, 25: AudioFormat, 26: Bitrate, 27: Platform, 28: SubscriptionPlatform, 29: Type] */
+  id: BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty;
+  name: string;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+  description?: string;
+}
+
+export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolResourceType {
+  /** [1000: Video, 1001: Movie, 1002: Anime, 1003: Ova, 1004: TvSeries, 1005: TvShow, 1006: Documentary, 1007: Clip, 1008: LiveStream, 1009: VideoSubscription, 1010: Av, 1011: AvClip, 1012: AvSubscription, 1013: Mmd, 1014: AdultMmd, 1015: Vr, 1016: VrAv, 1017: VrAnime, 1018: AiVideo, 1019: AsmrVideo, 2000: Image, 2001: Manga, 2002: Comic, 2003: Doushijin, 2004: Artbook, 2005: Illustration, 2006: ArtistCg, 2007: GameCg, 2008: ImageSubscription, 2009: IllustrationSubscription, 2010: MangaSubscription, 2011: Manga3D, 2012: Photograph, 2013: Cosplay, 2014: AiImage, 3000: Audio, 3001: AsmrAudio, 3002: Music, 3003: Podcast, 4000: Application, 4001: Game, 4002: Galgame, 4003: VrGame, 5000: Text, 5001: Novel, 10000: MotionManga, 10001: Mod, 10002: Tool] */
+  type: BakabaseModulesPresetsAbstractionsModelsConstantsPresetResourceType;
+  name: string;
+  /** [1: Image, 2: Audio, 3: Video, 4: Text, 5: Application, 1000: Unknown] */
+  mediaType: BakabaseInsideWorldModelsConstantsMediaType;
+  description?: string;
 }
 
 export interface BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
@@ -2315,13 +2407,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsViewResourceDisplayNameViewModel[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   /** @format int32 */
   code: number;
@@ -2467,6 +2552,13 @@ export interface BootstrapModelsResponseModelsListResponse1SystemCollectionsGene
   code: number;
   message?: string;
   data?: string[][];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1SystemInt32 {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: number[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1SystemString {
@@ -2812,6 +2904,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewCustomPropertyTypeConversionExampleViewModel {
@@ -5793,6 +5892,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name SearchAllResourceIds
+     * @request POST:/resource/search/ids
+     */
+    searchAllResourceIds: (data: BakabaseServiceModelsInputResourceSearchInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
+        path: `/resource/search/ids`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetResourcesByKeys
      * @request GET:/resource/keys
      */
@@ -7394,16 +7510,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryTemplate
-     * @name GetBuiltinMediaLibraryTemplates
-     * @request GET:/media-library-template/builtin
+     * @name GetMediaLibraryTemplatePresetDataPool
+     * @request GET:/media-library-template/preset-data-pool
      */
-    getBuiltinMediaLibraryTemplates: (params: RequestParams = {}) =>
+    getMediaLibraryTemplatePresetDataPool: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsBuiltinMediaLibraryTemplateBuiltinMediaLibraryTemplateDescriptor,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool,
         any
       >({
-        path: `/media-library-template/builtin`,
+        path: `/media-library-template/preset-data-pool`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplateFromPresetBuilder
+     * @request POST:/media-library-template/from-preset-builder
+     */
+    addMediaLibraryTemplateFromPresetBuilder: (
+      data: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplateCompactBuilder,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template/from-preset-builder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

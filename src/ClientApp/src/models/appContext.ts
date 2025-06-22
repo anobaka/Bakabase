@@ -3,6 +3,7 @@ import BApi, { BApi as BApiType } from '@/sdk/BApi';
 interface IAppContext {
   listeningAddresses: string[];
   apiEndpoint?: string;
+  apiEndpoints?: string[];
   bApi2: BApiType;
 }
 export default {

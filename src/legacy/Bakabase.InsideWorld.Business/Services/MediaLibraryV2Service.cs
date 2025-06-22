@@ -59,7 +59,7 @@ public class MediaLibraryV2Service<TDbContext>(
         await orm.UpdateByKey(id, data =>
         {
             data.Name = model.Name;
-            data.Path = model.Path;
+            data.Path = model.Path.StandardizePath()!;
         });
     }
 
@@ -69,7 +69,7 @@ public class MediaLibraryV2Service<TDbContext>(
         {
             if (model.Path.IsNotEmpty())
             {
-                data.Path = model.Path;
+                data.Path = model.Path.StandardizePath()!;
             }
 
             if (model.Name.IsNotEmpty())
@@ -86,6 +86,11 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task SaveAll(MediaLibraryV2[] models)
     {
+        foreach (var m in models)
+        {
+            m.Path = m.Path.StandardizePath()!;
+        }
+
         var newData = models.Where(x => x.Id == 0).ToArray();
         var dbData = models.Except(newData).ToArray();
         var ids = dbData.Select(x => x.Id).ToArray();

@@ -2,7 +2,8 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
-using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
+using Bakabase.Modules.Presets.Abstractions;
+using Bakabase.Modules.Presets.Abstractions.Models;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ namespace Bakabase.Service.Controllers;
 [Route("~/media-library-template")]
 public class MediaLibraryTemplateController(
     IMediaLibraryTemplateService service,
-    BuiltinMediaLibraryTemplateService builtinMediaLibraryTemplateService) : ControllerBase
+    IPresetsService presetsService) : ControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryTemplates")]
@@ -106,10 +107,17 @@ public class MediaLibraryTemplateController(
         return BaseResponseBuilder.Ok;
     }
 
-    [HttpGet("builtin")]
-    [SwaggerOperation(OperationId = "GetBuiltinMediaLibraryTemplates")]
-    public async Task<ListResponse<BuiltinMediaLibraryTemplateDescriptor>> GetBuiltinTemplates()
+    [HttpGet("preset-data-pool")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryTemplatePresetDataPool")]
+    public async Task<SingletonResponse<MediaLibraryTemplatePresetDataPool>> GetPresetDataPool()
     {
-        return new ListResponse<BuiltinMediaLibraryTemplateDescriptor>(builtinMediaLibraryTemplateService.GetAll());
+        return new(presetsService.GetMediaLibraryTemplatePresetDataPool());
+    }
+
+    [HttpPost("from-preset-builder")]
+    [SwaggerOperation(OperationId = "AddMediaLibraryTemplateFromPresetBuilder")]
+    public async Task<SingletonResponse<int>> AddFromPresetBuilder([FromBody] MediaLibraryTemplateCompactBuilder model)
+    {
+        return new(data: await presetsService.AddMediaLibrary(model));
     }
 }

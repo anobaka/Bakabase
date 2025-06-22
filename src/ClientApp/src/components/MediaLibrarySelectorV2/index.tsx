@@ -10,7 +10,7 @@ import { Button, Chip, Divider, Input, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 type Props = {
-  onSelect: (id: number) => (Promise<any> | any);
+  onSelect: (id: number, isLegacyMediaLibrary: boolean) => (Promise<any> | any);
   confirmation?: boolean;
 } & DestroyableProps;
 
@@ -25,7 +25,7 @@ type Category = {
   libraries: Library[];
 };
 
-const log = buildLogger('MediaLibraryPathSelectorV2');
+const log = buildLogger('MediaLibrarySelectorV2');
 
 export default (props: Props) => {
   const { t } = useTranslation();
@@ -37,30 +37,36 @@ export default (props: Props) => {
   const [keyword, setKeyword] = useState<string>();
   const resourceOptions = store.useModelState('resourceOptions');
 
-  // log(fsOptions);
+  const init = async () => {
+    const mls = (await BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })).data ?? [];
+    const data: Record<number, Category> = {};
+    for (const ml of mls) {
+      const paths: string[] | undefined = ml.pathConfigurations?.map(pc => pc.path).filter((x): x is string => x != null);
+      if (paths && paths.length > 0) {
+        if (!(ml.categoryId in data)) {
+          data[ml.categoryId] = {
+            id: ml.categoryId,
+            name: ml.category!.name,
+            libraries: [],
+          };
+        }
+        const { libraries } = data[ml.categoryId]!;
+        libraries.push({
+          id: ml.id,
+          name: ml.name,
+          paths: paths,
+        });
+      }
+    }
+    const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
+    if (mlv2s.length > 0) {
+      data[0] = { id: 0, name: t('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: [ml.path] })) };
+    }
+    setCategories(Object.values(data));
+  };
 
   useEffect(() => {
-    BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })
-      .then((a) => {
-        const data: Record<number, Category> = {};
-        for (const ml of a.data || []) {
-          if (!(ml.categoryId in data)) {
-            data[ml.categoryId] = {
-              id: ml.categoryId,
-              name: ml.category!.name,
-              libraries: [],
-            };
-          }
-          const { libraries } = data[ml.categoryId];
-          libraries.push({
-            id: ml.id,
-            name: ml.name,
-          });
-        }
-        setCategories(Object.values(data));
-      });
-    return () => {
-    };
+    init();
   }, []);
 
 
@@ -116,6 +122,15 @@ export default (props: Props) => {
                 >
                   <div>
                     {c.name}
+                    {c.id != 0 && (
+                      <Chip
+                        size={'sm'}
+                        variant={'flat'}
+                        radius={'sm'}
+                      >
+                        {t('Deprecated')}
+                      </Chip>
+                    )}
                   </div>
                   <div>
                     {c.libraries
@@ -146,12 +161,12 @@ export default (props: Props) => {
                                     </div>
                                   ),
                                   onOk: async () => {
-                                    onSelect?.(l.id);
+                                    onSelect?.(l.id, c.id != 0);
                                     setVisible(false);
                                   },
                                 });
                               } else {
-                                onSelect?.(l.id);
+                                onSelect?.(l.id, c.id != 0);
                                 setVisible(false);
                               }
                             }}

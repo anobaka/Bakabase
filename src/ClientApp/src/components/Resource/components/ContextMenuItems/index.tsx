@@ -62,10 +62,11 @@ export default ({
           log('inner', 'click');
           createPortal(MediaLibrarySelectorV2, {
             confirmation: true,
-            onSelect: async (id) => {
+            onSelect: async (id, isLegacyMediaLibrary) => {
               await BApi.resource.moveResources({
                 ids: selectedResourceIds,
                 mediaLibraryId: id,
+                isLegacyMediaLibrary,
               }).then(r => {
                 onSelectedResourcesChanged?.(selectedResourceIds);
               });

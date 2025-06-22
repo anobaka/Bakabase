@@ -1936,6 +1936,7 @@
   "MediaType.Audio": "音频",
   "MediaType.Text": "文本",
   "MediaType.Image": "图片",
+  "MediaType.Application": "应用",
   "The {{layer}}th layer of path -> {{propertyName}}": "路径第 {{layer}} 层 -> {{propertyName}}",
   "Builtin media library templates": "内置媒体库模板",
   "Select a builtin template": "选择一个内置模板",
@@ -1954,5 +1955,16 @@
   "No enhancer configured": "未配置增强器",
   "Search templates": "搜索模板",
   "Collapse all": "全部折叠",
-  "Expand all": "全部展开"
+  "Expand all": "全部展开",
+  "No properties enhanced": "没有属性被增强",
+  "The {{layer}}th layer": "第 {{layer}} 层",
+  "Set a name for this template": "为此模板设置一个名称",
+  "Preset media library template builder": "预设媒体库模板构建器",
+  "Resource layer": "资源层级",
+  "Set the directory name between the media library and the resource as a property of the resource": "将媒体库和资源之间的目录名称设置为资源的属性",
+  "You can configure how many levels deep the resource path should be under the media library path, and you can assign the intermediate directories as property values of the resource": "您可以设置资源路径在媒体库路径后第几层，并且可以将中间的目录设置为资源的属性值",
+  "media-library-template.use-preset-template-builder": "如果您是首次创建媒体库模板，推荐您使用<1>预置媒体库模板构建器</1>",
+  "Preset template builder": "预置媒体库模板构建器",
+  "Select all {{count}} filtered resources (including those not currently loaded).": "选择{{count}}个筛选后的资源（包括尚未加载的资源）",
+  "Deprecated": "已弃用"
 }

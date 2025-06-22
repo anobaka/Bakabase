@@ -77,9 +77,18 @@ public static class ResourceSearchExtensions
                 return null;
             }
 
+            // The value may use a different property type than the property itself
+            var valueProperty = property;
+            var ph = PropertyInternals.PropertySearchHandlerMap[property.Type];
+            var conversion = ph.SearchOperations[f.Operation!.Value];
+            if (conversion?.ConvertProperty != null)
+            {
+                valueProperty = conversion.ConvertProperty(property);
+            }
+
             return new ResourceSearchFilter
             {
-                DbValue = f.DbValue?.DeserializeAsStandardValue(property.Type.GetDbValueType()),
+                DbValue = f.DbValue?.DeserializeAsStandardValue(valueProperty.Type.GetDbValueType()),
                 Operation = f.Operation!.Value,
                 Property = property,
                 PropertyId = f.PropertyId!.Value,

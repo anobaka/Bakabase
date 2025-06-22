@@ -2,6 +2,6 @@
 
 public record SharableMediaLibraryTemplateProperty
 {
-    public Bakabase.Abstractions.Models.Domain.Property Property { get; set; } = null!;
+    public Property Property { get; set; } = null!;
     public List<PathLocator>? ValueLocators { get; set; }
 }

@@ -5,7 +5,6 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Ai;
-using Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.Legacy;
@@ -23,6 +22,7 @@ using Bakabase.Migrations.V190;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
+using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.ThirdParty.Extensions;
@@ -140,7 +140,7 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<OllamaApiClientAccessor>();
             services.AddSingleton<TampermonkeyService>();
 
-            services.AddBuiltinMediaLibraryTemplates();
+            services.AddPresets();
 
             #endregion
 

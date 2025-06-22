@@ -22,7 +22,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import BApi from '@/sdk/BApi';
 import { isNotEmpty } from '@/components/utils';
 import type { components } from '@/sdk/BApi2';
-import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/BuiltinTemplateSelector';
+import PresetTemplateBuilder from '@/pages/MediaLibraryTemplate/components/PresetTemplateBuilder';
 
 type MediaLibrary = components['schemas']['Bakabase.Abstractions.Models.Domain.MediaLibraryV2'];
 
@@ -54,6 +54,7 @@ export default () => {
   const loadTemplates = async () => {
     const r = await BApi.mediaLibraryTemplate.getAllMediaLibraryTemplates();
     const tpls = r.data ?? [];
+    // @ts-ignore
     setTemplates(tpls);
     templatesRef.current = tpls.reduce((s, t) => {
       s[t.id] = t;
@@ -203,13 +204,9 @@ export default () => {
                       const idStr = arr[0] as string;
                       const value = parseInt(idStr, 10);
                       if (value == -1) {
-                        createPortal(BuiltinTemplateSelector, {
-                          onSelect: async (template) => {
-                            e.templateId = (await BApi.mediaLibraryTemplate
-                              .addMediaLibraryTemplate({
-                                name: template.name,
-                                builtinTemplateId: template.id,
-                              })).data;
+                        createPortal(PresetTemplateBuilder, {
+                          onSubmitted: async (id) => {
+                            e.templateId = id;
                             await loadTemplates();
                           },
                         });

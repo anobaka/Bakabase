@@ -1,25 +1,25 @@
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import { Button, Input, Modal } from '@/components/bakaui';
-import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/BuiltinTemplateSelector';
+import { Button, Divider, Input, Modal } from '@/components/bakaui';
+import BuiltinTemplateSelector from '@/pages/MediaLibraryTemplate/components/PresetTemplateBuilder';
 import type { components } from '@/sdk/BApi2';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 
-type BuiltinTemplate = components['schemas']['Bakabase.InsideWorld.Business.Components.BuiltinMediaLibraryTemplate.BuiltinMediaLibraryTemplateDescriptor'];
 type Props = {} & DestroyableProps;
 
 export default ({ onDestroyed }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [name, setName] = useState<string>();
-  const [builtinTemplate, setBuiltinTemplate] = useState<BuiltinTemplate>();
+  const [visible, setVisible] = useState<boolean>(true);
 
   return (
     <Modal
       size={'md'}
+      visible={visible}
       title={t('Add a media library template')}
       defaultVisible
       onDestroyed={onDestroyed}
@@ -31,7 +31,7 @@ export default ({ onDestroyed }: Props) => {
       }}
       onOk={async () => {
         const r = await BApi.mediaLibraryTemplate
-          .addMediaLibraryTemplate({ name: name!, builtinTemplateId: builtinTemplate?.id });
+          .addMediaLibraryTemplate({ name: name! });
         if (r.code) {
           throw new Error(r.message);
         }
@@ -47,29 +47,26 @@ export default ({ onDestroyed }: Props) => {
             value={name}
           />
         </div>
-        <div className={'flex items-center gap-1'}>
-          <Button
-            variant={'light'}
-            onPress={() => {
-              createPortal(
-                BuiltinTemplateSelector, {
-                  onSelect: template => {
-                    setBuiltinTemplate(template);
-                    if (name == undefined || name.length == 0) {
-                      setName(template.name);
-                    }
+        <div className={''}>
+          <Trans i18nKey={'media-library-template.use-preset-template-builder'}>
+            We recommend using our
+            <Button
+              size={'sm'}
+              variant={'light'}
+              onPress={() => {
+                setVisible(false);
+                createPortal(
+                  BuiltinTemplateSelector, {
+                    onSubmitted: onDestroyed,
                   },
-                },
-              );
-            }}
-            color={builtinTemplate ? 'success' : 'primary'}
-          >
-            {builtinTemplate ? (
-              <div>
-                {t('Use base template')}&nbsp;{builtinTemplate.name}
-              </div>
-            ) : `${t('Select a base template')}(${t('Optional')})`}
-          </Button>
+                );
+              }}
+              color={'primary'}
+            >
+              {t('Preset template builder')}
+            </Button>
+            the first time you create a media library template.
+          </Trans>
         </div>
       </div>
     </Modal>
