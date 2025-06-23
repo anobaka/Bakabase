@@ -258,20 +258,12 @@ export default ({
                   <div className={'flex flex-col items-center gap-2 justify-center'}>
                     <div className={'w-4/5'}>
                       <DisconnectOutlined className={'text-base mr-1'} />
-                      {t('No property available. Please bind properties to category if you need to show them.')}
-                      <Button
-                        onClick={() => {
-                          history?.push('/category');
-                        }}
-                        variant={'light'}
-                        size={'sm'}
-                        color={'primary'}
-                      >{t('Go to category page')}</Button>
+                      {t('No custom property bound. You can bind them in media library template')}
                     </div>
                   </div>
                 )}
               />
-              <div className={'flex flex-col gap-1'}>
+              <div className={'flex flex-col gap-1 mt-2'}>
                 <Properties
                   resource={resource}
                   reload={loadResource}

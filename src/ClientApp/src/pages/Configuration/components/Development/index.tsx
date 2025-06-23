@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
   Button,
   Snippet, Table,
@@ -12,7 +13,6 @@ import {
 } from '@/components/bakaui';
 import store from '@/store';
 import ExternalLink from '@/components/ExternalLink';
-import CustomIcon from '@/components/CustomIcon';
 
 export default () => {
   const { t } = useTranslation();
@@ -22,33 +22,29 @@ export default () => {
 
   const items = [
     {
-      label: 'Listening addresses',
-      value: (
-        <div className={'flex flex-wrap gap-1 items-center'}>
-          {appContext.listeningAddresses?.map(x => (
-            <Snippet
-              symbol={<>&nbsp;</>}
-              size={'sm'}
-              variant={'flat'}
-            >
-              {x}
-            </Snippet>
-          ))}
+      label: 'API endpoints',
+      tip: (
+        <div>
+          {t('Listening addresses:')}
+          {appContext.listeningAddresses.map(addr => {
+            return (
+              <div>{addr}</div>
+            );
+          })}
         </div>
       ),
-    },
-    {
-      label: 'API endpoint',
       value: (
-        appContext.apiEndpoint && (
+        appContext.apiEndpoints && (
           <div className={'flex flex-wrap gap-1 items-center'}>
-            <Snippet
-              symbol={<>&nbsp;</>}
-              size={'sm'}
-              variant={'flat'}
-            >
-              {appContext.apiEndpoint}
-            </Snippet>
+            {appContext.apiEndpoints?.map(x => (
+              <Snippet
+                symbol={<>&nbsp;</>}
+                size={'sm'}
+                variant={'flat'}
+              >
+                {x}
+              </Snippet>
+            ))}
           </div>
         )
       ),
@@ -75,8 +71,13 @@ export default () => {
           return (
             <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
               <TableCell>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div className={'flex items-center gap-1'}>
                   {t(c.label)}
+                  {c.tip && (
+                    <Tooltip content={c.tip}>
+                      <QuestionCircleOutlined className={'text-base'} />
+                    </Tooltip>
+                  )}
                 </div>
               </TableCell>
               <TableCell>
