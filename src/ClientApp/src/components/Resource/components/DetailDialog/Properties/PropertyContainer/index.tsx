@@ -12,6 +12,7 @@ import type { IProperty } from '@/components/Property/models';
 import { buildLogger } from '@/components/utils';
 import { serializeStandardValue } from '@/components/StandardValue/helpers';
 import { PropertyLabel } from '@/components/Property/v2';
+import BriefProperty from '@/components/Chips/Property/BriefProperty';
 
 export type PropertyContainerProps = {
   valueScopePriority: PropertyValueScope[];
@@ -77,64 +78,58 @@ export default (props: PropertyContainerProps) => {
     <>
       {!hidePropertyName && (
         <div className={`flex ${classNames?.name}`}>
-          <Tooltip
-            content={(
-              <div>
-                <div>{`${t(PropertyPool[property.pool])}${t('Property')}`}</div>
-                <div className={'flex items-center gap-1'}>
-                  {isLinked ? t('This property is linked to the current media library template or category(deprecated)') : t('This property is not yet linked to the current media library template or category(deprecated)')}
-                  {isLinked ? (
-                    <Button
-                      size={'sm'}
-                      variant={'light'}
-                      color={'warning'}
-                      onPress={async () => {
-                        await BApi.category.unlinkCustomPropertyFromCategory(categoryId, property.id);
-                        setIsLinked(!isLinked);
-                      }}
-                    >
-                      <DisconnectOutlined className={'text-small'} />
-                      {t('Unlink')}
-                    </Button>
-                  ) : (
-                    <Button
-                      size={'sm'}
-                      variant={'light'}
-                      color={'secondary'}
-                      onPress={async () => {
-                        await BApi.category.bindCustomPropertyToCategory(categoryId, property.id);
-                        setIsLinked(!isLinked);
-                      }}
-                    >
-                      <ApiOutlined className={'text-small'} />
-                      {t('Link')}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          >
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-              color={property.pool == PropertyPool.Custom ? 'secondary' : 'default'}
-              // variant={'light'}
-            >
-              <div className={'flex items-center'}>
-                <PropertyLabel property={property} />
-              </div>
-            </Chip>
-            {/* <Chip */}
-            {/*   className={'whitespace-break-spaces py-1 h-auto break-all'} */}
-            {/*   size={'sm'} */}
-            {/*   radius={'sm'} */}
-            {/*   color={property.pool == PropertyPool.Custom ? 'secondary' : 'default'} */}
-            {/*   // variant={'light'} */}
-            {/* > */}
-            {/*   {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id]!)} */}
-            {/* </Chip> */}
-          </Tooltip>
+          <BriefProperty property={property} hideType />
         </div>
+        // <div className={`flex ${classNames?.name}`}>
+        //   <Tooltip
+        //     content={(
+        //       <div>
+        //         <div>{`${t(PropertyPool[property.pool])}${t('Property')}`}</div>
+        //         <div className={'flex items-center gap-1'}>
+        //           {isLinked ? t('This property is linked to the current media library template or category(deprecated)') : t('This property is not yet linked to the current media library template or category(deprecated)')}
+        //           {isLinked ? (
+        //             <Button
+        //               size={'sm'}
+        //               variant={'light'}
+        //               color={'warning'}
+        //               onPress={async () => {
+        //                 await BApi.category.unlinkCustomPropertyFromCategory(categoryId, property.id);
+        //                 setIsLinked(!isLinked);
+        //               }}
+        //             >
+        //               <DisconnectOutlined className={'text-small'} />
+        //               {t('Unlink')}
+        //             </Button>
+        //           ) : (
+        //             <Button
+        //               size={'sm'}
+        //               variant={'light'}
+        //               color={'secondary'}
+        //               onPress={async () => {
+        //                 await BApi.category.bindCustomPropertyToCategory(categoryId, property.id);
+        //                 setIsLinked(!isLinked);
+        //               }}
+        //             >
+        //               <ApiOutlined className={'text-small'} />
+        //               {t('Link')}
+        //             </Button>
+        //           )}
+        //         </div>
+        //       </div>
+        //     )}
+        //   >
+        //     <BriefProperty property={property} hideType />
+        //     {/* <Chip */}
+        //     {/*   className={'whitespace-break-spaces py-1 h-auto break-all'} */}
+        //     {/*   size={'sm'} */}
+        //     {/*   radius={'sm'} */}
+        //     {/*   color={property.pool == PropertyPool.Custom ? 'secondary' : 'default'} */}
+        //     {/*   // variant={'light'} */}
+        //     {/* > */}
+        //     {/*   {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id]!)} */}
+        //     {/* </Chip> */}
+        //   </Tooltip>
+        // </div>
       )}
       <div
         className={`flex items-center gap-2 break-all ${classNames?.value}`}

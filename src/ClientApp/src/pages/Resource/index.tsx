@@ -285,13 +285,12 @@ export default () => {
           });
         }}
         rearrangeResources={() => resourcesComponentRef.current?.rearrange()}
-        onSelectAllChange={(selected, includeNotLoaded) => {
+        onSelectAllChange={async (selected, includeNotLoaded) => {
           if (selected) {
             if (includeNotLoaded) {
-              BApi.resource.searchAllResourceIds(searchForm).then(r => {
-                const ids = r.data || [];
-                setSelectedIds(ids);
-              });
+              const r = await BApi.resource.searchAllResourceIds(searchForm ?? { page: 1, pageSize: 100000000 });
+              const ids = r.data || [];
+              setSelectedIds(ids);
             } else {
               setSelectedIds(resources.map(r => r.id));
             }

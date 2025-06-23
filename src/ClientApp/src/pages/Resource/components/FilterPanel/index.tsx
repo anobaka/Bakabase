@@ -10,7 +10,7 @@ import {
   SnippetsOutlined,
 } from '@ant-design/icons';
 import toast from 'react-hot-toast';
-import { AiOutlineDatabase, AiOutlineSearch } from 'react-icons/ai';
+import { AiOutlineFilter, AiOutlineSearch } from 'react-icons/ai';
 import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
@@ -18,7 +18,7 @@ import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
-import { Button, Checkbox, Chip, Input, Modal, Popover, Tooltip } from '@/components/bakaui';
+import { Button, Checkbox, Chip, Input, Modal, Popover, Spinner, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import type { SavedSearchRef } from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import SavedSearches from '@/pages/Resource/components/FilterPanel/SavedSearches';
@@ -74,6 +74,8 @@ export default ({
 
   const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
   const [searching, setSearching] = useState(false);
+
+  const [selectingAllFilteredResources, setSelectingAllFilteredResources] = useState(false);
 
   const savedSearchesRef = useRef<SavedSearchRef>(null);
 
@@ -256,7 +258,7 @@ export default ({
             </Chip>
           )}
           <Popover
-            trigger={<QuestionCircleOutlined className={'text-lg'} />}
+            trigger={<QuestionCircleOutlined className={'text-base'} />}
             color={'success'}
           >
             <div className={'flex flex-col gap-1'}>
@@ -268,14 +270,24 @@ export default ({
             content={(
               <div className={'flex items-center gap-1'}>
                 {t('Resources loaded in current page')}
-                {totalFilteredResourceCount != resourceCount && (
+                {selectingAllFilteredResources ? (
+                  <Spinner size={'sm'} />
+                ) : (totalFilteredResourceCount != resourceCount) && (
                   <Button
                     size={'sm'}
                     variant={'light'}
                     color={'primary'}
                     onPress={async () => {
                       setSelectedAll(true);
-                      onSelectAllChange(true, true);
+                      setSelectingAllFilteredResources(true);
+                      try {
+                        const ret = onSelectAllChange(true, true);
+                        if (!!ret && typeof ret.then === 'function') {
+                          await ret;
+                        }
+                      } finally {
+                        setSelectingAllFilteredResources(false);
+                      }
                     }}
                   >{t('Select all {{count}} filtered resources (including those not currently loaded).', { count: totalFilteredResourceCount })}</Button>
                 )}
@@ -292,10 +304,15 @@ export default ({
             >{selectedAll ? t('{{count}} items selected', { count: selectedResourceIds?.length }) : t('Select all')}</Checkbox>
           </Tooltip>
           <HandleUnknownResources onHandled={() => search({})} />
-          {(resourceCount && resourceCount > 0) ? (
+          {(totalFilteredResourceCount && totalFilteredResourceCount > 0) ? (
             <div className={'flex items-center gap-1'}>
-              <AiOutlineDatabase className={'text-medium'} />
-              {resourceCount}
+              <Tooltip content={t('Loaded resources')}>
+                <span className={'text-success'} >{resourceCount}</span>
+              </Tooltip>
+              /
+              <Tooltip content={t('All filtered resources')}>
+                <span className={'text-secondary'} >{totalFilteredResourceCount}</span>
+              </Tooltip>
             </div>
           ) : null}
           <OrderSelector

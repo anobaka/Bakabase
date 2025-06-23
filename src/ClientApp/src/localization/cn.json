@@ -1966,5 +1966,8 @@
   "media-library-template.use-preset-template-builder": "如果您是首次创建媒体库模板，推荐您使用<1>预置媒体库模板构建器</1>",
   "Preset template builder": "预置媒体库模板构建器",
   "Select all {{count}} filtered resources (including those not currently loaded).": "选择{{count}}个筛选后的资源（包括尚未加载的资源）",
-  "Deprecated": "已弃用"
+  "Deprecated": "已弃用",
+  "Loaded resources": "已加载资源",
+  "All filtered resources": "所有筛选后的资源",
+  "No custom property bound. You can bind them in media library template": "没有绑定自定义属性。您可以在媒体库模板中绑定它们"
 }
