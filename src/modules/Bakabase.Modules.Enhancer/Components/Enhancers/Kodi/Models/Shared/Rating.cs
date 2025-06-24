@@ -1,8 +1,6 @@
-﻿using System.Text.Json.Serialization;
-using System.Xml.Serialization;
-using Newtonsoft.Json;
+﻿using System.Xml.Serialization;
 
-namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models;
+namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models.Shared;
 
 public record Rating
 {

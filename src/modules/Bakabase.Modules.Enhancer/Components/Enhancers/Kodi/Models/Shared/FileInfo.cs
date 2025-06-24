@@ -1,6 +1,6 @@
 ﻿using System.Xml.Serialization;
 
-namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models;
+namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models.Shared;
 
 public record FileInfo
 {
