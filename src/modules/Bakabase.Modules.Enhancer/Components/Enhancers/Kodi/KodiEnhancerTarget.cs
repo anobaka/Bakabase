@@ -2,5 +2,7 @@
 
 public enum KodiEnhancerTarget
 {
-    
+    Title = 1,
+    Votes,
+    Covers,
 }

@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models.Shared;
+using System.Collections.Generic;
 using System.Xml.Serialization;
+using FileInfo = Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models.Shared.FileInfo;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models;
 
