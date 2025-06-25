@@ -55,6 +55,7 @@ const PropertySelector = (props: IProps) => {
 
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [selection, setSelection] = useState<Key[]>(propsSelection || []);
+  const [visible, setVisible] = useState(true);
 
   // console.log('props selection', propsSelection, properties, addable, editable, removable);
 
@@ -148,7 +149,8 @@ const PropertySelector = (props: IProps) => {
       await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.pool == s.pool))
         .filter(x => x != undefined) as IProperty[]);
     }
-  };
+    setVisible(false);
+};
 
   // console.log('render', reservedProperties, customProperties);
 
@@ -275,13 +277,16 @@ const PropertySelector = (props: IProps) => {
   return (
     <Modal
       size={'xl'}
-      defaultVisible
+      visible={visible}
       onOk={async () => {
         await onSubmit(selection);
       }}
       onDestroyed={onDestroyed}
       title={title ?? t(multiple ? 'Select properties' : 'Select a property')}
       footer={(multiple && propertyCount > 0) ? true : (<Spacer />)}
+      onClose={() => {
+        setVisible(false);
+      }}
     >
       <div>
         {renderFilter()}

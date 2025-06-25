@@ -56,10 +56,27 @@ public class MediaLibraryTemplateService<TDbContext>(
     protected IPresetsService BuiltinMediaLibraryTemplateService => GetRequiredService<IPresetsService>();
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
 
-    protected async Task Populate(Abstractions.Models.Domain.MediaLibraryTemplate[] templates)
+    protected async Task Populate(MediaLibraryTemplate[] templates)
     {
         var propertyKeysMap = templates.SelectMany(x => x.Properties ?? []).GroupBy(d => d.Pool)
             .ToDictionary(d => d.Key, d => d.Select(x => x.Id).ToHashSet());
+
+        foreach (var template in templates)
+        {
+            if (template.Enhancers != null)
+            {
+                foreach (var enhancer in template.Enhancers)
+                {
+                    if (enhancer.TargetOptions != null)
+                    {
+                        foreach (var to in enhancer.TargetOptions)
+                        {
+                            propertyKeysMap.GetOrAdd(to.PropertyPool, () => []).Add(to.PropertyId);
+                        }
+                    }
+                }
+            }
+        }
 
         var propertiesMap = (await propertyService.GetProperties((PropertyPool)propertyKeysMap.Keys.Sum(x => (int)x)))
             .ToMap();
@@ -71,6 +88,21 @@ public class MediaLibraryTemplateService<TDbContext>(
                 foreach (var p in template.Properties)
                 {
                     p.Property = propertiesMap.GetValueOrDefault(p.Pool)?.GetValueOrDefault(p.Id);
+                }
+            }
+
+            if (template.Enhancers != null)
+            {
+                foreach (var enhancer in template.Enhancers)
+                {
+                    if (enhancer.TargetOptions != null)
+                    {
+                        foreach (var to in enhancer.TargetOptions)
+                        {
+                            to.Property = propertiesMap.GetValueOrDefault(to.PropertyPool)
+                                ?.GetValueOrDefault(to.PropertyId);
+                        }
+                    }
                 }
             }
         }

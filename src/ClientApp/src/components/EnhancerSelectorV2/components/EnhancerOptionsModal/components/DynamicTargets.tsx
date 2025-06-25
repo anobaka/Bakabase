@@ -14,6 +14,7 @@ import { buildLogger, generateNextWithPrefix } from '@/components/utils';
 import OtherOptionsTip
   from '@/components/EnhancerSelectorV2/components/EnhancerOptionsModal/components/OtherOptionsTip';
 import type { PropertyMap } from '@/components/types';
+import PropertiesMatcher from '@/components/PropertiesMatcher';
 
 type Props = {
   propertyMap?: PropertyMap;
@@ -98,7 +99,31 @@ export default (props: Props) => {
                     {t('This is not a fixed enhancement target, which will be replaced with other content when data is collected')}
                   </Popover>
                 </TableColumn>
-                <TableColumn width={'25%'}>{t('Save as property')}</TableColumn>
+                <TableColumn width={'25%'} className={'flex items-center gap-1'}>
+                  {t('Bind property')}
+                  {(subOptions.length > 0) && (
+                    <PropertiesMatcher
+                      properties={enhancer.targets.map(td => ({
+                        type: td.propertyType,
+                        name: td.name,
+                      }))}
+                      onValueChanged={ps => {
+                        for (let i = 0; i < ps.length; i++) {
+                          const p = ps[i];
+                          if (p) {
+                            subOptions[i] = {
+                              ...subOptions[i],
+                              propertyId: p.id,
+                              propertyPool: p.pool,
+                              target: enhancer.targets[i]!.id,
+                            };
+                          }
+                        }
+                        updateGroups(groups);
+                      }}
+                    />
+                  )}
+                </TableColumn>
                 <TableColumn width={'25%'}>
                   <div className={'flex items-center gap-1'}>
                     {t('Other options')}

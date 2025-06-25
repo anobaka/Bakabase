@@ -14,13 +14,14 @@ type Options = {
   coverSelectOrder?: CoverSelectOrder;
 };
 
-interface IProps {
+type Props = {
   options?: Options;
   optionsItems?: EnhancerTargetOptionsItem[];
   onChange?: (options: Partial<EnhancerTargetFullOptions>) => void;
-}
+  isDisabled?: boolean;
+};
 
-export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
+export default ({ options: propsOptions, optionsItems, onChange, isDisabled }: Props) => {
   const { t } = useTranslation();
   const [options, setOptions] = useState<Options>(propsOptions ?? {});
 
@@ -46,34 +47,37 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
     <>
       {optionsItems?.map((item, index) => {
         switch (item) {
-          case EnhancerTargetOptionsItem.AutoMatchMultilevelString:
-            return (
-              <Checkbox
-                size={'sm'}
-                isSelected={finalOptions.autoMatchMultilevelString ?? false}
-                onValueChange={o => patchOptions({ autoMatchMultilevelString: o })}
-              >
-                {t('Auto match on empty values')}
-              </Checkbox>
-            );
-          case EnhancerTargetOptionsItem.AutoBindProperty:
-            return (
-              <Checkbox
-                size={'sm'}
-                isSelected={finalOptions.autoBindProperty ?? false}
-                onValueChange={o => patchOptions({ autoBindProperty: o })}
-              >
-                {t('Auto bind property')}
-              </Checkbox>
-            );
+          // case EnhancerTargetOptionsItem.AutoMatchMultilevelString:
+          //   return (
+          //     <Checkbox
+          //       size={'sm'}
+          //       isSelected={finalOptions.autoMatchMultilevelString ?? false}
+          //       onValueChange={o => patchOptions({ autoMatchMultilevelString: o })}
+          //     >
+          //       {t('Auto match on empty values')}
+          //     </Checkbox>
+          //   );
+          // case EnhancerTargetOptionsItem.AutoBindProperty:
+          //   return (
+          //     <Checkbox
+          //       size={'sm'}
+          //       isSelected={finalOptions.autoBindProperty ?? false}
+          //       onValueChange={o => patchOptions({ autoBindProperty: o })}
+          //     >
+          //       {t('Auto bind property')}
+          //     </Checkbox>
+          //   );
           case EnhancerTargetOptionsItem.CoverSelectOrder:
             return (
               <CoverSelectOrderComp
+                isDisabled={isDisabled}
                 key={item}
                 coverSelectOrder={finalOptions.coverSelectOrder}
                 onChange={o => patchOptions({ coverSelectOrder: o })}
               />
             );
+          default:
+            return null;
         }
       })}
     </>

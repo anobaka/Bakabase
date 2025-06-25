@@ -1972,5 +1972,9 @@
   "No custom property bound. You can bind them in media library template": "没有绑定自定义属性。您可以在媒体库模板中绑定它们",
   "Configure enhancer:{{enhancerName}}": "配置增强器：{{enhancerName}}",
   "Configured": "已配置",
-  "Bind property": "绑定属性"
+  "Bind property": "绑定属性",
+  "You can": "您可以",
+  "Automatically match property": "自动匹配属性",
+  "Automatically create a new property": "自动创建新属性",
+  "Select manually": "手动选择"
 }

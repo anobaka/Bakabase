@@ -1,22 +1,24 @@
 import type {
   EnhancerId,
-  EnhancerTargetOptionsItem,
+  EnhancerTargetOptionsItem, PropertyType,
+  StandardValueType } from '@/sdk/constants';
+import {
   ReservedProperty,
-  StandardValueType,
 } from '@/sdk/constants';
 
-export interface EnhancerDescriptor {
+export type EnhancerDescriptor = {
   id: EnhancerId;
   name: string;
   description?: string;
   targets: EnhancerTargetDescriptor[];
-}
+};
 
-export interface EnhancerTargetDescriptor {
+export type EnhancerTargetDescriptor = {
   id: number;
   isDynamic: boolean;
   name: string;
   description?: string;
   valueType: StandardValueType;
   optionsItems?: EnhancerTargetOptionsItem[];
-}
+  propertyType: PropertyType;
+};

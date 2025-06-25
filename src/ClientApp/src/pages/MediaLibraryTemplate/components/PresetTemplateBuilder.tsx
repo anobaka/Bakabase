@@ -115,7 +115,7 @@ export default ({
                         <Tooltip
                           content={tn.description}
                         >
-                          <AiOutlineQuestionCircle className={'text-base'} />
+                          <QuestionCircleOutlined className={'text-base'} />
                         </Tooltip>
                       )}
                     </Button>))}
@@ -148,7 +148,7 @@ export default ({
               color={form.properties?.includes(p.id) ? 'primary' : 'default'}
             >
               <BriefProperty
-                hidePool
+                fields={['type', 'name']}
                 property={{
                     pool: PropertyPool.Custom,
                     name: p.name,

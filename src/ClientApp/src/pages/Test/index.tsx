@@ -3,7 +3,6 @@ import './index.scss';
 import { useTranslation } from 'react-i18next';
 import { ListboxItem } from '@heroui/react';
 import { useCookie } from 'react-use';
-import { AiOutlineChrome } from 'react-icons/ai';
 import Psc from './cases/Psc';
 import Tour from './cases/Tour';
 import Sortable from './cases/Sortable';
@@ -12,7 +11,7 @@ import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog
 import ResourceFilter from './cases/ResourceFilter';
 import Properties from './cases/Properties';
 import PresetMediaLibraryTemplateBuilderTest from './cases/PresetMediaLibraryTemplateBuilderTest';
-import { Button, Listbox, Card, CardBody, CardHeader, CardFooter, Divider } from '@/components/bakaui';
+import { Button, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
@@ -21,10 +20,12 @@ import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector
 import VirtualList from '@/pages/Test/cases/VirtualList';
 import ResourceTransfer from '@/pages/Test/cases/ResourceTransfer';
 import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
-import { StandardValueType } from '@/sdk/constants';
+import { PropertyType, StandardValueType } from '@/sdk/constants';
+import PropertyMatcher from '@/components/PropertyMatcher';
 
 
 const components = {
+  PropertyMatcher: <PropertyMatcher type={PropertyType.Attachment} name={'封面3'} onValueChanged={console.log} />,
   PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <Properties />,
   BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,

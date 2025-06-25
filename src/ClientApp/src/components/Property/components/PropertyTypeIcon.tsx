@@ -13,11 +13,12 @@ import { GrTextWrap } from 'react-icons/gr';
 import { FaRegStar } from 'react-icons/fa6';
 import { RiFormula } from 'react-icons/ri';
 import { CiCircleList } from 'react-icons/ci';
+import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import { Tooltip } from '@/components/bakaui';
 import { PropertyType } from '@/sdk/constants';
 
 type Props = {
-  type: PropertyType;
+  type?: PropertyType;
   textVariant?: 'none' | 'default' | 'tooltip';
 } & Omit<IconType, 'type'>;
 
@@ -42,7 +43,8 @@ const PropertyTypeIconMap: Record<PropertyType, IconType> = {
 
 export default ({ type, textVariant = 'default', ...props }: Props) => {
   const { t } = useTranslation();
-  const Icon = PropertyTypeIconMap[type];
+  const Icon = type ? PropertyTypeIconMap[type] : AiOutlineQuestionCircle;
+  const typeName = type ? t(PropertyType[type]) : t('Unknown');
 
   switch (textVariant!) {
     case 'none':
@@ -59,14 +61,14 @@ export default ({ type, textVariant = 'default', ...props }: Props) => {
             className={'text-medium'}
             {...props}
           />
-          <div className={'text-xs'}>{t(PropertyType[type])}</div>
+          <div className={'text-xs'}>{typeName}</div>
         </div>
       );
     case 'tooltip':
       return (
         <Tooltip
           color={'foreground'}
-          content={t(PropertyType[type])}
+          content={typeName}
         >
           <Icon
             className={'text-medium'}

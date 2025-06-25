@@ -348,4 +348,10 @@
   <data name="PresetResourceType_Tool" xml:space="preserve">
     <value>Tool</value>
   </data>
+  <data name="PresetResourceTypeDescription_Comic" xml:space="preserve">
+    <value>Comic</value>
+  </data>
+  <data name="PresetResourceTypeDescription_Manga" xml:space="preserve">
+    <value>Manga</value>
+  </data>
 </root>

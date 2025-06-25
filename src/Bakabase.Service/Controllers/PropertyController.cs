@@ -89,5 +89,16 @@ namespace Bakabase.Service.Controllers
             var (dbValue, _) = pd.PrepareDbValue(property, bizValue.DeserializeBizValueAsStandardValue(property.Type));
             return new SingletonResponse<string>(dbValue.SerializeDbValueAsStandardValue(property.Type));
         }
+
+        [HttpGet("best-matching")]
+        [SwaggerOperation(OperationId = "FindBestMatchingProperty")]
+        public async Task<SingletonResponse<PropertyViewModel?>> FindBestMatchingProperty(PropertyType type,
+            string name)
+        {
+            var properties = await service.GetProperties(PropertyPool.Custom | PropertyPool.Reserved);
+            var property = properties.OrderBy(x => x.Pool == PropertyPool.Reserved ? -1 : 0)
+                .FirstOrDefault(x => x.Type == type && x.Name == name);
+            return new SingletonResponse<PropertyViewModel?>(property?.ToViewModel(localizer));
+        }
     }
 }

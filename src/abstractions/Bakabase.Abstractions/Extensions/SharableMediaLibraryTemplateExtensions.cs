@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Exceptions;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain.Sharable;
 
@@ -84,6 +85,10 @@ public static class SharableMediaLibraryTemplateExtensions
     public static SharableMediaLibraryTemplateEnhancerTargetAllInOneOptions ToSharable(
         this MediaLibraryTemplateEnhancerTargetAllInOneOptions options)
     {
+        if (options.Property == null)
+        {
+            throw new DevException("Cannot share an enhancer that binds to an unknown property");
+        }
         return new SharableMediaLibraryTemplateEnhancerTargetAllInOneOptions
         {
             Property = options.Property!,

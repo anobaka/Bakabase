@@ -78,7 +78,7 @@ export default (props: PropertyContainerProps) => {
     <>
       {!hidePropertyName && (
         <div className={`flex ${classNames?.name}`}>
-          <BriefProperty property={property} hideType />
+          <BriefProperty property={property} fields={['pool', 'name']} />
         </div>
         // <div className={`flex ${classNames?.name}`}>
         //   <Tooltip

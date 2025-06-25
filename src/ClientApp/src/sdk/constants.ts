@@ -176,7 +176,7 @@ export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Reg
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum RegexEnhancerTarget {CaptureGroups = 0}
 export const regexEnhancerTargets = Object.keys(RegexEnhancerTarget).filter(k => typeof RegexEnhancerTarget[k] === 'number').map(t => ({label: t, value: RegexEnhancerTarget[t]}));
-export enum KodiEnhancerTarget {}
+export enum KodiEnhancerTarget {Title = 1, Votes = 2, Covers = 3}
 export const kodiEnhancerTargets = Object.keys(KodiEnhancerTarget).filter(k => typeof KodiEnhancerTarget[k] === 'number').map(t => ({label: t, value: KodiEnhancerTarget[t]}));
 export enum ExHentaiEnhancerTarget {Name = 1, Introduction = 2, Rating = 3, Tags = 4, Cover = 5}
 export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));
