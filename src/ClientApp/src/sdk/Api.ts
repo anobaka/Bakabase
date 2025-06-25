@@ -680,12 +680,22 @@ export interface BakabaseAbstractionsModelsInputSpecialTextPatchInputModel {
 
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModel {
   categoryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel[];
+  mediaLibraryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel[];
 }
 
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel {
   /** @format int32 */
   categoryId: number;
   categoryName: string;
+  resourceCacheCountMap: Record<string, number>;
+  /** @format int32 */
+  resourceCount: number;
+}
+
+export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel {
+  /** @format int32 */
+  mediaLibraryId: number;
+  mediaLibraryName: string;
   resourceCacheCountMap: Record<string, number>;
   /** @format int32 */
   resourceCount: number;
@@ -4497,6 +4507,25 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/cache/category/${categoryId}/type/${type}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name DeleteResourceCacheByMediaLibraryIdAndCacheType
+     * @request DELETE:/cache/media-library/{mediaLibraryId}/type/{type}
+     */
+    deleteResourceCacheByMediaLibraryIdAndCacheType: (
+      mediaLibraryId: number,
+      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/cache/media-library/${mediaLibraryId}/type/${type}`,
         method: "DELETE",
         format: "json",
         ...params,

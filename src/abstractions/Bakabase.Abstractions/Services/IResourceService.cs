@@ -116,6 +116,7 @@ public interface IResourceService
     Task<CacheOverviewViewModel> GetCacheOverview();
 
     Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type);
+    Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type);
 
     Task MarkAsNotPlayed(int id);
 

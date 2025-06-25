@@ -897,12 +897,27 @@ namespace Bakabase.InsideWorld.Business.Services
             var r = await Get(id, ResourceAdditionalItem.None);
             if (r != null)
             {
-                var selector = await _categoryService.GetFirstComponent<IPlayableFileSelector>(r.CategoryId,
-                    ComponentType.PlayableFileSelector);
-                if (selector.Data != null)
+                if (r.IsMediaLibraryV2)
                 {
-                    var files = await selector.Data.GetPlayableFiles(r.Path, ct);
-                    return files.Select(f => f.StandardizePath()!).ToArray();
+                    var pfl = (await MediaLibraryV2Service.Get(r.MediaLibraryId, MediaLibraryV2AdditionalItem.Template)).Template?.PlayableFileLocator;
+                    if (pfl != null)
+                    {
+                        var extensions = (pfl.Extensions ?? [])
+                            .Concat(pfl.ExtensionGroups?.SelectMany(g => g.Extensions ?? []) ?? []).ToHashSet();
+                        var files = r.IsFile ? [r.Path] : Directory.GetFiles(r.Path, "*", SearchOption.AllDirectories);
+                        return files.Where(f => extensions.Contains(Path.GetExtension(f)))
+                            .Select(f => f.StandardizePath()!).ToArray();
+                    }
+                }
+                else
+                {
+                    var selector = await _categoryService.GetFirstComponent<IPlayableFileSelector>(r.CategoryId,
+                        ComponentType.PlayableFileSelector);
+                    if (selector.Data != null)
+                    {
+                        var files = await selector.Data.GetPlayableFiles(r.Path, ct);
+                        return files.Select(f => f.StandardizePath()!).ToArray();
+                    }
                 }
             }
 
@@ -971,28 +986,64 @@ namespace Bakabase.InsideWorld.Business.Services
                                         }
                                         case ResourceCacheType.PlayableFiles:
                                         {
-                                            var pfs = (await _categoryService.GetFirstComponent<IPlayableFileSelector>(
-                                                resource.CategoryId, ComponentType.PlayableFileSelector)).Data;
-                                            if (pfs != null)
+                                            string[]? playableFiles = null;
+
+                                            if (resource.IsMediaLibraryV2)
                                             {
-                                                var playableFiles =
-                                                    (await pfs.GetPlayableFiles(resource.Path, CancellationToken.None))
-                                                    .Select(f => f.StandardizePath()!).ToList();
-                                                var trimmedPlayableFiles = playableFiles
-                                                    .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
-                                                    .SelectMany(x =>
-                                                        x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
-                                                    .ToList();
-                                                cache.PlayableFilePaths =
-                                                    trimmedPlayableFiles.SerializeAsStandardValue(StandardValueType
-                                                        .ListString);
-                                                cache.HasMorePlayableFiles =
-                                                    trimmedPlayableFiles.Count < playableFiles.Count;
+                                                var mediaLibrary =
+                                                    await MediaLibraryV2Service.Get(resource.MediaLibraryId,
+                                                        MediaLibraryV2AdditionalItem.Template);
+                                                var ps = mediaLibrary.Template?.PlayableFileLocator;
+                                                if (ps != null)
+                                                {
+                                                    var extensions =
+                                                        (ps.Extensions ?? []).Concat(
+                                                            ps.ExtensionGroups?.SelectMany(g => g.Extensions ?? []) ??
+                                                            []).ToHashSet();
+                                                    if (extensions.Any())
+                                                    {
+                                                        var paths = resource.IsFile
+                                                            ? [resource.Path]
+                                                            : Directory.GetFiles(resource.Path, "*",
+                                                                SearchOption.AllDirectories);
+                                                        playableFiles = paths.Where(p =>
+                                                            extensions.Contains(Path.GetExtension(p))).ToArray();
+                                                        ;
+                                                    }
+                                                }
                                             }
                                             else
                                             {
-                                                cache.HasMorePlayableFiles = false;
-                                                cache.PlayableFilePaths = null;
+                                                var pfs = (await _categoryService
+                                                        .GetFirstComponent<IPlayableFileSelector>(
+                                                            resource.CategoryId,
+                                                            ComponentType.PlayableFileSelector))
+                                                    .Data;
+                                                if (pfs != null)
+                                                {
+                                                    playableFiles =
+                                                        (await pfs.GetPlayableFiles(resource.Path,
+                                                            CancellationToken.None)).ToArray();
+                                                }
+                                            }
+
+                                            if (playableFiles?.Any() == true)
+                                            {
+                                                playableFiles = playableFiles.Select(p => p.StandardizePath()!)
+                                                    .ToArray();
+                                                var trimmedPlayableFiles = playableFiles
+                                                    .GroupBy(d =>
+                                                        $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                                                    .SelectMany(x =>
+                                                        x.Take(InternalOptions
+                                                            .MaxPlayableFilesPerTypeAndSubDir))
+                                                    .ToList();
+                                                cache.PlayableFilePaths =
+                                                    trimmedPlayableFiles.SerializeAsStandardValue(
+                                                        StandardValueType
+                                                            .ListString);
+                                                cache.HasMorePlayableFiles =
+                                                    trimmedPlayableFiles.Count < playableFiles.Length;
                                             }
 
                                             cache.CachedTypes |= ResourceCacheType.PlayableFiles;
@@ -1138,12 +1189,18 @@ namespace Bakabase.InsideWorld.Business.Services
         {
             var cacheMap = (await _resourceCacheOrm.GetAll(null, false)).ToDictionary(d => d.ResourceId, d => d);
             var categories = await _categoryService.GetAll(null, CategoryAdditionalItem.None);
-            var categoryIdResourcesMap = (await GetAllDbModels(null, false)).GroupBy(r => r.CategoryId)
+            var resources = await GetAllDbModels(null, false);
+            var mediaLibrariesV2 = await MediaLibraryV2Service.GetAll(null, MediaLibraryV2AdditionalItem.None);
+            var categoryIdResourcesMap = resources.Where(r => r.CategoryId > 0).GroupBy(r => r.CategoryId)
                 .ToDictionary(d => d.Key, d => d.ToList());
-
             var categoryIdCachesMap = categories.ToDictionary(d => d.Id,
                 d => categoryIdResourcesMap.GetValueOrDefault(d.Id)?.Select(r => cacheMap.GetValueOrDefault(r.Id))
                     .OfType<ResourceCacheDbModel>().ToList() ?? []);
+            var mediaLibraryIdResourcesMap = resources.Where(r => r.CategoryId == 0).GroupBy(r => r.MediaLibraryId)
+                .ToDictionary(d => d.Key, d => d.ToList());
+            var mediaLibraryIdCachesMap = mediaLibrariesV2.ToDictionary(d => d.Id,
+                d => resources.Where(r => r.MediaLibraryId == d.Id && r.CategoryId == 0)
+                    .Select(r => cacheMap.GetValueOrDefault(r.Id)).OfType<ResourceCacheDbModel>().ToList());
 
             return new CacheOverviewViewModel
             {
@@ -1155,6 +1212,15 @@ namespace Bakabase.InsideWorld.Business.Services
                         d => categoryIdCachesMap.GetValueOrDefault(c.Id)?.Count(x => x.CachedTypes.HasFlag(d)) ?? 0),
                     ResourceCount = categoryIdResourcesMap.GetValueOrDefault(c.Id)?.Count ?? 0
                 }).ToList(),
+                MediaLibraryCaches = mediaLibrariesV2.Select(ml => new CacheOverviewViewModel.MediaLibraryCacheViewModel
+                {
+                    MediaLibraryId = ml.Id,
+                    MediaLibraryName = ml.Name,
+                    ResourceCacheCountMap = SpecificEnumUtils<ResourceCacheType>.Values.ToDictionary(d => (int)d,
+                        d => mediaLibraryIdCachesMap.GetValueOrDefault(ml.Id)?.Count(x => x.CachedTypes.HasFlag(d)) ??
+                             0),
+                    ResourceCount = mediaLibraryIdResourcesMap.GetValueOrDefault(ml.Id)?.Count ?? 0
+                })
             };
         }
 
@@ -1166,6 +1232,14 @@ namespace Bakabase.InsideWorld.Business.Services
             {
                 x.CachedTypes &= ~type;
             });
+        }
+
+        public async Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type)
+        {
+            var resources = await GetAllDbModels(d => d.MediaLibraryId == mediaLibraryId && d.CategoryId == 0);
+            var resourceIds = resources.Select(r => r.Id).ToList();
+            await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId),
+                x => { x.CachedTypes &= ~type; });
         }
 
         public async Task MarkAsNotPlayed(int id)

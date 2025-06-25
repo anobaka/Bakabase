@@ -14,7 +14,7 @@ public interface IMediaLibraryV2Service
     Task Put(int id, MediaLibraryV2AddOrPutInputModel model);
     Task Patch(int id, MediaLibraryV2PatchInputModel model);
     Task SaveAll(MediaLibraryV2[] models);
-    Task<MediaLibraryV2> Get(int id);
+    Task<MediaLibraryV2> Get(int id, MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
 
     Task<List<MediaLibraryV2>> GetByKeys(int[] ids,
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
