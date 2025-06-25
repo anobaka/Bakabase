@@ -31,4 +31,13 @@ public class CacheController(IResourceService resourceService) : Controller
         await resourceService.DeleteResourceCacheByCategoryIdAndCacheType(categoryId, type);
         return BaseResponseBuilder.Ok;
     }
+
+    [HttpDelete("media-library/{mediaLibraryId:int}/type/{type}")]
+    [SwaggerOperation(OperationId = "DeleteResourceCacheByMediaLibraryIdAndCacheType")]
+    public async Task<BaseResponse> DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId,
+        ResourceCacheType type)
+    {
+        await resourceService.DeleteResourceCacheByMediaLibraryIdAndCacheType(mediaLibraryId, type);
+        return BaseResponseBuilder.Ok;
+    }
 }

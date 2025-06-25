@@ -1484,6 +1484,57 @@ export const DeleteResourceCacheByCategoryIdAndCacheTypeURL = function(parameter
 }
 /**
  * 
+ * request: DeleteResourceCacheByMediaLibraryIdAndCacheType
+ * url: DeleteResourceCacheByMediaLibraryIdAndCacheTypeURL
+ * method: DeleteResourceCacheByMediaLibraryIdAndCacheType_TYPE
+ * raw_url: DeleteResourceCacheByMediaLibraryIdAndCacheType_RAW_URL
+ * @param mediaLibraryId - 
+ * @param type - [1: Covers, 2: PlayableFiles]
+ */
+export const DeleteResourceCacheByMediaLibraryIdAndCacheType = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/cache/media-library/{mediaLibraryId}/type/{type}'
+  let body
+  let queryParameters = {}
+  let form = {}
+  path = path.replace('{mediaLibraryId}', `${parameters['mediaLibraryId']}`)
+  if (parameters['mediaLibraryId'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: mediaLibraryId'))
+  }
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters['type'] === undefined) {
+    return Promise.reject(new Error('Missing required  parameter: type'))
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('delete', domain + path, body, queryParameters, form, config)
+}
+export const DeleteResourceCacheByMediaLibraryIdAndCacheType_RAW_URL = function() {
+  return '/cache/media-library/{mediaLibraryId}/type/{type}'
+}
+export const DeleteResourceCacheByMediaLibraryIdAndCacheType_TYPE = function() {
+  return 'delete'
+}
+export const DeleteResourceCacheByMediaLibraryIdAndCacheTypeURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/cache/media-library/{mediaLibraryId}/type/{type}'
+  path = path.replace('{mediaLibraryId}', `${parameters['mediaLibraryId']}`)
+  path = path.replace('{type}', `${parameters['type']}`)
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetCategory
  * url: GetCategoryURL
  * method: GetCategory_TYPE

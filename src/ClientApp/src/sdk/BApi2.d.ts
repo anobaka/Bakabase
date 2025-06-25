@@ -372,6 +372,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cache/media-library/{mediaLibraryId}/type/{type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteResourceCacheByMediaLibraryIdAndCacheType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/category/{id}": {
         parameters: {
             query?: never;
@@ -3767,11 +3783,22 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.View.CacheOverviewViewModel": {
             categoryCaches: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+CategoryCacheViewModel"][];
+            mediaLibraryCaches: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+MediaLibraryCacheViewModel"][];
         };
         "Bakabase.Abstractions.Models.View.CacheOverviewViewModel+CategoryCacheViewModel": {
             /** Format: int32 */
             categoryId: number;
             categoryName: string;
+            resourceCacheCountMap: {
+                [key: string]: number;
+            };
+            /** Format: int32 */
+            resourceCount: number;
+        };
+        "Bakabase.Abstractions.Models.View.CacheOverviewViewModel+MediaLibraryCacheViewModel": {
+            /** Format: int32 */
+            mediaLibraryId: number;
+            mediaLibraryName: string;
             resourceCacheCountMap: {
                 [key: string]: number;
             };
@@ -7005,6 +7032,32 @@ export interface operations {
             header?: never;
             path: {
                 categoryId: number;
+                /** @description [1: Covers, 2: PlayableFiles] */
+                type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteResourceCacheByMediaLibraryIdAndCacheType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mediaLibraryId: number;
                 /** @description [1: Covers, 2: PlayableFiles] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };

@@ -1976,5 +1976,6 @@
   "You can": "您可以",
   "Automatically match property": "自动匹配属性",
   "Automatically create a new property": "自动创建新属性",
-  "Select manually": "手动选择"
+  "Select manually": "手动选择",
+  "Resource ID": "资源ID"
 }

@@ -132,9 +132,12 @@ public class MediaLibraryV2Service<TDbContext>(
         }
     }
 
-    public async Task<MediaLibraryV2> Get(int id)
+    public async Task<MediaLibraryV2> Get(int id,
+        MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None)
     {
-        return (await orm.GetByKey(id)).ToDomainModel();
+        var domainModel = (await orm.GetByKey(id)).ToDomainModel();
+        await Populate([domainModel], additionalItems);
+        return domainModel;
     }
 
     public Task<List<MediaLibraryV2>> GetByKeys(int[] ids,
