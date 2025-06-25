@@ -18,6 +18,10 @@ import { PropertyPool } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import PropertySelector from '@/components/PropertySelector';
 import type { components } from '@/sdk/BApi2';
+import PropertyMatcher from '@/components/PropertyMatcher';
+import PropertiesMatcher from '@/components/PropertiesMatcher';
+import type { IProperty } from '@/components/Property/models';
+import BriefProperty from '@/components/Chips/Property/BriefProperty';
 
 type Props = {
   onImported?: () => any;
@@ -26,6 +30,7 @@ type Props = {
 type PropertyConversion = {
   toPropertyId: number;
   toPropertyPool: PropertyPool;
+  toProperty?: IProperty;
 };
 
 type ExtensionGroupConversion = {
@@ -42,13 +47,6 @@ type SimpleProperty = {
 type SimplePropertyMap = { [key in PropertyPool]?: Record<number, SimpleProperty> };
 
 const MissingDataMessage = 'The current template contains data missing from the application. Please configure how to handle this data before proceeding with the import.';
-
-const findProperProperty = (property: SimpleProperty, propertyMap: SimplePropertyMap): SimpleProperty | undefined => {
-  const candidates = _.values(propertyMap[PropertyPool.Reserved]).concat(_.values(propertyMap[PropertyPool.Custom]))
-    .filter(p => p.type == property.type);
-  const best = candidates.find(p => p.name == property.name);
-  return best ?? candidates[0];
-};
 
 const findProperExtensionGroup = (extensionGroup: ExtensionGroup,
                                   extensionGroups: ExtensionGroup[]): ExtensionGroup | undefined => {
@@ -189,11 +187,28 @@ export default ({ onImported }: Props) => {
               <div className={'flex items-center gap-1 text-lg font-bold'}>
                 <TbSectionSign className={''} />
                 {t('New properties')}
+                <PropertiesMatcher
+                  properties={configuration.uniqueCustomProperties.map(p => ({ type: p.type, name: p.name }))}
+                  onValueChanged={ps => {
+                    const pcm = propertyConversionsMap ?? {};
+                    for (let i = 0; i < configuration.uniqueCustomProperties!.length; i++) {
+                      const p = ps[i];
+                      if (p) {
+                        pcm[i] = {
+                          toPropertyId: p.id,
+                          toPropertyPool: p.pool,
+                          toProperty: p,
+                        };
+                      }
+                    }
+                    setPropertyConversionsMap(pcm);
+                }}
+                />
               </div>
               <div>
                 <div
                   className={'inline-grid gap-1 items-center'}
-                  style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
+                  style={{ gridTemplateColumns: 'auto auto auto auto' }}
                 >
                   {configuration.uniqueCustomProperties.map((p, pIdx) => {
                     const conversion = propertyConversionsMap?.[pIdx];
@@ -212,96 +227,34 @@ export default ({ onImported }: Props) => {
                           </Chip>
                         </div>
                         <div className={'flex items-center gap-1'}>
-                          <PropertyPoolIcon pool={p.pool} />
-                          <PropertyTypeIcon type={p.type} />
-                          {p.name}
+                          <BriefProperty property={p} fields={['name', 'type']} />
                         </div>
                         <TiChevronRightOutline className={'text-medium'} />
-                        <Tooltip content={t('Automatically process')}>
-                          <Button
-                            size="sm"
-                            color={'primary'}
-                            isIconOnly
-                            variant={'light'}
-                            onPress={async () => {
-                              const candidate = findProperProperty(p, propertyMap ?? {});
-                              if (candidate) {
-                                setPropertyConversionsMap({
-                                  ...propertyConversionsMap,
-                                  [pIdx]: {
-                                    toPropertyPool: candidate.pool,
-                                    toPropertyId: candidate.id,
-                                  },
-                                });
-                              } else {
-                                createPortal(Modal, {
-                                  defaultVisible: true,
-                                  title: t('No proper property found'),
-                                  children: t('Should we create a new property for this?'),
-                                  onOk: async () => {
-                                    const r = await BApi.customProperty.addCustomProperty({
-                                      name: p.name,
-                                      type: p.type,
-                                      options: p.options ? JSON.stringify(p.options) : undefined,
-                                    });
-                                    if (r.code) {
-                                      throw new Error(r.message);
-                                    }
-                                    const np = r.data!;
-                                    setPropertyMap({
-                                      ...propertyMap,
-                                      [np.pool]: {
-                                        ...propertyMap![np.pool],
-                                        [np.id]: np,
-                                      },
-                                    });
-                                    setPropertyConversionsMap({
-                                      ...propertyConversionsMap,
-                                      [pIdx]: {
-                                        toPropertyPool: np.pool,
-                                        toPropertyId: np.id,
-                                      },
-                                    });
-                                  },
-                                });
-                              }
-                            }}
-                          >
-                            <MdAutoFixHigh className={'text-medium'} />
-                          </Button>
-                        </Tooltip>
-                        <div>
-                          <Button
-                            size={'sm'}
-                            color={'primary'}
-                            variant={'light'}
-                            onPress={() => {
-                              createPortal(PropertySelector, {
-                                pool: PropertyPool.Custom | PropertyPool.Reserved,
-                                multiple: false,
-                                onSubmit: async selection => {
-                                  setPropertyConversionsMap({
-                                    ...propertyConversionsMap,
-                                    [p.id]: {
-                                      ...conversion,
-                                      toPropertyPool: selection[0]!.pool,
-                                      toPropertyId: selection[0]!.id,
-                                    },
-                                  });
-                                },
-                                v2: true,
-                              });
-                            }}
-                          >
-                            {property ? (
-                              <div className={'flex items-center gap-1'}>
-                                <PropertyPoolIcon pool={property.pool} />
-                                <PropertyTypeIcon type={property.type} />
-                                {property.name}
-                              </div>
-                            ) : t('Select a property manually')}
-                          </Button>
-                        </div>
+                        <PropertyMatcher
+                          type={p.type}
+                          name={p.name}
+                          options={p.options}
+                          matchedProperty={propertyConversionsMap?.[pIdx]?.toProperty}
+                          onValueChanged={property => {
+                            if (!property) {
+                              throw new Error('Property should not be undefined');
+                            }
+                            setPropertyMap({
+                              ...propertyMap,
+                              [property.pool]: {
+                                ...propertyMap![property.pool],
+                                [property.id]: property,
+                              },
+                            });
+                            setPropertyConversionsMap({
+                              ...propertyConversionsMap,
+                              [pIdx]: {
+                                toPropertyPool: property.pool,
+                                toPropertyId: property.id,
+                              },
+                            });
+                          }}
+                        />
                       </>
                     );
                   })}

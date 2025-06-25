@@ -752,5 +752,23 @@ namespace Bakabase.Modules.Presets.Resources {
                 return ResourceManager.GetString("PresetResourceType_VrGame", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Comic.
+        /// </summary>
+        public static string PresetResourceTypeDescription_Comic {
+            get {
+                return ResourceManager.GetString("PresetResourceTypeDescription_Comic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Manga.
+        /// </summary>
+        public static string PresetResourceTypeDescription_Manga {
+            get {
+                return ResourceManager.GetString("PresetResourceTypeDescription_Manga", resourceCulture);
+            }
+        }
     }
 }

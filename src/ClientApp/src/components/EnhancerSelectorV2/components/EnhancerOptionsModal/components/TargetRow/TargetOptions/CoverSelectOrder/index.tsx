@@ -5,21 +5,27 @@ import { CoverSelectOrder } from '@/sdk/constants';
 type Props = {
   coverSelectOrder?: CoverSelectOrder;
   onChange?: (coverSelectOrder: CoverSelectOrder) => void;
+  isDisabled?: boolean;
 };
 
 export default ({
-                  coverSelectOrder = CoverSelectOrder.FilenameAscending,
+                  coverSelectOrder,
                   onChange,
+                  isDisabled,
                 }: Props) => {
   const { t } = useTranslation();
+
+  console.log(coverSelectOrder);
+
   return (
     <RadioGroup
-      value={coverSelectOrder.toString()}
+      value={coverSelectOrder?.toString()}
       onValueChange={c => {
         onChange?.(parseInt(c, 10));
       }}
       size={'sm'}
       orientation="horizontal"
+      isDisabled={isDisabled}
     >
       {Object.keys(CoverSelectOrder).filter(x => !Number.isNaN(parseInt(x, 10))).map(x => {
         return (

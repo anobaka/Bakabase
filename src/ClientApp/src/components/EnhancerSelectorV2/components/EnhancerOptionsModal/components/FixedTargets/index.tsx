@@ -4,19 +4,10 @@ import TargetRow from '../TargetRow';
 import type { EnhancerTargetFullOptions } from '../../models';
 import type { EnhancerDescriptor } from '../../../../models';
 import OtherOptionsTip from '../OtherOptionsTip';
-import {
-  Checkbox,
-  Divider,
-  Popover,
-  Table,
-  TableBody,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  Tooltip,
-} from '@/components/bakaui';
+import { Divider, Table, TableBody, TableColumn, TableHeader } from '@/components/bakaui';
 import type { IProperty } from '@/components/Property/models';
 import type { PropertyPool } from '@/sdk/constants';
+import PropertiesMatcher from '@/components/PropertiesMatcher';
 
 interface Props {
   propertyMap?: { [key in PropertyPool]?: Record<number, IProperty> };
@@ -50,7 +41,34 @@ export default (props: Props) => {
           <TableColumn align={'center'} width={80}>{t('Configured')}</TableColumn>
           <TableColumn width={'33.3333%'}>{t('Enhancement target')}</TableColumn>
           <TableColumn width={'25%'}>
-            {t('Bind property')}
+            <div className={'flex items-center gap-1'}>
+              {t('Bind property')}
+              {(enhancer.targets && enhancer.targets.length > 0) && (
+                <PropertiesMatcher
+                  properties={enhancer.targets.map(td => ({
+                    type: td.propertyType,
+                    name: td.name,
+                  }))}
+                  onValueChanged={ps => {
+                    for (let i = 0; i < ps.length; i++) {
+                      const p = ps[i];
+                      if (p) {
+                        const td = enhancer.targets[i]!;
+                        let to = optionsList.find(x => x.target == td.id);
+                        if (!to) {
+                          to = { target: enhancer.targets[i]!.id };
+                          optionsList.push(to);
+                        }
+                        to.propertyId = p.id;
+                        to.propertyPool = p.pool;
+                      }
+                    }
+                    setOptionsList(optionsList);
+                    onChange?.(optionsList);
+                  }}
+                />
+              )}
+            </div>
           </TableColumn>
           <TableColumn width={'25%'}>
             <div className={'flex items-center gap-1'}>

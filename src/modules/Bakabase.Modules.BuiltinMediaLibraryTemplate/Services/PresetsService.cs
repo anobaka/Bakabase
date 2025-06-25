@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Domain;
@@ -21,6 +22,7 @@ namespace Bakabase.Modules.Presets.Services;
 internal class PresetsService(
     IBakabaseLocalizer bakabaseLocalizer,
     IMediaLibraryTemplateService mediaLibraryTemplateService,
+    IPresetsLocalizer presetsLocalizer,
     IEnhancerDescriptors enhancerDescriptors) : IPresetsService
 {
     public MediaLibraryTemplatePresetDataPool GetMediaLibraryTemplatePresetDataPool()
@@ -34,7 +36,7 @@ internal class PresetsService(
         var resourceTypes = SpecificEnumUtils<PresetResourceType>.Values
             .Select(t =>
                 new MediaLibraryTemplatePresetDataPool.ResourceType(t,
-                    t.GetAttribute<DisplayAttribute>()?.GetName() ?? t.ToString(), t.GetAttribute<PresetResourceTypeAttribute>()!.MediaType, null))
+                    t.GetAttribute<DisplayAttribute>()?.GetName() ?? t.ToString(), t.GetAttribute<PresetResourceTypeAttribute>()!.MediaType, presetsLocalizer.ResourceTypeDescription(t)))
             .ToList();
         var enhancers = enhancerDescriptors.Descriptors.Select(d =>
             new MediaLibraryTemplatePresetDataPool.Enhancer((EnhancerId)d.Id, d.Name, d.Description,

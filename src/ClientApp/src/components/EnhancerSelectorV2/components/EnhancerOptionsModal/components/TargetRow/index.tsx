@@ -1,31 +1,23 @@
-import {
-  DeleteOutlined,
-  DisconnectOutlined,
-  EditOutlined,
-  InfoCircleOutlined, QuestionCircleOutlined,
-} from '@ant-design/icons';
+import { DeleteOutlined, EditOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdateEffect } from 'react-use';
-import {
-  AiOutlineCheckCircle,
-  AiOutlineClose,
-  AiOutlineCloseCircle,
-  AiOutlineDisconnect,
-  AiOutlineLine, AiOutlineQuestionCircle,
-} from 'react-icons/ai';
+import { AiOutlineCheckCircle, AiOutlineClose, AiOutlineDisconnect } from 'react-icons/ai';
 import type { EnhancerTargetFullOptions } from '../../models';
 import { createEnhancerTargetOptions } from '../../models';
-import type { EnhancerDescriptor, EnhancerTargetDescriptor } from '../../../../models';
+import type { EnhancerTargetDescriptor } from '../../../../models';
 import TargetOptions from './TargetOptions';
 import { Button, Chip, Input, Tooltip } from '@/components/bakaui';
 import PropertySelector from '@/components/PropertySelector';
 import { PropertyLabel } from '@/components/Property';
 import type { IProperty } from '@/components/Property/models';
-import { PropertyPool, SpecialTextType, StandardValueType } from '@/sdk/constants';
+import type { PropertyPool } from '@/sdk/constants';
+import { SpecialTextType, StandardValueType } from '@/sdk/constants';
 import { IntegrateWithSpecialTextLabel } from '@/components/SpecialText';
 import { buildLogger } from '@/components/utils';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import PropertyMatcher from '@/components/PropertyMatcher';
+import BriefProperty from '@/components/Chips/Property/BriefProperty';
 
 interface Props {
   dynamicTarget?: string;
@@ -115,9 +107,19 @@ export default (props: Props) => {
     <div className={'flex items-center gap-1'}>
       <div className={'w-[80px] flex justify-center'}>
         {noPropertyBound ? (
-          <AiOutlineClose className={'text-lg'} />
+          <Chip
+            size={'sm'}
+            variant={'light'}
+            color={'warning'}
+          >
+            <AiOutlineClose className={'text-lg text-warning'} />
+          </Chip>
         ) : (
-          <Chip size={'sm'} variant={'light'} color={'success'}>
+          <Chip
+            size={'sm'}
+            variant={'light'}
+            color={'success'}
+          >
             <AiOutlineCheckCircle className={'text-lg'} />
           </Chip>
         )}
@@ -159,13 +161,7 @@ export default (props: Props) => {
               </Button>
             ) : (
               <>
-                <Chip
-                  // size={'sm'}
-                  variant={'light'}
-                  // color={'success'}
-                >
-                  {targetLabel}
-                </Chip>
+                <BriefProperty property={{ type: descriptor.propertyType, name: descriptor.name }} fields={['name', 'type']} />
                 {/* {targetLabel} */}
                 {integratedSpecialTextType && (
                   <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
@@ -194,54 +190,30 @@ export default (props: Props) => {
           </Chip>
         ) : (
           <div className={'flex items-center gap-1'}>
-            <Button
-              // size={'sm'}
-              isDisabled={options?.autoBindProperty}
-              variant={'light'}
-              color={property ? 'success' : 'primary'}
-              onPress={() => {
-                const modal = createPortal(PropertySelector, {
-                  addable: true,
-                  editable: true,
-                  pool: PropertyPool.Custom | PropertyPool.Reserved,
-                  multiple: false,
-                  selection: property ? [property] : [],
-                  onSubmit: async properties => {
-                    patchTargetOptions({
-                      propertyId: properties[0]!.id,
-                      propertyPool: properties[0]!.pool,
-                    });
-                    onPropertyChanged?.();
-                    modal.destroy();
-                  },
+            <PropertyMatcher
+              isClearable
+              matchedProperty={property}
+              type={descriptor.propertyType}
+              name={descriptor.name}
+              onValueChanged={property => {
+                if (!property) {
+                  onDeleted?.();
+                  return;
+                }
+                patchTargetOptions({
+                  propertyId: property.id,
+                  propertyPool: property.pool,
                 });
+                onPropertyChanged?.();
               }}
-            >
-              {property ? (
-                <PropertyLabel property={property} />
-              ) : t('Select a property')}
-            </Button>
-            {property && (
-              <Button
-                isIconOnly
-                color={'warning'}
-                variant={'light'}
-                onPress={() => {
-                  patchTargetOptions({
-                    propertyId: undefined,
-                    propertyPool: undefined,
-                  });
-                }}
-              >
-                <AiOutlineDisconnect className={'text-medium'} />
-              </Button>
-            )}
+            />
           </div>
         )}
       </div>
       <div className={'w-1/4'}>
         <div className={'flex flex-col gap-2'}>
           <TargetOptions
+            isDisabled={!options.autoBindProperty && (!options.propertyId || !options.propertyPool)}
             options={options}
             optionsItems={descriptor.optionsItems}
             onChange={patchTargetOptions}

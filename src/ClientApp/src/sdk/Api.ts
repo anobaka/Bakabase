@@ -8601,6 +8601,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags Property
+     * @name FindBestMatchingProperty
+     * @request GET:/property/best-matching
+     */
+    findBestMatchingProperty: (
+      query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        type?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+        name?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
+        path: `/property/best-matching`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
   };
   specialText = {
     /**

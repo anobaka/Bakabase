@@ -4,7 +4,7 @@ import { Chip, Tooltip } from '@/components/bakaui';
 import { PropertyPool } from '@/sdk/constants';
 
 type Props = {
-  pool: PropertyPool;
+  pool?: PropertyPool;
 };
 
 export default ({ pool }: Props) => {
@@ -22,20 +22,24 @@ export default ({ pool }: Props) => {
       color = 'primary';
       break;
     default:
+      color = 'warning';
       break;
   }
+
+  const poolName = pool ? t(`PropertyPool.${PropertyPool[pool]}`) : t('Unknown');
+  const poolAbbreviation = pool ? t(`PropertyPool.Abbreviation.${PropertyPool[pool]}`) : '?';
 
   return (
     <Tooltip
       color={'foreground'}
-      content={t(`PropertyPool.${PropertyPool[pool]}`)}
+      content={poolName}
     >
       <Chip
         size={'sm'}
         variant={'flat'}
         color={color}
       >
-        {t(`PropertyPool.Abbreviation.${PropertyPool[pool]}`)}
+        {poolAbbreviation}
       </Chip>
     </Tooltip>
   );

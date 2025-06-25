@@ -10021,6 +10021,59 @@ export const GetPropertyDbValueURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: FindBestMatchingProperty
+ * url: FindBestMatchingPropertyURL
+ * method: FindBestMatchingProperty_TYPE
+ * raw_url: FindBestMatchingProperty_RAW_URL
+ * @param type - [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags]
+ * @param name - 
+ */
+export const FindBestMatchingProperty = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/property/best-matching'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['type'] !== undefined) {
+    queryParameters['type'] = parameters['type']
+  }
+  if (parameters['name'] !== undefined) {
+    queryParameters['name'] = parameters['name']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const FindBestMatchingProperty_RAW_URL = function() {
+  return '/property/best-matching'
+}
+export const FindBestMatchingProperty_TYPE = function() {
+  return 'get'
+}
+export const FindBestMatchingPropertyURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/property/best-matching'
+  if (parameters['type'] !== undefined) {
+    queryParameters['type'] = parameters['type']
+  }
+  if (parameters['name'] !== undefined) {
+    queryParameters['name'] = parameters['name']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: GetSearchOperationsForProperty
  * url: GetSearchOperationsForPropertyURL
  * method: GetSearchOperationsForProperty_TYPE

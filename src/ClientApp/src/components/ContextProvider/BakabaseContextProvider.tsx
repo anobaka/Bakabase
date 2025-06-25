@@ -14,17 +14,20 @@ type CreatePortal = <P extends DestroyableProps>(C: ComponentType<P>, props: P) 
 interface IContext {
   isDarkMode: boolean;
   createPortal: CreatePortal;
+  isDebugging?: boolean;
 }
 
 export const BakabaseContext = createContext<IContext>({
   createPortal,
   isDarkMode: false,
+  isDebugging: false,
 });
 
 export default ({ children }) => {
   const appOptions = store.useModelState('appOptions');
   // console.log(appOptions);
   const isDarkMode = getUiTheme(appOptions) == UiTheme.Dark;
+  const isDebugging = false;
   // const [componentMap, setComponentMap] = useState<Record<string, { Component: any; props: any}>>({});
 
   // function removePortal(key: string) {
@@ -74,6 +77,7 @@ export default ({ children }) => {
           value={{
             isDarkMode,
             createPortal,
+            isDebugging,
           }}
         >
           <div className={`${isDarkMode ? 'dark' : 'light'} text-foreground bg-background`}>
@@ -103,6 +107,6 @@ export default ({ children }) => {
   );
 };
 
-export const useBakabaseContext = () => {
+export const useBakabaseContext = (): IContext => {
   return useContext(BakabaseContext);
 };
