@@ -17,7 +17,8 @@ public static class PathFilterExtensions
         string rootPath,
         string[]? subPaths = null, Func<int, Task>? onProgressChange = null, Func<string, Task>? onProcessChange = null,
         PauseToken pt = default,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int maxThreads = 1)
     {
         const float progressForScanning = 70f;
 
@@ -35,7 +36,8 @@ public static class PathFilterExtensions
         var pathRelativePathMap =
             subPaths.ToDictionary(d => d, x => x.Replace(rootPath, null).Trim(InternalOptions.DirSeparator));
         var pathRelativeSegmentsMap =
-            pathRelativePathMap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Split(InternalOptions.DirSeparator));
+            pathRelativePathMap.ToDictionary(kvp => kvp.Key,
+                kvp => kvp.Value.Split(InternalOptions.DirSeparator, StringSplitOptions.RemoveEmptyEntries));
         var resourcePathInfoMap = new Dictionary<string, ResourcePathInfo>();
         if (onProgressChange != null)
         {
@@ -110,30 +112,33 @@ public static class PathFilterExtensions
                 {
                     if (rf.Regex.IsNotEmpty())
                     {
-                        foreach (var path in candidatePaths)
-                        {
-                            var relativePath = pathRelativePathMap[path];
-                            var match = Regex.Match(relativePath, rf.Regex);
-                            if (match.Success)
+                        var regex = new Regex(rf.Regex, RegexOptions.Compiled);
+                        await Parallel.ForEachAsync(candidatePaths,
+                            new ParallelOptions {MaxDegreeOfParallelism = maxThreads}, async (path, pct) =>
                             {
-                                var len = match.Value.Split(InternalOptions.DirSeparator,
-                                    StringSplitOptions.RemoveEmptyEntries).Length;
-                                var segments = pathRelativeSegmentsMap[path];
-                                var relativeSegments = segments.Take(len).ToArray();
-                                var resourcePath = string.Join(InternalOptions.DirSeparator, rootPath, relativePath);
-                                if (!resourcePathInfoMap.ContainsKey(resourcePath))
+                                var relativePath = pathRelativePathMap[path];
+                                var match = regex.Match(relativePath);
+                                if (match.Success)
                                 {
-                                    var innerPaths = cachedInnerPathsMap.GetOrAdd(resourcePath,
-                                        () => subPaths.Where(x => x != resourcePath && x.StartsWith(resourcePath))
-                                            .ToArray());
-                                    resourcePathInfoMap[resourcePath] =
-                                        new ResourcePathInfo(path, relativePath, relativeSegments, innerPaths);
+                                    var len = match.Value.Split(InternalOptions.DirSeparator,
+                                        StringSplitOptions.RemoveEmptyEntries).Length;
+                                    var segments = pathRelativeSegmentsMap[path];
+                                    var relativeSegments = segments.Take(len).ToArray();
+                                    var resourcePath = string.Join(InternalOptions.DirSeparator, rootPath,
+                                        relativePath);
+                                    if (!resourcePathInfoMap.ContainsKey(resourcePath))
+                                    {
+                                        var innerPaths = cachedInnerPathsMap.GetOrAdd(resourcePath,
+                                            () => subPaths.Where(x => x != resourcePath && x.StartsWith(resourcePath))
+                                                .ToArray());
+                                        resourcePathInfoMap[resourcePath] =
+                                            new ResourcePathInfo(path, relativePath, relativeSegments, innerPaths);
+                                    }
                                 }
-                            }
 
-                            currentProgress =
-                                await filterOnProgress.TriggerOnJumpingOver(currentProgress, progressPerPath);
-                        }
+                                currentProgress =
+                                    await filterOnProgress.TriggerOnJumpingOver(currentProgress, progressPerPath);
+                            });
                     }
 
                     break;

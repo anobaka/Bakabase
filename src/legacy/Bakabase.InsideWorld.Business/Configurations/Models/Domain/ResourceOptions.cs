@@ -51,6 +51,7 @@ namespace Bakabase.InsideWorld.Business.Configurations.Models.Domain
 
         public record SynchronizationOptionsModel
         {
+            public int? MaxThreads { get; set; }
             public bool? DeleteResourcesWithUnknownPath { get; set; }
             public bool? DeleteResourcesWithUnknownMediaLibrary { get; set; }
             [Obsolete] public Dictionary<int, SynchronizationCategoryOptions>? CategoryOptionsMap { get; set; }

@@ -4139,6 +4139,8 @@ export interface components {
             };
         };
         "Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel": {
+            /** Format: int32 */
+            maxThreads?: number;
             deleteResourcesWithUnknownPath?: boolean;
             deleteResourcesWithUnknownMediaLibrary?: boolean;
             /** @deprecated */

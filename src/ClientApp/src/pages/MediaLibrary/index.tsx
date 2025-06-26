@@ -23,6 +23,7 @@ import BApi from '@/sdk/BApi';
 import { isNotEmpty } from '@/components/utils';
 import type { components } from '@/sdk/BApi2';
 import PresetTemplateBuilder from '@/pages/MediaLibraryTemplate/components/PresetTemplateBuilder';
+import TemplateModal from '@/pages/MediaLibraryTemplate/components/TemplateModal';
 
 type MediaLibrary = components['schemas']['Bakabase.Abstractions.Models.Domain.MediaLibraryV2'];
 
@@ -188,11 +189,11 @@ export default () => {
                     label: (
                       <div className={'flex items-center gap-1'}>
                         <AiOutlineImport className={'text-lg'} />
-                        {t('Import builtin templates')}
+                        {t('Create new template')}
                       </div>
                     ),
                     value: -1,
-                    textValue: t('Import builtin templates'),
+                    textValue: t('Create new template'),
                   }])}
                   variant="underlined"
                   isInvalid={e.templateId == undefined || e.templateId <= 0}
@@ -298,14 +299,25 @@ export default () => {
                       {ml.resourceCount}
                     </Chip>
                     {renderPath(ml)}
-                    <Chip
+                    <Button
+                      size={'sm'}
                       radius={'sm'}
                       className={''}
                       startContent={<TbTemplate className={'text-medium'} />}
                       variant={'light'}
+                      onPress={() => {
+                        if (ml.templateId) {
+                          createPortal(
+                            TemplateModal, {
+                              id: ml.templateId,
+                              onDestroyed: loadTemplates,
+                            },
+                          );
+                        }
+                      }}
                     >
                       {templates.find(t => t.id == ml.templateId)?.name ?? t('Unknown')}
-                    </Chip>
+                    </Button>
                     <SyncStatus
                       id={ml.id}
                       onSyncCompleted={() => {

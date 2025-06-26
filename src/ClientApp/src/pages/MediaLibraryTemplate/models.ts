@@ -49,7 +49,7 @@ export type MediaLibraryTemplate = {
 export type MediaLibraryTemplateProperty = {
   pool: PropertyPool;
   id: number;
-  property: IProperty;
+  property: Omit<IProperty, 'bizValueType' | 'dbValueType'>;
   valueLocators?: PathLocator[];
 };
 
