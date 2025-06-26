@@ -174,7 +174,8 @@ public static class MediaLibraryTemplateExtensions
             Enhancers = dbEnhancers?.Select(e => e.ToDomainModel()).ToList(),
             SamplePaths = dbModel.SamplePaths != null
                 ? JsonConvert.DeserializeObject<List<string>>(dbModel.SamplePaths)
-                : null
+                : null,
+            ChildTemplateId = dbModel.ChildTemplateId
         };
     }
 }
