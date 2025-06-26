@@ -1977,5 +1977,9 @@
   "Automatically match property": "自动匹配属性",
   "Automatically create a new property": "自动创建新属性",
   "Select manually": "手动选择",
-  "Resource ID": "资源ID"
+  "Resource ID": "资源ID",
+  "To reduce synchronization time, we will, by default, use 40% of your CPU's maximum thread count (rounded down) for syncing the media library": "为了降低同步耗时，默认情况下，我们将会使用您的CPU最大线程数的40%（向下取整）用于同步媒体库",
+  "Max threads": "最大线程数",
+  "Editing media library template": "编辑媒体库模板",
+  "Create new template": "创建新模板"
 }

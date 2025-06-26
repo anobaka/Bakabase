@@ -1112,6 +1112,8 @@ export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOp
 }
 
 export interface BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel {
+  /** @format int32 */
+  maxThreads?: number;
   deleteResourcesWithUnknownPath?: boolean;
   deleteResourcesWithUnknownMediaLibrary?: boolean;
   /** @deprecated */

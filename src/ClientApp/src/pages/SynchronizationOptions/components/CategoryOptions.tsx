@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { AiOutlineWarning } from 'react-icons/ai';
-import Card from './Card';
+import OptionsCard from './OptionsCard';
 import type { IdName } from '@/pages/SynchronizationOptions/models';
 import { SubjectLabels } from '@/pages/SynchronizationOptions/models';
 import type {
@@ -41,7 +41,7 @@ const CategoryOptions = ({
   // console.log(options, mediaLibrariesOptionsMap);
 
   return (
-    <Card header={(
+    <OptionsCard header={(
       <div className={'flex items-center gap-1 line-through opacity-60'}>
         {category.name}
         <Tooltip content={t('Category is deprecated and will be removed in a future version.')}>
@@ -116,7 +116,7 @@ const CategoryOptions = ({
           </>
         );
       })}
-    </Card>
+    </OptionsCard>
   );
 };
 

@@ -25,7 +25,7 @@ import type { IProperty } from '@/components/Property/models';
 
 type Props = DestroyableProps & {
   template?: string;
-  properties: IProperty[];
+  properties: Omit<IProperty, 'bizValueType' | 'dbValueType'>[];
   onSubmit?: (template: string) => any;
 };
 

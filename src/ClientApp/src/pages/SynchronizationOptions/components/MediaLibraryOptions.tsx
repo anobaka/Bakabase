@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { AiOutlineWarning } from 'react-icons/ai';
-import Card from './Card';
+import OptionsCard from './OptionsCard';
 import type { IdName } from '@/pages/SynchronizationOptions/models';
 import { SubjectLabels } from '@/pages/SynchronizationOptions/models';
 import type {
@@ -38,7 +38,7 @@ export default ({
   // console.log(options, mediaLibrariesOptionsMap);
 
   return (
-    <Card header={mediaLibrary.name}>
+    <OptionsCard header={mediaLibrary.name}>
       <BooleanOptions
         subject={t(SubjectLabels.DeleteResourcesWithUnknownPath)}
         onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
@@ -61,6 +61,6 @@ export default ({
           </>
         );
       })}
-    </Card>
+    </OptionsCard>
   );
 };
