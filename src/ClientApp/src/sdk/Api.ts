@@ -109,6 +109,12 @@ export type BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus = 1
 export type BakabaseAbstractionsModelsDomainConstantsInitializationContentType = 1 | 2;
 
 /**
+ * [0: None, 1: ChildTemplate]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem = 0 | 1;
+
+/**
  * [0: None, 1: Template]
  * @format int32
  */
@@ -291,6 +297,8 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   enhancers?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions[];
   displayNameTemplate?: string;
   samplePaths?: string[];
+  /** @format int32 */
+  childTemplateId?: number;
   child?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
@@ -7363,11 +7371,18 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllMediaLibraryTemplates
      * @request GET:/media-library-template
      */
-    getAllMediaLibraryTemplates: (params: RequestParams = {}) =>
+    getAllMediaLibraryTemplates: (
+      query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate, any>(
         {
           path: `/media-library-template`,
           method: "GET",
+          query: query,
           format: "json",
           ...params,
         },
@@ -7400,13 +7415,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetMediaLibraryTemplate
      * @request GET:/media-library-template/{id}
      */
-    getMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
+    getMediaLibraryTemplate: (
+      id: number,
+      query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
         any
       >({
         path: `/media-library-template/${id}`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

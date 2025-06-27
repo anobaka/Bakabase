@@ -68,7 +68,7 @@ public static class MediaLibraryTemplateExtensions
 
     public static async Task<List<TempSyncResource>> DiscoverResources(this MediaLibraryTemplate template,
         string rootPath, Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt,
-        CancellationToken ct)
+        CancellationToken ct, int maxThreads = 1)
     {
         if (template.ResourceFilters == null || template.ResourceFilters.Count == 0)
         {
@@ -76,13 +76,20 @@ public static class MediaLibraryTemplateExtensions
         }
 
         var resources = new List<TempSyncResource>();
+
+        await using var progressor = new BProgressor(onProgressChange);
+
         const float progressForFiltering = 70;
         const float progressForInitializing = 100 - progressForFiltering;
 
-        var rpiMap = await template.ResourceFilters.Filter(rootPath, null,
-            onProgressChange.ScaleInSubTask(0, progressForFiltering), null, pt, ct);
-        var currentProgress = progressForFiltering;
-        var progressPerPath = rpiMap.Count == 0 ? 0 : progressForInitializing / rpiMap.Count;
+        var filterProgressor = progressor.CreateNewScope(0, progressForFiltering);
+        var rpiMap =
+            await template.ResourceFilters.Filter(rootPath, null, p => filterProgressor.Set(p), null, pt, ct,
+                maxThreads);
+        await filterProgressor.DisposeAsync();
+        
+        var initializingProgressor = progressor.CreateNewScope(progressForFiltering, progressForInitializing);
+        var progressPerPath = rpiMap.Count == 0 ? 0 : 100f / rpiMap.Count;
         foreach (var (path, rpi) in rpiMap)
         {
             var resource = new TempSyncResource(path);
@@ -138,8 +145,7 @@ public static class MediaLibraryTemplateExtensions
             }
 
             resources.Add(resource);
-            currentProgress = await onProgressChange.TriggerOnJumpingOver(currentProgress, progressPerPath);
-
+            await initializingProgressor.Add(progressPerPath);
         }
 
         return resources;

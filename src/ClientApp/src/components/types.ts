@@ -23,3 +23,10 @@ export type LabelValue<TL = string, TV = number> = {
 };
 
 export type PropertyMap = {[key in PropertyPool]?: Record<number, IProperty>};
+
+export type Pageable = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPage: number;
+};

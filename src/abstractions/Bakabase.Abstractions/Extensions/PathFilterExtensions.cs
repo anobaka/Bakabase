@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Bootstrap.Extensions;
 using Bootstrap.Components.Tasks;
 using System;
+using System.Collections.Concurrent;
 using Bakabase.Abstractions.Components.Tasks;
 using Bootstrap.Components.Storage;
 using CsQuery.Engine.PseudoClassSelectors;
@@ -20,35 +21,31 @@ public static class PathFilterExtensions
         CancellationToken ct = default,
         int maxThreads = 1)
     {
+        await using var progressor = new BProgressor(onProgressChange);
         const float progressForScanning = 70f;
 
+        var scanningProgressor = progressor.CreateNewScope(0, progressForScanning);
         rootPath = rootPath.StandardizePath()!;
-        var fileEnumerationOnProgress = onProgressChange.ScaleInSubTask(0, progressForScanning);
         HashSet<string>? dirSet = null;
         if (subPaths == null)
         {
-            var data = DirectoryUtils.EnumerateFileSystemEntries(rootPath, p => fileEnumerationOnProgress?.Invoke(p))
+            var data = DirectoryUtils.EnumerateFileSystemEntries(rootPath, p => _ = scanningProgressor.Set(p))
                 .Select(x => x with {Path = x.Path.StandardizePath()!}).ToArray();
             dirSet = data.Where(d => !d.IsFile).Select(d => d.Path).ToHashSet();
             subPaths = data.Select(d => d.Path).ToArray();
         }
 
-        var pathRelativePathMap =
-            subPaths.ToDictionary(d => d, x => x.Replace(rootPath, null).Trim(InternalOptions.DirSeparator));
-        var pathRelativeSegmentsMap =
-            pathRelativePathMap.ToDictionary(kvp => kvp.Key,
-                kvp => kvp.Value.Split(InternalOptions.DirSeparator, StringSplitOptions.RemoveEmptyEntries));
-        var resourcePathInfoMap = new Dictionary<string, ResourcePathInfo>();
-        if (onProgressChange != null)
-        {
-            var progress = (int) (progressForScanning);
-            await onProgressChange(progress);
-        }
+        var pathRelativePathMap = new ConcurrentDictionary<string, string>(
+            subPaths.ToDictionary(d => d, x => x.Replace(rootPath, null).Trim(InternalOptions.DirSeparator)));
+        var pathRelativeSegmentsMap = new ConcurrentDictionary<string, string[]>(pathRelativePathMap.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value.Split(InternalOptions.DirSeparator, StringSplitOptions.RemoveEmptyEntries)));
+        var resourcePathInfoMap = new ConcurrentDictionary<string, ResourcePathInfo>();
+        await scanningProgressor.DisposeAsync();
 
-        var currentProgress = progressForScanning;
-        const float progressForFiltering = 100 - progressForScanning;
-        var progressPerFilter = filters.Count == 0 ? 0 : (100 - progressForFiltering) / filters.Count;
-        var progressPerPath = subPaths.Length == 0 ? 0 : progressForFiltering / subPaths.Length;
+        var filteringProgressor = progressor.CreateNewScope(progressForScanning, 100 - progressForScanning);
+        var progressPerFilter = filters.Count == 0 ? 0 : 100f / filters.Count;
+        var progressPerPath = subPaths.Length == 0 ? 0 : 100f / subPaths.Length;
 
         HashSet<string>? fileSet = null;
         if (filters.Any(f => f.FsType.HasValue))
@@ -57,11 +54,12 @@ public static class PathFilterExtensions
             fileSet = subPaths.Except(dirSet).ToHashSet();
         }
 
-        var cachedInnerPathsMap = new Dictionary<string, string[]>();
+        var cachedInnerPathsMap = new ConcurrentDictionary<string, string[]>();
 
-        var filterOnProgress = onProgressChange.ScaleInSubTask(progressForScanning, progressForFiltering);
         for (var index = 0; index < filters.Count; index++)
         {
+            await using var filterProgressor =
+                filteringProgressor.CreateNewScope(progressForScanning + index * progressPerFilter, progressPerFilter);
             var rf = filters[index];
 
             IEnumerable<string> candidatePaths = subPaths;
@@ -101,8 +99,7 @@ public static class PathFilterExtensions
                                     new ResourcePathInfo(path, relativePath, segments, innerPaths);
                             }
 
-                            currentProgress =
-                                await filterOnProgress.TriggerOnJumpingOver(currentProgress, progressPerPath);
+                            await filterProgressor.Add(progressPerPath);
                         }
                     }
 
@@ -136,8 +133,7 @@ public static class PathFilterExtensions
                                     }
                                 }
 
-                                currentProgress =
-                                    await filterOnProgress.TriggerOnJumpingOver(currentProgress, progressPerPath);
+                                await filterProgressor.Add(progressPerPath);
                             });
                     }
 
@@ -146,11 +142,10 @@ public static class PathFilterExtensions
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            currentProgress = await filterOnProgress.TriggerOnJumpingOver(currentProgress,
-                progressPerFilter * (index + 1) - currentProgress);
         }
 
-        return resourcePathInfoMap;
+        await filteringProgressor.DisposeAsync();
+
+        return new Dictionary<string, ResourcePathInfo>(resourcePathInfoMap);
     }
 }

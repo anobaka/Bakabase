@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
@@ -19,17 +20,19 @@ public class MediaLibraryTemplateController(
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryTemplates")]
-    public async Task<ListResponse<Abstractions.Models.Domain.MediaLibraryTemplate>> GetAll()
+    public async Task<ListResponse<Abstractions.Models.Domain.MediaLibraryTemplate>> GetAll(
+        MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
     {
-        var templates = await service.GetAll();
+        var templates = await service.GetAll(additionalItems);
         return new ListResponse<Abstractions.Models.Domain.MediaLibraryTemplate>(templates);
     }
 
     [HttpGet("{id:int}")]
     [SwaggerOperation(OperationId = "GetMediaLibraryTemplate")]
-    public async Task<SingletonResponse<Abstractions.Models.Domain.MediaLibraryTemplate>> Get(int id)
+    public async Task<SingletonResponse<Abstractions.Models.Domain.MediaLibraryTemplate>> Get(int id,
+        MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
     {
-        var template = await service.Get(id);
+        var template = await service.Get(id, additionalItems);
         return new SingletonResponse<Abstractions.Models.Domain.MediaLibraryTemplate>(template);
     }
 

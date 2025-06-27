@@ -138,6 +138,8 @@ export enum InitializationContentType {NotAcceptTerms = 1, NeedRestart = 2}
 export const initializationContentTypes = Object.keys(InitializationContentType).filter(k => typeof InitializationContentType[k] === 'number').map(t => ({label: t, value: InitializationContentType[t]}));
 export enum InternalProperty {RootPath = 1, ParentResource = 2, Resource = 3, Filename = 15, DirectoryPath = 16, CreatedAt = 17, FileCreatedAt = 18, FileModifiedAt = 19, Category = 20, MediaLibrary = 21, MediaLibraryV2 = 24}
 export const internalProperties = Object.keys(InternalProperty).filter(k => typeof InternalProperty[k] === 'number').map(t => ({label: t, value: InternalProperty[t]}));
+export enum MediaLibraryTemplateAdditionalItem {None = 0, ChildTemplate = 1}
+export const mediaLibraryTemplateAdditionalItems = Object.keys(MediaLibraryTemplateAdditionalItem).filter(k => typeof MediaLibraryTemplateAdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryTemplateAdditionalItem[t]}));
 export enum MediaLibraryV2AdditionalItem {None = 0, Template = 1}
 export const mediaLibraryV2AdditionalItems = Object.keys(MediaLibraryV2AdditionalItem).filter(k => typeof MediaLibraryV2AdditionalItem[k] === 'number').map(t => ({label: t, value: MediaLibraryV2AdditionalItem[t]}));
 export enum PathFilterFsType {File = 1, Directory = 2}

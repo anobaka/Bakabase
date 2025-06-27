@@ -956,136 +956,130 @@ namespace Bakabase.InsideWorld.Business.Services
             var fullCacheType = (ResourceCacheType) SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int) x);
             var percentage = 0m;
 
-            var estimateCount = await _resourceCacheOrm.Count(x => x.CachedTypes != fullCacheType);
+            var tbdCaches = await _resourceCacheOrm.GetAll(x => x.CachedTypes != fullCacheType);
+            var estimateCount = tbdCaches.Count;
             var itemPercentage = estimateCount == 0 ? 0 : 100m / estimateCount;
             var doneCount = 0;
-            while (true)
+
+            foreach (var tbdCache in tbdCaches)
             {
-                var cache = await _resourceCacheOrm.GetFirstOrDefault(x => x.CachedTypes != fullCacheType);
-                if (cache != null)
+                try
                 {
-                    if (SpecificEnumUtils<ResourceCacheType>.Values.Any(v => !cache.CachedTypes.HasFlag(v)))
+                    var cache = await _resourceCacheOrm.GetByKey(tbdCache.ResourceId);
+                    if (cache != null && cache.CachedTypes != fullCacheType)
                     {
                         var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
                         if (resource != null)
                         {
-                            try
+                            foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
                             {
-                                foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
+                                if (!cache.CachedTypes.HasFlag(cacheType))
                                 {
-                                    if (!cache.CachedTypes.HasFlag(cacheType))
+                                    await pt.WaitWhilePausedAsync(ct);
+                                    switch (cacheType)
                                     {
-                                        await pt.WaitWhilePausedAsync(ct);
-                                        switch (cacheType)
+                                        case ResourceCacheType.Covers:
                                         {
-                                            case ResourceCacheType.Covers:
-                                            {
-                                                var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
-                                                cache.CoverPaths = coverPath.IsNotEmpty()
-                                                    ? new ListStringValueBuilder([coverPath]).Value
-                                                        ?.SerializeAsStandardValue(
-                                                            StandardValueType.ListString)
-                                                    : null;
-                                                cache.CachedTypes |= ResourceCacheType.Covers;
-                                                break;
-                                            }
-                                            case ResourceCacheType.PlayableFiles:
-                                            {
-                                                string[]? playableFiles = null;
-
-                                                if (resource.IsMediaLibraryV2)
-                                                {
-                                                    var mediaLibrary =
-                                                        await MediaLibraryV2Service.Get(resource.MediaLibraryId,
-                                                            MediaLibraryV2AdditionalItem.Template);
-                                                    var ps = mediaLibrary.Template?.PlayableFileLocator;
-                                                    if (ps != null)
-                                                    {
-                                                        var extensions =
-                                                            (ps.Extensions ?? []).Concat(
-                                                                ps.ExtensionGroups?.SelectMany(g =>
-                                                                    g.Extensions ?? []) ??
-                                                                []).ToHashSet();
-                                                        if (extensions.Any())
-                                                        {
-                                                            var paths = resource.IsFile
-                                                                ? [resource.Path]
-                                                                : Directory.GetFiles(resource.Path, "*",
-                                                                    SearchOption.AllDirectories);
-                                                            playableFiles = paths.Where(p =>
-                                                                extensions.Contains(Path.GetExtension(p))).ToArray();
-                                                            ;
-                                                        }
-                                                    }
-                                                }
-                                                else
-                                                {
-                                                    var pfs = (await _categoryService
-                                                            .GetFirstComponent<IPlayableFileSelector>(
-                                                                resource.CategoryId,
-                                                                ComponentType.PlayableFileSelector))
-                                                        .Data;
-                                                    if (pfs != null)
-                                                    {
-                                                        playableFiles =
-                                                            (await pfs.GetPlayableFiles(resource.Path,
-                                                                CancellationToken.None)).ToArray();
-                                                    }
-                                                }
-
-                                                if (playableFiles?.Any() == true)
-                                                {
-                                                    playableFiles = playableFiles.Select(p => p.StandardizePath()!)
-                                                        .ToArray();
-                                                    var trimmedPlayableFiles = playableFiles
-                                                        .GroupBy(d =>
-                                                            $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
-                                                        .SelectMany(x =>
-                                                            x.Take(InternalOptions
-                                                                .MaxPlayableFilesPerTypeAndSubDir))
-                                                        .ToList();
-                                                    cache.PlayableFilePaths =
-                                                        trimmedPlayableFiles.SerializeAsStandardValue(
-                                                            StandardValueType
-                                                                .ListString);
-                                                    cache.HasMorePlayableFiles =
-                                                        trimmedPlayableFiles.Count < playableFiles.Length;
-                                                }
-
-                                                cache.CachedTypes |= ResourceCacheType.PlayableFiles;
-
-                                                break;
-                                            }
-                                            default:
-                                                throw new ArgumentOutOfRangeException();
+                                            var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
+                                            cache.CoverPaths = coverPath.IsNotEmpty()
+                                                ? new ListStringValueBuilder([coverPath]).Value
+                                                    ?.SerializeAsStandardValue(
+                                                        StandardValueType.ListString)
+                                                : null;
+                                            cache.CachedTypes |= ResourceCacheType.Covers;
+                                            break;
                                         }
+                                        case ResourceCacheType.PlayableFiles:
+                                        {
+                                            string[]? playableFiles = null;
+
+                                            if (resource.IsMediaLibraryV2)
+                                            {
+                                                var mediaLibrary =
+                                                    await MediaLibraryV2Service.Get(resource.MediaLibraryId,
+                                                        MediaLibraryV2AdditionalItem.Template);
+                                                var ps = mediaLibrary.Template?.PlayableFileLocator;
+                                                if (ps != null)
+                                                {
+                                                    var extensions =
+                                                        (ps.Extensions ?? []).Concat(
+                                                            ps.ExtensionGroups?.SelectMany(g =>
+                                                                g.Extensions ?? []) ??
+                                                            []).ToHashSet();
+                                                    if (extensions.Any())
+                                                    {
+                                                        var paths = resource.IsFile
+                                                            ? [resource.Path]
+                                                            : Directory.GetFiles(resource.Path, "*",
+                                                                SearchOption.AllDirectories);
+                                                        playableFiles = paths.Where(p =>
+                                                            extensions.Contains(Path.GetExtension(p))).ToArray();
+                                                        ;
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                var pfs = (await _categoryService
+                                                        .GetFirstComponent<IPlayableFileSelector>(
+                                                            resource.CategoryId,
+                                                            ComponentType.PlayableFileSelector))
+                                                    .Data;
+                                                if (pfs != null)
+                                                {
+                                                    playableFiles =
+                                                        (await pfs.GetPlayableFiles(resource.Path,
+                                                            CancellationToken.None)).ToArray();
+                                                }
+                                            }
+
+                                            if (playableFiles?.Any() == true)
+                                            {
+                                                playableFiles = playableFiles.Select(p => p.StandardizePath()!)
+                                                    .ToArray();
+                                                var trimmedPlayableFiles = playableFiles
+                                                    .GroupBy(d =>
+                                                        $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                                                    .SelectMany(x =>
+                                                        x.Take(InternalOptions
+                                                            .MaxPlayableFilesPerTypeAndSubDir))
+                                                    .ToList();
+                                                cache.PlayableFilePaths =
+                                                    trimmedPlayableFiles.SerializeAsStandardValue(
+                                                        StandardValueType
+                                                            .ListString);
+                                                cache.HasMorePlayableFiles =
+                                                    trimmedPlayableFiles.Count < playableFiles.Length;
+                                            }
+
+                                            cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+
+                                            break;
+                                        }
+                                        default:
+                                            throw new ArgumentOutOfRangeException();
                                     }
                                 }
                             }
-                            catch (Exception e)
-                            {
-                                await _logService.Log(nameof(PrepareCache), LogLevel.Error, "Failed to prepare cache",
-                                    e.BuildFullInformationText());
-                            }
 
                             await _resourceCacheOrm.Update(cache);
+                            _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
                         }
                     }
-
-                    _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
-
-                    var newPercentage = percentage + itemPercentage;
-                    if ((int) newPercentage != (int) percentage && onProgressChange != null)
-                    {
-                        await onProgressChange((int) newPercentage);
-                    }
-
-                    percentage = newPercentage;
                 }
-                else
+                catch (Exception e)
                 {
-                    break;
+                    await _logService.Log(nameof(PrepareCache), LogLevel.Error, "Failed to prepare cache",
+                        e.BuildFullInformationText());
                 }
+
+                var newPercentage = percentage + itemPercentage;
+                if ((int)newPercentage != (int)percentage && onProgressChange != null)
+                {
+                    await onProgressChange((int)newPercentage);
+                }
+
+                percentage = newPercentage;
 
                 if (onProcessChange != null)
                 {

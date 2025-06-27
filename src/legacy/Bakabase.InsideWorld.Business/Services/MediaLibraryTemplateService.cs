@@ -56,12 +56,32 @@ public class MediaLibraryTemplateService<TDbContext>(
     protected IPresetsService BuiltinMediaLibraryTemplateService => GetRequiredService<IPresetsService>();
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
 
-    protected async Task Populate(MediaLibraryTemplate[] templates)
+    protected async Task Populate(MediaLibraryTemplate[] templates,
+        MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
     {
-        var propertyKeysMap = templates.SelectMany(x => x.Properties ?? []).GroupBy(d => d.Pool)
+        var allRequiredTemplates = templates.ToList();
+
+        if (additionalItems.HasFlag(MediaLibraryTemplateAdditionalItem.ChildTemplate) &&
+            templates.Any(x => x.ChildTemplateId.HasValue))
+        {
+            var allDbModels = await orm.GetAll();
+            var currentIds = templates.Select(t => t.Id).ToHashSet();
+            var missingTemplates = allDbModels.Where(x => !currentIds.Contains(x.Id)).ToList();
+            allRequiredTemplates.AddRange(missingTemplates.Select(mt => mt.ToDomainModel()));
+        }
+
+        var templateMap = allRequiredTemplates.ToDictionary(d => d.Id, d => d);
+        foreach (var template in allRequiredTemplates)
+        {
+            template.Child = template.ChildTemplateId.HasValue
+                ? templateMap.GetValueOrDefault(template.ChildTemplateId.Value)
+                : null;
+        }
+
+        var propertyKeysMap = allRequiredTemplates.SelectMany(x => x.Properties ?? []).GroupBy(d => d.Pool)
             .ToDictionary(d => d.Key, d => d.Select(x => x.Id).ToHashSet());
 
-        foreach (var template in templates)
+        foreach (var template in allRequiredTemplates)
         {
             if (template.Enhancers != null)
             {
@@ -78,10 +98,10 @@ public class MediaLibraryTemplateService<TDbContext>(
             }
         }
 
-        var propertiesMap = (await propertyService.GetProperties((PropertyPool)propertyKeysMap.Keys.Sum(x => (int)x)))
+        var propertiesMap = (await propertyService.GetProperties((PropertyPool) propertyKeysMap.Keys.Sum(x => (int) x)))
             .ToMap();
 
-        foreach (var template in templates)
+        foreach (var template in allRequiredTemplates)
         {
             if (template.Properties != null)
             {
@@ -107,15 +127,15 @@ public class MediaLibraryTemplateService<TDbContext>(
             }
         }
 
-        var extensionGroupIds = templates.SelectMany(t =>
+        var extensionGroupIds = allRequiredTemplates.SelectMany(t =>
             (t.PlayableFileLocator?.ExtensionGroupIds ?? []).Concat(
                 t.ResourceFilters?.SelectMany(x => x.ExtensionGroupIds ?? []) ?? [])).ToHashSet();
         if (extensionGroupIds.Any())
         {
             var extensionGroups = (await extensionGroupService.GetAll()).ToDictionary(d => d.Id, d => d);
-            foreach (var t in templates)
+            foreach (var t in allRequiredTemplates)
             {
-                if (t.PlayableFileLocator is { ExtensionGroupIds: not null })
+                if (t.PlayableFileLocator is {ExtensionGroupIds: not null})
                 {
                     t.PlayableFileLocator.ExtensionGroups = t.PlayableFileLocator.ExtensionGroupIds
                         .Select(x => extensionGroups.GetValueOrDefault(x))
@@ -272,7 +292,7 @@ public class MediaLibraryTemplateService<TDbContext>(
         #endregion
     }
 
-    public async Task<MediaLibraryTemplate> Get(int id)
+    public async Task<MediaLibraryTemplate> Get(int id, MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
     {
         var dbData = await orm.GetByKey(id);
         var domainModel = dbData.ToDomainModel();
@@ -280,7 +300,7 @@ public class MediaLibraryTemplateService<TDbContext>(
         return domainModel;
     }
 
-    public async Task<MediaLibraryTemplate[]> GetByKeys(int[] ids)
+    public async Task<MediaLibraryTemplate[]> GetByKeys(int[] ids, MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
     {
         var dbData = await orm.GetByKeys(ids);
         var domainModels = dbData.Select(d => d.ToDomainModel()).ToArray();
@@ -288,12 +308,12 @@ public class MediaLibraryTemplateService<TDbContext>(
         return domainModels;
     }
 
-    public async Task<MediaLibraryTemplate[]> GetAll()
+    public async Task<MediaLibraryTemplate[]> GetAll(MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
     {
-        var templates = (await orm.GetAll()).OrderByDescending(d => d.Id);
-        var domainModels = templates.Select(x => x.ToDomainModel()).ToArray();
-        await Populate(domainModels);
-        return domainModels;
+        var dbModels = (await orm.GetAll()).OrderByDescending(d => d.Id);
+        var templates = dbModels.Select(x => x.ToDomainModel()).ToArray();
+        await Populate(templates, additionalItems);
+        return templates;
     }
 
     public async Task<MediaLibraryTemplate> Add(MediaLibraryTemplateAddInputModel model)

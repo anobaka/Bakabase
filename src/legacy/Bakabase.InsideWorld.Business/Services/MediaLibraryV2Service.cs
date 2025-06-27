@@ -15,6 +15,8 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.Gui;
+using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.InsideWorld.Business.Configurations.Extensions;
 using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
@@ -27,6 +29,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
+using Bootstrap.Components.Tasks.Progressor.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,7 +46,8 @@ public class MediaLibraryV2Service<TDbContext>(
     IBOptions<ResourceOptions> resourceOptions,
     BTaskManager btm,
     IBakabaseLocalizer localizer,
-    IServiceProvider serviceProvider
+    IServiceProvider serviceProvider,
+    ISystemService systemService
 )
     : ScopedService(serviceProvider), IMediaLibraryV2Service where TDbContext : DbContext
 {
@@ -165,6 +169,15 @@ public class MediaLibraryV2Service<TDbContext>(
         return await SyncAll([id], onProgressChange, onProcessChange, pt, ct);
     }
 
+    private class ProgressPerMediaLibrary
+    {
+        public const int Discovery = 50;
+        public const int Clean = 10;
+        public const int Add = 10;
+        public const int Update = 20;
+        public const int Finish = 10;
+    }
+
     public async Task<MediaLibrarySyncResultViewModel> SyncAll(int[]? ids, Func<int, Task>? onProgressChange,
         Func<string?, Task>? onProcessChange,
         PauseToken pt,
@@ -172,31 +185,40 @@ public class MediaLibraryV2Service<TDbContext>(
     {
         var data = await (ids == null ? GetAll() : GetByKeys(ids));
         var templateIds = data.Select(d => d.TemplateId).OfType<int>().ToHashSet();
-        var templateMap = (await TemplateService.GetByKeys(templateIds.ToArray())).ToDictionary(d => d.Id, d => d);
+        var templateMap =
+            (await TemplateService.GetByKeys(templateIds.ToArray(), MediaLibraryTemplateAdditionalItem.ChildTemplate))
+            .ToDictionary(d => d.Id, d => d);
         var mlResourceMap = (await resourceService.GetAllGeneratedByMediaLibraryV2(ids, ResourceAdditionalItem.All))
             .GroupBy(d => d.MediaLibraryId)
             .ToDictionary(d => d.Key, d => d.ToList());
         var syncOptions = resourceOptions.Value.SynchronizationOptions;
 
+        await using var progressor = new BProgressor(onProgressChange);
+
         var progressPerMediaLibrary = ids?.Length > 0 ? 100f / ids.Length : 0;
-        var baseProgress = 0f;
 
         var ret = new MediaLibrarySyncResultViewModel();
         for (var index = 0; index < data.Count; index++)
         {
+            var baseProgress = progressPerMediaLibrary * index;
+            await using var mlProgressor = progressor.CreateNewScope(baseProgress, progressPerMediaLibrary);
+
             var ml = data[index];
             if (ml.TemplateId.HasValue && templateMap.TryGetValue(ml.TemplateId.Value, out var template))
             {
                 #region Discovery
 
+                var discoveryProgressor = mlProgressor.CreateNewScope(0, ProgressPerMediaLibrary.Discovery);
                 if (onProcessChange != null)
                 {
                     await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_DiscoverResources(ml.Name));
                 }
 
-                var progressForDiscovering = progressPerMediaLibrary * 0.5f;
+                var maxThreads = Math.Max(1,
+                    resourceOptions.Value.SynchronizationOptions?.MaxThreads ??
+                    (int) (Environment.ProcessorCount * 0.4));
                 var treeTempSyncResources = await template.DiscoverResources(ml.Path,
-                    onProgressChange.ScaleInSubTask(baseProgress, progressForDiscovering), null, pt, ct);
+                    async p => await discoveryProgressor.Set(p), null, pt, ct, maxThreads);
                 var flattenTempSyncResources = treeTempSyncResources.SelectMany(d => d.Flatten()).ToList();
                 var flattenTempResources = flattenTempSyncResources.Select(x => x.ToDomainModel(ml.Id)).ToList();
                 var tempSyncResourcePaths = flattenTempResources.Select(d => d.Path).ToHashSet();
@@ -208,18 +230,19 @@ public class MediaLibraryV2Service<TDbContext>(
                 var dbResourcePaths = mlResources.Select(x => x.Path).ToHashSet();
                 var newTempSyncResources = flattenTempResources.Where(c => !dbResourcePaths.Contains(c.Path)).ToList();
                 var tempSyncResourceMap = flattenTempResources.ToDictionary(d => d.Path);
-                baseProgress = await onProgressChange.TriggerOnJumpingOver(baseProgress, progressForDiscovering);
+                await discoveryProgressor.DisposeAsync();
+                baseProgress += ProgressPerMediaLibrary.Discovery;
 
                 #endregion
 
                 #region Clean
 
+                var cleanProgressor = mlProgressor.CreateNewScope(baseProgress, ProgressPerMediaLibrary.Clean);
                 if (onProcessChange != null)
                 {
                     await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_CleanupResources(ml.Name));
                 }
 
-                var progressForCleaningResources = progressPerMediaLibrary * 0.1f;
                 var resourcesToBeDeleted =
                     unknownDbResources.Where(x => x.ShouldBeDeletedSinceFileNotFound(syncOptions)).ToList();
                 if (resourcesToBeDeleted.Any())
@@ -229,18 +252,19 @@ public class MediaLibraryV2Service<TDbContext>(
                     ret.Deleted += resourcesToBeDeleted.Count;
                 }
 
-                baseProgress = await onProgressChange.TriggerOnJumpingOver(baseProgress, progressForCleaningResources);
+                await cleanProgressor.DisposeAsync();
+                baseProgress += ProgressPerMediaLibrary.Clean;
 
                 #endregion
 
                 #region Add
 
+                var addProgressor = mlProgressor.CreateNewScope(baseProgress, ProgressPerMediaLibrary.Add);
                 if (onProcessChange != null)
                 {
                     await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_AddResources(ml.Name));
                 }
 
-                var progressForAddingResources = progressPerMediaLibrary * 0.1f;
                 await resourceService.AddOrPutRange(newTempSyncResources);
                 var allPathIdMap = mlResources.Concat(newTempSyncResources).ToDictionary(d => d.Path, d => d.Id);
                 ret.Added += newTempSyncResources.Count;
@@ -250,13 +274,14 @@ public class MediaLibraryV2Service<TDbContext>(
                     await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_UpdateResources(ml.Name));
                 }
 
-                baseProgress = await onProgressChange.TriggerOnJumpingOver(baseProgress, progressForAddingResources);
+                await addProgressor.DisposeAsync();
+                baseProgress += ProgressPerMediaLibrary.Add;
 
                 #endregion
 
                 #region Merge and update
 
-                var progressForUpdatingResources = progressPerMediaLibrary * 0.2f;
+                var updateProgressor = mlProgressor.CreateNewScope(baseProgress, ProgressPerMediaLibrary.Update);
                 var changedResources = new HashSet<Resource>();
                 foreach (var cr in conflictDbResources)
                 {
@@ -281,11 +306,14 @@ public class MediaLibraryV2Service<TDbContext>(
                     }
                 }
 
-                baseProgress = await onProgressChange.TriggerOnJumpingOver(baseProgress, progressForUpdatingResources);
+                await updateProgressor.DisposeAsync();
+                baseProgress += ProgressPerMediaLibrary.Update;
 
                 #endregion
 
                 #region Finishing up
+
+                var finishProgressor = mlProgressor.CreateNewScope(baseProgress, ProgressPerMediaLibrary.Finish);
 
                 if (onProcessChange != null)
                 {
@@ -302,7 +330,7 @@ public class MediaLibraryV2Service<TDbContext>(
 
                 // clean cache
                 await cacheOrm.RemoveByKeys(conflictDbResources.Select(r => r.Id));
-                baseProgress = await onProgressChange.TriggerOnJumpingOver(baseProgress, progressForFinishingUp);
+                await finishProgressor.DisposeAsync();
 
                 #endregion
 
@@ -312,11 +340,7 @@ public class MediaLibraryV2Service<TDbContext>(
                 }
             }
 
-            baseProgress = (index + 1) * progressPerMediaLibrary;
-            if (onProgressChange != null)
-            {
-                await onProgressChange((int) baseProgress);
-            }
+            await mlProgressor.DisposeAsync();
         }
 
         return ret;
