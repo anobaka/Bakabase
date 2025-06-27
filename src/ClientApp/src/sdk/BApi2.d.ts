@@ -3320,6 +3320,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.InitializationContentType": 1 | 2;
         /**
          * Format: int32
+         * @description [0: None, 1: ChildTemplate]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.MediaLibraryTemplateAdditionalItem": 0 | 1;
+        /**
+         * Format: int32
          * @description [0: None, 1: Template]
          * @enum {integer}
          */
@@ -3462,6 +3468,8 @@ export interface components {
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerOptions"][];
             displayNameTemplate?: string;
             samplePaths?: string[];
+            /** Format: int32 */
+            childTemplateId?: number;
             child?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryTemplate"];
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerOptions": {
@@ -10103,7 +10111,10 @@ export interface operations {
     };
     GetAllMediaLibraryTemplates: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description [0: None, 1: ChildTemplate] */
+                additionalItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.MediaLibraryTemplateAdditionalItem"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -10154,7 +10165,10 @@ export interface operations {
     };
     GetMediaLibraryTemplate: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description [0: None, 1: ChildTemplate] */
+                additionalItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.MediaLibraryTemplateAdditionalItem"];
+            };
             header?: never;
             path: {
                 id: number;

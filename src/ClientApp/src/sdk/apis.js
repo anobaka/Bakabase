@@ -7003,6 +7003,7 @@ export const StartSyncingMediaLibraryResourcesURL = function(parameters = {}) {
  * url: GetAllMediaLibraryTemplatesURL
  * method: GetAllMediaLibraryTemplates_TYPE
  * raw_url: GetAllMediaLibraryTemplates_RAW_URL
+ * @param additionalItems - [0: None, 1: ChildTemplate]
  */
 export const GetAllMediaLibraryTemplates = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -7011,6 +7012,9 @@ export const GetAllMediaLibraryTemplates = function(parameters = {}) {
   let body
   let queryParameters = {}
   let form = {}
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7028,6 +7032,9 @@ export const GetAllMediaLibraryTemplatesURL = function(parameters = {}) {
   let queryParameters = {}
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template'
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]
@@ -7086,6 +7093,7 @@ export const AddMediaLibraryTemplateURL = function(parameters = {}) {
  * method: GetMediaLibraryTemplate_TYPE
  * raw_url: GetMediaLibraryTemplate_RAW_URL
  * @param id - 
+ * @param additionalItems - [0: None, 1: ChildTemplate]
  */
 export const GetMediaLibraryTemplate = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -7097,6 +7105,9 @@ export const GetMediaLibraryTemplate = function(parameters = {}) {
   path = path.replace('{id}', `${parameters['id']}`)
   if (parameters['id'] === undefined) {
     return Promise.reject(new Error('Missing required  parameter: id'))
+  }
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -7116,6 +7127,9 @@ export const GetMediaLibraryTemplateURL = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
   let path = '/media-library-template/{id}'
   path = path.replace('{id}', `${parameters['id']}`)
+  if (parameters['additionalItems'] !== undefined) {
+    queryParameters['additionalItems'] = parameters['additionalItems']
+  }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

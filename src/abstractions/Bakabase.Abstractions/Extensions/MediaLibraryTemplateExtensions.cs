@@ -80,7 +80,7 @@ public static class MediaLibraryTemplateExtensions
             Enhancers = JsonConvert.SerializeObject(template.Enhancers?.Select(e => e.ToDbModel())),
             DisplayNameTemplate = template.DisplayNameTemplate,
             SamplePaths = JsonConvert.SerializeObject(template.SamplePaths),
-            ChildTemplateId = template.Child?.Id
+            ChildTemplateId = template.Child?.Id ?? template.ChildTemplateId
         };
     }
 

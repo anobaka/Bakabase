@@ -91,6 +91,7 @@ export default ({
     if (!r.code) {
       toast.success(t('Saved successfully'));
       onChange?.();
+      forceUpdate();
     }
   };
 
@@ -99,19 +100,22 @@ export default ({
       templates.filter(t1 => {
         return willCauseCircleReference(tpl, t1.id, templates,
           x => x.id,
-          x => x.childId,
-          (x, k) => x.childId = k,
+          x => x.childTemplateId,
+          (x, k) => x.childTemplateId = k,
         );
       }).map(x => x.id.toString()),
     );
+
+    console.log(tpl.childTemplateId, tpl.childTemplateId ? [tpl.childTemplateId.toString()] : undefined);
+
     return (
-      <div className={'inline-block items-center gap-2'}>
+      <div className={'inline-flex items-center gap-2'}>
         <Select
           className={'min-w-[320px]'}
           label={`${t('Child template')} (${t('optional')})`}
           placeholder={t('Select a child template')}
           size={'sm'}
-          selectedKeys={tpl.childId ? [tpl.childId.toString()] : undefined}
+          selectedKeys={tpl.childTemplateId ? [tpl.childTemplateId.toString()] : []}
           fullWidth={false}
           disabledKeys={willCauseLoopKeys}
           dataSource={templates.map(t1 => {
@@ -122,19 +126,26 @@ export default ({
             };
           })}
           onSelectionChange={keys => {
-            const id = parseInt(Array.from(keys)[0], 10);
-            tpl.childId = id;
+            const id = parseInt(Array.from(keys)[0] as string, 10);
+            tpl.childTemplateId = id;
             putTemplate(tpl);
           }}
         />
-        <Button
-          isIconOnly
-          color={'danger'}
-          // size={'sm'}
-          variant={'light'}
-        >
-          <AiOutlineDelete className={'text-base'} />
-        </Button>
+        {tpl.childTemplateId && (
+          <Button
+            isIconOnly
+            color={'danger'}
+            // size={'sm'}
+            variant={'light'}
+            onPress={() => {
+              tpl.childTemplateId = undefined;
+              tpl.child = undefined;
+              putTemplate(tpl);
+            }}
+          >
+            <AiOutlineDelete className={'text-base'} />
+          </Button>
+        )}
       </div>);
   };
 

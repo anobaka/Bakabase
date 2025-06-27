@@ -25,7 +25,6 @@ import dayjs from 'dayjs';
 import store from '@/store';
 import { BTaskStatus } from '@/sdk/constants';
 import {
-  Badge,
   Button,
   Chip,
   Divider,
@@ -63,7 +62,7 @@ enum TaskAction {
 }
 
 const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
-  [TaskAction.Start]: task => task.isPersistent && (task.status == BTaskStatus.Cancelled || task.status == BTaskStatus.Error || task.status == BTaskStatus.Completed),
+  [TaskAction.Start]: task => task.isPersistent && (task.status == BTaskStatus.Cancelled || task.status == BTaskStatus.Error || task.status == BTaskStatus.Completed || task.status == BTaskStatus.NotStarted),
   [TaskAction.Pause]: task => task.status == BTaskStatus.Running,
   [TaskAction.Resume]: task => task.status == BTaskStatus.Paused,
   [TaskAction.Stop]: task => task.status == BTaskStatus.Running,
