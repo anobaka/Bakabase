@@ -136,7 +136,9 @@ public static class PathFilterExtensions
                                     var match = regex.Match(relativePath);
                                     if (match.Success)
                                     {
-                                        var len = match.Value.Split(InternalOptions.DirSeparator,
+                                        var fullMatchedPath =
+                                            relativePath.Substring(0, match.Index + match.Value.Length);
+                                        var len = fullMatchedPath.Split(InternalOptions.DirSeparator,
                                             StringSplitOptions.RemoveEmptyEntries).Length;
                                         var segments = pathRelativeSegmentsMap[path];
                                         var relativeSegments = segments.Take(len).ToArray();

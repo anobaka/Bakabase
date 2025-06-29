@@ -12,14 +12,14 @@ public static class ResourceSearchExtensions
 {
     public static bool IsValid(this ResourceSearchFilter filter)
     {
-        if (filter is {PropertyPool: PropertyPool.Custom, Property: null})
+        if (filter is { PropertyPool: PropertyPool.Custom, Property: null })
         {
             return false;
         }
 
         var propertyType = filter.PropertyPool == PropertyPool.Custom
             ? filter.Property!.Type
-            : PropertyInternals.BuiltinPropertyMap.GetValueOrDefault((ResourceProperty) filter.PropertyId)?.Type;
+            : PropertyInternals.BuiltinPropertyMap.GetValueOrDefault((ResourceProperty)filter.PropertyId)?.Type;
 
         if (!propertyType.HasValue)
         {
@@ -27,26 +27,32 @@ public static class ResourceSearchExtensions
         }
 
         var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(propertyType.Value);
-        var dbValueType =
-            psh?.SearchOperations.GetValueOrDefault(filter.Operation)?.AsType.GetDbValueType();
-
-        if (!dbValueType.HasValue)
+        if (psh == null || psh.SearchOperations.TryGetValue(filter.Operation, out var psoo) != true)
         {
             return false;
         }
 
-        var stdValueHandler = StandardValueInternals.HandlerMap.GetValueOrDefault(dbValueType.Value);
-        if (stdValueHandler == null)
+        if (filter.Operation is not (SearchOperation.IsNull or SearchOperation.IsNotNull))
         {
-            return false;
-        }
+            var dbValueType = psoo?.AsType.GetDbValueType();
+            if (!dbValueType.HasValue)
+            {
+                return false;
+            }
 
-        var optimizedDbValue = stdValueHandler.Optimize(filter.DbValue);
+            var stdValueHandler = StandardValueInternals.HandlerMap.GetValueOrDefault(dbValueType.Value);
+            if (stdValueHandler == null)
+            {
+                return false;
+            }
 
-        if (filter.Operation is not SearchOperation.IsNull and not SearchOperation.IsNotNull &&
-            optimizedDbValue == null)
-        {
-            return false;
+            var optimizedDbValue = stdValueHandler.Optimize(filter.DbValue);
+
+            if (filter.Operation is not SearchOperation.IsNull and not SearchOperation.IsNotNull &&
+                optimizedDbValue == null)
+            {
+                return false;
+            }
         }
 
         return true;
