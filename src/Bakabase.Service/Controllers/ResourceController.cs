@@ -98,13 +98,12 @@ namespace Bakabase.Service.Controllers
             var p = await propertyService.GetProperty(propertyPool, propertyId);
 
             var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(p.Type);
-            var options = psh?.SearchOperations.GetValueOrDefault(operation);
-            if (options == null)
+            if (psh?.SearchOperations.TryGetValue(operation, out var options) != true)
             {
                 return SingletonResponseBuilder<PropertyViewModel>.NotFound;
             }
 
-            if (options.ConvertProperty != null)
+            if (options?.ConvertProperty != null)
             {
                 p = options.ConvertProperty(p);
             }

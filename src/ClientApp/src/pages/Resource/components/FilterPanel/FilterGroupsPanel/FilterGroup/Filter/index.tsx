@@ -143,6 +143,10 @@ export default ({
       return null;
     }
 
+    if (filter.operation == SearchOperation.IsNull || filter.operation == SearchOperation.IsNotNull) {
+      return null;
+    }
+
     return (
       <PropertyValueRenderer
         property={filter.valueProperty}
