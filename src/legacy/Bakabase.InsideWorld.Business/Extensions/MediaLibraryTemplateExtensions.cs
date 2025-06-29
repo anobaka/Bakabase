@@ -25,6 +25,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
+using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -125,7 +126,7 @@ public static class MediaLibraryTemplateExtensions
 
                     if (bizValue != null)
                     {
-                        (resource.PropertyValues ??= []).GetOrAdd(property!, () => bizValue);
+                        (resource.PropertyValues ??= []).GetOrAdd(property!, _ => bizValue);
                     }
                 }
             }

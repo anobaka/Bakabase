@@ -35,6 +35,7 @@ export default ({ onDestroyed }: Props) => {
         if (r.code) {
           throw new Error(r.message);
         }
+        setVisible(false);
       }}
     >
       <div className={'flex flex-col gap-1'}>

@@ -2,13 +2,14 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using System.Text.RegularExpressions;
-using Bootstrap.Extensions;
 using Bootstrap.Components.Tasks;
 using System;
 using System.Collections.Concurrent;
 using Bakabase.Abstractions.Components.Tasks;
 using Bootstrap.Components.Storage;
+using Bootstrap.Extensions;
 using CsQuery.Engine.PseudoClassSelectors;
+using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.Abstractions.Extensions;
 
@@ -88,13 +89,15 @@ public static class PathFilterExtensions
                     {
                         foreach (var path in candidatePaths)
                         {
+                            await pt.WaitWhilePausedAsync(ct);
+                            ct.ThrowIfCancellationRequested();
                             var segments = pathRelativeSegmentsMap[path];
                             var len = rf.Layer.Value;
                             if (len == segments.Length)
                             {
                                 var relativePath = pathRelativePathMap[path];
                                 var innerPaths = cachedInnerPathsMap.GetOrAdd(path,
-                                    () => subPaths.Where(x => x != path && x.StartsWith(path)).ToArray());
+                                    (_) => subPaths.Where(x => x != path && x.StartsWith(path)).ToArray());
                                 resourcePathInfoMap[path] =
                                     new ResourcePathInfo(path, relativePath, segments, innerPaths);
                             }
@@ -110,31 +113,89 @@ public static class PathFilterExtensions
                     if (rf.Regex.IsNotEmpty())
                     {
                         var regex = new Regex(rf.Regex, RegexOptions.Compiled);
-                        await Parallel.ForEachAsync(candidatePaths,
-                            new ParallelOptions {MaxDegreeOfParallelism = maxThreads}, async (path, pct) =>
-                            {
-                                var relativePath = pathRelativePathMap[path];
-                                var match = regex.Match(relativePath);
-                                if (match.Success)
-                                {
-                                    var len = match.Value.Split(InternalOptions.DirSeparator,
-                                        StringSplitOptions.RemoveEmptyEntries).Length;
-                                    var segments = pathRelativeSegmentsMap[path];
-                                    var relativeSegments = segments.Take(len).ToArray();
-                                    var resourcePath = string.Join(InternalOptions.DirSeparator, rootPath,
-                                        relativePath);
-                                    if (!resourcePathInfoMap.ContainsKey(resourcePath))
-                                    {
-                                        var innerPaths = cachedInnerPathsMap.GetOrAdd(resourcePath,
-                                            () => subPaths.Where(x => x != resourcePath && x.StartsWith(resourcePath))
-                                                .ToArray());
-                                        resourcePathInfoMap[resourcePath] =
-                                            new ResourcePathInfo(path, relativePath, relativeSegments, innerPaths);
-                                    }
-                                }
+                        var lazyMap = new ConcurrentDictionary<string, Lazy<ResourcePathInfo>>();
 
-                                await filterProgressor.Add(progressPerPath);
-                            });
+                        var tasks = new List<Task>();
+                        var candidatePathCountPerThread = Math.Max(1, candidatePaths.Count() / maxThreads);
+                        for (var i = 0; i < maxThreads; i++)
+                        {
+                            var threadedCandidatePaths = candidatePaths.Skip(candidatePathCountPerThread * i)
+                                .Take(candidatePathCountPerThread).ToArray();
+                            if (threadedCandidatePaths.Length == 0)
+                            {
+                                break;
+                            }
+
+                            tasks.Add(Task.Run(async () =>
+                            {
+                                foreach (var path in threadedCandidatePaths)
+                                {
+                                    await pt.WaitWhilePausedAsync(ct);
+                                    ct.ThrowIfCancellationRequested();
+                                    var relativePath = pathRelativePathMap[path];
+                                    var match = regex.Match(relativePath);
+                                    if (match.Success)
+                                    {
+                                        var len = match.Value.Split(InternalOptions.DirSeparator,
+                                            StringSplitOptions.RemoveEmptyEntries).Length;
+                                        var segments = pathRelativeSegmentsMap[path];
+                                        var relativeSegments = segments.Take(len).ToArray();
+                                        var resourcePath = string.Join(InternalOptions.DirSeparator,
+                                            [rootPath, .. relativeSegments]);
+                                        resourcePathInfoMap.GetOrAdd(resourcePath, _ =>
+                                        {
+                                            return lazyMap.GetOrAdd(resourcePath, _ => new Lazy<ResourcePathInfo>(() =>
+                                            {
+                                                var innerPaths = cachedInnerPathsMap.GetOrAdd(resourcePath,
+                                                    _ => subPaths
+                                                        .Where(x => x != resourcePath && x.StartsWith(resourcePath))
+                                                        .ToArray());
+                                                Console.WriteLine(resourcePath);
+                                                return new ResourcePathInfo(path, relativePath, relativeSegments,
+                                                    innerPaths);
+                                            })).Value;
+                                        });
+                                    }
+
+                                    await filterProgressor!.Add(progressPerPath);
+                                }
+                            }, ct));
+                        }
+
+                        await Task.WhenAll(tasks);
+
+                        // await Parallel.ForEachAsync(candidatePaths,
+                        //     new ParallelOptions { MaxDegreeOfParallelism = maxThreads, CancellationToken = ct },
+                        //     async (path, pct) =>
+                        //     {
+                        //         await pt.WaitWhilePausedAsync(pct);
+                        //         var relativePath = pathRelativePathMap[path];
+                        //         var match = regex.Match(relativePath);
+                        //         if (match.Success)
+                        //         {
+                        //             var len = match.Value.Split(InternalOptions.DirSeparator,
+                        //                 StringSplitOptions.RemoveEmptyEntries).Length;
+                        //             var segments = pathRelativeSegmentsMap[path];
+                        //             var relativeSegments = segments.Take(len).ToArray();
+                        //             var resourcePath = string.Join(InternalOptions.DirSeparator,
+                        //                 [rootPath, ..relativeSegments]);
+                        //             resourcePathInfoMap.GetOrAdd(resourcePath, _ =>
+                        //             {
+                        //                 return lazyMap.GetOrAdd(resourcePath, _ => new Lazy<ResourcePathInfo>(() =>
+                        //                 {
+                        //                     var innerPaths = cachedInnerPathsMap.GetOrAdd(resourcePath,
+                        //                         _ => subPaths
+                        //                             .Where(x => x != resourcePath && x.StartsWith(resourcePath))
+                        //                             .ToArray());
+                        //                     Console.WriteLine(resourcePath);
+                        //                     return new ResourcePathInfo(path, relativePath, relativeSegments,
+                        //                         innerPaths);
+                        //                 })).Value;
+                        //             });
+                        //         }
+                        //
+                        //         await filterProgressor.Add(progressPerPath);
+                        //     });
                     }
 
                     break;

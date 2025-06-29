@@ -18,6 +18,7 @@ using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
+using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -195,11 +196,11 @@ namespace Bakabase.Service.Controllers
                     {
                         foreach (var (pId, pv) in pvs)
                         {
-                            propertyValueExpectedCounts.GetOrAdd(pt, () => []).GetOrAdd(pId, () => 0);
+                            propertyValueExpectedCounts.GetOrAdd(pt, _ => []).GetOrAdd(pId, _ => 0);
                             propertyValueExpectedCounts[pt][pId]++;
                             if (pv.Values?.Any(x => x.Value != null) == true)
                             {
-                                propertyValueFilledCounts.GetOrAdd(pt, () => []).GetOrAdd(pId, () => 0);
+                                propertyValueFilledCounts.GetOrAdd(pt, _ => []).GetOrAdd(pId, _ => 0);
                                 propertyValueFilledCounts[pt][pId]++;
                             }
                         }

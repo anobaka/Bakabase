@@ -45,6 +45,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CsQuery.ExtensionMethods.Internal;
+using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -466,7 +467,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     foreach (var p in t.PropertyKeys.Where(x => !x.IsCustom))
                     {
-                        var propertyIdAndValues = builtinPropertyValues.GetOrAdd((ResourceProperty) p.Id, () => new());
+                        var propertyIdAndValues = builtinPropertyValues.GetOrAdd((ResourceProperty) p.Id, _ => new());
                         var v = t.SegmentText;
                         if (p is {IsCustom: false, Id: (int) ResourceProperty.ParentResource})
                         {
@@ -483,7 +484,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var t in e.GlobalMatchedValues.Where(p => !p.PropertyKey.IsCustom))
             {
-                var values = builtinPropertyValues.GetOrAdd((ResourceProperty) t.PropertyKey.Id, () => new());
+                var values = builtinPropertyValues.GetOrAdd((ResourceProperty) t.PropertyKey.Id, _ => new());
                 values.AddRange(t.TextValues);
             }
 
@@ -524,8 +525,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                     property.Type.GetBizValueType());
                                 pr.Properties ??= [];
                                 var propertyValues = pr.Properties.GetOrAdd((int) PropertyPool.Reserved,
-                                    () => new Dictionary<int, Resource.Property>()).GetOrAdd((int) propertyId,
-                                    () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
+                                    _ => new Dictionary<int, Resource.Property>()).GetOrAdd((int) propertyId,
+                                    _ => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
                                         property.Type.GetBizValueType(), null));
                                 propertyValues.Values ??= [];
                                 var v = propertyValues.Values!.FirstOrDefault(x =>
@@ -558,9 +559,9 @@ namespace Bakabase.InsideWorld.Business.Services
                     var property = customPropertyMap.GetValueOrDefault(pId);
                     if (property != null)
                     {
-                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int) PropertyPool.Custom, () => [])!;
+                        var propertyMap = (pr.Properties ??= []).GetOrAdd((int) PropertyPool.Custom, _ => [])!;
                         var rp = propertyMap.GetOrAdd(property.Id,
-                            () => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
+                            _ => new Resource.Property(property.Name, property.Type, property.Type.GetDbValueType(),
                                 property.Type.GetBizValueType(), null));
                         rp.Values ??= [];
                         rp.Values.Add(new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization,
@@ -852,7 +853,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 var eIds = pr.GetIdsOfEnhancersShouldBeReEnhanced(so);
                                 if (eIds?.Any() == true)
                                 {
-                                    toBeDeletedEnhancementKeys.GetOrAdd(pr.Id, eIds.ToHashSet);
+                                    toBeDeletedEnhancementKeys.GetOrAdd(pr.Id, _ => eIds.ToHashSet());
                                 }
                             }
 
@@ -879,7 +880,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                     if (eIds.Any())
                                     {
-                                        toBeReAppliedEnhancementKeys.GetOrAdd(pr.Id, eIds.ToHashSet);
+                                        toBeReAppliedEnhancementKeys.GetOrAdd(pr.Id, _ => eIds.ToHashSet());
                                     }
                                 }
                             }
@@ -969,8 +970,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                         : relativeSegments.Length + result.Layer!.Value - 1;
 
                                     var propertyIds = tmpSegmentProperties
-                                        .GetOrAdd(idx, () => new())
-                                        .GetOrAdd(m.IsCustomProperty, () => new());
+                                        .GetOrAdd(idx, _ => new())
+                                        .GetOrAdd(m.IsCustomProperty, _ => new());
                                     propertyIds.Add(m.PropertyId);
 
                                     break;
@@ -978,8 +979,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 case MatchResultType.Regex:
                                 {
                                     var values = tmpGlobalMatchedValues
-                                        .GetOrAdd(m.IsCustomProperty, () => new())
-                                        .GetOrAdd(m.PropertyId, () => new());
+                                        .GetOrAdd(m.IsCustomProperty, _ => new())
+                                        .GetOrAdd(m.PropertyId, _ => new());
                                     values.AddRange(result.Matches!);
 
                                     break;
@@ -1023,13 +1024,13 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         foreach (var p in segment.PropertyKeys.Where(p => p.IsCustom))
                         {
-                            propertyIdBizValueMap.GetOrAdd(p.Id, () => []).Add(segment.SegmentText);
+                            propertyIdBizValueMap.GetOrAdd(p.Id, _ => []).Add(segment.SegmentText);
                         }
                     }
 
                     foreach (var gv in globalValues.Where(x => x.PropertyKey.IsCustom))
                     {
-                        var set = propertyIdBizValueMap.GetOrAdd(gv.PropertyKey.Id, () => []);
+                        var set = propertyIdBizValueMap.GetOrAdd(gv.PropertyKey.Id, _ => []);
                         foreach (var x in gv.TextValues)
                         {
                             set.Add(x);

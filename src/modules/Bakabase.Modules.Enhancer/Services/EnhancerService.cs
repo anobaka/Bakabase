@@ -22,6 +22,7 @@ using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Logging.LogService.Services;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
+using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancer;
@@ -445,8 +446,8 @@ namespace Bakabase.Modules.Enhancer.Services
                         case PropertyPool.Reserved:
                         {
                             var scope = (PropertyValueScope) enhancerDescriptor.PropertyValueScope;
-                            var rpv = scopedRpvMap.GetOrAdd(scope, () => new Dictionary<int, ReservedPropertyValue>())
-                                .GetOrAdd(enhancement.ResourceId, () => new ReservedPropertyValue
+                            var rpv = scopedRpvMap.GetOrAdd(scope, _ => new Dictionary<int, ReservedPropertyValue>())
+                                .GetOrAdd(enhancement.ResourceId, _ => new ReservedPropertyValue
                                 {
                                     ResourceId = enhancement.ResourceId,
                                     Scope = (int) scope,
@@ -880,13 +881,13 @@ namespace Bakabase.Modules.Enhancer.Services
                                         property.Type.GetBizValueType());
 
                                     resource.Properties ??= [];
-                                    var rpp = resource.Properties.GetOrAdd((int)property.Pool, () => [])!;
+                                    var rpp = resource.Properties.GetOrAdd((int)property.Pool, _ => [])!;
                                     Resource.Property rp;
                                     if (property.Id > 0)
                                     {
                                         rp = rpp.GetOrAdd(
                                             property.Id,
-                                            () => new Resource.Property(property.Name,
+                                            _ => new Resource.Property(property.Name,
                                                 property.Type, property.Type.GetDbValueType(),
                                                 property.Type.GetBizValueType(), [], true, property.Order));
                                     }
