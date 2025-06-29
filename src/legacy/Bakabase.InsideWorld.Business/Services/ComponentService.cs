@@ -70,7 +70,7 @@ public class ComponentService : BootstrapService
 
     private IComponentDataVersionGenerator GetDataVersionGenerator(string assemblyQualifiedTypeName)
     {
-        var g = EnhancerTypeDataVersionGeneratorsMap.GetOrAdd(assemblyQualifiedTypeName, () =>
+        var g = EnhancerTypeDataVersionGeneratorsMap.GetOrAdd(assemblyQualifiedTypeName, _ =>
         {
             IComponentDataVersionGenerator g = null;
             if (StaticComponentTypeMap.TryGetValue(assemblyQualifiedTypeName, out var t))

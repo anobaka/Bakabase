@@ -42,6 +42,7 @@ using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CliWrap;
 using CsQuery.ExtensionMethods.Internal;
+using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -961,7 +962,7 @@ namespace Bakabase.Service.Controllers
                         {
                             if (System.IO.File.Exists(path))
                             {
-                                batches.GetOrAdd(pg.Key, () => []).Add(path);
+                                batches.GetOrAdd(pg.Key, _ => []).Add(path);
                             }
                         }
                     }

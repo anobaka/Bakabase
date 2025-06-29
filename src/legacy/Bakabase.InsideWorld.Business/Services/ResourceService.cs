@@ -59,6 +59,7 @@ using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedProper
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bootstrap.Components.Logging.LogService.Services;
+using DotNext.Collections.Generic;
 using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
 
 namespace Bakabase.InsideWorld.Business.Services
@@ -426,7 +427,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 r.Properties ??= [];
                                 var reservedProperties =
-                                    r.Properties.GetOrAdd((int)PropertyPool.Reserved, () => []);
+                                    r.Properties.GetOrAdd((int)PropertyPool.Reserved, _ => []);
                                 var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
                                 reservedProperties[(int)ResourceProperty.Rating] = new Resource.Property(
                                     reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Name,
@@ -506,7 +507,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 r.Properties ??= [];
                                 var customProperties =
-                                    r.Properties.GetOrAdd((int)PropertyPool.Custom, () => []);
+                                    r.Properties.GetOrAdd((int)PropertyPool.Custom, _ => []);
 
                                 var propertyIds = new List<int>();
                                 if (r.CategoryId > 0)
@@ -554,7 +555,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                     var visible = boundPropertyIds?.Contains(pId) == true;
 
                                     var p = customProperties.GetOrAdd(pId,
-                                        () => new Resource.Property(property.Name, property.Type,
+                                        _ => new Resource.Property(property.Name, property.Type,
                                             property.Type.GetDbValueType(),
                                             property.Type.GetBizValueType(), [], visible, propertyOrderMap[pId]));
                                     if (values != null)

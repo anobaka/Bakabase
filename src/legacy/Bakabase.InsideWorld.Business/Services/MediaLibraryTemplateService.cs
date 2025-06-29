@@ -29,6 +29,7 @@ using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
+using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
@@ -91,7 +92,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                     {
                         foreach (var to in enhancer.TargetOptions)
                         {
-                            propertyKeysMap.GetOrAdd(to.PropertyPool, () => []).Add(to.PropertyId);
+                            propertyKeysMap.GetOrAdd(to.PropertyPool, _ => []).Add(to.PropertyId);
                         }
                     }
                 }
@@ -226,8 +227,8 @@ public class MediaLibraryTemplateService<TDbContext>(
                         {
                             var r = resourcesMap[rpi.Path];
                             r.Properties ??= [];
-                            var rp = r.Properties.GetOrAdd((int)p.Pool, () => []).GetOrAdd(p.Id,
-                                () => new Resource.Property(p.Property.Name, p.Property.Type,
+                            var rp = r.Properties.GetOrAdd((int)p.Pool, _ => []).GetOrAdd(p.Id,
+                                _ => new Resource.Property(p.Property.Name, p.Property.Type,
                                     p.Property.Type.GetDbValueType(), p.Property.Type.GetBizValueType(), [], true));
                             rp.Values ??= [];
                             rp.Values.Add(new Resource.Property.PropertyValue((int)PropertyValueScope.Synchronization,
@@ -429,7 +430,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                     }).ToArray());
                 foreach (var np in newProperties)
                 {
-                    propertyMap.GetOrAdd(PropertyPool.Custom, () => []).TryAdd(np.Id, np.ToProperty());
+                    propertyMap.GetOrAdd(PropertyPool.Custom, _ => []).TryAdd(np.Id, np.ToProperty());
                 }
 
                 var newIdx = 0;

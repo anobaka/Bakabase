@@ -15,6 +15,7 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Orm;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
+using DotNext.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
 
@@ -146,7 +147,7 @@ public class ReservedPropertyValueService(
 
                     if (dataIsChanged)
                     {
-                        changed.GetOrAdd(r.Id, () => new Dictionary<int, ReservedPropertyValue>())[pv.Scope] = data;
+                        changed.GetOrAdd(r.Id, _ => new Dictionary<int, ReservedPropertyValue>())[pv.Scope] = data;
                     }
                 }
             }
