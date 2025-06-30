@@ -22,7 +22,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "OpenFilesSelector")]
         public async Task<ListResponse<string>> OpenFilesSelector(string? initialDirectory)
         {
-            return new ListResponse<string>(_guiAdapter.OpenFilesSelector(initialDirectory));
+            return new ListResponse<string>(_guiAdapter.OpenFilesSelector(initialDirectory) ?? []);
 
         }
 

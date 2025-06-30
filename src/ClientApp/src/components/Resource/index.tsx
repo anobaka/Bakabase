@@ -13,6 +13,7 @@ import {
   PushpinOutlined,
 } from '@ant-design/icons';
 import { ControlledMenu } from '@szhsin/react-menu';
+import { AiOutlineSync } from 'react-icons/ai';
 import styles from './index.module.scss';
 import { OpenResourceDirectory } from '@/sdk/apis';
 import { buildLogger, useTraceUpdate } from '@/components/utils';
@@ -28,7 +29,7 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import { Button, Chip, Link, Tooltip } from '@/components/bakaui';
 import {
   BTaskStatus,
-  PropertyPool, ReservedProperty,
+  PropertyPool,
   ResourceAdditionalItem,
   ResourceDisplayContent,
   ResourceTag,
@@ -44,6 +45,7 @@ import type { BTask } from '@/core/models/BTask';
 export interface IResourceHandler {
   id: number;
   reload: (ct?: AbortSignal) => Promise<any>;
+  select: (selected: boolean) => void;
 }
 
 type TooltipPlacement =
@@ -62,52 +64,47 @@ type TooltipPlacement =
 
 type Props = {
   resource: ResourceModel;
-  coverHash?: string;
   queue?: Queue;
-  onRemove?: (id: number) => any;
-  showBiggerCoverOnHover?: boolean;
   biggerCoverPlacement?: TooltipPlacement;
   searchEngines?: SimpleSearchEngine[] | null;
   ct?: AbortSignal;
   onTagClick?: (propertyId: number, value: TagValue) => any;
-  disableCache?: boolean;
-  disableMediaPreviewer?: boolean;
   style?: any;
   className?: string;
   selected?: boolean;
   mode?: 'default' | 'select';
-  onSelected?: () => any;
+  onSelected?: (id: number) => any;
   selectedResourceIds?: number[];
   onSelectedResourcesChanged?: (ids: number[]) => any;
+  debug?: boolean;
 };
 
 const Resource = React.forwardRef((props: Props, ref) => {
   const {
     resource,
-    onRemove = (id) => {
-    },
     onTagClick = (propertyId: number, value: TagValue) => {
     },
     queue,
     ct = new AbortController().signal,
-    disableCache = false,
     biggerCoverPlacement,
     style: propStyle = {},
     selected = false,
     mode = 'default',
-    onSelected = () => {
+    onSelected = (id: number) => {
     },
     selectedResourceIds: propsSelectedResourceIds,
     onSelectedResourcesChanged,
+    debug,
   } = props;
 
-  // console.log(`showBiggerCoverOnHover: ${showBiggerCoverOnHover}, disableMediaPreviewer: ${disableMediaPreviewer}, disableCache: ${disableCache}`);
+  // useTraceUpdate(props);
 
   const { createPortal } = useBakabaseContext();
 
   const { t } = useTranslation();
   const log = buildLogger(`Resource:${resource.id}|${resource.path}`);
-  const appContext = store.useModelState('appContext');
+  const renderedTimes = useRef(0);
+  renderedTimes.current += 1;
   const tasksRef = useRef<BTask[] | undefined>();
 
   const uiOptions = store.useModelState('uiOptions');
@@ -122,18 +119,16 @@ const Resource = React.forwardRef((props: Props, ref) => {
     y: 0,
   });
 
-  const hasActiveTask = tasksRef.current?.some(x => x.status == BTaskStatus.Paused || x.status == BTaskStatus.Running) == true;
-
-  const disableCacheRef = useRef(disableCache);
-
-  useEffect(() => {
-    disableCacheRef.current = disableCache;
-  }, [disableCache]);
+  const hasActiveTask = tasksRef
+    .current?.some(x => x.status == BTaskStatus.Paused || x.status == BTaskStatus.Running) == true;
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
       id: resource.id,
       reload: reload,
+      select: (selected: boolean) => {
+
+      },
     };
   }, []);
 
@@ -157,18 +152,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
   }, []);
 
-  const openFile = (id: number) => {
-    OpenResourceDirectory({
-      id,
-    })
-      .invoke((t) => {
-        if (!t.code) {
-          Message.success(t('Opened'));
-        }
-      });
-  };
-
-
   const reload = useCallback(async (ct?: AbortSignal) => {
     const newResourceRsp = await BApi.resource.getResourcesByKeys({
       ids: [resource.id],
@@ -190,31 +173,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     }
   }, []);
 
-  const open = () => {
-    openFile(resource.id);
-  };
-
   const coverRef = useRef<IResourceCoverRef>();
-
-  function onRenderCallback(
-    id, // the "id" prop of the Profiler tree that has just committed
-    phase, // either "mount" (if the tree just mounted) or "update" (if it re-rendered)
-    actualDuration, // time spent rendering the committed update
-    baseDuration, // estimated time to render the entire subtree without memoization
-    startTime, // when React began rendering this update
-    commitTime, // when React committed this update
-    interactions, // the Set of interactions belonging to this update
-  ) {
-    console.log({
-      id,
-      phase,
-      actualDuration,
-      baseDuration,
-      startTime,
-      commitTime,
-      interactions,
-    });
-  }
 
   const renderCover = () => {
     const elementId = `resource-${resource.id}`;
@@ -276,6 +235,19 @@ const Resource = React.forwardRef((props: Props, ref) => {
                 radius={'sm'}
               >{resource.id}</Chip>
             </Tooltip>
+          )}
+          {debug && (
+            <Chip
+              size={'sm'}
+              variant={'flat'}
+              radius={'sm'}
+            >
+              <div className={'flex items-center gap-1'}>
+                <AiOutlineSync className={'text-base'} />
+                {renderedTimes.current}
+              </div>
+
+            </Chip>
           )}
         </div>
         <PlayableFiles
@@ -414,7 +386,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         <div onClickCapture={e => {
           log('outer', 'click capture');
           if (mode == 'select' && !hasActiveTask) {
-            onSelected();
+            onSelected(resource.id);
             e.preventDefault();
             e.stopPropagation();
           }

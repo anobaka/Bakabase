@@ -12,7 +12,7 @@ import { PiEmpty } from 'react-icons/pi';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import type { MediaLibraryTemplate } from './models';
 import Template from './components/Template';
-import { Accordion, AccordionItem, Button, Chip, Input, Modal, Select, Textarea, Tooltip } from '@/components/bakaui';
+import { Accordion, AccordionItem, Button, Chip, Input, Modal, Select, Textarea, Tooltip, Autocomplete, AutocompleteItem } from '@/components/bakaui';
 import { PropertyPool } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { PropertyMap } from '@/components/types';
@@ -105,18 +105,24 @@ export default () => {
             <AiOutlinePlusCircle className={'text-base'} />
             {t('Create a template')}
           </Button>
-          <Input
-            size={'sm'}
-            fullWidth={false}
-            startContent={<AiOutlineSearch className={'text-base'} />}
-            placeholder={t('Search templates')}
-            value={searchForm.keyword}
-            onValueChange={keyword => setSearchForm({
-              ...searchForm,
-              keyword,
-            })}
-            endContent={filteredTemplates.length == templates.length ? filteredTemplates.length : `${filteredTemplates.length}/${templates.length}`}
-          />
+          <div>
+            <Autocomplete
+              size={'sm'}
+              fullWidth={false}
+              startContent={<AiOutlineSearch className={'text-base'} />}
+              placeholder={t('Search templates')}
+              inputValue={searchForm.keyword}
+              onInputChange={keyword => setSearchForm({
+                ...searchForm,
+                keyword,
+              })}
+              endContent={filteredTemplates.length == templates.length ? filteredTemplates.length : `${filteredTemplates.length}/${templates.length}`}
+            >
+              {templates?.map((tpl) => (
+                <AutocompleteItem key={tpl.id}>{tpl.name}</AutocompleteItem>
+              ))}
+            </Autocomplete>
+          </div>
           {templates.length > 0 ? expandedTemplateIds.length < templates.length ? (
             <Button
               size={'sm'}

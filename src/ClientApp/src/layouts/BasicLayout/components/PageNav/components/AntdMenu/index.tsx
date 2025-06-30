@@ -44,6 +44,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
     const Icon = item.icon ?? AiOutlineQuestionCircle;
     return getItem(t(item.name), item.path, <Icon
       style={IconStyle}
+      className={'text-lg'}
     />, item.children?.map(convertItem));
   }
 

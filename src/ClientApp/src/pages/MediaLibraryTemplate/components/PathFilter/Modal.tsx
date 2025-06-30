@@ -1,7 +1,8 @@
 import { BsFileEarmark, BsFolder } from 'react-icons/bs';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { Divider, Input, Modal, Radio, RadioGroup, Select, Textarea } from '@/components/bakaui';
+import { useState } from 'react';
+import { AiOutlineDelete } from 'react-icons/ai';
+import { Button, Divider, Input, Modal, Radio, RadioGroup, Select } from '@/components/bakaui';
 import type { PathFilter } from '@/pages/MediaLibraryTemplate/models';
 import { PathFilterFsType } from '@/pages/MediaLibraryTemplate/models';
 import { pathFilterFsTypes, PathPositioner, pathPositioners } from '@/sdk/constants';
@@ -151,35 +152,52 @@ export default ({
                     fsType,
                   });
                 }}
-              selectedKeys={filter.fsType ? [filter.fsType.toString()] : undefined}
+              disallowEmptySelection={false}
+              selectedKeys={filter.fsType ? [filter.fsType.toString()] : []}
               selectionMode={'single'}
+              endContent={(
+                <Button
+                  isIconOnly
+                  size={'sm'}
+                  variant={'light'}
+                  color={'danger'}
+                  onPress={() => {
+                      setFilter({
+                        ...filter,
+                        fsType: undefined,
+                      });
+                    }}
+                >
+                  <AiOutlineDelete className={'text-base'} />
+                </Button>
+                )}
               renderValue={items => {
                   return items.map(t => renderFsItem(parseInt((t.data as { value: string })!.value, 10)));
                 }}
             />
-            {(filter.fsType == undefined || filter.fsType == PathFilterFsType.File) && (
-              <>
-                <ExtensionGroupSelect
-                  value={filter.extensionGroupIds}
-                  onSelectionChange={ids => {
-                    setFilter({
-                      ...filter,
-                      extensionGroupIds: ids,
-                    });
-                  }}
-                />
-                <ExtensionsInput
-                  label={t('Limit file extensions')}
-                  onValueChange={v => {
-                    setFilter({
-                      ...filter,
-                      extensions: v,
-                    });
-                  }}
-                  defaultValue={filter.extensions}
-                />
-              </>
-            )}
+              {(filter.fsType == undefined || filter.fsType == PathFilterFsType.File) && (
+                <>
+                  <ExtensionGroupSelect
+                    value={filter.extensionGroupIds}
+                    onSelectionChange={ids => {
+                      setFilter({
+                        ...filter,
+                        extensionGroupIds: ids,
+                      });
+                    }}
+                  />
+                  <ExtensionsInput
+                    label={t('Limit file extensions')}
+                    onValueChange={v => {
+                      setFilter({
+                        ...filter,
+                        extensions: v,
+                      });
+                    }}
+                    defaultValue={filter.extensions}
+                  />
+                </>
+              )}
           </>
         )}
         {/* <pre>{JSON.stringify(filter)}</pre> */}
