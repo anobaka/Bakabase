@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import { useEffect, useState } from 'react';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import { Modal } from '@/components/bakaui';
+import { Chip, Modal } from '@/components/bakaui';
 import Template from '@/pages/MediaLibraryTemplate/components/Template';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { MediaLibraryTemplate } from '@/pages/MediaLibraryTemplate/models';
@@ -38,7 +38,12 @@ export default ({
         <div>
           {t('Editing media library template')}
           &nbsp;
-          <span className={'font-bold'}>{template?.name}</span>
+          <Chip
+            size={'lg'}
+            color={'success'}
+            variant={'light'}
+            className={'font-bold'}
+          >{template?.name}</Chip>
         </div>
       )}
       footer={false}

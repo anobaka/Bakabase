@@ -39,7 +39,7 @@ export default () => {
 
   return (
     <div>
-      <div className={'text-xl font-bold'}>{t('Category caches')}</div>
+      <div className={'text-xl font-bold'}>{t('Media library caches')}</div>
       <div className={'flex flex-col gap-2'}>
         {(cacheOverview?.mediaLibraryCaches && cacheOverview.mediaLibraryCaches.length > 0) ? (
           <div className={'grid grid-cols-4 gap-2'}>

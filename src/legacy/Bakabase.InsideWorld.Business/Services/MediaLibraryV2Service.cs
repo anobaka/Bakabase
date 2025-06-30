@@ -320,7 +320,6 @@ public class MediaLibraryV2Service<TDbContext>(
                     await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_AlmostComplete(ml.Name));
                 }
 
-                var progressForFinishingUp = progressPerMediaLibrary * 0.1f;
                 await resourceService.AddOrPutRange(changedResources.ToList());
                 await Patch(ml.Id,
                     new MediaLibraryV2PatchInputModel
@@ -339,8 +338,6 @@ public class MediaLibraryV2Service<TDbContext>(
                     await onProcessChange(null);
                 }
             }
-
-            await mlProgressor.DisposeAsync();
         }
 
         return ret;

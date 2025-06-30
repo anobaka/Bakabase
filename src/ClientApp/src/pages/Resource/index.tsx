@@ -195,6 +195,29 @@ export default () => {
     setSearching(false);
   };
 
+  const onSelect = useCallback((id: number) => {
+    const selected = selectedIdsRef.current.includes(id);
+    if (selected) {
+      setSelectedIds(selectedIdsRef.current.filter(id => id != id));
+    } else {
+      setSelectedIds([...selectedIdsRef.current, id]);
+    }
+  }, []);
+
+  const onSelectedResourcesChanged = useCallback((ids: number[]) => {
+    BApi.resource.getResourcesByKeys({ ids, additionalItems: ResourceAdditionalItem.All })
+      .then(res => {
+      const rs = res.data || [];
+      for (const r of rs) {
+        const idx = resourcesRef.current.findIndex(x => x.id == r.id);
+        if (idx > -1) {
+          resourcesRef.current[idx] = r;
+        }
+      }
+      setResources([...resourcesRef.current]);
+    });
+  }, []);
+
   const renderCell = useCallback(({
                                     columnIndex, // Horizontal (column) index of cell
                                     // isScrolling, // The Grid is currently being scrolled
@@ -211,7 +234,7 @@ export default () => {
       return null;
     }
     const resource = resources[index];
-    const selected = selectedIds.includes(resource.id);
+    const selected = selectedIdsRef.current.includes(resource.id);
     return (
       <div
         className={'relative p-0.5'}
@@ -222,37 +245,20 @@ export default () => {
         onLoad={measure}
       >
         <Resource
+          // debug
           resource={resource}
           showBiggerCoverOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
           disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
-          disableCache={uiOptions?.resource?.disableCache}
           biggerCoverPlacement={index % columnCount < columnCount / 2 ? 'right' : 'left'}
           mode={multiSelection ? 'select' : 'default'}
           selected={selected}
-          onSelectedResourcesChanged={ids => {
-            BApi.resource.getResourcesByKeys({ ids, additionalItems: ResourceAdditionalItem.All }).then(res => {
-              const rs = res.data || [];
-              for (const r of rs) {
-                const idx = resourcesRef.current.findIndex(x => x.id == r.id);
-                if (idx > -1) {
-                  resourcesRef.current[idx] = r;
-                }
-              }
-              setResources([...resourcesRef.current]);
-            });
-          }}
-          onSelected={() => {
-            if (selected) {
-              setSelectedIds(selectedIds.filter(id => id != resource.id));
-            } else {
-              setSelectedIds([...selectedIds, resource.id]);
-            }
-          }}
-          selectedResourceIds={selectedIds}
+          onSelectedResourcesChanged={onSelectedResourcesChanged}
+          onSelected={onSelect}
+          selectedResourceIds={selectedIdsRef.current}
         />
       </div>
     );
-  }, [resources, multiSelection, columnCount, selectedIds]);
+  }, [resources, multiSelection, columnCount]);
 
   log(searchForm?.page, pageable?.page, 'resource page rerender');
 
