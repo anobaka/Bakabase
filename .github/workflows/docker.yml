@@ -16,7 +16,7 @@ jobs:
         with:
           path: ${{ github.event.repository.name }}
           
-      - name: Clone other repos to parent directory
+      - name: Clone other repos
         run: |
           git clone https://github.com/anobaka/Bakabase.Infrastructures.git
           git clone https://github.com/anobaka/LazyMortal.git
@@ -26,6 +26,7 @@ jobs:
         with:
           ssh-key: ${{ secrets.BAKABASE_CI_TOKEN }}
           repository: anobaka/Bakabase.CI
+          path: Bakabase.CI
           
       - name: List current directory
         run: |
