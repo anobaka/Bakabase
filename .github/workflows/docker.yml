@@ -19,6 +19,7 @@ jobs:
           cd ..
           git clone https://github.com/anobaka/Bakabase.Infrastructures.git
           git clone https://github.com/anobaka/LazyMortal.git
+          git clone https://github.com/anobaka/Bakabase.CI.git
 
       - name: List parent directory
         run: |
