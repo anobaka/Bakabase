@@ -4,4 +4,4 @@
 
 It currently supports the management of media such as animation, comics, audio, books, movies, albums, etc. 
 
-If you like this app, please star it and recommend it to your friends. Thank you for your support. For more information, please visit [the project homepage](https://inside-world.anobaka.com/).
+If you like this app, please star it and recommend it to your friends. Thank you for your support. For more information, please visit [the project homepage](https://bakabase.anobaka.com/).
