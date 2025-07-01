@@ -2,7 +2,7 @@ import { Message, Overlay } from '@alifd/next';
 import React from 'react';
 import * as dayjs from 'dayjs';
 import * as duration from 'dayjs/plugin/duration';
-import type ReactPlayer from 'react-player/lazy';
+import type ReactPlayer from 'react-player';
 import MediaPlayer from '@/components/MediaPlayer';
 import { MediaType } from '@/sdk/constants';
 import { captureVideoFrame } from '@/components/utils';

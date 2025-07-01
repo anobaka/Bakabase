@@ -33,7 +33,6 @@ using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
-using Bakabase.Service.Components;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
 using Bootstrap.Components.DependencyInjection;
@@ -50,11 +49,11 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Service
+namespace Bakabase.Service.Components
 {
-    public class InsideWorldStartup : AppStartup<BakabaseSwaggerCustomModelDocumentFilter>
+    public class BakabaseStartup : AppStartup<BakabaseSwaggerCustomModelDocumentFilter>
     {
-        public InsideWorldStartup(IConfiguration configuration, IWebHostEnvironment env) : base(configuration, env)
+        public BakabaseStartup(IConfiguration configuration, IWebHostEnvironment env) : base(configuration, env)
         {
         }
 
@@ -142,7 +141,7 @@ namespace Bakabase.Service
 
         public override void Configure(IApplicationBuilder app, IHostApplicationLifetime lifetime)
         {
-            var logger = app.ApplicationServices.GetRequiredService<ILogger<InsideWorldStartup>>();
+            var logger = app.ApplicationServices.GetRequiredService<ILogger<BakabaseStartup>>();
             logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
 
             app.ConfigurePostParser();

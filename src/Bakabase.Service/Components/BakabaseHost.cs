@@ -26,14 +26,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Bakabase.Service
+namespace Bakabase.Service.Components
 {
-    public class InsideWorldHost : AppHost
+    public class BakabaseHost(IGuiAdapter guiAdapter, ISystemService systemService) : AppHost(guiAdapter, systemService)
     {
-        public InsideWorldHost(IGuiAdapter guiAdapter, ISystemService systemService) : base(guiAdapter, systemService)
-        {
-        }
-
         protected override int ListeningPortCount => 3;
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
@@ -46,7 +42,7 @@ namespace Bakabase.Service
         {
             try
             {
-                var startupPage = this.Host.Services.GetRequiredService<IBOptions<UIOptions>>().Value?.StartupPage;
+                var startupPage = Host.Services.GetRequiredService<IBOptions<UIOptions>>().Value?.StartupPage;
                 if (startupPage.HasValue)
                 {
                     switch (startupPage.Value)
@@ -83,7 +79,7 @@ namespace Bakabase.Service
         }
 
         protected override IHostBuilder CreateHostBuilder(params string[] args) =>
-            AppUtils.CreateAppHostBuilder<InsideWorldStartup>(args);
+            AppUtils.CreateAppHostBuilder<BakabaseStartup>(args);
 
         protected override string DisplayName => "Bakabase";
 

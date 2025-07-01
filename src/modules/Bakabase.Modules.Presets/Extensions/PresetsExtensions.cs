@@ -9,7 +9,7 @@ public static class PresetsExtensions
 {
     public static IServiceCollection AddPresets(this IServiceCollection services)
     {
-        return services.AddSingleton<IPresetsService, PresetsService>()
+        return services.AddScoped<IPresetsService, PresetsService>()
             .AddTransient<IPresetsLocalizer, PresetsLocalizer>();
     }
 }

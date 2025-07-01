@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useUpdate, useUpdateEffect } from 'react-use';
 import './index.scss';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import moment from 'moment';
 import Queue from 'queue';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
