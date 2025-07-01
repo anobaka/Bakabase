@@ -7,7 +7,7 @@ import CustomIcon from '@/components/CustomIcon';
 import './index.scss';
 import BApi from '@/sdk/BApi';
 import { MediaType } from '@/sdk/constants';
-import ReactPlayer from 'react-player/lazy';
+import ReactPlayer from 'react-player';
 import serverConfig from '@/serverConfig';
 import { PlayFileURL } from '@/sdk/apis';
 

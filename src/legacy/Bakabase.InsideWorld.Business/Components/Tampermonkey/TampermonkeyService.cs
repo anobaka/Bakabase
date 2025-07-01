@@ -27,7 +27,7 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext)
 
     public async Task Install(TampermonkeyScript script)
     {
-        var serverAddress = $"{appContext.ListeningAddresses.First(x => !x.Contains("0.0.0.0"))}";
+        var serverAddress = $"{appContext.ApiEndpoint}";
         var jsUrl = $"{serverAddress}/tampermonkey/script/{(int) script}.user.js";
         var installUrl = InstallScriptUrlTemplate.Replace("{jsUrl}", jsUrl);
         Process.Start(new ProcessStartInfo(installUrl) {UseShellExecute = true});
@@ -36,7 +36,7 @@ public class TampermonkeyService(IGuiAdapter guiAdapter, AppContext appContext)
     public async Task<string> GetScript(TampermonkeyScript script)
     {
         var template = await GetScriptTemplate(script);
-        var serverAddress = $"{appContext.ListeningAddresses.First(x => !x.Contains("0.0.0.0"))}";
+        var serverAddress = $"{appContext.ApiEndpoint}";
         return template.Replace("{appEndpoint}", serverAddress);
     }
 }

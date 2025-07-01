@@ -4,7 +4,7 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
-using Bakabase.Service;
+using Bakabase.Service.Components;
 using Application = System.Windows.Application;
 
 namespace Bakabase
@@ -16,7 +16,7 @@ namespace Bakabase
     {
         private readonly IGuiAdapter _guiAdapter;
         private readonly ISystemService _systemService;
-        public InsideWorldHost Host { get; private set; }
+        public BakabaseHost Host { get; private set; }
 
         public App()
         {
@@ -34,7 +34,7 @@ namespace Bakabase
 
         private async void App_OnStartup(object sender, StartupEventArgs e)
         {
-            Host = new InsideWorldHost(_guiAdapter, _systemService);
+            Host = new BakabaseHost(_guiAdapter, _systemService);
             await Host.Start(e.Args);
         }
     }

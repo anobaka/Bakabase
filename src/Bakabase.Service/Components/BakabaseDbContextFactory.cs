@@ -4,9 +4,9 @@ using Bakabase.InsideWorld.Business;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Bakabase.Service
+namespace Bakabase.Service.Components
 {
-    public class InsideWorldDbContextFactory : IDesignTimeDbContextFactory<InsideWorldDbContext>
+    public class BakabaseDbContextFactory : IDesignTimeDbContextFactory<InsideWorldDbContext>
     {
         public InsideWorldDbContext CreateDbContext(string[] args)
         {
