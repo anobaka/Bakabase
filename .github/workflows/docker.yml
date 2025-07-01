@@ -19,7 +19,12 @@ jobs:
           cd ..
           git clone https://github.com/anobaka/Bakabase.Infrastructures.git
           git clone https://github.com/anobaka/LazyMortal.git
-          git clone https://x-access-token:${{ secrets.BAKABASE_CI_TOKEN }}@github.com/anobaka/Bakabase.CI.git
+          
+      - name: Clone private Bakabase.CI
+        uses: actions/checkout@v2
+        with:
+          ssh-key: ${{ secrets.BAKABASE_CI_TOKEN }}
+          repository: anobaka/Bakabase.CI
           
       - name: List parent directory
         run: |
