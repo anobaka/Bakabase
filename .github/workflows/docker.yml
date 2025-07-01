@@ -25,6 +25,7 @@ jobs:
         with:
           ssh-key: ${{ secrets.BAKABASE_CI_TOKEN }}
           repository: anobaka/Bakabase.CI
+          path: ..
           
       - name: List parent directory
         run: |
