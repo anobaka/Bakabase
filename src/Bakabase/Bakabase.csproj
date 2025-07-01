@@ -8,7 +8,6 @@
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.9.2-beta</Version>
         <SpaRoot>ClientApp\</SpaRoot>
         <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
         <AssemblyName>Bakabase</AssemblyName>
@@ -18,6 +17,10 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+        <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
     </ItemGroup>
 
@@ -50,28 +53,6 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
     </ItemGroup>
-
-    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
-        <Message Text="Executing 'yarn install' in ..\$(SpaRoot)" Importance="high" />
-        <Exec WorkingDirectory="..\$(SpaRoot)" Command="yarn install" />
-        <Message Text="Executing 'yarn run build' in ..\$(SpaRoot)" Importance="high" />
-        <Exec WorkingDirectory="..\$(SpaRoot)" Command="yarn run build" />
-        <ItemGroup>
-            <DistFiles Include="..\$(SpaRoot)build\**" />
-            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
-                <RelativePath>$([System.String]::Copy('%(Identity)').Replace('..\',''))</RelativePath>
-                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            </ResolvedFileToPublish>
-
-            <!-- <WebView2Env Include=".\Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" /> -->
-            <!-- <ResolvedFileToPublish Include="@(WebView2Env->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)"> -->
-            <!--     <RelativePath>%(WebView2Env.Identity)</RelativePath> -->
-            <!--     <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory> -->
-            <!-- </ResolvedFileToPublish> -->
-        </ItemGroup>
-        <!-- <Message Text="??? %(DistFiles.Identity)" Importance="high" /> -->
-        <!-- <Message Text="??? @(DistFiles)->'$([System.String]::Copy('%(Identity)').Replace('..','123'))'" Importance="high" /> -->
-    </Target>
 
     <Target Name="CreateWwwRoot" AfterTargets="Publish">
         <Message Text="Try create wwwroot folder" Importance="high" />
