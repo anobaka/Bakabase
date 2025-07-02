@@ -47,7 +47,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using MimeKit;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers

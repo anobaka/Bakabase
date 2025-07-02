@@ -1,9 +1,8 @@
 {
     "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
-    "version": "1.9.2-alpha.{height}",
+    "version": "1.9.2-beta.{height}",
     "publicReleaseRefSpec": [
-      "^refs/heads/main$",
-      "^refs/heads/dev/v\\d+(\\.\\d+){2}$"
+      "^refs/heads/main$"
     ],
     "release": {
       "branchName": "dev/v{version}",
