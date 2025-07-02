@@ -122,15 +122,12 @@ jobs:
           path: ./publish/ClientApp/build
       - name: Ensure config directory exists
         run: mkdir -p ./publish/AppData/configs
-      - name: Create updater.json (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          printf '%s' "${{ secrets.UPDATER_JSON }}" > ./publish/AppData/configs/updater.json
-      - name: Create updater.json (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          Set-Content -Path .\publish\AppData\configs\updater.json -Value "${{ secrets.UPDATER_JSON }}"
-        shell: pwsh
+      - name: create-json
+        uses: jsdaniell/create-json@v1.2.3
+        with:
+          name: "updater.json"
+          json: ${{ secrets.UPDATER_JSON }}
+          dir: ./publish/AppData/configs
       - name: Upload Bakabase build artifact
         uses: actions/upload-artifact@v4
         with:
