@@ -157,7 +157,7 @@ jobs:
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+          OSS_ENDPOINT: http://oss-cn-shanghai.aliyuncs.com
         run: |
           ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
           ./ossutil64 cp -rf ./bakabase-win-build/ oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/unpacked/win/
@@ -167,10 +167,6 @@ jobs:
           zip -r bakabase.zip .
 
       - name: Upload zip to OSS
-        env:
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-cn-shanghai.aliyuncs.com
         run: |
           ./ossutil64 cp bakabase.zip oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/installer/bakabase.zip
 
@@ -184,7 +180,7 @@ jobs:
       - name: Download Bakabase build artifact
         uses: actions/download-artifact@v4
         with:
-          name: bakabase-web-build
+          name: docker
           path: ./build
 
       - name: Set Docker build context
