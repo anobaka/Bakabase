@@ -54,28 +54,6 @@
         </Content>
     </ItemGroup>
 
-    <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
-        <Message Text="Executing 'yarn install' in ..\$(SpaRoot)" Importance="high" />
-        <Exec WorkingDirectory="..\$(SpaRoot)" Command="yarn install" />
-        <Message Text="Executing 'yarn run build' in ..\$(SpaRoot)" Importance="high" />
-        <Exec WorkingDirectory="..\$(SpaRoot)" Command="yarn run build" />
-        <ItemGroup>
-            <DistFiles Include="..\$(SpaRoot)build\**" />
-            <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
-                <RelativePath>$([System.String]::Copy('%(Identity)').Replace('..\',''))</RelativePath>
-                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-            </ResolvedFileToPublish>
-
-            <!-- <WebView2Env Include=".\Microsoft.WebView2.FixedVersionRuntime.101.0.1210.53.x64\**" /> -->
-            <!-- <ResolvedFileToPublish Include="@(WebView2Env->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)"> -->
-            <!--     <RelativePath>%(WebView2Env.Identity)</RelativePath> -->
-            <!--     <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory> -->
-            <!-- </ResolvedFileToPublish> -->
-        </ItemGroup>
-        <!-- <Message Text="??? %(DistFiles.Identity)" Importance="high" /> -->
-        <!-- <Message Text="??? @(DistFiles)->'$([System.String]::Copy('%(Identity)').Replace('..','123'))'" Importance="high" /> -->
-    </Target>
-
     <Target Name="CreateWwwRoot" AfterTargets="Publish">
         <Message Text="Try create wwwroot folder" Importance="high" />
         <MakeDir Directories="$(PublishDir)wwwroot" Condition="!Exists('$(PublishDir)wwwroot')" />
