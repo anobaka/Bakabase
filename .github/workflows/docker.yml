@@ -42,6 +42,7 @@ jobs:
         uses: dotnet/nbgv@master
         with:
           path: ${{ github.event.repository.name }}
+          setAllVars: true
         
       - name: Print NBGV version info
         run: |
