@@ -120,23 +120,13 @@ jobs:
         with:
           name: fe
           path: ./publish/ClientApp/build
-      - name: Generate configs
-        run: |
-          configDir="./publish/AppData/configs"
-          mkdir -p "$configDir"
-          cat > "$configDir/updater.json" <<EOF
-          {
-            "Updater": {
-              "ossAccessKeyId": "${{ secrets.OSS_ACCESS_KEY_ID_READONLY }}",
-              "ossAccessKeySecret": "${{ secrets.OSS_ACCESS_KEY_SECRET_READONLY }}",
-              "ossEndpoint": "https://oss-cn-shanghai.aliyuncs.com",
-              "ossBucket": "anobaka-public",
-              "ossDomain": "https://cdn-public.anobaka.com/",
-              "appUpdaterOssObjectPrefix": "app/bakabase/inside-world/",
-              "updaterUpdaterOssObjectPrefix": "app/bakabase/updater/"
-            }
-          }
-          EOF
+      - name: create-json
+        id: create-json
+        uses: jsdaniell/create-json@v1.2.3
+        with:
+          name: "updater.json"
+          json: ${{ secrets.UPDATER_JSON }}
+          dir: ./publish/AppData/configs
       - name: Upload Bakabase build artifact
         uses: actions/upload-artifact@v4
         with:
