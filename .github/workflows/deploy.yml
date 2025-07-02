@@ -93,8 +93,14 @@ jobs:
             csproj: Bakabase/src/Bakabase.Service/Bakabase.Service.csproj
             nuget-path: ~/.nuget/packages
     steps:
-      - name: Checkout all code
-        uses: ./.github/actions/checkout
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          path: ${{ github.event.repository.name }}
+      - name: Clone Bakabase.Infrastructures
+        run: git clone https://github.com/anobaka/Bakabase.Infrastructures.git
+      - name: Clone LazyMortal
+        run: git clone https://github.com/anobaka/LazyMortal.git
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -113,12 +119,23 @@ jobs:
         with:
           name: fe
           path: ./publish/ClientApp/build
-      - name: Generate updater configs
-        uses: ./.github/actions/generate-configs
-        with:
-          publish-dir: ./publish
-          ossAccessKeyId: ${{ secrets.OSS_ACCESS_KEY_ID_READONLY }}
-          ossAccessKeySecret: ${{ secrets.OSS_ACCESS_KEY_SECRET_READONLY }}
+      - name: Generate configs
+        run: |
+          configDir="./publish/AppData/configs"
+          mkdir -p "$configDir"
+          cat > "$configDir/updater.json" <<EOF
+          {
+            "Updater": {
+              "ossAccessKeyId": "${{ secrets.OSS_ACCESS_KEY_ID_READONLY }}",
+              "ossAccessKeySecret": "${{ secrets.OSS_ACCESS_KEY_SECRET_READONLY }}",
+              "ossEndpoint": "https://oss-cn-shanghai.aliyuncs.com",
+              "ossBucket": "anobaka-public",
+              "ossDomain": "https://cdn-public.anobaka.com/",
+              "appUpdaterOssObjectPrefix": "app/bakabase/inside-world/",
+              "updaterUpdaterOssObjectPrefix": "app/bakabase/updater/"
+            }
+          }
+          EOF
       - name: Upload Bakabase build artifact
         uses: actions/upload-artifact@v4
         with:
