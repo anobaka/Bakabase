@@ -1,0 +1,36 @@
+name: Generate Configs
+
+description: Generate configs in the specified output directory.
+
+inputs:
+  publish-dir:
+    description: Directory to dotnet artifacts
+    required: true
+  ossAccessKeyId:
+    description: OSS Access Key ID
+    required: true
+  ossAccessKeySecret:
+    description: OSS Access Key Secret
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate configs
+      run: |
+        configDir="${{ inputs.publish-dir }}/AppData/configs"
+        mkdir -p "$configDir"
+        cat > "$configDir/updater.json" <<EOF
+        {
+          "Updater": {
+            "ossAccessKeyId": "${{ inputs.ossAccessKeyId }}",
+            "ossAccessKeySecret": "${{ inputs.ossAccessKeySecret }}",
+            "ossEndpoint": "https://oss-cn-shanghai.aliyuncs.com",
+            "ossBucket": "anobaka-public",
+            "ossDomain": "https://cdn-public.anobaka.com/",
+            "appUpdaterOssObjectPrefix": "app/bakabase/inside-world/",
+            "updaterUpdaterOssObjectPrefix": "app/bakabase/updater/"
+          }
+        }
+        EOF
+      shell: bash 
