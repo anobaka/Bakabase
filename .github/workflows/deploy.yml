@@ -27,6 +27,8 @@ jobs:
       - name: Get NBGV version info
         id: nbvg
         uses: dotnet/nbgv@master
+        with:
+          setAllVars: true
 
       - name: Set version and tag info
         id: set-var
