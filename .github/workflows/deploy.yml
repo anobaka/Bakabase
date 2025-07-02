@@ -159,7 +159,7 @@ jobs:
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          OSS_ENDPOINT: http://oss-cn-shanghai.aliyuncs.com
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
         run: |
           ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
           ./ossutil64 cp -rf . oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/unpacked/win/
