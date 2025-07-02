@@ -131,7 +131,7 @@ jobs:
       - name: Upload Bakabase build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.rid }}
+          name: ${{ matrix.artifact }}
           path: ./publish/*
 
   deploy-oss:
@@ -160,7 +160,7 @@ jobs:
           OSS_ENDPOINT: http://oss-cn-shanghai.aliyuncs.com
         run: |
           ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
-          ./ossutil64 cp -rf ./bakabase-win-build/ oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/unpacked/win/
+          ./ossutil64 cp -rf . oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/unpacked/win/
 
       - name: Zip all files
         run: |
@@ -181,7 +181,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: docker
-          path: ./build
+          path: ./publish
 
       - name: Set Docker build context
         id: docker_context
@@ -195,7 +195,7 @@ jobs:
       - name: Build Docker image
         run: |
           echo "Building Docker image 'bakabase:${DOCKER_TAG}' using Dockerfile '${DOCKERFILE}'..."
-          docker build --progress=plain -f "${DOCKERFILE}" -t bakabase:${DOCKER_TAG} ./build
+          docker build --progress=plain -f "${DOCKERFILE}" -t bakabase:${DOCKER_TAG} ./publish
           echo "Docker image 'bakabase:${DOCKER_TAG}' built successfully"
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
