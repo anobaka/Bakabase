@@ -96,6 +96,7 @@ jobs:
       - name: Checkout main repo
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0  # Fetch all history for all branches and tags
           path: ${{ github.event.repository.name }}
       - name: Clone Bakabase.Infrastructures
         run: git clone https://github.com/anobaka/Bakabase.Infrastructures.git
