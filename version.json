@@ -1,19 +1,22 @@
 {
     "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
-    "version": {
-      "version": "1.9.2",
-      "prerelease": "-beta.{height}"
-    },
+    "version": "1.9.2-beta.{height}",
     "publicReleaseRefSpec": [
-      "^refs/heads/main$"
+      "^refs/heads/main$",
+      "^refs/tags/v\\d+\\.\\d+"
     ],
     "release": {
       "branchName": "dev/v{version}",
       "firstUnstableTag": "beta"
     },
     "cloudBuild": {
+      "setVersionVariables": true,
       "buildNumber": {
-        "enabled": true
+        "enabled": false,
+        "includeCommitId": {
+          "when": "nonPublicReleaseOnly",
+          "where": "buildMetadata"
+        }
       }
     },
     "gitCommitIdShortFixedLength": 0,
