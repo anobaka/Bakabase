@@ -40,6 +40,8 @@ jobs:
           
       - name: Get NBGV version info
         uses: dotnet/nbgv@master
+        with:
+          path: ${{ github.event.repository.name }}
         
       - name: Print NBGV version info
         run: |
