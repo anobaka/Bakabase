@@ -1,0 +1,2 @@
+# 避免合并 version.json 冲突：保留当前分支版本
+version.json merge=ours

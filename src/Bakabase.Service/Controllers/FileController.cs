@@ -49,7 +49,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using Swashbuckle.AspNetCore.Annotations;
-using MimeTypes = Bakabase.Abstractions.MimeTypes;
 
 namespace Bakabase.Service.Controllers
 {

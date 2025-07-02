@@ -8,7 +8,6 @@
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.9.2-beta</Version>
         <SpaRoot>ClientApp\</SpaRoot>
         <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
         <AssemblyName>Bakabase</AssemblyName>
@@ -18,6 +17,10 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+        <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
     </ItemGroup>
 
