@@ -46,7 +46,7 @@ jobs:
         
       - name: Print NBGV version info
         run: |
-          echo "NBGV Version: ${{ env.NBGV_Version }}"
+          echo "NBGV Version: ${{ env.NBGV_CloudBuildNumber }}"
           echo "NBGV Assembly Version: ${{ env.NBGV_AssemblyVersion }}"
           echo "NBGV File Version: ${{ env.NBGV_FileVersion }}"
           echo "NBGV Informational Version: ${{ env.NBGV_InformationalVersion }}"
@@ -62,7 +62,7 @@ jobs:
             echo "docker_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
           else
             # 推送tag触发时使用NBGV版本
-            echo "docker_tag=${{ env.NBGV_Version }}" >> $GITHUB_OUTPUT
+            echo "docker_tag=${{ env.NBGV_CloudBuildNumber }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Run build.sh in main repo
