@@ -120,13 +120,11 @@ jobs:
         with:
           name: fe
           path: ./publish/ClientApp/build
-      - name: create-json
-        id: create-json
-        uses: jsdaniell/create-json@v1.2.3
-        with:
-          name: "updater.json"
-          json: ${{ secrets.UPDATER_JSON }}
-          dir: ./publish/AppData/configs
+      - name: Ensure config directory exists
+        run: mkdir -p ./publish/AppData/configs
+      - name: Create updater.json
+        run: |
+          echo ${{ secrets.UPDATER_JSON }} > ./publish/AppData/configs/updater.json
       - name: Upload Bakabase build artifact
         uses: actions/upload-artifact@v4
         with:
