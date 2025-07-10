@@ -11,6 +11,9 @@ import CategoryEnhancerOptionsDialog from './cases/CategoryEnhancerOptionsDialog
 import ResourceFilter from './cases/ResourceFilter';
 import Properties from './cases/Properties';
 import PresetMediaLibraryTemplateBuilderTest from './cases/PresetMediaLibraryTemplateBuilderTest';
+import LongTabs from './cases/LongTabs';
+import ReactPlayer from './cases/ReactPlayer';
+import HlsPlayer from './cases/HlsPlayer';
 import { Button, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
 import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
@@ -22,9 +25,11 @@ import ResourceTransfer from '@/pages/Test/cases/ResourceTransfer';
 import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 import { PropertyType, StandardValueType } from '@/sdk/constants';
 import PropertyMatcher from '@/components/PropertyMatcher';
+import FileNameModifierTest from './cases/FileNameModifierTest';
 
 
 const components = {
+  FileNameModifierTest: <FileNameModifierTest />,
   PropertyMatcher: <PropertyMatcher type={PropertyType.Attachment} name={'封面3'} onValueChanged={console.log} />,
   PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <Properties />,
@@ -38,6 +43,7 @@ const components = {
   ResourceOrderSelector: <OrderSelector />,
   Menu: <AntdMenu />,
   Sortable: <Sortable />,
+  LongTabs: <LongTabs />,
   FileSelector: (
     <Button
       onClick={() => {
@@ -80,6 +86,8 @@ const components = {
       );
     })
   ),
+  HlsPlayer: <HlsPlayer src={'http://localhost:5000/file/play?fullname=Z%3A%5CAnime%5CAdded%20recently%5CArcane%20S01%5CS01E01%20-%20Welcome%20to%20the%20Playground.mkv'} />,
+  ReactPlayer: <ReactPlayer />,
   MediaPreviewer: (<MediaPreviewer />),
 };
 

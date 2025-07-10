@@ -8663,6 +8663,7 @@ __metadata:
     eslint: "npm:^8.35.0"
     file-loader: "npm:^6.2.0"
     framer-motion: "npm:11.9.0"
+    hls.js: "npm:^1.6.6"
     hoist-non-react-statics: "npm:^3.3.2"
     i18next: "npm:^21.6.0"
     i18next-browser-languagedetector: "npm:^6.1.2"
@@ -11909,6 +11910,13 @@ __metadata:
   version: 1.6.5
   resolution: "hls.js@npm:1.6.5"
   checksum: 10c0/b156c31c1050b5be0d135b81c149d06656667d4d6f5de666a4ee41f7ee99e779c7cbd43e8a90ff5d0c7ab1c74e0d06cba52cfc10b8c2ccc2b49cbce67b0072ad
+  languageName: node
+  linkType: hard
+
+"hls.js@npm:^1.6.6":
+  version: 1.6.6
+  resolution: "hls.js@npm:1.6.6"
+  checksum: 10c0/ad0a73911df421225678a75da4e79fe89c04c4e5d5eb700136abc7a1ab63f92c5b1a9ce80ad5bd770728734bcae887d4ba98eeb462e04012305fd6424ea891a0
   languageName: node
   linkType: hard
 

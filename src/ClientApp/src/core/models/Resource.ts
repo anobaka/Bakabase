@@ -36,6 +36,7 @@ export type Resource = {
   properties?: {[key in PropertyPool]?: Record<number, Property>};
   coverPaths?: string[];
   mediaLibraryName?: string;
+  mediaLibraryColor?: string;
   category?: {id: number; name: string};
   pinned: boolean;
   tags: ResourceTag[];

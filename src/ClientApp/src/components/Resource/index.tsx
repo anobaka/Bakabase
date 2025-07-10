@@ -41,6 +41,7 @@ import type { PlayableFilesRef } from '@/components/Resource/components/Playable
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 import ContextMenuItems from '@/components/Resource/components/ContextMenuItems';
 import type { BTask } from '@/core/models/BTask';
+import { autoBackgroundColor } from '@/components/utils'; // adjust the path as needed
 
 export interface IResourceHandler {
   id: number;
@@ -277,6 +278,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               variant={'flat'}
               className={'h-auto'}
               radius={'sm'}
+              style={resource.mediaLibraryColor ? { color: resource.mediaLibraryColor, backgroundColor: autoBackgroundColor(resource.mediaLibraryColor) } : undefined}
             >{resource.mediaLibraryName}</Chip>
           )) : undefined}
           {(displayContents & ResourceDisplayContent.Category) ? (resource.category != undefined && (
@@ -417,7 +419,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                       className={'text-xs cursor-pointer'}
                       underline={'none'}
                       size={'sm'}
-                      // variant={'light'}
+                    // variant={'light'}
                     >#{v.group == undefined ? '' : `${v.group}:`}{v.name}</Link>
                   );
                 })}

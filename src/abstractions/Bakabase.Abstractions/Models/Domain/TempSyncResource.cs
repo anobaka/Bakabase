@@ -8,4 +8,14 @@ public record TempSyncResource(string Path)
     public TempSyncResource? Parent { get; set; }
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
+
+    public override string ToString()
+    {
+        if (Parent == null)
+        {
+            return Path;
+        }
+
+        return Path + " <- " + Parent;
+    }
 }

@@ -24,14 +24,19 @@ import {
   TableColumn,
   TableHeader,
   Snippet,
-  Tooltip, Chip,
+  Tooltip, Chip, Modal,
 } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { components } from '@/sdk/BApi2';
 
+
+type Version = components['schemas']['Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo'];
 
 export default ({ appInfo }) => {
   const { t } = useTranslation();
-  const [newVersion, setNewVersion] = useState();
+  const { createPortal } = useBakabaseContext();
+  const [newVersion, setNewVersion] = useState<Version>();
   const appUpdaterState = store.useModelState('appUpdaterState');
   // const appUpdaterState = {
   //   status: UpdaterStatus.Running,
@@ -54,13 +59,13 @@ export default ({ appInfo }) => {
 
 
   const renderNewVersion = () => {
-    if (!updaterContext || updaterContext.status == DependentComponentStatus.NotInstalled) {
-      return t('Updater is required to auto-update app');
-    }
+    // if (!updaterContext || updaterContext.status == DependentComponentStatus.NotInstalled) {
+    //   return t('Updater is required to auto-update app');
+    // }
 
-    if (updaterContext.status == DependentComponentStatus.Installing) {
-      return t('We\'re installing updater, please wait');
-    }
+    // if (updaterContext.status == DependentComponentStatus.Installing) {
+    //   return t('We\'re installing updater, please wait');
+    // }
 
     switch (appUpdaterState.status) {
       case UpdaterStatus.UpToDate:
@@ -71,6 +76,30 @@ export default ({ appInfo }) => {
             return (
               <Box direction={'row'} style={{ alignItems: 'center' }}>
                 <Chip radius={'sm'} variant={'light'}>{newVersion.version}</Chip>
+                {newVersion.changelog && (
+                  <>
+                    <Divider direction={'ver'} />
+                    <Button
+                      onPress={() => {
+                        createPortal(Modal, {
+                          size: 'xl',
+                          title: newVersion.version,
+                          defaultVisible: true,
+                          children: (
+                            <pre>
+                              {newVersion.changelog}
+                            </pre>
+                          ),
+                          footer: { actions: ['cancel'] },
+                        });
+                      }}
+                      variant={'light'}
+                      color={'secondary'}
+                      size={'small'}
+                    >{t('Change log')}
+                    </Button>
+                  </>
+                )}
                 <Divider direction={'ver'} />
                 <Button
                   onClick={() => {

@@ -7,6 +7,7 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Ai;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
+using Bakabase.InsideWorld.Business.Components.FileNameModifier.Extensions;
 using Bakabase.InsideWorld.Business.Components.Legacy;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.ReservedProperty;
@@ -37,7 +38,7 @@ using SpecialText = Bakabase.Abstractions.Models.Db.SpecialText;
 
 namespace Bakabase.Service.Extensions
 {
-    public static class InsideWorldBusinessExtensions
+    public static class BakabaseBusinessExtensions
     {
         public static IServiceCollection AddInsideWorldBusinesses(this IServiceCollection services)
         {
@@ -141,6 +142,8 @@ namespace Bakabase.Service.Extensions
             services.AddSingleton<TampermonkeyService>();
 
             services.AddPresets();
+
+            services.AddFileNameModifier();
 
             #endregion
 

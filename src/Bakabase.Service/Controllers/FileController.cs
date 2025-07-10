@@ -21,6 +21,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Entries;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
@@ -41,12 +42,14 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CliWrap;
+using CliWrap.Buffered;
 using CsQuery.ExtensionMethods.Internal;
 using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using SharpCompress.Common;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -66,12 +69,13 @@ namespace Bakabase.Service.Controllers
         private readonly PasswordService _passwordService;
         private readonly ILogger<FileController> _logger;
         private readonly IGuiAdapter _guiAdapter;
+        private readonly FfMpegService _ffMpegService;
 
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
             InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
-            InsideWorldLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter)
+            InsideWorldLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter, FfMpegService ffMpegService)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -84,6 +88,7 @@ namespace Bakabase.Service.Controllers
             _localizer = localizer;
             _taskManager = taskManager;
             _guiAdapter = guiAdapter;
+            _ffMpegService = ffMpegService;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
         }
@@ -599,12 +604,72 @@ namespace Bakabase.Service.Controllers
                     }
                 }
 
-                var mimeType = MimeTypes.GetMimeType(ext);
-                var fs = System.IO.File.OpenRead(fullname);
-                return File(fs, mimeType, true);
+                // Handle video transcoding if needed
+                if (InternalOptions.VideoExtensions.Contains(ext))
+                {
+                    var ffprobePath = _ffMpegService.FfProbeExecutable;
+                    var ffprobeResult = await Cli.Wrap(ffprobePath)
+                        .WithArguments(args =>
+                        {
+                            args
+                                .Add("-v").Add("error")
+                                .Add("-select_streams").Add("v:0")
+                                .Add("-show_entries").Add("stream=codec_name")
+                                .Add("-of").Add("default=noprint_wrappers=1:nokey=1")
+                                .Add(fullname);
+                        })
+                        .WithValidation(CommandResultValidation.None)
+                        .ExecuteBufferedAsync(HttpContext.RequestAborted);
+                    var codecName = ffprobeResult.StandardOutput.Trim();
+
+                    // If video is already h264, stream directly
+                    if (codecName.ToLower() == "h264")
+                    {
+                        var stream = new FileStream(fullname, FileMode.Open, FileAccess.Read, FileShare.Read);
+                        HttpContext.RequestAborted.Register(() => stream.Dispose());
+                        return File(stream, "video/mp4", Path.GetFileName(fullname));
+                    }
+                    else
+                    {
+                        // Transcode to h264 using ffmpeg
+                        var ffmpegPath = _ffMpegService.FfMpegExecutable; // Or set to ffmpeg path
+                        var ffmpegCmd = Cli.Wrap(ffmpegPath)
+                            .WithArguments(args =>
+                            {
+                                args
+                                    .Add("-i").Add(fullname)
+                                    .Add("-c:v").Add("libx264")
+                                    .Add("-preset").Add("ultrafast")
+                                    .Add("-b:v").Add("3M")
+                                    .Add("-maxrate").Add("4M")
+                                    .Add("-bufsize").Add("6M")
+                                    .Add("-vf").Add("scale='min(1920,iw)':min(1080,ih)'")
+                                    .Add("-filter:v").Add("fps=fps=60")
+                                    .Add("-c:a").Add("aac")
+                                    .Add("-f").Add("mp4")
+                                    .Add("-movflags").Add("frag_keyframe+empty_moov")
+                                    .Add("pipe:1");
+                                // 如需硬件加速，可替换 -c:v libx264 为 -c:v h264_nvenc 等
+                            })
+                            .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
+                        
+                        // Set response headers for streaming mp4
+                        Response.ContentType = "video/mp4";
+                        Response.Headers["Content-Disposition"] = $"inline; filename=\"{Path.GetFileName(fullname)}\"";
+                        await ffmpegCmd.ExecuteAsync(HttpContext.RequestAborted);
+                        return new EmptyResult();
+                    }
+                }
+                else
+                {
+                    // For images, audio, text: stream directly
+                    var mimeType = MimeTypes.GetMimeType(ext);
+                    var fs = System.IO.File.OpenRead(fullname);
+                    return File(fs, mimeType, true);
+                }
             }
 
-            return StatusCode((int) HttpStatusCode.UnsupportedMediaType);
+            return StatusCode((int)HttpStatusCode.UnsupportedMediaType);
         }
 
         [HttpPost("decompression")]

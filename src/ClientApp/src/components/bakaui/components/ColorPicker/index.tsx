@@ -1,5 +1,5 @@
 import { SketchPicker } from 'react-color';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Popover } from '@/components/bakaui';
 
 type Color = string | { r: number; g: number; b: number; a: number } | { h: number; s: number; l: number; a: number };
@@ -33,6 +33,12 @@ const ColorPicker = ({
                      }: ColorPickerProps) => {
   const [panelVisible, setPanelVisible] = React.useState(false);
   const [color, setColor] = useState(props.defaultColor ?? props.color);
+
+  useEffect(() => {
+    setColor(props.color);
+  }, [props.color])
+
+  // console.log(props, color);
 
   return (
     <Popover

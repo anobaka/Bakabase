@@ -89,6 +89,8 @@ public record PropertyInternals
                     (int) ResourceProperty.MediaLibrary, PropertyType.Multilevel),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
                     (int) ResourceProperty.PlayedAt, PropertyType.DateTime),
+                new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Internal,
+                    (int) ResourceProperty.ParentResource, PropertyType.SingleChoice),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                     (int) ResourceProperty.Rating, PropertyType.Rating),
                 new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
@@ -109,7 +111,8 @@ public record PropertyInternals
                 ResourceProperty.Category,
                 ResourceProperty.MediaLibrary,
                 ResourceProperty.PlayedAt,
-                ResourceProperty.MediaLibraryV2
+                ResourceProperty.MediaLibraryV2,
+                ResourceProperty.ParentResource,
             }.ToDictionary(d => d, d => BuiltinPropertyMap[d]));
 
     public static readonly ConcurrentDictionary<ReservedProperty, Bakabase.Abstractions.Models.Domain.Property>

@@ -1609,6 +1609,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file-name-modifier/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewFileNameModification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file-name-modifier/modify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ModifyFileNames"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/gui/files-selector": {
         parameters: {
             query?: never;
@@ -3509,6 +3541,7 @@ export interface components {
             templateId?: number;
             /** Format: int32 */
             resourceCount: number;
+            color?: string;
             template?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryTemplate"];
         };
         "Bakabase.Abstractions.Models.Domain.PathConfiguration": {
@@ -3634,6 +3667,7 @@ export interface components {
             readonly isMediaLibraryV2: boolean;
             category?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"];
             mediaLibraryName?: string;
+            mediaLibraryColor?: string;
         };
         "Bakabase.Abstractions.Models.Domain.Resource+Property": {
             name?: string;
@@ -3756,6 +3790,7 @@ export interface components {
         "Bakabase.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel": {
             name: string;
             path: string;
+            color?: string;
         };
         "Bakabase.Abstractions.Models.Input.ResourcePropertyValuePutInputModel": {
             /** Format: int32 */
@@ -3848,34 +3883,34 @@ export interface components {
             dataPath: string;
         };
         "Bakabase.Infrastructures.Components.App.Models.ResponseModels.AppInfo": {
-            appDataPath?: string;
-            coreVersion?: string;
+            appDataPath: string;
+            coreVersion: string;
             logPath?: string;
-            backupPath?: string;
-            tempFilesPath?: string;
+            backupPath: string;
+            tempFilesPath: string;
             notAcceptTerms: boolean;
             needRestart: boolean;
         };
         "Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo": {
-            version?: string;
-            installers?: components["schemas"]["Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo+Installer"][];
+            version: string;
+            installers: components["schemas"]["Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo+Installer"][];
         };
         "Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo+Installer": {
             osPlatform?: components["schemas"]["System.Runtime.InteropServices.OSPlatform"];
             osArchitecture: components["schemas"]["System.Runtime.InteropServices.Architecture"];
-            name?: string;
-            url?: string;
+            name: string;
+            url: string;
             /** Format: int64 */
             size: number;
         };
         "Bakabase.Infrastructures.Components.Configurations.App.AppOptions": {
-            language?: string;
-            version?: string;
+            language: string;
+            version: string;
             enablePreReleaseChannel: boolean;
             enableAnonymousDataTracking: boolean;
-            wwwRootPath?: string;
+            wwwRootPath: string;
             dataPath?: string;
-            prevDataPath?: string;
+            prevDataPath: string;
             closeBehavior: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
             /** Format: int32 */
@@ -4073,6 +4108,49 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.FileExplorer.IwFsType": 0 | 100 | 200 | 300 | 400 | 500 | 600 | 700 | 1000 | 10000;
+        /**
+         * Format: int32
+         * @description [1: TitleCase, 2: UpperCase, 3: LowerCase, 4: CamelCase, 5: PascalCase]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierCaseType": 1 | 2 | 3 | 4 | 5;
+        /**
+         * Format: int32
+         * @description [1: FileName, 2: FileNameWithoutExtension, 3: Extension, 4: ExtensionWithoutDot]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierFileNameTarget": 1 | 2 | 3 | 4;
+        "Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierOperation": {
+            target: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierFileNameTarget"];
+            operation: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierOperationType"];
+            position: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierPosition"];
+            /** Format: int32 */
+            positionIndex: number;
+            targetText?: string;
+            text?: string;
+            /** Format: int32 */
+            deleteCount: number;
+            /** Format: int32 */
+            deleteStartPosition: number;
+            caseType: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierCaseType"];
+            dateTimeFormat?: string;
+            alphabetStartChar: string;
+            /** Format: int32 */
+            alphabetCount: number;
+            replaceEntire: boolean;
+        };
+        /**
+         * Format: int32
+         * @description [1: Insert, 2: AddDateTime, 3: Delete, 4: Replace, 5: ChangeCase, 6: AddAlphabetSequence, 7: Reverse]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierOperationType": 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        /**
+         * Format: int32
+         * @description [1: Start, 2: End, 3: AtPosition, 4: AfterText, 5: BeforeText]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierPosition": 1 | 2 | 3 | 4 | 5;
         /**
          * Format: int32
          * @description [5: SoulPlus]
@@ -4849,6 +4927,10 @@ export interface components {
         "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
             orderedPropertyIds: number[];
         };
+        "Bakabase.Service.Models.Input.FileNameModifierProcessInputModel": {
+            filePaths: string[];
+            operations: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierOperation"][];
+        };
         "Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel": {
             paths: string[];
             groupInternal: boolean;
@@ -5000,6 +5082,12 @@ export interface components {
             customPropertyValue?: components["schemas"]["Bakabase.Abstractions.Models.Domain.CustomPropertyValue"];
             reservedPropertyValue?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ReservedPropertyValue"];
             property?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
+        };
+        "Bakabase.Service.Models.View.FileRenameResult": {
+            oldPath: string;
+            newPath: string;
+            success: boolean;
+            error?: string;
         };
         "Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel": {
             rootPath: string;
@@ -5229,6 +5317,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.FileRenameResult"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileSystemEntryGroupResultViewModel]": {
             /** Format: int32 */
@@ -9500,6 +9594,64 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                };
+            };
+        };
+    };
+    PreviewFileNameModification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    ModifyFileNames: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.FileNameModifierProcessInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]"];
                 };
             };
         };

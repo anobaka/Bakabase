@@ -55,7 +55,7 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task Add(MediaLibraryV2AddOrPutInputModel model)
     {
-        await orm.Add(new MediaLibraryV2DbModel {Path = model.Path, Name = model.Name});
+        await orm.Add(new MediaLibraryV2DbModel {Path = model.Path, Name = model.Name, Color = model.Color});
     }
 
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
@@ -64,6 +64,7 @@ public class MediaLibraryV2Service<TDbContext>(
         {
             data.Name = model.Name;
             data.Path = model.Path.StandardizePath()!;
+            data.Color = model.Color;
         });
     }
 
@@ -84,6 +85,10 @@ public class MediaLibraryV2Service<TDbContext>(
             if (model.ResourceCount.HasValue)
             {
                 data.ResourceCount = model.ResourceCount.Value;
+            }
+            if (model.Color != null)
+            {
+                data.Color = model.Color;
             }
         });
     }
@@ -219,15 +224,24 @@ public class MediaLibraryV2Service<TDbContext>(
                     (int) (Environment.ProcessorCount * 0.4));
                 var treeTempSyncResources = await template.DiscoverResources(ml.Path,
                     async p => await discoveryProgressor.Set(p), null, pt, ct, maxThreads);
-                var flattenTempSyncResources = treeTempSyncResources.SelectMany(d => d.Flatten()).ToList();
-                var flattenTempResources = flattenTempSyncResources.Select(x => x.ToDomainModel(ml.Id)).ToList();
+                var flattenTempResources = treeTempSyncResources.SelectMany(x => x.Flatten(ml.Id, null)).ToList();
                 var tempSyncResourcePaths = flattenTempResources.Select(d => d.Path).ToHashSet();
 
                 var mlResources = mlResourceMap.GetValueOrDefault(ml.Id) ?? [];
+                var resourceMapInMl = mlResources.ToDictionary(d => d.Path, d => d);
+
+                foreach (var tr in flattenTempResources)
+                {
+                    var dbResource = resourceMapInMl.GetValueOrDefault(tr.Path);
+                    if (dbResource != null)
+                    {
+                        tr.Id = dbResource.Id;
+                    }
+                }
 
                 var unknownDbResources = mlResources.Where(r => !tempSyncResourcePaths.Contains(r.Path)).ToList();
                 var conflictDbResources = mlResources.Except(unknownDbResources).ToList();
-                var dbResourcePaths = mlResources.Select(x => x.Path).ToHashSet();
+                var dbResourcePaths = resourceMapInMl.Keys.ToHashSet();
                 var newTempSyncResources = flattenTempResources.Where(c => !dbResourcePaths.Contains(c.Path)).ToList();
                 var tempSyncResourceMap = flattenTempResources.ToDictionary(d => d.Path);
                 await discoveryProgressor.DisposeAsync();
@@ -339,6 +353,8 @@ public class MediaLibraryV2Service<TDbContext>(
                 }
             }
         }
+
+        await resourceService.RefreshParentTag();
 
         return ret;
     }

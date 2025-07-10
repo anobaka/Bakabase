@@ -14,6 +14,7 @@ public static class MediaLibraryV2Extensions
             Path = model.Path,
             TemplateId = model.TemplateId,
             ResourceCount = model.ResourceCount,
+            Color = model.Color,
         };
     }
 
@@ -25,7 +26,8 @@ public static class MediaLibraryV2Extensions
             Name = dbModel.Name,
             Path = dbModel.Path,
             TemplateId = dbModel.TemplateId,
-            ResourceCount = dbModel.ResourceCount
+            ResourceCount = dbModel.ResourceCount,
+            Color = dbModel.Color,
         };
     }
 }
