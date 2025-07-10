@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useUpdate, useUpdateEffect } from 'react-use';
+import { useLocation, useUpdate, useUpdateEffect } from 'react-use';
 import { DisconnectOutlined } from '@ant-design/icons';
 import type { ResourcesRef } from './components/Resources';
 import Resources from './components/Resources';
@@ -29,6 +29,9 @@ const log = buildLogger('ResourcePage');
 export default () => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
+
+  const { hash } = useLocation();
+
   const [pageable, setPageable] = useState<IPageable>();
   const pageableRef = useRef(pageable);
 
@@ -55,10 +58,37 @@ export default () => {
 
   const initStartPageRef = useRef(1);
 
+  const initSearch = useCallback(async () => {
+    let sf: Partial<SearchForm> | undefined;
+    const qIdx = hash!.indexOf('?');
+    if (qIdx > -1) {
+      const query = new URLSearchParams(hash!.substring(qIdx)).get("query");
+
+      if (query) {
+        try {
+          const searchFormFromQuery = JSON.parse(query);
+          if (searchFormFromQuery) {
+            sf = searchFormFromQuery;
+          }
+        } catch (e) {
+          log('Error parsing search form from query', e);
+        }
+      }
+    }
+    
+    log('query search form', hash, sf);
+
+    if (!sf) {
+      const r = await BApi.resource.getLastResourceSearch();
+      sf = r.data ?? { page: 1, pageSize: PageSize };
+    }
+
+    search(sf, 'replace');
+  }, []);
+
   useEffect(() => {
-    BApi.resource.getLastResourceSearch().then(r => {
-      search(r.data ?? { page: 1, pageSize: PageSize }, 'replace');
-    });
+
+    initSearch();
 
     const handleScroll = () => {
       console.log(window.scrollY);

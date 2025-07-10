@@ -57,8 +57,7 @@ public class MediaLibraryTemplateService<TDbContext>(
     protected IPresetsService BuiltinMediaLibraryTemplateService => GetRequiredService<IPresetsService>();
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
 
-    protected async Task Populate(MediaLibraryTemplate[] templates,
-        MediaLibraryTemplateAdditionalItem additionalItems = MediaLibraryTemplateAdditionalItem.None)
+    protected async Task Populate(MediaLibraryTemplate[] templates, MediaLibraryTemplateAdditionalItem additionalItems)
     {
         var allRequiredTemplates = templates.ToList();
 
@@ -297,7 +296,7 @@ public class MediaLibraryTemplateService<TDbContext>(
     {
         var dbData = await orm.GetByKey(id);
         var domainModel = dbData.ToDomainModel();
-        await Populate([domainModel]);
+        await Populate([domainModel], additionalItems);
         return domainModel;
     }
 
@@ -305,7 +304,7 @@ public class MediaLibraryTemplateService<TDbContext>(
     {
         var dbData = await orm.GetByKeys(ids);
         var domainModels = dbData.Select(d => d.ToDomainModel()).ToArray();
-        await Populate(domainModels);
+        await Populate(domainModels, additionalItems);
         return domainModels;
     }
 

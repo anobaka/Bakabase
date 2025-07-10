@@ -4,4 +4,5 @@ public record ResourcePathInfo(
     string Path,
     string RelativePath,
     string[] RelativePathSegments,
-    string[] InnerPaths);
+    string[] InnerPaths,
+    bool IsFile);

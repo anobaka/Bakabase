@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Extensions;
@@ -10,29 +11,16 @@ namespace Bakabase.InsideWorld.Business.Extensions;
 
 public static class MediaLibraryV2Extensions
 {
-    public static List<TempSyncResource> Flatten(this TempSyncResource resource)
+    public static IEnumerable<Resource> Flatten(this TempSyncResource tempSyncResource, int mediaLibraryId,
+        Resource? parent)
     {
-        var list = new List<TempSyncResource> {resource};
-        if (resource.Children != null)
-        {
-            foreach (var c in resource.Children)
-            {
-                list.AddRange(c.Flatten());
-            }
-        }
-
-        return list;
-    }
-
-    public static Resource ToDomainModel(this TempSyncResource tempSyncResource, int mediaLibraryId)
-    {
-        return new Resource
+        var r = new Resource
         {
             MediaLibraryId = mediaLibraryId,
             Path = tempSyncResource.Path,
-            Directory = Path.GetDirectoryName(tempSyncResource.Path)!,
+            Directory = Path.GetDirectoryName(tempSyncResource.Path)!.StandardizePath()!,
             IsFile = tempSyncResource.IsFile,
-            Parent = tempSyncResource.Parent != null ? ToDomainModel(tempSyncResource.Parent, mediaLibraryId) : null,
+            Parent = parent,
             FileCreatedAt = tempSyncResource.FileCreatedAt,
             FileModifiedAt = tempSyncResource.FileModifiedAt,
             CreatedAt = DateTime.Now,
@@ -42,9 +30,23 @@ public static class MediaLibraryV2Extensions
                     c => new Resource.Property(c.Key.Name, c.Key.Type, c.Key.Type.GetDbValueType(),
                         c.Key.Type.GetBizValueType(),
                         [
-                            new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization, null, c.Value,
+                            new Resource.Property.PropertyValue((int) PropertyValueScope.Synchronization, null,
+                                c.Value,
                                 null)
                         ])))
         };
+
+        yield return r;
+
+        if (tempSyncResource.Children == null)
+        {
+            yield break;
+        }
+
+        foreach (var cr in tempSyncResource.Children.SelectMany(c => c.Flatten(mediaLibraryId, r)))
+        {
+            cr.Parent = r;
+            yield return cr;
+        }
     }
 }

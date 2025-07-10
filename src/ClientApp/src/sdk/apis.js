@@ -5911,6 +5911,92 @@ export const CheckPathIsFileURL = function(parameters = {}) {
 }
 /**
  * 
+ * request: PreviewFileNameModification
+ * url: PreviewFileNameModificationURL
+ * method: PreviewFileNameModification_TYPE
+ * raw_url: PreviewFileNameModification_RAW_URL
+ * @param model - 
+ */
+export const PreviewFileNameModification = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file-name-modifier/preview'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const PreviewFileNameModification_RAW_URL = function() {
+  return '/file-name-modifier/preview'
+}
+export const PreviewFileNameModification_TYPE = function() {
+  return 'post'
+}
+export const PreviewFileNameModificationURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file-name-modifier/preview'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ModifyFileNames
+ * url: ModifyFileNamesURL
+ * method: ModifyFileNames_TYPE
+ * raw_url: ModifyFileNames_RAW_URL
+ * @param model - 
+ */
+export const ModifyFileNames = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file-name-modifier/modify'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters['model'] !== undefined) {
+    body = parameters['model']
+  }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ModifyFileNames_RAW_URL = function() {
+  return '/file-name-modifier/modify'
+}
+export const ModifyFileNames_TYPE = function() {
+  return 'post'
+}
+export const ModifyFileNamesURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file-name-modifier/modify'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
  * request: OpenFilesSelector
  * url: OpenFilesSelectorURL
  * method: OpenFilesSelector_TYPE

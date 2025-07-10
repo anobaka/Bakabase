@@ -9,6 +9,7 @@ import {
   AiOutlineImport,
   AiOutlinePlusCircle,
   AiOutlineProduct,
+  AiOutlineSearch,
 } from 'react-icons/ai';
 import { MdOutlineDelete } from 'react-icons/md';
 import { IoIosSync, IoMdExit } from 'react-icons/io';
@@ -17,13 +18,17 @@ import { PiEmpty } from 'react-icons/pi';
 import type { Key } from '@react-types/shared';
 import type { MediaLibraryTemplate } from '../MediaLibraryTemplate/models';
 import SyncStatus from './components/SyncStatus';
-import { Button, Chip, Input, Modal, Select } from '@/components/bakaui';
+import { Button, Chip, Input, Modal, Select, Tooltip, ColorPicker } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import BApi from '@/sdk/BApi';
 import { isNotEmpty } from '@/components/utils';
 import type { components } from '@/sdk/BApi2';
 import PresetTemplateBuilder from '@/pages/MediaLibraryTemplate/components/PresetTemplateBuilder';
 import TemplateModal from '@/pages/MediaLibraryTemplate/components/TemplateModal';
+import { history } from 'ice';
+import { InternalProperty, PropertyPool, SearchOperation } from '@/sdk/constants';
+import colors from '@/components/bakaui/colors';
+import { buildColorValueString } from '@/components/bakaui/components/ColorPicker';
 
 type MediaLibrary = components['schemas']['Bakabase.Abstractions.Models.Domain.MediaLibraryV2'];
 
@@ -142,98 +147,115 @@ export default () => {
       </div>
       {editingMediaLibraries ? (
         <>
-          <div className={'inline-grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr auto' }}>
+          <div className={'inline-grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr 1fr auto' }}>
             {editingMediaLibraries.map((e, i) => {
-            return (
-              <>
-                <div className={'flex justify-center items-center'}>
-                  #{i + 1}
-                </div>
-                <Input
-                  variant="underlined"
-                  size={'sm'}
-                  label={t('Name')}
-                  isRequired
-                  placeholder={t('Name of media library')}
-                  isInvalid={e.name == undefined || e.name.length == 0}
-                  // errorMessage={t('Name is required')}
-                  value={e.name}
-                  onValueChange={v => {
-                    e.name = v;
-                    forceUpdate();
-                  }}
-                />
-                <Input
-                  variant="underlined"
-                  size={'sm'}
-                  label={t('Path')}
-                  placeholder={t('Path of media library')}
-                  isInvalid={e.path == undefined || e.path.length == 0}
-                  // errorMessage={t('Path is required')}
-                  isRequired
-                  value={e.path}
-                  onValueChange={v => {
-                    e.path = v;
-                    forceUpdate();
-                  }}
-                />
-                <Select
-                  size={'sm'}
-                  label={t('Template')}
-                  placeholder={t('Template for media library')}
-                  dataSource={templates.map(t => ({
-                    textValue: `#${t.id} ${t.name}`,
-                    label: `#${t.id} ${t.name}`,
-                    value: t.id,
-                  }) as { label?: any; value: Key; textValue?: string; isDisabled?: boolean }).concat([{
-                    label: (
-                      <div className={'flex items-center gap-1'}>
-                        <AiOutlineImport className={'text-lg'} />
-                        {t('Create new template')}
-                      </div>
-                    ),
-                    value: -1,
-                    textValue: t('Create new template'),
-                  }])}
-                  variant="underlined"
-                  isInvalid={e.templateId == undefined || e.templateId <= 0}
-                  isRequired
-                  selectedKeys={e.templateId ? [e.templateId.toString()] : undefined}
-                  onSelectionChange={keys => {
-                    const arr = Array.from(keys);
-                    if (arr.length > 0) {
-                      const idStr = arr[0] as string;
-                      const value = parseInt(idStr, 10);
-                      if (value == -1) {
-                        createPortal(PresetTemplateBuilder, {
-                          onSubmitted: async (id) => {
-                            e.templateId = id;
-                            await loadTemplates();
-                          },
-                        });
-                      } else {
-                        e.templateId = value;
-                        forceUpdate();
-                      }
-                    }
-                  }}
-                />
-                <div className={'flex items-center gap-1'}>
-                  <Button
-                    color={'danger'}
-                    variant={'light'}
-                    isIconOnly
-                    onPress={() => {
-                      editingMediaLibraries!.splice(i, 1);
+              return (
+                <>
+                  <div className={'flex justify-center items-center'}>
+                    #{i + 1}
+                  </div>
+                  <Input
+                    variant="underlined"
+                    size={'sm'}
+                    label={t('Name')}
+                    isRequired
+                    placeholder={t('Name of media library')}
+                    isInvalid={e.name == undefined || e.name.length == 0}
+                    // errorMessage={t('Name is required')}
+                    value={e.name}
+                    onValueChange={v => {
+                      e.name = v;
                       forceUpdate();
                     }}
-                  >
-                    <MdOutlineDelete className={'text-lg'} />
-                  </Button>
-                </div>
-              </>
-            );
-          })}
+                  />
+                  <Input
+                    variant="underlined"
+                    size={'sm'}
+                    label={t('Path')}
+                    placeholder={t('Path of media library')}
+                    isInvalid={e.path == undefined || e.path.length == 0}
+                    // errorMessage={t('Path is required')}
+                    isRequired
+                    value={e.path}
+                    onValueChange={v => {
+                      e.path = v;
+                      forceUpdate();
+                    }}
+                  />
+                  <Select
+                    size={'sm'}
+                    label={t('Template')}
+                    placeholder={t('Template for media library')}
+                    dataSource={templates.map(t => ({
+                      textValue: `#${t.id} ${t.name}`,
+                      label: `#${t.id} ${t.name}`,
+                      value: t.id,
+                    }) as { label?: any; value: Key; textValue?: string; isDisabled?: boolean }).concat([{
+                      label: (
+                        <div className={'flex items-center gap-1'}>
+                          <AiOutlineImport className={'text-lg'} />
+                          {t('Create new template')}
+                        </div>
+                      ),
+                      value: -1,
+                      textValue: t('Create new template'),
+                    }])}
+                    variant="underlined"
+                    isInvalid={e.templateId == undefined || e.templateId <= 0}
+                    isRequired
+                    selectedKeys={e.templateId ? [e.templateId.toString()] : undefined}
+                    onSelectionChange={keys => {
+                      const arr = Array.from(keys);
+                      if (arr.length > 0) {
+                        const idStr = arr[0] as string;
+                        const value = parseInt(idStr, 10);
+                        if (value == -1) {
+                          createPortal(PresetTemplateBuilder, {
+                            onSubmitted: async (id) => {
+                              e.templateId = id;
+                              await loadTemplates();
+                            },
+                          });
+                        } else {
+                          e.templateId = value;
+                          forceUpdate();
+                        }
+                      }
+                    }}
+                  />
+                  <div className={'flex items-center'}>
+                    <ColorPicker
+                      color={e.color}
+                      onChange={v => {
+                        if (typeof v === 'string') {
+                          e.color = v;
+                        } else if ('r' in v && 'g' in v && 'b' in v && 'a' in v) {
+                          e.color = `rgba(${v.r},${v.g},${v.b},${v.a})`;
+                        } else if ('h' in v && 's' in v && 'l' in v && 'a' in v) {
+                          e.color = `hsla(${v.h},${v.s}%,${v.l}%,${v.a})`;
+                        } else {
+                          e.color = '';
+                        }
+                        forceUpdate();
+                      }}
+                    />
+                  </div>
+                  <div className={'flex items-center gap-1'}>
+                    <Button
+                      color={'danger'}
+                      variant={'light'}
+                      isIconOnly
+                      onPress={() => {
+                        editingMediaLibraries!.splice(i, 1);
+                        forceUpdate();
+                      }}
+                    >
+                      <MdOutlineDelete className={'text-lg'} />
+                    </Button>
+                  </div>
+                </>
+              );
+            })}
           </div>
           <div className={'flex items-center gap-2 mt-2 justify-between'}>
             <div className={'flex items-center gap-2 mt-2'}>
@@ -288,12 +310,26 @@ export default () => {
           <div>
             <div
               className={'inline-grid gap-1 mt-2 items-center'}
-              style={{ gridTemplateColumns: 'auto auto auto auto auto' }}
+              style={{ gridTemplateColumns: 'repeat(6, auto)' }}
             >
               {mediaLibraries.map(ml => {
+                const currentColor = ml.color ?? colors.color;
+                console.log(ml, currentColor)
                 return (
                   <>
-                    <div>{ml.name}</div>
+                    <div style={{ color: currentColor }}>{ml.name}</div>
+                    <ColorPicker
+                      color={currentColor}
+                      onChange={async color => {
+                        const strColor = buildColorValueString(color);
+                        await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, {
+                          ...ml,
+                          color: strColor
+                        })
+                        ml.color = strColor;
+                        forceUpdate();
+                      }}
+                    />
                     <Chip
                       size={'sm'}
                       variant={'light'}
@@ -302,20 +338,78 @@ export default () => {
                     >
                       {ml.resourceCount}
                     </Chip>
+                    <Tooltip content={t('Search resources in current media library')} placement="top">
+                      <Button
+                        onPress={() => {
+                          createPortal(Modal, {
+                            title: t('Confirm'),
+                            children: t('Are you sure you want to leave the current page?'),
+                            defaultVisible: true,
+                            onOk: async () => {
+                              // 先调用GetFilterValueProperty接口获取valueProperty
+                              const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
+                                propertyPool: PropertyPool.Internal,
+                                propertyId: InternalProperty.MediaLibraryV2, // MediaLibrary 属性ID
+                                operation: SearchOperation.Equals, // Equal
+                              });
+
+                              // 创建搜索表单，包含媒体库ID过滤条件
+                              const searchForm = {
+                                group: {
+                                  combinator: 1, // And
+                                  disabled: false,
+                                  filters: [{
+                                    propertyPool: PropertyPool.Internal,
+                                    propertyId: InternalProperty.MediaLibraryV2, // MediaLibrary 属性ID
+                                    operation: SearchOperation.Equals, // Equal
+                                    dbValue: ml.id.toString(),
+                                    bizValue: ml.name,
+                                    valueProperty: valuePropertyResponse.data,
+                                    disabled: false
+                                  }]
+                                },
+                                page: 1,
+                                pageSize: 100
+                              };
+
+                              // 跳转到Resource页面并带上搜索参数
+                              const query = encodeURIComponent(JSON.stringify(searchForm));
+                              history!.push(`/resource?query=${query}`);
+                            },
+                            footer: {
+                              actions: ['ok', 'cancel'],
+                              okProps: {
+                                children: t('Continue')
+                              },
+                              cancelProps: {
+                                children: t('Cancel')
+                              }
+                            }
+                          });
+                        }}
+                        size={'sm'}
+                        radius={'sm'}
+                        className={''}
+                        variant={'light'}
+                        isIconOnly
+                      >
+                        <AiOutlineSearch className={'text-lg'} />
+                      </Button>
+                    </Tooltip>
                     {renderPath(ml)}
                     <Button
                       size={'sm'}
                       radius={'sm'}
-                      className={''}
+                      className={'text-left'}
                       startContent={<TbTemplate className={'text-medium'} />}
                       variant={'light'}
                       onPress={() => {
                         if (ml.templateId) {
                           createPortal(
                             TemplateModal, {
-                              id: ml.templateId,
-                              onDestroyed: loadTemplates,
-                            },
+                            id: ml.templateId,
+                            onDestroyed: loadTemplates,
+                          },
                           );
                         }
                       }}
