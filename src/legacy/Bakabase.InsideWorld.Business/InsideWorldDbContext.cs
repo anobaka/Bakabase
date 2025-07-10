@@ -224,6 +224,11 @@ namespace Bakabase.InsideWorld.Business
                 a.HasIndex(x => x.ResourceId);
                 a.HasIndex(x => x.PlayedAt);
             });
+
+            modelBuilder.Entity<MediaLibraryV2DbModel>(t =>
+            {
+                // t.Property(x => x.Color); // Optional: add for clarity
+            });
         }
     }
 }

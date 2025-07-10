@@ -10,6 +10,7 @@ using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
 using CsQuery.Engine.PseudoClassSelectors;
 using NPOI.SS.Formula.Functions;
+using System.Linq;
 
 namespace Bakabase.Abstractions.Extensions;
 
@@ -48,10 +49,10 @@ public static class PathFilterExtensions
         var progressPerFilter = filters.Count == 0 ? 0 : 100f / filters.Count;
         var progressPerPath = subPaths.Length == 0 ? 0 : 100f / subPaths.Length;
 
+        dirSet ??= subPaths.Where(Directory.Exists).ToHashSet();
         HashSet<string>? fileSet = null;
         if (filters.Any(f => f.FsType.HasValue))
         {
-            dirSet ??= subPaths.Where(Directory.Exists).ToHashSet();
             fileSet = subPaths.Except(dirSet).ToHashSet();
         }
 
@@ -72,7 +73,7 @@ public static class PathFilterExtensions
                         candidatePaths = fileSet!;
                         break;
                     case PathFilterFsType.Directory:
-                        candidatePaths = dirSet!;
+                        candidatePaths = dirSet;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
@@ -99,7 +100,7 @@ public static class PathFilterExtensions
                                 var innerPaths = cachedInnerPathsMap.GetOrAdd(path,
                                     (_) => subPaths.Where(x => x != path && x.StartsWith(path)).ToArray());
                                 resourcePathInfoMap[path] =
-                                    new ResourcePathInfo(path, relativePath, segments, innerPaths);
+                                    new ResourcePathInfo(path, relativePath, segments, innerPaths, !dirSet.Contains(path));
                             }
 
                             await filterProgressor.Add(progressPerPath);
@@ -126,6 +127,7 @@ public static class PathFilterExtensions
                                 break;
                             }
 
+                            var fp = filterProgressor;
                             tasks.Add(Task.Run(async () =>
                             {
                                 foreach (var path in threadedCandidatePaths)
@@ -154,12 +156,12 @@ public static class PathFilterExtensions
                                                         .ToArray());
                                                 Console.WriteLine(resourcePath);
                                                 return new ResourcePathInfo(path, relativePath, relativeSegments,
-                                                    innerPaths);
+                                                    innerPaths, !dirSet.Contains(resourcePath));
                                             })).Value;
                                         });
                                     }
 
-                                    await filterProgressor!.Add(progressPerPath);
+                                    await fp.Add(progressPerPath);
                                 }
                             }, ct));
                         }

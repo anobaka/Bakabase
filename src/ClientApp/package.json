@@ -44,6 +44,7 @@
       "enquire-js": "0.2.x",
       "file-loader": "^6.2.0",
       "framer-motion": "11.9.0",
+      "hls.js": "^1.6.6",
       "hoist-non-react-statics": "^3.3.2",
       "i18next": "^21.6.0",
       "i18next-browser-languagedetector": "^6.1.2",
@@ -117,8 +118,7 @@
       "start": "ice start --port 4444",
       "build": "ice build",
       "lint": "eslint . --ext '.js,.jsx' --fix",
-      "gen-sdk": "swagger-typescript-api --union-enums -p http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/api-generator.js && npx openapi-typescript http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
-      "gen-sdk2": "npx openapi-typescript http://localhost:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
+      "gen-sdk": "swagger-typescript-api --union-enums -p http://127.0.0.1:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/api-generator.js && npx openapi-typescript http://127.0.0.1:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
       "postinstall": "patch-package"
    },
    "title": "bxb",

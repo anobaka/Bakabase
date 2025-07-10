@@ -198,8 +198,8 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                                     tmpProperty.Options = BuildOptionsForMediaLibraryV2(mediaLibrariesV2);
                                     break;
                                 }
-                                case InternalProperty.RootPath:
                                 case InternalProperty.ParentResource:
+                                case InternalProperty.RootPath:
                                 case InternalProperty.Resource:
                                 case InternalProperty.Filename:
                                 case InternalProperty.DirectoryPath:

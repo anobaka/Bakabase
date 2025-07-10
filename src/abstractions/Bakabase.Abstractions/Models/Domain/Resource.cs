@@ -103,7 +103,6 @@ public record Resource
     public List<string>? CoverPaths { get; set; }
     public HashSet<ResourceTag> Tags { get; set; } = [];
     public Resource? Parent { get; set; }
-
     /// <summary>
     /// ResourcePropertyType - PropertyId - Property
     /// </summary>
@@ -148,6 +147,7 @@ public record Resource
     public Category? Category { get; set; }
 
     public string? MediaLibraryName { get; set; }
+    public string? MediaLibraryColor { get; set; }
 
     private void RebuildPath()
     {

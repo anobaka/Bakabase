@@ -217,6 +217,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             InternalProperty.Category => r => r.CategoryId.ToString(),
                             InternalProperty.MediaLibrary => r => new List<string> {r.MediaLibraryId.ToString()},
                             InternalProperty.MediaLibraryV2 => r => (r.CategoryId == 0 ? r.MediaLibraryId : -1).ToString(),
+                            InternalProperty.ParentResource => r => r.ParentId?.ToString(),
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)
@@ -299,6 +300,10 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 var values = context.PropertyValueMap?.GetValueOrDefault(filter.PropertyPool)
                                     ?.GetValueOrDefault(filter.PropertyId)?.GetValueOrDefault(id);
+                                if (values != null)
+                                {
+
+                                }
                                 return values?.Any(v => psh.IsMatch(v, filter.Operation, filter.DbValue)) ??
                                        psh.IsMatch(null, filter.Operation, filter.DbValue);
                             }).ToHashSet();
@@ -652,6 +657,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                 resource.MediaLibraryName = resource.CategoryId > 0
                                     ? mediaLibraryMap.GetValueOrDefault(resource.MediaLibraryId)?.Name
                                     : mediaLibraryV2Map?.GetValueOrDefault(resource.MediaLibraryId)?.Name;
+                                resource.MediaLibraryColor = resource.CategoryId > 0
+                                    ? null
+                                    : mediaLibraryV2Map?.GetValueOrDefault(resource.MediaLibraryId)?.Color;
                             }
 
                             break;
@@ -791,6 +799,37 @@ namespace Bakabase.InsideWorld.Business.Services
             finally
             {
                 _addOrUpdateLock.Release();
+            }
+        }
+
+        public async Task RefreshParentTag()
+        {
+            var allResources = await _orm.GetAll(null, false);
+            var parentIds = allResources.Select(r => r.ParentId).Where(r => r.HasValue).OfType<int>().ToHashSet();
+
+            var changedResources = new List<ResourceDbModel>();
+
+            foreach (var resource in allResources)
+            {
+                var isParent = parentIds.Contains(resource.Id);
+                var hasTag = resource.Tags.HasFlag(ResourceTag.IsParent);
+
+                switch (isParent)
+                {
+                    case true when !hasTag:
+                        resource.Tags |= ResourceTag.IsParent;
+                        changedResources.Add(resource);
+                        break;
+                    case false when hasTag:
+                        resource.Tags &= ~ResourceTag.IsParent;
+                        changedResources.Add(resource);
+                        break;
+                }
+            }
+
+            if (changedResources.Count > 0)
+            {
+                await _orm.UpdateRange(changedResources);
             }
         }
 

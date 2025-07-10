@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Orm;
-using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.FileMover;

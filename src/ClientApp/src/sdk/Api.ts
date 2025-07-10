@@ -348,6 +348,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   templateId?: number;
   /** @format int32 */
   resourceCount: number;
+  color?: string;
   template?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
@@ -487,6 +488,7 @@ export interface BakabaseAbstractionsModelsDomainResource {
   isMediaLibraryV2: boolean;
   category?: BakabaseAbstractionsModelsDomainCategory;
   mediaLibraryName?: string;
+  mediaLibraryColor?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProperty {
@@ -644,6 +646,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputM
 export interface BakabaseAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel {
   name: string;
   path: string;
+  color?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
@@ -753,38 +756,38 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreData
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
-  appDataPath?: string;
-  coreVersion?: string;
+  appDataPath: string;
+  coreVersion: string;
   logPath?: string;
-  backupPath?: string;
-  tempFilesPath?: string;
+  backupPath: string;
+  tempFilesPath: string;
   notAcceptTerms: boolean;
   needRestart: boolean;
 }
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfo {
-  version?: string;
-  installers?: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller[];
+  version: string;
+  installers: BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller[];
 }
 
 export interface BakabaseInfrastructuresComponentsAppUpgradeAbstractionsAppVersionInfoInstaller {
   osPlatform?: SystemRuntimeInteropServicesOSPlatform;
   /** [0: X86, 1: X64, 2: Arm, 3: Arm64, 4: Wasm, 5: S390x, 6: LoongArch64, 7: Armv6, 8: Ppc64le, 9: RiscV64] */
   osArchitecture: SystemRuntimeInteropServicesArchitecture;
-  name?: string;
-  url?: string;
+  name: string;
+  url: string;
   /** @format int64 */
   size: number;
 }
 
 export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
-  language?: string;
-  version?: string;
+  language: string;
+  version: string;
   enablePreReleaseChannel: boolean;
   enableAnonymousDataTracking: boolean;
-  wwwRootPath?: string;
+  wwwRootPath: string;
   dataPath?: string;
-  prevDataPath?: string;
+  prevDataPath: string;
   /** [0: Prompt, 1: Exit, 2: Minimize, 1000: Cancel] */
   closeBehavior: BakabaseInfrastructuresComponentsGuiCloseBehavior;
   /** [0: FollowSystem, 1: Light, 2: Dark] */
@@ -1031,6 +1034,61 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
   | 700
   | 1000
   | 10000;
+
+/**
+ * [1: TitleCase, 2: UpperCase, 3: LowerCase, 4: CamelCase, 5: PascalCase]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierCaseType = 1 | 2 | 3 | 4 | 5;
+
+/**
+ * [1: FileName, 2: FileNameWithoutExtension, 3: Extension, 4: ExtensionWithoutDot]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierFileNameTarget = 1 | 2 | 3 | 4;
+
+export interface BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation {
+  /** [1: FileName, 2: FileNameWithoutExtension, 3: Extension, 4: ExtensionWithoutDot] */
+  target: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierFileNameTarget;
+  /** [1: Insert, 2: AddDateTime, 3: Delete, 4: Replace, 5: ChangeCase, 6: AddAlphabetSequence, 7: Reverse] */
+  operation: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperationType;
+  /** [1: Start, 2: End, 3: AtPosition, 4: AfterText, 5: BeforeText] */
+  position: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierPosition;
+  /** @format int32 */
+  positionIndex: number;
+  targetText?: string;
+  text?: string;
+  /** @format int32 */
+  deleteCount: number;
+  /** @format int32 */
+  deleteStartPosition: number;
+  /** [1: TitleCase, 2: UpperCase, 3: LowerCase, 4: CamelCase, 5: PascalCase] */
+  caseType: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierCaseType;
+  dateTimeFormat?: string;
+  alphabetStartChar: string;
+  /** @format int32 */
+  alphabetCount: number;
+  replaceEntire: boolean;
+}
+
+/**
+ * [1: Insert, 2: AddDateTime, 3: Delete, 4: Replace, 5: ChangeCase, 6: AddAlphabetSequence, 7: Reverse]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperationType =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7;
+
+/**
+ * [1: Start, 2: End, 3: AtPosition, 4: AfterText, 5: BeforeText]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierPosition = 1 | 2 | 3 | 4 | 5;
 
 /**
  * [5: SoulPlus]
@@ -2061,6 +2119,11 @@ export interface BakabaseServiceModelsInputCategoryCustomPropertySortInputModel 
   orderedPropertyIds: number[];
 }
 
+export interface BakabaseServiceModelsInputFileNameModifierProcessInputModel {
+  filePaths: string[];
+  operations: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation[];
+}
+
 export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
   paths: string[];
   groupInternal: boolean;
@@ -2243,6 +2306,13 @@ export interface BakabaseServiceModelsViewEnhancementViewModel {
   customPropertyValue?: BakabaseAbstractionsModelsDomainCustomPropertyValue;
   reservedPropertyValue?: BakabaseAbstractionsModelsDomainReservedPropertyValue;
   property?: BakabaseModulesPropertyModelsViewPropertyViewModel;
+}
+
+export interface BakabaseServiceModelsViewFileRenameResult {
+  oldPath: string;
+  newPath: string;
+  success: boolean;
+  error?: string;
 }
 
 export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
@@ -2516,6 +2586,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFileRenameResult[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
@@ -7153,6 +7230,44 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/file/is-file`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+  };
+  fileNameModifier = {
+    /**
+     * No description
+     *
+     * @tags FileNameModifier
+     * @name PreviewFileNameModification
+     * @request POST:/file-name-modifier/preview
+     */
+    previewFileNameModification: (
+      data: BakabaseServiceModelsInputFileNameModifierProcessInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/file-name-modifier/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags FileNameModifier
+     * @name ModifyFileNames
+     * @request POST:/file-name-modifier/modify
+     */
+    modifyFileNames: (data: BakabaseServiceModelsInputFileNameModifierProcessInputModel, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameResult, any>({
+        path: `/file-name-modifier/modify`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

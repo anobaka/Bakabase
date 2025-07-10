@@ -29,6 +29,8 @@ import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 import CategoryPropertySortModal from '@/components/Resource/components/DetailDialog/CategoryPropertySortModal';
 import CustomPropertySortModal from '@/components/CustomPropertySortModal';
 import store from '@/store';
+import ChildrenModal from '../ChildrenModal';
+import { TiFlowChildren } from 'react-icons/ti';
 
 
 interface Props extends DestroyableProps {
@@ -211,6 +213,19 @@ export default ({
                       <FolderOpenOutlined />
                       {t('Open')}
                     </Button>
+                    {resource.hasChildren && (
+                      <Button
+                        color="default"
+                        onPress={() => {
+                          createPortal(ChildrenModal, {
+                            resourceId: resource.id,
+                          });
+                        }}
+                      >
+                        <TiFlowChildren className='text-lg' />
+                        {t('View Children')}
+                      </Button>
+                    )}
                     {/* <Button */}
                     {/*   color={'danger'} */}
                     {/*   onClick={() => onRemoved?.()} */}

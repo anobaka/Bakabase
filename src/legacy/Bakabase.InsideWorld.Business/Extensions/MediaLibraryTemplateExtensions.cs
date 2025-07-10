@@ -131,11 +131,10 @@ public static class MediaLibraryTemplateExtensions
                 }
             }
 
-            if (template.Child != null)
+            if (template.Child != null && !rpi.IsFile)
             {
-                resource.Children = await DiscoverResources(template.Child, resource.Path, onProgressChange,
-                    onProcessChange,
-                    pt, ct);
+                resource.Children =
+                    await DiscoverResources(template.Child, resource.Path, null, null, pt, ct);
                 if (resource.Children != null)
                 {
                     foreach (var c in resource.Children)
