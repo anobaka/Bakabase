@@ -52,9 +52,21 @@ export class BApi extends Api<any> {
         //   }
         // }
 
+        // console.log(error);
+
         if (!params.signal?.aborted) {
           const title = `${params.path}: 请求异常，请稍后再试。`;
-          toast(tst => <ErrorToast toast={tst} title={title} description={error} />, { duration: 5000 });
+          let description: string;
+          if (typeof error === 'string') {
+            description = error;
+          } else if (error && typeof error.message === 'string') {
+            description = error.message;
+          } else if (error && typeof error.toString === 'function') {
+            description = error.toString();
+          } else {
+            description = 'Unknown error';
+          }
+          toast(tst => <ErrorToast toast={tst} title={title} description={description} />, { duration: 5000 });
         }
 
         throw error;
