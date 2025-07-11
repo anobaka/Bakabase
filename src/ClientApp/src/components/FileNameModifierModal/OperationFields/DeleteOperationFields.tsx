@@ -1,6 +1,8 @@
 import React from 'react';
 import { Input, NumberInput, Select } from '../../bakaui';
-import { PositionType, PositionTypeOptions } from '../OperationCard';
+import { FileNameModifierPosition, fileNameModifierPositions } from '@/sdk/constants';
+const PositionType = FileNameModifierPosition;
+const PositionTypeOptions = fileNameModifierPositions.map(opt => ({ label: 'FileNameModifier.PositionType.' + FileNameModifierPosition[opt.value], value: opt.value }));
 
 const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
@@ -42,6 +44,17 @@ const DeleteOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         className="w-[140px]"
         placeholder={t('FileNameModifier.Placeholder.PositionType')}
       />
+      {operation.position === PositionType.AtPosition && (
+        <NumberInput
+          value={operation.positionIndex}
+          onValueChange={e => handleChangeField('positionIndex', e)}
+          placeholder={t('FileNameModifier.Placeholder.PositionIndex')}
+          label={t('FileNameModifier.Label.PositionIndex')}
+          size="sm"
+          isRequired={true}
+          className="w-[120px]"
+        />
+      )}
     </>
   );
 };

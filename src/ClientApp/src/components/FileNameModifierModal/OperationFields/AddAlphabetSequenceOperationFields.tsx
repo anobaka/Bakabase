@@ -1,5 +1,7 @@
 import React from 'react';
 import { Input, NumberInput } from '../../bakaui';
+import { FileNameModifierPosition } from '@/sdk/constants';
+const PositionType = FileNameModifierPosition;
 
 const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onChange }) => (
   <>
@@ -22,6 +24,17 @@ const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onCha
       isRequired={operation.alphabetCount == null}
       className="w-[100px]"
     />
+    {operation.position === PositionType.AtPosition && (
+      <NumberInput
+        value={operation.positionIndex}
+        onValueChange={e => onChange({ ...operation, positionIndex: e })}
+        placeholder={t('FileNameModifier.Placeholder.PositionIndex')}
+        label={t('FileNameModifier.Label.PositionIndex')}
+        size="sm"
+        isRequired={true}
+        className="w-[120px]"
+      />
+    )}
   </>
 );
 

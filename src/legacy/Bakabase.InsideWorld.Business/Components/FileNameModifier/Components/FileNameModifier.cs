@@ -110,7 +110,8 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
                     return (operation.Text ?? text) + ext;
                 return operation.Text ?? text;
             }
-            return operation.Operation switch
+
+            var result = operation.Operation switch
             {
                 FileNameModifierOperationType.Insert => ApplyInsert(text, operation),
                 FileNameModifierOperationType.AddDateTime => ApplyAddDateTime(text, operation),
@@ -121,6 +122,14 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
                 FileNameModifierOperationType.Reverse => ApplyReverse(text, operation),
                 _ => text
             };
+
+            // 新增：如果 target 是 FileNameWithoutExtension，自动拼接扩展名
+            if (operation.Target == FileNameModifierFileNameTarget.FileNameWithoutExtension)
+            {
+                var ext = System.IO.Path.GetExtension(fileName);
+                return result + ext;
+            }
+            return result;
         }
 
         private string ApplyInsert(string text, FileNameModifierOperation operation)

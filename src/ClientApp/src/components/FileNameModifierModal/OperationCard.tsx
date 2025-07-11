@@ -9,6 +9,16 @@ import AddDateTimeOperationFields from './OperationFields/AddDateTimeOperationFi
 import DeleteOperationFields from './OperationFields/DeleteOperationFields';
 import ChangeCaseOperationFields from './OperationFields/ChangeCaseOperationFields';
 import AddAlphabetSequenceOperationFields from './OperationFields/AddAlphabetSequenceOperationFields';
+import {
+  FileNameModifierOperationType,
+  fileNameModifierOperationTypes,
+  FileNameModifierPosition,
+  fileNameModifierPositions,
+  FileNameModifierCaseType,
+  fileNameModifierCaseTypes,
+  FileNameModifierFileNameTarget,
+  fileNameModifierFileNameTargets,
+} from '@/sdk/constants';
 
 interface OperationCardProps {
   operation: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
@@ -22,36 +32,11 @@ interface OperationCardProps {
 }
 
 // 枚举常量
-const OperationType = {
-  Insert: 1,
-  AddDateTime: 2,
-  Delete: 3,
-  Replace: 4,
-  ChangeCase: 5,
-  AddAlphabetSequence: 6,
-  Reverse: 7,
-};
-export const PositionType = {
-  Start: 1,
-  End: 2,
-  BeforeMatch: 3,
-  AfterMatch: 4,
-  AtIndex: 5,
-};
-export const PositionTypeOptions = [
-  { label: 'FileNameModifier.PositionType.Start', value: PositionType.Start },
-  { label: 'FileNameModifier.PositionType.End', value: PositionType.End },
-  { label: 'FileNameModifier.PositionType.BeforeMatch', value: PositionType.BeforeMatch },
-  { label: 'FileNameModifier.PositionType.AfterMatch', value: PositionType.AfterMatch },
-  { label: 'FileNameModifier.PositionType.AtIndex', value: PositionType.AtIndex },
-];
-export const CaseTypeOptions = [
-  { label: 'FileNameModifier.CaseType.TitleCase', value: 1 },
-  { label: 'FileNameModifier.CaseType.UpperCase', value: 2 },
-  { label: 'FileNameModifier.CaseType.LowerCase', value: 3 },
-  { label: 'FileNameModifier.CaseType.CamelCase', value: 4 },
-  { label: 'FileNameModifier.CaseType.PascalCase', value: 5 },
-];
+const OperationType = FileNameModifierOperationType;
+const PositionType = FileNameModifierPosition;
+const CaseTypeOptions = fileNameModifierCaseTypes.map(opt => ({ label: 'FileNameModifier.CaseType.' + FileNameModifierCaseType[opt.value], value: opt.value }));
+const PositionTypeOptions = fileNameModifierPositions.map(opt => ({ label: 'FileNameModifier.PositionType.' + FileNameModifierPosition[opt.value], value: opt.value }));
+const TargetTypeOptions = fileNameModifierFileNameTargets.map(opt => ({ label: 'FileNameModifier.Target.' + FileNameModifierFileNameTarget[opt.value], value: opt.value }));
 
 const OperationCard: React.FC<OperationCardProps> = ({
   operation,
@@ -73,15 +58,21 @@ const OperationCard: React.FC<OperationCardProps> = ({
     <Card className="mb-2 p-3 operation-card">
       <div className="flex items-center gap-2 mb-2">
         <Select
-          dataSource={[
-            { label: t('FileNameModifier.OperationType.Insert'), value: OperationType.Insert },
-            { label: t('FileNameModifier.OperationType.AddDateTime'), value: OperationType.AddDateTime },
-            { label: t('FileNameModifier.OperationType.Delete'), value: OperationType.Delete },
-            { label: t('FileNameModifier.OperationType.Replace'), value: OperationType.Replace },
-            { label: t('FileNameModifier.OperationType.ChangeCase'), value: OperationType.ChangeCase },
-            { label: t('FileNameModifier.OperationType.AddAlphabetSequence'), value: OperationType.AddAlphabetSequence },
-            { label: t('FileNameModifier.OperationType.Reverse'), value: OperationType.Reverse },
-          ]}
+          dataSource={TargetTypeOptions.map(opt => ({ label: t(opt.label), value: opt.value }))}
+          selectedKeys={[operation.target?.toString() || '']}
+          onSelectionChange={keys => {
+            const key = parseInt(Array.from(keys)[0] as string);
+            if (key !== operation.target) {
+              handleChange('target', key);
+            }
+          }}
+          isRequired={true}
+          className="w-[240px]"
+          label={t('FileNameModifier.TargetType')}
+          placeholder={t('FileNameModifier.TargetTypePlaceholder')}
+        />
+        <Select
+          dataSource={fileNameModifierOperationTypes.map(opt => ({ label: t(opt.label), value: opt.value }))}
           selectedKeys={[operation.operation?.toString() || '']}
           onSelectionChange={keys => {
             const key = Array.from(keys)[0] as string;
@@ -91,14 +82,13 @@ const OperationCard: React.FC<OperationCardProps> = ({
             }
           }}
           isRequired={true}
-          className="w-[240px]"
+          className="w-[180px]"
           label={t('FileNameModifier.OperationType')}
           placeholder={t('FileNameModifier.OperationTypePlaceholder')}
         />
       </div>
       {/* 错误提示 */}
       {errors && <div className="text-red-500 text-xs mb-1">{errors}</div>}
-      {/* 参数输入区（按操作类型动态显示） */}
       <div className="flex flex-wrap gap-2 items-center">
         {operation.operation === OperationType.Insert && (
           <InsertOperationFields operation={operation} t={t} onChange={onChange} />
