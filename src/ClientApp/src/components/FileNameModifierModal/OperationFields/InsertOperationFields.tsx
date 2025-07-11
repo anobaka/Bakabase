@@ -1,6 +1,8 @@
 import React from 'react';
-import { Input, Select } from '../../bakaui';
-import { PositionType, PositionTypeOptions } from '../OperationCard';
+import { Input, Select, NumberInput } from '../../bakaui';
+import { FileNameModifierPosition, fileNameModifierPositions } from '@/sdk/constants';
+const PositionType = FileNameModifierPosition;
+const PositionTypeOptions = fileNameModifierPositions.map(opt => ({ label: 'FileNameModifier.PositionType.' + FileNameModifierPosition[opt.value], value: opt.value }));
 
 const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const handleChangeField = (key: string, value: any) => onChange({ ...operation, [key]: value });
@@ -12,10 +14,10 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         placeholder={t('FileNameModifier.Placeholder.Text')}
         label={t('FileNameModifier.Label.Text')}
         size="sm"
-        isRequired={!operation.text && !(operation.position === PositionType.BeforeMatch || operation.position === PositionType.AfterMatch && operation.targetText)}
+        isRequired={!operation.text && !(operation.position === PositionType.BeforeText || operation.position === PositionType.AfterText && operation.targetText)}
         className="w-[240px]"
       />
-      {(operation.position === PositionType.BeforeMatch || operation.position === PositionType.AfterMatch) && (
+      {(operation.position === PositionType.BeforeText || operation.position === PositionType.AfterText) && (
         <Input
           value={operation.targetText || ''}
           onValueChange={e => handleChangeField('targetText', e)}
@@ -41,6 +43,17 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         className="w-[160px]"
         placeholder={t('FileNameModifier.Placeholder.PositionType')}
       />
+      {operation.position === PositionType.AtPosition && (
+        <NumberInput
+          value={operation.positionIndex}
+          onValueChange={e => handleChangeField('positionIndex', e)}
+          placeholder={t('FileNameModifier.Placeholder.PositionIndex')}
+          label={t('FileNameModifier.Label.PositionIndex')}
+          size="sm"
+          isRequired={true}
+          className="w-[120px]"
+        />
+      )}
     </>
   );
 };

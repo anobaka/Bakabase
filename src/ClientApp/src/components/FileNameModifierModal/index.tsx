@@ -3,7 +3,7 @@ import { Modal, Input, Button, Textarea, Notification, Divider } from '../bakaui
 import OperationCard from './OperationCard';
 import PreviewList from './PreviewList';
 import { useFileNameModifier } from './useFileNameModifier';
-import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from '../../sdk/Api';
+import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from '@/sdk/Api';
 // 1. 直接在本文件声明 defaultOperation 并导出 FileNameModificationResult 类型
 export interface FileNameModificationResult {
   originalPath: string;
@@ -16,7 +16,7 @@ export interface FileNameModificationResult {
 }
 
 const defaultOperation: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation = {
-  target: 1,
+  target: 2, // FileNameWithoutExtension
   operation: 1,
   position: 1,
   positionIndex: 0,
@@ -35,14 +35,47 @@ import { DestroyableProps } from '../bakaui/types';
 import BApi from '@/sdk/BApi';
 import { useEffect, useRef } from 'react';
 import { AiOutlineEdit, AiOutlineEye, AiOutlineEyeInvisible, AiOutlinePlusCircle } from 'react-icons/ai';
+import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 
 interface FileNameModifierModalProps extends DestroyableProps {
   onClose: () => void;
   initialFilePaths?: string[];
 }
 
+// 校验函数，返回 i18n key
+function validateOperation(op: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation): string {
+  if (!op.target) return 'FileNameModifier.Error.TargetRequired';
+  if (!op.operation) return 'FileNameModifier.Error.OperationTypeRequired';
+  switch (op.operation) {
+    case 1: // Insert
+      if (!op.text && !op.targetText) return 'FileNameModifier.Error.InsertTextRequired';
+      break;
+    case 2: // AddDateTime
+      if (!op.dateTimeFormat) return 'FileNameModifier.Error.DateTimeFormatRequired';
+      break;
+    case 3: // Delete
+      if (op.deleteCount == null || op.deleteStartPosition == null || !op.position) return 'FileNameModifier.Error.DeleteParamsRequired';
+      break;
+    case 4: // Replace
+      if (!op.text && !op.targetText) return 'FileNameModifier.Error.ReplaceTextRequired';
+      break;
+    case 5: // ChangeCase
+      if (!op.caseType) return 'FileNameModifier.Error.CaseTypeRequired';
+      break;
+    case 6: // AddAlphabetSequence
+      if (!op.alphabetStartChar || op.alphabetCount == null) return 'FileNameModifier.Error.AlphabetParamsRequired';
+      break;
+    case 7: // Reverse
+      break;
+    default:
+      return 'FileNameModifier.Error.UnknownOperationType';
+  }
+  return '';
+}
+
 const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, initialFilePaths = [] }) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const {
     operations,
     setOperations,
@@ -59,6 +92,7 @@ const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, 
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [showTextarea, setShowTextarea] = useState(false);
   const [showFullPaths, setShowFullPaths] = useState(false);
+  const [modifying, setModifying] = useState(false);
 
   // 操作项增删改、移动、复制
   const handleOperationChange = (idx: number, op) => {
@@ -123,38 +157,15 @@ const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, 
     if (filePaths.length === 0) {
       return;
     }
-    // 校验所有操作项是否合法（严格校验每种类型的必填参数）
-    const hasInvalid = operations.some(op => {
-      if (!op.operation) return true;
-      switch (op.operation) {
-        case 1: // Insert
-          return !op.text && !op.targetText;
-        case 2: // AddDateTime
-          return !op.dateTimeFormat;
-        case 3: // Delete
-          return op.deleteCount == null || op.deleteStartPosition == null || !op.position;
-        case 4: // Replace
-          return !op.text && !op.targetText;
-        case 5: // ChangeCase
-          return !op.caseType;
-        case 6: // AddAlphabetSequence
-          return !op.alphabetStartChar || op.alphabetCount == null;
-        case 7: // Reverse
-          return false;
-        default:
-          return true;
-      }
-    });
-    if (hasInvalid) {
-      return;
-    }
+    // 只用合法操作预览
+    const validOperations = operations.filter(op => !validateOperation(op));
     debounceTimer.current = setTimeout(() => {
       (async () => {
         try {
           setError('');
           const rsp = await BApi.fileNameModifier.previewFileNameModification({
             filePaths,
-            operations,
+            operations: validOperations,
           });
           let modifiedPaths: string[] = rsp.data ?? [];
           // 构建 previewResults
@@ -194,7 +205,7 @@ const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, 
                 key={idx}
                 operation={op}
                 index={idx}
-                errors={''} // TODO: 按需传递校验错误
+                errors={validateOperation(op) ? t(validateOperation(op)) : ''}
                 onChange={op2 => handleOperationChange(idx, op2)}
                 onDelete={() => handleOperationDelete(idx)}
                 onMoveUp={idx > 0 ? () => handleOperationMoveUp(idx) : undefined}
@@ -217,10 +228,63 @@ const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, 
           {/* 操作按钮 */}
           <div className="mt-4">
             <div className="flex gap-2">
-              <Button variant="solid" aria-label={t('FileNameModifier.ExecuteModification')}>
+              <Button variant="solid" aria-label={t('FileNameModifier.ExecuteModification')}
+                isLoading={modifying}
+                onClick={async () => {
+                  const validOperations = operations.filter(op => !validateOperation(op));
+                  if (validOperations.length === 0) {
+                    setError(t('FileNameModifier.Error.NoValidOperation'));
+                    return;
+                  }
+                  try {
+                    setModifying(true);
+                    setError('');
+                    const rsp = await BApi.fileNameModifier.modifyFileNames({
+                      filePaths,
+                      operations: validOperations,
+                    });
+                    const result = rsp.data ?? [];
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t('FileNameModifier.ModificationResult'),
+                      onClose: () => {},
+                      size: 'xl',
+                      footer: {
+                        actions: ['cancel']
+                      },
+                      children: (
+                        <>
+                          <div className="mb-2">
+                            <span className="text-green-600 font-semibold mr-4">{t('FileNameModifier.ModificationSuccessCount', { count: result.filter(r => r.success).length })}</span>
+                            <span className="text-red-600 font-semibold">{t('FileNameModifier.ModificationFailCount', { count: result.filter(r => !r.success).length })}</span>
+                          </div>
+                          {result.filter(r => !r.success).length > 0 && (
+                            <div className="max-h-48 overflow-y-auto border rounded p-2 bg-background border border-default">
+                              <div className="font-semibold mb-1">{t('FileNameModifier.ModificationFailList')}</div>
+                              <ul className="text-xs">
+                                {result.filter(r => !r.success).map(item => (
+                                  <li key={item.oldPath} className="mb-1">
+                                    <span className="text-foreground">{item.oldPath}</span>
+                                    <span className="text-red-500 ml-2">{t('FileNameModifier.ModificationFailReason')}: {item.error}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </>
+                      ),
+                    });
+                    setModifying(false);
+                  } catch (e: any) {
+                    setModifying(false);
+                    setError(e?.message || t('FileNameModifier.ModificationFailed'));
+                  }
+                }}
+              >
                 {t('FileNameModifier.ExecuteModification')}
               </Button>
             </div>
+            {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
           </div>
         </div>
         {/* 分隔线 */}

@@ -15,7 +15,6 @@
     "noUncheckedIndexedAccess": true,
     "importHelpers": true,
     "strictNullChecks": true,
-    "suppressImplicitAnyIndexErrors": true,
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
