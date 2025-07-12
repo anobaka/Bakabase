@@ -80,7 +80,7 @@ jobs:
         
   build:
     runs-on: ${{ matrix.os }}
-    needs: prepare
+    needs: [prepare, build-frontend]
     strategy:
       matrix:
         include:
