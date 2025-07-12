@@ -147,7 +147,7 @@ export default () => {
       </div>
       {editingMediaLibraries ? (
         <>
-          <div className={'inline-grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr 1fr auto' }}>
+          <div className={'grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr auto' }}>
             {editingMediaLibraries.map((e, i) => {
               return (
                 <>
@@ -223,7 +223,7 @@ export default () => {
                       }
                     }}
                   />
-                  <div className={'flex items-center'}>
+                  {/* <div className={'flex items-center'}>
                     <ColorPicker
                       color={e.color}
                       onChange={v => {
@@ -239,7 +239,7 @@ export default () => {
                         forceUpdate();
                       }}
                     />
-                  </div>
+                  </div> */}
                   <div className={'flex items-center gap-1'}>
                     <Button
                       color={'danger'}
@@ -310,7 +310,7 @@ export default () => {
           <div>
             <div
               className={'inline-grid gap-1 mt-2 items-center'}
-              style={{ gridTemplateColumns: 'repeat(6, auto)' }}
+              style={{ gridTemplateColumns: 'repeat(7, auto)' }}
             >
               {mediaLibraries.map(ml => {
                 const currentColor = ml.color ?? colors.color;
