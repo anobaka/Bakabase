@@ -112,10 +112,10 @@ export default () => {
                 size={'sm'}
                 color={'primary'}
                 onPress={() => setEditingMediaLibraries(mediaLibraries.length == 0 ? [{}]
-                  : JSON.parse(JSON.stringify(mediaLibraries)))}
+                  : JSON.parse(JSON.stringify(mediaLibraries)) as Partial<MediaLibrary>[])}
               >
                 <AiOutlineEdit className={'text-medium'} />
-                {t('Add or edit')}
+                {t('MediaLibrary.AddOrEdit')}
               </Button>
               <Button
                 // variant={'flat'}
@@ -126,7 +126,7 @@ export default () => {
                 }}
               >
                 <IoIosSync className={'text-lg'} />
-                {t('Synchronize all media libraries')}
+                {t('MediaLibrary.SynchronizeAll')}
               </Button>
             </>
           )}
@@ -140,7 +140,7 @@ export default () => {
               onPress={() => setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)}
             >
               <FaSort className={'text-medium'} />
-              {t('Sort by {{sortBy}}', { sortBy: t(SortBy[sortBy]) })}
+              {t('MediaLibrary.SortBy', { sortBy: t(`MediaLibrary.SortBy.${SortBy[sortBy]}`) })}
             </Button>
           </div>
         )}
@@ -157,9 +157,9 @@ export default () => {
                   <Input
                     variant="underlined"
                     size={'sm'}
-                    label={t('Name')}
+                    label={t('MediaLibrary.Name')}
                     isRequired
-                    placeholder={t('Name of media library')}
+                    placeholder={t('MediaLibrary.NamePlaceholder')}
                     isInvalid={e.name == undefined || e.name.length == 0}
                     // errorMessage={t('Name is required')}
                     value={e.name}
@@ -171,8 +171,8 @@ export default () => {
                   <Input
                     variant="underlined"
                     size={'sm'}
-                    label={t('Path')}
-                    placeholder={t('Path of media library')}
+                    label={t('MediaLibrary.Path')}
+                    placeholder={t('MediaLibrary.PathPlaceholder')}
                     isInvalid={e.path == undefined || e.path.length == 0}
                     // errorMessage={t('Path is required')}
                     isRequired
@@ -184,8 +184,8 @@ export default () => {
                   />
                   <Select
                     size={'sm'}
-                    label={t('Template')}
-                    placeholder={t('Template for media library')}
+                    label={t('MediaLibrary.Template')}
+                    placeholder={t('MediaLibrary.TemplatePlaceholder')}
                     dataSource={templates.map(t => ({
                       textValue: `#${t.id} ${t.name}`,
                       label: `#${t.id} ${t.name}`,
@@ -194,11 +194,11 @@ export default () => {
                       label: (
                         <div className={'flex items-center gap-1'}>
                           <AiOutlineImport className={'text-lg'} />
-                          {t('Create new template')}
+                          {t('MediaLibrary.CreateNewTemplate')}
                         </div>
                       ),
                       value: -1,
-                      textValue: t('Create new template'),
+                      textValue: t('MediaLibrary.CreateNewTemplate'),
                     }])}
                     variant="underlined"
                     isInvalid={e.templateId == undefined || e.templateId <= 0}
@@ -262,10 +262,10 @@ export default () => {
               <Button
                 size={'sm'}
                 color={'default'}
-                onPress={() => setEditingMediaLibraries(editingMediaLibraries!.concat([{}]))}
+                onPress={() => setEditingMediaLibraries(editingMediaLibraries!.concat([{} as Partial<MediaLibrary>]))}
               >
                 <AiOutlinePlusCircle className={'text-medium'} />
-                {t('Add')}
+                {t('MediaLibrary.Add')}
               </Button>
             </div>
             <div className={'flex items-center gap-2 mt-2'}>
@@ -275,14 +275,14 @@ export default () => {
                 onPress={async () => {
                   createPortal(Modal, {
                     defaultVisible: true,
-                    title: t('Save all media libraries'),
-                    children: t('Deleted media libraries will not be restored. Are you sure you want to save?'),
+                    title: t('MediaLibrary.SaveAll'),
+                    children: t('MediaLibrary.SaveAllConfirm'),
                     onOk: async () => {
                       const data = editingMediaLibraries as MediaLibrary[];
                       const r = await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(data);
                       if (!r.code) {
                         setEditingMediaLibraries(undefined);
-                        toast.success(t('Saved'));
+                        toast.success(t('MediaLibrary.Saved'));
                         await loadMediaLibraries();
                       }
                     },
@@ -291,7 +291,7 @@ export default () => {
                 isDisabled={!validate(editingMediaLibraries)}
               >
                 <FaRegSave className={'text-medium'} />
-                {t('Save')}
+                {t('MediaLibrary.Save')}
               </Button>
               <Button
                 variant={'flat'}
@@ -300,7 +300,7 @@ export default () => {
                 onPress={() => setEditingMediaLibraries(undefined)}
               >
                 <IoMdExit className={'text-medium'} />
-                {t('Exit editing mode')}
+                {t('MediaLibrary.ExitEditingMode')}
               </Button>
             </div>
           </div>
@@ -338,12 +338,12 @@ export default () => {
                     >
                       {ml.resourceCount}
                     </Chip>
-                    <Tooltip content={t('Search resources in current media library')} placement="top">
+                    <Tooltip content={t('MediaLibrary.SearchResources')} placement="top">
                       <Button
                         onPress={() => {
                           createPortal(Modal, {
-                            title: t('Confirm'),
-                            children: t('Are you sure you want to leave the current page?'),
+                            title: t('MediaLibrary.Confirm'),
+                            children: t('MediaLibrary.LeavePageConfirm'),
                             defaultVisible: true,
                             onOk: async () => {
                               // 先调用GetFilterValueProperty接口获取valueProperty
@@ -379,10 +379,10 @@ export default () => {
                             footer: {
                               actions: ['ok', 'cancel'],
                               okProps: {
-                                children: t('Continue')
+                                children: t('MediaLibrary.Continue')
                               },
                               cancelProps: {
-                                children: t('Cancel')
+                                children: t('MediaLibrary.Cancel')
                               }
                             }
                           });
@@ -414,7 +414,7 @@ export default () => {
                         }
                       }}
                     >
-                      {templates.find(t => t.id == ml.templateId)?.name ?? t('Unknown')}
+                      {templates.find(t => t.id == ml.templateId)?.name ?? t('MediaLibrary.Unknown')}
                     </Button>
                     <SyncStatus
                       id={ml.id}
@@ -433,7 +433,7 @@ export default () => {
         ) : (
           <div className={'flex items-center gap-2 grow justify-center'}>
             <PiEmpty className={'text-2xl'} />
-            {t('No media libraries found. You must add at least one media library and synchronize it to manage your resources.')}
+            {t('MediaLibrary.NoMediaLibrariesFound')}
           </div>
         )
       )}
