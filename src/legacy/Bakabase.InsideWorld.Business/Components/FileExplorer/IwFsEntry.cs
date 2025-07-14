@@ -16,11 +16,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 {
     public class IwFsEntry
     {
-        public IwFsEntry()
-        {
-        }
-
-        public IwFsEntry(string path)
+        public IwFsEntry(string path, IwFsType type = IwFsType.Unknown)
         {
             Path = path.StandardizePath()!;
             Name = System.IO.Path.GetFileName(path);
@@ -30,56 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 Name = Path;
             }
 
-            FileSystemInfo? fileSystemInfo = null;
-            var type = IwFsType.Unknown;
-            if (Directory.Exists(path))
-            {
-                var di = new DirectoryInfo(path);
-                type = di.Parent == null ? IwFsType.Drive : IwFsType.Directory;
-                fileSystemInfo = di;
-            }
-            else
-            {
-                if (File.Exists(path))
-                {
-                    fileSystemInfo = new FileInfo(path);
-                }
-                else
-                {
-                    type = IwFsType.Invalid;
-                }
-            }
-
-            if (fileSystemInfo != null)
-            {
-                if (fileSystemInfo.Name.StandardizePath() != Name)
-                {
-                    type = IwFsType.Invalid;
-                    fileSystemInfo = null;
-                }
-            }
-
-            var ext = System.IO.Path.GetExtension(path);
-
-            var attrs = new List<IwFsAttribute>();
-
-            foreach (var attr in SpecificEnumUtils<FileAttributes>.Values)
-            {
-                if (fileSystemInfo?.Attributes.HasFlag(attr) == true)
-                {
-                    switch (attr)
-                    {
-                        case FileAttributes.Hidden:
-                            attrs.Add(IwFsAttribute.Hidden);
-                            break;
-                        case FileAttributes.ReparsePoint:
-                            type = IwFsType.Symlink;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
+            var ext = type == IwFsType.Unknown ? System.IO.Path.GetExtension(Name) : null;
 
             if (type == IwFsType.Unknown)
             {
@@ -103,13 +50,13 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 }
             }
 
-            Ext = ext;
+            Ext = type == IwFsType.Unknown ? System.IO.Path.GetExtension(Name) : null;
             Type = type;
             MeaningfulName = System.IO.Path.GetFileNameWithoutExtension(Name);
-            CreationTime = fileSystemInfo?.CreationTime;
-            LastWriteTime = fileSystemInfo?.LastWriteTime;
-            Attributes = attrs.ToArray();
-            ChildrenCount = fileSystemInfo is FileInfo ? 0 : null;
+            // CreationTime = fileSystemInfo?.CreationTime;
+            // LastWriteTime = fileSystemInfo?.LastWriteTime;
+            // Attributes = attrs.ToArray();
+            // ChildrenCount = fileSystemInfo is FileInfo ? 0 : null;
             // FileCount = fileSystemInfo is FileInfo ? 0 : null;
             // DirectoryCount = fileSystemInfo is FileInfo ? 0 : null;
 
@@ -117,32 +64,23 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
             {
                 PasswordsForDecompressing = path.GetPasswordsFromPath();
             }
-
-            try
-            {
-                Size = fileSystemInfo is FileInfo f ? f.Length : null;
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
         }
 
         public string Path { get; set; }
         public string Name { get; set; }
         public string MeaningfulName { get; set; }
-        public string Ext { get; set; }
-        public IwFsAttribute[] Attributes { get; set; }
+        public string? Ext { get; set; }
+        // public IwFsAttribute[] Attributes { get; set; }
         public IwFsType Type { get; set; }
-        public long? Size { get; set; }
+        // public long? Size { get; set; }
 
-        public int? ChildrenCount { get; set; }
+        // public int? ChildrenCount { get; set; }
 
         // public int? FileCount { get; set; }
         // public int? DirectoryCount { get; set; }
-        public DateTime? CreationTime { get; set; }
-        public DateTime? LastWriteTime { get; set; }
-        public string[] PasswordsForDecompressing { get; set; } = Array.Empty<string>();
+        // public DateTime? CreationTime { get; set; }
+        // public DateTime? LastWriteTime { get; set; }
+        public string[] PasswordsForDecompressing { get; set; } = [];
 
         public override string ToString()
         {

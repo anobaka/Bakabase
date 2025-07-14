@@ -15,6 +15,8 @@ import type {
 import type { IProperty } from '@/components/Property/models';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import BetaChip from '@/components/Chips/BetaChip';
+import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 
 type Props<TOptions extends EnhancerFullOptions> = {
   enhancer: EnhancerDescriptor;
@@ -23,11 +25,11 @@ type Props<TOptions extends EnhancerFullOptions> = {
 } & DestroyableProps;
 
 export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
-                  enhancer,
-                  options: propsOptions,
-                  onSubmit,
-                  onDestroyed,
-                }: Props<T>) {
+  enhancer,
+  options: propsOptions,
+  onSubmit,
+  onDestroyed,
+}: Props<T>) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
@@ -55,9 +57,12 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
   return (
     <Modal
       size={'xl'}
-      title={t('Configure enhancer:{{enhancerName}}', {
-        enhancerName: enhancer.name,
-      })}
+      title={(
+        <div className={'flex items-center gap-x-2'}>
+          {t('Configure enhancer')}
+          <BriefEnhancer enhancer={enhancer} />
+        </div>
+      )}
       defaultVisible
       onDestroyed={onDestroyed}
       footer={{

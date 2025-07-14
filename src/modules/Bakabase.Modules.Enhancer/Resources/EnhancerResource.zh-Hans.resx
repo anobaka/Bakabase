@@ -245,6 +245,255 @@
   <data name="Enhancer_Regex_Target_CaptureGroups_Description" xml:space="preserve">
     <value>您必须先在配置页面配置正确的捕获组，然后在这里填入组名，否则增强将不会生效</value>
   </data>
+  <data name="Enhancer_Kodi_Name" xml:space="preserve">
+    <value>Kodi</value>
+  </data>
+  <data name="Enhancer_Kodi_Description" xml:space="preserve">
+    <value>从Kodi NFO文件中提取信息。此增强器会在资源所在目录中查找.nfo文件并解析其XML内容以提取元数据。</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Title_Name" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_OriginalTitle_Name" xml:space="preserve">
+    <value>原始标题</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_SortTitle_Name" xml:space="preserve">
+    <value>排序标题</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ShowTitle_Name" xml:space="preserve">
+    <value>剧集标题</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Outline_Name" xml:space="preserve">
+    <value>概要</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Plot_Name" xml:space="preserve">
+    <value>剧情</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Tagline_Name" xml:space="preserve">
+    <value>标语</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Runtime_Name" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Mpaa_Name" xml:space="preserve">
+    <value>分级</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_PlayCount_Name" xml:space="preserve">
+    <value>播放次数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_LastPlayed_Name" xml:space="preserve">
+    <value>最后播放</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Id_Name" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Genres_Name" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Countries_Name" xml:space="preserve">
+    <value>国家</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Tags_Name" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Director_Name" xml:space="preserve">
+    <value>导演</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Premiered_Name" xml:space="preserve">
+    <value>首映</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Year_Name" xml:space="preserve">
+    <value>年份</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Status_Name" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Studio_Name" xml:space="preserve">
+    <value>工作室</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Trailer_Name" xml:space="preserve">
+    <value>预告片</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Season_Name" xml:space="preserve">
+    <value>季数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Episode_Name" xml:space="preserve">
+    <value>集数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Genre_Name" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_UserRating_Name" xml:space="preserve">
+    <value>用户评分</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Thumbs_Name" xml:space="preserve">
+    <value>缩略图</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_FanartThumbs_Name" xml:space="preserve">
+    <value>背景图</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Actors_Name" xml:space="preserve">
+    <value>演员</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Artist_Name" xml:space="preserve">
+    <value>艺术家</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Album_Name" xml:space="preserve">
+    <value>专辑</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_MusicVideo_Name" xml:space="preserve">
+    <value>音乐视频</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Episodes_Name" xml:space="preserve">
+    <value>剧集</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Directors_Name" xml:space="preserve">
+    <value>导演</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Track_Name" xml:space="preserve">
+    <value>音轨</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Style_Name" xml:space="preserve">
+    <value>风格</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Mood_Name" xml:space="preserve">
+    <value>情绪</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Themes_Name" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Compilation_Name" xml:space="preserve">
+    <value>合辑</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_BoxSet_Name" xml:space="preserve">
+    <value>套装</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Review_Name" xml:space="preserve">
+    <value>评论</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Type_Name" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ReleaseStatus_Name" xml:space="preserve">
+    <value>发行状态</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>发行日期</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_OriginalReleaseDate_Name" xml:space="preserve">
+    <value>原始发行日期</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Label_Name" xml:space="preserve">
+    <value>厂牌</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Duration_Name" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Path_Name" xml:space="preserve">
+    <value>路径</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Votes_Name" xml:space="preserve">
+    <value>投票数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ReleaseType_Name" xml:space="preserve">
+    <value>发行类型</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Rating_Name" xml:space="preserve">
+    <value>评分</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_SortName_Name" xml:space="preserve">
+    <value>排序名称</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Gender_Name" xml:space="preserve">
+    <value>性别</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Disambiguation_Name" xml:space="preserve">
+    <value>消歧义</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Styles_Name" xml:space="preserve">
+    <value>风格</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Moods_Name" xml:space="preserve">
+    <value>情绪</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_YearsActive_Name" xml:space="preserve">
+    <value>活跃年份</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Born_Name" xml:space="preserve">
+    <value>出生</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Formed_Name" xml:space="preserve">
+    <value>成立</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Biography_Name" xml:space="preserve">
+    <value>传记</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Died_Name" xml:space="preserve">
+    <value>逝世</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Disbanded_Name" xml:space="preserve">
+    <value>解散</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_AlbumArtistCredits_Name" xml:space="preserve">
+    <value>专辑艺术家信息</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_VideoAssetTitle_Name" xml:space="preserve">
+    <value>视频资源标题</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_VideoAssetId_Name" xml:space="preserve">
+    <value>视频资源ID</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_VideoAssetType_Name" xml:space="preserve">
+    <value>视频资源类型</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_HasVideoVersions_Name" xml:space="preserve">
+    <value>有视频版本</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_HasVideoExtras_Name" xml:space="preserve">
+    <value>有视频附加内容</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_IsDefaultVideoVersion_Name" xml:space="preserve">
+    <value>是默认视频版本</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Credits_Name" xml:space="preserve">
+    <value>演职人员</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_DisplaySeason_Name" xml:space="preserve">
+    <value>显示季数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_DisplayEpisode_Name" xml:space="preserve">
+    <value>显示集数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Code_Name" xml:space="preserve">
+    <value>代码</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Aired_Name" xml:space="preserve">
+    <value>播出时间</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_DateAdded_Name" xml:space="preserve">
+    <value>添加日期</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Top250_Name" xml:space="preserve">
+    <value>前250名</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_UniqueIds_Name" xml:space="preserve">
+    <value>唯一标识符</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_NamedSeasons_Name" xml:space="preserve">
+    <value>命名季数</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Set_Name" xml:space="preserve">
+    <value>合集</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Resume_Name" xml:space="preserve">
+    <value>续播</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_MusicVideo_Name" xml:space="preserve">
+    <value>音乐视频</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Ratings_Name" xml:space="preserve">
+    <value>评分</value>
+  </data>
   <data name="Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot" xml:space="preserve">
     <value>属性id为空，但属性类型[{0}]不为空，请重新为增强目标[{1}]绑定属性</value>
   </data>

@@ -7,6 +7,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public class FavoritesDto : Favorites
     {
     }

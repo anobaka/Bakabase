@@ -245,6 +245,255 @@
   <data name="Enhancer_Regex_Target_CaptureGroups_Description" xml:space="preserve">
     <value>You must first configure the correct capture groups on the configuration page, and then enter the group names here, otherwise the enhancement will not take effect.</value>
   </data>
+  <data name="Enhancer_Kodi_Name" xml:space="preserve">
+    <value>Kodi</value>
+  </data>
+  <data name="Enhancer_Kodi_Description" xml:space="preserve">
+    <value>Extract information from Kodi NFO files. This enhancer will look for .nfo files in the same directory as the resource and parse their XML content to extract metadata.</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Title_Name" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_OriginalTitle_Name" xml:space="preserve">
+    <value>Original Title</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_SortTitle_Name" xml:space="preserve">
+    <value>Sort Title</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ShowTitle_Name" xml:space="preserve">
+    <value>Show Title</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Outline_Name" xml:space="preserve">
+    <value>Outline</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Plot_Name" xml:space="preserve">
+    <value>Plot</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Tagline_Name" xml:space="preserve">
+    <value>Tagline</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Runtime_Name" xml:space="preserve">
+    <value>Runtime</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Mpaa_Name" xml:space="preserve">
+    <value>MPAA Rating</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_PlayCount_Name" xml:space="preserve">
+    <value>Play Count</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_LastPlayed_Name" xml:space="preserve">
+    <value>Last Played</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Id_Name" xml:space="preserve">
+    <value>ID</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Genres_Name" xml:space="preserve">
+    <value>Genres</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Countries_Name" xml:space="preserve">
+    <value>Countries</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Tags_Name" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Director_Name" xml:space="preserve">
+    <value>Director</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Premiered_Name" xml:space="preserve">
+    <value>Premiered</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Year_Name" xml:space="preserve">
+    <value>Year</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Status_Name" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Studio_Name" xml:space="preserve">
+    <value>Studio</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Trailer_Name" xml:space="preserve">
+    <value>Trailer</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Season_Name" xml:space="preserve">
+    <value>Season</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Episode_Name" xml:space="preserve">
+    <value>Episode</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Genre_Name" xml:space="preserve">
+    <value>Genre</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_UserRating_Name" xml:space="preserve">
+    <value>User Rating</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Thumbs_Name" xml:space="preserve">
+    <value>Thumbnails</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_FanartThumbs_Name" xml:space="preserve">
+    <value>Fanart Thumbnails</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Actors_Name" xml:space="preserve">
+    <value>Actors</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Artist_Name" xml:space="preserve">
+    <value>Artist</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Album_Name" xml:space="preserve">
+    <value>Album</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_MusicVideo_Name" xml:space="preserve">
+    <value>Music Video</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Episodes_Name" xml:space="preserve">
+    <value>Episodes</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Directors_Name" xml:space="preserve">
+    <value>Directors</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Track_Name" xml:space="preserve">
+    <value>Track</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Style_Name" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Mood_Name" xml:space="preserve">
+    <value>Mood</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Themes_Name" xml:space="preserve">
+    <value>Themes</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Compilation_Name" xml:space="preserve">
+    <value>Compilation</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_BoxSet_Name" xml:space="preserve">
+    <value>Box Set</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Review_Name" xml:space="preserve">
+    <value>Review</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Type_Name" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ReleaseStatus_Name" xml:space="preserve">
+    <value>Release Status</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>Release Date</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_OriginalReleaseDate_Name" xml:space="preserve">
+    <value>Original Release Date</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Label_Name" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Duration_Name" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Path_Name" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Votes_Name" xml:space="preserve">
+    <value>Votes</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_ReleaseType_Name" xml:space="preserve">
+    <value>Release Type</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Rating_Name" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_SortName_Name" xml:space="preserve">
+    <value>Sort Name</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Gender_Name" xml:space="preserve">
+    <value>Gender</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Disambiguation_Name" xml:space="preserve">
+    <value>Disambiguation</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Styles_Name" xml:space="preserve">
+    <value>Styles</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Moods_Name" xml:space="preserve">
+    <value>Moods</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_YearsActive_Name" xml:space="preserve">
+    <value>Years Active</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Born_Name" xml:space="preserve">
+    <value>Born</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Formed_Name" xml:space="preserve">
+    <value>Formed</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Biography_Name" xml:space="preserve">
+    <value>Biography</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Died_Name" xml:space="preserve">
+    <value>Died</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Disbanded_Name" xml:space="preserve">
+    <value>Disbanded</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_AlbumArtistCredits_Name" xml:space="preserve">
+    <value>Album Artist Credits</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_VideoAssetTitle_Name" xml:space="preserve">
+    <value>Video Asset Title</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_VideoAssetId_Name" xml:space="preserve">
+    <value>Video Asset ID</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_VideoAssetType_Name" xml:space="preserve">
+    <value>Video Asset Type</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_HasVideoVersions_Name" xml:space="preserve">
+    <value>Has Video Versions</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_HasVideoExtras_Name" xml:space="preserve">
+    <value>Has Video Extras</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_IsDefaultVideoVersion_Name" xml:space="preserve">
+    <value>Is Default Video Version</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Credits_Name" xml:space="preserve">
+    <value>Credits</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_DisplaySeason_Name" xml:space="preserve">
+    <value>Display Season</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_DisplayEpisode_Name" xml:space="preserve">
+    <value>Display Episode</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Code_Name" xml:space="preserve">
+    <value>Code</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Aired_Name" xml:space="preserve">
+    <value>Aired</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_DateAdded_Name" xml:space="preserve">
+    <value>Date Added</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Top250_Name" xml:space="preserve">
+    <value>Top 250</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_UniqueIds_Name" xml:space="preserve">
+    <value>Unique IDs</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_NamedSeasons_Name" xml:space="preserve">
+    <value>Named Seasons</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Set_Name" xml:space="preserve">
+    <value>Set</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Resume_Name" xml:space="preserve">
+    <value>Resume</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_MusicVideo_Name" xml:space="preserve">
+    <value>Music Video</value>
+  </data>
+  <data name="Enhancer_Kodi_Target_Ratings_Name" xml:space="preserve">
+    <value>Ratings</value>
+  </data>
   <data name="Enhancer_Target_Options_PropertyIdIsNullButPropertyTypeIsNot" xml:space="preserve">
     <value>Property id is null but property type [{0}] is not null, please reset property for target [{1}]</value>
   </data>

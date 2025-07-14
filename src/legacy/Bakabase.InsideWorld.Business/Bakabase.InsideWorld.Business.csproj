@@ -62,7 +62,6 @@
 	<ItemGroup>
 	  <Folder Include="Components\PostParser\Models\Domain\Constants\" />
 	  <Folder Include="Components\Tampermonkey\Models\Constants\" />
-	  <Folder Include="Configurations\Extensions\" />
 	</ItemGroup>
 
 	<ItemGroup>

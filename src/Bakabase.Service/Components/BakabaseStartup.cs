@@ -10,6 +10,7 @@ using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
+using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
@@ -25,7 +26,6 @@ using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
 using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
-using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
@@ -95,7 +95,7 @@ namespace Bakabase.Service.Components
             services.RegisterAllRegisteredTypeAs<IDownloader>();
             services.RegisterAllRegisteredTypeAs<IDownloaderOptionsValidator>();
 
-            services.AddSingleton<InsideWorldOptionsManagerPool>();
+            services.AddSingleton<BakabaseOptionsManagerPool>();
 
             services.AddSingleton<ThirdPartyHttpRequestLogger>();
 
@@ -104,6 +104,7 @@ namespace Bakabase.Service.Components
             services.RegisterAllRegisteredTypeAs<ICookieValidator>();
 
             services.TryAddSingleton<FfMpegService>();
+            services.TryAddSingleton<HardwareAccelerationService>();
             services.TryAddSingleton<LuxService>();
             services.TryAddSingleton<BakabaseUpdaterService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
@@ -113,11 +114,11 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<WebGuiHubConfigurationAdapter>();
             services.TryAddSingleton<CompressedFileService>();
 
-            services.AddTransient<IBakabaseLocalizer, InsideWorldLocalizer>(x =>
-                x.GetRequiredService<InsideWorldLocalizer>());
-            services.AddTransient<IDependencyLocalizer, InsideWorldLocalizer>(x =>
-                x.GetRequiredService<InsideWorldLocalizer>());
-            services.AddTransient<InsideWorldLocalizer>();
+            services.AddTransient<IBakabaseLocalizer, BakabaseLocalizer>(x =>
+                x.GetRequiredService<BakabaseLocalizer>());
+            services.AddTransient<IDependencyLocalizer, BakabaseLocalizer>(x =>
+                x.GetRequiredService<BakabaseLocalizer>());
+            services.AddTransient<BakabaseLocalizer>();
 
             services.TryAddSingleton<IFileMover, FileMover>();
 

@@ -4,16 +4,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto;
+using Bakabase.InsideWorld.Business.Components.Dependency.Models.View;
 
 namespace Bakabase.InsideWorld.Business.Components.Dependency.Extensions
 {
     public static class DependentComponentServiceExtensions
     {
-        public static DependentComponentContextDto BuildContextDto(this IDependentComponentService service)
+        public static DependentComponentContextViewModel BuildContextDto(this IDependentComponentService service)
         {
             var ctx = service.Context;
-            return new DependentComponentContextDto
+            return new DependentComponentContextViewModel
             {
                 Id = service.Id,
                 Name = service.DisplayName,

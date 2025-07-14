@@ -12,7 +12,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Pixiv
 {
     public class PixivCookieValidator(IHttpClientFactory httpClientFactory, IBakabaseLocalizer localizer)
-        : JsonBasedInsideWorldCookieValidator<PixivBaseResponse>(httpClientFactory, localizer)
+        : JsonBasedBakabaseCookieValidator<PixivBaseResponse>(httpClientFactory, localizer)
     {
         public override CookieValidatorTarget Target => CookieValidatorTarget.Pixiv;
         protected override string Url => PixivClient.LoginStateCheckUrl;

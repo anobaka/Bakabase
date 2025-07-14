@@ -53,7 +53,7 @@ export default ({
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          children: `${t('Extract')}(Enter)`,
+          children: `${t('Group')}(Enter)`,
           autoFocus: true,
           disabled: !preview || preview.length == 0,
         },

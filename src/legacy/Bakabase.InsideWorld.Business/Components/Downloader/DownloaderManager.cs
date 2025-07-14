@@ -33,7 +33,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
         private readonly IServiceProvider _serviceProvider;
         private readonly ConcurrentDictionary<int, IDownloader> _downloaders = new();
         private readonly IStringLocalizer<SharedResource> _localizer;
-        private readonly InsideWorldLocalizer _insideWorldLocalizer;
+        private readonly BakabaseLocalizer _bakabaseLocalizer;
 
         private readonly Dictionary<ThirdPartyId, IDownloaderOptionsValidator> _validators;
 
@@ -69,12 +69,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
         public IDictionary<int, IDownloader> Downloaders => new Dictionary<int, IDownloader>(_downloaders);
 
         public DownloaderManager(IServiceProvider serviceProvider, IStringLocalizer<SharedResource> localizer,
-            IEnumerable<IDownloaderOptionsValidator> validators, ILogger<DownloaderManager> logger, InsideWorldLocalizer insideWorldLocalizer)
+            IEnumerable<IDownloaderOptionsValidator> validators, ILogger<DownloaderManager> logger, BakabaseLocalizer bakabaseLocalizer)
         {
             _serviceProvider = serviceProvider;
             _localizer = localizer;
             _logger = logger;
-            _insideWorldLocalizer = insideWorldLocalizer;
+            _bakabaseLocalizer = bakabaseLocalizer;
             _validators = validators.ToDictionary(a => a.ThirdPartyId, a => a);
 
             OnStatusChanged += (taskId, downloader) =>
@@ -144,7 +144,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader
                     var occupiedTasks = await service.GetByKeys(activeConflictDownloaders.Keys);
                     var message = _localizer[SharedResource.Downloader_DownloaderCountExceeded, task.ThirdPartyId,
                         $"{Environment.NewLine}{string.Join(Environment.NewLine, occupiedTasks.Select(a => a.Name ?? a.Key))}"];
-                    var fullMessage = _insideWorldLocalizer.Downloader_FailedToStart(task.Name ?? task.Key, message);
+                    var fullMessage = _bakabaseLocalizer.Downloader_FailedToStart(task.Name ?? task.Key, message);
                     return BaseResponseBuilder.Build(ResponseCode.Conflict, fullMessage);
                 }
             }

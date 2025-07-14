@@ -5,6 +5,8 @@ import DLsite from '@/assets/logo/dlsite.png';
 import Bangumi from '@/assets/logo/bangumi.png';
 import ExHentai from '@/assets/logo/exhentai.png';
 import Bakabase from '@/assets/logo/bakabase.png';
+import { SiKodi } from "react-icons/si";
+
 
 type Props = {
   id: EnhancerId;
@@ -31,6 +33,10 @@ export default ({ id }: Props) => {
     case EnhancerId.Regex:
       return (
         <BsRegex className={'text-base'} />
+      );
+    case EnhancerId.Kodi:
+      return (
+        <SiKodi className={'text-base'} />
       );
   }
   return (

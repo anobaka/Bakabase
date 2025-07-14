@@ -4882,6 +4882,7 @@ export const GetTopLevelFileSystemEntryNamesURL = function(parameters = {}) {
  * method: GetIwFsInfo_TYPE
  * raw_url: GetIwFsInfo_RAW_URL
  * @param path - 
+ * @param type - [0: Unknown, 100: Directory, 200: Image, 300: CompressedFileEntry, 400: CompressedFilePart, 500: Symlink, 600: Video, 700: Audio, 1000: Drive, 10000: Invalid]
  */
 export const GetIwFsInfo = function(parameters = {}) {
   const domain = parameters.$domain ? parameters.$domain : getDomain()
@@ -4892,6 +4893,9 @@ export const GetIwFsInfo = function(parameters = {}) {
   let form = {}
   if (parameters['path'] !== undefined) {
     queryParameters['path'] = parameters['path']
+  }
+  if (parameters['type'] !== undefined) {
+    queryParameters['type'] = parameters['type']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -4912,6 +4916,9 @@ export const GetIwFsInfoURL = function(parameters = {}) {
   let path = '/file/iwfs-info'
   if (parameters['path'] !== undefined) {
     queryParameters['path'] = parameters['path']
+  }
+  if (parameters['type'] !== undefined) {
+    queryParameters['type'] = parameters['type']
   }
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
@@ -5901,6 +5908,84 @@ export const CheckPathIsFileURL = function(parameters = {}) {
   if (parameters['path'] !== undefined) {
     queryParameters['path'] = parameters['path']
   }
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: GetHardwareAccelerationInfo
+ * url: GetHardwareAccelerationInfoURL
+ * method: GetHardwareAccelerationInfo_TYPE
+ * raw_url: GetHardwareAccelerationInfo_RAW_URL
+ */
+export const GetHardwareAccelerationInfo = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file/hardware-acceleration'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('get', domain + path, body, queryParameters, form, config)
+}
+export const GetHardwareAccelerationInfo_RAW_URL = function() {
+  return '/file/hardware-acceleration'
+}
+export const GetHardwareAccelerationInfo_TYPE = function() {
+  return 'get'
+}
+export const GetHardwareAccelerationInfoURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file/hardware-acceleration'
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    })
+  }
+  let keys = Object.keys(queryParameters)
+  return domain + path + (keys.length > 0 ? '?' + (keys.map(key => key + '=' + encodeURIComponent(queryParameters[key])).join('&')) : '')
+}
+/**
+ * 
+ * request: ClearHardwareAccelerationCache
+ * url: ClearHardwareAccelerationCacheURL
+ * method: ClearHardwareAccelerationCache_TYPE
+ * raw_url: ClearHardwareAccelerationCache_RAW_URL
+ */
+export const ClearHardwareAccelerationCache = function(parameters = {}) {
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  const config = parameters.$config
+  let path = '/file/hardware-acceleration/clear-cache'
+  let body
+  let queryParameters = {}
+  let form = {}
+  if (parameters.$queryParameters) {
+    Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
+      queryParameters[parameterName] = parameters.$queryParameters[parameterName]
+    });
+  }
+  return request('post', domain + path, body, queryParameters, form, config)
+}
+export const ClearHardwareAccelerationCache_RAW_URL = function() {
+  return '/file/hardware-acceleration/clear-cache'
+}
+export const ClearHardwareAccelerationCache_TYPE = function() {
+  return 'post'
+}
+export const ClearHardwareAccelerationCacheURL = function(parameters = {}) {
+  let queryParameters = {}
+  const domain = parameters.$domain ? parameters.$domain : getDomain()
+  let path = '/file/hardware-acceleration/clear-cache'
   if (parameters.$queryParameters) {
     Object.keys(parameters.$queryParameters).forEach(function(parameterName) {
       queryParameters[parameterName] = parameters.$queryParameters[parameterName]

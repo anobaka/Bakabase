@@ -1,5 +1,5 @@
 ﻿using System;
-using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bootstrap.Components.Configuration;
 using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.Extensions.Options;

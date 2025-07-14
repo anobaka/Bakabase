@@ -7,12 +7,13 @@ import { createPortalOfComponent } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import { StandardValueIcon } from '@/components/StandardValue';
-import { CategoryAdditionalItem, StandardValueType } from '@/sdk/constants';
+import { CategoryAdditionalItem, EnhancerId, StandardValueType } from '@/sdk/constants';
 import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { EnhancerIcon, EnhancerTargetNotSetupTip } from '@/components/Enhancer';
 import DeleteEnhancementsModal from '@/pages/Category/components/DeleteEnhancementsModal';
+import BetaChip from '../Chips/BetaChip';
 
 interface IProps extends DestroyableProps {
   categoryId: number;
@@ -105,6 +106,7 @@ const EnhancerSelector = ({
               <div className={'text-medium font-bold flex items-center gap-2'}>
                 <EnhancerIcon id={e.id} />
                 {e.name}
+                {e.id == EnhancerId.Kodi && <BetaChip />}
               </div>
               {e.description && (
                 <div className={'opacity-60 grow break-all'}>

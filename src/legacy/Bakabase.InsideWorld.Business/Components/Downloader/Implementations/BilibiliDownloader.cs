@@ -13,12 +13,13 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Checkpoint;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
-using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Constants;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
@@ -30,7 +31,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         private IStringLocalizer<SharedResource> _localizer;
         private readonly IHostEnvironment _env;
         private readonly BilibiliClient _client;
-        private readonly InsideWorldOptionsManagerPool _optionsManager;
+        private readonly IBOptions<BilibiliOptions> _options;
         private readonly ISpecialTextService _specialTextService;
 
         public override ThirdPartyId ThirdPartyId => ThirdPartyId.Bilibili;
@@ -38,12 +39,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
         private readonly LuxService _luxService;
 
         public BilibiliDownloader(IStringLocalizer<SharedResource> localizer,
-            BilibiliClient client, InsideWorldOptionsManagerPool optionsManager, ISpecialTextService specialTextService,
+            BilibiliClient client, IBOptions<BilibiliOptions> options, ISpecialTextService specialTextService,
             IHostEnvironment env, IServiceProvider serviceProvider, LuxService luxService) : base(serviceProvider)
         {
             _localizer = localizer;
             _client = client;
-            _optionsManager = optionsManager;
+            _options = options;
             _specialTextService = specialTextService;
             _env = env;
             _luxService = luxService;
@@ -81,8 +82,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
             //}
             //throw new Exception("Test exception");
 
-            var options = _optionsManager.Bilibili;
-            var cookie = options.Value.Cookie;
+            var cookie = _options.Value.Cookie;
             var favorites = await _client.GetFavorites();
             var targetFavorites = favorites.FirstOrDefault(a => a.Id == long.Parse(task.Key));
             if (targetFavorites == null)
@@ -193,8 +193,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Implementations
                                             .ToDictionary(a => a.Key, a => a.FirstOrDefault()!.Value2);
 
                                         var keyFilename = DownloaderUtils.BuildDownloadFilename<BilibiliNamingFields>(
-                                                options.Value.Downloader.NamingConvention.IsNotEmpty()
-                                                    ? options.Value.Downloader.NamingConvention
+                                                (_options.Value.Downloader != null &&
+                                                 _options.Value.Downloader.NamingConvention.IsNotEmpty())
+                                                    ? _options.Value.Downloader.NamingConvention
                                                     : DefaultNamingConvention, videoValues, wrappers)
                                             .RemoveInvalidFilePathChars();
 

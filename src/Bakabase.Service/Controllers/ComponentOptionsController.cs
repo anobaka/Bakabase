@@ -19,10 +19,10 @@ namespace Bakabase.Service.Controllers
         private readonly ComponentOptionsService _service;
         private readonly ICategoryService _categoryService;
         private readonly CategoryComponentService _categoryComponentService;
-        private readonly InsideWorldLocalizer _localizer;
+        private readonly BakabaseLocalizer _localizer;
 
         public ComponentOptionsController(ComponentOptionsService service, ICategoryService categoryService,
-            CategoryComponentService categoryComponentService, InsideWorldLocalizer localizer)
+            CategoryComponentService categoryComponentService, BakabaseLocalizer localizer)
         {
             _service = service;
             _categoryService = categoryService;

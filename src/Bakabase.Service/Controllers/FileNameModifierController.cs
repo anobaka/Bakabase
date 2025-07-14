@@ -68,12 +68,25 @@ public class FileNameModifierController(IFileNameModifier modifier) : Controller
             {
                 if (!string.Equals(oldPath, newPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (System.IO.File.Exists(newPath))
+                    // Check if target path already exists (for both files and directories)
+                    if (System.IO.File.Exists(newPath) || Directory.Exists(newPath))
                     {
-                        throw new IOException($"目标文件已存在: {newPath}");
+                        throw new IOException($"目标路径已存在: {newPath}");
                     }
 
-                    System.IO.File.Move(oldPath, newPath);
+                    // Check if source is a file or directory and move accordingly
+                    if (System.IO.File.Exists(oldPath))
+                    {
+                        System.IO.File.Move(oldPath, newPath);
+                    }
+                    else if (Directory.Exists(oldPath))
+                    {
+                        Directory.Move(oldPath, newPath);
+                    }
+                    else
+                    {
+                        throw new IOException($"源路径不存在: {oldPath}");
+                    }
                 }
 
                 results.Add(new FileRenameResult

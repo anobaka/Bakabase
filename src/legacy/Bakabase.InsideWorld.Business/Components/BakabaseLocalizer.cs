@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components
     /// <summary>
     /// todo: Redirect raw <see cref="IStringLocalizer"/> callings to here
     /// </summary>
-    public class InsideWorldLocalizer(IStringLocalizer<Business.SharedResource> localizer)
+    public class BakabaseLocalizer(IStringLocalizer<Business.SharedResource> localizer)
         : IStringLocalizer<Business.SharedResource>, IBakabaseLocalizer, IDependencyLocalizer
     {
         public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures) =>
