@@ -82,7 +82,7 @@ internal class PresetsService(
                 {
                     Property = new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Custom, 0, p.Type, p.Name),
                     ValueLocators = layerIdx > -1
-                        ? [new PathFilter { Layer = layerIdx.Value + 1, Positioner = PathPositioner.Layer }]
+                        ? [new PathPropertyLocator { Layer = layerIdx.Value + 1, Positioner = PathPositioner.Layer }]
                         : null
                 };
             }).ToList(),

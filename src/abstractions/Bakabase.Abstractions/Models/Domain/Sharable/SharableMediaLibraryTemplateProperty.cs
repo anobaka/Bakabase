@@ -3,5 +3,5 @@
 public record SharableMediaLibraryTemplateProperty
 {
     public Property Property { get; set; } = null!;
-    public List<PathLocator>? ValueLocators { get; set; }
+    public List<PathPropertyLocator>? ValueLocators { get; set; }
 }

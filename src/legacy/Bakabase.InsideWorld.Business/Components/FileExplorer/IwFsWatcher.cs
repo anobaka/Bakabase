@@ -42,6 +42,12 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         {
             Stop();
 
+            if (Directory.Exists(path) == false)
+            {
+                _logger.LogError($"Path [{path}] does not exist or is not a directory.");
+                return;
+            }
+
             _cts = new CancellationTokenSource();
             var ct = _cts.Token;
             var watcher = new FileSystemWatcher(path)

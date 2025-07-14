@@ -72,7 +72,7 @@ const OperationCard: React.FC<OperationCardProps> = ({
           placeholder={t('FileNameModifier.TargetTypePlaceholder')}
         />
         <Select
-          dataSource={fileNameModifierOperationTypes.map(opt => ({ label: t(opt.label), value: opt.value }))}
+          dataSource={fileNameModifierOperationTypes.map(opt => ({ label: t(`FileNameModifier.OperationType.${opt.label}`), value: opt.value }))}
           selectedKeys={[operation.operation?.toString() || '']}
           onSelectionChange={keys => {
             const key = Array.from(keys)[0] as string;

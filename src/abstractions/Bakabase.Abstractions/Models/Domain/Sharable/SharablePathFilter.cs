@@ -2,7 +2,7 @@
 
 namespace Bakabase.Abstractions.Models.Domain.Sharable;
 
-public record SharablePathFilter : PathLocator
+public record SharablePathFilter : PathPropertyLocator
 {
     public PathFilterFsType? FsType { get; set; }
     public List<ExtensionGroup>? ExtensionGroups { get; set; }
