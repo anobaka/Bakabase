@@ -167,7 +167,7 @@ const Modal = (props: ModalProps) => {
       // onOpenChange={v => console.log('123456', v)}
       onClose={onClose}
       scrollBehavior={'inside'}
-      isDismissable={props.isDismissable ?? false}
+      // isDismissable={props.isDismissable ?? false}
       isKeyboardDismissDisabled={props.isKeyboardDismissDisabled ?? true}
       size={size}
       ref={r => {

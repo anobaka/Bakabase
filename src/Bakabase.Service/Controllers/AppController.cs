@@ -6,7 +6,6 @@ using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.RequestModels;
 using Bakabase.Infrastructures.Components.App.Models.ResponseModels;
 using Bakabase.InsideWorld.Business;
-using Bakabase.InsideWorld.Business.Configurations;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
@@ -18,34 +17,18 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/app")]
-    public class AppController : Controller
+    public class AppController(AppService appService, AppDataMover appDataMover) : Controller
     {
-        private readonly IHostApplicationLifetime _lifetime;
-        private readonly IStringLocalizer<SharedResource> _localizer;
-        private readonly AppService _appService;
-        private readonly AppDataMover _appDataMover;
-        private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
-
-        public AppController(IHostApplicationLifetime lifetime, IStringLocalizer<SharedResource> localizer,
-            AppService appService, AppDataMover appDataMover, InsideWorldOptionsManagerPool insideWorldOptionsManager)
-        {
-            _lifetime = lifetime;
-            _localizer = localizer;
-            _appService = appService;
-            _appDataMover = appDataMover;
-            _insideWorldOptionsManager = insideWorldOptionsManager;
-        }
-
         [HttpGet("initialized")]
         [SwaggerOperation(OperationId = "CheckAppInitialized")]
         public async Task<SingletonResponse<InitializationContentType>> Initialized()
         {
-            if (_appService.NotAcceptTerms)
+            if (appService.NotAcceptTerms)
             {
                 return new SingletonResponse<InitializationContentType>(InitializationContentType.NotAcceptTerms);
             }
 
-            if (_appService.NeedRestart)
+            if (appService.NeedRestart)
             {
                 return new SingletonResponse<InitializationContentType>(InitializationContentType.NeedRestart);
             }
@@ -57,14 +40,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetAppInfo")]
         public async Task<SingletonResponse<AppInfo>> Info()
         {
-            return new SingletonResponse<AppInfo>(_appService.AppInfo);
+            return new SingletonResponse<AppInfo>(appService.AppInfo);
         }
 
         [HttpPost("terms")]
         [SwaggerOperation(OperationId = "AcceptTerms")]
         public async Task<BaseResponse> AcceptTerms()
         {
-            _appService.NotAcceptTerms = false;
+            appService.NotAcceptTerms = false;
             return BaseResponseBuilder.Ok;
         }
 
@@ -83,7 +66,7 @@ namespace Bakabase.Service.Controllers
                     }
                 }
 
-                await _appDataMover.CopyCoreData(model.DataPath);
+                await appDataMover.CopyCoreData(model.DataPath);
                 return BaseResponseBuilder.Ok;
             }
 

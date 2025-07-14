@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { AiOutlineQuestionCircle } from 'react-icons/ai';
 import type { IMenuItem } from '../../menuConfig';
 import { asideMenuConfig } from '../../menuConfig';
+import BetaChip from '@/components/Chips/BetaChip';
+import DeprecatedChip from '@/components/Chips/DeprecatedChip';
 
 type MenuItem = Required<MenuProps>['items'][number];
 
@@ -42,7 +44,13 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
   function convertItem(item: IMenuItem) {
     const Icon = item.icon ?? AiOutlineQuestionCircle;
-    return getItem(t(item.name), item.path, <Icon
+    return getItem((
+      <div className='flex items-center gap-x-0.5'>
+        {t(item.name)}
+        {item.isBeta && <BetaChip />}
+        {item.isDeprecated && <DeprecatedChip />}
+      </div>
+    ), item.path, <Icon
       style={IconStyle}
       className={'text-lg'}
     />, item.children?.map(convertItem));

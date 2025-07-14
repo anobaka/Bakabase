@@ -25,7 +25,6 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Entries;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
-using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
@@ -49,6 +48,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Org.BouncyCastle.Math;
 using SharpCompress.Common;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -60,26 +60,25 @@ namespace Bakabase.Service.Controllers
         private readonly ISpecialTextService _specialTextService;
         private readonly IWebHostEnvironment _env;
         private readonly BTaskManager _taskManager;
-        private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
         private readonly string _sevenZExecutable;
         private readonly CompressedFileService _compressedFileService;
         private readonly IBOptionsManager<FileSystemOptions> _fsOptionsManager;
-        private readonly InsideWorldLocalizer _localizer;
+        private readonly BakabaseLocalizer _localizer;
         private readonly IwFsWatcher _fileProcessorWatcher;
         private readonly PasswordService _passwordService;
         private readonly ILogger<FileController> _logger;
         private readonly IGuiAdapter _guiAdapter;
         private readonly FfMpegService _ffMpegService;
+        private readonly HardwareAccelerationService _hardwareAccelerationService;
 
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
-            InsideWorldLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter, FfMpegService ffMpegService)
+            BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter, 
+            FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService)
         {
             _specialTextService = specialTextService;
             _env = env;
-            _insideWorldOptionsManager = insideWorldOptionsManager;
             _compressedFileService = compressedFileService;
             _fsOptionsManager = fsOptionsManager;
             _fileProcessorWatcher = fileProcessorWatcher;
@@ -89,6 +88,7 @@ namespace Bakabase.Service.Controllers
             _taskManager = taskManager;
             _guiAdapter = guiAdapter;
             _ffMpegService = ffMpegService;
+            _hardwareAccelerationService = hardwareAccelerationService;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
         }
@@ -109,12 +109,9 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("iwfs-info")]
         [SwaggerOperation(OperationId = "GetIwFsInfo")]
-        public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path)
+        public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type)
         {
-            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo
-            {
-                ChildrenCount = Directory.GetFileSystemEntries(path).Length
-            });
+            return new SingletonResponse<IwFsEntryLazyInfo>(new IwFsEntryLazyInfo(path, type));
         }
 
         [HttpGet("iwfs-entry")]
@@ -158,12 +155,13 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<IwFsPreview>> Preview(string? root)
         {
             var isDirectory = false;
-            string[] files;
 
             root = root.StandardizePath();
+            var entries = new List<IwFsEntry>();
             if (string.IsNullOrEmpty(root))
             {
-                files = DriveInfo.GetDrives().Select(f => f.Name).ToArray();
+                var drives = DriveInfo.GetDrives().Select(f => f.Name).ToArray();
+                entries.AddRange(drives.Select(d => new IwFsEntry(d, IwFsType.Drive)));
             }
             else
             {
@@ -187,20 +185,26 @@ namespace Bakabase.Service.Controllers
                     }
                 }
 
+                string[] dirs = [];
+                string[] files = [];
                 if (isDirectory)
                 {
                     var dirWithPathSep = $"{root.StandardizePath()}{InternalOptions.DirSeparator}";
-                    files = Directory.GetFileSystemEntries(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
+                    files = Directory.GetFiles(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
+                    dirs = Directory.GetDirectories(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
                 }
                 else
                 {
-                    files = new[] {root};
+                    files = [root];
                 }
+
+                entries.AddRange(dirs.Select(d => new IwFsEntry(d, IwFsType.Directory)));
+                entries.AddRange(files.Select(d => new IwFsEntry(d, IwFsType.Unknown)));
             }
 
-            var entries = files.AsParallel().Select(t => new IwFsEntry(t))
+            entries = entries
                 // .OrderBy(t => t.Type == IwFsType.Directory ? 0 : 1)
-                .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+                .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList();
 
             // var entriesMap = entries.ToDictionary(t => t.Path, t => t);
             // var unknownTypePaths =
@@ -264,27 +268,9 @@ namespace Bakabase.Service.Controllers
             //     });
             // }
 
-            var fileChain = new List<IwFsEntry> { };
-            var pathSegments = root?
-                .Split(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
-                .Where(t => t.IsNotEmpty()).ToArray() ?? Array.Empty<string>();
-            string? lastFileChainPath = null;
-            foreach (var s in pathSegments.Take(isDirectory ? pathSegments.Length : pathSegments.Length - 1))
-            {
-                lastFileChainPath = lastFileChainPath.IsNullOrEmpty() ? s : Path.Combine(lastFileChainPath!, s);
-
-                fileChain.Add(new IwFsEntry
-                {
-                    Path = lastFileChainPath,
-                    Name = s
-                });
-            }
-
             var rsp = new IwFsPreview()
             {
-                Entries = entries,
-                DirectoryChain = fileChain.ToArray(),
-                // CompressedFileGroups = iwFsCompressedFileGroups.ToArray()
+                Entries = entries.ToArray(),
             };
             return new SingletonResponse<IwFsPreview>(rsp);
         }
@@ -392,7 +378,7 @@ namespace Bakabase.Service.Controllers
             var paths = model.EntryPaths.FindTopLevelPaths();
             // Directory.CreateDirectory(model.DestDir);
 
-            await _insideWorldOptionsManager.FileSystem.SaveAsync(options =>
+            await _fsOptionsManager.SaveAsync(options =>
             {
                 options.RecentMovingDestinations = new[] {model.DestDir}
                     .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToArray();
@@ -631,15 +617,53 @@ namespace Bakabase.Service.Controllers
                     }
                     else
                     {
-                        // Transcode to h264 using ffmpeg
-                        var ffmpegPath = _ffMpegService.FfMpegExecutable; // Or set to ffmpeg path
+                        // Get hardware acceleration info (cached)
+                        var hwAccelInfo = await _hardwareAccelerationService.GetHardwareAccelerationInfoAsync(HttpContext.RequestAborted);
+                        var preferredCodec = hwAccelInfo.PreferredCodec;
+                        
+                        _logger.LogInformation("Using codec {Codec} for video transcoding of {FileName}", preferredCodec, Path.GetFileName(fullname));
+                        
+                        // Transcode to h264 using ffmpeg with hardware acceleration if available
+                        var ffmpegPath = _ffMpegService.FfMpegExecutable;
                         var ffmpegCmd = Cli.Wrap(ffmpegPath)
                             .WithArguments(args =>
                             {
                                 args
                                     .Add("-i").Add(fullname)
-                                    .Add("-c:v").Add("libx264")
-                                    .Add("-preset").Add("ultrafast")
+                                    .Add("-c:v").Add(preferredCodec);
+                                
+                                // Add hardware-specific options based on the codec
+                                if (preferredCodec == "h264_nvenc")
+                                {
+                                    args
+                                        .Add("-preset").Add("p1") // NVENC preset
+                                        .Add("-tune").Add("hq"); // High quality tuning
+                                }
+                                else if (preferredCodec == "h264_qsv")
+                                {
+                                    args
+                                        .Add("-preset").Add("veryfast") // QSV preset
+                                        .Add("-look_ahead").Add("1"); // Enable look-ahead
+                                }
+                                else if (preferredCodec == "h264_amf")
+                                {
+                                    args
+                                        .Add("-quality").Add("speed") // AMF quality preset
+                                        .Add("-rc").Add("cqp"); // Rate control
+                                }
+                                else if (preferredCodec == "h264_videotoolbox")
+                                {
+                                    args
+                                        .Add("-allow_sw").Add("1"); // Allow software fallback
+                                }
+                                else
+                                {
+                                    // Software encoding (libx264)
+                                    args
+                                        .Add("-preset").Add("ultrafast");
+                                }
+                                
+                                args
                                     .Add("-b:v").Add("3M")
                                     .Add("-maxrate").Add("4M")
                                     .Add("-bufsize").Add("6M")
@@ -649,7 +673,6 @@ namespace Bakabase.Service.Controllers
                                     .Add("-f").Add("mp4")
                                     .Add("-movflags").Add("frag_keyframe+empty_moov")
                                     .Add("pipe:1");
-                                // 如需硬件加速，可替换 -c:v libx264 为 -c:v h264_nvenc 等
                             })
                             .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
                         
@@ -1107,17 +1130,23 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "CheckPathIsFile")]
         public async Task<SingletonResponse<bool>> CheckPathIsFile(string path)
         {
-            var isFile = false;
-            try
-            {
-                isFile = System.IO.File.Exists(path);
-            }
-            catch (Exception e)
-            {
-                // ignored
-            }
+            return new SingletonResponse<bool>(System.IO.File.Exists(path));
+        }
 
-            return new SingletonResponse<bool>(isFile);
+        [HttpGet("hardware-acceleration")]
+        [SwaggerOperation(OperationId = "GetHardwareAccelerationInfo")]
+        public async Task<SingletonResponse<HardwareAccelerationInfo>> GetHardwareAccelerationInfo()
+        {
+            var info = await _hardwareAccelerationService.GetHardwareAccelerationInfoAsync(HttpContext.RequestAborted);
+            return new SingletonResponse<HardwareAccelerationInfo>(info);
+        }
+
+        [HttpPost("hardware-acceleration/clear-cache")]
+        [SwaggerOperation(OperationId = "ClearHardwareAccelerationCache")]
+        public async Task<BaseResponse> ClearHardwareAccelerationCache()
+        {
+            _hardwareAccelerationService.ClearCache();
+            return BaseResponseBuilder.Ok;
         }
     }
 }

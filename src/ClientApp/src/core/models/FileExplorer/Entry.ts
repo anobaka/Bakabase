@@ -210,7 +210,7 @@ export class Entry {
           case EntryProperty.ChildrenCount: {
             if (this.isDirectoryOrDrive) {
               // @ts-ignore
-              const info = await BApi.file.getIwFsInfo({ path: this.path }, { ignoreError: () => true });
+              const info = await BApi.file.getIwFsInfo({ path: this.path, type: this.type }, { ignoreError: () => true });
               if (info.code) {
                 this.errors[EntryError.InitializationFailed] = info.message!;
               } else {

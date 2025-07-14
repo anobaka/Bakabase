@@ -6,9 +6,10 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
-using Bakabase.InsideWorld.Business.Configurations;
+using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
@@ -22,16 +23,16 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsV
     {
         private readonly IStringLocalizer<SharedResource> _localizer;
         private readonly IWebHostEnvironment _env;
-        private readonly InsideWorldOptionsManagerPool _optionsManager;
+        private readonly IBOptions<BilibiliOptions> _options;
         private readonly FfMpegService _ffMpegService;
         private readonly LuxService _luxService;
 
         public BilibiliDownloaderOptionsValidator(IStringLocalizer<SharedResource> localizer, IWebHostEnvironment env,
-            InsideWorldOptionsManagerPool optionsManager, FfMpegService ffMpegService, LuxService luxService)
+            IBOptions<BilibiliOptions> options, FfMpegService ffMpegService, LuxService luxService)
         {
             _localizer = localizer;
             _env = env;
-            _optionsManager = optionsManager;
+            _options = options;
             _ffMpegService = ffMpegService;
             _luxService = luxService;
         }
@@ -40,7 +41,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsV
 
         public async Task<BaseResponse> Validate()
         {
-            var options = (_optionsManager.Bilibili).Value;
+            var options = _options.Value;
 
             if (_ffMpegService.Status != DependentComponentStatus.Installed)
             {

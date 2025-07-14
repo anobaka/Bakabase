@@ -26,11 +26,31 @@ import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkMod
 import { PropertyType, StandardValueType } from '@/sdk/constants';
 import PropertyMatcher from '@/components/PropertyMatcher';
 import FileNameModifierTest from './cases/FileNameModifierTest';
+import BetaChip from '@/components/Chips/BetaChip';
+import DeprecatedChip from '@/components/Chips/DeprecatedChip';
 
 
 const components = {
   FileNameModifierTest: <FileNameModifierTest />,
   PropertyMatcher: <PropertyMatcher type={PropertyType.Attachment} name={'封面3'} onValueChanged={console.log} />,
+  BetaChip: (
+    <div className={'flex flex-wrap gap-2 items-center'}>
+      <BetaChip />
+      <BetaChip size="md" color="primary" />
+      <BetaChip size="lg" color="success" variant="solid" />
+      <BetaChip color="danger" variant="bordered" tooltipContent="Custom tooltip content" />
+      <BetaChip showTooltip={false} />
+    </div>
+  ),
+  DeprecatedChip: (
+    <div className={'flex flex-wrap gap-2 items-center'}>
+      <DeprecatedChip />
+      <DeprecatedChip size="md" color="warning" />
+      <DeprecatedChip size="lg" color="danger" variant="solid" />
+      <DeprecatedChip color="secondary" variant="bordered" tooltipContent="Custom deprecated message" />
+      <DeprecatedChip showTooltip={false} />
+    </div>
+  ),
   PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <Properties />,
   BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,

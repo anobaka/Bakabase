@@ -25,7 +25,7 @@ import {
   AiOutlineUngroup,
 } from 'react-icons/ai';
 import type { IconType } from 'react-icons';
-import { MdOutlineIntegrationInstructions, MdOutlineTopic } from 'react-icons/md';
+import { MdDriveFileRenameOutline, MdOutlineIntegrationInstructions, MdOutlineTopic } from 'react-icons/md';
 
 const headerMenuConfig = [];
 
@@ -34,6 +34,8 @@ export interface IMenuItem {
   path?: string;
   icon?: IconType;
   children?: IMenuItem[];
+  isBeta?: boolean;
+  isDeprecated?: boolean;
 }
 
 const asideMenuConfig: IMenuItem[] = [
@@ -48,15 +50,15 @@ const asideMenuConfig: IMenuItem[] = [
     path: '/medialibrary',
   },
   {
+    name: 'Media library template',
+    icon: AiOutlineAppstoreAdd,
+    path: '/medialibrarytemplate',
+  },
+  {
     name: 'Data',
     icon: AiOutlineDatabase,
     path: '/expandable-2',
     children: [
-      {
-        name: 'Media library template',
-        icon: AiOutlineAppstoreAdd,
-        path: '/medialibrarytemplate',
-      },
       {
         name: 'Synchronization options',
         path: '/synchronizationoptions',
@@ -113,9 +115,10 @@ const asideMenuConfig: IMenuItem[] = [
         icon: AiOutlineControl,
       },
       {
-        name: 'Media library(Deprec)',
+        name: 'Media library',
         icon: AiOutlineProduct,
         path: '/category',
+        isDeprecated: true,
       },
     ],
   },
@@ -138,6 +141,12 @@ const asideMenuConfig: IMenuItem[] = [
         name: 'File Mover',
         path: '/filemover',
         icon: AiOutlineFileSync,
+      },
+      {
+        name: 'File name modifier',
+        path: '/filenamemodifier',
+        icon: MdDriveFileRenameOutline ,
+        isBeta: true,
       },
       // {
       //   name: 'Other tools',

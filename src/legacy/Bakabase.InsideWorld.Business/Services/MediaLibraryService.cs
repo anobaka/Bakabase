@@ -19,11 +19,11 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Configurations;
+using Bakabase.InsideWorld.Business.Components.Configurations.Extensions;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PropertyMatcher;
-using Bakabase.InsideWorld.Business.Configurations;
-using Bakabase.InsideWorld.Business.Configurations.Extensions;
-using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
@@ -50,6 +50,7 @@ using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using static Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult.Resource;
+using static Bakabase.InsideWorld.Models.Configs.UIOptions;
 using MediaLibrary = Bakabase.Abstractions.Models.Domain.MediaLibrary;
 using PathConfiguration = Bakabase.Abstractions.Models.Domain.PathConfiguration;
 using SearchOption = System.IO.SearchOption;
@@ -70,14 +71,14 @@ namespace Bakabase.InsideWorld.Business.Services
         protected ICustomPropertyService CustomPropertyService => GetRequiredService<ICustomPropertyService>();
         protected BTaskManager TaskManager => GetRequiredService<BTaskManager>();
 
-        protected InsideWorldOptionsManagerPool InsideWorldAppService =>
-            GetRequiredService<InsideWorldOptionsManagerPool>();
+        protected BakabaseOptionsManagerPool InsideWorldAppService =>
+            GetRequiredService<BakabaseOptionsManagerPool>();
 
         protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
 
         private readonly IPropertyLocalizer _propertyLocalizer;
 
-        private readonly IBOptions<ResourceOptions> _resourceOptions;
+        private readonly IBOptionsManager<ResourceOptions> _resourceOptions;
         protected IEnhancementRecordService EnhancementRecordService => GetRequiredService<IEnhancementRecordService>();
         protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
         private readonly IBakabaseLocalizer _localizer;
@@ -86,7 +87,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public MediaLibraryService(IServiceProvider serviceProvider,
             ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibraryDbModel, int> orm,
             IPropertyService propertyService, IPropertyLocalizer propertyLocalizer,
-            IBOptions<ResourceOptions> resourceOptions, IEnhancerLocalizer enhancerLocalizer,
+            IBOptionsManager<ResourceOptions> resourceOptions, IEnhancerLocalizer enhancerLocalizer,
             IBakabaseLocalizer localizer) : base(serviceProvider)
         {
             _orm = orm;
@@ -821,10 +822,9 @@ namespace Bakabase.InsideWorld.Business.Services
                         result.UpdatedResourceCount = resourcesToBeSaved.Count - newResources.Length;
                         result.DirectoryResourceCount = patchingResources.Count(a => !a.Value.IsFile);
                         result.FileResourceCount = patchingResources.Count(a => a.Value.IsFile);
+                            onProgressChange(basePercentage + stepPercentage);
 
-                        onProgressChange(basePercentage + stepPercentage);
-
-                        await InsideWorldAppService.Resource.SaveAsync(t => t.LastSyncDt = DateTime.Now);
+                        await _resourceOptions.SaveAsync(t => t.LastSyncDt = DateTime.Now);
 
                         var allResources = resourcesToBeSaved.Concat(prevPathResourceMap.Values).ToList();
 

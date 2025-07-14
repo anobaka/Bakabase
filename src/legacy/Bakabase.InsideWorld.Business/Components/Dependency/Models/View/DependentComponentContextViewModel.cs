@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+﻿using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
 
-namespace Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto
+namespace Bakabase.InsideWorld.Business.Components.Dependency.Models.View
 {
-    public record DependentComponentContextDto : DependentComponentContext
+    public record DependentComponentContextViewModel : DependentComponentContext
     {
         public string Id { get; set; } = null!;
         public string Name { get; set; } = null!;

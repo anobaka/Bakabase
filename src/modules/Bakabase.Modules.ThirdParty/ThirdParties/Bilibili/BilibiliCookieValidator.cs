@@ -13,7 +13,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Constants;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.Bilibili
 {
     public class BilibiliCookieValidator(IHttpClientFactory httpClientFactory, IBakabaseLocalizer localizer)
-        : JsonBasedInsideWorldCookieValidator<DataWrapper<UserCredential>>(httpClientFactory, localizer)
+        : JsonBasedBakabaseCookieValidator<DataWrapper<UserCredential>>(httpClientFactory, localizer)
     {
         public override CookieValidatorTarget Target => CookieValidatorTarget.BiliBili;
 

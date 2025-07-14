@@ -68,7 +68,8 @@ public static class SharableMediaLibraryTemplateExtensions
         return new SharableMediaLibraryTemplatePlayableFileLocator
         {
             ExtensionGroups = locator.ExtensionGroups,
-            Extensions = locator.Extensions
+            Extensions = locator.Extensions,
+            MaxFileCount = locator.MaxFileCount
         };
     }
 
@@ -176,7 +177,8 @@ public static class SharableMediaLibraryTemplateExtensions
         {
             Extensions = sharable.Extensions,
             ExtensionGroupIds = groups?.Select(g => g.Id).ToHashSet(),
-            ExtensionGroups = groups
+            ExtensionGroups = groups,
+            MaxFileCount = sharable.MaxFileCount
         };
     }
 

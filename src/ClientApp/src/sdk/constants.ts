@@ -24,7 +24,7 @@ export enum PropertyPool {Internal = 1, Reserved = 2, Custom = 4, All = 7}
 export const propertyPools = Object.keys(PropertyPool).filter(k => typeof PropertyPool[k] === 'number').map(t => ({label: t, value: PropertyPool[t]}));
 export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15, Tags = 16}
 export const propertyTypes = Object.keys(PropertyType).filter(k => typeof PropertyType[k] === 'number').map(t => ({label: t, value: PropertyType[t]}));
-export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004}
+export enum PropertyValueScope {Manual = 0, Synchronization = 1, BakabaseEnhancer = 1000, ExHentaiEnhancer = 1001, BangumiEnhancer = 1002, DLsiteEnhancer = 1003, RegexEnhancer = 1004, KodiEnhancer = 1005}
 export const propertyValueScopes = Object.keys(PropertyValueScope).filter(k => typeof PropertyValueScope[k] === 'number').map(t => ({label: t, value: PropertyValueScope[t]}));
 export enum ReservedProperty {Introduction = 12, Rating = 13, Cover = 22}
 export const reservedProperties = Object.keys(ReservedProperty).filter(k => typeof ReservedProperty[k] === 'number').map(t => ({label: t, value: ReservedProperty[t]}));
@@ -130,11 +130,11 @@ export enum TagAdditionalItem {None = 0, GroupName = 1, PreferredAlias = 2}
 export const tagAdditionalItems = Object.keys(TagAdditionalItem).filter(k => typeof TagAdditionalItem[k] === 'number').map(t => ({label: t, value: TagAdditionalItem[t]}));
 export enum TagGroupAdditionalItem {Tags = 1, PreferredAlias = 2, TagNamePreferredAlias = 4}
 export const tagGroupAdditionalItems = Object.keys(TagGroupAdditionalItem).filter(k => typeof TagGroupAdditionalItem[k] === 'number').map(t => ({label: t, value: TagGroupAdditionalItem[t]}));
-export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Regex = 5}
+export enum EnhancerId {Bakabase = 1, ExHentai = 2, Bangumi = 3, DLsite = 4, Regex = 5, Kodi = 6}
 export const enhancerIds = Object.keys(EnhancerId).filter(k => typeof EnhancerId[k] === 'number').map(t => ({label: t, value: EnhancerId[t]}));
 export enum RegexEnhancerTarget {CaptureGroups = 0}
 export const regexEnhancerTargets = Object.keys(RegexEnhancerTarget).filter(k => typeof RegexEnhancerTarget[k] === 'number').map(t => ({label: t, value: RegexEnhancerTarget[t]}));
-export enum KodiEnhancerTarget {Title = 1, Votes = 2, Covers = 3}
+export enum KodiEnhancerTarget {Title = 1, OriginalTitle = 2, SortTitle = 3, ShowTitle = 4, Outline = 5, Plot = 6, Tagline = 7, Runtime = 8, Mpaa = 9, PlayCount = 10, LastPlayed = 11, Id = 12, Genres = 13, Countries = 14, Tags = 15, VideoAssetTitle = 16, VideoAssetId = 17, VideoAssetType = 18, HasVideoVersions = 19, HasVideoExtras = 20, IsDefaultVideoVersion = 21, Credits = 22, Director = 23, Premiered = 24, Year = 25, Status = 26, Studio = 27, Trailer = 28, Season = 29, Episode = 30, DisplaySeason = 31, DisplayEpisode = 32, Genre = 33, Code = 34, Aired = 35, DateAdded = 36, Top250 = 37, UserRating = 38, Thumbs = 39, FanartThumbs = 40, UniqueIds = 41, Actors = 42, NamedSeasons = 43, Ratings = 44, Set = 45, Resume = 46, Artist = 47, Album = 48, MusicVideo = 49, Episodes = 50, Directors = 51, Track = 52, Style = 53, Mood = 54, Themes = 55, Compilation = 56, BoxSet = 57, Review = 58, Type = 59, ReleaseStatus = 60, ReleaseDate = 61, OriginalReleaseDate = 62, Label = 63, Duration = 64, Path = 65, Votes = 66, ReleaseType = 67, Rating = 68, SortName = 69, Gender = 70, Disambiguation = 71, Styles = 72, Moods = 73, YearsActive = 74, Born = 75, Formed = 76, Biography = 77, Died = 78, Disbanded = 79, AlbumArtistCredits = 80}
 export const kodiEnhancerTargets = Object.keys(KodiEnhancerTarget).filter(k => typeof KodiEnhancerTarget[k] === 'number').map(t => ({label: t, value: KodiEnhancerTarget[t]}));
 export enum ExHentaiEnhancerTarget {Name = 1, Introduction = 2, Rating = 3, Tags = 4, Cover = 5}
 export const exHentaiEnhancerTargets = Object.keys(ExHentaiEnhancerTarget).filter(k => typeof ExHentaiEnhancerTarget[k] === 'number').map(t => ({label: t, value: ExHentaiEnhancerTarget[t]}));

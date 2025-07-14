@@ -5,6 +5,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public record PublisherDto
     {
         public int Id { get; set; }

@@ -3,10 +3,10 @@ using System.Linq;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Extensions;
-using static Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions;
-using static Bakabase.InsideWorld.Business.Configurations.Models.Domain.ResourceOptions.SynchronizationOptionsModel;
+using static Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions;
+using static Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions.SynchronizationOptionsModel;
 
-namespace Bakabase.InsideWorld.Business.Configurations.Extensions;
+namespace Bakabase.InsideWorld.Business.Components.Configurations.Extensions;
 
 public static class ResourceOptionsExtensions
 {
@@ -149,7 +149,7 @@ public static class ResourceOptionsExtensions
         return options.IsSet() ? options : null;
     }
 
-    public static bool ShouldBeDeletedSinceFileNotFound(this Resource fileNotFoundResource,
+    public static bool ShouldBeDeletedSinceFileNotFound(this Abstractions.Models.Domain.Resource fileNotFoundResource,
         SynchronizationOptionsModel? options)
     {
         if (options == null)
@@ -164,13 +164,13 @@ public static class ResourceOptionsExtensions
                co?.DeleteResourcesWithUnknownPath ?? options.DeleteResourcesWithUnknownPath ?? false;
     }
 
-    public static bool ShouldBeDeletedSinceUnknownMediaLibrary(this Resource fileNotFoundResource,
+    public static bool ShouldBeDeletedSinceUnknownMediaLibrary(this Abstractions.Models.Domain.Resource fileNotFoundResource,
         SynchronizationOptionsModel? options)
     {
         return options?.DeleteResourcesWithUnknownMediaLibrary ?? false;
     }
 
-    public static int[]? GetIdsOfEnhancersShouldBeReApplied(this Resource resource,
+    public static int[]? GetIdsOfEnhancersShouldBeReApplied(this Abstractions.Models.Domain.Resource resource,
         SynchronizationOptionsModel? options)
     {
         if (options == null)
@@ -189,7 +189,7 @@ public static class ResourceOptionsExtensions
             priority.Select(a => a?.GetValueOrDefault(id)?.ReApply).OfType<bool>().FirstOrDefault()).ToArray();
     }
 
-    public static int[]? GetIdsOfEnhancersShouldBeReEnhanced(this Resource resource,
+    public static int[]? GetIdsOfEnhancersShouldBeReEnhanced(this Abstractions.Models.Domain.Resource resource,
         SynchronizationOptionsModel? options)
     {
         if (options == null)

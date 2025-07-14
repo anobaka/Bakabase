@@ -25,6 +25,8 @@ import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2'
 import DeleteItemsWithSameNamesModal
   from '@/pages/FileProcessor/RootTreeEntry/components/DeleteItemsWithSameNamesModal';
 import GroupModal from '@/pages/FileProcessor/RootTreeEntry/components/GroupModal';
+import FileNameModifierModal from '@/components/FileNameModifierModal';
+import { MdDriveFileRenameOutline } from 'react-icons/md';
 
 type Props = {
   selectedEntries: Entry[];
@@ -143,7 +145,6 @@ export default ({
               return BApi.file.moveEntries({
                 destDir: path,
                 entryPaths: selectedEntries.map(e => e.path),
-                isLegacyMediaLibrary,
               });
             },
           });
@@ -206,6 +207,17 @@ export default ({
           .catch((e) => {
             Message.error(`${t('Failed to copy')}. ${e}`);
           });
+      },
+    });
+
+    // 批量修改名称操作
+    items.push({
+      icon: <MdDriveFileRenameOutline className={'text-base'} />, // 可换为更合适的icon
+      label: t('Batch rename {{count}} items', { count: selectedEntries.length }),
+      onClick: () => {
+        createPortal(FileNameModifierModal, {
+          initialFilePaths: selectedEntries.map(e => e.path),
+        });
       },
     });
   }

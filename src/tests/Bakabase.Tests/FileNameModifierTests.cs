@@ -68,6 +68,54 @@ public class FileNameModifierTests
     }
 
     [Fact]
+    public void Test_ModifyFileNames_WithDirectories()
+    {
+        // Test with directory paths
+        var directoryNames = new List<string> { "MyDocuments", "Photos", "Videos" };
+        var operations = new List<FileNameModifierOperation>
+        {
+            new FileNameModifierOperation
+            {
+                Target = FileNameModifierFileNameTarget.FileName,
+                Operation = FileNameModifierOperationType.Insert,
+                Position = FileNameModifierPosition.Start,
+                Text = "Backup_"
+            }
+        };
+        
+        var result = _modifier.ModifyFileNames(directoryNames, operations);
+        
+        Assert.Equal(3, result.Count);
+        Assert.Equal("Backup_MyDocuments", result[0]);
+        Assert.Equal("Backup_Photos", result[1]);
+        Assert.Equal("Backup_Videos", result[2]);
+    }
+
+    [Fact]
+    public void Test_ModifyFileNames_MixedFilesAndDirectories()
+    {
+        // Test with mixed file and directory names
+        var names = new List<string> { "document.txt", "Photos", "video.mp4", "Documents" };
+        var operations = new List<FileNameModifierOperation>
+        {
+            new FileNameModifierOperation
+            {
+                Target = FileNameModifierFileNameTarget.FileName,
+                Operation = FileNameModifierOperationType.ChangeCase,
+                CaseType = FileNameModifierCaseType.UpperCase
+            }
+        };
+        
+        var result = _modifier.ModifyFileNames(names, operations);
+        
+        Assert.Equal(4, result.Count);
+        Assert.Equal("DOCUMENT.TXT", result[0]);
+        Assert.Equal("PHOTOS", result[1]);
+        Assert.Equal("VIDEO.MP4", result[2]);
+        Assert.Equal("DOCUMENTS", result[3]);
+    }
+
+    [Fact]
     public void Test_ValidateOperation()
     {
         // Insert 需要 Text

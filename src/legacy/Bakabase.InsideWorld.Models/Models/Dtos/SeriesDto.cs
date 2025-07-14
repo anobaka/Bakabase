@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public record SeriesDto
     {
         public int Id { get; set; }

@@ -11,7 +11,7 @@ using Bakabase.Modules.ThirdParty.Components.Http.Cookie;
 namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
 {
     public class ExHentaiCookieValidator(IHttpClientFactory httpClientFactory, IBakabaseLocalizer localizer)
-        : NotEmptyResponseInsideWorldCookieValidator(httpClientFactory, localizer)
+        : NotEmptyResponseBakabaseCookieValidator(httpClientFactory, localizer)
     {
         public override CookieValidatorTarget Target => CookieValidatorTarget.ExHentai;
         protected override string Url => ExHentaiClient.Domain;

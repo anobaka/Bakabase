@@ -5,7 +5,7 @@ import { Card, CardBody, CardHeader, Chip, Modal, Tooltip } from '@/components/b
 import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
 import BApi from '@/sdk/BApi';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import { EnhancerIcon } from '@/components/Enhancer';
+import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 
 type Props = {
   selectedIds?: number[];
@@ -53,8 +53,7 @@ export default ({
             >
               <CardBody>
                 <div className={'text-medium flex items-center gap-1'}>
-                  <EnhancerIcon id={e.id} />
-                  {e.name}
+                  <BriefEnhancer enhancer={e} />
                   {isSelected && (
                     <Chip
                       variant={'light'}

@@ -9,9 +9,9 @@ using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.Infrastructures.Components.App.Upgrade.Abstractions;
 using Bakabase.Infrastructures.Components.Configurations;
 using Bakabase.Infrastructures.Components.Configurations.App;
+using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
-using Bakabase.InsideWorld.Business.Components.Dependency.Models.Dto;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
@@ -19,7 +19,6 @@ using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
-using Bakabase.InsideWorld.Business.Configurations;
 using Bakabase.InsideWorld.Business.Models.View;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
@@ -51,7 +50,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
     public class WebGuiHub : Hub<IWebGuiClient>
     {
         private readonly DownloadTaskService _downloadTaskService;
-        private readonly InsideWorldOptionsManagerPool _optionsManagerPool;
+        private readonly BakabaseOptionsManagerPool _optionsManagerPool;
         private readonly ILogger<WebGuiHub> _logger;
         private readonly IEnumerable<IDependentComponentService> _dependentComponentServices;
         private readonly IFileMover _fileMover;
@@ -62,7 +61,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
         public WebGuiHub(
             DownloadTaskService downloadTaskService,
-            InsideWorldOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
+            BakabaseOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
             AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager, IPostParserTaskService postParserTaskService)
         {

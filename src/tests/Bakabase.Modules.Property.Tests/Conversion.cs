@@ -3,7 +3,6 @@ using Bakabase.Abstractions.Models.Dto;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.Modules.CustomProperty;
 using Bakabase.InsideWorld.Business.Components.ReservedProperty;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Services;
@@ -14,6 +13,7 @@ using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Tests.Components;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Extensions;
+using DotNext.Collections.Generic;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,8 +35,8 @@ namespace Bakabase.Modules.Property.Tests
             sc.AddStandardValue<NoneCustomDateTimeParser>();
             sc.AddReservedProperty();
             sc.AddBootstrapServices<InsideWorldDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
-            sc.AddProperty<CustomPropertyService, CustomPropertyValueService, CategoryCustomPropertyMappingService>();
-            sc.AddTransient<InsideWorldLocalizer>();
+            sc.AddProperty<InsideWorldDbContext>();
+            sc.AddTransient<BakabaseLocalizer>();
             var sp = sc.BuildServiceProvider();
             var scope = sp.CreateAsyncScope();
             var scopeSp = scope.ServiceProvider;
@@ -99,7 +99,7 @@ namespace Bakabase.Modules.Property.Tests
                     var cp = customProperties[i];
                     var property = properties[i];
                     var data = dataSets[fromCpd.BizValueType][PropertyInternals.DescriptorMap[toType].BizValueType];
-                    var @case = cases.GetOrAdd(cp.Id, () => (toType, []));
+                    var @case = cases.GetOrAdd(cp.Id, k => (toType, []));
 
                     foreach (var (fromValue, expectedValue) in data)
                     {

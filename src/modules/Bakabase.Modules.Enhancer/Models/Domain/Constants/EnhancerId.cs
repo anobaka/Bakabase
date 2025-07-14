@@ -26,7 +26,7 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         [Enhancer(typeof(RegexEnhancer), PropertyValueScope.RegexEnhancer, typeof(RegexEnhancerTarget))]
         Regex = 5,
 
-        // [Enhancer(typeof(KodiEnhancer), PropertyValueScope.KodiEnhancer, typeof(KodiEnhancerTarget))]
-        // Kodi = 6
+        [Enhancer(typeof(KodiEnhancer), PropertyValueScope.KodiEnhancer, typeof(KodiEnhancerTarget))]
+        Kodi = 6
     }
 }

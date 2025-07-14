@@ -13,16 +13,16 @@ using Humanizer;
 using Microsoft.AspNetCore.SignalR;
 using Bakabase.InsideWorld.Business.Components.Gui;
 
-namespace Bakabase.InsideWorld.Business.Configurations
+namespace Bakabase.InsideWorld.Business.Components.Configurations
 {
     public class WebGuiHubConfigurationAdapter
     {
         private readonly ILogger<WebGuiHubConfigurationAdapter> _logger;
-        private readonly InsideWorldOptionsManagerPool _optionsManagerPool;
+        private readonly BakabaseOptionsManagerPool _optionsManagerPool;
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _hub;
 
         public WebGuiHubConfigurationAdapter(ILogger<WebGuiHubConfigurationAdapter> logger,
-            InsideWorldOptionsManagerPool optionsManagerPool, IHubContext<WebGuiHub, IWebGuiClient> hub)
+            BakabaseOptionsManagerPool optionsManagerPool, IHubContext<WebGuiHub, IWebGuiClient> hub)
         {
             _logger = logger;
             _optionsManagerPool = optionsManagerPool;

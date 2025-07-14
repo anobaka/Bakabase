@@ -10,6 +10,6 @@
         BangumiEnhancer = 1002,
         DLsiteEnhancer = 1003,
         RegexEnhancer = 1004,
-        // KodiEnhancer = 1005,
+        KodiEnhancer = 1005,
     }
 }

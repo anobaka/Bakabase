@@ -58,6 +58,7 @@ export type MediaLibraryTemplatePlayableFileLocator = {
   extensionGroups?: IdName[];
   extensionGroupIds?: number[];
   extensions?: string[];
+  maxFileCount?: number;
 };
 
 export type MediaLibraryTemplateEnhancerOptions = {

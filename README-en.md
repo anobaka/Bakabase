@@ -1,6 +1,6 @@
 [中文](README.md)|English
 
-~~Inside World~~ Bakabase is an offline media management software for fast processing, searching, previewing and playing local media. 
+Bakabase is an offline media management software for fast processing, searching, previewing and playing local media. 
 
 It currently supports the management of media such as animation, comics, audio, books, movies, albums, etc. 
 

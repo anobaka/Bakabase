@@ -1,9 +1,9 @@
 ﻿using Bakabase.Abstractions.Components.Localization;
-using Newtonsoft.Json;
+using Bootstrap.Extensions;
 
 namespace Bakabase.Modules.ThirdParty.Components.Http.Cookie
 {
-    public abstract class JsonBasedInsideWorldCookieValidator<TBody>(
+    public abstract class NotEmptyResponseBakabaseCookieValidator(
         IHttpClientFactory httpClientFactory,
         IBakabaseLocalizer localizer)
         : AbstractCookieValidator(httpClientFactory, localizer)
@@ -11,11 +11,7 @@ namespace Bakabase.Modules.ThirdParty.Components.Http.Cookie
         protected override async Task<(bool Success, string? Message, string? Content)> Validate(HttpResponseMessage rsp)
         {
             var body = await rsp.Content.ReadAsStringAsync();
-            var data = JsonConvert.DeserializeObject<TBody>(body);
-            var (success, message) = Validate(data);
-            return (success, message, body);
+            return (body.IsNotEmpty(), null, body);
         }
-
-        protected abstract (bool Success, string? Message) Validate(TBody body);
     }
 }

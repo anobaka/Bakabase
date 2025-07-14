@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public class SubCustomPlayerOptionsDto
     {
         public string[] Extensions { get; set; }

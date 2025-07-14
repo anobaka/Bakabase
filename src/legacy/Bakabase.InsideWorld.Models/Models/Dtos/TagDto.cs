@@ -6,6 +6,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
+    [Obsolete]
     public record TagDto
     {
         public int Id { get; set; }

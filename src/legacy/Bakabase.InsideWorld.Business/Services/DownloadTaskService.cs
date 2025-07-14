@@ -48,10 +48,10 @@ namespace Bakabase.InsideWorld.Business.Services
         protected IHubContext<WebGuiHub, IWebGuiClient> UiHub =>
             GetRequiredService<IHubContext<WebGuiHub, IWebGuiClient>>();
 
-        private InsideWorldLocalizer _localizer;
+        private BakabaseLocalizer _localizer;
         private readonly IGuiAdapter _guiAdapter;
 
-        public DownloadTaskService(IServiceProvider serviceProvider, InsideWorldLocalizer localizer,
+        public DownloadTaskService(IServiceProvider serviceProvider, BakabaseLocalizer localizer,
             IGuiAdapter guiAdapter) : base(
             serviceProvider)
         {

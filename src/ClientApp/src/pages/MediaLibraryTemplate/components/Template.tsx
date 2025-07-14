@@ -252,6 +252,11 @@ export default ({
               </Chip>
             );
           })}
+          {template.playableFileLocator?.maxFileCount && (
+            <Chip size={'sm'} variant={'flat'} color={'warning'}>
+              {t('Max: {{count}}', { count: template.playableFileLocator.maxFileCount })}
+            </Chip>
+          )}
         </div>
       </Block>
       <Block

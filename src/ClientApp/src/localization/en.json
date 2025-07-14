@@ -55,6 +55,10 @@
   "FeatureRequestTip.Developing": "The <1>{{name}}</1> feature is under development. You can urge the author or make suggestions on <3>Github</3> or <5>QQ group</5>",
   "FeatureRequestTip.Deprecated": "The <1>{{name}}</1> feature has been deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
   "FeatureRequestTip.Deprecating": "The <1>{{name}}</1> feature will be deprecated. If you need this feature, please propose it on <3>Github</3> or <5>QQ group</5>",
+  "Beta": "Beta",
+  "This feature is in beta and may be unstable. Please report any issues you encounter.": "This feature is in beta and may be unstable. Please report any issues you encounter.",
+  "Deprecated": "Deprecated",
+  "This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.": "This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.",
   "Keyboard.Enter": "Enter",
   "Filter(Verb)": "Filter",
   "Move {{count}} resources to media library (Including file system entries)": "Move {{count}} resources to media library (Including file system entries)",
@@ -224,6 +228,7 @@
   "PropertyValueScope.BangumiEnhancer": "Bangumi enhancer",
   "PropertyValueScope.DLsiteEnhancer": "DLsite enhancer",
   "PropertyValueScope.RegexEnhancer": "Regex enhancer",
+  "PropertyValueScope.KodiEnhancer": "Kodi enhancer",
   "PropertyType.SingleLineText": "Single-line text",
   "PropertyType.MultilineText": "Multi-line text",
   "PropertyType.SingleChoice": "Single choice",
@@ -428,5 +433,10 @@
   "FileNameModifier.ModificationFailCount": "Failed: {{count}}",
   "FileNameModifier.ModificationFailList": "Failed Files",
   "FileNameModifier.ModificationFailReason": "Reason",
-  "FileNameModifier.Close": "Close"
+  "FileNameModifier.Close": "Close",
+  "Maximum file count": "Maximum file count",
+  "Leave empty for no limit": "Leave empty for no limit",
+  "Max: {{count}}": "Max: {{count}}",
+  "Batch rename {{count}} items": "Batch rename {{count}} items",
+  "BetaFeature.BackupWarning": "If you are processing important data, it is recommended to back it up before trying."
 }

@@ -7,10 +7,10 @@ using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Configurations;
+using Bakabase.InsideWorld.Business.Components.Configurations.Extensions;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
-using Bakabase.InsideWorld.Business.Configurations;
-using Bakabase.InsideWorld.Business.Configurations.Extensions;
-using Bakabase.InsideWorld.Business.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.RequestModels.Options;
@@ -32,22 +32,15 @@ namespace Bakabase.Service.Controllers
     {
         private readonly IStringLocalizer<SharedResource> _prevLocalizer;
         private readonly IBOptionsManager<AppOptions> _appOptionsManager;
-        private readonly InsideWorldOptionsManagerPool _insideWorldOptionsManager;
-        private readonly InsideWorldLocalizer _localizer;
+        private readonly BakabaseOptionsManagerPool _bakabaseOptionsManager;
         private readonly IGuiAdapter _guiAdapter;
-        private readonly FfMpegService _ffMpegInstaller;
 
-        public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
-            IBOptionsManager<AppOptions> appOptionsManager,
-            InsideWorldOptionsManagerPool insideWorldOptionsManager, InsideWorldLocalizer localizer,
-            IGuiAdapter guiAdapter, FfMpegService ffMpegInstaller)
+        public OptionsController(IStringLocalizer<SharedResource> prevLocalizer, IBOptionsManager<AppOptions> appOptionsManager, BakabaseOptionsManagerPool bakabaseOptionsManager, IGuiAdapter guiAdapter)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
-            _insideWorldOptionsManager = insideWorldOptionsManager;
-            _localizer = localizer;
+            _bakabaseOptionsManager = bakabaseOptionsManager;
             _guiAdapter = guiAdapter;
-            _ffMpegInstaller = ffMpegInstaller;
         }
 
         [HttpGet("app")]
@@ -121,14 +114,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetUIOptions")]
         public async Task<SingletonResponse<UIOptions>> GetUIOptions()
         {
-            return new SingletonResponse<UIOptions>((_insideWorldOptionsManager.UI).Value);
+            return new SingletonResponse<UIOptions>(_bakabaseOptionsManager.Get<UIOptions>().Value);
         }
 
         [HttpPatch("ui")]
         [SwaggerOperation(OperationId = "PatchUIOptions")]
         public async Task<BaseResponse> PatchUIOptions([FromBody] UIOptionsPatchRequestModel model)
         {
-            await _insideWorldOptionsManager.UI.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<UIOptions>().SaveAsync(options =>
             {
                 if (model.Resource != null)
                 {
@@ -148,14 +141,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetBilibiliOptions")]
         public async Task<SingletonResponse<BilibiliOptions>> GetBilibiliOptions()
         {
-            return new SingletonResponse<BilibiliOptions>((_insideWorldOptionsManager.Bilibili).Value);
+            return new SingletonResponse<BilibiliOptions>(_bakabaseOptionsManager.Get<BilibiliOptions>().Value);
         }
 
         [HttpPatch("bilibili")]
         [SwaggerOperation(OperationId = "PatchBilibiliOptions")]
         public async Task<BaseResponse> PatchBilibiliOptions([FromBody] BilibiliOptions model)
         {
-            await _insideWorldOptionsManager.Bilibili.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<BilibiliOptions>().SaveAsync(options =>
             {
                 if (model.Cookie.IsNotEmpty())
                 {
@@ -174,14 +167,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetExHentaiOptions")]
         public async Task<SingletonResponse<ExHentaiOptions>> GetExHentaiOptions()
         {
-            return new SingletonResponse<ExHentaiOptions>((_insideWorldOptionsManager.ExHentai).Value);
+            return new SingletonResponse<ExHentaiOptions>(_bakabaseOptionsManager.Get<ExHentaiOptions>().Value);
         }
 
         [HttpPatch("exhentai")]
         [SwaggerOperation(OperationId = "PatchExHentaiOptions")]
         public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptions model)
         {
-            await _insideWorldOptionsManager.ExHentai.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<ExHentaiOptions>().SaveAsync(options =>
             {
                 if (model.Cookie.IsNotEmpty())
                 {
@@ -205,8 +198,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetFileSystemOptions")]
         public async Task<SingletonResponse<FileSystemOptions>> GetFileSystemOptions()
         {
-            return new SingletonResponse<FileSystemOptions>((_insideWorldOptionsManager.FileSystem)
-                .Value);
+            return new SingletonResponse<FileSystemOptions>(_bakabaseOptionsManager.Get<FileSystemOptions>().Value);
         }
 
         [HttpPatch("filesystem")]
@@ -219,7 +211,7 @@ namespace Bakabase.Service.Controllers
                 return result;
             }
 
-            await _insideWorldOptionsManager.FileSystem.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<FileSystemOptions>().SaveAsync(options =>
             {
                 if (model.FileMover != null)
                 {
@@ -243,15 +235,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetJavLibraryOptions")]
         public async Task<SingletonResponse<JavLibraryOptions>> GetJavLibraryOptions()
         {
-            return new SingletonResponse<JavLibraryOptions>((_insideWorldOptionsManager.JavLibrary)
-                .Value);
+            return new SingletonResponse<JavLibraryOptions>(_bakabaseOptionsManager.Get<JavLibraryOptions>().Value);
         }
 
         [HttpPatch("javlibrary")]
         [SwaggerOperation(OperationId = "PatchJavLibraryOptions")]
         public async Task<BaseResponse> PatchJavLibraryOptions([FromBody] JavLibraryOptions model)
         {
-            await _insideWorldOptionsManager.JavLibrary.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<JavLibraryOptions>().SaveAsync(options =>
             {
                 if (model.Cookie.IsNotEmpty())
                 {
@@ -270,14 +261,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetPixivOptions")]
         public async Task<SingletonResponse<PixivOptions>> GetPixivOptions()
         {
-            return new SingletonResponse<PixivOptions>((_insideWorldOptionsManager.Pixiv).Value);
+            return new SingletonResponse<PixivOptions>(_bakabaseOptionsManager.Get<PixivOptions>().Value);
         }
 
         [HttpPatch("pixiv")]
         [SwaggerOperation(OperationId = "PatchPixivOptions")]
         public async Task<BaseResponse> PatchPixivOptions([FromBody] PixivOptions model)
         {
-            await _insideWorldOptionsManager.Pixiv.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<PixivOptions>().SaveAsync(options =>
             {
                 if (model.Cookie.IsNotEmpty())
                 {
@@ -296,14 +287,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetResourceOptions")]
         public async Task<SingletonResponse<ResourceOptions>> GetResourceOptions()
         {
-            return new SingletonResponse<ResourceOptions>(_insideWorldOptionsManager.Resource.Value);
+            return new SingletonResponse<ResourceOptions>(_bakabaseOptionsManager.Get<ResourceOptions>().Value);
         }
 
         [HttpPatch("resource")]
         [SwaggerOperation(OperationId = "PatchResourceOptions")]
         public async Task<BaseResponse> PatchResourceOptions([FromBody] ResourceOptionsPatchInputModel model)
         {
-            await _insideWorldOptionsManager.Resource.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<ResourceOptions>().SaveAsync(options =>
             {
                 if (model.AdditionalCoverDiscoveringSources != null)
                 {
@@ -338,15 +329,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetThirdPartyOptions")]
         public async Task<SingletonResponse<ThirdPartyOptions>> GetThirdPartyOptions()
         {
-            return new SingletonResponse<ThirdPartyOptions>((_insideWorldOptionsManager.ThirdParty)
-                .Value);
+            return new SingletonResponse<ThirdPartyOptions>(_bakabaseOptionsManager.Get<ThirdPartyOptions>().Value);
         }
 
         [HttpPatch("thirdparty")]
         [SwaggerOperation(OperationId = "PatchThirdPartyOptions")]
         public async Task<BaseResponse> PatchThirdPartyOptions([FromBody] ThirdPartyOptionsPatchInput model)
         {
-            await _insideWorldOptionsManager.ThirdParty.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(options =>
             {
                 if (model.CurlExecutable != null)
                 {
@@ -377,7 +367,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutThirdPartyOptions")]
         public async Task<BaseResponse> PutThirdPartyOptions([FromBody] ThirdPartyOptions model)
         {
-            await _insideWorldOptionsManager.ThirdParty.SaveAsync(model);
+            await _bakabaseOptionsManager.Get<ThirdPartyOptions>().SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }
 
@@ -385,14 +375,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetNetworkOptions")]
         public async Task<SingletonResponse<NetworkOptions>> GetNetworkOptions()
         {
-            return new SingletonResponse<NetworkOptions>((_insideWorldOptionsManager.Network).Value);
+            return new SingletonResponse<NetworkOptions>(_bakabaseOptionsManager.Get<NetworkOptions>().Value);
         }
 
         [HttpPatch("network")]
         [SwaggerOperation(OperationId = "PatchNetworkOptions")]
         public async Task<BaseResponse> PatchNetworkOptions([FromBody] NetworkOptionsPatchInputModel model)
         {
-            await _insideWorldOptionsManager.Network.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<NetworkOptions>().SaveAsync(options =>
             {
                 if (model.Proxy != null)
                 {
@@ -412,14 +402,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetEnhancerOptions")]
         public async Task<SingletonResponse<EnhancerOptions>> GetEnhancerOptions()
         {
-            return new SingletonResponse<EnhancerOptions>((_insideWorldOptionsManager.Enhancer).Value);
+            return new SingletonResponse<EnhancerOptions>(_bakabaseOptionsManager.Get<EnhancerOptions>().Value);
         }
 
         [HttpPatch("enhancer")]
         [SwaggerOperation(OperationId = "PatchEnhancerOptions")]
         public async Task<BaseResponse> PatchEnhancerOptions([FromBody] EnhancerOptions model)
         {
-            await _insideWorldOptionsManager.Enhancer.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<EnhancerOptions>().SaveAsync(options =>
             {
                 if (model.RegexEnhancer != null)
                 {
@@ -433,14 +423,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetTaskOptions")]
         public async Task<SingletonResponse<TaskOptions>> GetTaskOptions()
         {
-            return new SingletonResponse<TaskOptions>((_insideWorldOptionsManager.Task).Value);
+            return new SingletonResponse<TaskOptions>(_bakabaseOptionsManager.Get<TaskOptions>().Value);
         }
 
         [HttpPatch("task")]
         [SwaggerOperation(OperationId = "PatchTaskOptions")]
         public async Task<BaseResponse> PatchTaskOptions([FromBody] TaskOptions model)
         {
-            await _insideWorldOptionsManager.Task.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<TaskOptions>().SaveAsync(options =>
             {
                 if (model.Tasks != null)
                 {
@@ -454,14 +444,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetAIOptions")]
         public async Task<SingletonResponse<AiOptions>> GetAiOptions()
         {
-            return new SingletonResponse<AiOptions>(_insideWorldOptionsManager.Ai.Value);
+            return new SingletonResponse<AiOptions>(_bakabaseOptionsManager.Get<AiOptions>().Value);
         }
 
         [HttpPatch("ai")]
         [SwaggerOperation(OperationId = "PatchAIOptions")]
         public async Task<BaseResponse> PatchAiOptions([FromBody] AiOptions model)
         {
-            await _insideWorldOptionsManager.Ai.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<AiOptions>().SaveAsync(options =>
             {
                 if (model.OllamaEndpoint.IsNotEmpty())
                 {
@@ -475,7 +465,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutAIOptions")]
         public async Task<BaseResponse> PutAiOptions([FromBody] AiOptions model)
         {
-            await _insideWorldOptionsManager.Ai.SaveAsync(model);
+            await _bakabaseOptionsManager.Get<AiOptions>().SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }
 
@@ -483,14 +473,14 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "GetSoulPlusOptions")]
         public async Task<SingletonResponse<SoulPlusOptions>> GetSoulPlusOptions()
         {
-            return new SingletonResponse<SoulPlusOptions>(_insideWorldOptionsManager.SoulPlus.Value);
+            return new SingletonResponse<SoulPlusOptions>(_bakabaseOptionsManager.Get<SoulPlusOptions>().Value);
         }
 
         [HttpPatch("soulplus")]
         [SwaggerOperation(OperationId = "PatchSoulPlusOptions")]
         public async Task<BaseResponse> PatchSoulPlusOptions([FromBody] SoulPlusOptionsPatchInputModel model)
         {
-            await _insideWorldOptionsManager.SoulPlus.SaveAsync(options =>
+            await _bakabaseOptionsManager.Get<SoulPlusOptions>().SaveAsync(options =>
             {
                 if (model.Cookie != null)
                 {
@@ -509,7 +499,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PutSoulPlusOptions")]
         public async Task<BaseResponse> PutSoulPlusOptions([FromBody] SoulPlusOptions model)
         {
-            await _insideWorldOptionsManager.SoulPlus.SaveAsync(model);
+            await _bakabaseOptionsManager.Get<SoulPlusOptions>().SaveAsync(model);
             return BaseResponseBuilder.Ok;
         }
     }
