@@ -2,7 +2,7 @@
 
 namespace Bakabase.Abstractions.Models.Domain;
 
-public record PathLocator
+public record PathPropertyLocator
 {
     public PathPositioner Positioner { get; set; }
     public int? Layer { get; set; }

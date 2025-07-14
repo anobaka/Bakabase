@@ -403,6 +403,7 @@
   "FileNameModifier.Error.CaseTypeRequired": "Case type is required",
   "FileNameModifier.Error.AlphabetParamsRequired": "Alphabet sequence parameters are incomplete",
   "FileNameModifier.Error.UnknownOperationType": "Unknown operation type",
+  "FileNameModifier.Error.NoValidOperation": "No valid operation configured. Please add at least one valid operation.",
   "MediaLibrary.AddOrEdit": "Add or edit",
   "MediaLibrary.SynchronizeAll": "Synchronize all media libraries",
   "MediaLibrary.SortBy": "Sort by {{sortBy}}",

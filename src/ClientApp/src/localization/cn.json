@@ -2149,5 +2149,6 @@
   "Max: {{count}}": "最大: {{count}}",
   "Configure enhancer": "配置增强器",
   "Batch rename {{count}} items": "批量重命名{{count}}项",
-  "BetaFeature.BackupWarning": "如果您正在处理重要数据，建议先备份后再尝试。"
+  "BetaFeature.BackupWarning": "如果您正在处理重要数据，建议先备份后再尝试。",
+  "File name modifier": "文件名修改器"
 }

@@ -7,7 +7,7 @@ namespace Bakabase.Abstractions.Extensions;
 
 public static class PathLocatorExtensions
 {
-    public static string[]? LocateValues(this PathLocator pl, string rootFilename, ResourcePathInfo rpi)
+    public static string[]? LocateValues(this PathPropertyLocator pl, string rootFilename, ResourcePathInfo rpi)
     {
         List<string>? pvs = null;
         switch (pl.Positioner)
