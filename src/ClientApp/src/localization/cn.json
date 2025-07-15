@@ -2151,7 +2151,10 @@
   "Batch rename {{count}} items": "批量重命名{{count}}项",
   "BetaFeature.BackupWarning": "如果您正在处理重要数据，建议先备份后再尝试。",
   "File name modifier": "文件名修改器",
-  "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}": "第0层是{{basePathType}}，负数代表{{basePathType}}以前，正数表示{{basePathType}}之后的层数",
+  "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}": "第0层为{{basePathType}}，负数表示在{{basePathType}}之前，正数表示在{{basePathType}}之后",
   "The {{n}}th layer before {{basePathType}}": "{{basePathType}}前的第{{n}}层",
-  "The {{n}}th layer after {{basePathType}}": "{{basePathType}}后的第{{n}}层"
+  "The {{n}}th layer after {{basePathType}}": "{{basePathType}}后的第{{n}}层",
+  "Based on": "基于",
+  "Based on media library": "基于媒体库",
+  "Based on resource": "基于资源"
 }

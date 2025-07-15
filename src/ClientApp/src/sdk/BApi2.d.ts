@@ -3592,7 +3592,7 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
-            path: string;
+            paths: string[];
             /** Format: int32 */
             templateId?: number;
             /** Format: int32 */
@@ -3846,7 +3846,7 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel": {
             name: string;
-            path: string;
+            paths: string[];
             color?: string;
         };
         "Bakabase.Abstractions.Models.Input.ResourcePropertyValuePutInputModel": {

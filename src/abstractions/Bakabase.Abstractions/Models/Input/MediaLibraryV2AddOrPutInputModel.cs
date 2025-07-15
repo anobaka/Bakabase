@@ -1,3 +1,3 @@
 ﻿namespace Bakabase.Abstractions.Models.Input;
 
-public record MediaLibraryV2AddOrPutInputModel(string Name, string Path, string? Color = null);
+public record MediaLibraryV2AddOrPutInputModel(string Name, List<string> Paths, string? Color = null);

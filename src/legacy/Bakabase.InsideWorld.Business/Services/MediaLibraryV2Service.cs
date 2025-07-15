@@ -55,7 +55,8 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task Add(MediaLibraryV2AddOrPutInputModel model)
     {
-        await orm.Add(new MediaLibraryV2DbModel {Path = model.Path, Name = model.Name, Color = model.Color});
+        var domainModel = new MediaLibraryV2 { Paths = model.Paths, Name = model.Name, Color = model.Color };
+        await orm.Add(domainModel.ToDbModel());
     }
 
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
@@ -63,7 +64,7 @@ public class MediaLibraryV2Service<TDbContext>(
         await orm.UpdateByKey(id, data =>
         {
             data.Name = model.Name;
-            data.Path = model.Path.StandardizePath()!;
+            data.SetPaths(model.Paths);
             data.Color = model.Color;
         });
     }
@@ -72,9 +73,9 @@ public class MediaLibraryV2Service<TDbContext>(
     {
         await orm.UpdateByKey(id, data =>
         {
-            if (model.Path.IsNotEmpty())
+            if (model.Paths.IsNotEmpty())
             {
-                data.Path = model.Path.StandardizePath()!;
+                data.SetPaths(model.Paths!);
             }
 
             if (model.Name.IsNotEmpty())
@@ -97,7 +98,7 @@ public class MediaLibraryV2Service<TDbContext>(
     {
         foreach (var m in models)
         {
-            m.Path = m.Path.StandardizePath()!;
+            m.Paths = m.Paths.Select(p => p.StandardizePath()!).Distinct().ToList();
         }
 
         var newData = models.Where(x => x.Id == 0).ToArray();
@@ -222,8 +223,19 @@ public class MediaLibraryV2Service<TDbContext>(
                 var maxThreads = Math.Max(1,
                     resourceOptions.Value.SynchronizationOptions?.MaxThreads ??
                     (int) (Environment.ProcessorCount * 0.4));
-                var treeTempSyncResources = await template.DiscoverResources(ml.Path,
-                    async p => await discoveryProgressor.Set(p), null, pt, ct, maxThreads);
+                var treeTempSyncResources = new List<TempSyncResource>();
+                var totalDiscoveryProgressPerPath = ProgressPerMediaLibrary.Discovery / (float)ml.Paths.Count;
+                for (var i = 0; i < ml.Paths.Count; i++)
+                {
+                    var path = ml.Paths[i];
+                    var discoveryProgressorByPath =
+                        discoveryProgressor.CreateNewScope(totalDiscoveryProgressPerPath * i,
+                            totalDiscoveryProgressPerPath);
+                    var rs = await template.DiscoverResources(path,
+                        async p => await discoveryProgressorByPath.Set(p), null, pt, ct, maxThreads);
+                    treeTempSyncResources.AddRange(rs);
+                }
+
                 var flattenTempResources = treeTempSyncResources.SelectMany(x => x.Flatten(ml.Id, null)).ToList();
                 var tempSyncResourcePaths = flattenTempResources.Select(d => d.Path).ToHashSet();
 
