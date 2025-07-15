@@ -20,5 +20,5 @@ public record MediaLibraryTemplateProperty
     }
 
     public Property? Property { get; set; }
-    public List<PathPropertyLocator>? ValueLocators { get; set; }
+    public List<PathPropertyExtractor>? ValueLocators { get; set; }
 }

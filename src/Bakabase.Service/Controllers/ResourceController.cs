@@ -26,7 +26,10 @@ using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.View;
+using Bakabase.Modules.Property.Services;
 using Bakabase.Modules.Search.Models.Db;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -37,9 +40,11 @@ using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
+using DotNext;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NPOI.Util.Collections;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -55,6 +60,7 @@ namespace Bakabase.Service.Controllers
         ICoverDiscoverer coverDiscoverer,
         IPropertyService propertyService,
         ICustomPropertyService customPropertyService,
+        ICustomPropertyValueService customPropertyValueService,
         IPropertyLocalizer propertyLocalizer,
         IMediaLibraryService mediaLibraryService,
         IMediaLibraryV2Service mediaLibraryV2Service,
@@ -287,7 +293,8 @@ namespace Bakabase.Service.Controllers
             string? mediaLibraryName;
             if (model.IsLegacyMediaLibrary)
             {
-                var mediaLibrary = await mediaLibraryService.Get(model.MediaLibraryId, MediaLibraryAdditionalItem.Category);
+                var mediaLibrary =
+                    await mediaLibraryService.Get(model.MediaLibraryId, MediaLibraryAdditionalItem.Category);
                 mediaLibraryName = mediaLibrary?.Name;
                 if (mediaLibrary?.Category != null)
                 {
@@ -535,6 +542,56 @@ namespace Bakabase.Service.Controllers
         {
             await service.MarkAsNotPlayed(id);
             return BaseResponseBuilder.Ok;
+        }
+
+
+        [HttpGet("search/keyword-recommendation")]
+        [SwaggerOperation(OperationId = "GetResourceSearchKeywordRecommendation")]
+        public async Task<ListResponse<string>> GetResourceSearchKeywordRecommendation(string keyword,
+            int maxCount = 10)
+        {
+            var keywords = new List<string>();
+            var mediaLibraries = await mediaLibraryV2Service.GetAll(x => x.Name.Contains(keyword));
+            keywords.AddRange(mediaLibraries.Select(ml => ml.Name).Distinct());
+
+            var set = keywords.ToHashSet();
+
+            if (keywords.Count < maxCount)
+            {
+                var pvs = await customPropertyValueService.GetAll(null, CustomPropertyValueAdditionalItem.BizValue,
+                    false);
+                var propertyValuesGroups = pvs.GroupBy(d => d.PropertyId).ToDictionary(d => d.Key, d => d.ToArray());
+                foreach (var (pId, values) in propertyValuesGroups)
+                {
+                    var p = values[0].Property!.ToProperty();
+                    var psh = PropertyInternals.PropertySearchHandlerMap[p.Type];
+                    var filter = psh.BuildSearchFilterByKeyword(p, keyword);
+                    if (filter != null)
+                    {
+                        foreach (var pv in values)
+                        {
+                            if (psh.IsMatch(pv.Value, filter.Operation, filter.DbValue))
+                            {
+                                var pd = PropertyInternals.DescriptorMap[p.Type];
+                                var bizValue = pd.GetBizValue(p, filter.DbValue);
+                                var svh = StandardValueInternals.HandlerMap[p.Type.GetBizValueType()];
+                                var kw = svh.BuildDisplayValue(pv.BizValue);
+                                if (kw.IsNotEmpty() && set.Add(kw))
+                                {
+                                    keywords.Add(kw);
+                                }
+
+                                if (keywords.Count >= maxCount)
+                                {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return new ListResponse<string>(keywords);
         }
     }
 }

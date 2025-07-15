@@ -7,7 +7,7 @@ namespace Bakabase.Modules.Property.Components.Properties.Tags;
 
 public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOptions, List<string>, List<TagValue>>
 {
-    public override PropertyType Type => Bakabase.Abstractions.Models.Domain.Constants.PropertyType.Tags;
+    public override PropertyType Type => PropertyType.Tags;
 
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(
         Bakabase.Abstractions.Models.Domain.Property property,

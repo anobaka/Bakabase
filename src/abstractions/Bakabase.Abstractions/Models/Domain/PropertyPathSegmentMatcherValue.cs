@@ -65,5 +65,26 @@ namespace Bakabase.Abstractions.Models.Domain
                     throw new ArgumentOutOfRangeException();
             }
         }
+        public PathPropertyExtractor ToPathPropertyExtractor()
+        {
+            switch (ValueType)
+            {
+                case ResourceMatcherValueType.Layer:
+                    return new PathPropertyExtractor
+                    {
+                        Layer = Layer,
+                        Positioner = PathPositioner.Layer
+                    };
+                case ResourceMatcherValueType.Regex:
+                    return new PathPropertyExtractor
+                    {
+                        Regex = Regex,
+                        Positioner = PathPositioner.Regex
+                    };
+                case ResourceMatcherValueType.FixedText:
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
     }
 }

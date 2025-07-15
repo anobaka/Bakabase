@@ -210,7 +210,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                     var pvs = new List<string>();
                     if (p.ValueLocators != null)
                     {
-                        foreach (var vs in p.ValueLocators.Select(vl => vl.LocateValues(rootFilename, rpi))
+                        foreach (var vs in p.ValueLocators.Select(vl => vl.ExtractValues(rootFilename, rpi))
                                      .OfType<string[]>())
                         {
                             pvs.AddRange(vs);

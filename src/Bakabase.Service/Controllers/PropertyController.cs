@@ -3,12 +3,17 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.Input;
 using Bakabase.Modules.Property.Models.View;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.View;
@@ -24,7 +29,10 @@ namespace Bakabase.Service.Controllers
     public class PropertyController(
         IPropertyService service,
         IPropertyLocalizer localizer,
-        ICustomPropertyService customPropertyService) : Controller
+        ICustomPropertyService customPropertyService,
+        ICustomPropertyValueService customPropertyValueService,
+        IReservedPropertyValueService reservedPropertyValueService,
+        IMediaLibraryV2Service mediaLibraryV2Service) : Controller
     {
         [HttpGet("pool/{pool}")]
         [SwaggerOperation(OperationId = "GetPropertiesByPool")]

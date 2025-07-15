@@ -3017,6 +3017,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/search/keyword-recommendation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourceSearchKeywordRecommendation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/special-text": {
         parameters: {
             query?: never;
@@ -3408,6 +3424,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PathPositioner": 1 | 2;
         /**
          * Format: int32
+         * @description [1: MediaLibrary, 2: Resource]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.PathPropertyExtractorBasePathType": 1 | 2;
+        /**
+         * Format: int32
          * @description [1: Internal, 2: Reserved, 4: Custom, 7: All]
          * @enum {integer}
          */
@@ -3564,7 +3586,7 @@ export interface components {
             /** Format: int32 */
             id: number;
             property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
-            valueLocators?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathLocator"][];
+            valueLocators?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathPropertyExtractor"][];
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryV2": {
             /** Format: int32 */
@@ -3621,7 +3643,8 @@ export interface components {
             extensionGroups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ExtensionGroup"][];
             extensions?: string[];
         };
-        "Bakabase.Abstractions.Models.Domain.PathLocator": {
+        "Bakabase.Abstractions.Models.Domain.PathPropertyExtractor": {
+            basePathType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPropertyExtractorBasePathType"];
             positioner: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPositioner"];
             /** Format: int32 */
             layer?: number;
@@ -12882,6 +12905,31 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourceSearchKeywordRecommendation: {
+        parameters: {
+            query?: {
+                keyword?: string;
+                maxCount?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
                 };
             };
         };

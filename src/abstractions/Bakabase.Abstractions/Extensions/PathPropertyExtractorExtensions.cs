@@ -5,9 +5,9 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Extensions;
 
-public static class PathLocatorExtensions
+public static class PathPropertyExtractorExtensions
 {
-    public static string[]? LocateValues(this PathPropertyLocator pl, string rootFilename, ResourcePathInfo rpi)
+    public static string[]? ExtractValues(this PathPropertyExtractor pl, string rootFilename, ResourcePathInfo rpi)
     {
         List<string>? pvs = null;
         switch (pl.Positioner)
@@ -16,33 +16,35 @@ public static class PathLocatorExtensions
             {
                 if (pl.Layer.HasValue)
                 {
-                    switch (pl.Layer.Value)
+                    var totalSegmentCount = rpi.MediaLibraryPathSegments.Length + rpi.RelativePathSegments.Length;
+                    var targetIndex = -1;
+                    switch (pl.BasePathType)
                     {
-                        case 0:
+                        case PathPropertyExtractorBasePathType.MediaLibrary:
                         {
-                            (pvs ??= []).Add(rootFilename);
+                            targetIndex = rpi.MediaLibraryPathSegments.Length - 1 + pl.Layer.Value;
+                            break;
+                        }
+                        case PathPropertyExtractorBasePathType.Resource:
+                        {
+                            targetIndex = totalSegmentCount - 1 + pl.Layer.Value;
                             break;
                         }
                         default:
-                        {
-                            if (pl.Layer > 0)
-                            {
-                                if (pl.Layer <= rpi.RelativePathSegments.Length)
-                                {
-                                    (pvs ??= []).Add(rpi.RelativePathSegments[pl.Layer.Value - 1]);
-                                }
-                            }
-                            else
-                            {
-                                var len = Math.Abs(pl.Layer.Value);
-                                if (len <= rpi.RelativePathSegments.Length)
-                                {
-                                    (pvs ??= []).Add(rpi.RelativePathSegments[^len]);
-                                }
-                            }
+                            throw new ArgumentOutOfRangeException();
+                    }
 
-                            break;
+                    if (targetIndex > -1 && targetIndex < totalSegmentCount)
+                    {
+                        var segments = rpi.MediaLibraryPathSegments;
+                        if (targetIndex >= rpi.MediaLibraryPathSegments.Length)
+                        {
+                            targetIndex -= rpi.MediaLibraryPathSegments.Length;
+                            segments = rpi.RelativePathSegments;
                         }
+
+                        (pvs ??= []).Add(segments[targetIndex]);
+
                     }
                 }
 

@@ -133,6 +133,12 @@ export type BakabaseAbstractionsModelsDomainConstantsPathFilterFsType = 1 | 2;
 export type BakabaseAbstractionsModelsDomainConstantsPathPositioner = 1 | 2;
 
 /**
+ * [1: MediaLibrary, 2: Resource]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPathPropertyExtractorBasePathType = 1 | 2;
+
+/**
  * [1: Internal, 2: Reserved, 4: Custom, 7: All]
  * @format int32
  */
@@ -346,7 +352,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateProperty {
   /** @format int32 */
   id: number;
   property?: BakabaseAbstractionsModelsDomainProperty;
-  valueLocators?: BakabaseAbstractionsModelsDomainPathLocator[];
+  valueLocators?: BakabaseAbstractionsModelsDomainPathPropertyExtractor[];
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
@@ -413,7 +419,9 @@ export interface BakabaseAbstractionsModelsDomainPathFilter {
   extensions?: string[];
 }
 
-export interface BakabaseAbstractionsModelsDomainPathLocator {
+export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
+  /** [1: MediaLibrary, 2: Resource] */
+  basePathType: BakabaseAbstractionsModelsDomainConstantsPathPropertyExtractorBasePathType;
   /** [1: Layer, 2: Regex] */
   positioner: BakabaseAbstractionsModelsDomainConstantsPathPositioner;
   /** @format int32 */
@@ -6347,6 +6355,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/played-at`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceSearchKeywordRecommendation
+     * @request GET:/resource/search/keyword-recommendation
+     */
+    getResourceSearchKeywordRecommendation: (
+      query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 10
+         */
+        maxCount?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/resource/search/keyword-recommendation`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

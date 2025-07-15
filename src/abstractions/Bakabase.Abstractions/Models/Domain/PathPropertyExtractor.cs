@@ -2,8 +2,10 @@
 
 namespace Bakabase.Abstractions.Models.Domain;
 
-public record PathPropertyLocator
+
+public record PathPropertyExtractor
 {
+    public PathPropertyExtractorBasePathType BasePathType { get; set; } = PathPropertyExtractorBasePathType.MediaLibrary;
     public PathPositioner Positioner { get; set; }
     public int? Layer { get; set; }
     public string? Regex { get; set; }

@@ -1,12 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { IoLayersOutline } from 'react-icons/io5';
 import { BsRegex } from 'react-icons/bs';
-import type { PathFilter, PathLocator } from '@/pages/MediaLibraryTemplate/models';
-import { pathFilterFsTypes, PathPositioner } from '@/sdk/constants';
+import type { PathFilter, PathPropertyExtractor } from '@/pages/MediaLibraryTemplate/models';
+import { pathFilterFsTypes, PathPositioner, PathPropertyExtractorBasePathType } from '@/sdk/constants';
 import PathFilterFsTypeBlock from '@/pages/MediaLibraryTemplate/components/PathFilterFsTypeBlock';
 
 type Props = {
-  locator: PathLocator;
+  locator: PathPropertyExtractor;
 };
 
 export default ({ locator }: Props) => {
@@ -37,7 +37,18 @@ export default ({ locator }: Props) => {
   const renderLayerOrRegex = () => {
     switch (locator.positioner) {
       case PathPositioner.Layer:
-        return locator.layer == undefined ? t('Not set') : locator.layer == 0 ? t('Directory of media library') : t('The {{layer}} layer', { layer: locator.layer });
+        const basePathType = locator.basePathType ?? PathPropertyExtractorBasePathType.MediaLibrary;
+        if (locator.layer == undefined) {
+          return t('Not set');
+        }
+        if (locator.layer === 0) {
+          return t('Self');
+        }
+        if (locator.layer > 0) {
+          return t('The {{n}}th layer after {{basePathType}}', { basePathType: t(PathPropertyExtractorBasePathType[basePathType]), n: locator.layer });
+        } else {
+          return t('The {{n}}th layer before {{basePathType}}', { basePathType: t(PathPropertyExtractorBasePathType[basePathType]), n: Math.abs(locator.layer) });
+        }
       case PathPositioner.Regex:
         return locator.regex ?? t('Not set');
       default:
