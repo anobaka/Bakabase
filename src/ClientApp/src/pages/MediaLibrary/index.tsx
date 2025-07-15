@@ -38,7 +38,7 @@ enum SortBy {
 }
 
 const validate = (mls: Partial<MediaLibrary>[]): boolean => {
-  return mls.every(ml => isNotEmpty(ml.path) && isNotEmpty(ml.name) && ml.templateId != undefined && ml.templateId > 0);
+  return mls.every(ml => Array.isArray(ml.paths) && ml.paths.length > 0 && ml.paths.every(p => !!p) && new Set(ml.paths).size === ml.paths.length && isNotEmpty(ml.name) && ml.templateId != undefined && ml.templateId > 0);
 };
 
 export default () => {
@@ -76,7 +76,7 @@ export default () => {
   useUpdateEffect(() => {
     switch (sortBy) {
       case SortBy.Path:
-        mediaLibraries.sort((a, b) => a.path.localeCompare(b.path));
+        mediaLibraries.sort((a, b) => (a.paths[0] ?? '').localeCompare(b.paths[0] ?? ''));
         break;
       case SortBy.Template:
         mediaLibraries.sort((a, b) => (templatesRef.current[a.templateId ?? 0]?.name ?? '').localeCompare(templatesRef.current[b.templateId ?? 0]?.name ?? ''));
@@ -87,16 +87,21 @@ export default () => {
 
   const renderPath = (ml: MediaLibrary) => {
     return (
-      <Button
-        className={'justify-start'}
-        size={'sm'}
-        color={'default'}
-        variant={'flat'}
-        onPress={() => BApi.tool.openFileOrDirectory({ path: ml.path })}
-      >
-        <AiOutlineFolderOpen className={'text-base'} />
-        {ml.path}
-      </Button>
+      <div className={'flex flex-col gap-1'}>
+        {(ml.paths ?? []).map((p, idx) => (
+          <Button
+            key={idx}
+            className={'justify-start'}
+            size={'sm'}
+            color={'default'}
+            variant={'flat'}
+            onPress={() => BApi.tool.openFileOrDirectory({ path: p })}
+          >
+            <AiOutlineFolderOpen className={'text-base'} />
+            {p}
+          </Button>
+        ))}
+      </div>
     );
   };
 
@@ -147,8 +152,10 @@ export default () => {
       </div>
       {editingMediaLibraries ? (
         <>
-          <div className={'grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr auto' }}>
+          <div className={'grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr auto 1fr auto' }}>
             {editingMediaLibraries.map((e, i) => {
+              const paths = Array.isArray(e.paths) ? e.paths : (e.paths = []);
+              const pathsValid = paths.length > 0 && paths.every(p => !!p) && new Set(paths).size === paths.length;
               return (
                 <>
                   <div className={'flex justify-center items-center'}>
@@ -161,27 +168,61 @@ export default () => {
                     isRequired
                     placeholder={t('MediaLibrary.NamePlaceholder')}
                     isInvalid={e.name == undefined || e.name.length == 0}
-                    // errorMessage={t('Name is required')}
                     value={e.name}
                     onValueChange={v => {
                       e.name = v;
                       forceUpdate();
                     }}
                   />
-                  <Input
-                    variant="underlined"
-                    size={'sm'}
-                    label={t('MediaLibrary.Path')}
-                    placeholder={t('MediaLibrary.PathPlaceholder')}
-                    isInvalid={e.path == undefined || e.path.length == 0}
-                    // errorMessage={t('Path is required')}
-                    isRequired
-                    value={e.path}
-                    onValueChange={v => {
-                      e.path = v;
+                  <div className={'flex flex-col gap-1'}>
+                    {paths.map((p, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Input
+                          variant="underlined"
+                          size="sm"
+                          label={paths.length > 1 ? `${t('MediaLibrary.Path')}${idx + 1}` : t('MediaLibrary.Path')}
+                          placeholder={t('MediaLibrary.PathPlaceholder')}
+                          isInvalid={!p}
+                          isRequired={idx === 0}
+                          value={p}
+                          onValueChange={v => {
+                            paths[idx] = v;
+                            // 保证无空字符串
+                            e.paths = paths.filter(Boolean);
+                            forceUpdate();
+                          }}
+                        />
+                        {paths.length > 1 && (
+                          <Button
+                            size="sm"
+                            color="danger"
+                            isIconOnly
+                            variant='light'
+                            onPress={() => {
+                              paths.splice(idx, 1);
+                              e.paths = paths;
+                              forceUpdate();
+                            }}
+                          >
+                            <MdOutlineDelete className={'text-lg'} />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    size="sm"
+                    color="primary"
+                    variant='light'
+                    isIconOnly
+                    onPress={() => {
+                      paths.push('');
+                      e.paths = paths;
                       forceUpdate();
                     }}
-                  />
+                  >
+                    <AiOutlinePlusCircle className='text-lg' />
+                  </Button>
                   <Select
                     size={'sm'}
                     label={t('MediaLibrary.Template')}
@@ -309,12 +350,12 @@ export default () => {
         (mediaLibraries && mediaLibraries.length > 0) ? (
           <div>
             <div
-              className={'inline-grid gap-1 mt-2 items-center'}
+              className={'inline-grid gap-2 mt-2 items-center'}
               style={{ gridTemplateColumns: 'repeat(7, auto)' }}
             >
               {mediaLibraries.map(ml => {
+                const template = templates.find(t => t.id == ml.templateId);
                 const currentColor = ml.color ?? colors.color;
-                console.log(ml, currentColor)
                 return (
                   <>
                     <div style={{ color: currentColor }}>{ml.name}</div>
@@ -413,14 +454,16 @@ export default () => {
                           );
                         }
                       }}
+                      isDisabled={!template}
                     >
-                      {templates.find(t => t.id == ml.templateId)?.name ?? t('MediaLibrary.Unknown')}
+                      {template?.name ?? t('MediaLibrary.Unknown')}
                     </Button>
                     <SyncStatus
                       id={ml.id}
                       onSyncCompleted={() => {
                         BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then(r => {
-                          const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data : m));
+                          if (!r.data) return;
+                          const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data! : m));
                           setMediaLibraries(updatedMediaLibraries);
                         });
                       }}

@@ -1,17 +1,20 @@
-﻿using Bakabase.Abstractions.Models.Db;
+﻿using Bakabase.Abstractions.Components.Configuration;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 
 namespace Bakabase.Abstractions.Extensions;
 
 public static class MediaLibraryV2Extensions
 {
+    private const char PathListSeparator = '|';
+
     public static MediaLibraryV2DbModel ToDbModel(this MediaLibraryV2 model)
     {
         return new MediaLibraryV2DbModel
         {
             Id = model.Id,
             Name = model.Name,
-            Path = model.Path,
+            Paths = string.Join(PathListSeparator, model.Paths),
             TemplateId = model.TemplateId,
             ResourceCount = model.ResourceCount,
             Color = model.Color,
@@ -24,10 +27,18 @@ public static class MediaLibraryV2Extensions
         {
             Id = dbModel.Id,
             Name = dbModel.Name,
-            Path = dbModel.Path,
+            Paths = string.IsNullOrEmpty(dbModel.Paths)
+                ? []
+                : dbModel.Paths.Split(PathListSeparator, StringSplitOptions.RemoveEmptyEntries).Distinct()
+                    .OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList(),
             TemplateId = dbModel.TemplateId,
             ResourceCount = dbModel.ResourceCount,
             Color = dbModel.Color,
         };
+    }
+
+    public static void SetPaths(this MediaLibraryV2DbModel model, IEnumerable<string> paths)
+    {
+        model.Paths = string.Join(PathListSeparator, paths.Select(p => p.StandardizePath()!).Distinct());
     }
 }

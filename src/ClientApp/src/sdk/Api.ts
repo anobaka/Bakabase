@@ -359,7 +359,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   /** @format int32 */
   id: number;
   name: string;
-  path: string;
+  paths: string[];
   /** @format int32 */
   templateId?: number;
   /** @format int32 */
@@ -663,7 +663,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputM
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel {
   name: string;
-  path: string;
+  paths: string[];
   color?: string;
 }
 

@@ -438,7 +438,20 @@
   "Max: {{count}}": "Max: {{count}}",
   "Batch rename {{count}} items": "Batch rename {{count}} items",
   "BetaFeature.BackupWarning": "If you are processing important data, it is recommended to back it up before trying.",
-  "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}": "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}",
   "The {{n}}th layer before {{basePathType}}": "The {{n}}th layer before {{basePathType}}",
-  "The {{n}}th layer after {{basePathType}}": "The {{n}}th layer after {{basePathType}}"
+  "The {{n}}th layer after {{basePathType}}": "The {{n}}th layer after {{basePathType}}",
+  "Layer": "Layer",
+  "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}": "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}",
+  "Regex": "Regex",
+  "Regex to match sub path": "Regex to match sub path",
+  "Not supported": "Not supported",
+  "Extract property values from resource path": "Extract property values from resource path",
+  "Rule": "Rule",
+  "Positioning": "Positioning",
+  "Based on": "Based on",
+  "Based on media library": "Based on media library",
+  "Based on resource": "Based on resource",
+  "Add a rule": "Add a rule",
+  "For layer-based rules, level 0 represents the current directory; for regex rules, the text to be matched starts from the next level under the current directory up to the resource path portion.": "For layer-based rules, level 0 represents the current directory; for regex rules, the text to be matched starts from the next level under the current directory up to the resource path portion.",
+  "All rules will be run independently, and the results will be merged": "All rules will be run independently, and the results will be merged"
 }
