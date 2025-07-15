@@ -1,5 +1,5 @@
 import type { IdName } from '@/components/types';
-import type { PropertyPool } from '@/sdk/constants';
+import type { PathPropertyExtractorBasePathType, PropertyPool } from '@/sdk/constants';
 import type { IProperty } from '@/components/Property/models';
 import type { EnhancerTargetFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
 import {
@@ -17,14 +17,18 @@ export enum PathFilterFsType {
 }
 
 
-export type PathFilter = PathLocator & {
+export type PathFilter = {
+  positioner: PathPositioner;
+  layer?: number;
+  regex?: string;
   fsType?: PathFilterFsType;
   extensionGroupIds?: number[];
   extensionGroups?: IdName[];
   extensions?: string[];
 };
 
-export type PathLocator = {
+export type PathPropertyExtractor = {
+  basePathType: PathPropertyExtractorBasePathType;
   positioner: PathPositioner;
   layer?: number;
   regex?: string;
@@ -51,7 +55,7 @@ export type MediaLibraryTemplateProperty = {
   pool: PropertyPool;
   id: number;
   property: Omit<IProperty, 'bizValueType' | 'dbValueType'>;
-  valueLocators?: PathLocator[];
+  valueLocators?: PathPropertyExtractor[];
 };
 
 export type MediaLibraryTemplatePlayableFileLocator = {

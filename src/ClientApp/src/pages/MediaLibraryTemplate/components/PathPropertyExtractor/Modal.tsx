@@ -4,44 +4,58 @@ import { useUpdate } from 'react-use';
 import { Accordion, AccordionItem } from '@heroui/react';
 import { AiOutlineDelete, AiOutlinePlusCircle } from 'react-icons/ai';
 import { Button, Input, Modal, Radio, RadioGroup, Select } from '@/components/bakaui';
-import type { PathLocator } from '@/pages/MediaLibraryTemplate/models';
-import { PathPositioner, pathPositioners } from '@/sdk/constants';
+import type { PathPropertyExtractor } from '@/pages/MediaLibraryTemplate/models';
+import { PathPositioner, pathPositioners, PathPropertyExtractorBasePathType } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
 
 type Props = {
-  locators?: PathLocator[];
-  onSubmit?: (locators: PathLocator[]) => any;
+  locators?: PathPropertyExtractor[];
+  onSubmit?: (locators: PathPropertyExtractor[]) => any;
 } & DestroyableProps;
 
 export default ({
-                  locators: propsLocators,
-                  onSubmit,
-                  onDestroyed,
-                }: Props) => {
+  locators: propsLocators,
+  onSubmit,
+  onDestroyed,
+}: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
-  const [locators, setLocators] = useState<Partial<PathLocator>[]>(propsLocators ?? []);
+  const [locators, setLocators] = useState<Partial<PathPropertyExtractor>[]>(propsLocators ?? []);
 
-  const renderPositioner = (locator: Partial<PathLocator>) => {
+  const renderPositioner = (locator: Partial<PathPropertyExtractor>) => {
     switch (locator.positioner) {
       case PathPositioner.Layer:
-        return (
-          <Select
-            isRequired
-            label={t('Layer')}
-            dataSource={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => ({
-              label: l,
-              value: l.toString(),
-            }))}
-            selectedKeys={locator.layer == undefined ? undefined : [locator.layer.toString()]}
-            onSelectionChange={keys => {
-              locator.layer = parseInt(Array.from(keys)[0] as string, 10);
-              forceUpdate();
-            }}
-            description={t('Layer 0 is directory of media library')}
-          />
-        );
+        {
+          let layers: number[] = [];
+          const basePathType = locator.basePathType ?? PathPropertyExtractorBasePathType.MediaLibrary;
+          switch (basePathType) {
+            case PathPropertyExtractorBasePathType.MediaLibrary:
+              layers = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+              break;
+            case PathPropertyExtractorBasePathType.Resource:
+              layers = [0, -1, -2, -3, -4, -5, -6, -7, -8, -9];
+              break;
+          }
+          return (
+            <>
+              <Select
+                isRequired
+                label={t('Layer')}
+                dataSource={layers.map(l => ({
+                  label: l,
+                  value: l.toString(),
+                }))}
+                selectedKeys={locator.layer == undefined ? undefined : [locator.layer.toString()]}
+                onSelectionChange={keys => {
+                  locator.layer = parseInt(Array.from(keys)[0] as string, 10);
+                  forceUpdate();
+                }}
+                description={t('Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}', { basePathType: t(PathPropertyExtractorBasePathType[basePathType]) })}
+              />
+            </>
+          );
+        }
       case PathPositioner.Regex:
         return (
           <Input
@@ -64,7 +78,7 @@ export default ({
     return locators.every(locator => {
       switch (locator.positioner) {
         case PathPositioner.Layer:
-          return locator.layer != undefined && locator.layer >= 0;
+          return locator.layer != undefined;
         case PathPositioner.Regex:
           return locator.regex != undefined && locator.regex.length > 0;
         default:
@@ -85,11 +99,12 @@ export default ({
           isDisabled: !isValid(),
         },
       }}
-      onOk={() => onSubmit?.(locators as PathLocator[])}
+      onOk={() => onSubmit?.(locators as PathPropertyExtractor[])}
     >
       <div className={'flex flex-col gap-2 min-h-0 overflow-auto'}>
         <Accordion variant="splitted" selectedKeys={locators.map((l, i) => i.toString())}>
           {locators.map((locator, i) => {
+            const basePathType = locator.basePathType ?? PathPropertyExtractorBasePathType.MediaLibrary;
             return (
               <AccordionItem
                 key={i}
@@ -111,7 +126,7 @@ export default ({
                   </div>
                 )}
               >
-                <div className={'flex flex-col gap-1'}>
+                <div className={'flex flex-col gap-2'}>
                   <RadioGroup
                     label={t('Positioning')}
                     onValueChange={v => {
@@ -129,6 +144,29 @@ export default ({
                       <Radio value={p.value.toString()}>{t(p.label)}</Radio>
                     ))}
                   </RadioGroup>
+                  {locator.positioner === PathPositioner.Layer && (
+                    <RadioGroup
+                      label={t('Based on')}
+                      onValueChange={v => {
+                        const nv = parseInt(v, 10);
+                        if (basePathType != nv) {
+                          locators[i]!.basePathType = nv;
+                          locators[i]!.layer = undefined;
+                          forceUpdate();
+                        }
+                      }}
+                      value={basePathType?.toString()}
+                      orientation="horizontal"
+                      isRequired
+                    >
+                      {[
+                        { label: t('Based on media library'), value: PathPropertyExtractorBasePathType.MediaLibrary },
+                        { label: t('Based on resource'), value: PathPropertyExtractorBasePathType.Resource },
+                      ].map(p => (
+                        <Radio value={p.value.toString()}>{p.label}</Radio>
+                      ))}
+                    </RadioGroup>
+                  )}
                   {locator.positioner && renderPositioner(locator)}
                 </div>
               </AccordionItem>
@@ -136,7 +174,7 @@ export default ({
           })}
         </Accordion>
       </div>
-      <div className={'flex flex-col gap-0.5 '}>
+      <div className={'flex flex-col gap-1'}>
         <div>
           <Button
             color={'primary'}

@@ -37,6 +37,8 @@ public static class PathFilterExtensions
             subPaths = data.Select(d => d.Path).ToArray();
         }
 
+        var rootSegments = rootPath.Split(InternalOptions.DirSeparator, StringSplitOptions.RemoveEmptyEntries);
+
         var pathRelativePathMap = new ConcurrentDictionary<string, string>(
             subPaths.ToDictionary(d => d, x => x.Replace(rootPath, null).Trim(InternalOptions.DirSeparator)));
         var pathRelativeSegmentsMap = new ConcurrentDictionary<string, string[]>(pathRelativePathMap.ToDictionary(
@@ -100,7 +102,7 @@ public static class PathFilterExtensions
                                 var innerPaths = cachedInnerPathsMap.GetOrAdd(path,
                                     (_) => subPaths.Where(x => x != path && x.StartsWith(path)).ToArray());
                                 resourcePathInfoMap[path] =
-                                    new ResourcePathInfo(path, relativePath, segments, innerPaths, !dirSet.Contains(path));
+                                    new ResourcePathInfo(path, relativePath, rootSegments, segments, innerPaths, !dirSet.Contains(path));
                             }
 
                             await filterProgressor.Add(progressPerPath);
@@ -155,7 +157,7 @@ public static class PathFilterExtensions
                                                         .Where(x => x != resourcePath && x.StartsWith(resourcePath))
                                                         .ToArray());
                                                 Console.WriteLine(resourcePath);
-                                                return new ResourcePathInfo(path, relativePath, relativeSegments,
+                                                return new ResourcePathInfo(path, relativePath, rootSegments, relativeSegments,
                                                     innerPaths, !dirSet.Contains(resourcePath));
                                             })).Value;
                                         });

@@ -7,5 +7,5 @@ public record MediaLibraryTemplatePropertyDbModel
 {
     public PropertyPool Pool { get; set; }
     public int Id { get; set; }
-    public List<PathPropertyLocator>? ValueLocators { get; set; }
+    public List<PathPropertyExtractor>? ValueLocators { get; set; }
 }

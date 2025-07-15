@@ -18,7 +18,7 @@ import PlayableFileSelectorModal from '@/pages/MediaLibraryTemplate/components/P
 import PropertySelector from '@/components/PropertySelector';
 import { PropertyPool } from '@/sdk/constants';
 import BriefProperty from '@/components/Chips/Property/BriefProperty';
-import { PathLocatorDemonstrator, PathLocatorModal } from '@/pages/MediaLibraryTemplate/components/PathLocator';
+import { PathPropertyExtractorDemonstrator, PathPropertyExtractorModal } from '@/pages/MediaLibraryTemplate/components/PathPropertyExtractor';
 import EnhancerSelectorModal from '@/pages/MediaLibraryTemplate/components/EnhancerSelectorModal';
 import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
 import EnhancerOptionsModal from '@/components/EnhancerSelectorV2/components/EnhancerOptionsModal';
@@ -299,7 +299,7 @@ export default ({
                         radius={'sm'}
                         variant={'bordered'}
                       >
-                        <PathLocatorDemonstrator locator={v} />
+                        <PathPropertyExtractorDemonstrator locator={v} />
                       </Chip>
                     );
                   })}
@@ -311,7 +311,7 @@ export default ({
                     isIconOnly
                     onPress={() => {
                       createPortal(
-                        PathLocatorModal, {
+                        PathPropertyExtractorModal, {
                           locators: p.valueLocators,
                           onSubmit: async vls => {
                             p.valueLocators = vls;

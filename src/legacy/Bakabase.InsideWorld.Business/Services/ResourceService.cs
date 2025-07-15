@@ -300,10 +300,6 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 var values = context.PropertyValueMap?.GetValueOrDefault(filter.PropertyPool)
                                     ?.GetValueOrDefault(filter.PropertyId)?.GetValueOrDefault(id);
-                                if (values != null)
-                                {
-
-                                }
                                 return values?.Any(v => psh.IsMatch(v, filter.Operation, filter.DbValue)) ??
                                        psh.IsMatch(null, filter.Operation, filter.DbValue);
                             }).ToHashSet();
@@ -407,7 +403,7 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await ToDomainModel([resource], additionalItems)).FirstOrDefault()!;
         }
 
-        public async Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.ResourceDbModel[] resources,
+        public async Task<List<Resource>> ToDomainModel(ResourceDbModel[] resources,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             var doList = resources.Select(r => r.ToDomainModel()).ToList();

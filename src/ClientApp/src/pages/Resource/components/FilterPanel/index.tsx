@@ -18,7 +18,7 @@ import BApi from '@/sdk/BApi';
 import store from '@/store';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
-import { Button, Checkbox, Chip, Input, Modal, Popover, Spinner, Tooltip } from '@/components/bakaui';
+import { Autocomplete, AutocompleteItem, Button, Checkbox, Chip, Input, Modal, Popover, Spinner, Tooltip } from '@/components/bakaui';
 import CustomIcon from '@/components/CustomIcon';
 import type { SavedSearchRef } from '@/pages/Resource/components/FilterPanel/SavedSearches';
 import SavedSearches from '@/pages/Resource/components/FilterPanel/SavedSearches';
@@ -52,16 +52,16 @@ const defaultSearchForm = (): SearchForm => ({
 });
 
 export default ({
-                  maxResourceColCount = DefaultMaxResourceColCount,
-                  selectedResourceIds,
-                  onSearch,
-                  searchForm: propsSearchForm,
-                  multiSelection = false,
-                  rearrangeResources,
-                  onSelectAllChange,
-                  resourceCount,
-                  totalFilteredResourceCount,
-                }: IProps) => {
+  maxResourceColCount = DefaultMaxResourceColCount,
+  selectedResourceIds,
+  onSearch,
+  searchForm: propsSearchForm,
+  multiSelection = false,
+  rearrangeResources,
+  onSelectAllChange,
+  resourceCount,
+  totalFilteredResourceCount,
+}: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -78,6 +78,10 @@ export default ({
   const [selectingAllFilteredResources, setSelectingAllFilteredResources] = useState(false);
 
   const savedSearchesRef = useRef<SavedSearchRef>(null);
+
+  const [isLoadingKeywords, setIsLoadingKeywords] = React.useState(false);
+  const [keywordCandidates, setKeywordCandidates] = React.useState<string[]>([]);
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   const filterGroupPortalRef = React.useRef<HTMLButtonElement>(null);
 
@@ -119,7 +123,8 @@ export default ({
   return (
     <div className={`${styles.filterPanel}`}>
       <div className={'flex items-center gap-4'}>
-        <Input
+        <Autocomplete
+          isLoading={isLoadingKeywords}
           startContent={(
             <SearchOutlined className={'text-xl'} />
           )}
@@ -132,7 +137,7 @@ export default ({
             });
           }}
           isClearable
-          value={searchForm.keyword}
+          inputValue={searchForm.keyword}
           onKeyDown={e => {
             if (e.key == 'Enter') {
               search({
@@ -141,7 +146,40 @@ export default ({
               });
             }
           }}
-        />
+          selectedKey={null}
+          onSelectionChange={k => {
+            console.log('onSelectionChange', k);
+            if (k) {
+              const nf = {
+                keyword: k as string,
+                page: 1,
+              };
+              search(nf)
+            }
+          }
+          }
+          items={keywordCandidates.map(k => ({ label: k, value: k }))}
+          onInputChange={v => {
+            if (debounceTimer.current) {
+              clearTimeout(debounceTimer.current);
+            }
+            if (v != undefined && v.length > 0) {
+              setIsLoadingKeywords(true);
+              debounceTimer.current = setTimeout(() => {
+                BApi.resource.getResourceSearchKeywordRecommendation({
+                  keyword: v,
+                }).then(ret => {
+                  setKeywordCandidates(ret.data ?? []);
+                }).finally(() => {
+                  setIsLoadingKeywords(false);
+                });
+              }, 300);
+            }
+          }}
+        >
+          {(item) => <AutocompleteItem title={item.label}
+            key={item.value}>{item.label}</AutocompleteItem>}
+        </Autocomplete>
         <Button
           ref={filterGroupPortalRef}
           isIconOnly

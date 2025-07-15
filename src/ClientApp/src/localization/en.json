@@ -365,8 +365,6 @@
   "FileNameModifier.CommonPrefix": "Common Prefix",
   "FileNameModifier.OriginalPath": "Original Path",
   "FileNameModifier.ModifiedPath": "Modified Path",
-  "FileNameModifier.ExecuteModification": "Execute Modification",
-  "FileNameModifier.PreviewResults": "Preview Results",
   "FileNameModifier.EditFileList": "Edit File List",
   "FileNameModifier.LoadingPreview": "Loading preview...",
   "FileNameModifier.NoPreviewResults": "No preview results",
@@ -439,5 +437,8 @@
   "Leave empty for no limit": "Leave empty for no limit",
   "Max: {{count}}": "Max: {{count}}",
   "Batch rename {{count}} items": "Batch rename {{count}} items",
-  "BetaFeature.BackupWarning": "If you are processing important data, it is recommended to back it up before trying."
+  "BetaFeature.BackupWarning": "If you are processing important data, it is recommended to back it up before trying.",
+  "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}": "Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}",
+  "The {{n}}th layer before {{basePathType}}": "The {{n}}th layer before {{basePathType}}",
+  "The {{n}}th layer after {{basePathType}}": "The {{n}}th layer after {{basePathType}}"
 }

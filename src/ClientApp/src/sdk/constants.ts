@@ -20,6 +20,8 @@ export enum PathFilterFsType {File = 1, Directory = 2}
 export const pathFilterFsTypes = Object.keys(PathFilterFsType).filter(k => typeof PathFilterFsType[k] === 'number').map(t => ({label: t, value: PathFilterFsType[t]}));
 export enum PathPositioner {Layer = 1, Regex = 2}
 export const pathPositioners = Object.keys(PathPositioner).filter(k => typeof PathPositioner[k] === 'number').map(t => ({label: t, value: PathPositioner[t]}));
+export enum PathPropertyExtractorBasePathType {MediaLibrary = 1, Resource = 2}
+export const pathPropertyExtractorBasePathTypes = Object.keys(PathPropertyExtractorBasePathType).filter(k => typeof PathPropertyExtractorBasePathType[k] === 'number').map(t => ({label: t, value: PathPropertyExtractorBasePathType[t]}));
 export enum PropertyPool {Internal = 1, Reserved = 2, Custom = 4, All = 7}
 export const propertyPools = Object.keys(PropertyPool).filter(k => typeof PropertyPool[k] === 'number').map(t => ({label: t, value: PropertyPool[t]}));
 export enum PropertyType {SingleLineText = 1, MultilineText = 2, SingleChoice = 3, MultipleChoice = 4, Number = 5, Percentage = 6, Rating = 7, Boolean = 8, Link = 9, Attachment = 10, Date = 11, DateTime = 12, Time = 13, Formula = 14, Multilevel = 15, Tags = 16}

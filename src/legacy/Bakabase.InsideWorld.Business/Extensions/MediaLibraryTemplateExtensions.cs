@@ -110,7 +110,7 @@ public static class MediaLibraryTemplateExtensions
                     if (propertyDefinition.ValueLocators != null)
                     {
                         var listStr = propertyDefinition.ValueLocators
-                            .Select(v => v.LocateValues(relativePath, rpi))
+                            .Select(v => v.ExtractValues(relativePath, rpi))
                             .OfType<string[]>()
                             .SelectMany(v => v).Distinct()
                             .ToList();
@@ -192,7 +192,7 @@ public static class MediaLibraryTemplateExtensions
                         (template.Properties ??= []).Add(tp);
                     }
 
-                    var filter = rv.ToPathFilter();
+                    var filter = rv.ToPathPropertyExtractor();
                     tp.ValueLocators ??= [];
                     tp.ValueLocators.Add(filter);
                 }
