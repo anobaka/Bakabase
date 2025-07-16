@@ -43,6 +43,7 @@ namespace Bakabase.Service.Controllers
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IPropertyService _propertyService;
         private readonly IBakabaseLocalizer _localizer;
+        private readonly IMediaLibraryV2Service _mediaLibraryV2Service;
 
         public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService,
             ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, IThirdPartyService thirdPartyService,
@@ -50,7 +51,7 @@ namespace Bakabase.Service.Controllers
             ComponentService componentService, PasswordService passwordService,
             ComponentOptionsService componentOptionsService, ICategoryService categoryService,
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
-            IPropertyService propertyService, IMediaLibraryService mediaLibraryService, IBakabaseLocalizer localizer)
+            IPropertyService propertyService, IMediaLibraryService mediaLibraryService, IBakabaseLocalizer localizer, IMediaLibraryV2Service mediaLibraryV2Service)
         {
             _resourceService = resourceService;
             _downloadTaskService = downloadTaskService;
@@ -68,6 +69,7 @@ namespace Bakabase.Service.Controllers
             _propertyService = propertyService;
             _mediaLibraryService = mediaLibraryService;
             _localizer = localizer;
+            _mediaLibraryV2Service = mediaLibraryV2Service;
         }
 
         [HttpGet]
@@ -77,48 +79,22 @@ namespace Bakabase.Service.Controllers
             var ds = new DashboardStatistics();
 
             // Resource
-            var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
-            var mediaLibraries = (await _mediaLibraryService.GetAll()).ToDictionary(d => d.Id, d => d);
-            var allEntities = await _resourceService.GetAllDbModels();
+            var mediaLibraries = (await _mediaLibraryV2Service.GetAll());
+            var mlIds = mediaLibraries.Select(ml => ml.Id).ToHashSet();
+            var allEntities =
+                await _resourceService.GetAllDbModels(r => r.CategoryId == 0 && mlIds.Contains(r.MediaLibraryId));
 
-            var totalCounts = allEntities.GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.CategoryMediaLibraryCount(
-                    categories.GetValueOrDefault(a.Key) ?? _localizer.Unknown(),
-                    a.GroupBy(x => x.MediaLibraryId).Select(x =>
-                        new DashboardStatistics.TextAndCount(
-                            mediaLibraries.GetValueOrDefault(x.Key)?.Name ?? _localizer.Unknown(),
-                            x.Count())).ToList()))
-                .ToList();
+            var mediaLibraryResources =
+                allEntities.GroupBy(r => r.MediaLibraryId).ToDictionary(d => d.Key, d => d.ToList());
 
-            ds.CategoryMediaLibraryCounts = totalCounts;
+            ds.MediaLibraryResourceCounts = mediaLibraries.Select(d =>
+                new DashboardStatistics.TextAndCount(d.Name, mediaLibraryResources.GetValueOrDefault(d.Id)?.Count ?? 0,
+                    null)).ToList();
 
             var today = DateTime.Today;
-            var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0)
-                .OrderByDescending(a => a.Count)
-                .ToList();
-
-            ds.TodayAddedCategoryResourceCounts = todayCounts;
-
             var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
             var monday = today.AddDays(-1 * weekdayDiff);
-            var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0)
-                .OrderByDescending(a => a.Count)
-                .ToList();
-
-            ds.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
-
             var thisMonth = today.GetFirstDayOfMonth();
-            var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0)
-                .OrderByDescending(a => a.Count)
-                .ToList();
-
-            ds.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
 
             // 12 weeks added counts trending
             {
@@ -182,7 +158,7 @@ namespace Bakabase.Service.Controllers
             var ds = new DashboardPropertyStatistics();
 
             // Property value coverage
-            var resources = await _resourceService.GetAll(null, ResourceAdditionalItem.All);
+            var resources = await _resourceService.GetAll(x => x.CategoryId == 0, ResourceAdditionalItem.All);
             var propertyValueExpectedCounts = new Dictionary<int, Dictionary<int, int>>();
             var propertyValueFilledCounts = new Dictionary<int, Dictionary<int, int>>();
             var propertyMap =

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Bakabase": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 8080"
+    }
+  }
+}

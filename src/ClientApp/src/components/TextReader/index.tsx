@@ -4,11 +4,9 @@ import i18n from 'i18next';
 import { NumberPicker } from '@alifd/next';
 import axios from 'axios';
 import { Entry } from '@/core/models/FileExplorer/Entry';
-import { PlayFileURL, PreviewTextFile } from '@/sdk/apis';
 import ColorPicker from '@/components/ColorPicker';
 import serverConfig from '@/serverConfig';
 import { getFileNameWithoutExtension } from '@/components/utils';
-
 
 const ParagraphPadding = 10;
 const TitleFontSize = 30;
@@ -35,7 +33,7 @@ export default (props: ITextReaderProps) => {
   useEffect(() => {
     if (file) {
       axios.request({
-        url: `${serverConfig.apiEndpoint}${PlayFileURL({ fullname: file })}`,
+        url: `${serverConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(file)}`,
       }).then((a) => {
         if (a.status == 200) {
           const text = a.data;

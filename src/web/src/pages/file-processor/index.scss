@@ -1,0 +1,244 @@
+.file-explorer-page {
+  height: 100%;
+  width: 100%;
+
+  color: var(--theme-text-subtle);
+
+  .next-loading, .next-loading-wrap {
+    width: 100%;
+    height: 100%;
+  }
+
+  .first-time-here {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    & > * {
+    }
+  }
+
+  .file-explorer {
+    outline: none;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .line1 {
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .left {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .back {
+          &.disabled {
+            cursor: not-allowed;
+          }
+        }
+
+        .working-dir-editor {
+          button {
+            padding: 0 5px;
+            margin-left: 5px;
+          }
+        }
+
+        //.folder {
+        //  //margin-right: 5px;
+        //  cursor: default;
+        //  //color: #666;
+        //  &:hover {
+        //    color: #666;
+        //  }
+        //}
+        .opt {
+          margin-right: 5px;
+          cursor: pointer;
+        }
+
+        .chain {
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          margin-right: 50px;
+
+          .dir-name {
+            cursor: pointer;
+            padding: 3px 5px;
+            border-radius: 4px;
+
+            &:hover {
+              background-color: var(--theme-block-background);
+            }
+          }
+
+          .path-separator {
+            margin: 0 4px;
+            color: #999;
+          }
+        }
+      }
+
+      .right {
+        button {
+          display: inline-flex;
+          align-items: center;
+        }
+
+        .root, .recycle-bin {
+          margin-left: 10px;
+        }
+
+        .recycle-bin {
+          padding: 0 8px;
+        }
+      }
+    }
+
+    .line2 {
+      margin: 5px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .left, .right {
+        display: flex;
+        align-items: center;
+      }
+
+      .left {
+        .counts {
+          margin-left: 10px;
+
+          .selected-count {
+            margin-left: 5px;
+            color: #00a1d6;
+          }
+        }
+
+        .selection-mode {
+          margin-left: 20px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+      }
+
+      .right {
+        flex: 1;
+        justify-content: flex-end;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+
+        button {
+          padding-left: 5px;
+          padding-right: 5px;
+        }
+      }
+    }
+
+    .root {
+      flex: 1;
+    }
+  }
+}
+
+.file-explorer-page-rename-menu {
+  width: 200px !important;
+}
+
+.standardize-preview {
+  .delete {
+    background-color: #ffc6c6;
+    text-decoration: line-through;
+  }
+
+  .insert {
+    background-color: #a0ffcb;
+  }
+}
+
+.tree-entry-name-container-balloon {
+  .name {
+
+  }
+
+  .opt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+  }
+}
+
+.entry-background-tasks-balloon {
+  .task {
+    color: #666;
+
+    .name {
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    pre {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+  }
+
+  .opt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.file-processor-page-context-menu {
+
+  ul {
+    li {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      padding: 8px 15px;
+
+      .iconfont {
+        font-size: 15px;
+      }
+
+      .important {
+        margin: 0 5px;
+        color: #0394f5;
+      }
+
+      .danger {
+        color: #c7254e;
+      }
+    }
+  }
+}
+
+.file-processor-page-popup-important {
+  margin: 0 5px;
+  color: #0394f5;
+}
+
+
+.contents-extraction-confirm-dialog {
+  .next-message-content {
+    word-break: break-all;
+
+    span.bold {
+      font-weight: bold;
+    }
+  }
+}

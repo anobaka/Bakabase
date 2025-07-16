@@ -1,0 +1,41 @@
+.custom-component-page {
+  .component-type {
+    margin-bottom: 30px;
+    .type-name {
+      font-size: 18px;
+      margin-bottom: 10px;
+
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .name {
+        display: flex;
+        align-items: center;
+      }
+
+      .add {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        cursor: pointer;
+        font-size: 14px;
+        //color: #999;
+
+        &:hover {
+          //color: #666;
+        }
+      }
+    }
+
+    .no-components {
+      font-size: 14px;
+      color: #999;
+    }
+    .components {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+  }
+}

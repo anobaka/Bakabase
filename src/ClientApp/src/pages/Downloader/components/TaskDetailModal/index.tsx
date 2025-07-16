@@ -241,6 +241,7 @@ export default ({
         title={isAdding ? t('Creating download task') : t('Download task')}
         className={'download-task-detail'}
         onOk={async () => {
+          console.log(form);
           const validForm = form as Form;
           if (isAdding) {
             const r = await BApi.downloadTask.addDownloadTask(validForm);

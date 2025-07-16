@@ -1,0 +1,54 @@
+.iw-theme-light {
+  --theme-color-success: rgb(35, 134, 54);
+  --theme-color-warning: #cd7600;
+  --theme-overlap-background-color: rgb(0, 0, 0, 0.05);
+  --theme-scrollbar-track-background: #fcfcfc;
+  --theme-scrollbar-thumb-background: #8b8b8b;
+  --theme-scrollbar-thumb-hover-background: #636363;
+  --theme-table-header-background: #f7f7f7;
+  --theme-button-normal-background: white;
+  --theme-button-normal-background-hover: #f9f9f9;
+  --theme-button-normal-background-active: #f9f9f9;
+  --theme-button-normal-border-color: #ccc;
+  --theme-button-normal-border-color-hover: #ccc;
+  --theme-button-normal-border-color-active: rgb(204, 204, 204);
+  --theme-button-secondary-background: var(--theme-button-normal-background);
+  --theme-button-secondary-background-hover: #1274E7;
+  --theme-button-secondary-background-active: #1274E7;
+  --theme-button-secondary-border-color: #1274E7;
+  --theme-button-secondary-border-color-hover: #1274E7;
+  --theme-button-secondary-border-color-active: #1274E7;
+  --theme-button-secondary-color-disabled: var(--theme-button-normal-color-disabled);
+  --theme-label-default-background: #ebebeb;
+  --theme-label-default-color: #666;
+  --theme-label-primary-background: #dee8ff;
+  --theme-label-primary-color: #5584ff;
+  --theme-label-success-background: #e4fdda;
+  --theme-label-success-color: #46bc15;
+  --theme-label-warning-background: #fff3e0;
+  --theme-label-warning-color: #ff9300;
+  --theme-label-info-background: #e3f2fd;
+  --theme-label-info-color: #4494f9;
+  --theme-label-danger-background: #ffece4;
+  --theme-label-danger-color: #ff3000;
+  --theme-border-color: #f0f0f0;
+  --theme-border-color-accent: #e5f3ff;
+  --theme-body-background: white;
+  --theme-block-background: #f7f7f7;
+  --theme-block-background-invert: #090909;
+  --theme-block-background-accent: #e7e7e7;
+  --theme-text-error: #ff3000;
+  --theme-text-subtle: #666;
+  --theme-text-primary: rgb(47, 129, 247);
+  --theme-text-secondary: rgb(174 110 255);
+  --theme-text-placeholder: #bbb;
+  --theme-file-processor-entry-background-color: transparent;
+  --theme-file-processor-entry-background-color-hover: #e5f3ff;
+  --theme-file-processor-entry-background-color-selected: #e5f3ff;
+  --theme-dialog-background-color: var(--theme-body-background);
+  --theme-menu-background-color: white;
+  --theme-component-card-background-color: white;
+  --theme-category-block-background-color: white;
+}
+
+/*# sourceMappingURL=global.light.css.map */

@@ -2156,5 +2156,6 @@
   "The {{n}}th layer after {{basePathType}}": "{{basePathType}}后的第{{n}}层",
   "Based on": "基于",
   "Based on media library": "基于媒体库",
-  "Based on resource": "基于资源"
+  "Based on resource": "基于资源",
+  "Once synced, you can search for resources in the media library": "同步后可在媒体库中搜索资源"
 }

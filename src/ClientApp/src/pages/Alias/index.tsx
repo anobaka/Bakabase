@@ -29,7 +29,7 @@ import {
   Tooltip,
 } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
+import { FileSystemSelectorPanel } from '@/components/FileSystemSelector';
 
 type Form = {
   pageSize: 20;
@@ -160,7 +160,7 @@ export default () => {
             size={'sm'}
             color={'secondary'}
             onClick={() => {
-              createPortal(FileSystemSelectorDialog, {
+              createPortal(FileSystemSelectorPanel, {
                 onSelected: e => {
                   const modal = createPortal(Modal, {
                     visible: true,

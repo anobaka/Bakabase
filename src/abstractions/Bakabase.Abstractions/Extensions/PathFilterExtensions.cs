@@ -5,12 +5,14 @@ using System.Text.RegularExpressions;
 using Bootstrap.Components.Tasks;
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Bakabase.Abstractions.Components.Tasks;
 using Bootstrap.Components.Storage;
 using Bootstrap.Extensions;
 using CsQuery.Engine.PseudoClassSelectors;
 using NPOI.SS.Formula.Functions;
 using System.Linq;
+using VDS.Common.Tries;
 
 namespace Bakabase.Abstractions.Extensions;
 
@@ -49,7 +51,7 @@ public static class PathFilterExtensions
 
         var filteringProgressor = progressor.CreateNewScope(progressForScanning, 100 - progressForScanning);
         var progressPerFilter = filters.Count == 0 ? 0 : 100f / filters.Count;
-        var progressPerPath = subPaths.Length == 0 ? 0 : 100f / subPaths.Length;
+        var progressPerPath = subPaths.Length == 0 ? 0 : 100f / subPaths.Length / filters.Count;
 
         dirSet ??= subPaths.Where(Directory.Exists).ToHashSet();
         HashSet<string>? fileSet = null;
@@ -60,10 +62,16 @@ public static class PathFilterExtensions
 
         var cachedInnerPathsMap = new ConcurrentDictionary<string, string[]>();
 
+        var trie = new Trie<string, string, string>(s => pathRelativeSegmentsMap[s]);
+        foreach (var subPath in subPaths)
+        {
+            trie.Add(subPath, subPath);
+        }
+
         for (var index = 0; index < filters.Count; index++)
         {
             await using var filterProgressor =
-                filteringProgressor.CreateNewScope(progressForScanning + index * progressPerFilter, progressPerFilter);
+                filteringProgressor.CreateNewScope(index * progressPerFilter, progressPerFilter);
             var rf = filters[index];
 
             IEnumerable<string> candidatePaths = subPaths;
@@ -94,15 +102,17 @@ public static class PathFilterExtensions
                         {
                             await pt.WaitWhilePausedAsync(ct);
                             ct.ThrowIfCancellationRequested();
+
                             var segments = pathRelativeSegmentsMap[path];
                             var len = rf.Layer.Value;
                             if (len == segments.Length)
                             {
                                 var relativePath = pathRelativePathMap[path];
                                 var innerPaths = cachedInnerPathsMap.GetOrAdd(path,
-                                    (_) => subPaths.Where(x => x != path && x.StartsWith(path)).ToArray());
+                                    (_) => trie.Find(path).Values.Skip(1).ToArray());
                                 resourcePathInfoMap[path] =
-                                    new ResourcePathInfo(path, relativePath, rootSegments, segments, innerPaths, !dirSet.Contains(path));
+                                    new ResourcePathInfo(path, relativePath, rootSegments, segments, innerPaths,
+                                        !dirSet.Contains(path));
                             }
 
                             await filterProgressor.Add(progressPerPath);
@@ -134,7 +144,6 @@ public static class PathFilterExtensions
                             {
                                 foreach (var path in threadedCandidatePaths)
                                 {
-                                    await pt.WaitWhilePausedAsync(ct);
                                     ct.ThrowIfCancellationRequested();
                                     var relativePath = pathRelativePathMap[path];
                                     var match = regex.Match(relativePath);
@@ -156,8 +165,8 @@ public static class PathFilterExtensions
                                                     _ => subPaths
                                                         .Where(x => x != resourcePath && x.StartsWith(resourcePath))
                                                         .ToArray());
-                                                Console.WriteLine(resourcePath);
-                                                return new ResourcePathInfo(path, relativePath, rootSegments, relativeSegments,
+                                                return new ResourcePathInfo(path, relativePath, rootSegments,
+                                                    relativeSegments,
                                                     innerPaths, !dirSet.Contains(resourcePath));
                                             })).Value;
                                         });

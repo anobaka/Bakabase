@@ -1,0 +1,127 @@
+.component-card {
+  //border: 1px solid #ccc;
+  box-shadow: rgba(9, 30, 66, 0.25) 0px 1px 1px, var(--theme-border-color) 0px 0px 1px 1px;
+  border-radius: 4px;
+  padding: 10px;
+  cursor: pointer;
+  color: var(--theme-text);
+  transition: border .2s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  margin: 0 1px;
+  background: var(--theme-component-card-background-color);
+
+
+  .top-right-operations {
+    background: var(--theme-block-background);
+    position: absolute;
+    right: 5px;
+    top: 5px;
+    display: flex;
+    gap: 5px;
+    visibility: collapse;
+
+    &>* {
+      cursor: pointer;
+      //background: white;
+    }
+  }
+
+  &.selected {
+    box-shadow: rgba(9, 30, 66, 0.25) 0px 1px 1px, var(--theme-text-primary) 0px 0px 1px 1px;
+  }
+
+  .selected-icon {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    color: #03c1fd;
+  }
+
+  &:hover {
+    box-shadow: rgba(9, 30, 66, 0.25) 0px 1px 1px, var(--theme-border-color-accent) 0px 0px 1px 1px;
+
+    color: var(--theme-text-accent);
+
+    .top-right-operations {
+      visibility: visible;
+    }
+
+    &.selected {
+      box-shadow: rgba(9, 30, 66, 0.25) 0px 1px 1px, var(--theme-text-primary) 0px 0px 1px 1px;
+    }
+  }
+
+  & > * {
+    word-break: break-all;
+  }
+
+  &>.top {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: inherit;
+    align-items: flex-start;
+    .name {
+      font-size: 14px;
+
+      .ice-label {
+        margin-right: 5px;
+      }
+    }
+
+    .description {
+      color: var(--theme-text-subtle);
+      font-size: 12px;
+    }
+
+    .target-groups {
+      .group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px;
+        align-items: center;
+      }
+    }
+  }
+
+  &>.bottom {
+    .categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      font-size: 12px;
+      line-height: 12px;
+      margin-bottom: 5px;
+      align-items: flex-start;
+
+      .label {
+        //display: flex;
+        //align-items: center;
+      }
+      .category {
+        //box-sizing: border-box;
+        //padding: 2px 5px;
+        //border-radius: 4px;
+        //border: 1px solid #ccc;
+        font-weight: bold;
+      }
+    }
+    .versions {
+      display: flex;
+      gap: 5px;
+      //justify-content: space-between;
+      .version {
+        &.empty {
+          visibility: hidden;
+        }
+        //font-size: 11px;
+        //padding: 2px 5px;
+        //border-radius: 4px;
+        //background: var(--theme-block-background);
+      }
+    }
+  }
+}

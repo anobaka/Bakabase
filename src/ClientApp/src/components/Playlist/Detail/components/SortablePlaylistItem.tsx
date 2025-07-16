@@ -2,7 +2,6 @@ import { SortableElement } from 'react-sortable-hoc';
 import { Button } from '@alifd/next';
 import React from 'react';
 import CustomIcon from '@/components/CustomIcon';
-import { OpenFileOrDirectory } from '@/sdk/apis';
 import { PlaylistItemType } from '@/sdk/constants';
 import DragHandle from '@/components/DragHandle';
 import ClickableIcon from '@/components/ClickableIcon';

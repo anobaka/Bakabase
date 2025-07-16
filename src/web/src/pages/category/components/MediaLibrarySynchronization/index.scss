@@ -1,0 +1,50 @@
+.media-library-synchronization {
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+
+  .main {
+    margin-left: 8px;
+    flex: 1;
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      .status {
+        margin-left: 5px;
+        .failed {
+          color: red;
+        }
+        .failed, .complete {
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto;
+        }
+        .complete {
+          color: rgb(26, 169, 0);
+        }
+      }
+      .opt {
+        .process {
+          font-size: 10px;
+        }
+        button {
+          font-size: 10px;
+          color: #100DB1;
+        }
+      }
+    }
+
+    .bottom {
+      .next {
+        line-height: 12px;
+        font-size: 10px;
+      }
+      .syncing {
+        line-height: 10px;
+      }
+    }
+  }
+}

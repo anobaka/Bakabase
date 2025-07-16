@@ -1,0 +1,194 @@
+[
+  null,
+  {
+    "type": 1,
+    "options": {},
+    "name": "single line"
+  },
+  {
+    "type": 2,
+    "options": {},
+    "name": "multiline"
+  },
+  {
+    "type": 3,
+    "options": {
+      "choices": [
+        {
+          "label": "ddd",
+          "value": "6dd8bd77-0905-4533-9c6d-fd30b0c68f0a"
+        },
+        {
+          "label": "abc",
+          "value": "7706ec2d-ffd5-4eec-9652-6aa91c1eb9e0"
+        },
+        {
+          "label": "aaa",
+          "value": "9f32d5a8-b523-4804-80d1-9f82a4299d2c",
+          "color": "#ff0000"
+        }
+      ],
+      "tags": [],
+      "defaultValue": "7706ec2d-ffd5-4eec-9652-6aa91c1eb9e0"
+    },
+    "name": "single choice"
+  },
+  {
+    "type": 4,
+    "options": {
+      "choices": [
+        {
+          "label": "m1",
+          "value": "376e5984-6f18-4438-adaf-c9e9b8ebfbcf"
+        },
+        {
+          "label": "m2",
+          "value": "3f9e312c-c884-40b5-9e16-cece8a4fa84d",
+          "color": "#2c00ff"
+        },
+        {
+          "label": "m3",
+          "value": "9f96b64b-496c-4ad5-b260-cf38d4125d7a"
+        }
+      ],
+      "defaultValue": [
+        "3f9e312c-c884-40b5-9e16-cece8a4fa84d",
+        "9f96b64b-496c-4ad5-b260-cf38d4125d7a"
+      ],
+      "tags": []
+    },
+    "name": "multiple choice"
+  },
+  {
+    "type": 5,
+    "options": {
+      "precision": "2"
+    },
+    "name": "number"
+  },
+  {
+    "type": 6,
+    "options": {
+      "precision": "2",
+      "showProgressbar": true
+    },
+    "name": "percentage"
+  },
+  {
+    "type": 7,
+    "options": {
+      "maxValue": "10"
+    },
+    "name": "rating"
+  },
+  {
+    "type": 8,
+    "options": {},
+    "name": "boolean"
+  },
+  {
+    "type": 9,
+    "options": {},
+    "name": "link"
+  },
+  {
+    "type": 10,
+    "options": {},
+    "name": "attachment"
+  },
+  {
+    "type": 11,
+    "options": {},
+    "name": "date"
+  },
+  {
+    "type": 12,
+    "options": {},
+    "name": "date time"
+  },
+  {
+    "type": 13,
+    "options": {},
+    "name": "time"
+  },
+  {
+    "type": 14,
+    "options": {},
+    "name": "formula"
+  },
+  {
+    "type": 15,
+    "options": {
+      "choices": [],
+      "tags": [],
+      "data": [
+        {
+          "value": "f7f4ca9f-def6-406c-9bd9-73d9d5895895",
+          "label": "Untitled 1"
+        },
+        {
+          "value": "194a1fae-8c42-4d07-aca9-13cd0c9d7388",
+          "label": "Untitled 2",
+          "children": [
+            {
+              "value": "a9892cc8-8c54-44a0-8cfa-e268417e3398",
+              "label": "Untitled 1",
+              "children": [
+                {
+                  "value": "0282b692-a1d3-4747-9ef2-69d29fc7bf35",
+                  "label": "Untitled 1",
+                  "children": [
+                    {
+                      "value": "4db5e616-ecc6-4479-926c-1d007b50d244",
+                      "label": "55",
+                      "children": [
+                        {
+                          "value": "2df2ba16-7cd6-43d3-bd56-87843b743eeb",
+                          "label": "Untitled 1"
+                        }
+                      ],
+                      "color": "#e71111"
+                    }
+                  ]
+                }
+              ],
+              "color": "#4320ff"
+            }
+          ]
+        },
+        {
+          "value": "43ab5d2c-6712-4177-b8d7-b7403d768d39",
+          "label": "Untitled 3"
+        },
+        {
+          "value": "3bc96ed1-4612-4ae9-a208-defaf22aaf84",
+          "label": "Untitled 4"
+        }
+      ]
+    },
+    "name": "multilevel"
+  },
+  {
+    "type": 16,
+    "options": {
+      "tags": [
+        {
+          "value": "ab674378-b783-4953-8c89-90612f5f36a3",
+          "group": "g1",
+          "name": "t1"
+        },
+        {
+          "value": "271cef00-bfe2-4b8b-9c6b-8074aa5a5136",
+          "group": "g4",
+          "name": "t2"
+        },
+        {
+          "value": "85c0e730-a2f9-48c2-a6f5-0f69b2b52dc7",
+          "name": "t655"
+        }
+      ],
+      "choices": []
+    },
+    "name": "tags"
+  }
+]

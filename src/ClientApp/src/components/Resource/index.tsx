@@ -15,7 +15,6 @@ import {
 import { ControlledMenu } from '@szhsin/react-menu';
 import { AiOutlineSync } from 'react-icons/ai';
 import styles from './index.module.scss';
-import { OpenResourceDirectory } from '@/sdk/apis';
 import { buildLogger, useTraceUpdate } from '@/components/utils';
 import ResourceDetailDialog from '@/components/Resource/components/DetailDialog';
 import BApi from '@/sdk/BApi';

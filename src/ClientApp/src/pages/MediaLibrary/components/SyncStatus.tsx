@@ -11,12 +11,13 @@ import {
 import { useEffect, useRef } from 'react';
 import dayjs from 'dayjs';
 import moment from 'moment';
-import { Button, Chip, CircularProgress, Modal } from '@/components/bakaui';
+import { Button, Chip, CircularProgress, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { BTask } from '@/core/models/BTask';
 import store from '@/store';
 import { BTaskStatus } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { useTranslation } from 'react-i18next';
 
 type Props = {
   id: number;
@@ -29,9 +30,10 @@ const BuildTaskId = (id: number) => `${SyncTaskPrefix}${id}`;
 type ElementType = 'progress' | 'cancel' | 'pause' | 'resume' | 'start' | 'error' | 'completed' | 'result';
 
 export default ({
-                  id,
-                  onSyncCompleted,
-                }: Props) => {
+  id,
+  onSyncCompleted,
+}: Props) => {
+  const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const bTasks = store.useModelState('bTasks');
@@ -138,17 +140,20 @@ export default ({
         );
       case 'start':
         return (
-          <Button
-            variant={'light'}
-            color={'secondary'}
-            size={'sm'}
-            isIconOnly
-            onPress={async () => {
-              await BApi.mediaLibraryV2.syncMediaLibraryV2(id);
-            }}
-          >
-            <AiOutlineSync className={'text-lg'} />
-          </Button>
+          <Tooltip content={t('Once synced, you can search for resources in the media library')} placement="top">
+            <Button
+              variant={'light'}
+              color={'secondary'}
+              size={'sm'}
+              isIconOnly
+              onPress={async () => {
+                await BApi.mediaLibraryV2.syncMediaLibraryV2(id);
+              }}
+            >
+              <AiOutlineSync className={'text-lg'} />
+            </Button>
+          </Tooltip>
+
         );
       case 'error':
         return (
@@ -159,17 +164,17 @@ export default ({
             isIconOnly
             onPress={async () => {
               createPortal(Modal, {
-                  defaultVisible: true,
-                  size: 'xl',
-                  children: (
-                    <pre>
-                      {task.error}
-                    </pre>
-                  ),
-                  footer: {
-                    actions: ['cancel'],
-                  },
+                defaultVisible: true,
+                size: 'xl',
+                children: (
+                  <pre>
+                    {task.error}
+                  </pre>
+                ),
+                footer: {
+                  actions: ['cancel'],
                 },
+              },
               );
             }}
           >
@@ -183,51 +188,51 @@ export default ({
           </Chip>
         );
       case 'result':
-      {
-        if (!data) {
-          return null;
+        {
+          if (!data) {
+            return null;
+          }
+          const items: { value: any; tip?: any; icon?: any }[] = [
+            {
+              value: dayjs.duration(Math.ceil(moment.duration(task.elapsed).asSeconds()) * 1000).format('HH:mm:ss'),
+              tip: undefined,
+              icon: <AiOutlineFieldTime className={'text-base'} />,
+            },
+            {
+              value: data?.added,
+              tip: 'Added',
+              icon: <AiOutlinePlusCircle className={'text-base'} />,
+            },
+            {
+              value: data?.deleted,
+              tip: 'Deleted',
+              icon: <AiOutlineMinusCircle className={'text-base'} />,
+            },
+            {
+              value: data?.updated,
+              tip: 'Updated',
+              icon: <AiOutlineSync className={'text-base'} />,
+            },
+          ];
+          return (
+            <>
+              {items.map((item, idx) => {
+                return (
+                  <Chip
+                    key={idx}
+                    variant={'light'}
+                    radius={'sm'}
+                    size={'sm'}
+                    startContent={item.icon}
+                    title={item.tip}
+                  >
+                    {item.value}
+                  </Chip>
+                );
+              })}
+            </>
+          );
         }
-        const items: {value: any; tip?: any; icon?: any}[] = [
-          {
-            value: dayjs.duration(Math.ceil(moment.duration(task.elapsed).asSeconds()) * 1000).format('HH:mm:ss'),
-            tip: undefined,
-            icon: <AiOutlineFieldTime className={'text-base'} />,
-          },
-          {
-            value: data?.added,
-            tip: 'Added',
-            icon: <AiOutlinePlusCircle className={'text-base'} />,
-          },
-          {
-            value: data?.deleted,
-            tip: 'Deleted',
-            icon: <AiOutlineMinusCircle className={'text-base'} />,
-          },
-          {
-            value: data?.updated,
-            tip: 'Updated',
-            icon: <AiOutlineSync className={'text-base'} />,
-          },
-        ];
-        return (
-          <>
-            {items.map((item, idx) => {
-              return (
-                <Chip
-                  key={idx}
-                  variant={'light'}
-                  radius={'sm'}
-                  size={'sm'}
-                  startContent={item.icon}
-                  title={item.tip}
-                >
-                  {item.value}
-                </Chip>
-              );
-            })}
-          </>
-        );
-      }
       default:
         return null;
     }

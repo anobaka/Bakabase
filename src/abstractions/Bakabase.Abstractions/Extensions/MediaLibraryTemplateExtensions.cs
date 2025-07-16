@@ -36,7 +36,7 @@ public static class MediaLibraryTemplateExtensions
     {
         return new MediaLibraryTemplatePlayableFileLocatorDbModel
         {
-            ExtensionGroupIds = locator.ExtensionGroups?.Select(g => g.Id).ToHashSet(),
+            ExtensionGroupIds = locator.ExtensionGroups?.Select(g => g.Id).ToHashSet() ?? locator.ExtensionGroupIds,
             Extensions = locator.Extensions,
             MaxFileCount = locator.MaxFileCount
         };

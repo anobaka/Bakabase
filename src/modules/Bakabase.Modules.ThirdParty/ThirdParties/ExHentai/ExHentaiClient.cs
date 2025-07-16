@@ -201,6 +201,11 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         public async Task<ExHentaiResource> ParseDetail(string url, bool includeTorrents)
         {
             var html = await GetHtmlAsync(HttpClient, url);
+            if (html.IsNullOrEmpty())
+            {
+                throw new Exception($"Got empty response from {url}");
+            }
+
             var cq = new CQ(html);
             var nameCq = cq["#gn"];
             var name = nameCq.Text();
@@ -520,9 +525,10 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
         public static (string Title, string PageUrl)[] GetImageTitleAndPageUrlsFromDetailHtml(string detailHtml)
         {
             var cq = new CQ(detailHtml);
+            // Page 197: 094.jpg
             var data = cq["#gdt"].Children("a").Select(a => a.Cq())
-                .Select(a => (Regex.Match(a.Children("div").Attr("title"), "\\:.*").Value.Trim(':').Trim(),
-                    a.Attr("href"))).Where(t => t.Item2.IsNotEmpty()).ToArray();
+                .Select(a => (a.Children("div").Attr("title"), a.Attr("href"))).Where(t => t.Item2.IsNotEmpty())
+                .ToArray();
             return data;
         }
 

@@ -1,13 +1,6 @@
 import { Balloon, Box, Divider, Icon, Message, Progress } from '@alifd/next';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  GetNewAppVersion,
-  OpenFileOrDirectory,
-  RestartAndUpdateApp,
-  StartUpdatingApp,
-  StartUpdatingUpdater,
-} from '@/sdk/apis';
 import { DependentComponentStatus, UpdaterStatus } from '@/sdk/constants';
 import ExternalLink from '@/components/ExternalLink';
 import { bytesToSize } from '@/components/utils';
@@ -45,7 +38,7 @@ export default ({ appInfo }) => {
   // };
   const updaterContext = store.useModelState('dependentComponentContexts')?.find(s => s.id == DependentComponentIds.BakabaseUpdater);
   const checkNewAppVersion = () => {
-    GetNewAppVersion().invoke((a) => {
+    BApi.updater.getNewAppVersion().then((a) => {
       setNewVersion(a.data || {});
     });
   };
@@ -103,7 +96,7 @@ export default ({ appInfo }) => {
                 <Divider direction={'ver'} />
                 <Button
                   onClick={() => {
-                    StartUpdatingApp().invoke();
+                    BApi.updater.startUpdatingApp();
                   }}
                   variant={'light'}
                   color={'success'}
@@ -158,7 +151,7 @@ export default ({ appInfo }) => {
             size={'small'}
             type={'primary'}
             onClick={() => {
-              RestartAndUpdateApp().invoke();
+              BApi.updater.restartAndUpdateApp();
             }}
           >{t('Restart to update')}
           </Button>
@@ -172,7 +165,7 @@ export default ({ appInfo }) => {
               text
               type={'primary'}
               onClick={() => {
-                StartUpdatingApp().invoke();
+                BApi.updater.startUpdatingApp();
               }}
             >{t('Click here to retry')}
             </Button>
@@ -188,24 +181,24 @@ export default ({ appInfo }) => {
     {
       label: 'App Data Path',
       tip: 'This is where core data files stored and DO NOT change them if not necessary.',
-      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.appDataPath }).invoke()}>{appInfo.appDataPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.appDataPath })}>{appInfo.appDataPath}</Button>,
       // value: <Snippet hideSymbol>{appInfo.appDataPath}</Snippet>,
     },
     {
       label: 'Temporary files path',
       tip: 'It\'s a directory where temporary files stored, such as cover files, etc.',
-      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.tempFilesPath }).invoke()}>{appInfo.tempFilesPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.tempFilesPath })}>{appInfo.tempFilesPath}</Button>,
     },
     {
       label: 'Log Path',
       tip: 'Detailed information which describing the running states of app.' +
         ' You can send log files to developer if the app is not running normally, and you can delete them also if everything is ok.',
-      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.logPath }).invoke()}>{appInfo.logPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.logPath })}>{appInfo.logPath}</Button>,
     },
     {
       label: 'Backup Path',
       tip: 'A data backup will be created when using the new version of app first time, you can delete them if everything is ok.',
-      value: <Button color={'primary'} variant={'light'} onClick={() => OpenFileOrDirectory({ path: appInfo.backupPath }).invoke()}>{appInfo.backupPath}</Button>,
+      value: <Button color={'primary'} variant={'light'} onClick={() => BApi.tool.openFileOrDirectory({ path: appInfo.backupPath })}>{appInfo.backupPath}</Button>,
     },
     {
       label: 'Core Version',
