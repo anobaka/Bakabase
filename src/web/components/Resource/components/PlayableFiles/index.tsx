@@ -9,7 +9,7 @@ import { splitPathIntoSegments, standardizePath } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import BusinessConstants from '@/components/BusinessConstants';
 import type { Resource as ResourceModel } from '@/core/models/Resource';
-import store from '@/store';
+import { useUiOptionsStore } from '@/models/options';
 
 type Props = {
   resource: ResourceModel;
@@ -85,7 +85,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
                                                       afterPlaying,
                                                     }, ref) => {
   const { t } = useTranslation();
-  const useCache = !store.useModelState('uiOptions').resource?.disableCache;
+  const useCache = !useUiOptionsStore(state => state.data).resource?.disableCache;
 
   const [portalCtx, setPortalCtx] = useState<PlayableFilesCtx>();
   const [dirs, setDirs] = useState<Directory[]>();
@@ -123,7 +123,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
       file,
     }).then((a) => {
       if (!a.code) {
-        toast.success(t('Opened'));
+        toast.success(t<string>('Opened'));
         afterPlaying?.();
       }
     });
@@ -154,7 +154,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
           }}
           footer={false}
           size={'lg'}
-          title={t('Please select a file to play')}
+          title={t<string>('Please select a file to play')}
         >
           <div className={'flex flex-col gap-2 pb-2'}>
             {dirs?.map(d => {
@@ -211,7 +211,7 @@ export default forwardRef<PlayableFilesRef, Props>(({
                                 setDirs([...dirs]);
                               }}
                             >
-                              {t('Show all {{count}} files', { count: g.files.length })}
+                              {t<string>('Show all {{count}} files', { count: g.files.length })}
                             </Button>
                           )}
                         </div>

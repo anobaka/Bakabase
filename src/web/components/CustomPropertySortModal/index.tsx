@@ -27,18 +27,18 @@ export default ({ properties, onDestroyed }: Props) => {
       footer={{
         actions: ['cancel'],
         cancelProps: {
-          text: t('Close'),
+          text: t<string>('Close'),
         },
       }}
-      title={t('Adjust orders of properties')}
+      title={t<string>('Adjust orders of properties')}
       onDestroyed={onDestroyed}
     >
-      <div>{t('You can adjust orders or properties by dragging and dropping them')}</div>
+      <div>{t<string>('You can adjust orders or properties by dragging and dropping them')}</div>
       <BlockSort
         blocks={properties}
         onSorted={async ids => {
           await BApi.customProperty.sortCustomProperties({ ids });
-          toast.success(t('Saved'));
+          toast.success(t<string>('Saved'));
         }}
       />
     </Modal>

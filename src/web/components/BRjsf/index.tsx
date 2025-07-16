@@ -84,7 +84,7 @@ const buildField = (fieldProps: FieldProps, bRjsfProps: BRjsfProperty, formRef: 
   return (
     <div className={'item'}>
       <div className="label">
-        {i18n.t(fieldProps.name)}
+        {i18n.t<string>(fieldProps.name)}
         {bRjsfProps.tip && (
           <Tooltip
             content={bRjsfProps.tip}

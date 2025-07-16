@@ -58,7 +58,7 @@ export default ({
 
   useEffect(() => {
     const error = validate(operation, options);
-    onChange?.(operation, options as ListStringValueProcessOptions, error == undefined ? undefined : t(error));
+    onChange?.(operation, options as ListStringValueProcessOptions, error == undefined ? undefined : t<string>(error));
   }, [options, operation]);
 
   const changeOptions = (patches: EditingListStringValueProcessOptions) => {
@@ -101,20 +101,20 @@ export default ({
       case BulkModificationListStringProcessOperation.Append:
       case BulkModificationListStringProcessOperation.Prepend:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: renderValueCell(),
         });
         break;
       case BulkModificationListStringProcessOperation.Modify: {
         const filterBy = options?.modifyOptions?.filterBy;
         components.push({
-          label: t('Filter by'),
+          label: t<string>('Filter by'),
           comp: (
             <div className={'flex items-center gap-2'}>
               <div className={'w-2/5'}>
                 <Select
                   dataSource={bulkModificationProcessorOptionsItemsFilterBies.map(fb => ({
-                    label: t(fb.label),
+                    label: t<string>(fb.label),
                     value: fb.value,
                   }))}
                   selectionMode={'single'}
@@ -136,7 +136,7 @@ export default ({
                   case BulkModificationProcessorOptionsItemsFilterBy.Matching:
                     return (
                       <Input
-                        placeholder={t(filterBy == BulkModificationProcessorOptionsItemsFilterBy.Containing ? 'Please input keyword' : 'Please input a regular expression')}
+                        placeholder={t<string>(filterBy == BulkModificationProcessorOptionsItemsFilterBy.Containing ? 'Please input keyword' : 'Please input a regular expression')}
                         onValueChange={v => {
                           changeOptions({
                             modifyOptions: {
@@ -154,7 +154,7 @@ export default ({
         });
 
         components.push({
-          label: t('For each filtered item'),
+          label: t<string>('For each filtered item'),
           comp: (
             <StringValueProcessEditor
               options={options?.modifyOptions?.options}
@@ -202,11 +202,11 @@ export default ({
   return (
     <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}>
       <div>
-        {t('Operation')}
+        {t<string>('Operation')}
       </div>
       <Select
         dataSource={bulkModificationListStringProcessOperations.map(tpo => ({
-          label: t(tpo.label),
+          label: t<string>(tpo.label),
           value: tpo.value,
         }))}
         selectionMode={'single'}

@@ -72,7 +72,7 @@ export default ({
                 </div>
                 <div className={'flex flex-wrap gap-1'}>
                   <div className={'font-bold'}>
-                    {t('Enhance properties')}:&nbsp;
+                    {t<string>('Enhance properties')}:&nbsp;
                   </div>
                   {e.targets.map(target => {
                     if (target.description) {

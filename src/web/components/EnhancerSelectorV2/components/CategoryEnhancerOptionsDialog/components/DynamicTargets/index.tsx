@@ -94,7 +94,7 @@ export default (props: Props) => {
     const options: EnhancerTargetFullOptions = defaultCategoryEnhancerTargetOptions(descriptor);
     let maxNo = 0;
     if (otherOptions != undefined) {
-      const regex = new RegExp(String.raw`^${t('Target')}(?<no>\d+)$`, 'g');
+      const regex = new RegExp(String.raw`^${t<string>('Target')}(?<no>\d+)$`, 'g');
       for (const o of otherOptions) {
         if (o.dynamicTarget != undefined) {
           regex.lastIndex = 0;
@@ -110,7 +110,7 @@ export default (props: Props) => {
       }
     }
     // console.log('current max no', maxNo, otherOptions);
-    options.dynamicTarget = `${t('Target')}${maxNo + 1}`;
+    options.dynamicTarget = `${t<string>('Target')}${maxNo + 1}`;
     return options;
   };
 
@@ -135,9 +135,9 @@ export default (props: Props) => {
                   &nbsp;
                   <DynamicTargetLabel />
                 </TableColumn>
-                <TableColumn width={'25%'}>{t('Save as property')}</TableColumn>
-                <TableColumn width={'25%'}>{t('Other options')}</TableColumn>
-                <TableColumn >{t('Operations')}</TableColumn>
+                <TableColumn width={'25%'}>{t<string>('Save as property')}</TableColumn>
+                <TableColumn width={'25%'}>{t<string>('Other options')}</TableColumn>
+                <TableColumn >{t<string>('Operations')}</TableColumn>
               </TableHeader>
               {/* @ts-ignore */}
               <TableBody />
@@ -188,7 +188,7 @@ export default (props: Props) => {
               }}
             >
               <PlusCircleOutlined className={'text-sm'} />
-              {t('Specify dynamic target')}
+              {t<string>('Specify dynamic target')}
             </Button>
           </div>
         );

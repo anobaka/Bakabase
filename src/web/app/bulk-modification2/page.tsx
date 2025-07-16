@@ -10,7 +10,7 @@ import { Accordion, AccordionItem, Button, Chip, Input, Modal, Spinner, Tooltip 
 import type { BulkModification as BulkModificationModel } from '@/pages/BulkModification2/components/BulkModification';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import store from '@/store';
+import { useBulkModificationInternalsStore } from '@/models/bulkModificationInternals';
 import { StandardValueType } from '@/sdk/constants';
 
 export default () => {
@@ -18,7 +18,7 @@ export default () => {
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const bmInternals = store.getModelState('bulkModificationInternals');
+  const bmInternals = useBulkModificationInternalsStore.getState();
 
   const [expandedKeys, setExpandedKeys] = useState<string[]>(['4']);
 
@@ -49,20 +49,20 @@ export default () => {
             });
           }}
         >
-          {t('Add a bulk modification')}
+          {t<string>('Add a bulk modification')}
         </Button>
         <div className={'flex items-center gap-1'}>
-          {t('Under development, currently supported data types')}
+          {t<string>('Under development, currently supported data types')}
           {bmInternals.supportedStandardValueTypes?.map(x => {
               return (
-                <Chip size={'sm'} radius={'sm'}>{t(`StandardValueType.${StandardValueType[x]}`)}</Chip>
+                <Chip size={'sm'} radius={'sm'}>{t<string>(`StandardValueType.${StandardValueType[x]}`)}</Chip>
               );
             })}
         </div>
       </div>
       {bulkModifications ? bulkModifications.length == 0 ? (
         <div className={'flex items-center justify-center min-h-[400px]'}>
-          {t('No data')}
+          {t<string>('No data')}
         </div>
       ) : (
         <Accordion
@@ -103,7 +103,7 @@ export default () => {
                               createPortal(Modal, {
                                 defaultVisible: true,
                                 size: 'lg',
-                                title: t('Edit name of bulk modification'),
+                                title: t<string>('Edit name of bulk modification'),
                                 children: (
                                   <Input
                                     isRequired
@@ -113,7 +113,7 @@ export default () => {
                                 ),
                                 onOk: async () => {
                                   if (newName.length == 0) {
-                                    toast.error(t('Name cannot be empty'));
+                                    toast.error(t<string>('Name cannot be empty'));
                                     throw new Error('Name cannot be empty');
                                   }
                                   BApi.bulkModification.patchBulkModification(bm.id, { name: newName }).then(r => {
@@ -131,14 +131,14 @@ export default () => {
                         )}
                       </div>
                       <Chip size={'sm'}>
-                        {t('{{count}} resources related', { count: bm.filteredResourceIds?.length || 0 })}
+                        {t<string>('{{count}} resources related', { count: bm.filteredResourceIds?.length || 0 })}
                       </Chip>
                       {/* <Button */}
                       {/*   size={'sm'} */}
                       {/*   variant={'light'} */}
                       {/*   color={'primary'} */}
                       {/* > */}
-                      {/*   {t('How does this work?')} */}
+                      {/*   {t<string>('How does this work?')} */}
                       {/* </Button> */}
                     </div>
                     <div className={'flex items-center gap-1'}>
@@ -158,10 +158,10 @@ export default () => {
                           });
                         }}
                       >
-                        {t('Duplicate')}
+                        {t<string>('Duplicate')}
                       </Button>
                       <Tooltip
-                        content={t(`Click to ${bm.isActive ? 'disable' : 'enable'}`)}
+                        content={t<string>(`Click to ${bm.isActive ? 'disable' : 'enable'}`)}
                       >
                         <Button
                           size={'sm'}
@@ -173,7 +173,7 @@ export default () => {
                             });
                           }}
                         >
-                          {t(bm.isActive ? 'Enabled' : 'Disabled')}
+                          {t<string>(bm.isActive ? 'Enabled' : 'Disabled')}
                         </Button>
                       </Tooltip>
                       <Button
@@ -185,8 +185,8 @@ export default () => {
                           createPortal(
                             Modal, {
                               defaultVisible: true,
-                              title: t('Delete bulk modification'),
-                              children: t('Are you sure to delete this bulk modification?'),
+                              title: t<string>('Delete bulk modification'),
+                              children: t<string>('Are you sure to delete this bulk modification?'),
                               onOk: async () => {
                                 await BApi.bulkModification.deleteBulkModification(bm.id);
                                 loadAllBulkModifications();

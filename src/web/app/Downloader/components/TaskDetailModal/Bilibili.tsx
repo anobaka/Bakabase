@@ -65,13 +65,13 @@ export default ({
       case BilibiliDownloadTaskType.Favorites: {
         return (
           <>
-            <div>{t('Favorites')}</div>
+            <div>{t<string>('Favorites')}</div>
             <div>
               {loadingFavorites ? (
                 <Spinner size="sm" />
               ) : favorites.length === 0 ? (
                 <div className={''}>
-                  {t('Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.')}
+                  {t<string>('Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.')}
                   <Button
                     variant={'light'}
                     size={'sm'}
@@ -83,13 +83,13 @@ export default ({
                       });
                     }}
                     color={'primary'}
-                  >{t('Setup now')}
+                  >{t<string>('Setup now')}
                   </Button>
                 </div>
               ) : (
                 <CheckboxGroup
                   // color="secondary"
-                  label={t('Select favorites')}
+                  label={t<string>('Select favorites')}
                   orientation="horizontal"
                   size={'sm'}
                   isDisabled={isReadOnly}
@@ -144,7 +144,7 @@ export default ({
         // className={'col-span-2'}
         className={'col-start-2'}
         color={'danger'}
-        title={t('This function is not working because lux or ffmpeg is not found, check them in system configurations')}
+        title={t<string>('This function is not working because lux or ffmpeg is not found, check them in system configurations')}
       />
     );
   }

@@ -10,8 +10,8 @@ const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onCha
     <Input
       value={operation.alphabetStartChar}
       onValueChange={e => onChange({ ...operation, alphabetStartChar: e })}
-      placeholder={t('FileNameModifier.Placeholder.StartChar')}
-      label={t('FileNameModifier.Label.StartChar')}
+      placeholder={t<string>('FileNameModifier.Placeholder.StartChar')}
+      label={t<string>('FileNameModifier.Label.StartChar')}
       size="sm"
       isRequired={!operation.alphabetStartChar}
       maxLength={1}
@@ -20,8 +20,8 @@ const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onCha
     <NumberInput
       value={operation.alphabetCount}
       onValueChange={e => onChange({ ...operation, alphabetCount: e })}
-      placeholder={t('FileNameModifier.Placeholder.Count')}
-      label={t('FileNameModifier.Label.Count')}
+      placeholder={t<string>('FileNameModifier.Placeholder.Count')}
+      label={t<string>('FileNameModifier.Label.Count')}
       size="sm"
       isRequired={operation.alphabetCount == null}
       className="w-[100px]"
@@ -30,8 +30,8 @@ const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onCha
       <NumberInput
         value={operation.positionIndex}
         onValueChange={e => onChange({ ...operation, positionIndex: e })}
-        placeholder={t('FileNameModifier.Placeholder.PositionIndex')}
-        label={t('FileNameModifier.Label.PositionIndex')}
+        placeholder={t<string>('FileNameModifier.Placeholder.PositionIndex')}
+        label={t<string>('FileNameModifier.Label.PositionIndex')}
         size="sm"
         isRequired={true}
         className="w-[120px]"

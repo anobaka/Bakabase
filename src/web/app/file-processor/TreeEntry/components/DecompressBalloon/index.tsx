@@ -52,13 +52,13 @@ export default (props: Props) => {
 
   const decompress = useCallback((path, password?: string) => {
     // Notification.open({
-    //   title: t('Start decompressing'),
+    //   title: t<string>('Start decompressing'),
     //   type: 'success',
     //   // content:
     //   //   "This is the content of the notification. This is the content of the notification. This is the content of the notification.",
     //   // type
     // });
-    Message.notice(t('Start decompressing'));
+    Message.notice(t<string>('Start decompressing'));
     return BApi.file.decompressFiles({
       paths: [path],
       password,
@@ -95,14 +95,14 @@ export default (props: Props) => {
       return (
         <div className={'secondary'}>
           <div className="tip">
-            {t(`Alternatively, you can choose a password from ${label} passwords:`)}
+            {t<string>(`Alternatively, you can choose a password from ${label} passwords:`)}
             {passwords.length == 5 && (<Button
               className={'show-more'}
               text
               size={'small'}
               type={'primary'}
               onClick={openPasswordSelector}
-            >{t('Show more')}</Button>)}
+            >{t<string>('Show more')}</Button>)}
           </div>
           <div className="passwords">
             {passwords.map(p => {
@@ -115,7 +115,7 @@ export default (props: Props) => {
                   }}
                   onClose={(from) => {
                     Dialog.confirm({
-                      title: t('Delete password from history?'),
+                      title: t<string>('Delete password from history?'),
                       closeable: true,
                       onOk: () => BApi.password.deletePassword(p.text),
                     });
@@ -138,7 +138,7 @@ export default (props: Props) => {
     <Tooltip
       content={(<div>
         <div className="common-tip">
-          {t('Contents will be decompressed to the same directory as the compressed file.')}
+          {t<string>('Contents will be decompressed to the same directory as the compressed file.')}
         </div>
         <div className="password-guides">
           {passwords.length > 0 && (
@@ -157,7 +157,7 @@ export default (props: Props) => {
           {passwords.length > 1 && (
             <div className={'secondary'}>
               <div className="tip">
-                {t('Alternatively, you can choose a password from the following candidates:')}
+                {t<string>('Alternatively, you can choose a password from the following candidates:')}
               </div>
               <div className="passwords">
                 {passwords.slice(1).map((password: string) => (
@@ -180,7 +180,7 @@ export default (props: Props) => {
           {renderTopNPasswords(PasswordSearchOrder.Frequency)}
 
           <div className={'secondary'}>
-            <div className="tip">{t('Or you can use a custom password:')}</div>
+            <div className="tip">{t<string>('Or you can use a custom password:')}</div>
             <Input.Group addonAfter={(
               <Button
                 type={'normal'}
@@ -189,17 +189,17 @@ export default (props: Props) => {
                   if (customPasswordRef.current) {
                     decompress(entry.path, customPasswordRef.current);
                   } else {
-                    Message.error(i18n.t('Password can not be empty'));
+                    Message.error(i18n.t<string>('Password can not be empty'));
                   }
                 }}
               >
-                {t('Use custom password to decompress')}
+                {t<string>('Use custom password to decompress')}
               </Button>
             )}
             >
               <Input
                 size={'small'}
-                placeholder={i18n.t('Password')}
+                placeholder={i18n.t<string>('Password')}
                 style={{ width: '100%' }}
                 hasClear
                 onKeyDown={e => {

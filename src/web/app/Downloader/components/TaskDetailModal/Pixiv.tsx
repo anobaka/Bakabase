@@ -49,7 +49,7 @@ export default ({
   const renderOptions = () => {
     return (
       <>
-        <div>{t('Url')}</div>
+        <div>{t<string>('Url')}</div>
         <Input
           value={_.keys(form?.keyAndNames ?? {})[0]}
           placeholder={`Novel is not supported now, please make sure your url likes:

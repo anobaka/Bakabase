@@ -56,7 +56,7 @@ class PscProperty implements IPscProperty {
   }
 
   toString(t: TFunction<'translation', undefined>, index?: number): string {
-    return `${(this.isCustom ? this.name : t(ResourceProperty[this.id]))}${index == undefined ? '' : index + 1}`;
+    return `${(this.isCustom ? this.name : t<string>(ResourceProperty[this.id]))}${index == undefined ? '' : index + 1}`;
   }
 
   static fromPscType(type: PscPropertyType): PscProperty {

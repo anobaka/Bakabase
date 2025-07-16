@@ -49,7 +49,7 @@ export default ({
         case 'cookie': {
           items.push(
             <>
-              <div>{t('Cookie')}</div>
+              <div>{t<string>('Cookie')}</div>
               <div>
                 <CookieValidator
                   cookie={options?.cookie}
@@ -66,7 +66,7 @@ export default ({
         case 'defaultDownloadPath': {
           items.push(
             <>
-              <div>{t('Default download path')}</div>
+              <div>{t<string>('Default download path')}</div>
               <div>
                 <FileSystemSelectorButton
                   // size={'small'}
@@ -85,7 +85,7 @@ export default ({
         case 'threads': {
           items.push(
             <>
-              <div>{t('Threads')}</div>
+              <div>{t<string>('Threads')}</div>
               <div>
                 <NumberInput
                   size={'sm'}
@@ -100,7 +100,7 @@ export default ({
                       threads,
                     },
                   })}
-                  description={t('If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.', { lowerCasedThirdPartyName: ThirdPartyId[thirdPartyId].toLowerCase() })}
+                  description={t<string>('If you are browsing {{thirdPartyName}}, you should decrease the threads of downloading.', { lowerCasedThirdPartyName: ThirdPartyId[thirdPartyId].toLowerCase() })}
                 />
               </div>
             </>,
@@ -110,14 +110,14 @@ export default ({
         case 'interval': {
           items.push(
             <>
-              <div>{t('Request interval')}</div>
+              <div>{t<string>('Request interval')}</div>
               <div className={'w-[200px]'}>
                 <NumberInput
                   size={'sm'}
                   fullWidth={false}
                   min={0}
                   max={9999999}
-                  endContent={t('ms')}
+                  endContent={t<string>('ms')}
                   value={options?.downloader?.interval}
                   onChange={(interval) => onChange({
                     downloader: {
@@ -148,7 +148,7 @@ export default ({
           }
           items.push(
             <>
-              <div>{t('Naming convention')}</div>
+              <div>{t<string>('Naming convention')}</div>
               <div className={'flex flex-col gap-2'}>
                 <Textarea
                   placeholder={defaultConvention}
@@ -163,7 +163,7 @@ export default ({
                     });
                   }}
                   description={(
-                    <div>{t('You can select fields to build a naming convention template, and \'/\' to create directory.')}</div>
+                    <div>{t<string>('You can select fields to build a naming convention template, and \'/\' to create directory.')}</div>
 
                   )}
                 />
@@ -174,7 +174,7 @@ export default ({
                       color={'secondary'}
                       radius={'sm'}
                       variant={'flat'}
-                    >{t('Example')}</Chip>
+                    >{t<string>('Example')}</Chip>
                     {namingPathSegments.map((t, i) => {
                       if (i == namingPathSegments.length - 1) {
                         return (
@@ -224,7 +224,7 @@ export default ({
                     if (f.description) {
                       return (
                         <Tooltip
-                          content={t(f.description)}
+                          content={t<string>(f.description)}
                         >
                           {tag}
                         </Tooltip>

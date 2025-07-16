@@ -41,7 +41,7 @@ export default () => {
 
   return (
     <div>
-      <div className={'text-xl font-bold'}>{t('Media library caches')}</div>
+      <div className={'text-xl font-bold'}>{t<string>('Media library caches')}</div>
       <div className={'flex flex-col gap-2'}>
         {(cacheOverview?.mediaLibraryCaches && cacheOverview.mediaLibraryCaches.length > 0) ? (
           <div className={'grid grid-cols-4 gap-2'}>
@@ -51,7 +51,7 @@ export default () => {
                   <CardHeader>
                     <div>
                       <div className="text-md">{item.mediaLibraryName}</div>
-                      <div className="text-small text-default-500">{t('Resource count')}: {item.resourceCount}</div>
+                      <div className="text-small text-default-500">{t<string>('Resource count')}: {item.resourceCount}</div>
                     </div>
                   </CardHeader>
                   <Divider />
@@ -63,7 +63,7 @@ export default () => {
                             size={'sm'}
                             radius={'sm'}
                           >
-                            {t('Cached')} {t(ResourceCacheType[key])}
+                            {t<string>('Cached')} {t<string>(ResourceCacheType[key])}
                           </Chip>
                           {item.resourceCacheCountMap[key]}
                           <Button
@@ -95,7 +95,7 @@ export default () => {
               );
             })}
           </div>
-        ) : t('No cache for now')}
+        ) : t<string>('No cache for now')}
         {(cacheOverview?.categoryCaches && cacheOverview.categoryCaches.length > 0) ? (
           <div className={'grid grid-cols-4 gap-2'}>
             {cacheOverview.categoryCaches.map((item, idx) => {
@@ -109,9 +109,9 @@ export default () => {
                           size={'sm'}
                           variant={'flat'}
                           radius={'sm'}
-                        >{t('Deprecated')}</Chip>
+                        >{t<string>('Deprecated')}</Chip>
                       </div>
-                      <div className="text-small text-default-500">{t('Resource count')}: {item.resourceCount}</div>
+                      <div className="text-small text-default-500">{t<string>('Resource count')}: {item.resourceCount}</div>
                     </div>
                   </CardHeader>
                   <Divider />
@@ -123,7 +123,7 @@ export default () => {
                             size={'sm'}
                             radius={'sm'}
                           >
-                            {t('Cached')} {t(ResourceCacheType[key])}
+                            {t<string>('Cached')} {t<string>(ResourceCacheType[key])}
                           </Chip>
                           {item.resourceCacheCountMap[key]}
                           <Button
@@ -155,7 +155,7 @@ export default () => {
               );
             })}
           </div>
-        ) : t('No cache for now')}
+        ) : t<string>('No cache for now')}
       </div>
     </div>
   );

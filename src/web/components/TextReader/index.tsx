@@ -59,19 +59,19 @@ export default (props: ITextReaderProps) => {
     <div className={`text-reader ${className || ''}`} style={{ ...style, background, color }} onLoad={onLoad}>
       <div className="configurations">
         <div className="label">
-          {i18n.t('Font size')}
+          {i18n.t<string>('Font size')}
         </div>
         <div className="value">
           <NumberPicker max={20} min={10} value={fontSize} onChange={(v) => setFontSize(v)} />
         </div>
         <div className="label">
-          {i18n.t('Font color')}
+          {i18n.t<string>('Font color')}
         </div>
         <div className="value">
           <ColorPicker color={color} onChange={(v) => setColor(v)} />
         </div>
         <div className="label">
-          {i18n.t('Background color')}
+          {i18n.t<string>('Background color')}
         </div>
         <div className="value">
           <ColorPicker color={background} onChange={(v) => setBackground(v)} />
@@ -101,7 +101,7 @@ export default (props: ITextReaderProps) => {
           );
         }) || (
           <div className={'no-content'}>
-            {i18n.t('No content')}
+            {i18n.t<string>('No content')}
           </div>
         )}
       </div>

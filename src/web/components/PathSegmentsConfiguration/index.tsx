@@ -107,7 +107,7 @@ const PathSegmentsConfiguration = React.forwardRef((props: IPathSegmentsConfigur
   const onDeleteMatcherValue = (property: PscProperty, valueIndex: number | undefined = 0) => {
     createPortal(Modal, {
       defaultVisible: true,
-      title: t('Sure to delete this property?'),
+      title: t<string>('Sure to delete this property?'),
       onOk: () => {
         const bad = value?.filter(v => v.property.equals(property))?.[valueIndex ?? 0];
         // console.log(bad, value.filter(v => v != bad), property);

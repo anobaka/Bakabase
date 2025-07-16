@@ -30,7 +30,7 @@ const Editor = ({ variables: propsVariables, onChange, value: propsValue }: IPro
   const [value, setValue] = useState<IValue>(propsValue ?? {});
 
   const operationDataSource = Object.keys(BmSimpleValueProcessorOperation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
-    label: t(x),
+    label: t<string>(x),
     value: BmSimpleValueProcessorOperation[x],
   }));
 
@@ -89,7 +89,7 @@ const Editor = ({ variables: propsVariables, onChange, value: propsValue }: IPro
     <>
       <div className="block">
         <div className={'label'}>
-          {t('Operation')}
+          {t<string>('Operation')}
         </div>
         <div className="value">
           <Select
@@ -116,7 +116,7 @@ const Demonstrator = ({ value }: { value: IValue }) => {
     case BmSimpleValueProcessorOperation.Remove:
       return (
         <>
-          <div className="primary">{t('Remove')}</div>
+          <div className="primary">{t<string>('Remove')}</div>
         </>
       );
     case BmSimpleValueProcessorOperation.SetWithFixedValue: {
@@ -147,7 +147,7 @@ const Demonstrator = ({ value }: { value: IValue }) => {
     default:
       return (
         <>
-          {t('Unsupported value')}
+          {t<string>('Unsupported value')}
         </>
       );
   }

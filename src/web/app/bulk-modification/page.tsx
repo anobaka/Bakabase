@@ -107,12 +107,12 @@
 //     <div className={'bulk-modification-page'}>
 //       <FeatureStatusTip
 //         status={'deprecated'}
-//         name={t('Bulk modification')}
+//         name={t<string>('Bulk modification')}
 //         // url={'https://github.com/anobaka/InsideWorld/discussions/506'}
 //       />
 //       <div className="header">
 //         <div className="title">
-//           {t('Bulk modification')}
+//           {t<string>('Bulk modification')}
 //         </div>
 //         <Button
 //           type={'primary'}
@@ -120,10 +120,10 @@
 //           onClick={() => {
 //             let name: string;
 //             Dialog.show({
-//               title: t('Creating a bulk modification'),
+//               title: t<string>('Creating a bulk modification'),
 //               content: (
 //                 <Input
-//                   placeholder={t('Please input a name')}
+//                   placeholder={t<string>('Please input a name')}
 //                   style={{ width: 500 }}
 //                   trim
 //                   onChange={v => name = v}
@@ -134,7 +134,7 @@
 //               closeMode: ['close', 'mask', 'esc'],
 //               onOk: async () => {
 //                 if (name == undefined || name.length == 0) {
-//                   return Message.error(t('Name is required'));
+//                   return Message.error(t<string>('Name is required'));
 //                 }
 //                 const r = await BApi.bulkModification.createBulkModification({ name });
 //                 if (!r.code) {
@@ -143,7 +143,7 @@
 //               },
 //             });
 //           }}
-//         >{t('Create')}</Button>
+//         >{t<string>('Create')}</Button>
 //       </div>
 //       {/* <div className="bulk-modifications-container"> */}
 //       <Loading visible={processing} className={'bulk-modifications-container'}>
@@ -171,7 +171,7 @@
 //                       <div className="status">
 //                         {/* @ts-ignore */}
 //                         <SimpleLabel status={BmStatusLabelStatusMap[bm.status]}>
-//                           {t(BulkModificationStatus[bm.status])}
+//                           {t<string>(BulkModificationStatus[bm.status])}
 //                         </SimpleLabel>
 //                       </div>
 //                       <Button
@@ -180,8 +180,8 @@
 //                         onClick={e => {
 //                           e.stopPropagation();
 //                           Dialog.confirm({
-//                             title: t('Duplicating a bulk modification'),
-//                             content: t('A new bulk modification will be created from current selection'),
+//                             title: t<string>('Duplicating a bulk modification'),
+//                             content: t<string>('A new bulk modification will be created from current selection'),
 //                             v2: true,
 //                             width: 'auto',
 //                             onOk: async () => {
@@ -190,7 +190,7 @@
 //                             },
 //                           });
 //                         }}
-//                       >{t('Duplicate')}</Button>
+//                       >{t<string>('Duplicate')}</Button>
 //                       {bm.status != BulkModificationStatus.Closed && (
 //                         <Button
 //                           type={'normal'}
@@ -199,8 +199,8 @@
 //                           onClick={e => {
 //                             e.stopPropagation();
 //                             Dialog.confirm({
-//                               title: t('Close a bulk modification'),
-//                               content: t('You will not be able to operate on a closed bulk modification'),
+//                               title: t<string>('Close a bulk modification'),
+//                               content: t<string>('You will not be able to operate on a closed bulk modification'),
 //                               v2: true,
 //                               width: 'auto',
 //                               onOk: async () => {
@@ -209,7 +209,7 @@
 //                               },
 //                             });
 //                           }}
-//                         >{t('Close')}</Button>
+//                         >{t<string>('Close')}</Button>
 //                       )}
 //                       {expanded && (
 //                         <Button
@@ -221,26 +221,26 @@
 //                             setSteps!([
 //                               {
 //                                 selector: `.bulk-modification-${bm.id} .filters-panel`,
-//                                 content: t('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
+//                                 content: t<string>('You can set any combination of criteria to filter the resources that you need to modify in bulk'),
 //                               },
 //                               {
 //                                 selector: `.bulk-modification-${bm.id} .variables-panel`,
-//                                 content: t('You can set some variables and use them in processes'),
+//                                 content: t<string>('You can set some variables and use them in processes'),
 //                               },
 //                               {
 //                                 selector: `.bulk-modification-${bm.id} .processes-panel`,
-//                                 content: t('To modify the properties of filtered resources, you should set at least one process'),
+//                                 content: t<string>('To modify the properties of filtered resources, you should set at least one process'),
 //                               },
 //                               {
 //                                 selector: `.bulk-modification-${bm.id} .result-panel`,
-//                                 content: t('You can preview the result then apply all changes'),
+//                                 content: t<string>('You can preview the result then apply all changes'),
 //                               },
 //                             ]);
 //                             setCurrentStep(0);
 //                             setIsOpen(o => true);
 //                           }}
 //                         >
-//                           {t('How does this work?')}
+//                           {t<string>('How does this work?')}
 //                         </Button>
 //                       )}
 //                       {processing && (
@@ -248,7 +248,7 @@
 //                       )}
 //                     </div>
 //                     <div className="right">
-//                       <div className="dt" title={t('Last modified at')}>
+//                       <div className="dt" title={t<string>('Last modified at')}>
 //                         <CustomIcon type={'time'} size={'small'} />
 //                         {bm.createdAt}
 //                       </div>
@@ -258,8 +258,8 @@
 //                         onClick={e => {
 //                           e.stopPropagation();
 //                           Dialog.confirm({
-//                             title: t('Deleting this bulk modification'),
-//                             content: t('Are you sure to delete this bulk modification?'),
+//                             title: t<string>('Deleting this bulk modification'),
+//                             content: t<string>('Are you sure to delete this bulk modification?'),
 //                             v2: true,
 //                             width: 'auto',
 //                             onOk: async () => {

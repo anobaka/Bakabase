@@ -3,7 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
 import { Button, DatePicker2, Icon, Input, Pagination, Select, Table } from '@alifd/next';
-import IceLabel from '@icedesign/label';
+// TODO: 迁移 IceLabel 相关用法，Next.js 无内置替代。
+// import IceLabel from '@icedesign/label';
 import moment from 'moment';
 import { useUpdateEffect } from 'react-use';
 import i18n from 'i18next';
@@ -105,7 +106,7 @@ export default () => {
       <div className="opt">
         <div className="left">
           <div className="item">
-            <div className="label">{t('Time')}</div>
+            <div className="label">{t<string>('Time')}</div>
             <div className="value">
               <DatePicker2.RangePicker
                 size={'small'}
@@ -127,7 +128,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t('Level')}</div>
+            <div className="label">{t<string>('Level')}</div>
             <div className="value">
               <Select
                 dataSource={logLevels}
@@ -141,7 +142,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t('Logger')}</div>
+            <div className="label">{t<string>('Logger')}</div>
             <div className="value">
               <Input
                 size={'small'}
@@ -154,7 +155,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t('Event')}</div>
+            <div className="label">{t<string>('Event')}</div>
             <div className="value">
               <Input
                 size={'small'}
@@ -167,7 +168,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t('Message')}</div>
+            <div className="label">{t<string>('Message')}</div>
             <div className="value">
               <Input
                 size={'small'}
@@ -187,7 +188,7 @@ export default () => {
             size={'small'}
             onClick={() => BApi.log.clearAllLog().then((a) => setLogs([]))}
           >
-            {t('Clear all')}
+            {t<string>('Clear all')}
           </Button>
         </div>
       </div>
@@ -202,7 +203,7 @@ export default () => {
           // sortable
           width={'8%'}
           dataIndex={'dateTime'}
-          title={t('Time')}
+          title={t<string>('Time')}
           cell={(d) => moment(d)
             .format('MM-DD HH:mm:ss')}
         />
@@ -211,12 +212,18 @@ export default () => {
           align={'center'}
           width={'5%'}
           dataIndex={'level'}
-          title={t('Level')}
-          cell={(l) => (<IceLabel
-            inverse={false}
-            status={(l == LogLevel.Error || l == LogLevel.Critical || l == LogLevel.Warning) ? 'danger' : 'info'}
-          >{l == LogLevel.Information ? 'Info' : LogLevel[l]}
-          </IceLabel>)}
+          title={t<string>('Level')}
+          cell={(l) => (
+            <span
+              className={`ice-label ice-label-${
+                l == LogLevel.Error || l == LogLevel.Critical || l == LogLevel.Warning
+                  ? 'danger'
+                  : 'info'
+              }`}
+            >
+              {l == LogLevel.Information ? 'Info' : LogLevel[l]}
+            </span>
+          )}
         />
         <Table.Column
           // sortable
@@ -225,21 +232,21 @@ export default () => {
           // alignHeader={'center'}
           dataIndex={'logger'}
           className={'logger'}
-          title={t('Logger')}
+          title={t<string>('Logger')}
         />
         <Table.Column
           // sortable
           align={'center'}
           width={'8%'}
           dataIndex={'event'}
-          title={t('Event')}
+          title={t<string>('Event')}
         />
         <Table.Column
           // sortable
           width={'50%'}
           alignHeader={'center'}
           dataIndex={'message'}
-          title={t('Message')}
+          title={t<string>('Message')}
           cell={(c) => <pre>{c}</pre>}
         />
         {/* <Table.Column */}

@@ -103,7 +103,7 @@ export default ({
     // arr.push(...cps);
     // propertiesRef.current = arr;
 
-    const builtinPropertyNames = builtinPropertyForDisplayNames.map(v => t(`BuiltinPropertyForDisplayName.${v.label}`));
+    const builtinPropertyNames = builtinPropertyForDisplayNames.map(v => t<string>(`BuiltinPropertyForDisplayName.${v.label}`));
     const customPropertyNames = c.customProperties?.map(cp => cp.name!) ?? [];
 
     setVariables(builtinPropertyNames.concat(customPropertyNames));
@@ -132,7 +132,7 @@ export default ({
     <Modal
       defaultVisible
       onDestroyed={props.onDestroyed}
-      title={t('Edit display name template for category {{name}}', { name: category?.name })}
+      title={t<string>('Edit display name template for category {{name}}', { name: category?.name })}
       onClose={close}
       size={'xl'}
       onOk={async () => {
@@ -145,7 +145,7 @@ export default ({
           <div className={'flex flex-wrap'}>
             <InfoCircleOutlined className={'text-medium'} />
             &nbsp;
-            {t('You can use any combination of text and following properties in template, and you can add more properties in category configuration.')}
+            {t<string>('You can use any combination of text and following properties in template, and you can add more properties in category configuration.')}
           </div>
           <div className={'flex flex-wrap items-center'}>
             <InfoCircleOutlined className={'text-medium'} />
@@ -153,8 +153,8 @@ export default ({
             <Trans
               i18nKey={'category.displayNameTemplate.propertyExample'}
               values={{
-                // samplePropertyName: propertiesRef.current[0]?.name ?? t('Name'),
-                samplePropertyName: variables?.[0] ?? t('Name'),
+                // samplePropertyName: propertiesRef.current[0]?.name ?? t<string>('Name'),
+                samplePropertyName: variables?.[0] ?? t<string>('Name'),
               }}
             >
               To add a property value as a variable in the template, you can use the following
@@ -166,7 +166,7 @@ export default ({
           <div className={'flex flex-wrap'}>
             <InfoCircleOutlined className={'text-medium'} />
             &nbsp;
-            {t('Be careful if you have multiple properties with same name, only a random one will be replaced.')}
+            {t<string>('Be careful if you have multiple properties with same name, only a random one will be replaced.')}
           </div>
         </div>
         <div className={'flex flex-wrap gap-1 mt-2'}>
@@ -188,8 +188,8 @@ export default ({
         <div className={'flex flex-wrap'}>
           <InfoCircleOutlined className={'text-medium'} />
           &nbsp;
-          {t('You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically.')}
-          {t('You can check and set the wrappers in special text configuration.')}
+          {t<string>('You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically.')}
+          {t<string>('You can check and set the wrappers in special text configuration.')}
         </div>
         <div className={'flex flex-wrap gap-1 mt-2'}>
           {wrappers.map(w => (
@@ -207,10 +207,10 @@ export default ({
       <div className={'flex flex-wrap'}>
         <InfoCircleOutlined className={'text-medium'} />
         &nbsp;
-        {t('If you leave the template with empty value, the file name will be the display name.')}
+        {t<string>('If you leave the template with empty value, the file name will be the display name.')}
       </div>
       <div>
-        <div>{t('Display name template')}</div>
+        <div>{t<string>('Display name template')}</div>
         <ContentEditable
           key={'0'}
           autoFocus
@@ -237,7 +237,7 @@ export default ({
                     footer: {
                       actions: ['ok'],
                     },
-                    title: t('Preview display names of resources'),
+                    title: t<string>('Preview display names of resources'),
                     children: (
                       <div>
                         {data.map(d => {
@@ -268,7 +268,7 @@ export default ({
                                   };
                                   return (
                                     <Tooltip
-                                      content={t(`CategoryResourceDisplayNameSegmentType.${CategoryResourceDisplayNameSegmentType[type]}`)}
+                                      content={t<string>(`CategoryResourceDisplayNameSegmentType.${CategoryResourceDisplayNameSegmentType[type]}`)}
                                     >
                                       <div className={'cursor-pointer hover:font-bold'}>
                                         {renderDisplayNameSegment(p)}
@@ -285,7 +285,7 @@ export default ({
                   });
                 });
             }}
-          >{t('Click to preview')}</Button>
+          >{t<string>('Click to preview')}</Button>
         </div>
       )}
     </Modal>

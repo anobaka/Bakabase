@@ -58,22 +58,22 @@ const Editor = ({
     const textValue = parseInt(label, 10);
     return Number.isNaN(textValue) && (removable || TextProcessOperation[label] != TextProcessOperation.Remove);
   }).map(x => ({
-    label: t(x),
+    label: t<string>(x),
     value: TextProcessOperation[x],
   }));
   const positionFromDataSource = [{
-    label: t('Position.Beginning'),
+    label: t<string>('Position.Beginning'),
     value: false,
   }, {
-    label: t('Position.End'),
+    label: t<string>('Position.End'),
     value: true,
   }];
 
   const directionDataSource = [{
-    label: t('Forward'),
+    label: t<string>('Forward'),
     value: false,
   }, {
-    label: t('Backward'),
+    label: t<string>('Backward'),
     value: true,
   }];
 
@@ -98,7 +98,7 @@ const Editor = ({
     switch (value.operation) {
       case TextProcessOperation.SetWithFixedValue:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: longText ? (
             <Input.TextArea
               value={value.value}
@@ -118,7 +118,7 @@ const Editor = ({
       case TextProcessOperation.AddToStart:
       case TextProcessOperation.AddToEnd:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <Input
               value={value.value}
@@ -129,7 +129,7 @@ const Editor = ({
         break;
       case TextProcessOperation.AddToAnyPosition:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <Input.Group>
               <Trans
@@ -150,7 +150,7 @@ const Editor = ({
                 {/* 3 */}
                 <NumberPicker
                   style={{ width: 100 }}
-                  placeholder={t('Starts from 0')}
+                  placeholder={t<string>('Starts from 0')}
                   onChange={position => changeValue({ position })}
                   value={value.position}
                 />
@@ -172,7 +172,7 @@ const Editor = ({
       case TextProcessOperation.RemoveFromStart:
       case TextProcessOperation.RemoveFromEnd:
         components.push({
-          label: t('Count'),
+          label: t<string>('Count'),
           comp: (
             <NumberPicker
               style={{ width: 200 }}
@@ -185,7 +185,7 @@ const Editor = ({
       case TextProcessOperation.RemoveFromAnyPosition:
         // delete 6 characters forward from the fifth character from the end
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <Input.Group>
               <Trans
@@ -216,7 +216,7 @@ const Editor = ({
                 {/* 5 */}
                 <NumberPicker
                   style={{ width: 100 }}
-                  placeholder={t('Starts from 0')}
+                  placeholder={t<string>('Starts from 0')}
                   onChange={position => changeValue({ position })}
                   value={value.position}
                 />
@@ -239,7 +239,7 @@ const Editor = ({
       case TextProcessOperation.ReplaceFromAnyPosition:
       case TextProcessOperation.ReplaceWithRegex:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <Input.Group>
               <Trans
@@ -279,7 +279,7 @@ const Editor = ({
     <>
       <div className="block">
         <div className={'label'}>
-          {t('Operation')}
+          {t<string>('Operation')}
         </div>
         <div className="value">
           <Select
@@ -322,7 +322,7 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd'}
           values={{
-            direction: value.operation == TextProcessOperation.AddToStart ? t('Position.Beginning') : t('Position.End'),
+            direction: value.operation == TextProcessOperation.AddToStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
             value: value.value,
           }}
         >
@@ -337,7 +337,7 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition'}
           values={{
-            direction: value.reverse ? t('Position.End') : t('Position.Beginning'),
+            direction: value.reverse ? t<string>('Position.End') : t<string>('Position.Beginning'),
             position: value.position,
             value: value.value,
           }}
@@ -357,7 +357,7 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
           <Trans
             i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd'}
             values={{
-              direction: value.operation == TextProcessOperation.RemoveFromStart ? t('Position.Beginning') : t('Position.End'),
+              direction: value.operation == TextProcessOperation.RemoveFromStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
               count: value.count,
             }}
           >
@@ -370,10 +370,10 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
       );
     case TextProcessOperation.RemoveFromAnyPosition: {
       const texts = {
-        direction: value.reverse ? t('Position.End') : t('Position.Beginning'),
+        direction: value.reverse ? t<string>('Position.End') : t<string>('Position.Beginning'),
         position: value.position,
         count: value.count,
-        removeDirection: value.removeBefore ? t('TextOperation.Backward') : t('TextOperation.Forward'),
+        removeDirection: value.removeBefore ? t<string>('TextOperation.Backward') : t<string>('TextOperation.Forward'),
       };
       return (
         <>
@@ -397,7 +397,7 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
     case TextProcessOperation.ReplaceFromStart:
     case TextProcessOperation.ReplaceFromEnd: {
       const texts = {
-        direction: value.operation == TextProcessOperation.ReplaceFromEnd ? t('Position.End') : t('Position.Beginning'),
+        direction: value.operation == TextProcessOperation.ReplaceFromEnd ? t<string>('Position.End') : t<string>('Position.Beginning'),
         replace: value.replace,
         find: value.find,
       };
@@ -426,7 +426,7 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
     }
     case TextProcessOperation.ReplaceFromAnyPosition: {
       const texts = {
-        direction: value.reverse ? t('end') : t('start'),
+        direction: value.reverse ? t<string>('end') : t<string>('start'),
         replace: value.replace,
         find: value.find,
       };
@@ -478,14 +478,14 @@ const Demonstrator = ({ value }: { value: ITextProcessorValue }) => {
     case TextProcessOperation.Remove: {
       return (
         <div className={'primary'}>
-          {t('Remove')}
+          {t<string>('Remove')}
         </div>
       );
     }
     default:
       return (
         <>
-          {t('Unsupported value')}
+          {t<string>('Unsupported value')}
         </>
       );
   }

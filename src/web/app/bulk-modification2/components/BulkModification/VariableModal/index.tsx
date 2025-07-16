@@ -15,7 +15,7 @@ import ProcessStepModal from '@/pages/BulkModification2/components/BulkModificat
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { buildLogger } from '@/components/utils';
-import store from '@/store';
+import { useBulkModificationInternalsStore } from '@/models/bulkModificationInternals';
 import { PropertyValueScopeSelectorLabel } from '@/components/Labels';
 import { PropertyLabel } from '@/components/Property';
 
@@ -36,7 +36,7 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const bmInternals = store.getModelState('bulkModificationInternals');
+  const bmInternals = useBulkModificationInternalsStore.getState();
 
   const [variable, setVariable] = useState<Partial<BulkModificationVariable>>(propsVariable ?? {});
 
@@ -48,7 +48,7 @@ export default ({
 
   return (
     <Modal
-      title={t('Setting variable')}
+      title={t<string>('Setting variable')}
       size={'xl'}
       onDestroyed={onDestroyed}
       defaultVisible
@@ -68,7 +68,7 @@ export default ({
       <Card>
         <CardBody>
           <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto 1fr' }}>
-            <div className={'text-right'}>{t('Property')}</div>
+            <div className={'text-right'}>{t<string>('Property')}</div>
             <div className={'flex items-center gap-2'}>
               <Button
                 size="sm"
@@ -99,7 +99,7 @@ export default ({
                     property={variable.property}
                     showPool
                   />
-                ) : t('Select a property')}
+                ) : t<string>('Select a property')}
               </Button>
               {/* {variable?.property && ( */}
               {/*   <Chip */}
@@ -107,7 +107,7 @@ export default ({
               {/*     radius={'sm'} */}
               {/*     isDisabled */}
               {/*   > */}
-              {/*     {t(`PropertyType.${PropertyType[variable.property.type]}`)} */}
+              {/*     {t<string>(`PropertyType.${PropertyType[variable.property.type]}`)} */}
               {/*   </Chip> */}
               {/* )} */}
             </div>
@@ -118,7 +118,7 @@ export default ({
               <Select
                 size="sm"
                 dataSource={propertyValueScopes.map(s => ({
-                  label: t(`PropertyValueScope.${s.label}`),
+                  label: t<string>(`PropertyValueScope.${s.label}`),
                   value: s.value,
                 }))}
                 selectedKeys={variable?.scope == undefined ? undefined : [variable.scope.toString()]}
@@ -131,11 +131,11 @@ export default ({
                     scope,
                   });
                 }}
-                placeholder={t('Select a scope for property value')}
+                placeholder={t<string>('Select a scope for property value')}
               />
             </div>
             <div className={'text-right'}>
-              {t('Name')}
+              {t<string>('Name')}
             </div>
             <div>
               <Input
@@ -143,7 +143,7 @@ export default ({
                 isRequired
                 isClearable
                 value={variable?.name}
-                placeholder={t('Set a name for this variable')}
+                placeholder={t<string>('Set a name for this variable')}
                 onValueChange={v => {
                   setVariable({
                     ...variable,
@@ -158,11 +158,11 @@ export default ({
       <Card>
         <CardHeader>
           <div className={'flex items-center gap-1'}>
-            <div>{t('Preprocessing')}</div>
+            <div>{t<string>('Preprocessing')}</div>
             <Tooltip content={(
               <div>
-                <div>{t('If a preprocessing procedure is set, the variables will be preprocessed first before being used.')}</div>
-                <div>{t('You can add multiple preprocessing steps.')}</div>
+                <div>{t<string>('If a preprocessing procedure is set, the variables will be preprocessed first before being used.')}</div>
+                <div>{t<string>('You can add multiple preprocessing steps.')}</div>
               </div>
             )}
             >
@@ -225,7 +225,7 @@ export default ({
                 }
               }}
             >
-              {t('Add a preprocess')}
+              {t<string>('Add a preprocess')}
             </Button>
           </div>
         </CardBody>

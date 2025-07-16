@@ -59,7 +59,7 @@ export default ({
     <div className={'bulk-modification-variables'}>
       <Dialog
         visible={!!editingVariable}
-        title={t('Setting variable')}
+        title={t<string>('Setting variable')}
         width={'auto'}
         closeMode={['close', 'esc', 'mask']}
         onClose={closeDialog}
@@ -73,7 +73,7 @@ export default ({
             variableSources.includes(editingVariable.key) ||
             editingVariable.source == undefined || !variableSources.includes(VariableSource[editingVariable?.source])
           ) {
-            return Message.error(t('Invalid data'));
+            return Message.error(t<string>('Invalid data'));
           }
 
           if (editingVariable.index != undefined) {
@@ -89,12 +89,12 @@ export default ({
       >
         <div className="variable-form">
           <div className="label">
-            {t('Source')}
+            {t<string>('Source')}
           </div>
           <div className="value">
             <Select
               dataSource={variableSources.map(s => ({
-                label: t(s),
+                label: t<string>(s),
                 value: VariableSource[s],
               }))}
               value={editingVariable?.source}
@@ -108,7 +108,7 @@ export default ({
             />
           </div>
           <div className="label">
-            {t('Name')}
+            {t<string>('Name')}
           </div>
           <div className="value">
             <Input
@@ -122,7 +122,7 @@ export default ({
             />
           </div>
           <div className="label">
-            {t('Variable name')}
+            {t<string>('Variable name')}
           </div>
           <div className="value">
             <Input
@@ -138,7 +138,7 @@ export default ({
             />
           </div>
           <div className="label">
-            {t('Find')}
+            {t<string>('Find')}
           </div>
           <div className="value">
             <Input
@@ -152,7 +152,7 @@ export default ({
             />
           </div>
           <div className="label">
-            {t('Value')}
+            {t<string>('Value')}
           </div>
           <div className="value">
             <Input
@@ -178,7 +178,7 @@ export default ({
               >
                 {key}
               </SimpleLabel>
-              {t(key)}
+              {t<string>(key)}
             </div>
           );
         })}
@@ -225,7 +225,7 @@ export default ({
               align={'t'}
               v2
             >
-              [{t('Source')}] {t(VariableSource[v.source])}, [{t('Find')}] {v.find}, [{t('Value')}] {v.value}
+              [{t<string>('Source')}] {t<string>(VariableSource[v.source])}, [{t<string>('Find')}] {v.find}, [{t<string>('Value')}] {v.value}
             </Balloon.Tooltip>
           );
         })}
@@ -238,7 +238,7 @@ export default ({
             setEditingVariable({});
           }}
         >
-          {t('Add')}
+          {t<string>('Add')}
         </Button>
       )}
     </div>

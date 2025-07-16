@@ -46,14 +46,14 @@ export default ({
               alignItems: 'center',
               gap: 5,
             }}
-            title={t(y.label)}
+            title={t<string>(y.label)}
           >
             <CustomIcon type={y.asc ? 'sort-ascending' : 'sort-descending'} className={'text-lg'} />
-            {t(x.label)}
+            {t<string>(x.label)}
           </div>
         ),
         value: `${x.value}-${y.asc}`,
-        textValue: `${x.label}${t(y.asc ? 'Asc' : 'Desc')}`,
+        textValue: `${x.label}${t<string>(y.asc ? 'Asc' : 'Desc')}`,
       });
     });
 
@@ -63,14 +63,14 @@ export default ({
   return (
     <div>
       <Select
-        aria-label={t('Orders')}
+        aria-label={t<string>('Orders')}
         selectionMode={'multiple'}
         style={{
           maxWidth: 500,
           minWidth: 200,
         }}
-        placeholder={t('Select orders')}
-        // label={t('Order')}
+        placeholder={t<string>('Select orders')}
+        // label={t<string>('Order')}
         dataSource={orderDataSourceRef.current}
         selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
         size={'sm'}

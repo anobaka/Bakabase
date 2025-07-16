@@ -177,7 +177,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
             break;
           case MatchResultType.Regex:
             data.globalErrors.push(new SimpleGlobalError(PscProperty.Resource, undefined,
-              t('Resource matcher can not have a regex result(make sure you are not setting groups in regex)'), true, true));
+              t<string>('Resource matcher can not have a regex result(make sure you are not setting groups in regex)'), true, true));
             break;
         }
       }
@@ -239,15 +239,15 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
     const propertyMatchResultsOfMatcher = allPropertyMatchResults.filter(x => x.pmv.property.type == vm.propertyType) || [];
     // check required
     if (vm.isRequired && propertyMatchResultsOfMatcher.length == 0) {
-      data.globalErrors.push(new SimpleGlobalError(PscProperty.fromPscType(vm.propertyType), undefined, t('Missing'), false, true));
+      data.globalErrors.push(new SimpleGlobalError(PscProperty.fromPscType(vm.propertyType), undefined, t<string>('Missing'), false, true));
     }
 
     // check prerequisites
     const missingPrerequisites = vm.prerequisites.filter(p => allPropertyMatchResults.every(m => m.pmv.property.type != p));
     let missingPrerequisitesTip: string | undefined;
     if (missingPrerequisites.length > 0) {
-      missingPrerequisitesTip = t('[{{matchers}}] (is)are required to set this property', {
-        matchers: missingPrerequisites.map(p => t(PscPropertyType[p])).join(','),
+      missingPrerequisitesTip = t<string>('[{{matchers}}] (is)are required to set this property', {
+        matchers: missingPrerequisites.map(p => t<string>(PscPropertyType[p])).join(','),
       });
       if (propertyMatchResultsOfMatcher.length > 0) {
         propertyMatchResultsOfMatcher.forEach(r => {
@@ -283,8 +283,8 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
           }
         }
         if (invalidOrderResultLabels.length > 0) {
-          errors.push(t(`{{target}} should come ${direction == 1 ? 'after' : 'before'} {{invalidMatchers}}`, {
-            target: t(PscPropertyType[vm.propertyType]),
+          errors.push(t<string>(`{{target}} should come ${direction == 1 ? 'after' : 'before'} {{invalidMatchers}}`, {
+            target: t<string>(PscPropertyType[vm.propertyType]),
             invalidMatchers: invalidOrderResultLabels.join(','),
           }));
         }
@@ -300,7 +300,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
       log(`Checking result ${pmr.indexByProperty} of ${pmr.pmv.property.toString(t, pmr.indexByProperty)}`, r);
       // check mismatched values
       if (r == undefined) {
-        data.globalErrors.push(new SimpleGlobalError(pmr.pmv.property, pmr.indexByProperty, t('Match failed'), true, pmr.pmv.value.valueType != ResourceMatcherValueType.Regex));
+        data.globalErrors.push(new SimpleGlobalError(pmr.pmv.property, pmr.indexByProperty, t<string>('Match failed'), true, pmr.pmv.value.valueType != ResourceMatcherValueType.Regex));
       } else {
         if (r.type == MatchResultType.Layer) {
           if (r.index != undefined) {
@@ -358,7 +358,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
               r.text = vm.propertyType == PscPropertyType.Resource ? resourceRegexTargetText : commonRegexTargetText;
               r.available = true;
             } else {
-              r.errors.push(t('Match target is not found'));
+              r.errors.push(t<string>('Match target is not found'));
             }
           }
           const errors = getInvalidOrderMatcherTips(i);
@@ -394,7 +394,7 @@ export const BuildPscContext = (segments: string[], pmvs: IPscPropertyMatcherVal
           sm.errors.push(missingPrerequisitesTip!);
         }
       } else {
-        sm.errors.push(t('Readonly'));
+        sm.errors.push(t<string>('Readonly'));
       }
 
       ds.selectiveMatchers.push(sm);

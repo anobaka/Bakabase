@@ -46,7 +46,7 @@ export default ({
     <Modal
       size={'lg'}
       visible={visible}
-      title={t('Custom property')}
+      title={t<string>('Custom property')}
       onClose={close}
       footer={{
         actions: ['ok', 'cancel'],

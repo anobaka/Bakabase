@@ -127,19 +127,19 @@ export default ({
           });
       }}
     >
-      {t('I need choose files with specific types as resources')}
+      {t<string>('I need choose files with specific types as resources')}
     </Button>
   );
 
   return (
     <div className="file-resource-helper psc-block">
-      <div className="title">{t('Match by file extensions')}</div>
+      <div className="title">{t<string>('Match by file extensions')}</div>
       {fileResourceExtensions == undefined ? (
         <>
           <Message type={'warning'}>
             <>
-              {t('Please pay attention, you marked a file as a resource. We\'ll treat all files or folders with same path layer as resources by default. It may not be your actual design(if you chose a movie and its subtitle file has the same path layer, then the subtitle file will be another resource).')}
-              {t('If you want to mark resources with specific file types, you can click button below to load all file types and select some of them.')}
+              {t<string>('Please pay attention, you marked a file as a resource. We\'ll treat all files or folders with same path layer as resources by default. It may not be your actual design(if you chose a movie and its subtitle file has the same path layer, then the subtitle file will be another resource).')}
+              {t<string>('If you want to mark resources with specific file types, you can click button below to load all file types and select some of them.')}
             </>
           </Message>
           {rootPathIsSelected ? loaderBtn : (
@@ -148,7 +148,7 @@ export default ({
               triggerType={'hover'}
               align={'t'}
             >
-              {t('Please select root path first.')}
+              {t<string>('Please select root path first.')}
             </Balloon.Tooltip>
           )}
         </>
@@ -156,10 +156,10 @@ export default ({
         <>
           <Message type={'notice'}>
             <>
-              {t('You can mark resources by file types.')}
+              {t<string>('You can mark resources by file types.')}
               {fileResourceExtensionCandidates.length > 0
-                ? `${t('You selected {{count}} file types:', { count: fileResourceExtensionCandidates.length })}${fileResourceExtensionCandidates.join(', ')}`
-                : t('None of file types has been selected, we\'ll treat all files or folders with same path layer as your file as resources.')}
+                ? `${t<string>('You selected {{count}} file types:', { count: fileResourceExtensionCandidates.length })}${fileResourceExtensionCandidates.join(', ')}`
+                : t<string>('None of file types has been selected, we\'ll treat all files or folders with same path layer as your file as resources.')}
             </>
           </Message>
           <Tag.Group style={{ marginTop: 5 }}>
@@ -188,8 +188,8 @@ export default ({
                       if (e.ext == currentFileExt) {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t('You are deselecting extension same as file you selected'),
-                          children: t('After your deselection, the current file will not be treat as a resource, and you need reset the Resource part from path segments, are you sure to remove file type: {{ext}}?', { ext: currentFileExt }),
+                          title: t<string>('You are deselecting extension same as file you selected'),
+                          children: t<string>('After your deselection, the current file will not be treat as a resource, and you need reset the Resource part from path segments, are you sure to remove file type: {{ext}}?', { ext: currentFileExt }),
                           onOk: () => async () => {
                             candidates.splice(idx, 1);
                             apply(candidates);
@@ -212,7 +212,7 @@ export default ({
           </Tag.Group>
         </>
       ) : <>
-        {t('No known file type is found.')}
+        {t<string>('No known file type is found.')}
       </>}
     </div>
   );

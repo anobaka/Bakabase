@@ -47,7 +47,7 @@ export default () => {
           isCompact
         >
           <TableHeader>
-            <TableColumn width={200}>{t('Contact us')}</TableColumn>
+            <TableColumn width={200}>{t<string>('Contact us')}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -55,7 +55,7 @@ export default () => {
               return (
                 <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
                   <TableCell>
-                    {t(c.label)}
+                    {t<string>(c.label)}
                   </TableCell>
                   <TableCell>
                     {c.value}

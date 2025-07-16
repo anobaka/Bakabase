@@ -135,7 +135,7 @@ function ResourceEnhancementsDialog({
             dbRv = new Dayjs(rv.playedAt);
             break;
           default:
-            return t('Unsupported reserved property type: {{type}}', { type: e.propertyId });
+            return t<string>('Unsupported reserved property type: {{type}}', { type: e.propertyId });
         }
         return (
           <PropertyValueRenderer
@@ -162,14 +162,14 @@ function ResourceEnhancementsDialog({
       }
       case PropertyPool.Internal:
       case PropertyPool.All:
-        return t('Unsupported property type: {{type}}', { type: e.propertyPool });
+        return t<string>('Unsupported property type: {{type}}', { type: e.propertyPool });
     }
   };
 
   return (
     <Modal
       size={'full'}
-      title={t('Enhancement records')}
+      title={t<string>('Enhancement records')}
       defaultVisible
       footer={{
         actions: ['ok'],
@@ -178,7 +178,7 @@ function ResourceEnhancementsDialog({
     >
       <div className={'flex items-center gap-2'}>
         <div>
-          {t('Path of resource')}
+          {t<string>('Path of resource')}
         </div>
         <Snippet size={'sm'} symbol={''}>{resource.path}</Snippet>
       </div>
@@ -204,18 +204,18 @@ function ResourceEnhancementsDialog({
                       radius={'sm'}
                     >
                       <div className={'flex items-center gap-1'}>
-                        {t('Data created at')}
+                        {t<string>('Data created at')}
                         <Tooltip
                           color={'secondary'}
                           className={'max-w-[500px]'}
                           placement={'top'}
-                          content={t('The data has been created, indicating that the enhancer has completed the data retrieval process, which is typically done by accessing third-party sites or executing specific internal logic. You can check the status of the data retrieval in the table below. Frequent repeated data retrieval attempts may result in access denial from third-party services.')}
+                          content={t<string>('The data has been created, indicating that the enhancer has completed the data retrieval process, which is typically done by accessing third-party sites or executing specific internal logic. You can check the status of the data retrieval in the table below. Frequent repeated data retrieval attempts may result in access denial from third-party services.')}
                         >
                           <QuestionCircleOutlined className={'text-base'} />
                         </Tooltip>
                       </div>
                     </Chip>
-                    {e.contextCreatedAt ?? t('None')}
+                    {e.contextCreatedAt ?? t<string>('None')}
                   </div>
                   <div className={'flex items-center gap-2'}>
                     <Chip
@@ -225,21 +225,21 @@ function ResourceEnhancementsDialog({
                       radius={'sm'}
                     >
                       <div className={'flex items-center gap-1'}>
-                        {t('Data applied at')}
+                        {t<string>('Data applied at')}
                         <Tooltip
                           color={'secondary'}
                           className={'max-w-[500px]'}
                           placement={'top'}
-                          content={t('The application of data indicates that the retrieved data has been successfully converted into attribute values. This step is conducted entirely within the program, without involving any third-party data exchange.')}
+                          content={t<string>('The application of data indicates that the retrieved data has been successfully converted into attribute values. This step is conducted entirely within the program, without involving any third-party data exchange.')}
                         >
                           <QuestionCircleOutlined className={'text-base'} />
                         </Tooltip>
                       </div>
                     </Chip>
-                    {e.contextAppliedAt ?? t('None')}
+                    {e.contextAppliedAt ?? t<string>('None')}
                   </div>
                   <Tooltip
-                    content={t('Retrieve data then apply data. To reduce the possibility of access denial from third-party services, it is recommended to apply data only after all data has been retrieved. Configuring enhancer options in category won\'t affect the data retrieval process, it only affects the data applying process.')}
+                    content={t<string>('Retrieve data then apply data. To reduce the possibility of access denial from third-party services, it is recommended to apply data only after all data has been retrieved. Configuring enhancer options in category won\'t affect the data retrieval process, it only affects the data applying process.')}
                     color={'secondary'}
                     className={'max-w-[500px]'}
                   >
@@ -257,13 +257,13 @@ function ResourceEnhancementsDialog({
                       }}
                     >
                       <SyncOutlined className={'text-base'} />
-                      {t(e.status == EnhancementRecordStatus.ContextApplied ? 'Re-enhance now' : 'Enhance now')}
+                      {t<string>(e.status == EnhancementRecordStatus.ContextApplied ? 'Re-enhance now' : 'Enhance now')}
                     </Button>
                   </Tooltip>
                   {(e.status == EnhancementRecordStatus.ContextApplied || e.status == EnhancementRecordStatus.ContextCreated) && (
                     <Tooltip
                       color={'secondary'}
-                      content={t('Apply the data to property values of the resource.')}
+                      content={t<string>('Apply the data to property values of the resource.')}
                     >
                       <Button
                         size={'sm'}
@@ -279,7 +279,7 @@ function ResourceEnhancementsDialog({
                         }}
                       >
                         <ApiOutlined className={'text-base'} />
-                        {t('Apply data')}
+                        {t<string>('Apply data')}
                       </Button>
                     </Tooltip>
                   )}
@@ -296,7 +296,7 @@ function ResourceEnhancementsDialog({
                       });
                     }}
                   >
-                    {t('Check configuration')}
+                    {t<string>('Check configuration')}
                   </Button>
                 </div>
               </div>
@@ -310,14 +310,14 @@ function ResourceEnhancementsDialog({
                       className={'opacity-60'}
                     >
                       <ExclamationCircleOutlined className={'text-sm mr-1'} />
-                      {t('No data retrieved for fixed targets, please check configuration if necessary')}
+                      {t<string>('No data retrieved for fixed targets, please check configuration if necessary')}
                     </Chip>
                   )}
                   <Table isStriped className={'break-all'}>
                     <TableHeader>
-                      <TableColumn>{t('Target')}</TableColumn>
-                      <TableColumn>{t('Raw data')}</TableColumn>
-                      <TableColumn>{t('Generated custom property value')}</TableColumn>
+                      <TableColumn>{t<string>('Target')}</TableColumn>
+                      <TableColumn>{t<string>('Raw data')}</TableColumn>
+                      <TableColumn>{t<string>('Generated custom property value')}</TableColumn>
                     </TableHeader>
                     <TableBody>
                       {targets.map((e) => {
@@ -343,14 +343,14 @@ function ResourceEnhancementsDialog({
                           className={'opacity-60'}
                         >
                           <ExclamationCircleOutlined className={'text-sm mr-1'} />
-                          {t('No data retrieved for dynamic targets, please check configuration if necessary')}
+                          {t<string>('No data retrieved for dynamic targets, please check configuration if necessary')}
                         </Chip>
                       )}
                       <Table isStriped className={'break-all'}>
                         <TableHeader>
                           <TableColumn>{dt.targetName}({dt.enhancements?.length ?? 0})</TableColumn>
-                          <TableColumn>{t('Raw data')}</TableColumn>
-                          <TableColumn>{t('Generated custom property value')}</TableColumn>
+                          <TableColumn>{t<string>('Raw data')}</TableColumn>
+                          <TableColumn>{t<string>('Generated custom property value')}</TableColumn>
                         </TableHeader>
                         <TableBody>
                           {dt.enhancements?.map((e) => {

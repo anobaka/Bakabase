@@ -16,7 +16,7 @@ interface PreviewListProps {
 const PreviewList: React.FC<PreviewListProps> = ({ results, showFullPaths, commonPrefix }) => {
   const { t } = useTranslation();
   if (!results.length) {
-    return <div className="text-gray-400 text-center py-5">{t('FileNameModifier.NoPreviewResults')}</div>;
+    return <div className="text-gray-400 text-center py-5">{t<string>('FileNameModifier.NoPreviewResults')}</div>;
   }
   return (
     <div className="preview-list min-h-0 max-h-full overflow-y-auto">

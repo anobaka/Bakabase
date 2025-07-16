@@ -37,7 +37,7 @@ import {
   StandardValueType,
 } from '@/sdk/constants';
 import type { TagValue } from '@/components/StandardValue/models';
-import store from '@/store';
+import { useUiOptionsStore } from '@/models/options';
 import type { PlayableFilesRef } from '@/components/Resource/components/PlayableFiles';
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 import ContextMenuItems from '@/components/Resource/components/ContextMenuItems';
@@ -109,7 +109,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   renderedTimes.current += 1;
   const tasksRef = useRef<BTask[] | undefined>();
 
-  const uiOptions = store.useModelState('uiOptions');
+  const uiOptions = useUiOptionsStore(state => state.data);
 
   const forceUpdate = useUpdate();
 
@@ -210,27 +210,27 @@ const Resource = React.forwardRef((props: Props, ref) => {
             <PushpinOutlined />
           )}
           {resource.tags.includes(ResourceTag.IsParent) && (
-            <Tooltip content={t('This is a parent resource')}>
+            <Tooltip content={t<string>('This is a parent resource')}>
               <ApartmentOutlined className={''} />
             </Tooltip>
           )}
           {resource.tags.includes(ResourceTag.PathDoesNotExist) && (
-            <Tooltip content={t('File does not exist')}>
+            <Tooltip content={t<string>('File does not exist')}>
               <FileUnknownOutlined className={'text-warning'} />
             </Tooltip>
           )}
           {resource.tags.includes(ResourceTag.UnknownMediaLibrary) && (
-            <Tooltip content={t('Unknown media library')}>
+            <Tooltip content={t<string>('Unknown media library')}>
               <DisconnectOutlined className={'text-warning'} />
             </Tooltip>
           )}
           {resource.playedAt && (
-            <Tooltip content={t('Last played at {{dt}}', { dt: resource.playedAt })}>
+            <Tooltip content={t<string>('Last played at {{dt}}', { dt: resource.playedAt })}>
               <HistoryOutlined />
             </Tooltip>
           )}
           {uiOptions.resource?.displayResourceId && (
-            <Tooltip content={t('Resource ID')}>
+            <Tooltip content={t<string>('Resource ID')}>
               <Chip
                 size={'sm'}
                 variant={'flat'}
@@ -257,7 +257,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           PortalComponent={({ onClick }) => (
             <div className={styles.play}>
               <Tooltip
-                content={t('Use player to play')}
+                content={t<string>('Use player to play')}
               >
                 <Button
                   onClick={onClick}

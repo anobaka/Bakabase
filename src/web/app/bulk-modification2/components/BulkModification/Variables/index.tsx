@@ -34,8 +34,8 @@ export default ({
                   createPortal(
                     Modal, {
                       defaultVisible: true,
-                      title: t('Delete variable'),
-                      children: t('Are you sure to delete variable {{name}}?', { name: v.name }),
+                      title: t<string>('Delete variable'),
+                      children: t<string>('Are you sure to delete variable {{name}}?', { name: v.name }),
                       onOk: () => {
                         const nvs = variables.filter((v, idx) => idx != i);
                         setVariables(nvs);
@@ -80,7 +80,7 @@ export default ({
           });
         }}
       >
-        {t('Add')}
+        {t<string>('Add')}
       </Button>
     </div>
   );

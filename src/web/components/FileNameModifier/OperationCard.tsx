@@ -60,7 +60,7 @@ const OperationCard: React.FC<OperationCardProps> = ({
     <Card className="mb-2 p-3 operation-card">
       <div className="flex items-center gap-2 mb-2">
         <Select
-          dataSource={TargetTypeOptions.map(opt => ({ label: t(opt.label), value: opt.value }))}
+          dataSource={TargetTypeOptions.map(opt => ({ label: t<string>(opt.label), value: opt.value }))}
           selectedKeys={[operation.target?.toString() || '']}
           onSelectionChange={keys => {
             const key = parseInt(Array.from(keys)[0] as string);
@@ -70,11 +70,11 @@ const OperationCard: React.FC<OperationCardProps> = ({
           }}
           isRequired={true}
           className="w-[240px]"
-          label={t('FileNameModifier.TargetType')}
-          placeholder={t('FileNameModifier.TargetTypePlaceholder')}
+          label={t<string>('FileNameModifier.TargetType')}
+          placeholder={t<string>('FileNameModifier.TargetTypePlaceholder')}
         />
         <Select
-          dataSource={fileNameModifierOperationTypes.map(opt => ({ label: t(`FileNameModifier.OperationType.${opt.label}`), value: opt.value }))}
+          dataSource={fileNameModifierOperationTypes.map(opt => ({ label: t<string>(`FileNameModifier.OperationType.${opt.label}`), value: opt.value }))}
           selectedKeys={[operation.operation?.toString() || '']}
           onSelectionChange={keys => {
             const key = Array.from(keys)[0] as string;
@@ -85,8 +85,8 @@ const OperationCard: React.FC<OperationCardProps> = ({
           }}
           isRequired={true}
           className="w-[180px]"
-          label={t('FileNameModifier.OperationType')}
-          placeholder={t('FileNameModifier.OperationTypePlaceholder')}
+          label={t<string>('FileNameModifier.OperationType')}
+          placeholder={t<string>('FileNameModifier.OperationTypePlaceholder')}
         />
       </div>
       {/* 错误提示 */}

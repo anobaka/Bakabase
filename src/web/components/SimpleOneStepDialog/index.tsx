@@ -83,7 +83,7 @@ const SimpleOneStepDialog = (props: ISimpleOneStepDialogProps) => {
       message = result.message;
     }
     if (!success && (message === undefined || message === null)) {
-      message = t('Error');
+      message = t<string>('Error');
     }
 
     setProcessing(false);

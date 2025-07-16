@@ -25,7 +25,6 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import DeleteConfirmationModal from '@/pages/FileProcessor/RootTreeEntry/components/DeleteConfirmationModal';
 import WrapModal from '@/pages/FileProcessor/RootTreeEntry/components/WrapModal';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
-import store from '@/store';
 import { UiTheme } from '@/sdk/constants';
 import ExtractModal from '@/pages/FileProcessor/RootTreeEntry/components/ExtractModal';
 
@@ -352,7 +351,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           }
           size={'sm'}
           radius={'none'}
-          placeholder={t('You can type a path here')}
+          placeholder={t<string>('You can type a path here')}
           value={inputValue}
           className={'grow'}
           classNames={{
@@ -374,7 +373,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           startContent={<SearchOutlined className={'text-base'} />}
           size={'sm'}
           radius={'none'}
-          placeholder={t('Filter')}
+          placeholder={t<string>('Filter')}
           className={'w-1/4'}
           value={filterInputValue}
           onValueChange={v => setFilterInputValue(v)}
@@ -388,7 +387,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(({
           }}
         >
           <FolderOpenOutlined className={'text-base'} />
-          {t('Recycle bin')}
+          {t<string>('Recycle bin')}
         </Button>
       </div>
       <div className={'grow min-h-0'}>

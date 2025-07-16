@@ -88,8 +88,8 @@ export default ({
                         createPortal(
                           Modal, {
                             defaultVisible: true,
-                            title: t('Delete current process'),
-                            children: t('Are you sure you want to delete this process and all its process steps?'),
+                            title: t<string>('Delete current process'),
+                            children: t<string>('Are you sure you want to delete this process and all its process steps?'),
                             onOk: async () => {
                               const nps = processes.filter((_, j) => j !== i);
                               setProcesses(nps);
@@ -150,7 +150,7 @@ export default ({
             });
           }}
         >
-          {t('Add')}
+          {t<string>('Add')}
         </Button>
       </div>
     </div>

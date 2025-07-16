@@ -77,7 +77,7 @@ export default () => {
     <div>
       <Modal
         visible={!!editingGroup}
-        title={t('Editing extension group')}
+        title={t<string>('Editing extension group')}
         onClose={() => setEditingGroup(undefined)}
         onOk={async () => {
           let r: BootstrapModelsResponseModelsBaseResponse;
@@ -98,7 +98,7 @@ export default () => {
         }}
       >
         <Input
-          label={t('Name')}
+          label={t<string>('Name')}
           onValueChange={v => {
             setEditingGroup({
               ...editingGroup!,
@@ -110,8 +110,8 @@ export default () => {
         />
         <div>
           <Textarea
-            label={t('Extensions')}
-            placeholder={t('Separate by space or newline')}
+            label={t<string>('Extensions')}
+            placeholder={t<string>('Separate by space or newline')}
             value={editingExtensionsText}
             onValueChange={v => {
               setEditingExtensionsText(v);
@@ -145,14 +145,14 @@ export default () => {
             });
           }}
         >
-          {t('Add a group')}
+          {t<string>('Add a group')}
         </Button>
       </div>
       <Table isStriped removeWrapper className={'mt-2'}>
         <TableHeader>
-          <TableColumn>{t('Name')}</TableColumn>
-          <TableColumn>{t('Extensions')}</TableColumn>
-          <TableColumn>{t('Operations')}</TableColumn>
+          <TableColumn>{t<string>('Name')}</TableColumn>
+          <TableColumn>{t<string>('Extensions')}</TableColumn>
+          <TableColumn>{t<string>('Operations')}</TableColumn>
         </TableHeader>
         <TableBody>
           {groups.map((eg, i) => {
@@ -197,8 +197,8 @@ export default () => {
                       onPress={() => {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t('Sure to delete?'),
-                          children: t('Be careful, this operation can not be undone'),
+                          title: t<string>('Sure to delete?'),
+                          children: t<string>('Be careful, this operation can not be undone'),
                           onOk: async () => {
                             await BApi.extensionGroup.deleteExtensionGroup(eg.id);
                             groups.splice(i, 1);

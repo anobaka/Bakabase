@@ -45,7 +45,7 @@ export default ({
       defaultVisible
       size={'xl'}
       onDestroyed={onDestroyed}
-      title={t(groupInternal ? 'Group internal items' : 'Group {{count}} items', { count: entries.length })}
+      title={t<string>(groupInternal ? 'Group internal items' : 'Group {{count}} items', { count: entries.length })}
       onOk={async () => {
         await BApi.file.mergeFileSystemEntries({
           paths: entries.map(e => e.path),
@@ -55,7 +55,7 @@ export default ({
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          children: `${t('Group')}(Enter)`,
+          children: `${t<string>('Group')}(Enter)`,
           autoFocus: true,
           disabled: !preview || preview.length == 0,
         },
@@ -86,7 +86,7 @@ export default ({
             ) : <FileSystemEntryChangeExampleItem
               type={'error'}
               layer={1}
-              text={t('Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped')}
+              text={t<string>('Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped')}
             />}
             <FileSystemEntryChangeExampleMiscellaneousItem parent={p.rootPath} indent={1} />
           </div>
@@ -94,7 +94,7 @@ export default ({
       }) : (
         <div className={'flex items-center gap-2'}>
           <Spinner />
-          {t('Calculating changes...')}
+          {t<string>('Calculating changes...')}
         </div>
       )}
     </Modal>

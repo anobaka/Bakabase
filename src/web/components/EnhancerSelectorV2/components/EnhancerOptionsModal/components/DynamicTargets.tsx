@@ -98,11 +98,11 @@ export default (props: Props) => {
                     <ApartmentOutlined className={'text-medium'} />
                   )}
                   >
-                    {t('This is not a fixed enhancement target, which will be replaced with other content when data is collected')}
+                    {t<string>('This is not a fixed enhancement target, which will be replaced with other content when data is collected')}
                   </Popover>
                 </TableColumn>
                 <TableColumn width={'25%'} className={'flex items-center gap-1'}>
-                  {t('Bind property')}
+                  {t<string>('Bind property')}
                   {(subOptions.length > 0) && (
                     <PropertiesMatcher
                       properties={enhancer.targets.map(td => ({
@@ -128,11 +128,11 @@ export default (props: Props) => {
                 </TableColumn>
                 <TableColumn width={'25%'}>
                   <div className={'flex items-center gap-1'}>
-                    {t('Other options')}
+                    {t<string>('Other options')}
                     <OtherOptionsTip />
                   </div>
                 </TableColumn>
-                <TableColumn>{t('Operations')}</TableColumn>
+                <TableColumn>{t<string>('Operations')}</TableColumn>
               </TableHeader>
               {/* @ts-ignore */}
               <TableBody />
@@ -168,7 +168,7 @@ export default (props: Props) => {
               color={'success'}
               onPress={() => {
                 const currentTargets = subOptions.filter(x => x.dynamicTarget != undefined).map(x => x.dynamicTarget!);
-                const nextTarget = generateNextWithPrefix(t('Target'), currentTargets);
+                const nextTarget = generateNextWithPrefix(t<string>('Target'), currentTargets);
                 const newOptions = createEnhancerTargetOptions(descriptor);
                 newOptions.dynamicTarget = nextTarget;
                 subOptions.push(newOptions);
@@ -176,7 +176,7 @@ export default (props: Props) => {
               }}
             >
               <PlusCircleOutlined className={'text-sm'} />
-              {t('Specify dynamic target')}
+              {t<string>('Specify dynamic target')}
             </Button>
           </div>
         );

@@ -58,11 +58,11 @@ export default ({
 
   const proxies = [
     {
-      label: t('Do not use proxy'),
+      label: t<string>('Do not use proxy'),
       value: ProxyMode.DoNotUse.toString(),
     },
     {
-      label: t('Use system proxy'),
+      label: t<string>('Use system proxy'),
       value: ProxyMode.UseSystem.toString(),
     },
     ...(networkOptions.customProxies?.map(c => ({
@@ -122,7 +122,7 @@ export default ({
                   console.log(key, keys, patches);
                   BApi.options.patchNetworkOptions(patches).then(x => {
                     if (!x.code) {
-                      toast.success(t('Saved'));
+                      toast.success(t<string>('Saved'));
                     }
                   });
                 }}
@@ -137,16 +137,16 @@ export default ({
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: 'lg',
-                  title: t('Add a proxy'),
+                  title: t<string>('Add a proxy'),
                   children: (
                     <Input
-                      placeholder={t('You can set a proxy for network requests, such as socks5://127.0.0.1:18888')}
+                      placeholder={t<string>('You can set a proxy for network requests, such as socks5://127.0.0.1:18888')}
                       onValueChange={v => p = v}
                     />
                   ),
                   onOk: async () => {
                     if (p == undefined || p.length == 0) {
-                      Notification.error(t('Invalid Data'));
+                      Notification.error(t<string>('Invalid Data'));
                       throw new Error('Invalid data');
                     }
                     await BApi.options.patchNetworkOptions({
@@ -159,7 +159,7 @@ export default ({
                 });
               }}
             >
-              {t('Add')}
+              {t<string>('Add')}
             </Button>
           </div>
         );
@@ -226,21 +226,21 @@ export default ({
               formatOptions={{ useGrouping: false }}
               min={minPort}
               max={maxPort}
-              placeholder={t('Port number')}
+              placeholder={t<string>('Port number')}
               className={'max-w-[320px]'}
               description={(
                 <div>
                   <div>
-                    {t('Current listening port is {{port}}', { port: appContext?.listeningAddresses?.[0]?.split(':').slice(-1)[0] })}
+                    {t<string>('Current listening port is {{port}}', { port: appContext?.listeningAddresses?.[0]?.split(':').slice(-1)[0] })}
                   </div>
                   <div>
-                    {t('The configurable port range is {{min}}-{{max}}', {
+                    {t<string>('The configurable port range is {{min}}-{{max}}', {
                       min: minPort,
                       max: maxPort,
                     })}
                   </div>
                   <div>
-                    {t('Changes will take effect after restarting the application')}
+                    {t<string>('Changes will take effect after restarting the application')}
                   </div>
                 </div>
               )}
@@ -261,13 +261,13 @@ export default ({
 
   return (
     <div className="group">
-      {/* <Title title={i18n.t('Other settings')} /> */}
+      {/* <Title title={i18n.t<string>('Other settings')} /> */}
       <div className="settings">
         <Table
           removeWrapper
         >
           <TableHeader>
-            <TableColumn width={200}>{t('Other settings')}</TableColumn>
+            <TableColumn width={200}>{t<string>('Other settings')}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -280,13 +280,13 @@ export default ({
                       alignItems: 'center',
                     }}
                     >
-                      {t(c.label)}
+                      {t<string>(c.label)}
                       {c.tip && (
                         <>
                           &nbsp;
                           <Tooltip
                             placement={'right'}
-                            content={t(c.tip)}
+                            content={t<string>(c.tip)}
                           >
                             <CustomIcon type={'question-circle'} className={'text-base'} />
                           </Tooltip>
@@ -316,7 +316,7 @@ export default ({
         {/*   <Table.Column */}
         {/*     dataIndex={'label'} */}
         {/*     width={300} */}
-        {/*     title={i18n.t('Other setting')} */}
+        {/*     title={i18n.t<string>('Other setting')} */}
         {/*     cell={(l, i, r) => { */}
         {/*       return ( */}
         {/*         <div style={{ */}
@@ -324,7 +324,7 @@ export default ({
         {/*           alignItems: 'center', */}
         {/*         }} */}
         {/*         > */}
-        {/*           {i18n.t(l)} */}
+        {/*           {i18n.t<string>(l)} */}
         {/*           {r.tip && ( */}
         {/*             <> */}
         {/*               &nbsp; */}
@@ -332,7 +332,7 @@ export default ({
         {/*                 align={'r'} */}
         {/*                 trigger={<CustomIcon type={'question-circle'} />} */}
         {/*               > */}
-        {/*                 {i18n.t(r.tip)} */}
+        {/*                 {i18n.t<string>(r.tip)} */}
         {/*               </Balloon.Tooltip> */}
         {/*             </> */}
         {/*           )} */}
@@ -342,7 +342,7 @@ export default ({
         {/*   /> */}
         {/*   <Table.Column */}
         {/*     dataIndex={'renderValue'} */}
-        {/*     title={i18n.t('Value')} */}
+        {/*     title={i18n.t<string>('Value')} */}
         {/*     cell={(render, i, r) => (render ? render() : r.value)} */}
         {/*   /> */}
         {/* </Table> */}

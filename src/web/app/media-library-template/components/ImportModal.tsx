@@ -120,13 +120,13 @@ export default ({ onImported }: Props) => {
   return (
     <Modal
       defaultVisible
-      title={t('Import media library template')}
+      title={t<string>('Import media library template')}
       size={'lg'}
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
           isDisabled: !shareCode && !validate(propertyConversionsMap, extensionGroupConversionsMap, configuration),
-          children: t('Import'),
+          children: t<string>('Import'),
         },
       }}
       onOk={async () => {
@@ -134,20 +134,20 @@ export default ({ onImported }: Props) => {
           const importConfigurationResp = await BApi.mediaLibraryTemplate
             .getMediaLibraryTemplateImportConfiguration(shareCode!);
           if (importConfigurationResp.code) {
-            const msg = `${t('Failed to get media library template import configuration')}:${importConfigurationResp.message}`;
+            const msg = `${t<string>('Failed to get media library template import configuration')}:${importConfigurationResp.message}`;
             toast.error(msg);
             throw new Error(msg);
           } else {
             setConfiguration(importConfigurationResp.data!);
             if (!importConfigurationResp.data!.noNeedToConfigure) {
               await initDataForImport();
-              throw new Error(t(MissingDataMessage));
+              throw new Error(t<string>(MissingDataMessage));
             }
           }
         }
         const importResult = await $import();
         if (importResult.code) {
-          const msg = `${t('Failed to import media library template')}:${importResult.message}`;
+          const msg = `${t<string>('Failed to import media library template')}:${importResult.message}`;
           toast.error(msg);
           throw new Error(msg);
         } else {
@@ -161,8 +161,8 @@ export default ({ onImported }: Props) => {
           isDisabled={!!configuration}
           isRequired
           onValueChange={setShareCode}
-          label={t('Share code')}
-          placeholder={t('Paste share code here')}
+          label={t<string>('Share code')}
+          placeholder={t<string>('Paste share code here')}
         />
         {configuration && (
           <Button
@@ -175,20 +175,20 @@ export default ({ onImported }: Props) => {
             }}
           >
             <IoSync />
-            {t('Change share code')}
+            {t<string>('Change share code')}
           </Button>
         )}
       </div>
       {configuration && !configuration.noNeedToConfigure && (
         <div className={'flex flex-col gap-2'}>
           <div>
-            <Alert color={'warning'} title={t(MissingDataMessage)} />
+            <Alert color={'warning'} title={t<string>(MissingDataMessage)} />
           </div>
           {configuration.uniqueCustomProperties && configuration.uniqueCustomProperties.length > 0 && (
             <div className={'flex flex-col gap-2'}>
               <div className={'flex items-center gap-1 text-lg font-bold'}>
                 <TbSectionSign className={''} />
-                {t('New properties')}
+                {t<string>('New properties')}
                 <PropertiesMatcher
                   properties={configuration.uniqueCustomProperties.map(p => ({ type: p.type, name: p.name }))}
                   onValueChanged={ps => {
@@ -268,7 +268,7 @@ export default ({ onImported }: Props) => {
             <div className={'flex flex-col gap-2'}>
               <div className={'flex items-center gap-1 text-lg font-bold'}>
                 <TbSectionSign className={''} />
-                {t('New extension groups')}
+                {t<string>('New extension groups')}
               </div>
               <div>
                 <div
@@ -301,7 +301,7 @@ export default ({ onImported }: Props) => {
                           })}
                         </div>
                         <TiChevronRightOutline className={'text-medium'} />
-                        <Tooltip content={t('Automatically process')}>
+                        <Tooltip content={t<string>('Automatically process')}>
                           <Button
                             color={'primary'}
                             isIconOnly
@@ -318,8 +318,8 @@ export default ({ onImported }: Props) => {
                               } else {
                                 createPortal(Modal, {
                                   defaultVisible: true,
-                                  title: t('No proper extension group found'),
-                                  children: t('Should we create a new extension group for this?'),
+                                  title: t<string>('No proper extension group found'),
+                                  children: t<string>('Should we create a new extension group for this?'),
                                   onOk: async () => {
                                     const r = await BApi.extensionGroup.addExtensionGroup({
                                       name: eg.name,
@@ -351,7 +351,7 @@ export default ({ onImported }: Props) => {
                             size={'sm'}
                             isMultiline
                             variant={'bordered'}
-                            placeholder={t('Select an extension group manually')}
+                            placeholder={t<string>('Select an extension group manually')}
                             selectedKeys={conversion?.toExtensionGroupId
                               ? [conversion.toExtensionGroupId.toString()] : undefined}
                             onSelectionChange={selection => {

@@ -34,9 +34,9 @@ export default ({
       variant={'flat'}
     >
       <div className={'flex items-center gap-1'}>
-        {t('Enhancer')}
+        {t<string>('Enhancer')}
         <EnhancerIcon id={enhancer.id} />
-        {t(enhancer.name)}
+        {t<string>(enhancer.name)}
       </div>
     </Chip>
   );
@@ -54,7 +54,7 @@ export default ({
         subject={subject ?? (
           <>
             {enhancerChip}
-            {t(SubjectLabels.EnhancerReApply)}
+            {t<string>(SubjectLabels.EnhancerReApply)}
           </>
         )}
         isSelected={options?.reApply}
@@ -67,7 +67,7 @@ export default ({
         subject={subject ?? (
           <>
             {enhancerChip}
-            {t(SubjectLabels.EnhancerReEnhance)}
+            {t<string>(SubjectLabels.EnhancerReEnhance)}
           </>
         )}
         isSelected={options?.reEnhance}

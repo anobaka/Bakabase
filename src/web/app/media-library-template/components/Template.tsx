@@ -91,7 +91,7 @@ export default ({
   const putTemplate = async (tpl: MediaLibraryTemplate) => {
     const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(tpl.id, tpl);
     if (!r.code) {
-      toast.success(t('Saved successfully'));
+      toast.success(t<string>('Saved successfully'));
       onChange?.();
       forceUpdate();
     }
@@ -114,8 +114,8 @@ export default ({
       <div className={'inline-flex items-center gap-2'}>
         <Select
           className={'min-w-[320px]'}
-          label={`${t('Child template')} (${t('optional')})`}
-          placeholder={t('Select a child template')}
+          label={`${t<string>('Child template')} (${t<string>('optional')})`}
+          placeholder={t<string>('Select a child template')}
           size={'sm'}
           selectedKeys={tpl.childTemplateId ? [tpl.childTemplateId.toString()] : []}
           fullWidth={false}
@@ -123,7 +123,7 @@ export default ({
           dataSource={templates.map(t1 => {
             const hasLoop = willCauseLoopKeys.has(t1.id.toString());
             return {
-              label: `[#${t1.id}] ${t1.name}${hasLoop ? ` (${t('Loop detected')})` : ''}`,
+              label: `[#${t1.id}] ${t1.name}${hasLoop ? ` (${t<string>('Loop detected')})` : ''}`,
               value: t1.id.toString(),
             };
           })}
@@ -155,8 +155,8 @@ export default ({
     <div className={'flex flex-col gap-2'}>
       <Block
         leftIcon={<IoLocate className={'text-large'} />}
-        title={t('Resource filter')}
-        description={t('Determine which files or folders will be considered as resources')}
+        title={t<string>('Resource filter')}
+        description={t<string>('Determine which files or folders will be considered as resources')}
         rightIcon={<AiOutlinePlusCircle className={'text-large'} />}
         onRightIconPress={() => {
           createPortal(
@@ -204,8 +204,8 @@ export default ({
                   onPress={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t('Delete resource filter'),
-                      children: t('Sure to delete?'),
+                      title: t<string>('Delete resource filter'),
+                      children: t<string>('Sure to delete?'),
                       onOk: async () => {
                         template.resourceFilters?.splice(i, 1);
                         await putTemplate(template);
@@ -222,8 +222,8 @@ export default ({
         </div>
       </Block>
       <Block
-        title={t('Playable(Runnable) files')}
-        description={t('Determine which files be considered as playable files')}
+        title={t<string>('Playable(Runnable) files')}
+        description={t<string>('Determine which files be considered as playable files')}
         leftIcon={<IoPlayCircleOutline className={'text-large'} />}
         rightIcon={<AiOutlineEdit className={'text-medium'} />}
         onRightIconPress={() => {
@@ -256,14 +256,14 @@ export default ({
           })}
           {template.playableFileLocator?.maxFileCount && (
             <Chip size={'sm'} variant={'flat'} color={'warning'}>
-              {t('Max: {{count}}', { count: template.playableFileLocator.maxFileCount })}
+              {t<string>('Max: {{count}}', { count: template.playableFileLocator.maxFileCount })}
             </Chip>
           )}
         </div>
       </Block>
       <Block
-        title={t('Properties')}
-        description={t('You can configure which properties your resource includes')}
+        title={t<string>('Properties')}
+        description={t<string>('You can configure which properties your resource includes')}
         leftIcon={<TbDatabase className={'text-large'} />}
         rightIcon={<AiOutlineEdit className={'text-large'} />}
         onRightIconPress={() => {
@@ -334,8 +334,8 @@ export default ({
                     onPress={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t('Delete resource filter'),
-                        children: t('Sure to delete?'),
+                        title: t<string>('Delete resource filter'),
+                        children: t<string>('Sure to delete?'),
                         onOk: async () => {
                           template.properties?.splice(i, 1);
                           await putTemplate(template);
@@ -353,8 +353,8 @@ export default ({
         </div>
       </Block>
       <Block
-        title={t('Enhancers')}
-        description={t('You can use enhancers to automatically populate resource information or files')}
+        title={t<string>('Enhancers')}
+        description={t<string>('You can use enhancers to automatically populate resource information or files')}
         leftIcon={<IoRocketOutline className={'text-large'} />}
         rightIcon={<AiOutlineEdit className={'text-large'} />}
         onRightIconPress={() => {
@@ -377,7 +377,7 @@ export default ({
           {template.enhancers?.map((e, i) => {
             const enhancer = enhancers.find(x => x.id == e.enhancerId);
             if (!enhancer) {
-              return t('Unknown enhancer');
+              return t<string>('Unknown enhancer');
             }
             return (
               <div>
@@ -411,8 +411,8 @@ export default ({
                     onPress={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t('Delete resource filter'),
-                        children: t('Sure to delete?'),
+                        title: t<string>('Delete resource filter'),
+                        children: t<string>('Sure to delete?'),
                         onOk: async () => {
                           template.enhancers?.splice(i, 1);
                           await putTemplate(template);
@@ -431,7 +431,7 @@ export default ({
                       radius={'sm'}
                       variant={'flat'}
                     >
-                      {t('Expressions')}
+                      {t<string>('Expressions')}
                     </Chip>
                     {e.expressions.map(x => (
                       <div>{x}</div>
@@ -466,8 +466,8 @@ export default ({
                                     <QuestionCircleOutlined className={'text-medium'} />
                                   </Tooltip>
                                 )}
-                                {mainOptions?.autoBindProperty && t('Auto bind property')}
-                                {mainOptions?.autoMatchMultilevelString && t('Auto match multilevel string')}
+                                {mainOptions?.autoBindProperty && t<string>('Auto bind property')}
+                                {mainOptions?.autoMatchMultilevelString && t<string>('Auto match multilevel string')}
                               </div>
                               {otherOptions.map(to => {
                                 const property = (to.propertyPool != undefined && to.propertyId != undefined)
@@ -483,10 +483,10 @@ export default ({
                                       {to.dynamicTarget}
                                     </Chip>
                                     <TiChevronRightOutline className={'text-medium'} />
-                                    {to.autoBindProperty ? t('Auto bind property') : property ? (
+                                    {to.autoBindProperty ? t<string>('Auto bind property') : property ? (
                                       <BriefProperty property={property} />
-                                    ) : t('Unknown property')}
-                                    {to.autoMatchMultilevelString && t('Auto match multilevel string')}
+                                    ) : t<string>('Unknown property')}
+                                    {to.autoMatchMultilevelString && t<string>('Auto match multilevel string')}
                                   </div>
                                 );
                               })}
@@ -520,16 +520,16 @@ export default ({
                                 </Chip>
                               )}
                               <TiChevronRightOutline className={'text-medium'} />
-                              {to.autoBindProperty ? t('Auto bind property') : property ? (
+                              {to.autoBindProperty ? t<string>('Auto bind property') : property ? (
                                 <BriefProperty property={property} />
-                              ) : t('Unknown property')}
-                              {to.autoMatchMultilevelString && t('Auto match multilevel string')}
+                              ) : t<string>('Unknown property')}
+                              {to.autoMatchMultilevelString && t<string>('Auto match multilevel string')}
                             </div>
                           );
                         }
                       })}
                     </div>
-                  ) : t('Not configured')}
+                  ) : t<string>('Not configured')}
                 </div>
               </div>
             );
@@ -537,8 +537,8 @@ export default ({
         </div>
       </Block>
       <Block
-        title={t('Display name template')}
-        description={t('You can customize the display name of the resource')}
+        title={t<string>('Display name template')}
+        description={t<string>('You can customize the display name of the resource')}
         leftIcon={<MdOutlineSubtitles className={'text-large'} />}
         rightIcon={<AiOutlineEdit className={'text-large'} />}
         onRightIconPress={() => {
@@ -558,8 +558,8 @@ export default ({
         {template.displayNameTemplate}
       </Block>
       <Block
-        title={t('Subresource')}
-        description={t('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
+        title={t<string>('Subresource')}
+        description={t<string>('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
         descriptionPlacement={'bottom'}
         leftIcon={<TiFlowChildren className={'text-large'} />}
         // rightIcon={<AiOutlineEdit className={'text-large'} />}
@@ -580,25 +580,25 @@ export default ({
         {renderChildSelector(template)}
       </Block>
       {/* <Block */}
-      {/*   title={t('Preview')} */}
+      {/*   title={t<string>('Preview')} */}
       {/*   icon={<AiOutlineEdit className={'text-medium'} />} */}
       {/*   onIconPress={() => { */}
       {/*     let { samplePaths } = tpl; */}
       {/*     createPortal( */}
       {/*       Modal, { */}
       {/*         defaultVisible: true, */}
-      {/*         title: t('Setup paths for preview'), */}
+      {/*         title: t<string>('Setup paths for preview'), */}
       {/*         children: ( */}
       {/*           <div> */}
       {/*             <div className={'opacity-60'}> */}
-      {/*               <div>{t('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div> */}
-      {/*               <div>{t('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div> */}
+      {/*               <div>{t<string>('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div> */}
+      {/*               <div>{t<string>('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div> */}
       {/*             </div> */}
       {/*             <div> */}
       {/*               <Textarea */}
       {/*                 defaultValue={samplePaths?.join('\n')} */}
       {/*                 onValueChange={v => samplePaths = v.split('\n')} */}
-      {/*                 placeholder={t('Paths separated by line')} */}
+      {/*                 placeholder={t<string>('Paths separated by line')} */}
       {/*                 fullWidth */}
       {/*                 isMultiline */}
       {/*               /> */}
@@ -615,7 +615,7 @@ export default ({
       {/*   }} */}
       {/* > */}
       {/*   {(!tpl.samplePaths || tpl.samplePaths.length == 0) ? ( */}
-      {/*     <div>{t('This template cannot be previewed because no sample path has been configured.')}</div> */}
+      {/*     <div>{t<string>('This template cannot be previewed because no sample path has been configured.')}</div> */}
       {/*   ) : ( */}
       {/*     <div> */}
       {/*       <Button */}

@@ -41,7 +41,7 @@ export default ({
               variant={'ghost'}
             >
               <FileZipOutlined className={'text-sm'} />
-              {t('Decompress')}<Kbd>d</Kbd>
+              {t<string>('Decompress')}<Kbd>d</Kbd>
             </Button>
           )}
         />
@@ -60,7 +60,7 @@ export default ({
           }}
         >
           <ApartmentOutlined className={'text-sm'} />
-          {t('Wrap')}<Kbd>w</Kbd>
+          {t<string>('Wrap')}<Kbd>w</Kbd>
         </Button>
       )}
       {isMovable && (
@@ -80,7 +80,7 @@ export default ({
           }}
         >
           <SendOutlined className={'text-sm'} />
-          {t('Move')}<Kbd>m</Kbd>
+          {t<string>('Move')}<Kbd>m</Kbd>
         </Button>
       )}
     </>

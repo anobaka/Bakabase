@@ -10,10 +10,10 @@ import { BTaskResourceType, BTaskStatus } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Button, Chip, Modal } from '@/components/bakaui';
-import store from '@/store';
 import { buildLogger } from '@/components/utils';
 import type { BTask } from '@/core/models/BTask';
 import { BTaskStopButton } from '@/components/BTask';
+import { useBTasksStore } from '@/models/bTasks';
 
 interface IProps {
   resource: any;
@@ -39,9 +39,8 @@ export default ({
 
   const tasksRef = useRef<BTask[]>([]);
   useEffect(() => {
-    const unsubscribe = store.subscribe(() => {
-      const tasks = store.getState()
-        .bTasks
+    const unsubscribe = useBTasksStore.subscribe(() => {
+      const tasks = useBTasksStore.getState().tasks
         ?.filter((t) =>
           t.resourceType == BTaskResourceType.Resource && t.resourceKeys?.some(x => x == resource.id) &&
           (t.status == BTaskStatus.Running || t.status == BTaskStatus.Paused || t.status == BTaskStatus.Error || t.status == BTaskStatus.NotStarted || t.status == BTaskStatus.Completed),
@@ -118,11 +117,11 @@ export default ({
             className={'cursor-pointer'}
             onClick={() => createPortal(Modal, {
               defaultVisible: true,
-              title: t('Error'),
+              title: t<string>('Error'),
               size: 'xl',
               children: <pre>{displayingTask.error}</pre>,
             })}
-          >{t('Error')}
+          >{t<string>('Error')}
           </Chip>
           <Button
             size={'sm'}
@@ -138,7 +137,7 @@ export default ({
         </div>
       ) : (
         <div className={'font-bold z-20'}>
-          {displayingTask.status == BTaskStatus.NotStarted ? t('Waiting') : `${displayingTask.percentage}%`}
+          {displayingTask.status == BTaskStatus.NotStarted ? t<string>('Waiting') : `${displayingTask.percentage}%`}
         </div>
       )}
       {displayingTask.error ? null : (

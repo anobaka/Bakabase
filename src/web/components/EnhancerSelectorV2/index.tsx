@@ -84,7 +84,7 @@ const EnhancerSelector = ({
 
   return (
     <Modal
-      title={t('Enhancers')}
+      title={t<string>('Enhancers')}
       defaultVisible
       size={'xl'}
       onDestroyed={onDestroyed}
@@ -118,7 +118,7 @@ const EnhancerSelector = ({
               <Divider />
               <div className={'mt-2 mb-2 grow'}>
                 <div className={' italic'}>
-                  {t('This enhancer can produce the following property values')}
+                  {t<string>('This enhancer can produce the following property values')}
                 </div>
                 <div className={'flex flex-wrap gap-x-3 gap-y-1 mt-1'}>
                   {e.targets.map(target => {
@@ -129,12 +129,12 @@ const EnhancerSelector = ({
                           <div>
                             <div>{target.description}</div>
                             <div>
-                              {t('The value type of this target is')}
+                              {t<string>('The value type of this target is')}
                               &nbsp;
                               <span className={'font-bold'}>
                                 <StandardValueIcon valueType={target.valueType} className={'text-small'} />
                                 &nbsp;
-                                {t(`StandardValueType.${StandardValueType[target.valueType]}`)}
+                                {t<string>(`StandardValueType.${StandardValueType[target.valueType]}`)}
                               </span>
                             </div>
                           </div>
@@ -180,20 +180,20 @@ const EnhancerSelector = ({
                         switch (key) {
                           case 'Category':
                             createPortal(DeleteEnhancementsModal, {
-                              title: t('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category!.name }),
+                              title: t<string>('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category!.name }),
                               onOk: async (deleteEmptyOnly) => await BApi.category.deleteEnhancementsByCategoryAndEnhancer(category!.id, e.id, { deleteEmptyOnly }),
                             });
                             break;
                           case 'All':
                             createPortal(DeleteEnhancementsModal, {
-                              title: t('Delete all enhancement records of this enhancer'),
+                              title: t<string>('Delete all enhancement records of this enhancer'),
                               onOk: async (deleteEmptyOnly) => await BApi.enhancer.deleteEnhancementsByEnhancer(e!.id, { deleteEmptyOnly }),
                             });
                             break;
                           case 'ApplyContext':
                             createPortal(Modal, {
                               defaultVisible: true,
-                              title: t('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name }),
+                              title: t<string>('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name }),
                               onOk: async () => await BApi.category.applyEnhancementContextDataByEnhancerAndCategory(category!.id, e.id),
                             });
                             break;
@@ -208,7 +208,7 @@ const EnhancerSelector = ({
                         className={'text-danger'}
                         startContent={<DeleteOutlined className={'text-base'} />}
                       >
-                        {t('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category?.name })}
+                        {t<string>('Delete all enhancement records of this enhancer for category {{categoryName}}', { categoryName: category?.name })}
                       </ListboxItem>
                       <ListboxItem
                         key={'All'}
@@ -216,7 +216,7 @@ const EnhancerSelector = ({
                         className={'text-danger'}
                         startContent={<DeleteOutlined className={'text-base'} />}
                       >
-                        {t('Delete all enhancement records of this enhancer')}
+                        {t<string>('Delete all enhancement records of this enhancer')}
                       </ListboxItem>
                       <ListboxItem
                         key={'ApplyContext'}
@@ -224,7 +224,7 @@ const EnhancerSelector = ({
                         className={'text-warning'}
                         startContent={<FireOutlined className={'text-base'} />}
                       >
-                        {t('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name })}
+                        {t<string>('Re-apply all enhancement data of this enhancer for category {{categoryName}}', { categoryName: category?.name })}
                       </ListboxItem>
                     </Listbox>
                   </Popover>
@@ -246,7 +246,7 @@ const EnhancerSelector = ({
                       });
                     }}
                   >
-                    {t('Setup')}
+                    {t<string>('Setup')}
                   </Button>
                   <Checkbox
                     size={'sm'}
@@ -259,7 +259,7 @@ const EnhancerSelector = ({
                       });
                     }}
                   >
-                    {t('Enable')}
+                    {t<string>('Enable')}
                   </Checkbox>
                 </div>
               </div>

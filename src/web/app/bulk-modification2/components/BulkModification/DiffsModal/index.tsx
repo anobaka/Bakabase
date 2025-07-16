@@ -102,7 +102,7 @@ export default ({ bmId, onDestroyed }: Props) => {
           <Input
             size={'sm'}
             startContent={<SearchOutlined className={'text-base'} />}
-            placeholder={t('Search')}
+            placeholder={t<string>('Search')}
             value={keyword}
             onValueChange={e => setKeyword(e)}
             onKeyDown={e => {
@@ -118,17 +118,17 @@ export default ({ bmId, onDestroyed }: Props) => {
       {data ? data.length == 0 ? (
         <div className={'flex justify-center mt-4'}>
           <div>
-            <div>{t('No data')}</div>
-            <div>1. {t('Please ensure that the calculation operation has been executed.')}</div>
-            <div>2. {t('If the calculation operation has been executed, there may be no resources that will be changed.')}</div>
-            <div>3. {t('Please check the search criteria.')}</div>
+            <div>{t<string>('No data')}</div>
+            <div>1. {t<string>('Please ensure that the calculation operation has been executed.')}</div>
+            <div>2. {t<string>('If the calculation operation has been executed, there may be no resources that will be changed.')}</div>
+            <div>3. {t<string>('Please check the search criteria.')}</div>
           </div>
         </div>
       ) : (
         <Table removeWrapper>
           <TableHeader>
-            <TableColumn>{t('Resource')}</TableColumn>
-            <TableColumn>{t('Diffs')}</TableColumn>
+            <TableColumn>{t<string>('Resource')}</TableColumn>
+            <TableColumn>{t<string>('Diffs')}</TableColumn>
           </TableHeader>
           <TableBody>
             {data.map(d => {

@@ -67,7 +67,7 @@ export default ({ isDisabled, value }: Props) => {
         }}
         ref={buttonRef}
       >
-        {t('Validate')}
+        {t<string>('Validate')}
       </Button>
       {buttonRef.current && (
         <Modal
@@ -76,11 +76,11 @@ export default ({ isDisabled, value }: Props) => {
             setResult(undefined);
           }}
           visible={!!result}
-          title={t('Found top {{count}} resources. (shows up to 100 results)', { count: (result?.resources || []).length })}
+          title={t<string>('Found top {{count}} resources. (shows up to 100 results)', { count: (result?.resources || []).length })}
           footer={{
             actions: ['cancel'],
             cancelProps: {
-              children: t('Close'),
+              children: t<string>('Close'),
             },
           }}
           portalContainer={buttonRef.current}
@@ -103,15 +103,15 @@ export default ({ isDisabled, value }: Props) => {
                       const ps = segmentAndMatchedValues[j];
                       const matchLabels: string[] = [];
                       if (j == segmentAndMatchedValues.length - 1) {
-                        matchLabels.push(t(ResourceProperty[ResourceProperty.Resource]));
+                        matchLabels.push(t<string>(ResourceProperty[ResourceProperty.Resource]));
                       }
                       if (ps.propertyKeys?.length > 0) {
                         for (const p of ps.propertyKeys) {
                           if (p.isCustom) {
                             const pName = result.customPropertyMap?.[p.id]?.name;
-                            matchLabels.push(pName ?? t('Unknown property'));
+                            matchLabels.push(pName ?? t<string>('Unknown property'));
                           } else {
-                            matchLabels.push(t(ResourceProperty[p.id]));
+                            matchLabels.push(t<string>(ResourceProperty[p.id]));
                           }
                         }
                       }
@@ -146,7 +146,7 @@ export default ({ isDisabled, value }: Props) => {
                           textValues,
                           propertyKey,
                         } = gmv;
-                        const propertyLabel = propertyKey.isCustom ? result.customPropertyMap?.[propertyKey.id]?.name ?? t('Unknown property') : t(ResourceProperty[propertyKey.id]);
+                        const propertyLabel = propertyKey.isCustom ? result.customPropertyMap?.[propertyKey.id]?.name ?? t<string>('Unknown property') : t<string>(ResourceProperty[propertyKey.id]);
                         if (textValues?.length > 0) {
                           globalMatchesElements.push(
                             <div className={'flex items-center gap-1'}>

@@ -108,7 +108,7 @@ export default ({
       onDestroyed={props.onDestroyed}
       size={'lg'}
       defaultVisible
-      title={t('Configure [{{property}}] property for path segment', { property: property.name })}
+      title={t<string>('Configure [{{property}}] property for path segment', { property: property.name })}
       onOk={async () => {
         onSubmit?.(new PscMatcherValue({
           ...value,
@@ -123,7 +123,7 @@ export default ({
       }}
     >
       <div className={''}>
-        <div className={'font-bold'}>{t('Path segment')}</div>
+        <div className={'font-bold'}>{t<string>('Path segment')}</div>
         <div className={'flex items-center gap-1 mb-2'}>
           {segments.map((segment, index) => {
             const marker: SegmentIndexMarker | undefined = segmentMarkers[index];
@@ -132,7 +132,7 @@ export default ({
               <>
                 {options != undefined ? (
                   <Tooltip
-                    content={t(options.tip)}
+                    content={t<string>(options.tip)}
                   >
                     <Chip
                       variant={'light'}

@@ -86,15 +86,15 @@ export default ({
             {/*   radius={'sm'} */}
             {/*   size={'sm'} */}
             {/*   classNames={{}} */}
-            {/* >{t('{{count}} categories', { count: categories.length })}</Chip> */}
+            {/* >{t<string>('{{count}} categories', { count: categories.length })}</Chip> */}
           </Tooltip>
         ) : (
           <Tooltip
             placement={'bottom'}
             content={(
               <div>
-                <div>{t('No category bound')}</div>
-                <div>{t('You can bind properties in category page')}</div>
+                <div>{t<string>('No category bound')}</div>
+                <div>{t<string>('You can bind properties in category page')}</div>
               </div>
             )}
           >
@@ -104,7 +104,7 @@ export default ({
         {property.valueCount != undefined && (
           <Tooltip
             placement={'bottom'}
-            content={t('{{count}} values', { count: property.valueCount })}
+            content={t<string>('{{count}} values', { count: property.valueCount })}
           >
             <div className={'flex gap-0.5 items-center'}>
               <DatabaseOutlined className={'text-sm'} />

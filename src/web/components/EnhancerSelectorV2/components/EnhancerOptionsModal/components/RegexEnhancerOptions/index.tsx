@@ -7,7 +7,6 @@ import { useUpdate, useUpdateEffect } from 'react-use';
 import DynamicTargets from '../DynamicTargets';
 import { buildLogger, findCapturingGroupsInRegex } from '@/components/utils';
 import { Chip, Textarea } from '@/components/bakaui';
-import store from '@/store';
 import type {
   EnhancerFullOptions, RegexEnhancerFullOptions,
 } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
@@ -65,7 +64,7 @@ export default ({
         <Textarea
           minRows={3}
           maxRows={10}
-          label={t('Regex expressions')}
+          label={t<string>('Regex expressions')}
           value={options?.expressions?.join('\n')}
           onValueChange={v => {
             patchOptions({ expressions: v.split('\n') });
@@ -74,7 +73,7 @@ export default ({
             <div>
               {captureGroups.length > 0 ? (
                 <div>
-                  {t('Available capture groups:')}
+                  {t<string>('Available capture groups:')}
                   {captureGroups.map(g => {
                     return (
                       <Chip
@@ -85,12 +84,12 @@ export default ({
                   })}
                 </div>
               ) : (
-                <div>{t('No named capture groups were found, so the enhancement will not take effect.')}</div>
+                <div>{t<string>('No named capture groups were found, so the enhancement will not take effect.')}</div>
               )}
-              <div>{t('You can set multiple regex expressions(separated by new line) to match the file or folder name of each resource.')}</div>
-              <div>{t('Text matched by multiple capture groups with the same name will be merged into a list and deduplicated.')}</div>
-              <div>{t('After setting regex expressions, you must go to category page to configure regex enhancer for each category.')}</div>
-              <div>{t('You need to use the same name(index-based group name will be ignored) as the capture group for the dynamic enhancement target, otherwise the resource may not be enhanced.')}</div>
+              <div>{t<string>('You can set multiple regex expressions(separated by new line) to match the file or folder name of each resource.')}</div>
+              <div>{t<string>('Text matched by multiple capture groups with the same name will be merged into a list and deduplicated.')}</div>
+              <div>{t<string>('After setting regex expressions, you must go to category page to configure regex enhancer for each category.')}</div>
+              <div>{t<string>('You need to use the same name(index-based group name will be ignored) as the capture group for the dynamic enhancement target, otherwise the resource may not be enhanced.')}</div>
             </div>
           )}
         />

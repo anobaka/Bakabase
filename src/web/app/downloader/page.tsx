@@ -151,14 +151,14 @@ export default () => {
       createPortal(Modal, {
         defaultVisible: true,
         size: 'lg',
-        title: t('Found some conflicted tasks'),
+        title: t<string>('Found some conflicted tasks'),
         children: rsp.message,
         footer: {
           okProps: {
-            children: t('Download selected tasks firstly'),
+            children: t<string>('Download selected tasks firstly'),
           },
           cancelProps: {
-            children: t('Add selected tasks to the queue'),
+            children: t<string>('Add selected tasks to the queue'),
           },
         },
         onOk: async () => {
@@ -209,11 +209,11 @@ export default () => {
             />
             {moreThanOne && (
               <>
-                {t('Bulk')}
+                {t<string>('Bulk')}
                 &nbsp;
               </>
             )}
-            {t('Start')}
+            {t<string>('Start')}
           </div>
         </MenuItem>
         <MenuItem onClick={() => BApi.downloadTask.stopDownloadTasks(selectedTaskIdsRef.current)}>
@@ -223,17 +223,17 @@ export default () => {
             />
             {moreThanOne && (
               <>
-                {t('Bulk')}
+                {t<string>('Bulk')}
                 &nbsp;
               </>
             )}
-            {t('Stop')}
+            {t<string>('Stop')}
           </div>
         </MenuItem>
         <MenuItem onClick={() => {
           createPortal(Modal, {
             defaultVisible: true,
-            title: t('Deleting {{count}} download tasks', { count: selectedTaskIdsRef.current.length }),
+            title: t<string>('Deleting {{count}} download tasks', { count: selectedTaskIdsRef.current.length }),
             onOk: async () => {
               await BApi.downloadTask.deleteDownloadTasks({ ids: selectedTaskIdsRef.current });
             },
@@ -246,11 +246,11 @@ export default () => {
             />
             {moreThanOne && (
               <>
-                {t('Bulk')}
+                {t<string>('Bulk')}
                 &nbsp;
               </>
             )}
-            {t('Delete')}
+            {t<string>('Delete')}
           </div>
         </MenuItem>
       </ControlledMenu>
@@ -367,7 +367,7 @@ export default () => {
     <div className={'h-full flex flex-col gap-1'}>
       {renderContextMenu()}
       <div className="grid gap-x-4 gap-y-1 items-center" style={{ gridTemplateColumns: 'auto 1fr' }}>
-        <div>{t('Source')}</div>
+        <div>{t<string>('Source')}</div>
         <div className="flex items-center gap-4">
           {thirdPartyIds.map((s) => {
             const count = tasks.filter((t) => t.thirdPartyId == s.value).length;
@@ -400,7 +400,7 @@ export default () => {
             );
           })}
         </div>
-        <div>{t('Status')}</div>
+        <div>{t<string>('Status')}</div>
         <div className="flex items-center gap-4">
           {downloadTaskDtoStatuses.map(((s) => {
             const count = tasks.filter((t) => t.status == s.value).length;
@@ -436,13 +436,13 @@ export default () => {
                     content: 'pl-0',
                   }}
                 >
-                  {t(s.label)}{count > 0 && <span className={'count'}>({count})</span>}
+                  {t<string>(s.label)}{count > 0 && <span className={'count'}>({count})</span>}
                 </Chip>
               </Checkbox>
             );
           }))}
         </div>
-        <div>{t('Keyword')}</div>
+        <div>{t<string>('Keyword')}</div>
         <div>
           <Input
             className={'w-[320px]'}
@@ -467,7 +467,7 @@ export default () => {
           >
             <>
               <AiOutlinePlusCircle className={'text-medium'} />
-              {t('Create task')}
+              {t<string>('Create task')}
             </>
           </Button>
           <Button
@@ -479,7 +479,7 @@ export default () => {
             }}
           >
             <AiOutlinePlayCircle className={'text-medium'} />
-            {t('Start all')}
+            {t<string>('Start all')}
           </Button>
           <Button
             color={'warning'}
@@ -490,7 +490,7 @@ export default () => {
             }}
           >
             <AiOutlineStop className={'text-medium'} />
-            {t('Stop all')}
+            {t<string>('Stop all')}
           </Button>
         </div>
         <div className="flex items-center gap-1">
@@ -503,7 +503,7 @@ export default () => {
             variant={'flat'}
           >
             <AiOutlineExport className={'text-medium'} />
-            {t('Export all tasks')}
+            {t<string>('Export all tasks')}
           </Button>
           <Button
             color={'secondary'}
@@ -514,7 +514,7 @@ export default () => {
             }}
           >
             <AiOutlineSetting className={'text-medium'} />
-            {t('Configurations')}
+            {t<string>('Configurations')}
           </Button>
         </div>
       </div>
@@ -577,7 +577,7 @@ export default () => {
                             color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
                             variant={'light'}
                           >
-                            {t(DownloadTaskDtoStatus[task.status])}
+                            {t<string>(DownloadTaskDtoStatus[task.status])}
                             {task.current}
                           </Chip>
                           {task.status == DownloadTaskDtoStatus.Failed && (
@@ -590,7 +590,7 @@ export default () => {
                                   createPortal(Modal, {
                                     defaultVisible: true,
                                     size: 'xl',
-                                    title: t('Error'),
+                                    title: t<string>('Error'),
                                     children: (
                                       <pre>{task.message}</pre>
                                     ),
@@ -608,7 +608,7 @@ export default () => {
                               size={'sm'}
                               color={'default'}
                             >
-                              {t('Next start time')}:
+                              {t<string>('Next start time')}:
                               {moment(task.nextStartDt)
                                 .format('YYYY-MM-DD HH:mm:ss')}
                             </Chip>
@@ -690,7 +690,7 @@ export default () => {
                               case 'delete':
                                 createPortal(Modal, {
                                   defaultVisible: true,
-                                  title: t('Are you sure to delete it?'),
+                                  title: t<string>('Are you sure to delete it?'),
                                   onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }),
                                 });
                                 break;
@@ -702,7 +702,7 @@ export default () => {
                               startContent={<AiOutlineDelete className={'text-lg'} />}
                               color={'danger'}
                             >
-                              {t('Delete')}
+                              {t<string>('Delete')}
                             </DropdownItem>
                           </DropdownMenu>
                         </Dropdown>
@@ -892,7 +892,7 @@ export default () => {
       }
       {/*                                 width: 1000, */
       }
-      {/*                                 title: t('Error'), */
+      {/*                                 title: t<string>('Error'), */
       }
       {/*                                 content: ( */
       }
@@ -908,7 +908,7 @@ export default () => {
       }
       {/*                       > */
       }
-      {/*                         {t(DownloadTaskDtoStatus[task.status])} */
+      {/*                         {t<string>(DownloadTaskDtoStatus[task.status])} */
       }
       {/*                       </span> */
       }
@@ -936,7 +936,7 @@ export default () => {
       }
       {/*                       > */
       }
-      {/*                         {t('Failure times')}: */
+      {/*                         {t<string>('Failure times')}: */
       }
       {/*                         <span>{task.failureTimes}</span> */
       }
@@ -954,7 +954,7 @@ export default () => {
       }
       {/*                       > */
       }
-      {/*                         {t('Next start time')}: */
+      {/*                         {t<string>('Next start time')}: */
       }
       {/*                         <span> */
       }
@@ -1016,7 +1016,7 @@ export default () => {
       }
       {/*                           type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'} */
       }
-      {/*                           title={t('Start now')} */
+      {/*                           title={t<string>('Start now')} */
       }
       {/*                           onClick={() => { */
       }
@@ -1038,7 +1038,7 @@ export default () => {
       }
       {/*                           type={'stop'} */
       }
-      {/*                           title={t('Disable')} */
+      {/*                           title={t<string>('Disable')} */
       }
       {/*                           onClick={() => { */
       }
@@ -1060,7 +1060,7 @@ export default () => {
       }
       {/*                   type={'folder-open'} */
       }
-      {/*                   title={t('Open folder')} */
+      {/*                   title={t<string>('Open folder')} */
       }
       {/*                   onClick={() => { */
       }
@@ -1096,7 +1096,7 @@ export default () => {
       }
       {/*                   <Menu> */
       }
-      {/*                     /!* <Menu.Item title={t(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> *!/ */
+      {/*                     /!* <Menu.Item title={t<string>(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> *!/ */
       }
       {/*                     /!*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> *!/ */
       }
@@ -1111,7 +1111,7 @@ export default () => {
       }
       {/*                     /!*     /> *!/ */
       }
-      {/*                     /!*     {t(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} *!/ */
+      {/*                     /!*     {t<string>(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} *!/ */
       }
       {/*                     /!*   </div> *!/ */
       }
@@ -1127,7 +1127,7 @@ export default () => {
       }
       {/*                           Dialog.confirm({ */
       }
-      {/*                             title: t('Are you sure to delete it?'), */
+      {/*                             title: t<string>('Are you sure to delete it?'), */
       }
       {/*                             onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }), */
       }
@@ -1139,7 +1139,7 @@ export default () => {
       }
       {/*                         <CustomIcon type={'delete'} /> */
       }
-      {/*                         {t('Remove')} */
+      {/*                         {t<string>('Remove')} */
       }
       {/*                       </div> */
       }
@@ -1188,7 +1188,7 @@ export default () => {
       }
       {/*     > */
       }
-      {/*       {t('Create download task')} */
+      {/*       {t<string>('Create download task')} */
       }
       {/*     </Button> */
       }

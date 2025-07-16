@@ -68,7 +68,7 @@ const FavoritesSelector = React.memo(({ resourceIds = [] }: Props) => {
           });
       }}
       style={{ minWidth: 600 }}
-      title={t('Select favorites')}
+      title={t<string>('Select favorites')}
     >
       {favorites.map((f) => {
         const allResourceIds = (favoritesResourcesMappings[f.id] || []);

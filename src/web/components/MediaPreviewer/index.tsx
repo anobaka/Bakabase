@@ -237,7 +237,7 @@ const MediaPreviewer = (props: IProps) => {
         case MediaType.Unknown:
         default:
           return (
-            <div>{t('Unsupported')}</div>
+            <div>{t<string>('Unsupported')}</div>
           );
       }
     }
@@ -282,7 +282,7 @@ const MediaPreviewer = (props: IProps) => {
             <div className="label">
               <LoadingOutlined className={'text-2xl'} />
               {/* <Icon type={'loading'} size={'xl'} /> */}
-              {/* {t(PreviewerStatus[status])} */}
+              {/* {t<string>(PreviewerStatus[status])} */}
             </div>
           </div>
         );

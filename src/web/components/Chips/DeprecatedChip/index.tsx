@@ -48,7 +48,7 @@ export default ({
 }: Props) => {
   const { t } = useTranslation();
 
-  const defaultTooltipContent = t('This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.');
+  const defaultTooltipContent = t<string>('This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.');
 
   const chip = (
     <Chip
@@ -57,7 +57,7 @@ export default ({
       color={color}
       className={className}
     >
-      {t('Deprecated')}
+      {t<string>('Deprecated')}
     </Chip>
   );
 

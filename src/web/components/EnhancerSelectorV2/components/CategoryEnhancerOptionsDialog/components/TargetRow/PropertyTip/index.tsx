@@ -39,14 +39,14 @@ export default ({
     // if (allowAddingNewDataDynamicallyDisabled) {
     //   tips.push(
     //     <div className={'flex items-center gap-1'} key={1}>
-    //       {t('Adding new data dynamically is disabled for this property, new data will not be saved.')}
+    //       {t<string>('Adding new data dynamically is disabled for this property, new data will not be saved.')}
     //       <Button
     //         size={'sm'}
     //         color={'primary'}
     //         variant={'light'}
     //         onClick={() => {
     //           createPortal(Modal, {
-    //             title: t('Allow adding new data dynamically'),
+    //             title: t<string>('Allow adding new data dynamically'),
     //             defaultVisible: true,
     //             onOk: async () => {
     //               await BApi.customProperty.enableAddingNewDataDynamicallyForCustomProperty(property.id);
@@ -55,7 +55,7 @@ export default ({
     //           });
     //         }}
     //       >
-    //         {t('Click to enable')}
+    //         {t<string>('Click to enable')}
     //       </Button>
     //     </div>,
     //   );
@@ -64,14 +64,14 @@ export default ({
     if (category.customPropertyIds?.includes(property.id) != true && property.pool == PropertyPool.Custom) {
       tips.push(
         <div className={'flex items-center gap-1'} key={2}>
-          {t('This property is not bound to the category, its data will not be displayed.')}
+          {t<string>('This property is not bound to the category, its data will not be displayed.')}
           <Button
             size={'sm'}
             color={'primary'}
             variant={'light'}
             onClick={() => {
               createPortal(Modal, {
-                title: t('Bind property {{propertyName}} to category {{categoryName}}', {
+                title: t<string>('Bind property {{propertyName}} to category {{categoryName}}', {
                   propertyName: property.name,
                   categoryName: category.name,
                 }),
@@ -83,7 +83,7 @@ export default ({
               });
             }}
           >
-            {t('Bind now')}
+            {t<string>('Bind now')}
           </Button>
         </div>,
       );

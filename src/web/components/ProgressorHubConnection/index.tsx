@@ -187,7 +187,7 @@ function useProgressorHubConnection(id: string, onProgressChange = (progress) =>
         if (state != HubConnectionState.Connected) {
           dialogRef.current = Dialog.show({
             content: (
-              <div style={{ textAlign: 'center' }}>Hub{i18n.t('Connecting...')}</div>
+              <div style={{ textAlign: 'center' }}>Hub{i18n.t<string>('Connecting...')}</div>
             ),
             width: 'auto',
             footer: false,
@@ -197,13 +197,13 @@ function useProgressorHubConnection(id: string, onProgressChange = (progress) =>
             hasMask: false,
           });
         } else {
-          Message.success(`[${progressorHubUri}]${i18n.t('Hub connected')}`);
+          Message.success(`[${progressorHubUri}]${i18n.t<string>('Hub connected')}`);
         }
       },
       onFatalError: (code: number, msg: string) => Dialog.error({
         v2: true,
         width: 'auto',
-        title: i18n.t('Error'),
+        title: i18n.t<string>('Error'),
         content: <pre>Code: {code}, message: {msg}</pre>,
       }),
     });

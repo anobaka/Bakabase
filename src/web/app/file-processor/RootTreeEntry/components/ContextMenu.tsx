@@ -63,7 +63,7 @@ export default ({
     if (expandableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={'text-base'} />,
-        label: t(selectedEntries.length == 1 ? 'Expand' : 'Expand selected'),
+        label: t<string>(selectedEntries.length == 1 ? 'Expand' : 'Expand selected'),
         onClick: () => {
           for (const entry of expandableEntries) {
             entry.expand(false);
@@ -75,7 +75,7 @@ export default ({
     if (collapsableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={'text-base'} />,
-        label: t(selectedEntries.length == 1 ? 'Collapse' : 'Collapse selected'),
+        label: t<string>(selectedEntries.length == 1 ? 'Collapse' : 'Collapse selected'),
         onClick: () => {
           for (const entry of collapsableEntries) {
             entry.collapse();
@@ -87,7 +87,7 @@ export default ({
     if (capabilities?.includes('decompress') && decompressableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={'text-base'} />,
-        label: t('Decompress {{count}} files', { count: decompressableEntries.length }),
+        label: t<string>('Decompress {{count}} files', { count: decompressableEntries.length }),
         onClick: () => {
           BApi.file.decompressFiles({ paths: decompressableEntries.map(e => e.path) });
         },
@@ -97,7 +97,7 @@ export default ({
     if (capabilities?.includes('extract') && directoryEntries.length > 0) {
       items.push({
         icon: <UploadOutlined className={'text-base'} />,
-        label: t('Extract {{count}} directories', { count: directoryEntries.length }),
+        label: t<string>('Extract {{count}} directories', { count: directoryEntries.length }),
         onClick: () => {
           createPortal(ExtractModal, { entries: selectedEntries });
         },
@@ -107,7 +107,7 @@ export default ({
     if (capabilities?.includes('wrap')) {
       items.push({
         icon: <MergeOutlined className={'text-base'} />,
-        label: t('Wrap {{count}} items using directory', { count: selectedEntries.length }),
+        label: t<string>('Wrap {{count}} items using directory', { count: selectedEntries.length }),
         onClick: () => {
           createPortal(WrapModal, { entries: selectedEntries });
         },
@@ -117,7 +117,7 @@ export default ({
     if (capabilities?.includes('delete')) {
       items.push({
         icon: <DeleteOutlined className={'text-base'} />,
-        label: t('Delete {{count}} items', { count: selectedEntries.length }),
+        label: t<string>('Delete {{count}} items', { count: selectedEntries.length }),
         onClick: () => {
           createPortal(DeleteConfirmationModal, { entries: selectedEntries, rootPath: root?.path });
         },
@@ -127,7 +127,7 @@ export default ({
     if (capabilities?.includes('delete-all-by-name')) {
       items.push({
         icon: <DeleteColumnOutlined className={'text-base'} />,
-        label: t('Delete items with the same names'),
+        label: t<string>('Delete items with the same names'),
         onClick: () => {
           createPortal(DeleteItemsWithSameNamesModal, {
             entries: selectedEntries,
@@ -140,7 +140,7 @@ export default ({
     if (capabilities?.includes('move')) {
       items.push({
         icon: <SendOutlined className={'text-base'} />,
-        label: t('Move {{count}} items', { count: selectedEntries.length }),
+        label: t<string>('Move {{count}} items', { count: selectedEntries.length }),
         onClick: () => {
           createPortal(MediaLibraryPathSelectorV2, {
             onSelect: (id, path, isLegacyMediaLibrary) => {
@@ -159,7 +159,7 @@ export default ({
       if (targetEntries.length > 1) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
-          label: t('Auto group {{count}} selected items', { count: targetEntries.length }),
+          label: t<string>('Auto group {{count}} selected items', { count: targetEntries.length }),
           onClick: () => {
             createPortal(GroupModal, {
               entries: selectedEntries,
@@ -173,7 +173,7 @@ export default ({
       if (directoryEntries.length > 0) {
         items.push({
           icon: <GroupOutlined className={'text-base'} />,
-          label: t('Auto group internal items in {{count}} selected directories', { count: directoryEntries.length }),
+          label: t<string>('Auto group internal items in {{count}} selected directories', { count: directoryEntries.length }),
           onClick: () => {
             createPortal(GroupModal, {
               entries: selectedEntries,
@@ -186,28 +186,28 @@ export default ({
 
     items.push({
       icon: <CopyOutlined className={'text-base'} />,
-      label: t('Copy {{count}} names', { count: selectedEntries.length }),
+      label: t<string>('Copy {{count}} names', { count: selectedEntries.length }),
       onClick: () => {
         navigator.clipboard.writeText(selectedEntries.map(e => e.name).join('\n'))
           .then(() => {
-            Message.success(t('Copied'));
+            Message.success(t<string>('Copied'));
           })
           .catch((e) => {
-            Message.error(`${t('Failed to copy')}. ${e}`);
+            Message.error(`${t<string>('Failed to copy')}. ${e}`);
           });
       },
     });
 
     items.push({
       icon: <CopyOutlined className={'text-base'} />,
-      label: t('Copy {{count}} paths', { count: selectedEntries.length }),
+      label: t<string>('Copy {{count}} paths', { count: selectedEntries.length }),
       onClick: () => {
         navigator.clipboard.writeText(selectedEntries.map(e => e.path).join('\n'))
           .then(() => {
-            Message.success(t('Copied'));
+            Message.success(t<string>('Copied'));
           })
           .catch((e) => {
-            Message.error(`${t('Failed to copy')}. ${e}`);
+            Message.error(`${t<string>('Failed to copy')}. ${e}`);
           });
       },
     });
@@ -215,7 +215,7 @@ export default ({
     // 批量修改名称操作
     items.push({
       icon: <MdDriveFileRenameOutline className={'text-base'} />, // 可换为更合适的icon
-      label: t('Batch rename {{count}} items', { count: selectedEntries.length }),
+      label: t<string>('Batch rename {{count}} items', { count: selectedEntries.length }),
       onClick: () => {
         createPortal(FileNameModifierModal, {
           initialFilePaths: selectedEntries.map(e => e.path),

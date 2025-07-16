@@ -19,12 +19,12 @@ export default (props: Props) => {
         variant={'light'}
         size={'sm'}
       >
-        <span className={'opacity-40'}>{t('Click to set')}</span>
+        <span className={'opacity-40'}>{t<string>('Click to set')}</span>
       </Button>
     );
   } else {
     return (
-      <span className={'opacity-40'}>{t('Not set')}</span>
+      <span className={'opacity-40'}>{t<string>('Not set')}</span>
     );
   }
 };

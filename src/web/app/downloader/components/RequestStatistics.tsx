@@ -109,14 +109,14 @@ export default () => {
             footer: {
               actions: ['ok'],
             },
-            title: t('Requests overview'),
+            title: t<string>('Requests overview'),
           },
         );
       }}
       >
         <div className="flex items-center gap-1">
           <AiOutlineBarChart className={'text-base'} />
-          {t('Requests overview')}
+          {t<string>('Requests overview')}
           {requestStatistics?.map((rs) => {
             let successCount = 0;
             let failureCount = 0;
@@ -139,7 +139,7 @@ export default () => {
                   size={'sm'}
                 />
                 <Tooltip
-                  content={t('Success')}
+                  content={t<string>('Success')}
                 >
                   <Chip
                     size={'sm'}
@@ -152,7 +152,7 @@ export default () => {
                 </Tooltip>
                 /
                 <Tooltip
-                  content={t('Failure')}
+                  content={t<string>('Failure')}
                 >
                   <Chip
                     size={'sm'}

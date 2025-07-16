@@ -56,7 +56,7 @@ export default ({ options: propsOptions, optionsItems, onChange, isDisabled }: P
           //       isSelected={finalOptions.autoMatchMultilevelString ?? false}
           //       onValueChange={o => patchOptions({ autoMatchMultilevelString: o })}
           //     >
-          //       {t('Auto match on empty values')}
+          //       {t<string>('Auto match on empty values')}
           //     </Checkbox>
           //   );
           // case EnhancerTargetOptionsItem.AutoBindProperty:
@@ -66,7 +66,7 @@ export default ({ options: propsOptions, optionsItems, onChange, isDisabled }: P
           //       isSelected={finalOptions.autoBindProperty ?? false}
           //       onValueChange={o => patchOptions({ autoBindProperty: o })}
           //     >
-          //       {t('Auto bind property')}
+          //       {t<string>('Auto bind property')}
           //     </Checkbox>
           //   );
           case EnhancerTargetOptionsItem.CoverSelectOrder:

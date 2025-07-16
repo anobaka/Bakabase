@@ -4,7 +4,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { uuidv4 } from '@/components/utils';
 import MediaPlayer from '@/components/MediaPlayer/index';
-import store from '@/store';
 
 const createMediaPlayer = (props) => {
   const { key = `message-${uuidv4()}` } = props;
@@ -21,12 +20,10 @@ const createMediaPlayer = (props) => {
 
   root.render(
     <React.StrictMode>
-      <store.Provider>
-        <MediaPlayer
-          {...props}
-          afterClose={unmount}
-        />
-      </store.Provider>
+      <MediaPlayer
+        {...props}
+        afterClose={unmount}
+      />
     </React.StrictMode>,
   );
 

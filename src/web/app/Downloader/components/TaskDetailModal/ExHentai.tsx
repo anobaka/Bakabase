@@ -36,9 +36,9 @@ export default ({
       case ExHentaiDownloadTaskType.Torrent:
         return (
           <>
-            <div>{t('Gallery url(s)')}</div>
+            <div>{t<string>('Gallery url(s)')}</div>
             <Textarea
-              // label={t('Gallery url(s)')}
+              // label={t<string>('Gallery url(s)')}
               value={_.keys(knMap).join('\n')}
               placeholder={`https://exhentai.org/g/xxxxx/xxxxx/
 https://exhentai.org/g/xxxxx/xxxxx/
@@ -54,7 +54,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
         // todo: https://exhentai.org/watched
         return (
           <>
-            <div>{t('Watched page url')}</div>
+            <div>{t<string>('Watched page url')}</div>
             <Input
               value={_.keys(knMap)[0]}
               placeholder={'https://exhentai.org/watched'}
@@ -78,7 +78,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
       case ExHentaiDownloadTaskType.List:
         return (
           <>
-            <div>{t('List page url')}</div>
+            <div>{t<string>('List page url')}</div>
             <Input
               // label={}
               value={_.keys(knMap)[0]}

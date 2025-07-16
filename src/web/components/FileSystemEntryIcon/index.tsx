@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import i18n from 'i18next';
-import store from '@/store';
 import CustomIcon from '@/components/CustomIcon';
 import './index.scss';
 import { IconType } from '@/sdk/constants';
@@ -55,7 +54,7 @@ export default ({
                 }: Props) => {
   const cacheKey = buildCacheKey(type, path);
 
-  const [icons, iconsDispatchers] = store.useModel('icons');
+  const [icons, iconsDispatchers] = useState<{ [key: string]: string }>({});
   const [iconImgData, setIconImgData] = useState(disableCache ? undefined : icons[cacheKey]);
 
   // console.log(path, type, size, iconImgData);
@@ -66,7 +65,7 @@ export default ({
         type,
         path,
       }).then(r => {
-        iconsDispatchers.add({ [cacheKey]: r.data });
+        iconsDispatchers({ ...icons, [cacheKey]: r.data });
         setIconImgData(r.data);
       });
     }
@@ -115,7 +114,7 @@ export default ({
             color: '#ccc',
             fontSize: size,
           }}
-          title={i18n.t('Unknown file type')}
+          title={i18n.t<string>('Unknown file type')}
         />
       )}
     </div>

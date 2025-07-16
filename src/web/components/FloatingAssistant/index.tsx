@@ -2,9 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
-import { history } from 'ice';
-
-import { useUpdateEffect } from 'react-use';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import {
   CaretRightOutlined,
@@ -24,7 +22,6 @@ import {
 } from '@ant-design/icons';
 import moment from 'moment';
 import dayjs from 'dayjs';
-import store from '@/store';
 import { BTaskStatus } from '@/sdk/constants';
 import {
   Button,
@@ -45,7 +42,7 @@ import BApi from '@/sdk/BApi';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { buildLogger } from '@/components/utils';
 import type { BTask } from '@/core/models/BTask';
-
+import { useBTasksStore } from '@/models/bTasks';
 
 const AssistantStatus = {
   Idle: 0,
@@ -81,12 +78,11 @@ export default () => {
   const [cleaningTaskId, setCleaningTaskId] = useState<string | undefined>();
   const [tasksVisible, setTasksVisible] = useState(false);
   const { createPortal } = useBakabaseContext();
-
   const { t } = useTranslation();
-
   const portalRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
 
-  const bTasks = store.useModelState('bTasks');
+  const bTasks = useBTasksStore(state => state.tasks);
 
   const columns = useRef<{ key: string; label: string }[]>([
     {
@@ -127,20 +123,17 @@ export default () => {
     },
   ].map(x => ({
     ...x,
-    label: t(x.label),
+    label: t<string>(x.label),
   })));
 
-  // const bTasks = testTasks;
-
-  useUpdateEffect(() => {
+  useEffect(() => {
     statusRef.current = status;
   }, [status]);
 
   useEffect(() => {
     log('Initializing...');
-
     const queryTask = setInterval(() => {
-      const tempTasks = store.getState().bTasks;
+      const tempTasks = useBTasksStore.getState().tasks;
       let newStatus = AssistantStatus.AllDone;
       if (tempTasks.length > 0) {
         const ongoingTasks = tempTasks.filter((a) => a.status == BTaskStatus.Running);
@@ -158,7 +151,6 @@ export default () => {
           }
         }
       }
-
       if (newStatus != statusRef.current) {
         setStatus(newStatus);
         if (newStatus == AssistantStatus.AllDone) {
@@ -168,7 +160,6 @@ export default () => {
         }
       }
     }, 1000);
-
     return () => {
       log('Destroying...');
       clearInterval(queryTask);
@@ -222,7 +213,7 @@ export default () => {
                   classNames: {
                     wrapper: 'floating-assistant-modal',
                   },
-                  title: t('Error'),
+                  title: t<string>('Error'),
                   children: (
                     <pre>
                       {task.error}
@@ -263,8 +254,8 @@ export default () => {
   const renderTaskOpts = (task: BTask) => {
     const opts: any[] = [];
     Object.keys(ActionsFilter).forEach((key) => {
-      const filter = ActionsFilter[key];
-      if (filter(task)) {
+      const filter = ActionsFilter[key as unknown as TaskAction];
+      if (filter && filter(task)) {
         const action: TaskAction = parseInt(key, 10) as TaskAction;
         switch (action) {
           case TaskAction.Start:
@@ -322,8 +313,8 @@ export default () => {
                 onPress={() => {
                   createPortal(Modal, {
                     defaultVisible: true,
-                    title: t('Stopping task: {{taskName}}', { taskName: task.name }),
-                    children: task.messageOnInterruption ?? t('Are you sure to stop this task?'),
+                    title: t<string>('Stopping task: {{taskName}}', { taskName: task.name }),
+                    children: task.messageOnInterruption ?? t<string>('Are you sure to stop this task?'),
                     onOk: async () => await BApi.backgroundTask.stopBackgroundTask(task.id),
                     classNames: {
                       wrapper: 'floating-assistant-modal',
@@ -360,10 +351,10 @@ export default () => {
                   createPortal(
                     Modal, {
                       defaultVisible: true,
-                      title: t('About to leave current page'),
-                      children: t('Sure?'),
+                      title: t<string>('About to leave current page'),
+                      children: t<string>('Sure?'),
                       onOk: async () => {
-                        history!.push('/backgroundtask');
+                        router.push('/backgroundtask');
                       },
                       classNames: {
                         wrapper: 'floating-assistant-modal',
@@ -477,7 +468,7 @@ export default () => {
     }
     return (
       <div className="h-[80px] flex items-center justify-center">
-        {t('No background task')}
+        {t<string>('No background task')}
       </div>
     );
   };
@@ -540,7 +531,7 @@ export default () => {
         )}
       >
         <div className={'flex flex-col gap-2 p-2 min-w-[300px]'}>
-          {/* <div className={'font-bold'}>{t('Task list')}</div> */}
+          {/* <div className={'font-bold'}>{t<string>('Task list')}</div> */}
           {/* <Divider orientation={'horizontal'} /> */}
           <div className="flex flex-col gap-1 max-h-[600px] mt-2 overflow-auto">
             {renderTasks()}
@@ -554,7 +545,7 @@ export default () => {
                 onPress={() => BApi.backgroundTask.cleanInactiveBackgroundTasks()}
               >
                 <ClearOutlined className={'text-base'} />
-                {t('Clear inactive tasks')}
+                {t<string>('Clear inactive tasks')}
               </Button>
             )}
           </div>

@@ -34,9 +34,9 @@ export default () => {
   }[]>>>();
 
   const columns = [
-    // <TableColumn>{t('Source type')}</TableColumn>,
-    <TableColumn>{t('Target type')}</TableColumn>,
-    <TableColumn>{t('Rules')}</TableColumn>,
+    // <TableColumn>{t<string>('Source type')}</TableColumn>,
+    <TableColumn>{t<string>('Target type')}</TableColumn>,
+    <TableColumn>{t<string>('Rules')}</TableColumn>,
   ];
 
   useEffect(() => {
@@ -63,8 +63,8 @@ export default () => {
       const rules = targetMap[toType];
       rows.push(
         <TableRow key={fromType}>
-          {/* <TableCell>{t(PropertyType[fromType])}</TableCell> */}
-          <TableCell>{t(PropertyType[toType])}</TableCell>
+          {/* <TableCell>{t<string>(PropertyType[fromType])}</TableCell> */}
+          <TableCell>{t<string>(PropertyType[toType])}</TableCell>
           <TableCell>
             <div className={'flex flex-wrap gap-1'}>
               {rules.map(r => {
@@ -99,7 +99,7 @@ export default () => {
       defaultVisible
       title={(
         <div className={'flex items-center gap-2'}>
-          {t('Type conversion rules')}
+          {t<string>('Type conversion rules')}
           <Button
             size={'sm'}
             variant={'light'}
@@ -108,7 +108,7 @@ export default () => {
               createPortal(TypeConversionExampleDialog, {});
             }}
           >
-            {t('Check examples')}
+            {t<string>('Check examples')}
           </Button>
         </div>
       )}
@@ -116,16 +116,16 @@ export default () => {
       footer={{
         actions: ['cancel'],
         cancelProps: {
-          children: t('Close'),
+          children: t<string>('Close'),
         },
       }}
     >
       <div>
         <Tabs isVertical disabledKeys={['title']}>
-          <Tab key={'title'} title={t('Source type')} />
+          <Tab key={'title'} title={t<string>('Source type')} />
           {propertyTypes.map(cpt => {
             return (
-              <Tab key={cpt.value} title={t(PropertyType[cpt.value])} className={'w-full'} >
+              <Tab key={cpt.value} title={t<string>(PropertyType[cpt.value])} className={'w-full'} >
                 <Table isCompact isStriped removeWrapper isHeaderSticky>
                   <TableHeader>
                     {columns}

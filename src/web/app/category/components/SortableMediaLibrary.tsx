@@ -78,7 +78,7 @@ export default (({
       switch (resourceValue.valueType) {
         case ResourceMatcherValueType.Layer:
           valueComponent = (
-            <div>{t(resourceValue.layer > 0 ? 'The {{layer}} layer after root path' : 'The {{layer}} layer to the resource', { layer: Math.abs(resourceValue.layer) })}</div>
+            <div>{t<string>(resourceValue.layer > 0 ? 'The {{layer}} layer after root path' : 'The {{layer}} layer to the resource', { layer: Math.abs(resourceValue.layer) })}</div>
           );
           break;
         case ResourceMatcherValueType.Regex:
@@ -99,12 +99,12 @@ export default (({
           <Chip
             size={'sm'}
             radius={'sm'}
-          >{t(ResourceMatcherValueType[resourceValue.valueType])}</Chip>
+          >{t<string>(ResourceMatcherValueType[resourceValue.valueType])}</Chip>
           {valueComponent}
         </div>
       );
     }
-    return (<div className={'unset filter'}>{t('Not set')}</div>);
+    return (<div className={'unset filter'}>{t<string>('Not set')}</div>);
   }, []);
 
   const renderCustomProperties = useCallback(p => {
@@ -117,10 +117,10 @@ export default (({
             size={'sm'}
             radius={'sm'}
           >
-            {n ?? t('Unknown property')}
+            {n ?? t<string>('Unknown property')}
           </Chip>
         );
-      }) : t('Not set');
+      }) : t<string>('Not set');
   }, []);
 
   const renderAddRootPathInBulkModal = () => {
@@ -161,7 +161,7 @@ export default (({
             onClick={() => {
               let n = library.name;
               Dialog.show({
-                title: t('Change name'),
+                title: t<string>('Change name'),
                 content: (<Input
                   style={{ width: '100%' }}
                   defaultValue={n}
@@ -188,7 +188,7 @@ export default (({
                           }
                         });
                     } else {
-                      Message.error(t('Invalid data'));
+                      Message.error(t<string>('Invalid data'));
                     }
                   }));
                 },
@@ -201,7 +201,7 @@ export default (({
             </AutoTextSize>
             {library.resourceCount > 0 ? (
               <Tooltip
-                content={t('Count of resources')}
+                content={t<string>('Count of resources')}
               >
                 <Chip
                   size={'sm'}
@@ -216,7 +216,7 @@ export default (({
               </Tooltip>
             ) : (
               library.pathConfigurations?.length > 0 && (
-                <Tooltip content={t('Resource not found? Please try to perform the synchronization operation.')}>
+                <Tooltip content={t<string>('Resource not found? Please try to perform the synchronization operation.')}>
                   <QuestionCircleOutlined className={'text-base'} />
                 </Tooltip>
               )
@@ -224,7 +224,7 @@ export default (({
           </div>
           <div className={'pl-2'}>
             <Tooltip
-              content={t('Sync current media library')}
+              content={t<string>('Sync current media library')}
               placement={'top'}
               color={'secondary'}
             >
@@ -273,7 +273,7 @@ export default (({
                     type="playlist_add"
                     className={'text-base'}
                   />
-                  {t('Add root paths in bulk')}
+                  {t<string>('Add root paths in bulk')}
                 </Menu.Item>
               </Menu>
             </Dropdown>
@@ -300,7 +300,7 @@ export default (({
                   onClick={() => {
                     createPortal(
                       DeleteEnhancementsModal, {
-                        title: t('Deleting all enhancement records of resources under this media library'),
+                        title: t<string>('Deleting all enhancement records of resources under this media library'),
                         onOk: async (deleteEmptyOnly) => {
                           await BApi.mediaLibrary.deleteByEnhancementsMediaLibrary(library.id, { deleteEmptyOnly: deleteEmptyOnly });
                         },
@@ -312,13 +312,13 @@ export default (({
                     type="flashlight"
                     className={'text-base'}
                   />
-                  {t('Delete all enhancement records')}
+                  {t<string>('Delete all enhancement records')}
                 </Menu.Item>
                 <Menu.Item
                   className={'warning'}
                   onClick={() => {
                     Dialog.confirm({
-                      title: `${t('Deleting')} ${library.name}`,
+                      title: `${t<string>('Deleting')} ${library.name}`,
                       closeable: true,
                       onOk: () => new Promise(((resolve, reject) => {
                         BApi.mediaLibrary.deleteMediaLibrary(library.id)
@@ -336,7 +336,7 @@ export default (({
                     type="delete"
                     className={'text-base'}
                   />
-                  {t('Remove')}
+                  {t<string>('Remove')}
                 </Menu.Item>
               </Menu>
             </Dropdown>
@@ -384,28 +384,28 @@ export default (({
                       createPortal(Modal, {
                         defaultVisible: true,
                         size: 'lg',
-                        title: t('Exporting path configuration as new media library template'),
+                        title: t<string>('Exporting path configuration as new media library template'),
                         children: (
                           <div className={'flex flex-col gap-1'}>
                             <Alert
                               color={'default'}
-                              title={t('The old categorization and media library features will soon be removed. Please export the data as a new media library template.')}
+                              title={t<string>('The old categorization and media library features will soon be removed. Please export the data as a new media library template.')}
                               description={(
                                 <div>
-                                  <div>{t('The resource selection rules, attribute value settings, enhancer configurations, playable file locator, ' +
+                                  <div>{t<string>('The resource selection rules, attribute value settings, enhancer configurations, playable file locator, ' +
                                     'and resource naming conventions of the current path will all be exported to the media library template.')}</div>
-                                  <div>{t('However, the player will not be included. Please configure the player manually in the new media library.')}</div>
-                                  <div>{t('A media library template is a combination of the rules below and can be reused across multiple paths.')}</div>
-                                  <div>{t('It is not necessary to create a separate template for each path.')}</div>
+                                  <div>{t<string>('However, the player will not be included. Please configure the player manually in the new media library.')}</div>
+                                  <div>{t<string>('A media library template is a combination of the rules below and can be reused across multiple paths.')}</div>
+                                  <div>{t<string>('It is not necessary to create a separate template for each path.')}</div>
                                 </div>
                               )}
                             />
-                            <Input isRequired onValueChange={v => templateName = v} label={t('Template name')} />
+                            <Input isRequired onValueChange={v => templateName = v} label={t<string>('Template name')} />
                           </div>
                         ),
                         onOk: async () => {
                           if (templateName == undefined || templateName.length == 0) {
-                            const msg = t('Template name is required');
+                            const msg = t<string>('Template name is required');
                             toast.error(msg);
                             throw new Error(msg);
                           }
@@ -416,7 +416,7 @@ export default (({
                               name: templateName,
                             });
                           if (!r.code) {
-                            Message.success(t('Media library template created successfully'));
+                            Message.success(t<string>('Media library template created successfully'));
                           }
                         },
                       });
@@ -451,7 +451,7 @@ export default (({
                       onClick={(e) => {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: `${t('Deleting')} ${p.path}`,
+                          title: `${t<string>('Deleting')} ${p.path}`,
                           onOk: async () => {
                             const rsp = await BApi.mediaLibrary.removeMediaLibraryPathConfiguration(library.id, {
                               index: i,
@@ -477,7 +477,7 @@ export default (({
         }) : (
           <div className={'flex flex-col gap-2'}>
             <div className={'text-center'}>
-              {t('To get your resources loaded, you must add at least one root path containing your local resources to this media library')}
+              {t<string>('To get your resources loaded, you must add at least one root path containing your local resources to this media library')}
             </div>
             <div
               className={'flex items-center gap-4 justify-center'}
@@ -489,7 +489,7 @@ export default (({
                   renderAddRootPathModal();
                 }}
               >
-                {t('Add root path')}
+                {t<string>('Add root path')}
               </Button>
               <Button
                 size={'sm'}
@@ -498,7 +498,7 @@ export default (({
                   renderAddRootPathInBulkModal();
                 }}
               >
-                {t('Add root paths in bulk')}
+                {t<string>('Add root paths in bulk')}
               </Button>
             </div>
           </div>

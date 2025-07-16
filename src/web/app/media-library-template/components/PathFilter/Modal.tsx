@@ -31,14 +31,14 @@ export default ({
         return (
           <div className={'inline-flex items-center gap-1'}>
             <BsFileEarmark />
-            {t('File')}
+            {t<string>('File')}
           </div>
         );
       case PathFilterFsType.Directory:
         return (
           <div className={'inline-flex items-center gap-1'}>
             <BsFolder />
-            {t('Folder')}
+            {t<string>('Folder')}
           </div>
         );
     }
@@ -50,7 +50,7 @@ export default ({
         return (
           <Select
             isRequired
-            label={t('Layer')}
+            label={t<string>('Layer')}
             dataSource={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => ({
               label: l,
               value: l.toString(),
@@ -63,15 +63,15 @@ export default ({
                 layer,
               });
             }}
-            description={t('Layer 0 is directory of media library')}
+            description={t<string>('Layer 0 is directory of media library')}
           />
         );
       case PathPositioner.Regex:
         return (
           <Input
             isRequired
-            label={t('Regex')}
-            placeholder={t('Regex to match sub path')}
+            label={t<string>('Regex')}
+            placeholder={t<string>('Regex to match sub path')}
             value={filter.regex}
             onValueChange={v => {
               setFilter({
@@ -82,7 +82,7 @@ export default ({
           />
         );
       default:
-        return t('Not supported');
+        return t<string>('Not supported');
     }
   };
 
@@ -118,7 +118,7 @@ export default ({
     >
       <div className={'flex flex-col gap-2'}>
         <RadioGroup
-          label={t('Positioning')}
+          label={t<string>('Positioning')}
           onValueChange={v => {
             const nv = parseInt(v, 10);
             if (filter.positioner != nv) {
@@ -132,7 +132,7 @@ export default ({
           isRequired
         >
           {pathPositioners.map(p => (
-            <Radio value={p.value.toString()}>{t(p.label)}</Radio>
+            <Radio value={p.value.toString()}>{t<string>(p.label)}</Radio>
           ))}
         </RadioGroup>
         {filter.positioner && (
@@ -140,8 +140,8 @@ export default ({
             {renderPositioner()}
             <Divider className="my-4" />
             <Select
-              label={t('Limit path type')}
-              placeholder={t('No limited')}
+              label={t<string>('Limit path type')}
+              placeholder={t<string>('No limited')}
               dataSource={pathFilterFsTypes.map(t => ({
                   label: renderFsItem(t.value),
                   value: t.value.toString(),
@@ -189,7 +189,7 @@ export default ({
                     }}
                   />
                   <ExtensionsInput
-                    label={t('Limit file extensions')}
+                    label={t<string>('Limit file extensions')}
                     onValueChange={v => {
                       setFilter({
                         ...filter,

@@ -41,7 +41,7 @@ export default ({}: Props) => {
         return (
           <>
             <div>
-              {t('Value')}
+              {t<string>('Value')}
             </div>
             <MultilevelValueRenderer editor={{ }} />
           </>
@@ -49,7 +49,7 @@ export default ({}: Props) => {
       case MultilevelProcessorOperation.ModifyNode:
         return (
           <>
-            <div>{t('Filter branches by')}</div>
+            <div>{t<string>('Filter branches by')}</div>
           </>
         );
       case MultilevelProcessorOperation.AddLayer:
@@ -63,7 +63,7 @@ export default ({}: Props) => {
   return (
     <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}>
       <div>
-        {t('Operation')}
+        {t<string>('Operation')}
       </div>
       <Select
         dataSource={multilevelProcessorOperations.map(tpo => ({

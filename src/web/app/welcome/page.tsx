@@ -32,7 +32,7 @@ export default function WelcomePage() {
           </span>
         </div>
         <div className={'flex items-center gap-1'}>
-          {t('Please read terms and conditions carefully before you start to use this app')}
+          {t<string>('Please read terms and conditions carefully before you start to use this app')}
           <Popover
             trigger={(
               <Button
@@ -40,11 +40,11 @@ export default function WelcomePage() {
                 radius={'sm'}
                 variant={'light'}
               >
-                {t('Click to check')}
+                {t<string>('Click to check')}
               </Button>
             )}
           >
-            {t('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
+            {t<string>('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
           </Popover>
         </div>
         <div className={'flex justify-center'}>
@@ -55,7 +55,7 @@ export default function WelcomePage() {
                 router.push('/');
               });
             }}
-          >{t('Accept and start to use')}
+          >{t<string>('Accept and start to use')}
           </Button>
         </div>
       </div>

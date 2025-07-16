@@ -50,8 +50,8 @@ export default ({
 
   const defaultTooltipContent = (
     <>
-      {t('This feature is in beta and may be unstable. Please report any issues you encounter.')}<br/>
-      {t('BetaFeature.BackupWarning')}
+      {t<string>('This feature is in beta and may be unstable. Please report any issues you encounter.')}<br/>
+      {t<string>('BetaFeature.BackupWarning')}
     </>
   );
 
@@ -62,7 +62,7 @@ export default ({
       color={color}
       className={className}
     >
-      {t('Beta')}
+      {t<string>('Beta')}
     </Chip>
   );
 

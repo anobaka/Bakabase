@@ -84,7 +84,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
 
     const deletedChoicesCount = choices.length - sameChoicesCount;
     if (deletedChoicesCount > 0 || addedChoicesCount > 0) {
-      const tips = [deletedChoicesCount > 0 ? t('{{count}} data will be deleted', { count: deletedChoicesCount }) : '', addedChoicesCount > 0 ? t('{{count}} data will be added', { count: addedChoicesCount }) : ''];
+      const tips = [deletedChoicesCount > 0 ? t<string>('{{count}} data will be deleted', { count: deletedChoicesCount }) : '', addedChoicesCount > 0 ? t<string>('{{count}} data will be added', { count: addedChoicesCount }) : ''];
       setBulkEditSummaries(tips.filter(t => t));
     } else {
       setBulkEditSummaries([]);
@@ -112,7 +112,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
           }}
         >
           <CustomIcon type={'sorting'} className={'text-medium'} />
-          {t('Sort by alphabet')}
+          {t<string>('Sort by alphabet')}
         </Button>
       </div>
       <div className="mt-2 mb-2 flex flex-col gap-1">
@@ -200,7 +200,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
             type={'plus-circle'}
             className={'text-medium'}
           />
-          {t('Add a choice')}
+          {t<string>('Add a choice')}
         </Button>
         <Popover
           trigger={(
@@ -208,7 +208,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
               variant={'light'}
               size={'sm'}
             >
-              {t('Add or delete in bulk')}
+              {t<string>('Add or delete in bulk')}
             </Button>
           )}
           style={{ zIndex: 100 }}
@@ -224,11 +224,11 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
           }}
         >
           <div className={'flex flex-col gap-2 m-2 '}>
-            <div className="text-medium">{t('Add or delete choices in bulk')}</div>
+            <div className="text-medium">{t<string>('Add or delete choices in bulk')}</div>
             <div className={'text-sm opacity-70'}>
-              <div>{t('Choices will be separated by line breaks.')}</div>
-              <div>{t('Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.')}</div>
-              <div>{t('Be cautions: once you modify the text in one line, it will be treated as a new choice, and the original choice will be deleted.')}</div>
+              <div>{t<string>('Choices will be separated by line breaks.')}</div>
+              <div>{t<string>('Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.')}</div>
+              <div>{t<string>('Be cautions: once you modify the text in one line, it will be treated as a new choice, and the original choice will be deleted.')}</div>
             </div>
             {bulkEditSummaries.length > 0 && (
               <div className={'flex items-center gap-2 text-sm'}>
@@ -262,7 +262,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                   setEditInBulkPopupVisible(false);
                 }}
               >
-                {t('Cancel')}
+                {t<string>('Cancel')}
               </Button>
               <Button
                 color={'primary'}
@@ -273,7 +273,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                   setEditInBulkPopupVisible(false);
                 }}
               >
-                {t('Submit')}
+                {t<string>('Submit')}
               </Button>
             </div>
           </div>

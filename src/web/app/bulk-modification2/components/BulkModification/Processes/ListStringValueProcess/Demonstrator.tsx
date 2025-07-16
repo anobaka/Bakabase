@@ -57,7 +57,7 @@ export default (props: Props) => {
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd'}
           values={{
-            direction: operation == BulkModificationListStringProcessOperation.AddToStart ? t('Position.Beginning') : t('Position.End'),
+            direction: operation == BulkModificationListStringProcessOperation.AddToStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
             value: options?.value,
           }}
         >
@@ -77,7 +77,7 @@ export default (props: Props) => {
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition'}
           values={{
-            direction: options?.isPositioningDirectionReversed ? t('Position.End') : t('Position.Beginning'),
+            direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
             position: options?.index,
             value: options?.value,
           }}
@@ -102,7 +102,7 @@ export default (props: Props) => {
           <Trans
             i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd'}
             values={{
-              direction: operation == BulkModificationListStringProcessOperation.RemoveFromStart ? t('Position.Beginning') : t('Position.End'),
+              direction: operation == BulkModificationListStringProcessOperation.RemoveFromStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
               count: options?.count,
             }}
           >
@@ -115,10 +115,10 @@ export default (props: Props) => {
       );
     case BulkModificationListStringProcessOperation.RemoveFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t('Position.End') : t('Position.Beginning'),
+        direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
         position: options?.index,
         count: options?.count,
-        removeDirection: options?.isOperationDirectionReversed ? t('TextOperation.Backward') : t('TextOperation.Forward'),
+        removeDirection: options?.isOperationDirectionReversed ? t<string>('TextOperation.Backward') : t<string>('TextOperation.Forward'),
       };
       return (
         <>
@@ -142,7 +142,7 @@ export default (props: Props) => {
     case BulkModificationListStringProcessOperation.ReplaceFromStart:
     case BulkModificationListStringProcessOperation.ReplaceFromEnd: {
       const texts = {
-        direction: operation == BulkModificationListStringProcessOperation.ReplaceFromEnd ? t('Position.End') : t('Position.Beginning'),
+        direction: operation == BulkModificationListStringProcessOperation.ReplaceFromEnd ? t<string>('Position.End') : t<string>('Position.Beginning'),
         replace: options?.replace,
         find: options?.find,
       };
@@ -176,7 +176,7 @@ export default (props: Props) => {
     }
     case BulkModificationListStringProcessOperation.ReplaceFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t('end') : t('start'),
+        direction: options?.isPositioningDirectionReversed ? t<string>('end') : t<string>('start'),
         replace: options?.replace,
         find: options?.find,
       };
@@ -238,14 +238,14 @@ export default (props: Props) => {
     case BulkModificationListStringProcessOperation.Delete: {
       return (
         <div className={'primary'}>
-          {t('Delete')}
+          {t<string>('Delete')}
         </div>
       );
     }
     default:
       return (
         <>
-          {t('Unsupported value')}
+          {t<string>('Unsupported value')}
         </>
       );
   }

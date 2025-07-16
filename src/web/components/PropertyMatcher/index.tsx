@@ -82,7 +82,7 @@ export default ({
           )}
         </>
       )}
-      <Tooltip content={t('Automatically match property')}>
+      <Tooltip content={t<string>('Automatically match property')}>
         <Button
           size={'sm'}
           isIconOnly
@@ -98,10 +98,10 @@ export default ({
             } else {
               const modal = createPortal(Modal, {
                 defaultVisible: true,
-                title: t('No proper property found'),
+                title: t<string>('No proper property found'),
                 children: (
                   <div className={'flex flex-col gap-2'}>
-                    {t('You can')}:
+                    {t<string>('You can')}:
                     <div className={'grid grid-cols-2 gap-2'}>
                       <Card
                         isPressable
@@ -121,7 +121,7 @@ export default ({
                         className={'flex flex-col items-center gap-2 justify-center py-2'}
                       >
                         <MdAutoFixHigh className={'text-2xl'} />
-                        {t('Automatically create a new property')}
+                        {t<string>('Automatically create a new property')}
                       </Card>
                       <Card
                         isPressable
@@ -139,7 +139,7 @@ export default ({
                         className={'flex flex-col items-center gap-2 justify-center py-2'}
                       >
                         <AiOutlineSearch className={'text-2xl'} />
-                        {t('Select manually')}
+                        {t<string>('Select manually')}
                       </Card>
                     </div>
                   </div>

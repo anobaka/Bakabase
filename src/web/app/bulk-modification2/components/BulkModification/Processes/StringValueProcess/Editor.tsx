@@ -46,7 +46,7 @@ export default ({
 
   useEffect(() => {
     const error = validate(operation, options);
-    onChange?.(operation, options, error == undefined ? undefined : t(error));
+    onChange?.(operation, options, error == undefined ? undefined : t<string>(error));
   }, [options, operation]);
 
   const changeOptions = (patches: Partial<StringProcessOptions>) => {
@@ -87,7 +87,7 @@ export default ({
     switch (operation) {
       case BulkModificationStringProcessOperation.SetWithFixedValue:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: renderValueCell(),
         });
         break;
@@ -96,13 +96,13 @@ export default ({
       case BulkModificationStringProcessOperation.AddToStart:
       case BulkModificationStringProcessOperation.AddToEnd:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: renderValueCell(),
         });
         break;
       case BulkModificationStringProcessOperation.AddToAnyPosition:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <div className={'flex items-center gap-1 whitespace-nowrap'}>
               <Trans
@@ -121,7 +121,7 @@ export default ({
                 <NumberInput
                   className={'w-auto'}
                   style={{ width: 100 }}
-                  placeholder={t('Starts from 0')}
+                  placeholder={t<string>('Starts from 0')}
                   onValueChange={index => changeOptions({ index })}
                   value={options.index}
                 />
@@ -141,7 +141,7 @@ export default ({
       case BulkModificationStringProcessOperation.RemoveFromStart:
       case BulkModificationStringProcessOperation.RemoveFromEnd:
         components.push({
-          label: t('Count'),
+          label: t<string>('Count'),
           comp: (
             <NumberInput
               className={'w-auto'}
@@ -155,7 +155,7 @@ export default ({
       case BulkModificationStringProcessOperation.RemoveFromAnyPosition:
         // delete 6 characters forward from the fifth character from the end
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <div className={'flex items-center gap-1 whitespace-nowrap'}>
               <Trans
@@ -187,7 +187,7 @@ export default ({
                 <NumberInput
                   className={'w-auto'}
                   style={{ width: 100 }}
-                  placeholder={t('Starts from 0')}
+                  placeholder={t<string>('Starts from 0')}
                   onValueChange={index => changeOptions({ index })}
                   value={options.index}
                 />
@@ -209,7 +209,7 @@ export default ({
       case BulkModificationStringProcessOperation.ReplaceFromAnyPosition:
       case BulkModificationStringProcessOperation.ReplaceWithRegex:
         components.push({
-          label: t('Value'),
+          label: t<string>('Value'),
           comp: (
             <div className={'flex items-center gap-1 whitespace-nowrap'}>
               <Trans
@@ -245,11 +245,11 @@ export default ({
   return (
     <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}>
       <div>
-        {t('Operation')}
+        {t<string>('Operation')}
       </div>
       <Select
         dataSource={bulkModificationStringProcessOperations.map(tpo => ({
-          label: t(tpo.label),
+          label: t<string>(tpo.label),
           value: tpo.value,
         }))}
         selectionMode={'single'}

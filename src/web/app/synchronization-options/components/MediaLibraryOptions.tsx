@@ -42,7 +42,7 @@ export default ({
   return (
     <OptionsCard header={mediaLibrary.name}>
       <BooleanOptions
-        subject={t(SubjectLabels.DeleteResourcesWithUnknownPath)}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
         onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownPath}
       />

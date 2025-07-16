@@ -38,7 +38,7 @@ export default ({ onAdded }: Props) => {
 
   return (
     <>
-      <div>{t('Quick filter')}</div>
+      <div>{t<string>('Quick filter')}</div>
       <div className={'flex items-center gap-2 flex-wrap'}>
         {loading ? (
           <Spinner size="sm" />

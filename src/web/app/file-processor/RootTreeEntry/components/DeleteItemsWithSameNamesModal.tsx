@@ -47,7 +47,7 @@ export default ({
       size={'xl'}
       onDestroyed={onDestroyed}
       defaultVisible
-      title={t('Delete items with the same names')}
+      title={t<string>('Delete items with the same names')}
       onOk={async () => {
         // console.log(deletingAllPaths);
         if (!deletingAllPaths || deletingAllPaths.length == 0) {
@@ -64,7 +64,7 @@ export default ({
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          children: `${t('Delete')}(Enter)`,
+          children: `${t<string>('Delete')}(Enter)`,
           color: 'danger',
           autoFocus: true,
           disabled: !deletingAllPaths || deletingAllPaths.length == 0,
@@ -73,7 +73,7 @@ export default ({
     >
       <div
         className={'mb-2'}
-      >{t('Removing all filesystem entries in {{workingDirectory}} that have the same names as the {{count}} selected filesystem entries', {
+      >{t<string>('Removing all filesystem entries in {{workingDirectory}} that have the same names as the {{count}} selected filesystem entries', {
         count: entries.length,
         workingDirectory,
       })}</div>
@@ -97,7 +97,7 @@ export default ({
       ) : (
         <div className={'flex items-center gap-2'}>
           <Spinner />
-          {t('Discovering files with same name')}
+          {t<string>('Discovering files with same name')}
         </div>
       )}
     </Modal>

@@ -79,10 +79,10 @@ const FilterGroup = (props: IProps) => {
         }}
       >
         <span className="property">
-          {t(BulkModificationProperty[filter.property!])}{filter?.propertyKey}
+          {t<string>(BulkModificationProperty[filter.property!])}{filter?.propertyKey}
         </span>
         <span className="operation">
-          {t(`BulkModificationFilterOperation.${BulkModificationFilterOperation[filter.operation!]}`)}
+          {t<string>(`BulkModificationFilterOperation.${BulkModificationFilterOperation[filter.operation!]}`)}
         </span>
         <span className={'target'}>
           <TargetRenderer
@@ -120,7 +120,7 @@ const FilterGroup = (props: IProps) => {
             text
             type={'primary'}
           >
-            {t(`BulkModificationFilterGroupOperation.${BulkModificationFilterGroupOperation[group.operation]}`)}
+            {t<string>(`BulkModificationFilterGroupOperation.${BulkModificationFilterGroupOperation[group.operation]}`)}
           </Button>
         );
         if (editable) {
@@ -143,7 +143,7 @@ const FilterGroup = (props: IProps) => {
                     }}
                     disabled={group.operation == operation.value}
                   >
-                    {t(`BulkModificationFilterGroupOperation.${BulkModificationFilterGroupOperation[operation.value]}`)}
+                    {t<string>(`BulkModificationFilterGroupOperation.${BulkModificationFilterGroupOperation[operation.value]}`)}
                   </Menu.Item>
                 ))}
               </Menu>
@@ -188,7 +188,7 @@ const FilterGroup = (props: IProps) => {
                 },
               });
             }}
-            >{t('Add a filter')}</Menu.Item>
+            >{t<string>('Add a filter')}</Menu.Item>
             <Menu.Item onClick={() => {
               if (!group.groups) {
                 group.groups = [];
@@ -196,7 +196,7 @@ const FilterGroup = (props: IProps) => {
               group.groups.push({ operation: BulkModificationFilterGroupOperation.And });
               forceUpdate();
             }}
-            >{t('Add a group')}</Menu.Item>
+            >{t<string>('Add a group')}</Menu.Item>
           </Menu>
         </Dropdown>
       )}

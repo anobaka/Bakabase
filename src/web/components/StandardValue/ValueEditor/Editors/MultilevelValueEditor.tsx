@@ -143,7 +143,7 @@ export default <V = string>(props: MultilevelValueEditorProps<V>) => {
     <Modal
       defaultVisible
       size={dataSource.length > 10 ? 'xl' : 'lg'}
-      title={t('Select data')}
+      title={t<string>('Select data')}
       onOk={async () => {
         const bv = value.map(v =>
           findNodeChainInMultilevelData(dataSource, v)?.map(x => x.label))
@@ -166,7 +166,7 @@ export default <V = string>(props: MultilevelValueEditorProps<V>) => {
         <div className={'flex flex-wrap gap-1 w-full min-h-0 overflow-y-auto'}>
           {filteredData.length > 0 ? renderTreeNodes(filteredData) : (
             <div className={'m-2 flex items-center justify-center'}>
-              {t('No data')}
+              {t<string>('No data')}
             </div>
           )}
         </div>

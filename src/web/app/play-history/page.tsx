@@ -104,8 +104,8 @@ export default () => {
             isHeaderSticky
           >
             <TableHeader>
-              <TableColumn>{t('Item')}</TableColumn>
-              <TableColumn>{t('Played at')}</TableColumn>
+              <TableColumn>{t<string>('Item')}</TableColumn>
+              <TableColumn>{t<string>('Played at')}</TableColumn>
             </TableHeader>
             <TableBody>
               {playHistories.map(a => {
@@ -123,7 +123,7 @@ export default () => {
         </div>
       ) : (
         <div>
-          {t('No play history')}
+          {t<string>('No play history')}
         </div>
       )}
     </div>

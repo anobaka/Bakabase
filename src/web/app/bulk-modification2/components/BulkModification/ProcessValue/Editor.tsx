@@ -180,7 +180,7 @@ export default (props: Props) => {
                   'For example, if you use the \'actor\' from the multiple-choice data as the change result, then in the future, if you modify \'actor\' to \'actor1\', the current data will also be changed to \'actor1\' after next time processing. However, if this options is not enabled, the current data will be changed to \'actor\' after next time processing.',
                   'For properties(such as text, numbers, dates, etc.) without reference values, there is no difference between statuses of this options.'].map(p => {
                   return (
-                    <p>{t(p)}</p>
+                    <p>{t<string>(p)}</p>
                   );
                 })}
               </div>
@@ -193,7 +193,7 @@ export default (props: Props) => {
               onValueChange={onFollowPropertyChanges}
               className={'ml-2'}
             >
-              {t('Follow property changes')}
+              {t<string>('Follow property changes')}
             </Checkbox>
           </Tooltip>
         )}
@@ -213,7 +213,7 @@ export default (props: Props) => {
                 // size={'sm'}
                 variant="bordered"
               >
-                {property ? `(${property.poolName})${property.name}` : t('Choose a property')}
+                {property ? `(${property.poolName})${property.name}` : t<string>('Choose a property')}
               </Button>
             </DropdownTrigger>
             <DropdownMenu
@@ -265,8 +265,8 @@ export default (props: Props) => {
                   variant="bordered"
                 >
                   {value.editorPropertyType ? (
-                    `${t('Use {{any}}', { any: `${t(PropertyType[value.editorPropertyType])} ${t('editor')}` })}`
-                  ) : t('Choose a property value editor')}
+                    `${t<string>('Use {{any}}', { any: `${t<string>(PropertyType[value.editorPropertyType])} ${t<string>('editor')}` })}`
+                  ) : t<string>('Choose a property value editor')}
                 </Button>
               </DropdownTrigger>
               <DropdownMenu
@@ -294,7 +294,7 @@ export default (props: Props) => {
                       className={pt.isAvailable ? '' : 'text-gray-400 cursor-not-allowed'}
                     >
                       <div className={'flex items-center gap-2'}>
-                        {t(`PropertyType.${PropertyType[pt.type]}`)}
+                        {t<string>(`PropertyType.${PropertyType[pt.type]}`)}
                         {!pt.isAvailable && (
                           <Tooltip
                             content={pt.unavailableReason}
@@ -316,11 +316,11 @@ export default (props: Props) => {
         );
       case BulkModificationProcessorValueType.Variable:
         if (!variables || variables.length == 0) {
-          return t('No variables available');
+          return t<string>('No variables available');
         }
         return (
           <Select
-            placeholder={t('Please select a variable')}
+            placeholder={t<string>('Please select a variable')}
             dataSource={variables.map(v => ({
               label: v.name,
               value: v.key,
@@ -375,7 +375,7 @@ export default (props: Props) => {
               // size={'sm'}
               variant="bordered"
             >
-              {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
+              {t<string>(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
             </Button>
           </DropdownTrigger>
           <DropdownMenu
@@ -391,7 +391,7 @@ export default (props: Props) => {
               return (
                 <DropdownItem key={s}>
                   <div className={'flex items-center gap-2'}>
-                    {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s]}`)}
+                    {t<string>(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s]}`)}
                   </div>
                 </DropdownItem>
               );
@@ -403,7 +403,7 @@ export default (props: Props) => {
       </div>
       {error && (
         <div className={'text-danger'}>
-          {t(error)}
+          {t<string>(error)}
         </div>
       )}
     </div>

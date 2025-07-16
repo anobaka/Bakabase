@@ -82,7 +82,7 @@ export default ({ id }: { id: string }) => {
             onClick={() => {
               createPortal(Modal, {
                 defaultVisible: true,
-                title: t('Failed to get information of new version'),
+                title: t<string>('Failed to get information of new version'),
                 children: (
                   <pre>
                     {latestVersion.error}
@@ -105,7 +105,7 @@ export default ({ id }: { id: string }) => {
                   BApi.component.installDependentComponent({ id });
                 }}
               >
-                {t('Click to update to version')}: {latestVersion.version}
+                {t<string>('Click to update to version')}: {latestVersion.version}
               </Button>,
             );
           }
@@ -118,7 +118,7 @@ export default ({ id }: { id: string }) => {
     } else {
       if (findingNewVersion) {
         elements.push(
-          <Icon type={'loading'} size={'small'} title={t('Checking new version')} />,
+          <Icon type={'loading'} size={'small'} title={t<string>('Checking new version')} />,
         );
       }
     }
@@ -127,7 +127,7 @@ export default ({ id }: { id: string }) => {
     if (context && context.status == DependentComponentStatus.Installing) {
       elements.push(
         <>
-          {t('Updating')}: {context.installationProgress}%
+          {t<string>('Updating')}: {context.installationProgress}%
           <Icon type={'loading'} size={'small'} />
         </>,
       );
@@ -141,7 +141,7 @@ export default ({ id }: { id: string }) => {
           onClick={() => {
             createPortal(Modal, {
               defaultVisible: true,
-              title: t('Error'),
+              title: t<string>('Error'),
               children: (
                 <pre>
                   {context.error}
@@ -174,7 +174,7 @@ export default ({ id }: { id: string }) => {
               size={'sm'}
               radius={'sm'}
               title={context?.location ?? undefined}
-            >{context?.version ?? t('Not installed')}</Chip>
+            >{context?.version ?? t<string>('Not installed')}</Chip>
           )
         }
       </div>

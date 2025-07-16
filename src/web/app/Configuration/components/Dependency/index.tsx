@@ -32,13 +32,13 @@ export default () => {
 
   return (
     <div className="group">
-      {/* <Title title={t('Dependent components')} /> */}
+      {/* <Title title={t<string>('Dependent components')} /> */}
       <div className="settings">
         <Table
           removeWrapper
         >
           <TableHeader>
-            <TableColumn width={200}>{t('Dependent components')}</TableColumn>
+            <TableColumn width={200}>{t<string>('Dependent components')}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -64,7 +64,7 @@ export default () => {
                               </pre>
                             )}
                             <div className={'flex items-center gap-2'}>
-                              {t('Default location')}
+                              {t<string>('Default location')}
                               <Snippet
                                 size={'sm'}
                                 variant="bordered"
@@ -87,7 +87,7 @@ export default () => {
             </>
             <TableRow key={componentContexts.length} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
               <TableCell>
-                {t('curl')}
+                {t<string>('curl')}
               </TableCell>
               <TableCell>
                 <EditableValue<string, InputProps, SnippetProps & { value: string }>
@@ -97,7 +97,7 @@ export default () => {
                            }) => (value ? (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>) : null)}
                   Editor={Input}
                   editorProps={{
-                    placeholder: t('path/to/curl.exe'),
+                    placeholder: t<string>('path/to/curl.exe'),
                   }}
                   onSubmit={async v => await BApi.options.putThirdPartyOptions({
                     ...thirdPartyOptions,
@@ -109,7 +109,7 @@ export default () => {
             </TableRow>
             <TableRow key={componentContexts.length + 1} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
               <TableCell>
-                {t('Ollama endpoint')}
+                {t<string>('Ollama endpoint')}
               </TableCell>
               <TableCell>
                 <EditableValue<string, InputProps, SnippetProps & { value: string }>
@@ -119,7 +119,7 @@ export default () => {
                            }) => (value ? (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>) : null)}
                   Editor={Input}
                   editorProps={{
-                    placeholder: t('http://localhost:11434'),
+                    placeholder: t<string>('http://localhost:11434'),
                   }}
                   onSubmit={async v => await BApi.options.putAiOptions({
                     ...aiOptions,
@@ -162,7 +162,7 @@ export default () => {
         {/*                 </div> */}
         {/*               )} */}
         {/*               <div> */}
-        {/*                 {t('Default location')}: {c.defaultLocation} */}
+        {/*                 {t<string>('Default location')}: {c.defaultLocation} */}
         {/*               </div> */}
         {/*             </div> */}
 

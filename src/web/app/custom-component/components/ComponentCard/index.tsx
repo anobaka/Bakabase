@@ -126,8 +126,8 @@ export default (props: DescriptorCardProps) => {
               e.preventDefault();
               e.stopPropagation();
               Dialog.confirm({
-                title: t('Sure to delete?'),
-                content: t(''),
+                title: t<string>('Sure to delete?'),
+                content: t<string>(''),
                 v2: true,
                 closeMode: ['mask', 'esc', 'close'],
                 onOk: () => BApi.componentOptions.removeComponentOptions(descriptor.optionsId).then(a => {
@@ -148,20 +148,20 @@ export default (props: DescriptorCardProps) => {
         <div className="name">
           {labelProps && (
             <>
-              <SimpleLabel status={labelProps.status}>{t(labelProps.label)}</SimpleLabel>
+              <SimpleLabel status={labelProps.status}>{t<string>(labelProps.label)}</SimpleLabel>
               &nbsp;
             </>
           )}
-          {t(descriptor.name)}
+          {t<string>(descriptor.name)}
         </div>
-        {descriptor.description && <div className="description">{t(descriptor.description)}</div>}
+        {descriptor.description && <div className="description">{t<string>(descriptor.description)}</div>}
         {renderExtra()}
       </div>
       <div className="bottom">
         {categories.length > 0 && (
           <div className="categories">
             <div className="label">
-              {t('Applied to {{count}} categories', { count: categories.length })}
+              {t<string>('Applied to {{count}} categories', { count: categories.length })}
             </div>
           </div>
         )}
@@ -169,11 +169,11 @@ export default (props: DescriptorCardProps) => {
           <SimpleLabel
             status={'default'}
             className={`version ${descriptor.version?.length > 0 ? '' : 'empty'}`}
-            title={`${t('Version')}:${t('May be different in incoming versions of app')}`}
+            title={`${t<string>('Version')}:${t<string>('May be different in incoming versions of app')}`}
           >{descriptor.version}</SimpleLabel>
           <SimpleLabel
             className={`version ${descriptor.dataVersion?.length > 0 ? '' : 'empty'}`}
-            title={`${t('Data version')}:${t('May be different after configuration change')}`}
+            title={`${t<string>('Data version')}:${t<string>('May be different after configuration change')}`}
           >{descriptor.dataVersion}</SimpleLabel>
         </div>
       </div>

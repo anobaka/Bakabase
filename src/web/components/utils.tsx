@@ -13,8 +13,7 @@ import chalk from 'chalk';
 import { Time } from '@internationalized/date';
 import type { Duration } from 'dayjs/plugin/duration';
 import dayjs from 'dayjs';
-import { reservedResourceFileTypes, reservedResourceProperties, UiTheme } from '@/sdk/constants';
-import store from '@/store';
+import { reservedResourceFileTypes, UiTheme } from '@/sdk/constants';
 import BusinessConstants from '@/components/BusinessConstants';
 import type { BakabaseInfrastructuresComponentsConfigurationsAppAppOptions } from '@/sdk/Api';
 
@@ -412,16 +411,16 @@ export function extractEnhancerTargetDescription(target: string) {
   if (type == 'p') {
     typeName = 'Property';
     const reserved = reservedResourceProperties.find((x) => x.label.toLowerCase() == key.toLowerCase());
-    keyName = reserved ? i18n.t(reserved.label) : key;
+    keyName = reserved ? i18n.t<string>(reserved.label) : key;
   } else if (type == 'f') {
     typeName = 'File';
     const reserved = reservedResourceFileTypes.find((x) => x.label.toLowerCase() == key.toLowerCase());
-    keyName = reserved ? i18n.t(reserved.label) : key;
+    keyName = reserved ? i18n.t<string>(reserved.label) : key;
   } else {
     typeName = 'Unknown';
   }
   return {
-    type: i18n.t(typeName),
+    type: i18n.t<string>(typeName),
     key: keyName,
   };
 }
@@ -447,17 +446,15 @@ export function createPortalOfComponent(Component: React.ComponentType<any>, pro
   console.log('Mounting', key);
 
   root.render(
-    <store.Provider>
-      <Component
-        {...props}
-        afterClose={() => {
-          if (props.afterClose) {
-            props.afterClose();
-          }
-          unmount();
-        }}
-      />
-    </store.Provider>,
+    <Component
+      {...props}
+      afterClose={() => {
+        if (props.afterClose) {
+          props.afterClose();
+        }
+        unmount();
+      }}
+    />
   );
 
   return {

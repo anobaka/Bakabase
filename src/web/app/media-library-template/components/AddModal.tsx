@@ -22,7 +22,7 @@ export default ({ onDestroyed }: Props) => {
     <Modal
       size={'md'}
       visible={visible}
-      title={t('Add a media library template')}
+      title={t<string>('Add a media library template')}
       defaultVisible
       onDestroyed={onDestroyed}
       footer={{
@@ -43,8 +43,8 @@ export default ({ onDestroyed }: Props) => {
       <div className={'flex flex-col gap-1'}>
         <div>
           <Input
-            label={t('Template name')}
-            placeholder={t('Enter template name')}
+            label={t<string>('Template name')}
+            placeholder={t<string>('Enter template name')}
             isRequired
             onValueChange={setName}
             value={name}
@@ -66,7 +66,7 @@ export default ({ onDestroyed }: Props) => {
               }}
               color={'primary'}
             >
-              {t('Preset template builder')}
+              {t<string>('Preset template builder')}
             </Button>
             the first time you create a media library template.
           </Trans>

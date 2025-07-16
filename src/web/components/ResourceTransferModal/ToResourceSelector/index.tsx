@@ -46,7 +46,7 @@ export default ({
         if (isOverflow) {
           listItems.push({
             id: 0,
-            fileName: t('20 results can be shown at most, please refine your search'),
+            fileName: t<string>('20 results can be shown at most, please refine your search'),
           });
         }
 
@@ -68,7 +68,7 @@ export default ({
     <div className={'mb-4'}>
       <Autocomplete
         isRequired
-        label={t('Input keyword of the resource path to select the target resource')}
+        label={t<string>('Input keyword of the resource path to select the target resource')}
         inputValue={targetResourceCandidates.filterText}
         fullWidth
         onInputChange={targetResourceCandidates.setFilterText}
@@ -77,7 +77,7 @@ export default ({
         size={'sm'}
         isLoading={targetResourceCandidates.isLoading}
         listboxProps={{
-          emptyContent: t('Can not find any resource'),
+          emptyContent: t<string>('Can not find any resource'),
         }}
         onSelectionChange={key => {
           log(key);
@@ -86,7 +86,7 @@ export default ({
             onSelect(id);
           }
         }}
-        description={t('You may need modify the default keyword to search the expected resources')}
+        description={t<string>('You may need modify the default keyword to search the expected resources')}
       >
         {(rc: Item) => {
           const isFromResource = fromResourcePath == rc.path;
@@ -101,7 +101,7 @@ export default ({
                 ? <Chip
                     size={'sm'}
                     radius={'sm'}
-                >{t('Current path')}</Chip> : undefined}
+                >{t<string>('Current path')}</Chip> : undefined}
             >
               {rc.fileName}
             </AutocompleteItem>
@@ -116,7 +116,7 @@ export default ({
         }}
       >
         <ReloadOutlined className={'text-base'} />
-        {t('Reset keyword to path of from resource')}
+        {t<string>('Reset keyword to path of from resource')}
       </Button>
     </div>
   );

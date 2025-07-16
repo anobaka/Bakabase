@@ -8,7 +8,9 @@ import { ThirdPartyId } from '@/sdk/constants';
 import { Modal, Tab, Tabs } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useExHentaiOptionsStore } from '@/models/options';
+import { usePixivOptionsStore } from '@/models/options';
+import { useBilibiliOptionsStore } from '@/models/options';
 
 type ConfigurableKey = 'cookie' | 'threads' | 'interval' | 'defaultDownloadPath' | 'namingConvention';
 
@@ -22,9 +24,9 @@ export default ({
                 }: Props) => {
   const { t } = useTranslation();
 
-  const [exhentaOptions, exhentaiOptionsDispatcher] = store.useModel('exHentaiOptions');
-  const [pixivOptions, pixivOptionsDispatcher] = store.useModel('pixivOptions');
-  const [bilibiliOptions, bilibiliOptionsDispatcher] = store.useModel('bilibiliOptions');
+  const exhentaiOptions = useExHentaiOptionsStore(state => state.data);
+  const pixivOptions = usePixivOptionsStore(state => state.data);
+  const bilibiliOptions = useBilibiliOptionsStore(state => state.data);
 
   const [tmpOptions, setTmpOptions] = useState<{ [key in ThirdPartyId]?: any }>({});
 
@@ -37,17 +39,17 @@ export default ({
   } = {
     [ThirdPartyId.Bilibili]: {
       options: bilibiliOptions,
-      put: bilibiliOptionsDispatcher.put,
+      put: useBilibiliOptionsStore(state => state.put),
       configurableKeys: ['cookie', 'interval', 'defaultDownloadPath', 'namingConvention'],
     },
     [ThirdPartyId.ExHentai]: {
-      options: exhentaOptions,
-      put: exhentaiOptionsDispatcher.put,
+      options: exhentaiOptions,
+      put: useExHentaiOptionsStore(state => state.put),
       configurableKeys: ['cookie', 'threads', 'interval', 'defaultDownloadPath', 'namingConvention'],
     },
     [ThirdPartyId.Pixiv]: {
       options: pixivOptions,
-      put: pixivOptionsDispatcher.put,
+      put: usePixivOptionsStore(state => state.put),
       configurableKeys: ['cookie', 'threads', 'interval', 'defaultDownloadPath', 'namingConvention'],
     },
   };
@@ -64,7 +66,7 @@ export default ({
     <Modal
       size={'xl'}
       defaultVisible
-      title={t('Configurations')}
+      title={t<string>('Configurations')}
       onDestroyed={onDestroyed}
       onOk={async () => {
         const tasks = _.keys(tmpOptions).filter(x => tmpOptions[x]).map(async x => {

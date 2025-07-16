@@ -61,7 +61,7 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
       size={'xl'}
       title={(
         <div className={'flex items-center gap-x-2'}>
-          {t('Configure enhancer')}
+          {t<string>('Configure enhancer')}
           <BriefEnhancer enhancer={enhancer} />
         </div>
       )}

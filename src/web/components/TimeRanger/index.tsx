@@ -42,7 +42,7 @@ export default ({
     if (value instanceof Array) {
       propsOnChange(value);
     } else {
-      Message.error(t('Not supported'));
+      Message.error(t<string>('Not supported'));
     }
   }, [propsOnChange]);
 
@@ -50,7 +50,7 @@ export default ({
     if (value instanceof Array) {
       propsOnProcess(value);
     } else {
-      Message.error(t('Not supported'));
+      Message.error(t<string>('Not supported'));
     }
   }, [propsOnProcess]);
 

@@ -33,7 +33,7 @@ export default ({ resource }: Props) => {
   return (
     <div className={'grid justify-evenly gap-y-1'} style={{ gridTemplateColumns: 'repeat(2, auto)' }}>
       {dateTimes.map((dateTime, i) => {
-        const label = t(dateTime.label);
+        const label = t<string>(dateTime.label);
           const value = dayjs(resource[dateTime.key]).format('YYYY-MM-DD HH:mm:ss');
           return (
             <div key={i} className={'flex flex-col'}>

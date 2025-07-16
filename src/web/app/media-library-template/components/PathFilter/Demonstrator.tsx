@@ -22,29 +22,29 @@ export default ({ filter }: Props) => {
         return (
           <>
             <IoLayersOutline className={'text-medium'} />
-            {t('Layer')}
+            {t<string>('Layer')}
           </>
         );
       case PathPositioner.Regex:
         return (
           <>
             <BsRegex className={'text-medium'} />
-            {t('Regex')}
+            {t<string>('Regex')}
           </>
         );
       default:
-        return t('Not supported');
+        return t<string>('Not supported');
     }
   };
 
   const renderLayerOrRegex = () => {
     switch (filter.positioner) {
       case PathPositioner.Layer:
-        return filter.layer == undefined ? t('Not set') : filter.layer == 0 ? t('Directory of media library') : t('The {{layer}} layer', { layer: filter.layer });
+        return filter.layer == undefined ? t<string>('Not set') : filter.layer == 0 ? t<string>('Directory of media library') : t<string>('The {{layer}} layer', { layer: filter.layer });
       case PathPositioner.Regex:
-        return filter.regex ?? t('Not set');
+        return filter.regex ?? t<string>('Not set');
       default:
-        return t('Not supported');
+        return t<string>('Not supported');
     }
   };
 
@@ -74,7 +74,7 @@ export default ({ filter }: Props) => {
   return (
     <div className={'flex items-center gap-2'}>
       <div className={'flex items-center gap-1'}>
-        {t('Through')}
+        {t<string>('Through')}
         {renderPositioner()}
       </div>
       <div className={'flex items-center gap-1'}>

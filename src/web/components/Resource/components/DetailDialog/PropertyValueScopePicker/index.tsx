@@ -6,7 +6,7 @@ import type { CSSProperties } from 'react';
 import React, { useCallback, useEffect, useState } from 'react';
 import { CheckCircleOutlined, CloseCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { Property, Resource as ResourceModel } from '@/core/models/Resource';
-import store from '@/store';
+import { useResourceOptionsStore } from '@/models/options';
 import { Button, Chip, Modal, Table, Tooltip } from '@/components/bakaui';
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -29,7 +29,7 @@ export default (props: Props) => {
 
   const { resource } = props;
 
-  const resourceOptions = store.useModelState('resourceOptions');
+  const resourceOptions = useResourceOptionsStore(state => state.data);
 
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
 
@@ -54,8 +54,8 @@ export default (props: Props) => {
 
   const renderHeader = () => {
     const columns: any[] = [
-      <TableColumn>{t('Property')}</TableColumn>,
-      <TableColumn>{t('Display value')}</TableColumn>,
+      <TableColumn>{t<string>('Property')}</TableColumn>,
+      <TableColumn>{t<string>('Display value')}</TableColumn>,
       ...visibleScopes.map(scope => {
         const priority = resourceOptions.propertyValueScopePriority ?? [];
         const index = priority.findIndex(p => p == scope);
@@ -72,15 +72,15 @@ export default (props: Props) => {
                 });
               }}
             >
-              {t(`PropertyValueScope.${PropertyValueScope[scope]}`)}
+              {t<string>(`PropertyValueScope.${PropertyValueScope[scope]}`)}
               <Tooltip content={(
                 <div className={'flex flex-col gap-2'}>
                   <div>
-                    {t('The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.')}
+                    {t<string>('The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.')}
                   </div>
                   <div className={'flex items-center gap-2'}>
                     <CloseCircleOutlined className={'text-base'} />
-                    {t('indicates this scope is not enabled')}
+                    {t<string>('indicates this scope is not enabled')}
                   </div>
                 </div>
               )}
@@ -191,12 +191,12 @@ export default (props: Props) => {
       defaultVisible
       size={'full'}
       footer={false}
-      title={t('Setup priority of property value scopes')}
+      title={t<string>('Setup priority of property value scopes')}
     >
       <div className={'flex items-center gap-2'}>
         <div className={'flex items-center gap-1'}>
-          {t('Visible scopes')}
-          <Tooltip content={t('This filter is used for quick check and does not change the priority of property value scopes.')}>
+          {t<string>('Visible scopes')}
+          <Tooltip content={t<string>('This filter is used for quick check and does not change the priority of property value scopes.')}>
             <QuestionCircleOutlined className={'text-base'} />
           </Tooltip>
         </div>
@@ -217,14 +217,14 @@ export default (props: Props) => {
                   }
                 }}
               >
-                {t(`PropertyValueScope.${PropertyValueScope[s.value]}`)}
+                {t<string>(`PropertyValueScope.${PropertyValueScope[s.value]}`)}
               </Chip>
             );
           })}
         </div>
       </div>
       <div>
-        {t('You can click on the scope button to change the priority of the property value scopes.')}
+        {t<string>('You can click on the scope button to change the priority of the property value scopes.')}
       </div>
       <Table removeWrapper>
         <TableHeader>

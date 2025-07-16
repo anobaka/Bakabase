@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useUpdate } from 'react-use';
 import type { Property, Resource } from '@/core/models/Resource';
 import { PropertyPool, PropertyValueScope, propertyValueScopes } from '@/sdk/constants';
-import store from '@/store';
+import { useResourceOptionsStore } from '@/models/options';
 import type {
   PropertyContainerProps,
 } from '@/components/Resource/components/DetailDialog/Properties/PropertyContainer';
@@ -58,7 +58,7 @@ export default (props: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const cps = resource.properties;
-  const resourceOptions = store.useModelState('resourceOptions');
+  const resourceOptions = useResourceOptionsStore(state => state.data);
   const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
   const [builtinPropertyMap, setBuiltinPropertyMap] = useState<Record<number, IProperty>>({});
   const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
@@ -99,7 +99,7 @@ export default (props: Props) => {
   if (!cps || Object.keys(cps).length == 0) {
     return (
       <div className={'opacity-60'}>
-        {t('There is no property bound yet, you can bind properties to media library template or category(deprecated) first.')}
+        {t<string>('There is no property bound yet, you can bind properties to media library template or category(deprecated) first.')}
       </div>
     );
   }
@@ -237,7 +237,7 @@ export default (props: Props) => {
             size={'sm'}
             color={'primary'}
           >
-            {t('Show properties not bound to media library templates or categories(deprecated)')}
+            {t<string>('Show properties not bound to media library templates or categories(deprecated)')}
           </Button>
         </div>
       )}

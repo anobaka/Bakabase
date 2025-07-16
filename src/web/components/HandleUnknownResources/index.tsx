@@ -35,16 +35,16 @@ export default ({ onHandled }: Props) => {
         onClick={() => {
           const modal = createPortal(Modal, {
             defaultVisible: true,
-            title: t('Choose a method to handle unknown resources'),
+            title: t<string>('Choose a method to handle unknown resources'),
             size: 'lg',
             children: (
               <div className={'flex flex-col gap-4 mb-4'}>
                 <div>
                   <div>
-                    {t('When the system fails to find the file or folder corresponding to the resource path, the resource is marked as an unknown resource.')}
+                    {t<string>('When the system fails to find the file or folder corresponding to the resource path, the resource is marked as an unknown resource.')}
                   </div>
                   <div>
-                    {t('In most cases, this is caused by changes in the names of files or folders.')}
+                    {t<string>('In most cases, this is caused by changes in the names of files or folders.')}
                   </div>
                 </div>
                 <div className={'flex items-start gap-2 justify-around'}>
@@ -56,7 +56,7 @@ export default ({ onHandled }: Props) => {
                       const loadingModal = createPortal(Modal, {
                         defaultVisible: true,
                         footer: false,
-                        title: t('Loading unknown resources'),
+                        title: t<string>('Loading unknown resources'),
                       });
                       BApi.resource.getUnknownResources().then(r => {
                         loadingModal.destroy();
@@ -74,12 +74,12 @@ export default ({ onHandled }: Props) => {
                   >
                     <CardHeader className="flex gap-3 text-lg">
                       <SyncOutlined className={'text-success'} />
-                      {t('Transfer data')}
+                      {t<string>('Transfer data')}
                     </CardHeader>
                     <Divider />
                     <CardBody>
-                      <div>{t('You can transfer the data of unknown resources to existing resources.')}</div>
-                      <div>{t('You can also transfer the data of some of unknown resources to existing resources first, and then delete the remaining unknown resources.')}</div>
+                      <div>{t<string>('You can transfer the data of unknown resources to existing resources.')}</div>
+                      <div>{t<string>('You can also transfer the data of some of unknown resources to existing resources first, and then delete the remaining unknown resources.')}</div>
                     </CardBody>
                   </Card>
                   <Card
@@ -89,10 +89,10 @@ export default ({ onHandled }: Props) => {
                     onPress={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t('Delete {{count}} unknown resources permanently', { count }),
+                        title: t<string>('Delete {{count}} unknown resources permanently', { count }),
                         children: (
                           <div>
-                            {t('Be careful, this operation can not be undone')}
+                            {t<string>('Be careful, this operation can not be undone')}
                           </div>
                         ),
                         onOk: async () => {
@@ -106,11 +106,11 @@ export default ({ onHandled }: Props) => {
                   >
                     <CardHeader className="flex gap-3 text-lg">
                       <DeleteOutlined className={'text-danger'} />
-                      {t('Delete {{count}} unknown resources permanently', { count })}
+                      {t<string>('Delete {{count}} unknown resources permanently', { count })}
                     </CardHeader>
                     <Divider />
                     <CardBody>
-                      <div>{t('You can delete all unknown resources permanently.')}</div>
+                      <div>{t<string>('You can delete all unknown resources permanently.')}</div>
                     </CardBody>
                   </Card>
                 </div>
@@ -121,7 +121,7 @@ export default ({ onHandled }: Props) => {
         }}
       >
         <FileUnknownOutlined className={'text-base'} />
-        {t('Handle {{count}} unknown resources', { count })}
+        {t<string>('Handle {{count}} unknown resources', { count })}
       </Button>
     );
   }

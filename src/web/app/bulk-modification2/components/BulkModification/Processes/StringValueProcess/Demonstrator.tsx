@@ -51,7 +51,7 @@ export default (props: Props) => {
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd'}
           values={{
-            direction: operation == TextProcessingOperation.AddToStart ? t('Position.Beginning') : t('Position.End'),
+            direction: operation == TextProcessingOperation.AddToStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
             value: options?.value,
           }}
         >
@@ -69,7 +69,7 @@ export default (props: Props) => {
         <Trans
           i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition'}
           values={{
-            direction: options?.isPositioningDirectionReversed ? t('Position.End') : t('Position.Beginning'),
+            direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
             position: options?.index,
             value: options?.value,
           }}
@@ -92,7 +92,7 @@ export default (props: Props) => {
           <Trans
             i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd'}
             values={{
-              direction: operation == TextProcessingOperation.RemoveFromStart ? t('Position.Beginning') : t('Position.End'),
+              direction: operation == TextProcessingOperation.RemoveFromStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
               count: options?.count,
             }}
           >
@@ -105,10 +105,10 @@ export default (props: Props) => {
       );
     case TextProcessingOperation.RemoveFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t('Position.End') : t('Position.Beginning'),
+        direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
         position: options?.index,
         count: options?.count,
-        removeDirection: options?.isOperationDirectionReversed ? t('TextOperation.Backward') : t('TextOperation.Forward'),
+        removeDirection: options?.isOperationDirectionReversed ? t<string>('TextOperation.Backward') : t<string>('TextOperation.Forward'),
       };
       return (
         <>
@@ -132,7 +132,7 @@ export default (props: Props) => {
     case TextProcessingOperation.ReplaceFromStart:
     case TextProcessingOperation.ReplaceFromEnd: {
       const texts = {
-        direction: operation == TextProcessingOperation.ReplaceFromEnd ? t('Position.End') : t('Position.Beginning'),
+        direction: operation == TextProcessingOperation.ReplaceFromEnd ? t<string>('Position.End') : t<string>('Position.Beginning'),
         find: options?.find,
       };
       return (
@@ -163,7 +163,7 @@ export default (props: Props) => {
     }
     case TextProcessingOperation.ReplaceFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t('end') : t('start'),
+        direction: options?.isPositioningDirectionReversed ? t<string>('end') : t<string>('start'),
         find: options?.find,
       };
       return (
@@ -218,14 +218,14 @@ export default (props: Props) => {
     case TextProcessingOperation.Delete: {
       return (
         <div className={'primary'}>
-          {t('Delete')}
+          {t<string>('Delete')}
         </div>
       );
     }
     default:
       return (
         <>
-          {t('Unsupported value')}
+          {t<string>('Unsupported value')}
         </>
       );
   }

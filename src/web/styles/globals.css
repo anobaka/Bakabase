@@ -1,5 +1,4 @@
 @import "tailwindcss";
-
 @config "../tailwind.config.js";
 
 /* ===== 以下为 icejs global.scss 及相关主题样式迁移 ===== */
@@ -85,18 +84,18 @@ pre {
 }
 
 /* ===== 主题变量（dark/light） ===== */
-@import './global.dark.scss';
-@import './global.light.scss';
+@import './global.dark.css';
+@import './global.light.css';
 
 /* ===== fusion design 覆盖 ===== */
-@import './global.fusion.design.overrides.scss';
+@import './global.fusion.design.overrides.css';
 
 /* ===== reactour 覆盖 ===== */
-@import './global.reactour.overrides.scss';
+@import './global.reactour.overrides.css';
 
 /* ===== bakaui 组件变量 ===== */
-@import '../components/bakaui/index.scss';
-@import '../components/bakaui/index.dark.scss';
-@import '../components/bakaui/index.light.scss';
+@import '../components/bakaui/index.css';
+@import '../components/bakaui/index.dark.css';
+@import '../components/bakaui/index.light.css';
 
 /* ===== END icejs 样式迁移 ===== */

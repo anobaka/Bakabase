@@ -51,7 +51,7 @@ export default ({ defaultValue = [], onChange = (tree) => {} }) => {
                       onClick={() => {
                         setEditingKey(key);
                       }}
-                    >{i18n.t('Add')}
+                    >{i18n.t<string>('Add')}
                     </Button>
                   ) : d.label
                 )}

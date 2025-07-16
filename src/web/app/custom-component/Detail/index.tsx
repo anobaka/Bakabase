@@ -14,7 +14,6 @@ import type {
 import ComponentDescriptorCard from '@/pages/CustomComponent/components/ComponentCard';
 import ComponentOptionsRender from '@/pages/CustomComponent/Detail/ComponentOptions/ComponentOptionsRender';
 import { uuidv4 } from '@/components/utils';
-import store from '@/store';
 
 
 export interface CustomComponentDetailDialogProps extends DialogProps{
@@ -83,14 +82,14 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
       width={'auto'}
       centered
       className={'custom-component-detail-dialog'}
-      title={i18n.t(ComponentType[componentType])}
+      title={i18n.t<string>(ComponentType[componentType])}
       v2
       visible={visible}
       closeMode={['close', 'esc', 'mask']}
       onOk={() => new Promise((resolve, reject) => {
         if (optionsFormRef.current.validateForm()) {
           if (!(descriptor.name?.length > 0)) {
-            return Message.error(i18n.t('{{key}} is not set', { key: i18n.t('Name') }));
+            return Message.error(i18n.t<string>('{{key}} is not set', { key: i18n.t<string>('Name') }));
           }
 
           const data = {
@@ -133,7 +132,7 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
       }}
       {...(otherProps || {})}
     >
-      <div className="label">{i18n.t('Type')}</div>
+      <div className="label">{i18n.t<string>('Type')}</div>
       <div className="value ">
         <div className="base-components">
           {baseDescriptors.map(c => {
@@ -149,7 +148,7 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
           })}
         </div>
       </div>
-      <div className="label">{i18n.t('Name')}</div>
+      <div className="label">{i18n.t<string>('Name')}</div>
       <div className="value">
         <Input
           onChange={v => {
@@ -161,11 +160,11 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
           value={descriptor?.name}
         />
       </div>
-      <div className="label">{i18n.t('Description')}</div>
+      <div className="label">{i18n.t<string>('Description')}</div>
       <div className="value">
         <Input.TextArea
           value={descriptor?.description}
-          placeholder={baseDescriptor?.description ? i18n.t(baseDescriptor?.description) : undefined}
+          placeholder={baseDescriptor?.description ? i18n.t<string>(baseDescriptor?.description) : undefined}
           onChange={v => {
             setDescriptor({
               ...(descriptor || {}),
@@ -176,7 +175,7 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
       </div>
       {optionsJsonSchema && (
         <>
-          <div className="label">{i18n.t('Configuration')}</div>
+          <div className="label">{i18n.t<string>('Configuration')}</div>
           <div className="value">
             <ComponentOptionsRender
               defaultValue={descriptor?.optionsJson ? JSON.parse(descriptor?.optionsJson) : undefined}
@@ -212,12 +211,10 @@ ComponentDetail.show = (props) => {
 
   root.render(
     // <React.StrictMode>
-    <store.Provider>
-      <ComponentDetail
-        {...props}
-        afterClose={unmount}
-      />
-    </store.Provider>,
+    <ComponentDetail
+      {...props}
+      afterClose={unmount}
+    />,
     // </React.StrictMode>,
   );
 

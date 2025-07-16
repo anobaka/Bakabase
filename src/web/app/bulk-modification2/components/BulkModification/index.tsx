@@ -76,7 +76,7 @@ export default ({
             case 'Filters':
               blockTip = (
                 <div>
-                  {t('Select resources to be modified.')}
+                  {t<string>('Select resources to be modified.')}
                 </div>
               );
               blockInner = (
@@ -101,13 +101,13 @@ export default ({
                       }}
                       variant={'ghost'}
                     >
-                      {t('Filter(Verb)')}
+                      {t<string>('Filter(Verb)')}
                     </Button>
                     <div className={''}>
-                      {t('{{count}} resources have been filtered out', { count: bm.filteredResourceIds?.length || 0 })}
+                      {t<string>('{{count}} resources have been filtered out', { count: bm.filteredResourceIds?.length || 0 })}
                     </div>
                     {/* {bm.filteredAt && ( */}
-                    {/* <div className={'filtered-at'}>{t('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div> */}
+                    {/* <div className={'filtered-at'}>{t<string>('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div> */}
                     {/* )} */}
                     {/* {bm.filteredResourceIds && bm.filteredResourceIds.length > 0 && ( */}
                     {/* <Button */}
@@ -119,7 +119,7 @@ export default ({
                     {/*       bmId: bm.id!, */}
                     {/*     }); */}
                     {/*   }} */}
-                    {/* >{t('Check all the resources that have been filtered out')}</Button> */}
+                    {/* >{t<string>('Check all the resources that have been filtered out')}</Button> */}
                     {/* )} */}
                   </div>
 
@@ -129,7 +129,7 @@ export default ({
             case 'Variables':
               blockTip = (
                 <div>
-                  {t('You can define and preprocess variables here, then use it in process steps.')}
+                  {t<string>('You can define and preprocess variables here, then use it in process steps.')}
                 </div>
               );
               blockInner = (
@@ -152,7 +152,7 @@ export default ({
             case 'Processes':
               blockTip = (
                 <div>
-                  {t('You can define process steps here, and use variables in steps, to modify all filtered resources.')}
+                  {t<string>('You can define process steps here, and use variables in steps, to modify all filtered resources.')}
                 </div>
               );
               blockInner = (
@@ -176,7 +176,7 @@ export default ({
             case 'Changes':
               blockTip = (
                 <div>
-                  {t('Before applying bulk modification, you must calculate and check the changes here.')}
+                  {t<string>('Before applying bulk modification, you must calculate and check the changes here.')}
                 </div>
               );
               blockInner = (
@@ -195,7 +195,7 @@ export default ({
                       });
                     }}
                   >
-                    {t('Calculate changes')}
+                    {t<string>('Calculate changes')}
                   </Button>
                   {bm.resourceDiffCount > 0 && (
                     <Button
@@ -210,7 +210,7 @@ export default ({
                         );
                       }}
                     >
-                      {t('Check {{count}} diffs', { count: bm.resourceDiffCount })}
+                      {t<string>('Check {{count}} diffs', { count: bm.resourceDiffCount })}
                     </Button>
                   )}
                 </div>
@@ -226,8 +226,8 @@ export default ({
                     onClick={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t('Apply bulk modification'),
-                        children: t('Please check diffs before applying, and changed value may not be reverted perfectly in some situations,  are you sure to apply?'),
+                        title: t<string>('Apply bulk modification'),
+                        children: t<string>('Please check diffs before applying, and changed value may not be reverted perfectly in some situations,  are you sure to apply?'),
                         onOk: async () => {
                           await BApi.bulkModification.applyBulkModification(bm.id);
                           reload();
@@ -235,7 +235,7 @@ export default ({
                       });
                     }}
                   >
-                    {t('Apply changes')}
+                    {t<string>('Apply changes')}
                   </Button>
                   {bm.appliedAt && (
                     <Button
@@ -245,8 +245,8 @@ export default ({
                       onClick={() => {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t('Revert bulk modification'),
-                          children: t('Are you sure to revert the bulk modification?'),
+                          title: t<string>('Revert bulk modification'),
+                          children: t<string>('Are you sure to revert the bulk modification?'),
                           onOk: async () => {
                             await BApi.bulkModification.revertBulkModification(bm.id);
                             reload();
@@ -254,7 +254,7 @@ export default ({
                         });
                       }}
                     >
-                      {t('Revert changes')}
+                      {t<string>('Revert changes')}
                     </Button>
                   )}
                 </div>
@@ -273,14 +273,14 @@ export default ({
                           content: 'items-center flex gap-1',
                         }}
                       >
-                        {t(bk)}
+                        {t<string>(bk)}
                         <QuestionCircleOutlined className={'text-base'} />
                       </Chip>
                     </Tooltip>
                   ) : (
                     <Chip
                       radius={'sm'}
-                    >{t(bk)}</Chip>
+                    >{t<string>(bk)}</Chip>
                   )}
                 </div>
                 {blockInner}

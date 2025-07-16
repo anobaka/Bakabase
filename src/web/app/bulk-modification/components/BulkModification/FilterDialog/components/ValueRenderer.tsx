@@ -85,7 +85,7 @@ export default ({
       case BulkModificationProperty.Language: {
         setDataSource(newDs.map(d => ({
           ...d,
-          label: t(ResourceLanguage[d.value]),
+          label: t<string>(ResourceLanguage[d.value]),
         })));
         break;
       }

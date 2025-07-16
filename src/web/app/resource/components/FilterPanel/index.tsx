@@ -17,7 +17,7 @@ import styles from './index.module.scss';
 import FilterGroupsPanel from './FilterGroupsPanel';
 import OrderSelector from './OrderSelector';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useUiOptionsStore } from '@/models/options';
 import { PlaylistCollection } from '@/components/Playlist';
 import type { SearchForm } from '@/pages/Resource/models';
 import { Autocomplete, AutocompleteItem, Button, Checkbox, Chip, Input, Modal, Popover, Spinner, Tooltip } from '@/components/bakaui';
@@ -67,7 +67,7 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const uiOptions = store.useModelState('uiOptions');
+  const uiOptions = useUiOptionsStore(state => state.data);
 
   const [colCountsDataSource, setColCountsDataSource] = useState<{ label: any; value: number }[]>([]);
   const colCount = uiOptions.resource?.colCount ?? DefaultResourceColCount;
@@ -131,7 +131,7 @@ export default ({
             <SearchOutlined className={'text-xl'} />
           )}
           className={'w-1/4 min-w-[200px]'}
-          placeholder={t('Search everything')}
+          placeholder={t<string>('Search everything')}
           onValueChange={v => {
             setSearchForm({
               ...searchForm,
@@ -227,7 +227,7 @@ export default ({
                   });
                 }}
               >
-                {t(`ResourceTag.${ResourceTag[tag]}`)}
+                {t<string>(`ResourceTag.${ResourceTag[tag]}`)}
               </Chip>
             );
           })}
@@ -247,27 +247,27 @@ export default ({
             isLoading={searching}
           >
             <AiOutlineSearch className={'text-medium'} />
-            {t('Search')}
+            {t<string>('Search')}
           </Button>
           <Tooltip
-            content={t('Save current search to quick search')}
+            content={t<string>('Save current search to quick search')}
             placement={'right'}
           >
             <Button
               size={'sm'}
               isIconOnly
               onPress={() => {
-                let name = `${t('Untitled search')}1`;
+                let name = `${t<string>('Untitled search')}1`;
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: 'lg',
-                  title: t('Save current search'),
+                  title: t<string>('Save current search'),
                   children: (
                     <Input
-                      label={t('Name')}
+                      label={t<string>('Name')}
                       onValueChange={v => name = v?.trim()}
                       defaultValue={name}
-                      placeholder={t('Please set a name for current search')}
+                      placeholder={t<string>('Please set a name for current search')}
                       isRequired
                     />
                   ),
@@ -280,7 +280,7 @@ export default ({
                       });
                       savedSearchesRef.current?.reload();
                     } else {
-                      toast.error(t('Name is required'));
+                      toast.error(t<string>('Name is required'));
                       throw new Error('Name is required');
                     }
                   },
@@ -302,14 +302,14 @@ export default ({
             color={'success'}
           >
             <div className={'flex flex-col gap-1'}>
-              <div>{t('Hold down Ctrl to select multiple resources.')}</div>
-              <div>{t('You can perform more actions by right-clicking on the resource.')}</div>
+              <div>{t<string>('Hold down Ctrl to select multiple resources.')}</div>
+              <div>{t<string>('You can perform more actions by right-clicking on the resource.')}</div>
             </div>
           </Popover>
           <Tooltip
             content={(
               <div className={'flex items-center gap-1'}>
-                {t('Resources loaded in current page')}
+                {t<string>('Resources loaded in current page')}
                 {selectingAllFilteredResources ? (
                   <Spinner size={'sm'} />
                 ) : (totalFilteredResourceCount != resourceCount) && (
@@ -329,7 +329,7 @@ export default ({
                         setSelectingAllFilteredResources(false);
                       }
                     }}
-                  >{t('Select all {{count}} filtered resources (including those not currently loaded).', { count: totalFilteredResourceCount })}</Button>
+                  >{t<string>('Select all {{count}} filtered resources (including those not currently loaded).', { count: totalFilteredResourceCount })}</Button>
                 )}
               </div>
             )}
@@ -341,16 +341,16 @@ export default ({
                 setSelectedAll(isSelected);
               }}
               size={'sm'}
-            >{selectedAll ? t('{{count}} items selected', { count: selectedResourceIds?.length }) : t('Select all')}</Checkbox>
+            >{selectedAll ? t<string>('{{count}} items selected', { count: selectedResourceIds?.length }) : t<string>('Select all')}</Checkbox>
           </Tooltip>
           <HandleUnknownResources onHandled={() => search({})} />
           {(totalFilteredResourceCount && totalFilteredResourceCount > 0) ? (
             <div className={'flex items-center gap-1'}>
-              <Tooltip content={t('Loaded resources')}>
+              <Tooltip content={t<string>('Loaded resources')}>
                 <span className={'text-success'} >{resourceCount}</span>
               </Tooltip>
               /
-              <Tooltip content={t('All filtered resources')}>
+              <Tooltip content={t<string>('All filtered resources')}>
                 <span className={'text-secondary'} >{totalFilteredResourceCount}</span>
               </Tooltip>
             </div>
@@ -376,7 +376,7 @@ export default ({
                 className={'text-xl'}
               />}
             >
-              {t('Playlist')}
+              {t<string>('Playlist')}
             </Button>
           )}
           >
@@ -390,7 +390,7 @@ export default ({
                 color={'default'}
                 size={'sm'}
               >
-                {t('Column count')}
+                {t<string>('Column count')}
                 &nbsp;
                 {colCount}
               </Button>

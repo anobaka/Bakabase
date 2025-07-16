@@ -1,10 +1,7 @@
+'use client';
+
 import React from 'react';
-import { Outlet } from 'ice';
-import styles from './index.module.scss';
-export default function BlankLayout() {
-  return (
-    <div className={styles.insideWorld}>
-      <Outlet />
-    </div>
-  );
+
+export default function BlankLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

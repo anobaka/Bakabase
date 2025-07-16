@@ -29,7 +29,8 @@ import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContext
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import BApi from '@/sdk/BApi';
 import { PostParserSource, postParserSources, ThirdPartyId } from '@/sdk/constants';
-import store from '@/store';
+import { useThirdPartyOptionsStore } from '@/models/options';
+import { usePostParserTasksStore } from '@/models/postParserTasks';
 import ConfigurationModal from '@/pages/PostParser/components/ConfigurationModal';
 import ThirdPartyIcon from '@/components/ThirdPartyIcon';
 
@@ -40,9 +41,9 @@ const ThirdPartyMap: Record<PostParserSource, ThirdPartyId> = {
 export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const thirdPartyOptions = store.useModelState('thirdPartyOptions');
+  const thirdPartyOptions = useThirdPartyOptionsStore(state => state.data);
 
-  const tasks = store.useModelState('postParserTasks');
+  const tasks = usePostParserTasksStore(state => state.tasks);
 
   useEffect(() => {
   }, []);
@@ -60,7 +61,7 @@ export default () => {
               createPortal(Modal, {
                 defaultVisible: true,
                 size: 'xl',
-                title: t('Add tasks'),
+                title: t<string>('Add tasks'),
                 children: (
                   <div>
                     {postParserSources.map(s => {
@@ -69,7 +70,7 @@ export default () => {
                           onValueChange={v => {
                             linksTextMap[s.value] = v;
                           }}
-                          label={t('Post links in {{source}}', { source: s.label })}
+                          label={t<string>('Post links in {{source}}', { source: s.label })}
                           minRows={10}
                           placeholder={`https://xxxxxxx
 https://xxxxxxx
@@ -77,7 +78,7 @@ https://xxxxxxx
                         />
                       );
                     })}
-                    <FeatureStatusTip status={'developing'} name={t('Support for other sites')} />
+                    <FeatureStatusTip status={'developing'} name={t<string>('Support for other sites')} />
                   </div>
                 ),
                 onOk: async () => {
@@ -88,7 +89,7 @@ https://xxxxxxx
             }}
           >
             <AiOutlinePlusCircle className={'text-medium'} />
-            {t('Add tasks')}
+            {t<string>('Add tasks')}
           </Button>
           <Button
             size={'sm'}
@@ -97,7 +98,7 @@ https://xxxxxxx
             }}
           >
             <AiOutlineSetting className={'text-medium'} />
-            {t('Configuration')}
+            {t<string>('Configuration')}
           </Button>
         </div>
         <div className={'flex items-center gap-2'}>
@@ -113,7 +114,7 @@ https://xxxxxxx
               }
             }}
           >
-            {t('Automatically parsing')}
+            {t<string>('Automatically parsing')}
           </Checkbox>
           <Button
             variant={'light'}
@@ -123,37 +124,37 @@ https://xxxxxxx
               createPortal(Modal, {
                 defaultVisible: true,
                 size: 'xl',
-                title: t('Instructions for use'),
+                title: t<string>('Instructions for use'),
                 children: (
                   <div>
                     <Alert
                       description={(
                         <div>
-                          <div>{t('This feature internally uses curl. If your system-level curl version is lower than 8.14, please configure the correct curl path in the system settings.')}</div>
-                          <div>{t('The request interval configuration is temporarily unavailable. The built-in default interval is 3 seconds.')}</div>
+                          <div>{t<string>('This feature internally uses curl. If your system-level curl version is lower than 8.14, please configure the correct curl path in the system settings.')}</div>
+                          <div>{t<string>('The request interval configuration is temporarily unavailable. The built-in default interval is 3 seconds.')}</div>
                         </div>
                       )}
-                      title={t('curl')}
+                      title={t<string>('curl')}
                     />
                     <Alert
                       description={(
                         <div>
-                          <div>{t('This feature internally uses Ollama. You need to install and run Ollama first, and install at least one model. Then configure the Ollama API address in the system settings.')}</div>
-                          <div>{t('This feature will prioritize the largest model in the Ollama model list.')}</div>
-                          <div>{t('Currently, deepseek-r1:14b and 32b have been tested and can be used safely.')}</div>
+                          <div>{t<string>('This feature internally uses Ollama. You need to install and run Ollama first, and install at least one model. Then configure the Ollama API address in the system settings.')}</div>
+                          <div>{t<string>('This feature will prioritize the largest model in the Ollama model list.')}</div>
+                          <div>{t<string>('Currently, deepseek-r1:14b and 32b have been tested and can be used safely.')}</div>
                         </div>
                       )}
-                      title={t('ollama')}
+                      title={t<string>('ollama')}
                     />
                     <Alert
                       color={'success'}
                       variant={'flat'}
                       description={(
                         <div>
-                          <div>{t('Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the "Third-Party Integrations" section.')}</div>
+                          <div>{t<string>('Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the "Third-Party Integrations" section.')}</div>
                         </div>
                       )}
-                      title={t('browser integrations')}
+                      title={t<string>('browser integrations')}
                     />
                   </div>
                 ),
@@ -164,7 +165,7 @@ https://xxxxxxx
             }}
           >
             <AiOutlineQuestionCircle className={'text-medium'} />
-            {t('Instructions for use')}
+            {t<string>('Instructions for use')}
           </Button>
         </div>
       </div>
@@ -175,12 +176,12 @@ https://xxxxxxx
           className={'break-all'}
         >
           <TableHeader>
-            <TableColumn>{t('#')}</TableColumn>
-            <TableColumn>{t('Target')}</TableColumn>
-            {/* <TableColumn>{t('Content')}</TableColumn> */}
-            <TableColumn>{t('Items')}</TableColumn>
-            <TableColumn>{t('ParsedAt')}</TableColumn>
-            <TableColumn>{t('Operations')}</TableColumn>
+            <TableColumn>{t<string>('#')}</TableColumn>
+            <TableColumn>{t<string>('Target')}</TableColumn>
+            {/* <TableColumn>{t<string>('Content')}</TableColumn> */}
+            <TableColumn>{t<string>('Items')}</TableColumn>
+            <TableColumn>{t<string>('ParsedAt')}</TableColumn>
+            <TableColumn>{t<string>('Operations')}</TableColumn>
           </TableHeader>
           <TableBody>
             {tasks.map((task) => {
@@ -194,7 +195,7 @@ https://xxxxxxx
                           {/* <Chip */}
                           {/*   size={'sm'} */}
                           {/*   variant={'flat'} */}
-                          {/* >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip> */}
+                          {/* >{t<string>(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip> */}
                           <ThirdPartyIcon thirdPartyId={ThirdPartyMap[task.source]} />
                           <div>{task.title}</div>
                         </div>
@@ -214,7 +215,7 @@ https://xxxxxxx
                         {/* <Chip */}
                         {/*   size={'sm'} */}
                         {/*   variant={'flat'} */}
-                        {/* >{t(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip> */}
+                        {/* >{t<string>(`DownloadTaskParserSource.${DownloadTaskParserSource[task.source]}`)}</Chip> */}
                         <ThirdPartyIcon thirdPartyId={ThirdPartyMap[task.source]} />
                         <div>
                           <Button
@@ -241,7 +242,7 @@ https://xxxxxxx
                   {/*       }); */}
                   {/*     }} */}
                   {/*     > */}
-                  {/*       {t('View')} */}
+                  {/*       {t<string>('View')} */}
                   {/*     </Button> */}
                   {/*   )} */}
                   {/* </TableCell> */}
@@ -261,10 +262,10 @@ https://xxxxxxx
                           )}
                           <div>
                             {item.accessCode && (
-                              <Snippet symbol={t('Access code')} size={'sm'}>{item.accessCode}</Snippet>
+                              <Snippet symbol={t<string>('Access code')} size={'sm'}>{item.accessCode}</Snippet>
                             )}
                             {item.decompressionPassword && (
-                              <Snippet symbol={t('Decompression password')} size={'sm'}>{}</Snippet>
+                              <Snippet symbol={t<string>('Decompression password')} size={'sm'}>{}</Snippet>
                             )}
                           </div>
                         </div>

@@ -140,7 +140,7 @@ export default ({
 
   return (
     <Modal
-      title={t('Transfer data of resources')}
+      title={t<string>('Transfer data of resources')}
       defaultVisible
       size={'full'}
       onDestroyed={onDestroyed}
@@ -159,7 +159,7 @@ export default ({
             setDeletedSourceResourceIds([...deletedSourceResourceIds]);
           }
         } else {
-          toast.error(t('Invalid data'));
+          toast.error(t<string>('Invalid data'));
         }
 
         if (deletedSourceResourceIds.length != fromResources.length) {
@@ -190,7 +190,7 @@ export default ({
                     pathKeyword: standardizePath(v?.toLowerCase()),
                   });
                 }}
-                placeholder={t('Path keyword')}
+                placeholder={t<string>('Path keyword')}
               />
             </div>
             <div>
@@ -204,7 +204,7 @@ export default ({
                   });
                 }}
               >
-                {t('Show unfinished only')}
+                {t<string>('Show unfinished only')}
               </Checkbox>
             </div>
             <div className={'flex items-center gap-1'}>
@@ -213,7 +213,7 @@ export default ({
                 variant={'light'}
                 size={'sm'}
               >
-                {t('Finished')}
+                {t<string>('Finished')}
               </Chip>
               {fromResources.filter(r => inputModel.items?.find(i => i!.fromId == r.id)?.toId != undefined).length}/{fromResources.length}
             </div>
@@ -229,7 +229,7 @@ export default ({
             {/*     color={'secondary'} */}
             {/*     // variant={'flat'} */}
             {/*   > */}
-            {/*     {t('Auto select overwritten resources')} */}
+            {/*     {t<string>('Auto select overwritten resources')} */}
             {/*   </Button> */}
             {/* </Tooltip> */}
           </div>
@@ -240,13 +240,13 @@ export default ({
                 content={(
                   <div>
                     <div className={'flex items-center gap-1'}>
-                      {t('Following properties will not be transferred')}
+                      {t<string>('Following properties will not be transferred')}
                       {['Parent association', 'Path', 'FileCreatedAt', 'FileModifiedAt'].map(x => (
                         <Chip
                           size={'sm'}
                           radius={'sm'}
                         >
-                          {t(`Property.${x}`)}
+                          {t<string>(`Property.${x}`)}
                         </Chip>
                       ))}
                     </div>
@@ -259,18 +259,18 @@ export default ({
           </div>
         </div>
         <div className={'grow overflow-y-auto'}>
-          {resources.length == 0 ? t('No resources to be transferred')
+          {resources.length == 0 ? t<string>('No resources to be transferred')
             : (
               <Table
                 removeWrapper
                 isCompact
               >
                 <TableHeader>
-                  <TableColumn width={100}>{t('#')}</TableColumn>
-                  <TableColumn width={200}>{t('Source resource')}</TableColumn>
+                  <TableColumn width={100}>{t<string>('#')}</TableColumn>
+                  <TableColumn width={200}>{t<string>('Source resource')}</TableColumn>
                   <TableColumn width={60}>-</TableColumn>
-                  <TableColumn width={200}>{t('Resource will be overwritten')}</TableColumn>
-                  <TableColumn>{t('Operations')}</TableColumn>
+                  <TableColumn width={200}>{t<string>('Resource will be overwritten')}</TableColumn>
+                  <TableColumn>{t<string>('Operations')}</TableColumn>
                 </TableHeader>
                 <TableBody>
                   {resources.map((x, i) => {
@@ -306,11 +306,11 @@ export default ({
                           {item.toId
                             ? toResource ? (
                               <Resource resource={toResource} />
-                            ) : t('Unknown resource')
+                            ) : t<string>('Unknown resource')
                             : (<div
                                 className={'text-warning'}
                             >
-                              {t('Please select a target resource on the right side')}
+                              {t<string>('Please select a target resource on the right side')}
                             </div>)}
                         </TableCell>
                         <TableCell className={'flex flex-col'}>
@@ -345,7 +345,7 @@ export default ({
                                 setInputModel({ ...inputModel });
                               }}
                               isSelected={inputModel.deleteAllSourceResources || item.deleteSourceResource}
-                            >{t('Delete source resource (data only)')}</Checkbox>
+                            >{t<string>('Delete source resource (data only)')}</Checkbox>
                             <Checkbox
                               isDisabled={inputModel.keepMediaLibraryForAll}
                               isSelected={inputModel.keepMediaLibraryForAll || item.keepMediaLibrary}
@@ -354,7 +354,7 @@ export default ({
                                 addItem(inputModel, item);
                                 setInputModel({ ...inputModel });
                               }}
-                            >{t('Keep associated media library information for target resource')}</Checkbox>
+                            >{t<string>('Keep associated media library information for target resource')}</Checkbox>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -376,14 +376,14 @@ export default ({
               }}
               isSelected={inputModel.deleteAllSourceResources}
             >
-              {t('Delete source resource (data only)')}({t('For all {{count}} items', { count: fromResources.length })})
+              {t<string>('Delete source resource (data only)')}({t<string>('For all {{count}} items', { count: fromResources.length })})
             </Checkbox>
             <Tooltip
               color={'secondary'}
               content={(
                 <div>
-                  <div>{t('Category and media library of target resource will be remained by default.')}</div>
-                  <div>{t('By disable this options, the category and media library of target resource will be replaced with data from source resource.')}</div>
+                  <div>{t<string>('Category and media library of target resource will be remained by default.')}</div>
+                  <div>{t<string>('By disable this options, the category and media library of target resource will be replaced with data from source resource.')}</div>
                 </div>
               )}
             >
@@ -396,8 +396,8 @@ export default ({
                     keepMediaLibraryForAll: v,
                   });
                 }}
-              >{t('Keep associated media library information for target resource')}
-                ({t('For all {{count}} items', { count: fromResources.length })})
+              >{t<string>('Keep associated media library information for target resource')}
+                ({t<string>('For all {{count}} items', { count: fromResources.length })})
               </Checkbox>
             </Tooltip>
           </div>

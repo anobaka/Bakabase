@@ -432,7 +432,7 @@ const MediaPlayer = (props: IProps) => {
               setCurrentInitialized(true);
               tryAutoGotoNextNode();
             }}
-          >{t('Unsupported')}
+          >{t<string>('Unsupported')}
           </div>
         );
     }

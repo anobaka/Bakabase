@@ -37,10 +37,10 @@ export default (props: Props) => {
       {/* see https://github.com/nextui-org/nextui/issues/729 */}
       <Table removeWrapper aria-label={'Fixed targets'}>
         <TableHeader>
-          <TableColumn width={'41.666667%'}>{t('Enhancement target')}</TableColumn>
-          <TableColumn width={'25%'}>{t('Save as property')}</TableColumn>
-          <TableColumn width={'25%'}>{t('Other options')}</TableColumn>
-          <TableColumn >{t('Operations')}</TableColumn>
+          <TableColumn width={'41.666667%'}>{t<string>('Enhancement target')}</TableColumn>
+          <TableColumn width={'25%'}>{t<string>('Save as property')}</TableColumn>
+          <TableColumn width={'25%'}>{t<string>('Other options')}</TableColumn>
+          <TableColumn >{t<string>('Operations')}</TableColumn>
         </TableHeader>
         {/* @ts-ignore */}
         <TableBody />

@@ -68,7 +68,7 @@ export default ({
       title={(
         <div className={'flex items-center gap-1'}>
           <div>
-            {t('Preset media library template builder')}
+            {t<string>('Preset media library template builder')}
           </div>
         </div>
       )}
@@ -89,7 +89,7 @@ export default ({
       }}
     >
       {dataPool ? (<div className={'grid gap-x-4 gap-y-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr' }}>
-        <div className={'text-right'}>{t('Resource type')}</div>
+        <div className={'text-right'}>{t<string>('Resource type')}</div>
         <div className={'flex flex-col gap-2'}>
           {_.keys(resourceTypeGroups).map(type => {
               const resourceTypes = resourceTypeGroups[type]!;
@@ -129,7 +129,7 @@ export default ({
         </div>
         <div />
         <Divider />
-        <div className={'text-right'}>{t('Properties')}</div>
+        <div className={'text-right'}>{t<string>('Properties')}</div>
         <div>
           <div className={'flex items-center gap-1 flex-wrap'}>
             {dataPool.properties.map(p => (<Button
@@ -164,15 +164,15 @@ export default ({
         <div />
         <Divider />
         <div className={'flex items-center gap-1'}>
-          {t('Resource layer')}
+          {t<string>('Resource layer')}
           <Tooltip
-            content={t('You can configure how many levels deep the resource path should be under the media library path, and you can assign the intermediate directories as property values of the resource')}
+            content={t<string>('You can configure how many levels deep the resource path should be under the media library path, and you can assign the intermediate directories as property values of the resource')}
           >
             <QuestionCircleOutlined className={'text-base'} />
           </Tooltip>
         </div>
         <div className={'flex flex-wrap items-center'}>
-          <Chip variant={'light'} color={'success'}>{t('Media library')}</Chip>
+          <Chip variant={'light'} color={'success'}>{t<string>('Media library')}</Chip>
           <Chip variant={'light'} color={'warning'}>/</Chip>
           {(form.resourceLayer && form.resourceLayer > 0) ? (
             <>
@@ -182,7 +182,7 @@ export default ({
                       <Select
                         className={'min-w-[200px]'}
                         size={'sm'}
-                        label={t('The {{layer}}th layer', { layer: idx + 1 })}
+                        label={t<string>('The {{layer}}th layer', { layer: idx + 1 })}
                         value={lp}
                         dataSource={form.properties?.map(p => ({
                           label: propertyMap?.[p]!.name,
@@ -238,11 +238,11 @@ export default ({
           >
             <AiOutlinePlusCircle className={'text-base'} />
           </Button>
-          <Chip variant={'light'} color={'success'}>{t('Resource')}</Chip>
+          <Chip variant={'light'} color={'success'}>{t<string>('Resource')}</Chip>
         </div>
         <div />
         <Divider />
-        <div className={'text-right'}>{t('Enhancers')}</div>
+        <div className={'text-right'}>{t<string>('Enhancers')}</div>
         <div>
           <div className={'flex items-center gap-1 flex-wrap'}>
             {dataPool.enhancers.map(e => (
@@ -270,13 +270,13 @@ export default ({
               ))}
           </div>
         </div>
-        <div className={'text-right'}>{t('Name')}</div>
+        <div className={'text-right'}>{t<string>('Name')}</div>
         <div>
           <Input
             className={'w-[320px]'}
             fullWidth={false}
             isRequired
-            placeholder={t('Set a name for this template')}
+            placeholder={t<string>('Set a name for this template')}
             value={form.name}
             onValueChange={name => setForm({
                 ...form,
@@ -288,7 +288,7 @@ export default ({
         : (
           <div className={'flex items-center justify-center gap-2 text-lg grow'}>
             <Spinner size={'md'} />
-            {t('Initializing')}
+            {t<string>('Initializing')}
           </div>
         )}
 

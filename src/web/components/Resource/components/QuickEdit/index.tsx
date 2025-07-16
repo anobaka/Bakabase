@@ -12,8 +12,8 @@ export default () => {
       <Tooltip
         content={(
           <div>
-            <div>{t('Edit property values quickly')}</div>
-            <div>{t('You can hover over the property name in the resource details to set the property as quickly editable')}</div>
+            <div>{t<string>('Edit property values quickly')}</div>
+            <div>{t<string>('You can hover over the property name in the resource details to set the property as quickly editable')}</div>
           </div>
         )}
       >

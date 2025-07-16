@@ -15,7 +15,7 @@ import type {
 } from '@/pages/BulkModification2/components/BulkModification/models';
 import ProcessStep from '@/pages/BulkModification2/components/BulkModification/ProcessStep';
 import ProcessStepModal from '@/pages/BulkModification2/components/BulkModification/ProcessStepModal';
-import store from '@/store';
+import { useBulkModificationInternalsStore } from '@/models/bulkModificationInternals';
 import { PropertyLabel } from '@/components/Property';
 
 type Props = {
@@ -37,13 +37,13 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const bmInternals = store.getModelState('bulkModificationInternals');
+  const bmInternals = useBulkModificationInternalsStore.getState();
 
   const [process, setProcess] = useState<Partial<BulkModificationProcess>>(propsProcess ?? {});
 
   return (
     <Modal
-      title={t('Setting process')}
+      title={t<string>('Setting process')}
       size={'xl'}
       onDestroyed={onDestroyed}
       defaultVisible
@@ -63,7 +63,7 @@ export default ({
       <Card>
         <CardBody>
           <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto 1fr' }}>
-            <div className={'text-right'}>{t('Property')}</div>
+            <div className={'text-right'}>{t<string>('Property')}</div>
             <div>
               <Button
                 size="sm"
@@ -93,7 +93,7 @@ export default ({
                     property={process.property}
                     showPool
                   />
-                ) : t('Select a property')}
+                ) : t<string>('Select a property')}
               </Button>
             </div>
           </div>
@@ -102,10 +102,10 @@ export default ({
       <Card>
         <CardHeader>
           <div className={'flex items-center gap-1'}>
-            <div>{t('Steps')}</div>
+            <div>{t<string>('Steps')}</div>
             <Tooltip content={(
               <div>
-                <div>{t('You can add multiple preprocessing steps.')}</div>
+                <div>{t<string>('You can add multiple preprocessing steps.')}</div>
               </div>
             )}
             >
@@ -172,7 +172,7 @@ export default ({
                 }
               }}
             >
-              {t('Add a preprocess')}
+              {t<string>('Add a preprocess')}
             </Button>
           </div>
         </CardBody>

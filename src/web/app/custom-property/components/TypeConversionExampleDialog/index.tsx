@@ -27,11 +27,11 @@ export default () => {
   const [results, setResults] = useState<Result[]>([]);
 
   const columns = [
-    // <TableColumn>{t('Type to be converted')}</TableColumn>,
-    <TableColumn>{t('Value to be converted')}</TableColumn>,
+    // <TableColumn>{t<string>('Type to be converted')}</TableColumn>,
+    <TableColumn>{t<string>('Value to be converted')}</TableColumn>,
     ...propertyTypes.map(cpt => {
       return (
-        <TableColumn>{t(PropertyType[cpt.value])}</TableColumn>
+        <TableColumn>{t<string>(PropertyType[cpt.value])}</TableColumn>
       );
     }),
   ];
@@ -46,22 +46,22 @@ export default () => {
   return (
     <Modal
       defaultVisible
-      title={t('Type conversion examples')}
+      title={t<string>('Type conversion examples')}
       size={'full'}
       footer={{
         actions: ['cancel'],
         cancelProps: {
-          children: t('Close'),
+          children: t<string>('Close'),
         },
       }}
     >
       <div>
         <Tabs isVertical disabledKeys={['title']}>
-          <Tab key={'title'} title={t('Source type')} />
+          <Tab key={'title'} title={t<string>('Source type')} />
           {propertyTypes.map(cpt => {
             const filteredResults = results?.filter(x => x.type == cpt.value) || [];
             return (
-              <Tab key={cpt.value} title={t(PropertyType[cpt.value])} className={'w-full'}>
+              <Tab key={cpt.value} title={t<string>(PropertyType[cpt.value])} className={'w-full'}>
                 <Table isCompact isStriped removeWrapper isHeaderSticky>
                   <TableHeader>
                     {columns}
@@ -69,7 +69,7 @@ export default () => {
                   <TableBody>
                     {filteredResults.map((td, i) => {
                       const cells = [
-                        // <TableCell>{t(PropertyType[td.type])}</TableCell>,
+                        // <TableCell>{t<string>(PropertyType[td.type])}</TableCell>,
                         <TableCell>
                           <StandardValueRenderer
                             type={td.bizValueType}

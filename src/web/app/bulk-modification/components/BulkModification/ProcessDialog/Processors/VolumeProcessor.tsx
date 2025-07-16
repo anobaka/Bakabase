@@ -41,7 +41,7 @@ const Editor = ({
   const [value, setValue] = useState<IValue>(propsValue ?? {});
 
   const operationDataSource = Object.keys(BmVolumeProcessorOperation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
-    label: t(x),
+    label: t<string>(x),
     value: BmVolumeProcessorOperation[x],
   }));
 
@@ -64,7 +64,7 @@ const Editor = ({
     switch (value.operation) {
       case BmVolumeProcessorOperation.Modify:
         components.push({
-          label: t('Target properties'),
+          label: t<string>('Target properties'),
           comp: (
             <Checkbox.Group
               onChange={v => {
@@ -86,11 +86,11 @@ const Editor = ({
               }}
               dataSource={[
                 {
-                  label: t('Name'),
+                  label: t<string>('Name'),
                   value: VolumeProperty.Name,
                 },
                 {
-                  label: t('Title'),
+                  label: t<string>('Title'),
                   value: VolumeProperty.Title,
                 },
               ]}
@@ -117,7 +117,7 @@ const Editor = ({
     return properties.map(p => {
       return (
         <div className={'container'} key={p}>
-          <div className={'title'}>{t(VolumeProperty[p])}</div>
+          <div className={'title'}>{t<string>(VolumeProperty[p])}</div>
           <TextProcessor.Editor
             variables={variables}
             value={value.propertyModifications?.[p]}
@@ -132,7 +132,7 @@ const Editor = ({
     <>
       <div className="block">
         <div className={'label'}>
-          {t('Operation')}
+          {t<string>('Operation')}
         </div>
         <div className="value">
           <Select
@@ -161,7 +161,7 @@ const Demonstrator = ({
     case BmVolumeProcessorOperation.Remove:
       return (
         <>
-          <div className="primary">{t('Remove')}</div>
+          <div className="primary">{t<string>('Remove')}</div>
         </>
       );
     case BmVolumeProcessorOperation.Modify:
@@ -171,11 +171,11 @@ const Demonstrator = ({
             const textProcessorValue = value.propertyModifications?.[p];
             return (
               <div key={p} className={'line'}>
-                {t('Modify')}
-                <div className={'primary'}>{t(VolumeProperty[p])}</div>
+                {t<string>('Modify')}
+                <div className={'primary'}>{t<string>(VolumeProperty[p])}</div>
                 {textProcessorValue ? (
                   <TextProcessor.Demonstrator value={textProcessorValue} />
-                ) : t('Not set')}
+                ) : t<string>('Not set')}
               </div>
             );
           })}
@@ -184,7 +184,7 @@ const Demonstrator = ({
     default:
       return (
         <>
-          {t('Unsupported value')}
+          {t<string>('Unsupported value')}
         </>
       );
   }

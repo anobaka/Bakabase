@@ -20,18 +20,18 @@ export default ({ locator }: Props) => {
         return (
           <>
             <IoLayersOutline className={'text-medium'} />
-            {t('Layer')}
+            {t<string>('Layer')}
           </>
         );
       case PathPositioner.Regex:
         return (
           <>
             <BsRegex className={'text-medium'} />
-            {t('Regex')}
+            {t<string>('Regex')}
           </>
         );
       default:
-        return t('Not supported');
+        return t<string>('Not supported');
     }
   };
 
@@ -41,20 +41,20 @@ export default ({ locator }: Props) => {
       case PathPositioner.Layer:
         const basePathType = locator.basePathType ?? PathPropertyExtractorBasePathType.MediaLibrary;
         if (locator.layer == undefined) {
-          return t('Not set');
+          return t<string>('Not set');
         }
         if (locator.layer === 0) {
-          return t('Self');
+          return t<string>('Self');
         }
         if (locator.layer > 0) {
-          return t('The {{n}}th layer after {{basePathType}}', { basePathType: t(PathPropertyExtractorBasePathType[basePathType]), n: locator.layer });
+          return t<string>('The {{n}}th layer after {{basePathType}}', { basePathType: t<string>(PathPropertyExtractorBasePathType[basePathType]), n: locator.layer });
         } else {
-          return t('The {{n}}th layer before {{basePathType}}', { basePathType: t(PathPropertyExtractorBasePathType[basePathType]), n: Math.abs(locator.layer) });
+          return t<string>('The {{n}}th layer before {{basePathType}}', { basePathType: t<string>(PathPropertyExtractorBasePathType[basePathType]), n: Math.abs(locator.layer) });
         }
       case PathPositioner.Regex:
-        return locator.regex ?? t('Not set');
+        return locator.regex ?? t<string>('Not set');
       default:
-        return t('Not supported');
+        return t<string>('Not supported');
     }
   };
 

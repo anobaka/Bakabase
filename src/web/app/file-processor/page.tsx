@@ -8,7 +8,7 @@ import RootTreeEntry from './RootTreeEntry';
 import type { Entry } from '@/core/models/FileExplorer/Entry';
 import type RootEntry from '@/core/models/FileExplorer/RootEntry';
 import { buildLogger } from '@/components/utils';
-import store from '@/store';
+import { useFileSystemOptionsStore } from '@/models/options';
 import BApi from '@/sdk/BApi';
 
 const log = buildLogger('FileProcessor');
@@ -24,7 +24,7 @@ export default () => {
   const selectedEntriesRef = useRef<Entry[]>([]);
   const [allSelected, setAllSelected] = useState(false);
 
-  const options = store.useModelState('fileSystemOptions');
+  const options = useFileSystemOptionsStore(state => state.data);
   const [rootPath, setRootPath] = useState<string>();
   const [rootPathInitialized, setRootPathInitialized] = useState(false);
 

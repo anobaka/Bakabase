@@ -63,7 +63,7 @@ export default ({ entry, onEnterDirectory }: Props) => {
             if (entry.type == IwFsType.Directory) {
               onEnterDirectory(entry.path);
             } else {
-              Message.error(i18n.t('Under development'));
+              Message.error(i18n.t<string>('Under development'));
             }
           }}
         >

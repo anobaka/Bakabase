@@ -14,7 +14,7 @@ export default ({ indent, parent }: Props) => {
   return (
     <FileSystemEntryChangeExampleItem
       layer={indent}
-      text={parent ? `${t('Other files in {{parent}}', { parent })}...` : `${t('Other files')}...`}
+      text={parent ? `${t<string>('Other files in {{parent}}', { parent })}...` : `${t<string>('Other files')}...`}
       type={'others'}
       className={'opacity-60'}
     />

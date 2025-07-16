@@ -13,8 +13,8 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
       <Input
         value={operation.text || ''}
         onValueChange={e => handleChangeField('text', e)}
-        placeholder={t('FileNameModifier.Placeholder.Text')}
-        label={t('FileNameModifier.Label.Text')}
+        placeholder={t<string>('FileNameModifier.Placeholder.Text')}
+        label={t<string>('FileNameModifier.Label.Text')}
         size="sm"
         isRequired={!operation.text && !(operation.position === PositionType.BeforeText || operation.position === PositionType.AfterText && operation.targetText)}
         className="w-[240px]"
@@ -23,15 +23,15 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         <Input
           value={operation.targetText || ''}
           onValueChange={e => handleChangeField('targetText', e)}
-          placeholder={t('FileNameModifier.Placeholder.TargetText')}
-          label={t('FileNameModifier.Label.TargetText')}
+          placeholder={t<string>('FileNameModifier.Placeholder.TargetText')}
+          label={t<string>('FileNameModifier.Label.TargetText')}
           size="sm"
           isRequired={!operation.targetText}
           className="w-[240px]"
         />
       )}
       <Select
-        dataSource={PositionTypeOptions.map(opt => ({ label: t(opt.label), value: opt.value }))}
+        dataSource={PositionTypeOptions.map(opt => ({ label: t<string>(opt.label), value: opt.value }))}
         selectedKeys={[operation.position?.toString() || '']}
         onSelectionChange={keys => {
           const key = parseInt(Array.from(keys)[0] as string);
@@ -39,18 +39,18 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
             handleChangeField('position', key);
           }
         }}
-        label={t('FileNameModifier.Label.PositionType')}
+        label={t<string>('FileNameModifier.Label.PositionType')}
         size="sm"
         isRequired={!operation.position}
         className="w-[160px]"
-        placeholder={t('FileNameModifier.Placeholder.PositionType')}
+        placeholder={t<string>('FileNameModifier.Placeholder.PositionType')}
       />
       {operation.position === PositionType.AtPosition && (
         <NumberInput
           value={operation.positionIndex}
           onValueChange={e => handleChangeField('positionIndex', e)}
-          placeholder={t('FileNameModifier.Placeholder.PositionIndex')}
-          label={t('FileNameModifier.Label.PositionIndex')}
+          placeholder={t<string>('FileNameModifier.Placeholder.PositionIndex')}
+          label={t<string>('FileNameModifier.Label.PositionIndex')}
           size="sm"
           isRequired={true}
           className="w-[120px]"

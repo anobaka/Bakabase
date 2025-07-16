@@ -40,7 +40,7 @@ export default (props: IProps) => {
         });
       }}
     >
-      {property ? property.name : t('Select a property')}
+      {property ? property.name : t<string>('Select a property')}
     </Button>
   );
 };

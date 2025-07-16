@@ -84,8 +84,8 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                 style={{ width: '100%' }}
                 size={'small'}
                 label={(
-                  <Balloon.Tooltip trigger={(t('Excluded tags'))}>
-                    {t('You can filter some namespaces and tags such as \'language:*\' for ignoring all tags in language namespace')}
+                  <Balloon.Tooltip trigger={(t<string>('Excluded tags'))}>
+                    {t<string>('You can filter some namespaces and tags such as \'language:*\' for ignoring all tags in language namespace')}
                   </Balloon.Tooltip>
                 )}
                 value={tmpExHentaiOptions?.enhancer?.excludedTags}
@@ -109,7 +109,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                 onClick={() => {
                   applyPatches(BApi.options.patchExHentaiOptions, tmpExHentaiOptions);
                 }}
-              >{t('Save')}
+              >{t<string>('Save')}
               </Button>
               <Button
                 size={'sm'}
@@ -122,15 +122,15 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                     target: CookieValidatorTarget.ExHentai,
                   }).then((r) => {
                     if (r.code) {
-                      Message.error(`${t('Invalid cookie')}:${r.message}`);
+                      Message.error(`${t<string>('Invalid cookie')}:${r.message}`);
                     } else {
-                      Message.success(t('Cookie is good'));
+                      Message.success(t<string>('Cookie is good'));
                     }
                   }).finally(() => {
                     setValidatingExHentaiCookie(false);
                   });
                 }}
-              >{t('Validate cookie')}
+              >{t<string>('Validate cookie')}
               </Button>
             </div>
           </div>
@@ -152,7 +152,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
           >
             {startupPages.map((s) => {
               return (
-                <Radio key={s.value} value={s.value}>{t(s.label)}</Radio>
+                <Radio key={s.value} value={s.value}>{t<string>(s.label)}</Radio>
               );
             })}
           </Radio.Group>
@@ -173,7 +173,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
             }}
           >
             {[CloseBehavior.Minimize, CloseBehavior.Exit, CloseBehavior.Prompt].map(c => (
-              <Radio key={c} value={c}>{t(CloseBehavior[c])}</Radio>
+              <Radio key={c} value={c}>{t<string>(CloseBehavior[c])}</Radio>
             ))}
           </Radio.Group>
         );
@@ -183,13 +183,13 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
 
   return (
     <div className="group">
-      {/* <Title title={i18n.t('Functional configurations')} /> */}
+      {/* <Title title={i18n.t<string>('Functional configurations')} /> */}
       <div className="settings">
         <Table
           removeWrapper
         >
           <TableHeader>
-            <TableColumn width={200}>{t('Functional configurations')}</TableColumn>
+            <TableColumn width={200}>{t<string>('Functional configurations')}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -198,13 +198,13 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                 <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
                   <TableCell>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      {t(c.label)}
+                      {t<string>(c.label)}
                       {c.tip && (
                         <>
                           &nbsp;
                           <Tooltip
                             placement={'right'}
-                            content={t(c.tip)}
+                            content={t<string>(c.tip)}
                           >
                             <CustomIcon type={'question-circle'} className={'text-base'} />
                           </Tooltip>

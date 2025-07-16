@@ -73,7 +73,7 @@ const ProcessDialog = (props: IProps) => {
     return (
       <div className={'block'}>
         <div className="label">
-          {t('Property Key')}
+          {t<string>('Property Key')}
         </div>
         <div className="value">
           <Select
@@ -146,7 +146,7 @@ const ProcessDialog = (props: IProps) => {
           <EnumProcessor.Editor
             dataSource={resourceLanguages.map(l => ({
               ...l,
-              label: t(l.label),
+              label: t<string>(l.label),
             }))}
             {...commonProps}
           />
@@ -213,7 +213,7 @@ const ProcessDialog = (props: IProps) => {
       <div className="filter-form">
         <div className="block">
           <div className="label">
-            {t('Property')}
+            {t<string>('Property')}
           </div>
           <div className="value">
             <Tag.Group>
@@ -233,7 +233,7 @@ const ProcessDialog = (props: IProps) => {
                     }}
                     checked={currChecked}
                     disabled={!available}
-                  >{t(p.label)}</Tag.Selectable>
+                  >{t<string>(p.label)}</Tag.Selectable>
                 );
               })}
             </Tag.Group>
@@ -242,7 +242,7 @@ const ProcessDialog = (props: IProps) => {
         {/* {renderCustomPropertyKeySelector()} */}
         <div className="block">
           <div className="label">
-            {t('Variables')}
+            {t<string>('Variables')}
           </div>
           <div className="value">
             <Variables variables={variables} />

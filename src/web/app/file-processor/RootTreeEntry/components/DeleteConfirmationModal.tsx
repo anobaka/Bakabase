@@ -107,12 +107,12 @@ export default ({
     <Modal
       defaultVisible
       size={'xl'}
-      title={t('Sure to delete?')}
+      title={t<string>('Sure to delete?')}
       onDestroyed={onDestroyed}
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          children: `${t('Delete')}(Enter)`,
+          children: `${t<string>('Delete')}(Enter)`,
           color: 'danger',
           autoFocus: true,
         },

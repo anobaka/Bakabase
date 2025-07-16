@@ -12,8 +12,8 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
           key={key as string}
           value={operation[key as keyof typeof operation] || ''}
           onValueChange={e => handleChangeField(key as string, e)}
-          placeholder={t(`FileNameModifier.Placeholder.${label}`)}
-          label={t(`FileNameModifier.Label.${label}`)}
+          placeholder={t<string>(`FileNameModifier.Placeholder.${label}`)}
+          label={t<string>(`FileNameModifier.Label.${label}`)}
           size="sm"
           isRequired={!operation.text && !operation.targetText}
           className="w-[180px]"
@@ -24,7 +24,7 @@ const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
           checked={operation.replaceEntire}
           onChange={e => handleChangeField('replaceEntire', e.target.checked)}
         />
-        <span className="text-xs text-gray-500">{t('FileNameModifier.ReplaceEntire')}</span>
+        <span className="text-xs text-gray-500">{t<string>('FileNameModifier.ReplaceEntire')}</span>
       </div>
     </>
   );

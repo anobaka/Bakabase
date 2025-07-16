@@ -19,8 +19,8 @@ export default (props: Props) => {
     if (rsp.code == 202) {
       createPortal(Modal, {
         defaultVisible: true,
-        title: t('Stop Task'),
-        children: rsp.message ?? t('Sure to stop the task?'),
+        title: t<string>('Stop Task'),
+        children: rsp.message ?? t<string>('Sure to stop the task?'),
         onOk: async () => await BApi.backgroundTask.stopBackgroundTask(props.id, { confirm: true }),
       });
     }
@@ -31,7 +31,7 @@ export default (props: Props) => {
       {...props}
       onPress={props.onPress ?? stop}
     >
-      {props.children ?? t('Stop')}
+      {props.children ?? t<string>('Stop')}
     </Button>
   );
 };

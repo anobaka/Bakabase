@@ -40,11 +40,11 @@ export default (props: Props) => {
       {/* see https://github.com/nextui-org/nextui/issues/729 */}
       <Table removeWrapper aria-label={'Fixed targets'}>
         <TableHeader>
-          <TableColumn align={'center'} width={80}>{t('Configured')}</TableColumn>
-          <TableColumn width={'33.3333%'}>{t('Enhancement target')}</TableColumn>
+          <TableColumn align={'center'} width={80}>{t<string>('Configured')}</TableColumn>
+          <TableColumn width={'33.3333%'}>{t<string>('Enhancement target')}</TableColumn>
           <TableColumn width={'25%'}>
             <div className={'flex items-center gap-1'}>
-              {t('Bind property')}
+              {t<string>('Bind property')}
               {(enhancer.targets && enhancer.targets.length > 0) && (
                 <PropertiesMatcher
                   properties={enhancer.targets.map(td => ({
@@ -74,11 +74,11 @@ export default (props: Props) => {
           </TableColumn>
           <TableColumn width={'25%'}>
             <div className={'flex items-center gap-1'}>
-              {t('Other options')}
+              {t<string>('Other options')}
               <OtherOptionsTip />
             </div>
           </TableColumn>
-          <TableColumn>{t('Operations')}</TableColumn>
+          <TableColumn>{t<string>('Operations')}</TableColumn>
         </TableHeader>
         {/* @ts-ignore */}
         <TableBody />

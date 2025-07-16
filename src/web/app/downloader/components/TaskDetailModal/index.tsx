@@ -122,7 +122,7 @@ export default ({
 
     items.push(
       <>
-        <div>{t('Duration')}</div>
+        <div>{t<string>('Duration')}</div>
         <div className={'w-[200px]'}>
           <DurationInput
             // className={'col-span-2'}
@@ -140,16 +140,16 @@ export default ({
 
     items.push(
       <>
-        <div>{t('Checkpoint')}</div>
+        <div>{t<string>('Checkpoint')}</div>
         <Textarea
           size={'sm'}
           // className={'col-span-2'}
-          // label={t('Checkpoint')}
+          // label={t<string>('Checkpoint')}
           description={(
             <div>
-              <div>{t('You can set the previous downloading checkpoint manually to make the downloader start the downloading task from it.')}</div>
-              <div>{t('In most cases, you should let this field set by downloader automatically.')}</div>
-              <div>{t('Each downloader has its own checkpoint format, and invalid checkpoint data will be ignored. You can find samples on our online document.')}</div>
+              <div>{t<string>('You can set the previous downloading checkpoint manually to make the downloader start the downloading task from it.')}</div>
+              <div>{t<string>('In most cases, you should let this field set by downloader automatically.')}</div>
+              <div>{t<string>('Each downloader has its own checkpoint format, and invalid checkpoint data will be ignored. You can find samples on our online document.')}</div>
             </div>
           )}
           value={form.checkpoint}
@@ -173,14 +173,14 @@ export default ({
     //         setConfigurationsVisible(true);
     //       }}
     //     >
-    //       {t('Check')}
+    //       {t<string>('Check')}
     //     </Button>
     //   ),
     // });
 
     items.push(
       <>
-        <div>{t('Auto retry')}</div>
+        <div>{t<string>('Auto retry')}</div>
         <div>
           <div>
             <Checkbox
@@ -194,7 +194,7 @@ export default ({
               }}
             />
             &nbsp;
-            <span className={'opacity-60 text-xs'}>{t('Retry automatically when the downloading task failed.')}</span>
+            <span className={'opacity-60 text-xs'}>{t<string>('Retry automatically when the downloading task failed.')}</span>
           </div>
         </div>
       </>,
@@ -203,7 +203,7 @@ export default ({
     if (isAdding) {
       items.push(
         <>
-          <div>{t('Allow duplicate submission')}</div>
+          <div>{t<string>('Allow duplicate submission')}</div>
           <div>
             <div>
               <Checkbox
@@ -216,7 +216,7 @@ export default ({
                 }}
               />
               &nbsp;
-              <span className={'opacity-60 text-xs'}>{t('In general, it\'s not necessary to create identical tasks.')}</span>
+              <span className={'opacity-60 text-xs'}>{t<string>('In general, it\'s not necessary to create identical tasks.')}</span>
             </div>
           </div>
         </>,
@@ -240,7 +240,7 @@ export default ({
         onDestroyed={onDestroyed}
         size={'xl'}
         defaultVisible
-        title={isAdding ? t('Creating download task') : t('Download task')}
+        title={isAdding ? t<string>('Creating download task') : t<string>('Download task')}
         className={'download-task-detail'}
         onOk={async () => {
           const validForm = form as Form;
@@ -264,7 +264,7 @@ export default ({
         }}
       >
         <div className={'grid gap-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr' }}>
-          <div>{t('Site')}</div>
+          <div>{t<string>('Site')}</div>
           <div>
             <ButtonGroup size={'sm'}>
               {thirdPartyIds.filter(x => x.value in ThirdPartyIdTaskTypesMap).map((tpId) => {
@@ -283,7 +283,7 @@ export default ({
                     isDisabled={!isAdding}
                   >
                     <ThirdPartyIcon thirdPartyId={tpId.value} />
-                    {t(tpId.label)}
+                    {t<string>(tpId.label)}
                   </Button>
                 );
               })}
@@ -292,7 +292,7 @@ export default ({
           {form.thirdPartyId && (
             <>
               <div>
-                {t('Task type')}
+                {t<string>('Task type')}
               </div>
               <div>
                 <ButtonGroup size={'sm'}>

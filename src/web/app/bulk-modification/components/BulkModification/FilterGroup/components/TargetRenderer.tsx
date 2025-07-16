@@ -24,7 +24,7 @@ export default ({
   useEffect(() => {
     const typedTarget = target == undefined ? [] : JSON.parse(target);
     const values: any[] = Array.isArray(typedTarget) ? typedTarget : typedTarget == undefined ? [] : [typedTarget];
-    // console.log(target, property, values, t(ResourceLanguage[ResourceLanguage.NotSet]));
+    // console.log(target, property, values, t<string>(ResourceLanguage[ResourceLanguage.NotSet]));
 
     switch (property) {
       case BulkModificationProperty.Category: {
@@ -51,7 +51,7 @@ export default ({
       //   break;
       // }
       case BulkModificationProperty.Language: {
-        setLabels(values.map(d => t(ResourceLanguage[d])));
+        setLabels(values.map(d => t<string>(ResourceLanguage[d])));
         break;
       }
       case BulkModificationProperty.Tag:

@@ -39,7 +39,7 @@ export default ({ options: propsOptions, title }: Props) => {
         return (
           <>
             <div>
-              {t('Value')}
+              {t<string>('Value')}
             </div>
             <div>
               <Input
@@ -60,7 +60,7 @@ export default ({ options: propsOptions, title }: Props) => {
         return (
           <>
             <div>
-              {t('Sequence number')}
+              {t<string>('Sequence number')}
             </div>
             <div>
               <DirectionSelector
@@ -82,7 +82,7 @@ export default ({ options: propsOptions, title }: Props) => {
 
   return (
     <>
-      <div>{t('Mode')}</div>
+      <div>{t<string>('Mode')}</div>
       <div>
         <RadioGroup
           orientation={'horizontal'}

@@ -116,7 +116,7 @@ export default (({
         v2: true,
         style: { minWidth: 1000 },
         closeMode: ['esc', 'close', 'mask'],
-        title: t(ComponentType[componentType]),
+        title: t<string>(ComponentType[componentType]),
         content: (
           <BasicCategoryComponentSelector
             onChange={(componentKeys) => {
@@ -138,10 +138,10 @@ export default (({
                     // body: 'z-10000',
                   },
                   defaultVisible: true,
-                  title: t('Are you sure to change playable file selector?'),
+                  title: t<string>('Are you sure to change playable file selector?'),
                   children: (
                     <div>
-                      {t('Changing the playable file selector will clear all cached playable file information. The cache for these files will be rebuilt after the operation.')}
+                      {t<string>('Changing the playable file selector will clear all cached playable file information. The cache for these files will be rebuilt after the operation.')}
                     </div>
                   ),
                   onOk: async () => {
@@ -188,10 +188,10 @@ export default (({
     let n;
     createPortal(Modal, {
       defaultVisible: true,
-      title: t('Add a media library'),
+      title: t<string>('Add a media library'),
       children: (
         <Input
-          placeholder={t('Name of media library')}
+          placeholder={t<string>('Name of media library')}
           style={{ width: '100%' }}
           defaultValue={n}
           onValueChange={(v) => {
@@ -211,7 +211,7 @@ export default (({
             throw new Error(r.message!);
           }
         } else {
-          Message.error(t('Invalid data'));
+          Message.error(t<string>('Invalid data'));
           throw new Error('Invalid data');
         }
       },
@@ -372,7 +372,7 @@ export default (({
                   case 'delete-enhancements': {
                     createPortal(
                       DeleteEnhancementsModal, {
-                        title: t('Deleting all enhancement records of resources under this category'),
+                        title: t<string>('Deleting all enhancement records of resources under this category'),
                         onOk: async (deleteEmptyOnly) => {
                           await BApi.category.deleteEnhancementsByCategory(category.id, { deleteEmptyOnly: deleteEmptyOnly });
                         },
@@ -383,10 +383,10 @@ export default (({
                   case 'delete-category': {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: `${t('Deleting')} ${category.name}`,
+                      title: `${t<string>('Deleting')} ${category.name}`,
                       children: (<>
-                        <div>{t('All related data will be deleted too, are you sure?')}</div>
-                        <div>{t('This operation cannot be undone. Would you like to proceed?')}</div>
+                        <div>{t<string>('All related data will be deleted too, are you sure?')}</div>
+                        <div>{t<string>('This operation cannot be undone. Would you like to proceed?')}</div>
                       </>),
                       onOk: async () => {
                         const rsp = await BApi.category.deleteCategory(category.id);
@@ -405,14 +405,14 @@ export default (({
                 color="danger"
                 key={'delete-enhancements'}
               >
-                {t('Delete all enhancement records')}
+                {t<string>('Delete all enhancement records')}
               </DropdownItem>
               <DropdownItem
                 className="text-danger"
                 color="danger"
                 key={'delete-category'}
               >
-                {t('Delete category')}
+                {t<string>('Delete category')}
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>
@@ -420,7 +420,7 @@ export default (({
           {resourceCount > 0 && (
             <>
               <Tooltip
-                content={t('Count of resources')}
+                content={t<string>('Count of resources')}
               >
                 <Chip
                   // size={'sm'}
@@ -438,7 +438,7 @@ export default (({
         </div>
         <div className="right flex items-center gap-2">
           <Tooltip
-            content={t('Sync all media libraries in current category')}
+            content={t<string>('Sync all media libraries in current category')}
             placement={'left'}
             color={'secondary'}
           >
@@ -457,7 +457,7 @@ export default (({
               }}
             >
               <SyncOutlined className={'text-base'} />
-              {t('Sync now')}
+              {t<string>('Sync now')}
             </Button>
           </Tooltip>
           <Button
@@ -467,11 +467,11 @@ export default (({
             onClick={() => {
               let name;
               Dialog.show({
-                title: t('Duplicating a category'),
+                title: t<string>('Duplicating a category'),
                 content: (
                   <Input
                     style={{ width: 400 }}
-                    placeholder={t('Please input a new name for the duplicated category')}
+                    placeholder={t<string>('Please input a new name for the duplicated category')}
                     onValueChange={v => name = v}
                   />
                 ),
@@ -489,7 +489,7 @@ export default (({
             }}
           >
             <CopyOutlined className={'text-base'} />
-            {t('Duplicate')}
+            {t<string>('Duplicate')}
           </Button>
         </div>
       </div>
@@ -501,12 +501,12 @@ export default (({
             return (
               <div className={'flex items-center gap-1'} key={type.value}>
                 <Tooltip
-                  content={t(ComponentTips[type.value])}
+                  content={t<string>(ComponentTips[type.value])}
                 >
                   <Chip
                     size={'sm'}
                     radius={'sm'}
-                  >{t(type.label)}
+                  >{t<string>(type.label)}
                   </Chip>
                 </Tooltip>
                 <Button
@@ -517,7 +517,7 @@ export default (({
                   }}
                   variant={'light'}
                 >
-                  {t(comp?.descriptor?.name ?? 'Click to set')}
+                  {t<string>(comp?.descriptor?.name ?? 'Click to set')}
                 </Button>
               </div>
             );
@@ -526,7 +526,7 @@ export default (({
           <Chip
             size={'sm'}
             radius={'sm'}
-          >{t('Priority on cover selection')}</Chip>
+          >{t<string>('Priority on cover selection')}</Chip>
           <Dropdown>
             <DropdownTrigger>
               <Button
@@ -535,9 +535,9 @@ export default (({
                 color={category.coverSelectionOrder > 0 ? 'default' : 'primary'}
               >
                 {category.coverSelectionOrder > 0 ? (
-                  t(CoverSelectOrder[category.coverSelectionOrder])
+                  t<string>(CoverSelectOrder[category.coverSelectionOrder])
                 ) : (
-                  t('Click to set')
+                  t<string>('Click to set')
                 )}
               </Button>
             </DropdownTrigger>
@@ -562,7 +562,7 @@ export default (({
             >
               {coverSelectOrders.map(c => {
                 return (
-                  <DropdownItem key={c.value}>{t(CoverSelectOrder[c.value])}</DropdownItem>
+                  <DropdownItem key={c.value}>{t<string>(CoverSelectOrder[c.value])}</DropdownItem>
                 );
               })}
             </DropdownMenu>
@@ -571,12 +571,12 @@ export default (({
         <div className={'col-span-3'}>
           <div className={'flex items-center gap-2'}>
             <Tooltip
-              content={t(ComponentTips[ComponentType.Enhancer])}
+              content={t<string>(ComponentTips[ComponentType.Enhancer])}
             >
               <Chip
                 size={'sm'}
                 radius={'sm'}
-              >{t('Enhancers')}</Chip>
+              >{t<string>('Enhancers')}</Chip>
             </Tooltip>
             <div
               className="flex flex-wrap gap-1"
@@ -618,7 +618,7 @@ export default (({
                       });
                     }}
                   >
-                    {t('Click to set')}
+                    {t<string>('Click to set')}
                   </Button>
                 )
               }
@@ -630,12 +630,12 @@ export default (({
           className={'col-span-3'}
         >
           <div className={'flex flex-wrap items-center gap-2'}>
-            <Tooltip content={t('Unassociated custom properties will not be displayed')}>
+            <Tooltip content={t<string>('Unassociated custom properties will not be displayed')}>
               <Chip
                 size={'sm'}
                 radius={'sm'}
               >
-                {t('Custom properties')}
+                {t<string>('Custom properties')}
               </Chip>
             </Tooltip>
             {
@@ -678,7 +678,7 @@ export default (({
                     );
                   }}
                 >
-                  {t('Click to set')}
+                  {t<string>('Click to set')}
                 </Button>
               )
             }
@@ -687,13 +687,13 @@ export default (({
         <div className={'col-span-3'}>
           <div className={'flex flex-wrap items-center gap-2'}>
             <Tooltip
-              content={t('You can set a display name template for resources. By default, file name will be used as display name')}
+              content={t<string>('You can set a display name template for resources. By default, file name will be used as display name')}
             >
               <Chip
                 size={'sm'}
                 radius={'sm'}
               >
-                {t('Display name template')}
+                {t<string>('Display name template')}
               </Chip>
             </Tooltip>
             <Button
@@ -707,7 +707,7 @@ export default (({
                 });
               }}
             >
-              {category.resourceDisplayNameTemplate ?? t('Click to set')}
+              {category.resourceDisplayNameTemplate ?? t<string>('Click to set')}
             </Button>
           </div>
         </div>
@@ -716,10 +716,10 @@ export default (({
         <div className="libraries-header">
           <div className="title-line ls">
             <div className="title">
-              {t('Media libraries')}
+              {t<string>('Media libraries')}
             </div>
             <Tooltip
-              content={t('Resources will not loaded automatically after modifying media libraries, ' +
+              content={t<string>('Resources will not loaded automatically after modifying media libraries, ' +
                 'you can click "sync button" at top-right of current page to load your resources immediately.')}
             >
               <CustomIcon type="warning-circle" />
@@ -753,23 +753,23 @@ export default (({
                   // color="danger"
                   key={'add'}
                 >
-                  {t('Add a media library')}
+                  {t<string>('Add a media library')}
                 </DropdownItem>
                 <DropdownItem
                   // className="text-danger"
                   // color="danger"
                   key={'add-in-bulk'}
                 >
-                  {t('Add in bulk')}
+                  {t<string>('Add in bulk')}
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>
           </div>
           <div className="path-configuration header">
-            <div className="path">{t('Root path')}</div>
-            <div className="filter">{t('Resource discovery')}</div>
-            {/* <div className="tags">{t('Fixed tags')}</div> */}
-            <div className="tags">{t('Generated properties')}</div>
+            <div className="path">{t<string>('Root path')}</div>
+            <div className="filter">{t<string>('Resource discovery')}</div>
+            {/* <div className="tags">{t<string>('Fixed tags')}</div> */}
+            <div className="tags">{t<string>('Generated properties')}</div>
           </div>
         </div>
         <div className="libraries">
@@ -783,7 +783,7 @@ export default (({
           ) : (
             <div className={'flex flex-col gap-2'}>
               <div className={'text-center'}>
-                {t('You should set up a media library first to visit your resources')}
+                {t<string>('You should set up a media library first to visit your resources')}
               </div>
               <div className={'flex items-center gap-4 justify-center'}>
                 <Button
@@ -793,7 +793,7 @@ export default (({
                     renderMediaLibraryAddModal();
                   }}
                 >
-                  {t('Set up now')}
+                  {t<string>('Set up now')}
                 </Button>
                 <Button
                   color={'secondary'}
@@ -802,7 +802,7 @@ export default (({
                     renderMediaLibraryAddInBulkModal();
                   }}
                 >
-                  {t('Set up in bulk')}
+                  {t<string>('Set up in bulk')}
                 </Button>
               </div>
             </div>

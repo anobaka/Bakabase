@@ -31,7 +31,7 @@ export default ({
                 }: IProps) => {
   const { t } = useTranslation();
 
-  const a = t('a');
+  const a = t<string>('a');
 
   const [filter, setFilter] = useState<ResourceSearchFilter>(propsFilter);
 
@@ -50,7 +50,7 @@ export default ({
     if (filter.propertyId == undefined) {
       return (
         <Tooltip
-          content={t('Please select a property first')}
+          content={t<string>('Please select a property first')}
         >
           <Button
             className={'min-w-fit pl-2 pr-2 cursor-not-allowed'}
@@ -58,7 +58,7 @@ export default ({
             color={'secondary'}
             size={'sm'}
           >
-            {filter.operation == undefined ? t('Condition') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+            {filter.operation == undefined ? t<string>('Condition') : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
           </Button>
         </Tooltip>
       );
@@ -69,7 +69,7 @@ export default ({
     if (operations.length == 0) {
       return (
         <Tooltip
-          content={t('Can not operate on this property')}
+          content={t<string>('Can not operate on this property')}
         >
           <Button
             className={'min-w-fit pl-2 pr-2 cursor-not-allowed'}
@@ -77,7 +77,7 @@ export default ({
             color={'secondary'}
             size={'sm'}
           >
-            {filter.operation == undefined ? t('Condition') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+            {filter.operation == undefined ? t<string>('Condition') : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
           </Button>
         </Tooltip>
       );
@@ -91,13 +91,13 @@ export default ({
               color={'secondary'}
               size={'sm'}
             >
-              {filter.operation == undefined ? t('Condition') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}
+              {filter.operation == undefined ? t<string>('Condition') : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
             </Button>
           </DropdownTrigger>
           <DropdownMenu>
             {operations.map((operation) => {
               const descriptionKey = `SearchOperation.${SearchOperation[operation]}.description`;
-              const description = t(descriptionKey);
+              const description = t<string>(descriptionKey);
               return (
                 <DropdownItem
                   key={operation}
@@ -109,7 +109,7 @@ export default ({
                     }}
                   description={description == descriptionKey ? undefined : description}
                 >
-                  {t(`SearchOperation.${SearchOperation[operation]}`)}
+                  {t<string>(`SearchOperation.${SearchOperation[operation]}`)}
                 </DropdownItem>
               );
             })}
@@ -262,7 +262,7 @@ export default ({
                 });
               }}
             >
-              {filter.property ? filter.property.name ?? t('Unknown property') : t('Property')}
+              {filter.property ? filter.property.name ?? t<string>('Unknown property') : t<string>('Property')}
             </Button>
           </div>
           <div className={''}>

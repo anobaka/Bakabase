@@ -69,7 +69,7 @@ export default ({
     <div>
       <div>
         <span className={'text-base'}>
-          {t('Files')}
+          {t<string>('Files')}
         </span>
         {loading && (
           <Spinner size={'sm'} />

@@ -31,7 +31,7 @@ export default ({
     >
       {Object.keys(CoverSelectOrder).filter(x => !Number.isNaN(parseInt(x, 10))).map(x => {
         return (
-          <Radio value={x}>{t(`CoverSelectOrder.${CoverSelectOrder[x]}`)}</Radio>
+          <Radio value={x}>{t<string>(`CoverSelectOrder.${CoverSelectOrder[x]}`)}</Radio>
         );
       })}
     </RadioGroup>

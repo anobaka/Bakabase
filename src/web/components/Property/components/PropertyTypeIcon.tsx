@@ -46,7 +46,7 @@ const PropertyTypeIconMap: Record<PropertyType, IconType> = {
 export default ({ type, textVariant = 'default', ...props }: Props) => {
   const { t } = useTranslation();
   const Icon = type ? PropertyTypeIconMap[type] : AiOutlineQuestionCircle;
-  const typeName = type ? t(PropertyType[type]) : t('Unknown');
+  const typeName = type ? t<string>(PropertyType[type]) : t<string>('Unknown');
 
   switch (textVariant!) {
     case 'none':

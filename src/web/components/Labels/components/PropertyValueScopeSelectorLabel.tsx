@@ -8,10 +8,10 @@ export default () => {
   const { t } = useTranslation();
   return (
     <div className={'flex items-center gap-1'}>
-      {t('Scope')}
+      {t<string>('Scope')}
       <Tooltip content={(
         <div className={'flex flex-col gap-1'}>
-          <div>{t('A property may have multiple dimensional values, and you can choose one of the dimensions as the base data.')}</div>
+          <div>{t<string>('A property may have multiple dimensional values, and you can choose one of the dimensions as the base data.')}</div>
         </div>
       )}
       >

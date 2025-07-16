@@ -11,10 +11,10 @@ export default () => {
       <QuestionCircleOutlined className={'leading-normal block'} />
       <div className={'leading-normal'}>
         <div>
-          {t('You can set conventions on each path segments to fill the properties of resources.')}
+          {t<string>('You can set conventions on each path segments to fill the properties of resources.')}
         </div>
         <div>
-          {t('If your path layer isn\'t stable to root path but it is stable to resource, \'The xxx layer to the resource\' is your better choice.')}
+          {t<string>('If your path layer isn\'t stable to root path but it is stable to resource, \'The xxx layer to the resource\' is your better choice.')}
         </div>
       </div>
     </div>

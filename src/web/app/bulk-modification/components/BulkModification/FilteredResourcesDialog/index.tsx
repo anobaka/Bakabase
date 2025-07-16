@@ -76,12 +76,12 @@ const FilteredResourcesDialog = ({ bmId }: IProps) => {
       footerActions={['ok']}
       v2
       width={'auto'}
-      title={t('Filtered resources')}
+      title={t<string>('Filtered resources')}
     >
       <div className="panel">
         <Input
           onChange={v => setKeyword(v)}
-          addonTextBefore={t('Search')}
+          addonTextBefore={t<string>('Search')}
           innerAfter={
             <CustomIcon
               type="search"

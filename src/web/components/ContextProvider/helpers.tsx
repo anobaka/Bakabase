@@ -5,7 +5,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { uuidv4 } from '@/components/utils';
 import type { DestroyableProps } from '@/components/bakaui/types';
-import store from '@/store';
 import BakabaseContextProvider from '@/components/ContextProvider/BakabaseContextProvider';
 
 export function createPortal<P extends DestroyableProps>(C: ComponentType<P>, props: P): {destroy: () => void; key: string} {
@@ -31,20 +30,18 @@ export function createPortal<P extends DestroyableProps>(C: ComponentType<P>, pr
   console.log('Mounting', key);
 
   root.render(
-    <store.Provider>
-      <BakabaseContextProvider >
-        <C
-          {...props}
-          onDestroyed={() => {
-          if (props.onDestroyed) {
-            props.onDestroyed();
-          }
-          unmount();
-        }}
-        />
-      </BakabaseContextProvider>
-    </store.Provider>,
-);
+    <BakabaseContextProvider >
+      <C
+        {...props}
+        onDestroyed={() => {
+        if (props.onDestroyed) {
+          props.onDestroyed();
+        }
+        unmount();
+      }}
+      />
+    </BakabaseContextProvider>
+  );
 
   return {
     key,

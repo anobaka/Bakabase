@@ -35,7 +35,7 @@ export default ({
         radius={'sm'}
         isDisabled
       >
-        {t('No set')}
+        {t<string>('No set')}
       </Chip>
     );
   }
@@ -50,7 +50,7 @@ export default ({
             radius={'sm'}
             isDisabled
           >
-            {t('Unable to get property information')}
+            {t<string>('Unable to get property information')}
           </Chip>
         );
       }
@@ -71,7 +71,7 @@ export default ({
             color={'secondary'}
             variant={'flat'}
           >
-            {t(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
+            {t<string>(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
           </Chip>
           <Chip
             size={'sm'}

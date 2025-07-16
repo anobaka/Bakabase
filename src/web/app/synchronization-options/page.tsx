@@ -8,7 +8,7 @@ import { Alert, Button, Card, CardBody, CardHeader, Chip, Divider, Modal } from 
 import BApi from '@/sdk/BApi';
 import { CategoryAdditionalItem, enhancerIds, MediaLibraryV2AdditionalItem } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import store from '@/store';
+import { useResourceOptionsStore } from '@/models/options';
 import type {
   BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel,
 } from '@/sdk/Api';
@@ -32,7 +32,7 @@ export default () => {
   const { createPortal } = useBakabaseContext();
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const synchronizationOptions = store.useModelState('resourceOptions')?.synchronizationOptions;
+  const synchronizationOptions = useResourceOptionsStore(state => state.data)?.synchronizationOptions;
   const [mediaLibraryV2s, setMediaLibraryV2s] = useState<MediaLibrary[]>([]);
 
   const [options, setOptions] = useState<Options>();
@@ -97,7 +97,7 @@ export default () => {
         title={(
           <div className={'flex items-center gap-2'}>
             <div>
-              {t('You can customize media library synchronization behavior here. If you leave the option blank, we will attempt to apply the parent selection according to priority.')}
+              {t<string>('You can customize media library synchronization behavior here. If you leave the option blank, we will attempt to apply the parent selection according to priority.')}
             </div>
             <Button
               size={'sm'}
@@ -130,12 +130,12 @@ export default () => {
 
                 createPortal(Modal, {
                   defaultVisible: true,
-                  title: t('Configuration item instructions'),
+                  title: t<string>('Configuration item instructions'),
                   size: 'xl',
                   footer: {
                     actions: ['cancel'],
                     cancelProps: {
-                      text: t('Close'),
+                      text: t<string>('Close'),
                     },
                   },
                   children: (
@@ -143,8 +143,8 @@ export default () => {
                       {data.map(d => {
                         return (
                           <>
-                            <div className={'font-bold text-right'}>{t(d.label)}</div>
-                            <div className={'opacity-80'}>{t(d.description)}</div>
+                            <div className={'font-bold text-right'}>{t<string>(d.label)}</div>
+                            <div className={'opacity-80'}>{t<string>(d.description)}</div>
                           </>
                         );
                       })}
@@ -153,7 +153,7 @@ export default () => {
                 });
               }}
             >
-              {t('View configuration item instructions')}
+              {t<string>('View configuration item instructions')}
             </Button>
           </div>
         )}

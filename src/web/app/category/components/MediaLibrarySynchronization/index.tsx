@@ -62,7 +62,7 @@ export default ({
         <div className="top">
           {isSyncing ? (
             <div className="process">
-              {t(taskInfo?.process)}({taskInfo?.percentage}%)
+              {t<string>(taskInfo?.process)}({taskInfo?.percentage}%)
             </div>
           ) : (
             <Button
@@ -77,7 +77,7 @@ export default ({
               }}
             >
               <SyncOutlined className={'text-base'} />
-              {t('Sync all media libraries')}
+              {t<string>('Sync all media libraries')}
             </Button>
           )}
           {(failed || isComplete) && (
@@ -89,7 +89,7 @@ export default ({
                   )}
                 >
                   <div className={'failed'}>
-                    {t('Failed')}
+                    {t<string>('Failed')}
                     &nbsp;
                     <CustomIcon
                       type={'question-circle'}
@@ -106,7 +106,7 @@ export default ({
                       className={'text-base'}
                     />
                     &nbsp;
-                    {t('Complete')}
+                    {t<string>('Complete')}
                   </div>
                 )
               }

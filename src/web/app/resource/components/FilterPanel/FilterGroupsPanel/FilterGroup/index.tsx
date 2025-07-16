@@ -96,7 +96,7 @@ const FilterGroup = ({
           />
           <div />
           <Divider orientation={'horizontal'} />
-          <div>{t('Advance filter')}</div>
+          <div>{t<string>('Advance filter')}</div>
           <div className={'flex items-center gap-2'}>
             <Button
               size={'sm'}
@@ -111,7 +111,7 @@ const FilterGroup = ({
               }}
             >
               <FilterOutlined className={'text-base'} />
-              {t('Filter')}
+              {t<string>('Filter')}
             </Button>
             <Button
               size={'sm'}
@@ -129,12 +129,12 @@ const FilterGroup = ({
               }}
             >
               <AppstoreOutlined className={'text-base'} />
-              {t('Filter group')}
+              {t<string>('Filter group')}
             </Button>
           </div>
           <div />
           <Divider orientation={'horizontal'} />
-          <div>{t('Special filters')}</div>
+          <div>{t<string>('Special filters')}</div>
           <div>
             <CheckboxGroup
               value={tags?.map(t => t.toString())}
@@ -145,7 +145,7 @@ const FilterGroup = ({
             >
               {resourceTags.map(rt => {
                 return (
-                  <Checkbox value={rt.value.toString()}>{t(`ResourceTag.${rt.label}`)}</Checkbox>
+                  <Checkbox value={rt.value.toString()}>{t<string>(`ResourceTag.${rt.label}`)}</Checkbox>
                 );
               })}
             </CheckboxGroup>
@@ -233,7 +233,7 @@ const FilterGroup = ({
             });
           }}
         >
-          {t(`Combinator.${GroupCombinator[combinator]}`)}
+          {t<string>(`Combinator.${GroupCombinator[combinator]}`)}
         </Button>,
       );
     }
@@ -254,7 +254,7 @@ const FilterGroup = ({
             style={{ backgroundColor: 'hsla(from var(--bakaui-color) h s l / 50%)' }}
           >
             <Tooltip
-              content={t('Click to enable')}
+              content={t<string>('Click to enable')}
             >
               <Button
                 size={'sm'}
@@ -300,7 +300,7 @@ const FilterGroup = ({
           }}
         >
           <DisconnectOutlined className={'text-base'} />
-          {t('Disable group')}
+          {t<string>('Disable group')}
         </Button>
         <Button
           size={'sm'}
@@ -309,7 +309,7 @@ const FilterGroup = ({
           onClick={onRemove}
         >
           <DeleteOutlined className={'text-base'} />
-          {t('Delete group')}
+          {t<string>('Delete group')}
         </Button>
       </div>
     )}

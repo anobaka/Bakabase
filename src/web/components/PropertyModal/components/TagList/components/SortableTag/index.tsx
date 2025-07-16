@@ -71,7 +71,7 @@ export function SortableTag({
       <Input
         size={'sm'}
         value={tag?.group}
-        placeholder={t('Group of tag, optional')}
+        placeholder={t<string>('Group of tag, optional')}
         onValueChange={group => {
           setTag({
             ...tag,
@@ -82,7 +82,7 @@ export function SortableTag({
       <Input
         size={'sm'}
         value={tag?.name}
-        placeholder={t('Name of tag, required')}
+        placeholder={t<string>('Name of tag, required')}
         onValueChange={name => {
           setTag({
             ...tag,
@@ -95,7 +95,7 @@ export function SortableTag({
           size={'sm'}
           radius={'sm'}
           isIconOnly
-          title={t('Hide in view')}
+          title={t<string>('Hide in view')}
           onClick={() => {
             setTag({
               ...tag,
@@ -117,8 +117,8 @@ export function SortableTag({
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: 'sm',
-                  title: t('Value is being referenced in {{count}} places', { count }),
-                  children: t('Sure to delete?'),
+                  title: t<string>('Value is being referenced in {{count}} places', { count }),
+                  children: t<string>('Sure to delete?'),
                   onOk: async () => {
                     onRemove?.(tag);
                   },

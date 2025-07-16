@@ -86,9 +86,9 @@ export default (props: PropertyContainerProps) => {
         //   <Tooltip
         //     content={(
         //       <div>
-        //         <div>{`${t(PropertyPool[property.pool])}${t('Property')}`}</div>
+        //         <div>{`${t<string>(PropertyPool[property.pool])}${t<string>('Property')}`}</div>
         //         <div className={'flex items-center gap-1'}>
-        //           {isLinked ? t('This property is linked to the current media library template or category(deprecated)') : t('This property is not yet linked to the current media library template or category(deprecated)')}
+        //           {isLinked ? t<string>('This property is linked to the current media library template or category(deprecated)') : t<string>('This property is not yet linked to the current media library template or category(deprecated)')}
         //           {isLinked ? (
         //             <Button
         //               size={'sm'}
@@ -100,7 +100,7 @@ export default (props: PropertyContainerProps) => {
         //               }}
         //             >
         //               <DisconnectOutlined className={'text-small'} />
-        //               {t('Unlink')}
+        //               {t<string>('Unlink')}
         //             </Button>
         //           ) : (
         //             <Button
@@ -113,7 +113,7 @@ export default (props: PropertyContainerProps) => {
         //               }}
         //             >
         //               <ApiOutlined className={'text-small'} />
-        //               {t('Link')}
+        //               {t<string>('Link')}
         //             </Button>
         //           )}
         //         </div>
@@ -128,7 +128,7 @@ export default (props: PropertyContainerProps) => {
         //     {/*   color={property.pool == PropertyPool.Custom ? 'secondary' : 'default'} */}
         //     {/*   // variant={'light'} */}
         //     {/* > */}
-        //     {/*   {property.pool == PropertyPool.Custom ? property.name : t(ResourceProperty[property.id]!)} */}
+        //     {/*   {property.pool == PropertyPool.Custom ? property.name : t<string>(ResourceProperty[property.id]!)} */}
         //     {/* </Chip> */}
         //   </Tooltip>
         // </div>

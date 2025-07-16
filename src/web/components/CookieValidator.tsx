@@ -68,7 +68,7 @@ export default ({ cookie, target, onChange = (v) => {} }: {cookie: string | unde
             }
           }}
         >
-          {t('Validate')}
+          {t<string>('Validate')}
         </Button>
         {renderStatus()}
       </div>

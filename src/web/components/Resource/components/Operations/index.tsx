@@ -56,7 +56,7 @@ export default ({
         <Button
           size={'sm'}
           color={resource.pinned ? 'warning' : 'default'}
-          title={resource.pinned ? t('Unpin') : t('Pin')}
+          title={resource.pinned ? t<string>('Unpin') : t<string>('Pin')}
           isIconOnly
           onClick={() => {
             BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then(r => {
@@ -68,7 +68,7 @@ export default ({
         </Button>
         <Button
           size={'sm'}
-          title={t('Open folder')}
+          title={t<string>('Open folder')}
           isIconOnly
           onClick={() => BApi.tool.openFileOrDirectory({ path: resource.path, openInDirectory: resource.isFile })}
 
@@ -77,7 +77,7 @@ export default ({
         </Button>
         <Button
           size={'sm'}
-          title={t('Enhancements')}
+          title={t<string>('Enhancements')}
           isIconOnly
           onClick={() => {
             BApi.resource.getResourceEnhancements(resource.id, { additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue })
@@ -94,7 +94,7 @@ export default ({
         </Button>
         <Button
           size={'sm'}
-          title={t('Preview')}
+          title={t<string>('Preview')}
           isIconOnly
           onClick={() => {
             ShowResourceMediaPlayer(resource.id, resource.path, (base64String: string) => {
@@ -107,11 +107,11 @@ export default ({
         </Button>
         <Button
           size={'sm'}
-          title={t('Add to playlist')}
+          title={t<string>('Add to playlist')}
           isIconOnly
           onClick={() => {
             Dialog.show({
-              title: t('Add to playlist'),
+              title: t<string>('Add to playlist'),
               content: (
                 <PlaylistCollection defaultNewItem={{
                   resourceId: resource.id,

@@ -54,7 +54,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       log('Found children:', response.data?.length || 0);
     } catch (err) {
       console.error('Failed to search children:', err);
-      setError(t('Failed to load children'));
+      setError(t<string>('Failed to load children'));
     } finally {
       setLoading(false);
     }
@@ -70,7 +70,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   return (
     <Modal
       defaultVisible
-      title={t('Resource Children')}
+      title={t<string>('Resource Children')}
       onDestroyed={onDestroyed}
       size="xl"
       footer={false}
@@ -79,7 +79,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <Spinner size="lg" />
-            <span className="ml-2">{t('Loading children...')}</span>
+            <span className="ml-2">{t<string>('Loading children...')}</span>
           </div>
         ) : error ? (
           <div className="text-center text-red-500 p-4">
@@ -87,12 +87,12 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
           </div>
         ) : children.length === 0 ? (
           <div className="text-center text-gray-500 p-4">
-            {t('No children found')}
+            {t<string>('No children found')}
           </div>
         ) : (
           <div className='flex flex-col gap-2'>
             <div>
-              {t('Found {{count}} children', { count: children.length })}
+              {t<string>('Found {{count}} children', { count: children.length })}
             </div>
             <div className="grid grid-cols-6 gap-4">
               {children.map((child) => (

@@ -50,8 +50,8 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
     <div>
       <Textarea
         isClearable
-        label={label ?? t('Extensions')}
-        placeholder={placeholder ?? t('Separate by space or newline')}
+        label={label ?? t<string>('Extensions')}
+        placeholder={placeholder ?? t<string>('Separate by space or newline')}
         value={text}
         onValueChange={(v) => {
           setText(v);

@@ -60,10 +60,10 @@ export default (props: Props) => {
   const validateDynamicTarget = (newTarget: string) => {
     let error;
     if (otherDynamicTargetsInGroup?.includes(newTarget)) {
-      error = t('Duplicate dynamic target is found');
+      error = t<string>('Duplicate dynamic target is found');
     }
     if (newTarget.length == 0) {
-      error = t('This field is required');
+      error = t<string>('This field is required');
     }
     if (dynamicTargetError != error) {
       setDynamicTargetError(error);
@@ -92,7 +92,7 @@ export default (props: Props) => {
 
   const dt = options.dynamicTarget ?? dynamicTarget;
 
-  const targetLabel = descriptor.isDynamic ? dt ?? t('Default') : descriptor.name;
+  const targetLabel = descriptor.isDynamic ? dt ?? t<string>('Default') : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
 
@@ -158,7 +158,7 @@ export default (props: Props) => {
                   setEditingDynamicTarget(true);
                 }}
               >
-                {targetLabel ?? t('Click to specify target')}
+                {targetLabel ?? t<string>('Click to specify target')}
                 <EditOutlined className={'text-base'} />
               </Button>
             ) : (
@@ -181,7 +181,7 @@ export default (props: Props) => {
           </div>
           {/* <div className={'flex items-center gap-1 opacity-60'}> */}
           {/*   <StandardValueIcon valueType={target.valueType} className={'text-small'} /> */}
-          {/*   {t(`StandardValueType.${StandardValueType[target.valueType]}`)} */}
+          {/*   {t<string>(`StandardValueType.${StandardValueType[target.valueType]}`)} */}
           {/* </div> */}
         </div>
       </div>

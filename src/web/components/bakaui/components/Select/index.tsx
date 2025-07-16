@@ -29,7 +29,7 @@ export default ({
       return (
         <div className={'flex flex-wrap gap-2'}>
           {v.reduce<ReactNode[]>((s, x, i) => {
-            s.push(<Chip radius={'sm'} size={props.size ?? undefined}>{dataSource.find(d => d.value === x.data?.value)?.label ?? t('Unknown label')}</Chip>);
+            s.push(<Chip radius={'sm'} size={props.size ?? undefined}>{dataSource.find(d => d.value === x.data?.value)?.label ?? t<string>('Unknown label')}</Chip>);
             return s;
           }, [])}
         </div>

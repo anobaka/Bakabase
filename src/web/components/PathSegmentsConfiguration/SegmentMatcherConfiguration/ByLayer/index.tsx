@@ -34,7 +34,7 @@ export default ({ modeIsSelected, onSelectMode, onSelectLayer, selectedLayer, la
           onValueChange={onSelectMode}
         >
           <Radio value={'layer'} >
-            {t('Set by {{thing}}', { thing: t('layer') })}
+            {t<string>('Set by {{thing}}', { thing: t<string>('layer') })}
           </Radio>
         </RadioGroup>
       </CardHeader>
@@ -52,7 +52,7 @@ export default ({ modeIsSelected, onSelectMode, onSelectLayer, selectedLayer, la
                   onSelectLayer(layer);
                 }}
               >
-                {layer < 0 ? t('The {{layer}} layer to the resource', { layer: -layer }) : t('The {{layer}} layer after root path', { layer: layer })}
+                {layer < 0 ? t<string>('The {{layer}} layer to the resource', { layer: -layer }) : t<string>('The {{layer}} layer after root path', { layer: layer })}
               </Button>
             );
           })}

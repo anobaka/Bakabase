@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Modal, NumberInput, Tab, Tabs, Textarea } from '@/components/bakaui';
-import store from '@/store';
+import { useSoulPlusOptionsStore } from '@/models/options';
 import BApi from '@/sdk/BApi';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { EditableValue } from '@/components/EditableValue';
@@ -11,7 +11,7 @@ type Props = DestroyableProps;
 
 export default (props: Props) => {
   const { t } = useTranslation();
-  const soulPlusOptions = store.useModelState('soulPlusOptions');
+  const soulPlusOptions = useSoulPlusOptionsStore(state => state.data);
   return (
     <Modal
       defaultVisible
@@ -22,13 +22,13 @@ export default (props: Props) => {
       }}
     >
       <Tabs aria-label="Options" isVertical>
-        <Tab key="soulplus" title={t('SoulPlus')}>
+        <Tab key="soulplus" title={t<string>('SoulPlus')}>
           <div className={'flex flex-col gap-2'}>
             <EditableValue
               Viewer={Textarea}
               Editor={Textarea}
-              label={t('Cookie')}
-              description={t('Cookie is used to access SoulPlus posts.')}
+              label={t<string>('Cookie')}
+              description={t<string>('Cookie is used to access SoulPlus posts.')}
               value={soulPlusOptions.cookie}
               onSubmit={async v => {
                 await BApi.options.patchSoulPlusOptions({
@@ -48,8 +48,8 @@ export default (props: Props) => {
                 formatOptions: { useGrouping: false },
                 hideStepper: true,
               }}
-              label={t('Auto buy threshold')}
-              description={t('Items priced below this value will be bought automatically.')}
+              label={t<string>('Auto buy threshold')}
+              description={t<string>('Items priced below this value will be bought automatically.')}
               value={soulPlusOptions.autoBuyThreshold}
               onSubmit={async v => {
                 await BApi.options.patchSoulPlusOptions({

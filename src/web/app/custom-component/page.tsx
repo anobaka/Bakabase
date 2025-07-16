@@ -63,7 +63,7 @@ export default () => {
             <div className="type-name">
               <div className="name flex items-center gap-1">
                 <CustomIcon type={ComponentTypeIcons[ct.value]} size={'large'} />
-                {t(ct.label)}
+                {t<string>(ct.label)}
               </div>
               <Button
                 color={'primary'}
@@ -73,7 +73,7 @@ export default () => {
                   }}
               >
                 <PlusCircleOutlined className={'text-base'} />
-                {t('Add')}
+                {t<string>('Add')}
               </Button>
             </div>
             {(components.length > 0 ? (<div className="components">
@@ -90,7 +90,7 @@ export default () => {
               })}
             </div>) : (
               <div className={'no-components'}>
-                {t('Nothing here yet')}
+                {t<string>('Nothing here yet')}
               </div>
             ))}
           </div>

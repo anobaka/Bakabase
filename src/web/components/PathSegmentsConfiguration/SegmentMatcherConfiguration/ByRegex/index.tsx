@@ -65,7 +65,7 @@ export default ({
               variant={'light'}
               color={'danger'}
             >
-              {t('Test failed, please check your regex')}
+              {t<string>('Test failed, please check your regex')}
             </Chip>
           </div>
 
@@ -104,7 +104,7 @@ export default ({
             {values && values.length > 0 && (
               <div className="flex flex-wrap gap-1 items-center">
                 <div className="font-bold">
-                  {t('Match result')}
+                  {t<string>('Match result')}
                 </div>
                 {values.map(v => (
                   <Chip
@@ -134,17 +134,17 @@ export default ({
           onValueChange={onSelectMode}
         >
           <Radio value={'regex'}>
-            {t('Set by {{thing}}', { thing: t('regex') })}
+            {t<string>('Set by {{thing}}', { thing: t<string>('regex') })}
           </Radio>
         </RadioGroup>
         <Tooltip
           content={(
             <div>
-              {t('/ is the directory separator always, not \\')}
+              {t<string>('/ is the directory separator always, not \\')}
               <br />
-              {t('The whole matched text will be ignored if capturing groups are used')}
+              {t<string>('The whole matched text will be ignored if capturing groups are used')}
               <br />
-              {t('You should not use capturing groups on Resource property due to partial path is not available to match a file system entry')}
+              {t<string>('You should not use capturing groups on Resource property due to partial path is not available to match a file system entry')}
             </div>
           )}
         >
@@ -156,7 +156,7 @@ export default ({
       <CardBody>
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span>{t('Text to be matched')}</span>
+            <span>{t<string>('Text to be matched')}</span>
             <Chip
               size={'sm'}
               variant={'light'}
@@ -191,20 +191,20 @@ export default ({
                     const v = getResultFromExecAll(new RegExp(value), textToBeMatched);
                     console.log(v, isResourceProperty);
                     if (v && v.groups && v.groups.length > 0 && isResourceProperty) {
-                      throw new Error(t('Capturing groups are not allowed on Resource property'));
+                      throw new Error(t<string>('Capturing groups are not allowed on Resource property'));
                     }
 
                     let tip: string | undefined;
                     if (v) {
                       if (v.groups && v.groups.length > 0) {
-                        tip = t('Capturing groups are used, only matched text will be applied');
+                        tip = t<string>('Capturing groups are used, only matched text will be applied');
                       } else {
                         if (v.text != undefined && v.text.length > 0) {
-                          tip = t('Whole segment will be applied if capturing group is not used');
+                          tip = t<string>('Whole segment will be applied if capturing group is not used');
                         }
                       }
                     } else {
-                      tip = t('No text was matched, but you can still save the regular expression.');
+                      tip = t<string>('No text was matched, but you can still save the regular expression.');
                     }
 
                     setTestResult({
@@ -223,7 +223,7 @@ export default ({
                 }
               }}
             >
-              {t('Test')}
+              {t<string>('Test')}
             </Button>
           </div>
           {renderTestResult()}

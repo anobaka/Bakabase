@@ -25,13 +25,13 @@ const typeDataSources = [
   },
 ].map(a => ({
   ...a,
-  label: i18n.t(a.label)
+  label: i18n.t<string>(a.label)
     .toString(),
 }));
 
 const translatedReservedResourceProperties = reservedResourceProperties.map(a => ({
   ...a,
-  label: i18n.t(a.label)
+  label: i18n.t<string>(a.label)
     .toString(),
 }));
 
@@ -123,7 +123,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
               size={'small'}
             >
               <Table.Column
-                title={i18n.t('Group name')}
+                title={i18n.t<string>('Group name')}
                 dataIndex={'name'}
                 cell={(c, i, r) => {
                   return (
@@ -142,7 +142,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                       />
                       {regexCapturingGroupsRef.current?.indexOf(c) == -1 && (
                         <div className={'error'}>
-                          {i18n.t('Invalid capturing group')}
+                          {i18n.t<string>('Invalid capturing group')}
                         </div>
                       )}
                     </div>
@@ -150,7 +150,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                 }}
               />
               <Table.Column
-                title={i18n.t('Type')}
+                title={i18n.t<string>('Type')}
                 dataIndex={'isReserved'}
                 cell={(c, i, r) => {
                   console.log('asdsdasasdasasda', c);
@@ -167,7 +167,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                       />
                       {c == undefined && (
                         <div className={'error'}>
-                          {i18n.t('Type is not set')}
+                          {i18n.t<string>('Type is not set')}
                         </div>
                       )}
                     </div>
@@ -175,7 +175,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                 }}
               />
               <Table.Column
-                title={i18n.t('Property')}
+                title={i18n.t<string>('Property')}
                 dataIndex={'key'}
                 cell={(c, i, r) => {
                   const error = c == undefined || c.length == 0;
@@ -205,7 +205,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                       )}
                       {error && (
                         <div className={'error'}>
-                          {i18n.t('Property is not set')}
+                          {i18n.t<string>('Property is not set')}
                         </div>
                       )}
                     </div>
@@ -213,7 +213,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                 }}
               />
               <Table.Column
-                title={i18n.t('Operations')}
+                title={i18n.t<string>('Operations')}
                 cell={(_, i, r) => {
                   return (
                     <CustomIcon
@@ -237,7 +237,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
                 setValue([...newValue]);
               }}
             >
-              {i18n.t('Add')}
+              {i18n.t<string>('Add')}
             </Button>
           </div>
         );
@@ -259,15 +259,15 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
         console.log(formData);
         if (formData.groups) {
           if (!(formData.groups?.length > 0)) {
-            errors.groups.addError(i18n.t('Invalid configuration'));
+            errors.groups.addError(i18n.t<string>('Invalid configuration'));
           } else {
             const invalidGroups = formData.groups.filter(a => regexCapturingGroupsRef.current?.indexOf(a.name) == -1);
             if (invalidGroups.length > 0) {
-              errors.groups.addError(i18n.t('Multiple invalid capturing group names are found: {{names}}', { names: invalidGroups.map(a => a.name).join(',') }));
+              errors.groups.addError(i18n.t<string>('Multiple invalid capturing group names are found: {{names}}', { names: invalidGroups.map(a => a.name).join(',') }));
             } else {
               if (invalidGroups.some(d => {
                 if (d.isReserved == undefined || d.key == undefined || d.key.length == 0 || d.name == undefined || d.name.length == 0) {
-                  errors.groups.addError(i18n.t('Invalid group'));
+                  errors.groups.addError(i18n.t<string>('Invalid group'));
                 }
               })) {
 
@@ -278,7 +278,7 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
 
         if (formData.regex) {
           if (regexCapturingGroupsRef.current.length == 0) {
-            errors.regex.addError(i18n.t('No capturing groups are found'));
+            errors.regex.addError(i18n.t<string>('No capturing groups are found'));
           }
         }
 

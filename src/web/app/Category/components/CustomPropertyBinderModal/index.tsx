@@ -27,7 +27,7 @@ export default ({
         id: c.id,
         pool: PropertyPool.Custom,
       }))}
-      title={t('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
+      title={t<string>('Binding custom properties to category {{categoryName}}', { categoryName: category.name })}
       onSubmit={async (properties) => {
         const rsp = await BApi.category
           .bindCustomPropertiesToCategory(category.id, { customPropertyIds: properties?.map(p => p.id) });

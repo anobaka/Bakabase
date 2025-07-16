@@ -32,7 +32,7 @@ export default ({ value: propsValue, onChange }: Props) => {
       return (
         <Input
           key="0"
-          placeholder={t('Text')}
+          placeholder={t<string>('Text')}
           className={'w-full'}
           required
           value={value.value1}
@@ -48,7 +48,7 @@ export default ({ value: propsValue, onChange }: Props) => {
         <>
           <Input
             key="0"
-            placeholder={t('Source text')}
+            placeholder={t<string>('Source text')}
             required
             value={value.value1}
             onValueChange={(value1) => {
@@ -57,7 +57,7 @@ export default ({ value: propsValue, onChange }: Props) => {
           />
           <Input
             key="1"
-            placeholder={t('Convert to')}
+            placeholder={t<string>('Convert to')}
             required
             value={value.value2}
             onValueChange={(value2) => {
@@ -71,7 +71,7 @@ export default ({ value: propsValue, onChange }: Props) => {
         <>
           <Input
             key="0"
-            placeholder={t('Left wrapper')}
+            placeholder={t<string>('Left wrapper')}
             required
             value={value.value1}
             onValueChange={(value1) => {
@@ -80,7 +80,7 @@ export default ({ value: propsValue, onChange }: Props) => {
           />
           <Input
             key="1"
-            placeholder={t('Right wrapper')}
+            placeholder={t<string>('Right wrapper')}
             required
             value={value.value2}
             onValueChange={(value2) => {

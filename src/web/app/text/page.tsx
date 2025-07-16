@@ -124,10 +124,10 @@ export default () => {
     <div className="text-page" title="Text">
       <Table isStriped removeWrapper>
         <TableHeader>
-          <TableColumn>{t('Type')}</TableColumn>
-          <TableColumn>{t('Applied to')}</TableColumn>
-          <TableColumn>{t('Texts')}</TableColumn>
-          <TableColumn>{t('Opt')}</TableColumn>
+          <TableColumn>{t<string>('Type')}</TableColumn>
+          <TableColumn>{t<string>('Applied to')}</TableColumn>
+          <TableColumn>{t<string>('Texts')}</TableColumn>
+          <TableColumn>{t<string>('Opt')}</TableColumn>
         </TableHeader>
         <TableBody>
           {Object.keys(textsMap).map(typeStr => {
@@ -137,9 +137,9 @@ export default () => {
               <TableRow>
                 <TableCell>
                   <div className={'flex items-center gap-1'}>
-                    {t(SpecialTextType[type])}
+                    {t<string>(SpecialTextType[type])}
                     <Tooltip
-                      content={t(typeDescriptions[type])}
+                      content={t<string>(typeDescriptions[type])}
                     >
                       <QuestionCircleOutlined className={'text-medium'} />
                     </Tooltip>
@@ -155,7 +155,7 @@ export default () => {
                           color={'default'}
                           variant={'flat'}
                         >
-                          {t(x)}
+                          {t<string>(x)}
                         </Chip>
                       );
                     })}
@@ -176,7 +176,7 @@ export default () => {
                             variant={'bordered'}
                             onClose={() => {
                               createPortal(Modal, {
-                                title: t('Sure to delete?'),
+                                title: t<string>('Sure to delete?'),
                                 defaultVisible: true,
                                 onOk: async () => {
                                   await BApi.specialText.deleteSpecialText(c.id);
@@ -201,7 +201,7 @@ export default () => {
                       value1: '',
                     })}
                   >
-                    {t('Add')}
+                    {t<string>('Add')}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -221,7 +221,7 @@ export default () => {
               }
             });
           }}
-        >{t('Add prefabs')}
+        >{t<string>('Add prefabs')}
         </Button>
       </div>
     </div>

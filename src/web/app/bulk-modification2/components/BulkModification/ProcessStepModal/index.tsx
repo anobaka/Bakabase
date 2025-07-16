@@ -94,7 +94,7 @@ export default ({
       case PropertyType.Tags:
         break;
     }
-    return t('Not supported');
+    return t<string>('Not supported');
   };
 
   return (
@@ -118,7 +118,7 @@ export default ({
       {renderOptions()}
       {error && (
         <div className={'whitespace-break-spaces text-danger'} >
-          {t('ERROR')}: {error}
+          {t<string>('ERROR')}: {error}
         </div>
       )}
     </Modal>

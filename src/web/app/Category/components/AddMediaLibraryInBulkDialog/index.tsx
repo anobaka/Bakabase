@@ -28,7 +28,7 @@ const close = () => {
 
   return (
     <Dialog
-      title={t('Add media libraries in bulk')}
+      title={t<string>('Add media libraries in bulk')}
       v2
       visible={visible}
       width={'auto'}
@@ -53,12 +53,12 @@ const close = () => {
         dataSource={nameAndPaths}
       >
         <Table.Column
-          title={t('Media libraries')}
+          title={t<string>('Media libraries')}
           dataIndex={'name'}
           cell={(name, i, r) => {
             return (
               <Input
-                placeholder={t('Name')}
+                placeholder={t<string>('Name')}
                 trim
                 hasClear
                 onChange={v => {
@@ -69,14 +69,14 @@ const close = () => {
           }}
         />
         <Table.Column
-          title={t('Root paths')}
+          title={t<string>('Root paths')}
           dataIndex={'paths'}
           cell={(paths, i, r) => {
             const elements = (paths || []).map((p, j) => {
               return (
                 <Input
                   style={{ width: 800 }}
-                  placeholder={t('Root path')}
+                  placeholder={t<string>('Root path')}
                   trim
                   key={j}
                   onChange={vp => {
@@ -111,7 +111,7 @@ const close = () => {
                   setNameAndPaths([...nameAndPaths]);
                 }}
               >
-                {t('Add root path')}
+                {t<string>('Add root path')}
               </Button>,
             );
             return (
@@ -131,7 +131,7 @@ const close = () => {
           setNameAndPaths([...nameAndPaths, { name: '', paths: [] }]);
         }}
       >
-        {t('Add a media library')}
+        {t<string>('Add a media library')}
       </Button>
     </Dialog>
   );

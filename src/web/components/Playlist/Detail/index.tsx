@@ -66,7 +66,7 @@ export default ({ id, onChange }) => {
       <div className="info">
         <div className="name">
           <div className="label">
-            {i18n.t('Name')}
+            {i18n.t<string>('Name')}
           </div>
           <div className="value">
             <Input
@@ -81,7 +81,7 @@ export default ({ id, onChange }) => {
         </div>
         <div className="interval">
           <div className="label">
-            {i18n.t('Interval')}
+            {i18n.t<string>('Interval')}
           </div>
           <div className="value">
             <NumberPicker
@@ -92,7 +92,7 @@ export default ({ id, onChange }) => {
                   interval: v,
                 });
               }}
-              innerAfter={i18n.t('ms')}
+              innerAfter={i18n.t<string>('ms')}
             />
           </div>
         </div>

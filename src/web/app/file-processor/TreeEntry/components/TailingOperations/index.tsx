@@ -39,7 +39,7 @@ export default (props: Props) => {
       </OperationButton>
       {isExtractable && (
         <Tooltip
-          content={`(E)${t('Extract children to parent and delete current directory')}`}
+          content={`(E)${t<string>('Extract children to parent and delete current directory')}`}
           placement={'top'}
         >
           <Button

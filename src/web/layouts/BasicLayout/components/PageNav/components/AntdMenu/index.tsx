@@ -49,7 +49,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
     const Icon = item.icon ?? AiOutlineQuestionCircle;
     return getItem((
       <div className='flex items-center gap-x-0.5'>
-        {t(item.name)}
+        {t<string>(item.name)}
         {item.isBeta && <BetaChip />}
         {item.isDeprecated && <DeprecatedChip />}
       </div>

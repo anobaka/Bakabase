@@ -49,7 +49,7 @@ export default (props: ChoiceValueEditorProps) => {
     <Modal
       defaultVisible
       size={dataSource.length > 10 ? 'xl' : 'lg'}
-      title={t('Select data')}
+      title={t<string>('Select data')}
       onOk={async () => {
         const validValues = value.filter(v => dataSource.some(d => d.value == v));
         onValueChange?.(validValues, validValues.map(v => dataSource.find(x => x.value == v)?.label).filter(x => x) as string[]);
@@ -66,7 +66,7 @@ export default (props: ChoiceValueEditorProps) => {
         />
       </div>
       <div className={'flex flex-wrap gap-1'}>
-        {dataSource.length == 0 ? t('No choices available, please check your configurations') : dataSource.filter(d =>
+        {dataSource.length == 0 ? t<string>('No choices available, please check your configurations') : dataSource.filter(d =>
           keyword.length == 0 || d.label.toLowerCase().includes(keyword.toLowerCase())).map(d => {
           return (
             <Button

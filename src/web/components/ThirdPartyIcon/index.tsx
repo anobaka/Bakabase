@@ -40,7 +40,7 @@ export default ({ thirdPartyId, size }: Props) => {
     <img
       style={style}
       src={img}
-      alt={t(`ThirdPartyId.${ThirdPartyId[thirdPartyId]}`)}
+      alt={t<string>(`ThirdPartyId.${ThirdPartyId[thirdPartyId]}`)}
     />
   );
 };

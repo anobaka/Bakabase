@@ -46,7 +46,7 @@ export default ({
       </div>
       <div className="name">{name}</div>
       {description && (
-        <pre className="description">{i18n.t(description)}</pre>
+        <pre className="description">{i18n.t<string>(description)}</pre>
       )}
       {extra}
     </div>
@@ -54,7 +54,7 @@ export default ({
 
   return (
     tip ? (
-      <Balloon.Tooltip trigger={coreComponent}>{i18n.t(tip)}</Balloon.Tooltip>
+      <Balloon.Tooltip trigger={coreComponent}>{i18n.t<string>(tip)}</Balloon.Tooltip>
     ) : coreComponent
   );
 };

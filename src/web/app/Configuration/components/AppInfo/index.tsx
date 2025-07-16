@@ -55,16 +55,16 @@ export default ({ appInfo }) => {
 
   const renderNewVersion = () => {
     // if (!updaterContext || updaterContext.status == DependentComponentStatus.NotInstalled) {
-    //   return t('Updater is required to auto-update app');
+    //   return t<string>('Updater is required to auto-update app');
     // }
 
     // if (updaterContext.status == DependentComponentStatus.Installing) {
-    //   return t('We\'re installing updater, please wait');
+    //   return t<string>('We\'re installing updater, please wait');
     // }
 
     switch (appUpdaterState.status) {
       case UpdaterStatus.UpToDate:
-        return t('Up-to-date');
+        return t<string>('Up-to-date');
       case UpdaterStatus.Idle:
         if (newVersion) {
           if (newVersion.version) {
@@ -91,7 +91,7 @@ export default ({ appInfo }) => {
                       variant={'light'}
                       color={'secondary'}
                       size={'small'}
-                    >{t('Change log')}
+                    >{t<string>('Change log')}
                     </Button>
                   </>
                 )}
@@ -103,7 +103,7 @@ export default ({ appInfo }) => {
                   variant={'light'}
                   color={'success'}
                   size={'small'}
-                >{t('Click to auto-update')}
+                >{t<string>('Click to auto-update')}
                 </Button>
                 {
                   newVersion.installers?.length > 0 ? (
@@ -116,7 +116,7 @@ export default ({ appInfo }) => {
                           variant={'light'}
                           size={'sm'}
                           color={'primary'}
-                        >{t('Auto-Update Fails? Click to download complete installers')}</Button>}
+                        >{t<string>('Auto-Update Fails? Click to download complete installers')}</Button>}
                       >
                         {newVersion.installers.map((i) => (
                           <div key={i.url}>
@@ -130,17 +130,17 @@ export default ({ appInfo }) => {
               </Box>
             );
           } else {
-            return t('Up-to-date');
+            return t<string>('Up-to-date');
           }
         } else {
-          return t('Failed to get latest version');
+          return t<string>('Failed to get latest version');
         }
       case UpdaterStatus.Running:
         return (
           <div style={{ display: 'flex', alignItems: 'center' }}>
             {newVersion?.version}
             &nbsp;
-            {t('Updating')}
+            {t<string>('Updating')}
             &nbsp;
             <div style={{ width: 400 }}>
               <Progress progressive percent={appUpdaterState.percentage} />
@@ -155,13 +155,13 @@ export default ({ appInfo }) => {
             onClick={() => {
               BApi.updater.restartAndUpdateApp();
             }}
-          >{t('Restart to update')}
+          >{t<string>('Restart to update')}
           </Button>
         );
       case UpdaterStatus.Failed:
         return (
           <>
-            {t('Failed to update app')}: {t(appUpdaterState.error)}
+            {t<string>('Failed to update app')}: {t<string>(appUpdaterState.error)}
             &nbsp;
             <Button
               text
@@ -169,7 +169,7 @@ export default ({ appInfo }) => {
               onClick={() => {
                 BApi.updater.startUpdatingApp();
               }}
-            >{t('Click here to retry')}
+            >{t<string>('Click here to retry')}
             </Button>
           </>
         );
@@ -210,18 +210,18 @@ export default ({ appInfo }) => {
       label: 'Latest version',
       value: renderNewVersion(),
     },
-  ].map((x) => ({ ...x, label: t(x.label), tip: t(x.tip) }));
+  ].map((x) => ({ ...x, label: t<string>(x.label), tip: t<string>(x.tip) }));
 
   return (
     <div className="group">
-      {/* <Title title={t('System information')} /> */}
+      {/* <Title title={t<string>('System information')} /> */}
       <div className="settings">
         <Table
           removeWrapper
           isCompact
         >
           <TableHeader>
-            <TableColumn width={200}>{t('System information')}</TableColumn>
+            <TableColumn width={200}>{t<string>('System information')}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
@@ -230,13 +230,13 @@ export default ({ appInfo }) => {
                 <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
                   <TableCell>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      {t(c.label)}
+                      {t<string>(c.label)}
                       {c.tip && (
                         <>
                           &nbsp;
                           <Tooltip
                             placement={'right'}
-                            content={t(c.tip)}
+                            content={t<string>(c.tip)}
                           >
                             <CustomIcon type={'question-circle'} className={'text-base'} />
                           </Tooltip>

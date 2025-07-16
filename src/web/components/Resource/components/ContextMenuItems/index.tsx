@@ -4,7 +4,7 @@ import { MenuItem } from '@szhsin/react-menu';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { ApiOutlined, DeleteOutlined, ExportOutlined, FileSyncOutlined, SendOutlined } from '@ant-design/icons';
-import { history } from 'ice';
+import { useRouter } from 'next/navigation';
 import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
 import MediaLibrarySelectorV2 from '@/components/MediaLibrarySelectorV2';
 import { ResourceAdditionalItem } from '@/sdk/constants';
@@ -56,7 +56,7 @@ export default ({
       >
         <div className={'flex items-center gap-2'}>
           <FileSyncOutlined className={'text-base'} />
-          {selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Including file system entries)', { count: selectedResourceIds.length }) : t('Move to media library (Including file system entries)')}
+          {selectedResourceIds.length > 1 ? t<string>('Move {{count}} resources to media library (Including file system entries)', { count: selectedResourceIds.length }) : t<string>('Move to media library (Including file system entries)')}
         </div>
       </MenuItem>
       <MenuItem
@@ -81,7 +81,7 @@ export default ({
       >
         <div className={'flex items-center gap-2'}>
           <ApiOutlined className={'text-base'} />
-          {selectedResourceIds.length > 1 ? t('Move {{count}} resources to media library (Data only)', { count: selectedResourceIds.length }) : t('Move to media library (Data only)')}
+          {selectedResourceIds.length > 1 ? t<string>('Move {{count}} resources to media library (Data only)', { count: selectedResourceIds.length }) : t<string>('Move to media library (Data only)')}
         </div>
       </MenuItem>
       <MenuItem
@@ -103,7 +103,7 @@ export default ({
       >
         <div className={'flex items-center gap-2'}>
           <SendOutlined className={'text-base'} />
-          {selectedResourceIds.length > 1 ? t('Transfer data of {{count}} resources', { count: selectedResourceIds.length }) : t('Transfer resource data')}
+          {selectedResourceIds.length > 1 ? t<string>('Transfer data of {{count}} resources', { count: selectedResourceIds.length }) : t<string>('Transfer resource data')}
         </div>
       </MenuItem>
       {selectedResourceIds.length > 1 && (
@@ -112,9 +112,9 @@ export default ({
             log('inner', 'click');
             createPortal(Modal, {
               defaultVisible: true,
-              title: t('We are leaving current page'),
+              title: t<string>('We are leaving current page'),
               onOk: async () => {
-                history?.push('/bulkmodification2');
+                useRouter().push('/bulkmodification2');
               },
             });
           }}
@@ -124,7 +124,7 @@ export default ({
         >
           <div className={'flex items-center gap-2 text-secondary'}>
             <ExportOutlined className={'text-base'} />
-            {t('Bulk modification')}
+            {t<string>('Bulk modification')}
           </div>
         </MenuItem>
       )}
@@ -135,7 +135,7 @@ export default ({
           createPortal(
             Modal, {
               defaultVisible: true,
-              title: t('Delete {{count}} resources', { count: selectedResourceIds.length }),
+              title: t<string>('Delete {{count}} resources', { count: selectedResourceIds.length }),
               children: (
                 <div>
                   <div>
@@ -143,13 +143,13 @@ export default ({
                       // color={'warning'}
                       // size={'sm'}
                       onValueChange={s => deleteFiles = s}
-                    >{t('Delete files also')}</Checkbox>
+                    >{t<string>('Delete files also')}</Checkbox>
                   </div>
                   <div className={'opacity-80'}>
-                    {t('Resource will be shown again after next synchronization if you leave files undeleted.')}
+                    {t<string>('Resource will be shown again after next synchronization if you leave files undeleted.')}
                   </div>
                   <div className={'mt-6 font-bold'}>
-                    {t('Are you sure you want to delete {{count}} resources?', { count: selectedResourceIds.length })}
+                    {t<string>('Are you sure you want to delete {{count}} resources?', { count: selectedResourceIds.length })}
                   </div>
                 </div>
               ),
@@ -168,7 +168,7 @@ export default ({
       >
         <div className={'flex items-center gap-2 text-danger'}>
           <DeleteOutlined className={'text-base'} />
-          {selectedResourceIds.length > 1 ? t('Delete {{count}} resources', { count: selectedResourceIds.length }) : t('Delete resource')}
+          {selectedResourceIds.length > 1 ? t<string>('Delete {{count}} resources', { count: selectedResourceIds.length }) : t<string>('Delete resource')}
         </div>
       </MenuItem>
     </>

@@ -4,7 +4,7 @@ import React from 'react';
 import { Button } from '@alifd/next';
 import './index.scss';
 import i18n from 'i18next';
-import { Link } from 'ice';
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 export default ({
@@ -18,7 +18,7 @@ export default ({
   return (
     <div className={'iw-title'}>
       <div className="left">
-        <div className="title">{t(title)}</div>
+        <div className="title">{t<string>(title)}</div>
         {titleAfter && (
           <div className={'title-after'}>
             {titleAfter}
@@ -29,8 +29,8 @@ export default ({
             {buttons.map((b) => (
               <div className={'button'} key={b.key}>
                 <img className={'icon'} src={b.icon} alt="" />
-                {b.type == 'link' ? (<Link to={b.to}>{t(b.text)}</Link>)
-                  : (<Button type={'primary'} onClick={b.onClick} text>{t(b.text)}</Button>)}
+                {b.type == 'link' ? (<Link href={b.to}>{t<string>(b.text)}</Link>)
+                  : (<Button type={'primary'} onClick={b.onClick} text>{t<string>(b.text)}</Button>)}
               </div>
             ))}
           </div>

@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import store from '@/store';
+import { useResourceOptionsStore } from '@/models/options';
 import { CoverSaveMode, coverSaveModes } from '@/sdk/constants';
 import { Button, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
@@ -25,7 +25,7 @@ export default (props: Props) => {
     getDataURL,
     resourceId,
   } = props;
-  const resourceOptions = store.useModelState('resourceOptions');
+  const resourceOptions = useResourceOptionsStore(state => state.data);
 
   const { saveMode } = resourceOptions.coverOptions ?? {};
   const externalDisabled = !!disabledReason;
@@ -34,7 +34,7 @@ export default (props: Props) => {
     <Tooltip
       content={(
         <div className={'flex flex-col gap-2 p-2'}>
-          <div>{t('Please select mode')}</div>
+          <div>{t<string>('Please select mode')}</div>
           {coverSaveModes.map(c => {
             return (
               <div className={'flex items-center gap-2'}>
@@ -51,10 +51,10 @@ export default (props: Props) => {
                   }}
                   color={saveMode == c.value ? 'primary' : 'default'}
                 >
-                  {t(c.label)}
+                  {t<string>(c.label)}
                 </Button>
                 <div>
-                  {t(modeTips[c.value])}
+                  {t<string>(modeTips[c.value])}
                 </div>
               </div>
             );
@@ -71,12 +71,12 @@ export default (props: Props) => {
               base64String: getDataURL(),
               saveMode,
             }).then(r => {
-              toast.success(t('Saved'));
+              toast.success(t<string>('Saved'));
             });
           }
         }}
       >
-        {externalDisabled ? disabledReason : saveMode == undefined ? t('Please select cover save mode first') : saveMode == CoverSaveMode.Prepend ? t('Prepend to covers') : t('Replace cover')}
+        {externalDisabled ? disabledReason : saveMode == undefined ? t<string>('Please select cover save mode first') : saveMode == CoverSaveMode.Prepend ? t<string>('Prepend to covers') : t<string>('Replace cover')}
       </Button>
     </Tooltip>
   );

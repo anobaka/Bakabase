@@ -18,14 +18,14 @@ export default ({
       size={'md'}
       defaultVisible
       onDestroyed={onDestroyed}
-      title={t('Synchronize resource data')}
+      title={t<string>('Synchronize resource data')}
       onOk={onOk}
     >
       <div className={''}>
-        {t('All eligible files or folders under the specified root directory will be saved to the media library.')}
+        {t<string>('All eligible files or folders under the specified root directory will be saved to the media library.')}
       </div>
       <div className={'text-warning text-sm'}>
-        {t('Please note, if you modify the resource path (generally the file name), a new resource associated with the new path will be created after synchronization. You can transfer historical resource data to the new resource or directly delete the historical resource through the resource page.')}
+        {t<string>('Please note, if you modify the resource path (generally the file name), a new resource associated with the new path will be created after synchronization. You can transfer historical resource data to the new resource or directly delete the historical resource through the resource page.')}
       </div>
     </Modal>
   );

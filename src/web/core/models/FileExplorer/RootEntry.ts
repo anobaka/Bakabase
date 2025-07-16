@@ -4,10 +4,11 @@ import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
 import { Entry } from '@/core/models/FileExplorer/Entry';
 import BusinessConstants from '@/components/BusinessConstants';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
 import { buildLogger, splitPathIntoSegments } from '@/components/utils';
 import { BTaskResourceType, BTaskStatus, IwFsEntryChangeType, IwFsType } from '@/sdk/constants';
 import type { BTask } from '@/core/models/BTask';
+import { useBTasksStore } from '@/models/bTasks';
+import { useIwFsEntryChangeEventsStore } from '@/models/iwFsEntryChangeEvents';
 
 const log = buildLogger('RootEntry');
 
@@ -73,7 +74,7 @@ class RootEntry extends Entry {
 
   async _compareBTasks(renderingQueue: RenderingQueue) {
     const self = this;
-    const bTasks = store.getModelState('bTasks');
+    const bTasks = useBTasksStore.getState().tasks;
     const targetTasks = bTasks.filter(x => x.resourceType == BTaskResourceType.FileSystemEntry &&
       (x.status == BTaskStatus.Running || x.status == BTaskStatus.Paused || x.status == BTaskStatus.Error || x.status == BTaskStatus.NotStarted));
     const targetTasksMap: Record<string, BTask[]> = _.flatMap(targetTasks, t => (t.resourceKeys ?? []).map(k => ({
@@ -124,7 +125,12 @@ class RootEntry extends Entry {
 
   async _consumeFsEvents(renderingQueue: RenderingQueue) {
     const self = this;
-    const [data, dispatchers] = store.getModel('iwFsEntryChangeEvents');
+    const data = useIwFsEntryChangeEventsStore.getState().contexts;
+    const dispatchers = {
+      addRange: useIwFsEntryChangeEventsStore.getState().addRange,
+      clear: useIwFsEntryChangeEventsStore.getState().clear,
+      // ... 其它 action如有
+    };
     const { events } = data;
     if (events.length > 0) {
       log('handling events', events, self);
@@ -283,7 +289,7 @@ class RootEntry extends Entry {
     log('Stopping watcher', this, this.path, this._fsWatcher);
     clearInterval(this._fsWatcher);
     await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
-    store.dispatch.iwFsEntryChangeEvents.clear();
+    useIwFsEntryChangeEventsStore.getState().clear();
     // }
   }
 

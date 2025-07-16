@@ -173,7 +173,7 @@ const PropertySelector = (props: IProps) => {
                 <Chip
                   key={'pool'}
                   size={'sm'}
-                >{t(PropertyPool[v])}</Chip>,
+                >{t<string>(PropertyPool[v])}</Chip>,
               );
               break;
             default:
@@ -187,7 +187,7 @@ const PropertySelector = (props: IProps) => {
         ...valueTypes.map(vt => (<Chip
           key={vt}
           size={'sm'}
-        >{t(StandardValueType[vt])}</Chip>)),
+        >{t<string>(StandardValueType[vt])}</Chip>)),
       );
     }
 
@@ -196,14 +196,14 @@ const PropertySelector = (props: IProps) => {
         ...types.map(pt => (<Chip
           key={pt}
           size={'sm'}
-        >{t(PropertyType[pt])}</Chip>)),
+        >{t<string>(PropertyType[pt])}</Chip>)),
       );
     }
 
     if (filters.length > 0) {
       return (
         <div className={'flex gap-1 items-center mb-2 flex-wrap'}>
-          {t('Filtering')}
+          {t<string>('Filtering')}
           <Spacer />
           {filters}
         </div>
@@ -232,7 +232,7 @@ const PropertySelector = (props: IProps) => {
     if (propertyCount == 0) {
       return (
         <div className={'flex items-center justify-center gap-2 mt-6'}>
-          {t('No properties available')}
+          {t<string>('No properties available')}
           {addable && (
             <Button
               color={'primary'}
@@ -244,7 +244,7 @@ const PropertySelector = (props: IProps) => {
                 });
               }}
             >
-              {t('Add a property')}
+              {t<string>('Add a property')}
             </Button>
           )}
         </div>
@@ -258,7 +258,7 @@ const PropertySelector = (props: IProps) => {
         <div className={'flex items-start gap-2'}>
           <div
             className={'w-[100px] min-w-[100px] text-medium'}
-          >{`${t('Selected')}(${selectedProperties.length})`}</div>
+          >{`${t<string>('Selected')}(${selectedProperties.length})`}</div>
           <div className={'flex flex-wrap gap-2 items-start'}>
             {selectedProperties.map(p => renderProperty(p))}
           </div>
@@ -267,7 +267,7 @@ const PropertySelector = (props: IProps) => {
         <div className={'flex items-start gap-2'}>
           <div
             className={'w-[100px] min-w-[100px] text-medium'}
-          >{`${t('Not selected')}(${unselectedProperties.length})`}</div>
+          >{`${t<string>('Not selected')}(${unselectedProperties.length})`}</div>
           <div className={'flex flex-wrap gap-2 items-start'}>
             {unselectedProperties.map(p => renderProperty(p))}
           </div>
@@ -284,7 +284,7 @@ const PropertySelector = (props: IProps) => {
         await onSubmit(selection);
       }}
       onDestroyed={onDestroyed}
-      title={title ?? t(multiple ? 'Select properties' : 'Select a property')}
+      title={title ?? t<string>(multiple ? 'Select properties' : 'Select a property')}
       footer={(multiple && propertyCount > 0) ? true : (<Spacer />)}
       onClose={() => {
         setVisible(false);
@@ -307,7 +307,7 @@ const PropertySelector = (props: IProps) => {
                 );
               }}
             >
-              {t('Add a property')}
+              {t<string>('Add a property')}
             </Button>
           )}
         </div>

@@ -106,13 +106,13 @@ export default ({
   const renderResultInfo = () => {
     const data: any[] = [];
     if (bm.calculatedAt) {
-      data.push(t('Calculated at {{datetime}}', { datetime: bm.calculatedAt }));
+      data.push(t<string>('Calculated at {{datetime}}', { datetime: bm.calculatedAt }));
     }
     if (bm.appliedAt) {
-      data.push(t('Applied at {{datetime}}', { datetime: bm.appliedAt }));
+      data.push(t<string>('Applied at {{datetime}}', { datetime: bm.appliedAt }));
     }
     if (bm.revertedAt) {
-      data.push(t('Reverted at {{datetime}}', { datetime: bm.revertedAt }));
+      data.push(t<string>('Reverted at {{datetime}}', { datetime: bm.revertedAt }));
     }
     if (data.length > 0) {
       return (
@@ -136,7 +136,7 @@ export default ({
     const dialog = Dialog.show({
       title: (
         <div>
-          {t('Processing')}
+          {t<string>('Processing')}
           &nbsp;
           <Icon type={'loading'} />
         </div>
@@ -146,7 +146,7 @@ export default ({
       closeMode: [],
       footerActions: ['cancel'],
       cancelProps: {
-        children: t('Abort'),
+        children: t<string>('Abort'),
         warning: true,
         type: 'primary',
       },
@@ -176,8 +176,8 @@ export default ({
       console.log(bm.appliedAt, datetimes, revertingWillBeDisabled, appliedAt.isBefore(datetimes[0]));
       if (revertingWillBeDisabled) {
         Dialog.confirm({
-          title: t('Reverting will be disabled'),
-          content: t('Continuing will result in the inability to revert the applied changes. Do you want to proceed?'),
+          title: t<string>('Reverting will be disabled'),
+          content: t<string>('Continuing will result in the inability to revert the applied changes. Do you want to proceed?'),
           v2: true,
           width: 'auto',
           closeable: false,
@@ -197,7 +197,7 @@ export default ({
     <>
       <div className="filters-panel">
         <div className="title">
-          {t('Filters')}
+          {t<string>('Filters')}
         </div>
         <div className="content">
           <div className="filters">
@@ -227,13 +227,13 @@ export default ({
                     }
                   });
                 }}
-              >{t('Filter(Verb)')}</Button>
+              >{t<string>('Filter(Verb)')}</Button>
             )}
             <div className={'resource-count'}>
-              {t('{{count}} resources have been filtered out', { count: bm.filteredResourceIds?.length || 0 })}
+              {t<string>('{{count}} resources have been filtered out', { count: bm.filteredResourceIds?.length || 0 })}
             </div>
             {bm.filteredAt && (
-              <div className={'filtered-at'}>{t('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div>
+              <div className={'filtered-at'}>{t<string>('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div>
             )}
             {bm.filteredResourceIds && bm.filteredResourceIds.length > 0 && (
               <Button
@@ -245,14 +245,14 @@ export default ({
                     bmId: bm.id!,
                   });
                 }}
-              >{t('Check all the resources that have been filtered out')}</Button>
+              >{t<string>('Check all the resources that have been filtered out')}</Button>
             )}
           </div>
         </div>
       </div>
       <div className="variables-panel">
         <div className="title">
-          {t('Variables')}
+          {t<string>('Variables')}
         </div>
         <Variables
           variables={bm.variables}
@@ -264,7 +264,7 @@ export default ({
       </div>
       <div className="processes-panel">
         <div className="title">
-          {t('Processes')}
+          {t<string>('Processes')}
         </div>
         <div className="content">
           {bm.processes && bm.processes.length > 0 && (
@@ -318,7 +318,7 @@ export default ({
       </div>
       <div className="result-panel">
         <div className="title">
-          {t('Result')}
+          {t<string>('Result')}
         </div>
         <div className="content">
           {renderResultInfo()}
@@ -334,12 +334,12 @@ export default ({
                         await calculateResourceDiffs();
                       });
                     }}
-                  >{t(bm.calculatedAt ? 'Recalculate resource diffs' : 'Calculate resource diffs')}</Button>
+                  >{t<string>(bm.calculatedAt ? 'Recalculate resource diffs' : 'Calculate resource diffs')}</Button>
                 )}
                 v2
                 align={'t'}
               >
-                {t('This process may take a long time, please be patient')}
+                {t<string>('This process may take a long time, please be patient')}
               </Balloon.Tooltip>
             )}
             {bm.calculatedAt && (
@@ -353,7 +353,7 @@ export default ({
                     displayDataSources,
                   });
                 }}
-              >{t('Check previous calculation result')}</Button>
+              >{t<string>('Check previous calculation result')}</Button>
             )}
             {bm.calculatedAt && editable && (
               <Button
@@ -361,15 +361,15 @@ export default ({
                 size={'small'}
                 onClick={() => {
                   Dialog.confirm({
-                    title: t('Apply bulk modification'),
+                    title: t<string>('Apply bulk modification'),
                     content: (
                       <div>
-                        {t('All changes will be applied to resources, and there is no way back. Are you sure to apply the bulk modification?')}
+                        {t<string>('All changes will be applied to resources, and there is no way back. Are you sure to apply the bulk modification?')}
                       </div>
                     ),
                     onOk: () => {
                       const dialog = Dialog.show({
-                        title: t('Processing'),
+                        title: t<string>('Processing'),
                         closeable: false,
                         footer: false,
                         v2: true,
@@ -377,7 +377,7 @@ export default ({
                       });
                       BApi.bulkModification.applyBulkModification(bm.id).then(r => {
                         if (!r.code) {
-                          Message.success(t('Bulk modification has been applied successfully'));
+                          Message.success(t<string>('Bulk modification has been applied successfully'));
                           refresh();
                         }
                       }).finally(() => {
@@ -386,7 +386,7 @@ export default ({
                     },
                   });
                 }}
-              >{t('Apply')}</Button>
+              >{t<string>('Apply')}</Button>
             )}
             {bm.appliedAt && editable && (
               <Button
@@ -395,11 +395,11 @@ export default ({
                 size={'small'}
                 onClick={() => {
                   Dialog.confirm({
-                    title: t('Revert bulk modification'),
-                    content: t('All changes will be reverted, and there is no way back. Are you sure to revert current bulk modification?'),
+                    title: t<string>('Revert bulk modification'),
+                    content: t<string>('All changes will be reverted, and there is no way back. Are you sure to revert current bulk modification?'),
                     onOk: () => {
                       const dialog = Dialog.show({
-                        title: t('Processing'),
+                        title: t<string>('Processing'),
                         closeable: false,
                         footer: false,
                         v2: true,
@@ -407,7 +407,7 @@ export default ({
                       });
                       BApi.bulkModification.revertBulkModification(bm.id).then(r => {
                         if (!r.code) {
-                          Message.success(t('Bulk modification has been reverted successfully'));
+                          Message.success(t<string>('Bulk modification has been reverted successfully'));
                           refresh();
                         }
                       }).finally(() => {
@@ -416,7 +416,7 @@ export default ({
                     },
                   });
                 }}
-              >{t('Revert')}</Button>
+              >{t<string>('Revert')}</Button>
             )}
           </div>
         </div>

@@ -51,7 +51,7 @@ export default ({
       defaultVisible
       size={'xl'}
       onDestroyed={onDestroyed}
-      title={t('Extract {{count}} directories', { count: entries.length })}
+      title={t<string>('Extract {{count}} directories', { count: entries.length })}
       onOk={async () => {
         for (const e of targetEntries) {
           await BApi.file.extractAndRemoveDirectory({ directory: e.path });
@@ -60,7 +60,7 @@ export default ({
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          children: `${t('Extract')}(Enter)`,
+          children: `${t<string>('Extract')}(Enter)`,
           autoFocus: true,
         },
       }}
@@ -85,13 +85,13 @@ export default ({
                       <FileSystemEntryChangeExampleItem
                         type={'deleted'}
                         layer={2}
-                        text={`${t('Other files')}...`}
+                        text={`${t<string>('Other files')}...`}
                         isDirectory={false}
                       />
                       <FileSystemEntryChangeExampleItem
                         type={'added'}
                         layer={1}
-                        text={`${t('Other files in {{parent}}', { parent: e.name })}...`}
+                        text={`${t<string>('Other files in {{parent}}', { parent: e.name })}...`}
                         isDirectory={false}
                       />
                     </>

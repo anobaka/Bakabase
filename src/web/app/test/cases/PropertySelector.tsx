@@ -34,7 +34,7 @@ export default () => {
       }}
       size={'small'}
     >
-      {filter.propertyId ? filter.propertyName : t('Property')}
+      {filter.propertyId ? filter.propertyName : t<string>('Property')}
     </Button>
   );
 };

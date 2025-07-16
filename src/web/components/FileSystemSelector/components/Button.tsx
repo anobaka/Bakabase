@@ -23,11 +23,11 @@ export default ({ fileSystemSelectorProps, children, ...buttonProps }: Props) =>
   if (!path) {
     if (!children) {
       if (fileSystemSelectorProps.targetType === 'folder') {
-        label = t('Select folder');
+        label = t<string>('Select folder');
       } else if (fileSystemSelectorProps.targetType === 'file') {
-        label = t('Select file');
+        label = t<string>('Select file');
       } else {
-        label = t('Select file system entries');
+        label = t<string>('Select file system entries');
       }
     } else {
       label = children;

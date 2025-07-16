@@ -33,7 +33,7 @@ export default ({
   }, [propsOnValueChanged]);
 
   return (
-    <Tooltip content={t('Automatically match property')}>
+    <Tooltip content={t<string>('Automatically match property')}>
       <Button
         size={'sm'}
         isIconOnly

@@ -27,7 +27,7 @@ export default () => {
       label: 'API endpoints',
       tip: (
         <div>
-          {t('Listening addresses:')}
+          {t<string>('Listening addresses:')}
           {appContext.listeningAddresses.map(addr => {
             return (
               <div>{addr}</div>
@@ -65,7 +65,7 @@ export default () => {
       isCompact
     >
       <TableHeader>
-        <TableColumn width={200}>{t('Development')}</TableColumn>
+        <TableColumn width={200}>{t<string>('Development')}</TableColumn>
         <TableColumn>&nbsp;</TableColumn>
       </TableHeader>
       <TableBody>
@@ -74,7 +74,7 @@ export default () => {
             <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
               <TableCell>
                 <div className={'flex items-center gap-1'}>
-                  {t(c.label)}
+                  {t<string>(c.label)}
                   {c.tip && (
                     <Tooltip content={c.tip}>
                       <QuestionCircleOutlined className={'text-base'} />

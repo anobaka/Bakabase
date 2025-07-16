@@ -9,7 +9,7 @@ import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import AnimatedArrow from '@/components/AnimatedArrow';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useFileMovingProgressesStore } from '@/models/fileMovingProgresses';
 import ClickableIcon from '@/components/ClickableIcon';
 import { Button, Checkbox, Switch, Tooltip } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -48,7 +48,7 @@ export default () => {
     sources?: string[];
   }[]>();
 
-  const progresses = store.useModelState('fileMovingProgresses');
+  const progresses = useFileMovingProgressesStore(state => state.progresses);
 
   console.log(progresses);
 
@@ -88,7 +88,7 @@ export default () => {
     })
       .then((a) => {
         if (!a.code) {
-          Message.success(t('Saved'));
+          Message.success(t<string>('Saved'));
           loadOptions();
           cb && cb();
         }
@@ -247,7 +247,7 @@ export default () => {
         className={'quick-edit-mode-table'}
       >
         <Table.Column
-          title={t('Target')}
+          title={t<string>('Target')}
           dataIndex={'path'}
           cell={(path, i, r) => {
             if (i == quickEditModeData!.length - 1) {
@@ -259,14 +259,14 @@ export default () => {
                     quickEditModeData?.splice(i, 0, {});
                     setQuickEditModeData([...quickEditModeData!]);
                   }}
-                >{t('Add')}</Button>
+                >{t<string>('Add')}</Button>
               );
             }
             const target = targets[path];
             return (
               <div className={'target'}>
                 <Input
-                  placeholder={t('Target path')}
+                  placeholder={t<string>('Target path')}
                   value={path}
                   onChange={v => {
                     quickEditModeData![i].path = v;
@@ -294,7 +294,7 @@ export default () => {
         <Table.Column
           width={90}
           align={'center'}
-          title={t('Moving direction')}
+          title={t<string>('Moving direction')}
           cell={() => {
             return (
               <AnimatedArrow direction={'left'} />
@@ -302,7 +302,7 @@ export default () => {
           }}
         />
         <Table.Column
-          title={t('Source')}
+          title={t<string>('Source')}
           dataIndex={'sources'}
           cell={(s, i, r) => {
             if (i == quickEditModeData!.length - 1) {
@@ -311,7 +311,7 @@ export default () => {
             return (
               <Input.TextArea
                 size={'small'}
-                placeholder={t('One path per line')}
+                placeholder={t<string>('One path per line')}
                 width={'100%'}
                 autoHeight={{
                   minRows: 2,
@@ -345,7 +345,7 @@ export default () => {
         }}
       >
         <Table.Column
-          title={t('Target')}
+          title={t<string>('Target')}
           dataIndex={'target'}
           cell={(target, i, r) => {
             // console.log(`rendering table col ${i}-1`, target, i);
@@ -366,7 +366,7 @@ export default () => {
                             }, defaultSelectedPath: target ?? null
                           }}
                         >
-                          {t('Add target path')}
+                          {t<string>('Add target path')}
                         </FileSystemSelectorButton>
                       </div>
                     }
@@ -385,21 +385,21 @@ export default () => {
                         });
                       }}
                       >
-                        {t('Select from media library')}
+                        {t<string>('Select from media library')}
                       </Menu.Item>
                     </Menu>
                   </Dropdown>
                 </div>
                 {target && (
                   <div className={'flex items-center gap-1'}>
-                    <Tooltip content={t('Overwrite files in target path')}>
+                    <Tooltip content={t<string>('Overwrite files in target path')}>
                       <Checkbox
                         isSelected={r.overwrite}
                         onValueChange={v => setOverwrite(target, v)}
                         size={'sm'}
-                      >{t('Overwrite')}</Checkbox>
+                      >{t<string>('Overwrite')}</Checkbox>
                     </Tooltip>
-                    <Tooltip content={t('Add source path')}>
+                    <Tooltip content={t<string>('Add source path')}>
                       <Button
                         size={'sm'}
                         variant={'light'}
@@ -428,7 +428,7 @@ export default () => {
                       <DeleteOutlined
                         onClick={() => {
                           Dialog.confirm({
-                            title: t('Sure to remove?'),
+                            title: t<string>('Sure to remove?'),
                             v2: true,
                             onOk: () => new Promise(((resolve, reject) => {
                               save({
@@ -451,7 +451,7 @@ export default () => {
         <Table.Column
           width={90}
           align={'center'}
-          title={t('Moving direction')}
+          title={t<string>('Moving direction')}
           cell={() => {
             return (
               <AnimatedArrow direction={'left'} />
@@ -459,7 +459,7 @@ export default () => {
           }}
         />
         <Table.Column
-          title={t('Source')}
+          title={t<string>('Source')}
           dataIndex={'source'}
           cell={(s, i, r) => {
             if (i > 0) {
@@ -487,7 +487,7 @@ export default () => {
                             colorType={'danger'}
                             onClick={() => {
                               Dialog.alert({
-                                title: t('Error'),
+                                title: t<string>('Error'),
                                 v2: true,
                                 width: 'auto',
                                 closeMode: ['esc', 'close', 'mask'],
@@ -524,7 +524,7 @@ export default () => {
                         <DeleteOutlined
                           onClick={() => {
                             Dialog.confirm({
-                              title: t('Sure to remove?'),
+                              title: t<string>('Sure to remove?'),
                               v2: true,
                               onOk: () => new Promise(((resolve, reject) => {
                                 const { target: targetPath } = r;
@@ -559,7 +559,7 @@ export default () => {
         <div className="left">
           <div className="enable">
             <div className="label">
-              {t(enabled ? 'Enabled' : 'Disabled')}
+              {t<string>(enabled ? 'Enabled' : 'Disabled')}
             </div>
             <Switch
               size={'sm'}
@@ -574,10 +574,10 @@ export default () => {
           <div className="delay">
             <Tooltip
               placement={'bottom'}
-              content={t('Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.')}
+              content={t<string>('Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.')}
             >
               <div className={'flex items-center gap-1'}>
-                {t('Delay')}
+                {t<string>('Delay')}
                 <QuestionCircleOutlined className={'text-base'} />
               </div>
             </Tooltip>
@@ -611,7 +611,7 @@ export default () => {
                 });
               }}
             >
-              {t('Save')}
+              {t<string>('Save')}
             </Button>
           )}
           <Button
@@ -626,7 +626,7 @@ export default () => {
               }
             }}
           >
-            {quickEditModeData ? t('Back to normal edit mode') : t('Quick edit mode')}
+            {quickEditModeData ? t<string>('Back to normal edit mode') : t<string>('Quick edit mode')}
           </Button>
         </div>
       </div>

@@ -388,7 +388,7 @@ const TreeEntry = (props: TreeEntryProps) => {
             createPortal(Modal, {
               defaultVisible: true,
               size: 'xl',
-              title: t('Error'),
+              title: t<string>('Error'),
               children: (
                 <pre>{text}</pre>
               ),
@@ -411,7 +411,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         .then((x) => {
           if (!x.code) {
             if (!x.data || (x.data.length == 0)) {
-              return Message.notice(t('No files to preview'));
+              return Message.notice(t<string>('No files to preview'));
             }
             MediaPlayer.show({
               files: x.data!.map(a => ({
@@ -465,7 +465,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                 <div className="percentage">
                   {entryRef.current.task.name}
                   &nbsp;
-                  {entryRef.current.task.status == BTaskStatus.NotStarted ? t('Waiting') : `${entryRef.current.task.percentage}%`}
+                  {entryRef.current.task.status == BTaskStatus.NotStarted ? t<string>('Waiting') : `${entryRef.current.task.percentage}%`}
                 </div>
               </div>
               <div className="stop">
@@ -588,7 +588,7 @@ const TreeEntry = (props: TreeEntryProps) => {
       ) : (
         <div className={'flex justify-center items-center gap-2 opacity-70 py-2'}>
           <InfoCircleOutlined />
-          <div>{t('No content')}</div>
+          <div>{t<string>('No content')}</div>
         </div>
       ))}
     </div>

@@ -80,7 +80,7 @@ export default () => {
   const putTemplate = async (tpl: MediaLibraryTemplate) => {
     const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(tpl.id, tpl);
     if (!r.code) {
-      toast.success(t('Saved successfully'));
+      toast.success(t<string>('Saved successfully'));
       await loadTemplate(tpl.id);
     }
   };
@@ -105,14 +105,14 @@ export default () => {
             onPress={() => createPortal(AddModal, { onDestroyed: loadTemplates })}
           >
             <AiOutlinePlusCircle className={'text-base'} />
-            {t('Create a template')}
+            {t<string>('Create a template')}
           </Button>
           <div>
             <Autocomplete
               size={'sm'}
               fullWidth={false}
               startContent={<AiOutlineSearch className={'text-base'} />}
-              placeholder={t('Search templates')}
+              placeholder={t<string>('Search templates')}
               inputValue={searchForm.keyword}
               onInputChange={keyword => setSearchForm({
                 ...searchForm,
@@ -132,7 +132,7 @@ export default () => {
               onPress={() => setExpandedTemplateIds(templates.map(tpl => tpl.id.toString()))}
             >
               <BiExpandVertical className={'text-base'} />
-              {t('Expand all')}
+              {t<string>('Expand all')}
             </Button>
           ) : (
             <Button
@@ -141,7 +141,7 @@ export default () => {
               onPress={() => setExpandedTemplateIds([])}
             >
               <BiCollapseVertical className={'text-base'} />
-              {t('Collapse all')}
+              {t<string>('Collapse all')}
             </Button>
           ) : null}
         </div>
@@ -160,7 +160,7 @@ export default () => {
             }}
           >
             <ImportOutlined />
-            {t('Import a template')}
+            {t<string>('Import a template')}
           </Button>
         </div>
       </div>
@@ -168,7 +168,7 @@ export default () => {
         {templates.length == 0 ? (
           <div className={'flex items-center gap-2 w-full h-full justify-center'}>
             <PiEmpty className={'text-2xl'} />
-            {t('No templates found. You can create a template or import one from a share code.')}
+            {t<string>('No templates found. You can create a template or import one from a share code.')}
           </div>
         ) : (
           <Accordion
@@ -214,12 +214,12 @@ export default () => {
                             } = tpl;
                             createPortal(Modal, {
                               defaultVisible: true,
-                              title: t('Edit template'),
+                              title: t<string>('Edit template'),
                               children: (
                                 <div className={'flex flex-col gap-2'}>
                                   <Input
-                                    label={t('Name')}
-                                    placeholder={t('Enter template name')}
+                                    label={t<string>('Name')}
+                                    placeholder={t<string>('Enter template name')}
                                     isRequired
                                     defaultValue={name}
                                     onValueChange={v => {
@@ -227,16 +227,16 @@ export default () => {
                                     }}
                                   />
                                   <Input
-                                    label={`${t('Author')}${t('(optional)')}`}
-                                    placeholder={t('Enter author name')}
+                                    label={`${t<string>('Author')}${t<string>('(optional)')}`}
+                                    placeholder={t<string>('Enter author name')}
                                     defaultValue={author}
                                     onValueChange={v => {
                                       author = v;
                                     }}
                                   />
                                   <Textarea
-                                    label={`${t('Description')}${t('(optional)')}`}
-                                    placeholder={t('Enter description')}
+                                    label={`${t<string>('Description')}${t<string>('(optional)')}`}
+                                    placeholder={t<string>('Enter description')}
                                     defaultValue={description}
                                     onValueChange={v => {
                                       description = v;
@@ -274,12 +274,12 @@ export default () => {
                               await navigator.clipboard.writeText(shareText);
                               createPortal(Modal, {
                                 defaultVisible: true,
-                                title: t('Share code has been copied'),
-                                children: t('Share code has been copied to your clipboard, you can send it to your friends. (ctrl+v)'),
+                                title: t<string>('Share code has been copied'),
+                                children: t<string>('Share code has been copied to your clipboard, you can send it to your friends. (ctrl+v)'),
                                 footer: {
                                   actions: ['ok'],
                                   okProps: {
-                                    children: t('I got it'),
+                                    children: t<string>('I got it'),
                                   },
                                 },
                               });
@@ -298,7 +298,7 @@ export default () => {
                             createPortal(
                               Modal, {
                                 defaultVisible: true,
-                                title: t('Duplicate current template'),
+                                title: t<string>('Duplicate current template'),
                                 // children: (
                                 //
                                 // ),
@@ -322,8 +322,8 @@ export default () => {
                           onPress={() => {
                             createPortal(Modal, {
                               defaultVisible: true,
-                              title: t('Deleting template {{name}}', { name: tpl.name }),
-                              children: t('This action cannot be undone. Are you sure you want to delete this template?'),
+                              title: t<string>('Deleting template {{name}}', { name: tpl.name }),
+                              children: t<string>('This action cannot be undone. Are you sure you want to delete this template?'),
                               onOk: async () => {
                                 const r = await BApi.mediaLibraryTemplate.deleteMediaLibraryTemplate(tpl.id);
                                 if (!r.code) {

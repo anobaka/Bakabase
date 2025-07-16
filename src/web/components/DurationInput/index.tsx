@@ -75,7 +75,7 @@ export default ({
   return (
     <NumberInput
       size={'sm'}
-      // label={t('Duration')}
+      // label={t<string>('Duration')}
       step={1}
       value={number}
       onValueChange={v => {
@@ -95,7 +95,7 @@ export default ({
             {TimeUnits.map(tu => {
               return (
                 <option aria-label="US Dollar" value={tu.value}>
-                  {t(`DurationUnit.${tu.label}`)}
+                  {t<string>(`DurationUnit.${tu.label}`)}
                 </option>
               );
             })}

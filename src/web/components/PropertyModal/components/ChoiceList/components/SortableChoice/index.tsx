@@ -91,7 +91,7 @@ export function SortableChoice({
           size={'sm'}
           radius={'sm'}
           isIconOnly
-          title={t('Hide in view')}
+          title={t<string>('Hide in view')}
           onClick={() => {
             setChoice({
               ...choice,
@@ -113,8 +113,8 @@ export function SortableChoice({
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: 'sm',
-                  title: t('Value is being referenced in {{count}} places', { count }),
-                  children: t('Sure to delete?'),
+                  title: t<string>('Value is being referenced in {{count}} places', { count }),
+                  children: t<string>('Sure to delete?'),
                   onOk: async () => {
                     onRemove?.(choice);
                   },

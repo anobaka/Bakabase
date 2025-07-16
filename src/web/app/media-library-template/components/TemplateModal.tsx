@@ -38,7 +38,7 @@ export default ({
       size={'full'}
       title={(
         <div>
-          {t('Editing media library template')}
+          {t<string>('Editing media library template')}
           &nbsp;
           <Chip
             size={'lg'}

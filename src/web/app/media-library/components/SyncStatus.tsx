@@ -16,7 +16,7 @@ import moment from 'moment';
 import { Button, Chip, CircularProgress, Modal, Tooltip } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import type { BTask } from '@/core/models/BTask';
-import store from '@/store';
+import { useBTasksStore } from '@/models/bTasks';
 import { BTaskStatus } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { useTranslation } from 'react-i18next';
@@ -38,7 +38,7 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const bTasks = store.useModelState('bTasks');
+  const bTasks = useBTasksStore(state => state.tasks);
   const taskId = BuildTaskId(id);
   const task = bTasks?.find(d => d.id == taskId) as BTask;
 
@@ -142,7 +142,7 @@ export default ({
         );
       case 'start':
         return (
-          <Tooltip content={t('Once synced, you can search for resources in the media library')} placement="top">
+          <Tooltip content={t<string>('Once synced, you can search for resources in the media library')} placement="top">
             <Button
               variant={'light'}
               color={'secondary'}

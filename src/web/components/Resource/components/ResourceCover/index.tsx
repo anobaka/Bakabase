@@ -9,7 +9,7 @@ import serverConfig from '@/serverConfig';
 import { buildLogger, uuidv4 } from '@/components/utils';
 import MediaPreviewer from '@/components/MediaPreviewer';
 import './index.scss';
-import store from '@/store';
+import { useAppContextStore } from '@/models/appContext';
 import { CoverFit, ResourceCacheType } from '@/sdk/constants';
 import CustomIcon from '@/components/CustomIcon';
 import { Carousel, Tooltip } from '@/components/bakaui';
@@ -69,7 +69,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const disableCacheRef = useRef(useCache);
 
-  const appContext = store.useModelState('appContext');
+  const appContext = useAppContextStore(state => state);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const maxCoverRawSizeRef = useRef<{ w: number; h: number }>({

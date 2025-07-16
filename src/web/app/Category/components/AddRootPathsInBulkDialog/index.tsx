@@ -28,7 +28,7 @@ const AddRootPathsInBulkDialog = ({
 
   return (
     <Dialog
-      title={t('Add root paths in bulk')}
+      title={t<string>('Add root paths in bulk')}
       v2
       visible={visible}
       width={'auto'}
@@ -49,13 +49,13 @@ const AddRootPathsInBulkDialog = ({
         dataSource={paths}
       >
         <Table.Column
-          title={t('Root paths')}
+          title={t<string>('Root paths')}
           dataIndex={'name'}
           cell={(name, i, r) => {
             return (
               <Input
                 style={{ width: 800 }}
-                placeholder={t('Root path')}
+                placeholder={t<string>('Root path')}
                 trim
                 hasClear
                 onChange={v => {
@@ -86,7 +86,7 @@ const AddRootPathsInBulkDialog = ({
           setPaths([...paths, '']);
         }}
       >
-        {t('Add a root path')}
+        {t<string>('Add a root path')}
       </Button>
     </Dialog>
   );

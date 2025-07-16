@@ -104,7 +104,7 @@ const Modal = (props: ModalProps) => {
           ref={ref}
           {...otherProps}
         >
-          {children ?? t('Close')}
+          {children ?? t<string>('Close')}
         </Button>,
       );
     }
@@ -152,7 +152,7 @@ const Modal = (props: ModalProps) => {
           }}
           {...otherProps}
         >
-          {children ?? t('Confirm')}
+          {children ?? t<string>('Confirm')}
         </Button>,
       );
     }

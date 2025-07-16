@@ -28,8 +28,8 @@ export default ({ pool }: Props) => {
       break;
   }
 
-  const poolName = pool ? t(`PropertyPool.${PropertyPool[pool]}`) : t('Unknown');
-  const poolAbbreviation = pool ? t(`PropertyPool.Abbreviation.${PropertyPool[pool]}`) : '?';
+  const poolName = pool ? t<string>(`PropertyPool.${PropertyPool[pool]}`) : t<string>('Unknown');
+  const poolAbbreviation = pool ? t<string>(`PropertyPool.Abbreviation.${PropertyPool[pool]}`) : '?';
 
   return (
     <Tooltip

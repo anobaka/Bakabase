@@ -2,7 +2,7 @@
 
 import { Trans, useTranslation } from 'react-i18next';
 import { useEffect, useState } from 'react';
-import { history } from 'ice';
+import { useRouter } from 'next/navigation';
 import { Accordion, AccordionItem, Link, Modal, Snippet, Spacer } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
 import { createPortalOfComponent } from '@/components/utils';
@@ -12,6 +12,7 @@ interface IProps {
 
 const ErrorModal = ({}: IProps) => {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const [appInfo, setAppInfo] = useState<{ logPath: string }>();
 
@@ -28,7 +29,7 @@ const ErrorModal = ({}: IProps) => {
   return (
     <Modal
       defaultVisible
-      title={t('We have encountered some problems. You could try the following steps:')}
+      title={t<string>('We have encountered some problems. You could try the following steps:')}
       size={'lg'}
       footer={{
         actions: ['cancel'],
@@ -42,28 +43,28 @@ const ErrorModal = ({}: IProps) => {
         <AccordionItem
           key="1"
           title={(
-            <span className={'font-bold'}>{t('Simply retry')}</span>
+            <span className={'font-bold'}>{t<string>('Simply retry')}</span>
           )}
         >
-          {t('Press \'F5\' to reload the page.')}
+          {t<string>('Press \'F5\' to reload the page.')}
         </AccordionItem>
         <AccordionItem
           key="2"
           title={(
-            <span className={'font-bold'}>{t('Restart the app')}</span>
+            <span className={'font-bold'}>{t<string>('Restart the app')}</span>
           )}
         >
-          {t('Shutdown and restart the app completely.')}
+          {t<string>('Shutdown and restart the app completely.')}
         </AccordionItem>
         <AccordionItem
           key="3"
           title={(
-            <span className={'font-bold'}>{t('Contact support')}</span>
+            <span className={'font-bold'}>{t<string>('Contact support')}</span>
           )}
         >
           <div className={'flex flex-col gap-1 mb-2'}>
             <div>
-              {t('You can find the latest log file at')}
+              {t<string>('You can find the latest log file at')}
               <Spacer y={1} />
               <Snippet
                 size={'sm'}
@@ -84,17 +85,17 @@ const ErrorModal = ({}: IProps) => {
             </div>
             <div className={''}>
               <span className={'font-bold'}>
-                {t('If you have no programming experience,')}
+                {t<string>('If you have no programming experience,')}
               </span>
               &nbsp;
-              {t('please provide the latest log file to the support team.')}
+              {t<string>('please provide the latest log file to the support team.')}
             </div>
             <div className={''}>
               <span className={'font-bold'}>
-                {t('Otherwise,')}
+                {t<string>('Otherwise,')}
               </span>
               &nbsp;
-              {t('you can locate and collect the error messages in the log file, and provide they to the support team. (open an issue on github, or send to developer directly)')}
+              {t<string>('you can locate and collect the error messages in the log file, and provide they to the support team. (open an issue on github, or send to developer directly)')}
             </div>
             <div className={'mt-2'}>
               <Trans
@@ -105,10 +106,10 @@ const ErrorModal = ({}: IProps) => {
                   size={'sm'}
                   className={'cursor-pointer'}
                   onClick={() => {
-                    history!.push('/configuration');
+                    router.push('/configuration');
                   }}
                 >
-                  {t('Configuration page')}
+                  {t<string>('Configuration page')}
                 </Link>
               </Trans>
             </div>
@@ -117,17 +118,17 @@ const ErrorModal = ({}: IProps) => {
         <AccordionItem
           key="4"
           title={(
-            <span className={'font-bold'}>{t('Try other features')}</span>
+            <span className={'font-bold'}>{t<string>('Try other features')}</span>
           )}
         >
           <Link
             size={'sm'}
             className={'cursor-pointer'}
             onClick={() => {
-              history!.push('/');
+              router.push('/');
             }}
           >
-            {t('Return to homepage')}
+            {t<string>('Return to homepage')}
           </Link>
         </AccordionItem>
       </Accordion>

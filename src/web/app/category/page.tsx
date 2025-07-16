@@ -6,7 +6,7 @@ import './index.scss';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
 import { DisconnectOutlined, SettingOutlined } from '@ant-design/icons';
-import { history } from 'ice';
+import { useRouter } from 'next/navigation';
 import { TbPackageExport } from 'react-icons/tb';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
@@ -125,19 +125,19 @@ export default () => {
   return (
     <div className={'category-page'}>
       <Modal
-        title={t('Current media library feature will be removed soon')}
+        title={t<string>('Current media library feature will be removed soon')}
         size={'lg'}
         defaultVisible
         footer={{ actions: ['cancel'] }}
       >
         <Alert
           color={'danger'}
-          title={t('Please note that the categorization feature will be removed soon. Please switch to the new media library function as soon as possible.')}
+          title={t<string>('Please note that the categorization feature will be removed soon. Please switch to the new media library function as soon as possible.')}
         />
         <Alert
           icon={<TbPackageExport className={'text-lg'} />}
           color={'primary'}
-          title={t('You can use this button in your path configuration to export the current media library configuration as a new media library template and bind it to the new media library.')}
+          title={t<string>('You can use this button in your path configuration to export the current media library configuration as a new media library template and bind it to the new media library.')}
         />
       </Modal>
       <div className="header mb-1">
@@ -150,20 +150,20 @@ export default () => {
               createPortal(Modal, {
                 defaultVisible: true,
                 size: 'md',
-                title: t('Create a category'),
+                title: t<string>('Create a category'),
                 children: (
                   <div>
                     <Input
                       size={'md'}
                       className={'w-full'}
-                      placeholder={t('Please enter the name of the category')}
+                      placeholder={t<string>('Please enter the name of the category')}
                       onValueChange={(v) => {
                         name = v;
                       }}
                     />
                     <FeatureStatusTip
                       className={'mt-2'}
-                      name={t('Setup wizard')}
+                      name={t<string>('Setup wizard')}
                       status={'deprecated'}
                     />
                   </div>
@@ -180,7 +180,7 @@ export default () => {
               });
             }}
           >
-            {t('Add')}
+            {t<string>('Add')}
           </Button>
           {categories.length > 1 && (
             <Dropdown>
@@ -189,7 +189,7 @@ export default () => {
                   size={'small'}
                   className={'elevator'}
                 >
-                  {t('QuickJump')}
+                  {t<string>('QuickJump')}
                 </Button>
               </DropdownTrigger>
               <DropdownMenu
@@ -217,12 +217,12 @@ export default () => {
             size={'small'}
             color={'primary'}
             onPress={() => {
-              history!.push('/synchronizationoptions');
+              useRouter().push('/synchronizationoptions');
             }}
             variant={'light'}
           >
             <SettingOutlined className={'text-medium'} />
-            {t('Synchronization options')}
+            {t<string>('Synchronization options')}
           </Button>
           <Button
             color={'default'}
@@ -230,8 +230,8 @@ export default () => {
             onClick={() => {
               createPortal(Modal, {
                 defaultVisible: true,
-                title: t('Sort by name'),
-                children: t('We\'ll sort categories by name'),
+                title: t<string>('Sort by name'),
+                children: t<string>('We\'ll sort categories by name'),
                 onOk: async () => {
                   const orderedCategoryIds = categories.slice().sort((a, b) => a.name.localeCompare(b.name)).map(a => a.id);
                   const rsp = await BApi.category.sortCategories({
@@ -243,9 +243,9 @@ export default () => {
                 },
               });
             }}
-          >{t('Sort by name')}</Button>
+          >{t<string>('Sort by name')}</Button>
           <div className={'last-sync-time'}>
-            {t('Last sync time')}: {resourceOptions?.lastSyncDt ? dayjs(resourceOptions.lastSyncDt).format('YYYY-MM-DD HH:mm:ss') : t('Never')}
+            {t<string>('Last sync time')}: {resourceOptions?.lastSyncDt ? dayjs(resourceOptions.lastSyncDt).format('YYYY-MM-DD HH:mm:ss') : t<string>('Never')}
           </div>
           <MediaLibrarySynchronization onComplete={() => loadAllMediaLibraries()} />
         </div>
@@ -266,7 +266,7 @@ export default () => {
       ) : (
         <div className={'flex items-center gap-1 justify-center mt-10'}>
           <DisconnectOutlined className={'text-base'} />
-          {t('Categories have not been created yet. To load your resources, please ensure that at least one category is created.')}
+          {t<string>('Categories have not been created yet. To load your resources, please ensure that at least one category is created.')}
         </div>
       )}
     </div>

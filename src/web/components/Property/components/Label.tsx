@@ -23,7 +23,7 @@ const { t } = useTranslation();
           radius={'sm'}
           variant={'flat'}
         >
-          {t(`PropertyPool.${PropertyPool[property.pool]}`)}
+          {t<string>(`PropertyPool.${PropertyPool[property.pool]}`)}
         </Chip>
       )}
       <PropertyTypeIcon type={property.type} textVariant={'none'} />

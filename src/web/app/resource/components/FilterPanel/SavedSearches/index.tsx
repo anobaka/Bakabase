@@ -60,7 +60,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
         // color={'primary'}
         size={'sm'}
       >
-        {filter.dbValue == undefined ? t('Not set') : (
+        {filter.dbValue == undefined ? t<string>('Not set') : (
           <PropertyValueRenderer
             variant={'light'}
             property={filter.valueProperty}
@@ -79,12 +79,12 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
           variant={'light'}
           color={'primary'}
           size={'sm'}
-        >{filter.property?.name ?? t('Not set')}</Chip>
+        >{filter.property?.name ?? t<string>('Not set')}</Chip>
         <Chip
           variant={'light'}
           color={'secondary'}
           size={'sm'}
-        >{filter.operation == undefined ? t('Not set') : t(`SearchOperation.${SearchOperation[filter.operation]}`)}</Chip>
+        >{filter.operation == undefined ? t<string>('Not set') : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}</Chip>
         {renderFilterValue(filter)}
       </div>
     );
@@ -111,7 +111,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                   variant={'light'}
                   size={'sm'}
                   color={'success'}
-                >{t(`Combinator.${SearchCombinator[group.combinator]}`)}</Chip>
+                >{t<string>(`Combinator.${SearchCombinator[group.combinator]}`)}</Chip>
               )}
             </>
           );
@@ -125,7 +125,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                   variant={'light'}
                   size={'sm'}
                   color={'success'}
-                >{t(`Combinator.${SearchCombinator[group.combinator]}`)}</Chip>
+                >{t<string>(`Combinator.${SearchCombinator[group.combinator]}`)}</Chip>
               )}
             </>
           );
@@ -209,7 +209,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                       size={'sm'}
                       radius={'sm'}
                       variant={'bordered'}
-                    >{t('Keyword')}</Chip>
+                    >{t<string>('Keyword')}</Chip>
                   </div>
                   <div>{search.keyword}</div>
                   <div className={'text-right'}>
@@ -217,7 +217,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                       size={'sm'}
                       radius={'sm'}
                       variant={'bordered'}
-                    >{t('Filters')}</Chip>
+                    >{t<string>('Filters')}</Chip>
                   </div>
                   <div>
                     {search.group && renderGroup(search.group, true)}
@@ -227,7 +227,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                       size={'sm'}
                       radius={'sm'}
                       variant={'bordered'}
-                    >{t('Order')}</Chip>
+                    >{t<string>('Order')}</Chip>
                   </div>
                   <div className={'flex items-center gap-1'}>
                     {search.orders?.map(o => {
@@ -236,7 +236,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                           size={'sm'}
                           radius={'sm'}
                         >
-                          {t(ResourceSearchSortableProperty[o.property])}{t(o.asc ? 'Asc' : 'Desc')}
+                          {t<string>(ResourceSearchSortableProperty[o.property])}{t<string>(o.asc ? 'Asc' : 'Desc')}
                         </Chip>
                       );
                     })}
@@ -246,7 +246,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                       size={'sm'}
                       radius={'sm'}
                       variant={'bordered'}
-                    >{t('Page')}</Chip>
+                    >{t<string>('Page')}</Chip>
                   </div>
                   <div>{search.page}</div>
                   <div className={'text-right'}>
@@ -254,7 +254,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                       size={'sm'}
                       radius={'sm'}
                       variant={'bordered'}
-                    >{t('Special filters')}</Chip>
+                    >{t<string>('Special filters')}</Chip>
                   </div>
                   <div className={'flex flex-wrap gap-1'}>
                     {search.tags?.map(x => {
@@ -264,7 +264,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                           radius={'sm'}
                           // variant={'bordered'}
                         >
-                          {t(`ResourceTag.${ResourceTag[x]}`)}
+                          {t<string>(`ResourceTag.${ResourceTag[x]}`)}
                         </Chip>
                       );
                     })}

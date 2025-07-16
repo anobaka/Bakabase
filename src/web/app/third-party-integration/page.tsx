@@ -17,7 +17,7 @@ export default () => {
       <AccordionItem key="SoulPlus" title="SoulPlus">
         <div>
           <div className={'flex items-center gap-2'}>
-            <div>{t('Tampermonkey script')}</div>
+            <div>{t<string>('Tampermonkey script')}</div>
             <Button
               variant={'light'}
               color={'primary'}
@@ -26,17 +26,17 @@ export default () => {
               }}
             >
               <GrInstallOption className={'text-medium'} />
-              {t('One-click installation')}
+              {t<string>('One-click installation')}
             </Button>
           </div>
           <Alert
             color={'default'}
             variant={'flat'}
-            title={t('This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.')}
+            title={t<string>('This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.')}
             // hideIcon
             description={(
               <div>
-                <div>1. {t('Left-clicking on covers or post titles will trigger the creation of a post parsing task on Bakabase. You can still use the middle button to open posts.')}</div>
+                <div>1. {t<string>('Left-clicking on covers or post titles will trigger the creation of a post parsing task on Bakabase. You can still use the middle button to open posts.')}</div>
               </div>
           )}
           />
@@ -45,7 +45,7 @@ export default () => {
       <AccordionItem key="ExHentai" title="ExHentai">
         <div>
           <div className={'flex items-center gap-2'}>
-            <div>{t('Tampermonkey script')}</div>
+            <div>{t<string>('Tampermonkey script')}</div>
             <Button
               variant={'light'}
               color={'primary'}
@@ -54,17 +54,17 @@ export default () => {
               }}
             >
               <GrInstallOption className={'text-medium'} />
-              {t('One-click installation')}
+              {t<string>('One-click installation')}
             </Button>
           </div>
           <Alert
             color={'default'}
             variant={'flat'}
-            title={t('This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.')}
+            title={t<string>('This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.')}
             // hideIcon
             description={(
               <div>
-                <div>1. {t('Left-clicking on covers will trigger the creation of a torrent download task on Bakabase. You can still use the middle button to open posts.')}</div>
+                <div>1. {t<string>('Left-clicking on covers will trigger the creation of a torrent download task on Bakabase. You can still use the middle button to open posts.')}</div>
               </div>
             )}
           />

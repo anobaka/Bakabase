@@ -92,7 +92,7 @@ export default ({
         }}
       >
         <CustomIcon type={'plus-circle'} />
-        {t('Add')}
+        {t<string>('Add')}
       </div>
     </div>
   );

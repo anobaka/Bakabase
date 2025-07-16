@@ -88,7 +88,7 @@ export default ({
             value={process.value}
             dataSource={resourceLanguages.map(l => ({
               ...l,
-              label: t(l.label),
+              label: t<string>(l.label),
             }))}
           />
         );
@@ -148,14 +148,14 @@ export default ({
       </div>
       <div className="property">
         <CustomIcon type={PropertyIconMap[process.property!] || 'segment'} size={'xs'} />
-        {t(BulkModificationProperty[process.property!])}
+        {t<string>(BulkModificationProperty[process.property!])}
       </div>
       {process.propertyKey != undefined && (
         <div className={'property-key'}>
           {process.propertyKey}
         </div>
       )}
-      <ErrorBoundary fallback={<span>{t('Unsupported processor type')}</span>}>
+      <ErrorBoundary fallback={<span>{t<string>('Unsupported processor type')}</span>}>
         {renderProcessorValue()}
       </ErrorBoundary>
       {editable && (

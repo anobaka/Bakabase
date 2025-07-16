@@ -119,7 +119,7 @@ export default () => {
         <div>
           <Input
             startContent={<SearchOutlined className={'text-sm'} />}
-            placeholder={t('Press enter to search')}
+            placeholder={t<string>('Press enter to search')}
             value={form.fuzzyText}
             onValueChange={v => setForm({
               ...form,
@@ -141,7 +141,7 @@ export default () => {
               createPortal(Modal, {
                 defaultVisible: true,
                 size: 'lg',
-                title: t('Add an alias'),
+                title: t<string>('Add an alias'),
                 children: (
                   <Input
                     onValueChange={v => value = v}
@@ -156,7 +156,7 @@ export default () => {
             }}
           >
             <PlusCircleOutlined className={'text-base'} />
-            {t('Add an alias')}
+            {t<string>('Add an alias')}
           </Button>
           <Button
             size={'sm'}
@@ -166,7 +166,7 @@ export default () => {
                 onSelected: e => {
                   const modal = createPortal(Modal, {
                     visible: true,
-                    title: t('Importing, please wait...'),
+                    title: t<string>('Importing, please wait...'),
                     footer: false,
                     closeButton: false,
                   });
@@ -180,7 +180,7 @@ export default () => {
             }}
           >
             <UploadOutlined className={'text-base'} />
-            {t('Import')}
+            {t<string>('Import')}
           </Button>
           <Button
             size={'sm'}
@@ -189,7 +189,7 @@ export default () => {
             }}
           >
             <DownloadOutlined className={'text-base'} />
-            {t('Export')}
+            {t<string>('Export')}
           </Button>
         </div>
       </div>
@@ -199,9 +199,9 @@ export default () => {
           <Card>
             <CardHeader>
               <div className={'text-md flex items-center gap-2'}>
-                {t('Bulk operations')}
+                {t<string>('Bulk operations')}
                 <Tooltip
-                  content={t('{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text.', { text: bulkOperationContext.preferredTexts[0] })}
+                  content={t<string>('{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text.', { text: bulkOperationContext.preferredTexts[0] })}
                 >
                   <Button
                     color={'secondary'}
@@ -210,8 +210,8 @@ export default () => {
                     onClick={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t('Merging alias groups: {{texts}}', { texts: bulkOperationContext.preferredTexts.join(',') }),
-                        children: t('All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?', { preferred: bulkOperationContext.preferredTexts[0] }),
+                        title: t<string>('Merging alias groups: {{texts}}', { texts: bulkOperationContext.preferredTexts.join(',') }),
+                        children: t<string>('All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?', { preferred: bulkOperationContext.preferredTexts[0] }),
                         onOk: async () => {
                           await BApi.alias.mergeAliasGroups({ preferredTexts: bulkOperationContext.preferredTexts });
                           resetBulkOperationContext();
@@ -220,7 +220,7 @@ export default () => {
                       });
                     }}
                   >
-                    {t('Merge')}
+                    {t<string>('Merge')}
                   </Button>
                 </Tooltip>
                 <Button
@@ -229,8 +229,8 @@ export default () => {
                   onClick={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t('Deleting alias groups: {{texts}}', { texts: bulkOperationContext.preferredTexts.join(',') }),
-                      children: t('All selected alias groups and its candidates will be delete and there is no way back, are you sure?'),
+                      title: t<string>('Deleting alias groups: {{texts}}', { texts: bulkOperationContext.preferredTexts.join(',') }),
+                      children: t<string>('All selected alias groups and its candidates will be delete and there is no way back, are you sure?'),
                       onOk: async () => {
                         await BApi.alias.deleteAliasGroups({ preferredTexts: bulkOperationContext.preferredTexts });
                         resetBulkOperationContext();
@@ -240,7 +240,7 @@ export default () => {
                   }}
                   startContent={<DeleteOutlined className={'text-sm'} />}
                 >
-                  {t('Delete')}
+                  {t<string>('Delete')}
                 </Button>
                 <Button
                   color={'default'}
@@ -250,7 +250,7 @@ export default () => {
                     resetBulkOperationContext();
                   }}
                 >
-                  {t('Exit')}
+                  {t<string>('Exit')}
                 </Button>
               </div>
             </CardHeader>
@@ -321,8 +321,8 @@ export default () => {
             color={'primary'}
           >
             <TableHeader>
-              <TableColumn>{t('Preferred')}</TableColumn>
-              <TableColumn>{t('Candidates')}</TableColumn></TableHeader>
+              <TableColumn>{t<string>('Preferred')}</TableColumn>
+              <TableColumn>{t<string>('Candidates')}</TableColumn></TableHeader>
             <TableBody>
               {aliases.map(a => {
                 return (
@@ -356,7 +356,7 @@ export default () => {
                                     });
                                   }}
                                 >
-                                  {t('Set as preferred')}
+                                  {t<string>('Set as preferred')}
                                 </Button>
                               </div>
                             )}
@@ -366,8 +366,8 @@ export default () => {
                                 onClose={() => {
                                   createPortal(Modal, {
                                     defaultVisible: true,
-                                    title: t('Deleting an alias: {{text}}', { text: c }),
-                                    content: t('There is no way back, are you sure?'),
+                                    title: t<string>('Deleting an alias: {{text}}', { text: c }),
+                                    content: t<string>('There is no way back, are you sure?'),
                                     onOk: async () => {
                                       await BApi.alias.deleteAlias({ text: c });
                                       a.candidates = a.candidates?.filter(x => x != c);

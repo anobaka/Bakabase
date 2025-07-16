@@ -16,7 +16,7 @@ import AntdMenu from './components/AntdMenu';
 import styles from './index.module.scss';
 import { Button, Spinner } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useAppOptionsStore } from '@/models/options';
 import { UiTheme } from '@/sdk/constants';
 
 const OptIconStyle = { fontSize: 20 };
@@ -25,7 +25,7 @@ const Navigation = () => {
   const { t } = useTranslation();
   const pathname = usePathname();
 
-  const appOptions = store.useModelState('appOptions');
+  const appOptions = useAppOptionsStore(state => state.data);
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
   const isEnglish = appOptions.language == 'en';
 

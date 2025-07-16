@@ -84,7 +84,7 @@ const ResourceDiffsResultsDialog = ({
       footerActions={['ok']}
       v2
       width={'auto'}
-      title={t('Resource diffs')}
+      title={t<string>('Resource diffs')}
     >
       <div className="panel">
         <div className="left">
@@ -96,7 +96,7 @@ const ResourceDiffsResultsDialog = ({
               pageIndex: 0,
             })}
             hasClear
-            addonTextBefore={t('Keyword')}
+            addonTextBefore={t<string>('Keyword')}
             innerAfter={
               <CustomIcon
                 type="search"
@@ -113,9 +113,9 @@ const ResourceDiffsResultsDialog = ({
               property: v,
               pageIndex: 0,
             })}
-            label={t('Changed property')}
+            label={t<string>('Changed property')}
             dataSource={bulkModificationProperties.map(p => ({
-              label: t(p.label),
+              label: t<string>(p.label),
               value: p.value,
             }))}
             innerAfter={
@@ -127,7 +127,7 @@ const ResourceDiffsResultsDialog = ({
             }
           />
           <span>
-            {t('Filtered')}:{filteredResults.length} / {t('Total')}:{results.length}
+            {t<string>('Filtered')}:{filteredResults.length} / {t<string>('Total')}:{results.length}
           </span>
         </div>
         <div className="right">

@@ -6,7 +6,7 @@ import { CaseTypeOptions } from '../OperationCard';
 
 const ChangeCaseOperationFields: React.FC<any> = ({ operation, t, onChange }) => (
   <Select
-    dataSource={CaseTypeOptions.map(opt => ({ label: t(opt.label), value: opt.value }))}
+    dataSource={CaseTypeOptions.map(opt => ({ label: t<string>(opt.label), value: opt.value }))}
     selectedKeys={[operation.caseType?.toString() || '']}
     onSelectionChange={keys => {
       const key = parseInt(Array.from(keys)[0] as string);
@@ -14,11 +14,11 @@ const ChangeCaseOperationFields: React.FC<any> = ({ operation, t, onChange }) =>
         onChange({ ...operation, caseType: key });
       }
     }}
-    label={t('FileNameModifier.Label.CaseType')}
+    label={t<string>('FileNameModifier.Label.CaseType')}
     size="sm"
     isRequired={!operation.caseType}
     className="w-[180px]"
-    placeholder={t('FileNameModifier.Placeholder.CaseType')}
+    placeholder={t<string>('FileNameModifier.Placeholder.CaseType')}
   />
 );
 

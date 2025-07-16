@@ -37,7 +37,7 @@ export default ({
 
   return (
     <>
-      <div>{t('Download path')}</div>
+      <div>{t<string>('Download path')}</div>
       <div>
         <Button
           size={'sm'}
@@ -54,7 +54,7 @@ export default ({
              });
            }}
         >
-          {downloadPath ?? t('Select download path')}
+          {downloadPath ?? t<string>('Select download path')}
         </Button>
       </div>
     </>

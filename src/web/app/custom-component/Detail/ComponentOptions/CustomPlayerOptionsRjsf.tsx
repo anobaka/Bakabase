@@ -12,12 +12,12 @@ import {
 } from '@/components/FileSystemSelector';
 import CustomIcon from '@/components/CustomIcon';
 
-const CommandTemplatePlaceholder = i18n.t('Default is `{0}`. {0} will be replaced by filename');
+const CommandTemplatePlaceholder = i18n.t<string>('Default is `{0}`. {0} will be replaced by filename');
 
 const commandTemplateTip = (<>
-  {i18n.t('You can change the command template for some specific scenarios. The `{0}` will be replaced by filename and the default command template is `{0}`.')}{i18n.t('For example')}
+  {i18n.t<string>('You can change the command template for some specific scenarios. The `{0}` will be replaced by filename and the default command template is `{0}`.')}{i18n.t<string>('For example')}
   <br />
-  {i18n.t('If the command template is `-i {0} --windowed`, the full command at runtime will be')} <br />
+  {i18n.t<string>('If the command template is `-i {0} --windowed`, the full command at runtime will be')} <br />
   "C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe" -i "D:\anime\dragon ball\1.mp4" --windowed'
 </>);
 
@@ -69,7 +69,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                   size={'small'}
                 >
                   <Table.Column
-                    title={i18n.t('Extensions')}
+                    title={i18n.t<string>('Extensions')}
                     dataIndex={'extensions'}
                     cell={(data, i, r) => {
                       return (
@@ -91,7 +91,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                     }}
                   />
                   <Table.Column
-                    title={i18n.t('Executable')}
+                    title={i18n.t<string>('Executable')}
                     dataIndex={'executable'}
                     cell={(f, i, r) => {
                       return (
@@ -115,7 +115,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                         gap: 5,
                       }}
                       >
-                        {i18n.t('CommandTemplate')}
+                        {i18n.t<string>('CommandTemplate')}
                         <Balloon.Tooltip
                           triggerType={'hover'}
                           align={'t'}
@@ -142,7 +142,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                     }}
                   />
                   <Table.Column
-                    title={i18n.t('Operations')}
+                    title={i18n.t<string>('Operations')}
                     cell={(_, i, r) => {
                       return (
                         <Button
@@ -173,7 +173,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                     newValue.push({});
                     setValue([...newValue]);
                   }}
-                >{i18n.t('Add')}</Button>
+                >{i18n.t<string>('Add')}</Button>
               </div>
             );
           },

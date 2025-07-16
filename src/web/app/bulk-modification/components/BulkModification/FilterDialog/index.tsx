@@ -101,7 +101,7 @@ const FilterDialog = (props: IProps) => {
     return (
       <>
         <div className="label">
-          {t('Property Key')}
+          {t<string>('Property Key')}
         </div>
         <div className="value">
           <Select
@@ -130,7 +130,7 @@ const FilterDialog = (props: IProps) => {
         if (FindInAliasesProperties.includes(filter.property!)) {
           elements.push((
             <div className={'label'} key={'find-in-aliases-label'}>
-              {t('Find in aliases')}
+              {t<string>('Find in aliases')}
               <Balloon.Tooltip
                 trigger={(
                   <CustomIcon type={'question-circle'} />
@@ -139,7 +139,7 @@ const FilterDialog = (props: IProps) => {
                 align={'t'}
                 v2
               >
-                {t('Some properties have applied aliases, you can enable this feature to check your target both in raw values and aliases.')}
+                {t<string>('Some properties have applied aliases, you can enable this feature to check your target both in raw values and aliases.')}
               </Balloon.Tooltip>
             </div>
           ));
@@ -147,11 +147,11 @@ const FilterDialog = (props: IProps) => {
             <div className={'value'} key={'find-in-aliases-value'}>
               <Radio.Group
                 dataSource={[{
-                  label: t('Enable'),
+                  label: t<string>('Enable'),
                   value: 1,
                 },
                   // , {
-                  //   label: t('Disable'),
+                  //   label: t<string>('Disable'),
                   //   value: 0,
                   // }
                 ]}
@@ -187,7 +187,7 @@ const FilterDialog = (props: IProps) => {
                 targetComponent = (
                   <Input
                     key={'multiple'}
-                    placeholder={t('Press enter to add a item to list')}
+                    placeholder={t<string>('Press enter to add a item to list')}
                     onChange={v => compValue = v}
                     onKeyDown={e => {
                       if (e.key == 'Enter') {
@@ -226,7 +226,7 @@ const FilterDialog = (props: IProps) => {
                   <NumberPicker
                     precision={2}
                     key={'multiple'}
-                    placeholder={t('Press enter to add a item to list')}
+                    placeholder={t<string>('Press enter to add a item to list')}
                     onChange={v => compValue = v}
                     onKeyDown={e => {
                       if (e.key == 'Enter') {
@@ -263,7 +263,7 @@ const FilterDialog = (props: IProps) => {
               if (component.multiple) {
                 targetComponent = (
                   <Select
-                    dataSource={resourceLanguages.map(r => ({ ...r, label: t(r.label) }))}
+                    dataSource={resourceLanguages.map(r => ({ ...r, label: t<string>(r.label) }))}
                     value={undefined}
                     key={'multiple'}
                     onChange={v => {
@@ -280,7 +280,7 @@ const FilterDialog = (props: IProps) => {
               } else {
                 targetComponent = (
                   <Select
-                    dataSource={resourceLanguages.map(r => ({ ...r, label: t(r.label) }))}
+                    dataSource={resourceLanguages.map(r => ({ ...r, label: t<string>(r.label) }))}
                     key={'single'}
                     value={typedTarget}
                     onChange={v => {
@@ -361,7 +361,7 @@ const FilterDialog = (props: IProps) => {
                   onClick={() => {
                     let value = compValue;
                     Dialog.show({
-                      title: t('Select media libraries'),
+                      title: t<string>('Select media libraries'),
                       v2: true,
                       width: 'auto',
                       content: (
@@ -382,7 +382,7 @@ const FilterDialog = (props: IProps) => {
                       },
                     });
                   }}
-                >{t('Select media libraries')}</Button>
+                >{t<string>('Select media libraries')}</Button>
               );
               break;
             }
@@ -395,7 +395,7 @@ const FilterDialog = (props: IProps) => {
                 //   onClick={() => {
                 //     let value = compValue;
                 //     Dialog.show({
-                //       title: t('Select tags'),
+                //       title: t<string>('Select tags'),
                 //       v2: true,
                 //       width: 'auto',
                 //       content: (
@@ -416,7 +416,7 @@ const FilterDialog = (props: IProps) => {
                 //       },
                 //     });
                 //   }}
-                // >{t('Select tags')}</Button>
+                // >{t<string>('Select tags')}</Button>
                 <Select
                   showSearch
                   dataSource={tagsCandidatesRef.current}
@@ -436,7 +436,7 @@ const FilterDialog = (props: IProps) => {
           if (targetComponent) {
             elements.push(
               <div className="label" key={'target-label'}>
-                {t('Target')}
+                {t<string>('Target')}
               </div>,
             );
 
@@ -491,7 +491,7 @@ const FilterDialog = (props: IProps) => {
     >
       <div className="filter-form">
         <div className="label">
-          {t('Property')}
+          {t<string>('Property')}
         </div>
         <div className="value">
           <Tag.Group>
@@ -512,14 +512,14 @@ const FilterDialog = (props: IProps) => {
                     }
                   }}
                   checked={currChecked}
-                >{t(p.label)}</Tag.Selectable>
+                >{t<string>(p.label)}</Tag.Selectable>
               );
             })}
           </Tag.Group>
         </div>
         {renderCustomPropertyKeySelector()}
         <div className="label">
-          {t('Operation')}
+          {t<string>('Operation')}
         </div>
         <div className="value">
           <Tag.Group>
@@ -539,7 +539,7 @@ const FilterDialog = (props: IProps) => {
                   }}
                   checked={currChecked}
                   disabled={!availableOperations.includes(op.value)}
-                >{t(`BulkModificationFilterOperation.${BulkModificationFilterOperation[op.value]}`)}</Tag.Selectable>
+                >{t<string>(`BulkModificationFilterOperation.${BulkModificationFilterOperation[op.value]}`)}</Tag.Selectable>
               );
             })}
           </Tag.Group>

@@ -11,7 +11,7 @@ import FilterPanel from './components/FilterPanel';
 import type { SearchForm } from '@/pages/Resource/models';
 import BApi from '@/sdk/BApi';
 import Resource from '@/components/Resource';
-import store from '@/store';
+import { useUiOptionsStore } from '@/models/options';
 import BusinessConstants from '@/components/BusinessConstants';
 import { Button, Chip, Link, Pagination, Spinner } from '@/components/bakaui';
 import { buildLogger } from '@/components/utils';
@@ -40,7 +40,7 @@ export default () => {
   const [resources, setResources] = useState<any[]>([]);
   const resourcesRef = useRef(resources);
 
-  const uiOptions = store.useModelState('uiOptions');
+  const uiOptions = useUiOptionsStore(state => state.data);
 
   const [columnCount, setColumnCount] = useState<number>(0);
   const [searchForm, setSearchForm] = useState<SearchForm>();
@@ -424,20 +424,20 @@ export default () => {
         className={'mt-10 flex items-center gap-2 justify-center left-0 w-ful bottom-0'}
         style={{ position: resources.length == 0 ? 'relative' : 'absolute' }}
       >
-        {/* <Spinner label={t('Searching...')} /> */}
+        {/* <Spinner label={t<string>('Searching...')} /> */}
         {searching ? (
-          <Spinner label={t('Searching...')} />
+          <Spinner label={t<string>('Searching...')} />
         ) : (resources.length == 0) && (
           <div className={'flex flex-col gap-2'}>
             <div className={'mb-2 flex items-center gap-1'}>
               <DisconnectOutlined className={'text-base'} />
               <Chip variant={'light'} >
-                {t('Resource Not Found. You can try the following solutions:')}
+                {t<string>('Resource Not Found. You can try the following solutions:')}
               </Chip>
             </div>
             <div className={'flex flex-col gap-2'}>
               <div className={'flex items-center gap-1'}>
-                {t('1. Please check if the search criteria is correct.')}
+                {t<string>('1. Please check if the search criteria is correct.')}
                 <Button
                   size={'sm'}
                   variant={'light'}
@@ -447,17 +447,17 @@ export default () => {
                     search({ page: 1 }, 'replace', true);
                   }}
                 >
-                  {t('Reset search criteria')}
+                  {t<string>('Reset search criteria')}
                 </Button>
               </div>
               <div className={'flex items-center gap-1'}>
-                {t('2. Please ensure that media libraries are created, bound to a template, and fully synchronized.')}
+                {t<string>('2. Please ensure that media libraries are created, bound to a template, and fully synchronized.')}
                 <Link
                   size={'sm'}
                   isBlock
                   underline={'none'}
                   href={'#/medialibrary'}
-                >{t('Go to media library page')}</Link>
+                >{t<string>('Go to media library page')}</Link>
               </div>
             </div>
           </div>

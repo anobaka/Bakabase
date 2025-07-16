@@ -11,13 +11,13 @@ import {
 } from '@ant-design/icons';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { history } from 'ice';
+import { useRouter } from 'next/navigation';
 import { AiOutlineFieldNumber } from 'react-icons/ai';
 import { BiCarousel } from 'react-icons/bi';
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tooltip } from '@/components/bakaui';
 import { CoverFit, ResourceDisplayContent, resourceDisplayContents } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useUiOptionsStore } from '@/models/options';
 import type { BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions } from '@/sdk/Api';
 import { buildLogger } from '@/components/utils';
 
@@ -44,12 +44,12 @@ type ListBoxItemKey =
 
 export default ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
-  const uiOptions = store.useModelState('uiOptions');
+  const uiOptions = useUiOptionsStore(state => state.data);
   const options = uiOptions.resource;
 
   const currentResourceDisplayContents = uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
   const selectableResourceDisplayContents = resourceDisplayContents.filter(d => d.value != ResourceDisplayContent.All).map(x => ({
-    label: t('Show') + t(x.label),
+    label: t<string>('Show') + t<string>(x.label),
     value: x.value.toString(),
   }));
 
@@ -61,50 +61,52 @@ export default ({ rearrangeResources }: Props) => {
     })),
     {
       key: 'FillCover',
-      label: t('Fill cover'),
+      label: t<string>('Fill cover'),
       Icon: FullscreenOutlined,
     },
     {
       key: 'ShowLargerCoverOnHover',
-      label: t('Show larger cover on mouse hover'),
+      label: t<string>('Show larger cover on mouse hover'),
       Icon: ZoomInOutlined,
     },
     {
       key: 'PreviewOnHover',
-      label: t('Preview files of a resource on mouse hover'),
+      label: t<string>('Preview files of a resource on mouse hover'),
       Icon: PlayCircleOutlined,
     },
     {
       key: 'UseCache',
-      label: t('Use cache'),
+      label: t<string>('Use cache'),
       Icon: DashboardOutlined,
       tip: (
         <div className={'max-w-[400px]'}>
-          {t('Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.')}
+          {t<string>('Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.')}
           <Button
             size={'sm'}
             variant={'flat'}
             // color={'secondary'}
             onClick={() => {
-              history?.push('/cache');
+              router.push('/cache');
             }}
           >
-            {t('Manage cache')}
+            {t<string>('Manage cache')}
           </Button>
         </div>
       ),
     },
     {
       key: 'CoverCarousel',
-      label: t('Cover carousel'),
+      label: t<string>('Cover carousel'),
       Icon: BiCarousel,
     },
     {
       key: 'DisplayResourceId',
-      label: t('Display resource ID'),
+      label: t<string>('Display resource ID'),
       Icon: AiOutlineFieldNumber,
     },
   ];
+
+  const router = useRouter();
 
   const buildSelectedKeys = () => {
     const keys: ListBoxItemKey[] = [];

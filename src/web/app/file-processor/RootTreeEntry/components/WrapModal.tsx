@@ -35,7 +35,7 @@ export default ({
       defaultVisible
       size={'xl'}
       onDestroyed={onDestroyed}
-      title={t('Wrapping {{count}} file entries', { count: entries.length })}
+      title={t<string>('Wrapping {{count}} file entries', { count: entries.length })}
       onOk={async () => {
         await Promise.all(_.keys(groupsRef.current).map(async p => {
           const innerEntries = groupsRef.current[p]!;
@@ -50,7 +50,7 @@ export default ({
       footer={{
         actions: ['ok', 'cancel'],
         okProps: {
-          children: `${t('Wrap')}(Enter)`,
+          children: `${t<string>('Wrap')}(Enter)`,
           autoFocus: true,
           disabled: _.values(newParentNames).some(x => !x || x.length == 0),
         },

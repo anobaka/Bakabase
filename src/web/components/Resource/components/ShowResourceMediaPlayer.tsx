@@ -27,7 +27,7 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
     .then(a => {
       if (!a.code && a.data) {
         if (a.data.length == 0) {
-          return Message.notice(t('No files to preview'));
+          return Message.notice(t<string>('No files to preview'));
         }
         const files = a.data;
         MediaPlayer.show({
@@ -50,7 +50,7 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
               //     }}
               //   >
               //     <CustomIcon type={'star'} />
-              //     {t('Add resource to favorites')}
+              //     {t<string>('Add resource to favorites')}
               //   </Button>
               // ),
             ];
@@ -79,7 +79,7 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
             //       trigger={(
             //         <Button type={'normal'}>
             //           <CustomIcon type={'playlistadd'} />
-            //           {t('Add file to playlists')}
+            //           {t<string>('Add file to playlists')}
             //         </Button>
             //       )}
             //       needAdjust
@@ -108,12 +108,12 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
                       if (frame) {
                         return frame.dataUri;
                       } else {
-                        const msg = t('Failed to capture video frame');
+                        const msg = t<string>('Failed to capture video frame');
                         Message.error(msg);
                         throw new Error(msg);
                       }
                     }}
-                    disabledReason={playing ? t('Available when video is paused') : undefined}
+                    disabledReason={playing ? t<string>('Available when video is paused') : undefined}
                   />,
                 );
               }

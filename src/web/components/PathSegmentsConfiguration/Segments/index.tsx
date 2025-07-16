@@ -51,7 +51,7 @@ export default ({
         radius={'sm'}
         color={available ? 'success' : 'warning'}
       >{
-        t(available ? '{{mode}} mode is available' : '{{mode}} mode is unavailable', { mode: name })
+        t<string>(available ? '{{mode}} mode is available' : '{{mode}} mode is unavailable', { mode: name })
       }
       </Chip>
     );
@@ -88,8 +88,8 @@ export default ({
     const showReplace = m.isConfigurable && m.replaceCurrent;
 
     const firstLineNodes: React.ReactNode[] = [
-      buildMatchModeTip(t('Layer'), <SisternodeOutlined className={'text-sm'} />, l.available, l.errors),
-      buildMatchModeTip(t('Regex'), <FieldBinaryOutlined className={'text-sm'} />, r.available, r.errors),
+      buildMatchModeTip(t<string>('Layer'), <SisternodeOutlined className={'text-sm'} />, l.available, l.errors),
+      buildMatchModeTip(t<string>('Regex'), <FieldBinaryOutlined className={'text-sm'} />, r.available, r.errors),
     ];
 
     if (showReplace) {
@@ -101,7 +101,7 @@ export default ({
           radius={'sm'}
           color={'warning'}
         >
-          {t('Selected value will be replaced')}
+          {t<string>('Selected value will be replaced')}
         </Chip>,
       );
     }
@@ -228,7 +228,7 @@ export default ({
               >
                 <div className="p-4">
                   <div className={'mb-2'}>
-                    <div className={'font-bold text-xl'}>{t('Mark this path segment as')}</div>
+                    <div className={'font-bold text-xl'}>{t<string>('Mark this path segment as')}</div>
                   </div>
                   <div>
                     <Listbox
@@ -314,7 +314,7 @@ export default ({
                               </ul>)}
                           >
                             <div className={'flex items-center gap-4'}>
-                              <span className={'text-base'}>{t(PscPropertyType[m.propertyType])}</span>
+                              <span className={'text-base'}>{t<string>(PscPropertyType[m.propertyType])}</span>
                               <div className={'flex items-center gap-2'}>{rightContents}</div>
                             </div>
                           </ListboxItem>
@@ -324,7 +324,7 @@ export default ({
                   </div>
                   <div
                     className={'italic opacity-60 mt-1'}
-                  >{t('Some properties may not able to set by layer, but you still can set it by regex.')}</div>
+                  >{t<string>('Some properties may not able to set by layer, but you still can set it by regex.')}</div>
                 </div>
               </Popover>
             )}

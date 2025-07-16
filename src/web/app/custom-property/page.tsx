@@ -73,7 +73,7 @@ export default () => {
               });
             }}
           >
-            {t('Add')}
+            {t<string>('Add')}
           </Button>
           <div>
             <Input
@@ -93,7 +93,7 @@ export default () => {
               createPortal(TypeConversionRuleOverviewDialog, {});
             }}
           >
-            {t('Check type conversion rules')}
+            {t<string>('Check type conversion rules')}
           </Button>
           <Button
             size={'sm'}
@@ -107,7 +107,7 @@ export default () => {
             }}
           >
             <SortAscendingOutlined className={'text-medium'} />
-            {t('Adjust display orders')}
+            {t<string>('Adjust display orders')}
           </Button>
         </div>
         <div />

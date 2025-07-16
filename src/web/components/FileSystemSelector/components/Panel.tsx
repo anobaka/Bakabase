@@ -128,7 +128,7 @@ export default (props: FileSystemSelectorProps) => {
               variant={'light'}
               color={'success'}
             >
-              {t('Selected')}
+              {t<string>('Selected')}
             </Chip>
             <Chip
               size={'sm'}
@@ -151,7 +151,7 @@ export default (props: FileSystemSelectorProps) => {
           }}
         >
           <FolderAddOutlined className={'text-base'} />
-          {t('New Folder')}
+          {t<string>('New Folder')}
         </Button>
         <div className="flex items-center gap-2">
           <Button
@@ -162,7 +162,7 @@ export default (props: FileSystemSelectorProps) => {
               onSelected?.(selected!);
             }}
           >
-            {t('OK')}
+            {t<string>('OK')}
           </Button>
           <Button
             // size={'small'}
@@ -170,7 +170,7 @@ export default (props: FileSystemSelectorProps) => {
               onCancel?.();
             }}
           >
-            {t('Cancel')}
+            {t<string>('Cancel')}
           </Button>
         </div>
       </div>

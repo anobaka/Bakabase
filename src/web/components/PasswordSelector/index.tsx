@@ -60,7 +60,7 @@ function PasswordSelector(props: IProps) {
                 e.stopPropagation();
                 e.preventDefault();
                 Dialog.confirm({
-                  title: t('Delete password from history?'),
+                  title: t<string>('Delete password from history?'),
                   closeable: true,
                   onOk: () => BApi.password.deletePassword(p.text),
                 });
@@ -79,7 +79,7 @@ function PasswordSelector(props: IProps) {
 
   return (
     <Dialog
-      title={t('Passwords')}
+      title={t<string>('Passwords')}
       afterClose={afterClose}
       visible={visible}
       className={'password-selector-dialog'}
@@ -91,17 +91,17 @@ function PasswordSelector(props: IProps) {
       onCancel={close}
     >
       <div className="orders">
-        <div className="title">{t('Order')}</div>
+        <div className="title">{t<string>('Order')}</div>
         <div className="content">
           <Radio.Group
             value={order}
             dataSource={[
               {
-                label: t('Used recently'),
+                label: t<string>('Used recently'),
                 value: PasswordSearchOrder.Latest,
               },
               {
-                label: t('Used frequently'),
+                label: t<string>('Used frequently'),
                 value: PasswordSearchOrder.Frequency,
               },
             ]}
@@ -113,7 +113,7 @@ function PasswordSelector(props: IProps) {
         </div>
       </div>
       <div className="passwords">
-        <div className="title">{t('Passwords')}</div>
+        <div className="title">{t<string>('Passwords')}</div>
         <div className="content">
           {renderPasswords()}
         </div>

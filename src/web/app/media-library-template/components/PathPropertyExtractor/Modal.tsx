@@ -43,7 +43,7 @@ export default ({
             <>
               <Select
                 isRequired
-                label={t('Layer')}
+                label={t<string>('Layer')}
                 dataSource={layers.map(l => ({
                   label: l,
                   value: l.toString(),
@@ -53,7 +53,7 @@ export default ({
                   locator.layer = parseInt(Array.from(keys)[0] as string, 10);
                   forceUpdate();
                 }}
-                description={t('Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}', { basePathType: t(PathPropertyExtractorBasePathType[basePathType]) })}
+                description={t<string>('Layer 0 is {{basePathType}}, negative means before {{basePathType}}, positive means after {{basePathType}}', { basePathType: t<string>(PathPropertyExtractorBasePathType[basePathType]) })}
               />
             </>
           );
@@ -62,8 +62,8 @@ export default ({
         return (
           <Input
             isRequired
-            label={t('Regex')}
-            placeholder={t('Regex to match sub path')}
+            label={t<string>('Regex')}
+            placeholder={t<string>('Regex to match sub path')}
             value={locator.regex}
             onValueChange={v => {
               locator.regex = v;
@@ -72,7 +72,7 @@ export default ({
           />
         );
       default:
-        return t('Not supported');
+        return t<string>('Not supported');
     }
   };
 
@@ -92,7 +92,7 @@ export default ({
   return (
     <Modal
       size={'lg'}
-      title={t('Extract property values from resource path')}
+      title={t<string>('Extract property values from resource path')}
       defaultVisible
       onDestroyed={onDestroyed}
       footer={{
@@ -112,7 +112,7 @@ export default ({
                 key={i}
                 title={(
                   <div className={'flex items-center gap-1'}>
-                    {t('Rule')} {i + 1}
+                    {t<string>('Rule')} {i + 1}
                     <Button
                       isIconOnly
                       size={'sm'}
@@ -130,7 +130,7 @@ export default ({
               >
                 <div className={'flex flex-col gap-2'}>
                   <RadioGroup
-                    label={t('Positioning')}
+                    label={t<string>('Positioning')}
                     onValueChange={v => {
                       const nv = parseInt(v, 10);
                       if (locator.positioner != nv) {
@@ -143,12 +143,12 @@ export default ({
                     isRequired
                   >
                     {pathPositioners.map(p => (
-                      <Radio value={p.value.toString()}>{t(p.label)}</Radio>
+                      <Radio value={p.value.toString()}>{t<string>(p.label)}</Radio>
                     ))}
                   </RadioGroup>
                   {locator.positioner === PathPositioner.Layer && (
                     <RadioGroup
-                      label={t('Based on')}
+                      label={t<string>('Based on')}
                       onValueChange={v => {
                         const nv = parseInt(v, 10);
                         if (basePathType != nv) {
@@ -162,8 +162,8 @@ export default ({
                       isRequired
                     >
                       {[
-                        { label: t('Based on media library'), value: PathPropertyExtractorBasePathType.MediaLibrary },
-                        { label: t('Based on resource'), value: PathPropertyExtractorBasePathType.Resource },
+                        { label: t<string>('Based on media library'), value: PathPropertyExtractorBasePathType.MediaLibrary },
+                        { label: t<string>('Based on resource'), value: PathPropertyExtractorBasePathType.Resource },
                       ].map(p => (
                         <Radio value={p.value.toString()}>{p.label}</Radio>
                       ))}
@@ -189,11 +189,11 @@ export default ({
             }}
           >
             <AiOutlinePlusCircle className={'text-base'} />
-            {t('Add a rule')}
+            {t<string>('Add a rule')}
           </Button>
         </div>
-        <div>{t('For layer-based rules, level 0 represents the current directory; for regex rules, the text to be matched starts from the next level under the current directory up to the resource path portion.')}</div>
-        <div>{t('All rules will be run independently, and the results will be merged')}</div>
+        <div>{t<string>('For layer-based rules, level 0 represents the current directory; for regex rules, the text to be matched starts from the next level under the current directory up to the resource path portion.')}</div>
+        <div>{t<string>('All rules will be run independently, and the results will be merged')}</div>
       </div>
       {/* <div>{JSON.stringify(locators)}</div> */}
     </Modal>

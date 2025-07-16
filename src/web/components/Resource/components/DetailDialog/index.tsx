@@ -13,7 +13,7 @@ import {
   ProfileOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { history } from 'ice';
+import { useRouter } from 'next/navigation';
 import _ from 'lodash';
 import { MdCalendarMonth } from 'react-icons/md';
 import BasicInfo from './BasicInfo';
@@ -30,7 +30,7 @@ import PropertyValueScopePicker from '@/components/Resource/components/DetailDia
 import PlayableFiles from '@/components/Resource/components/PlayableFiles';
 import CategoryPropertySortModal from '@/components/Resource/components/DetailDialog/CategoryPropertySortModal';
 import CustomPropertySortModal from '@/components/CustomPropertySortModal';
-import store from '@/store';
+import { useUiOptionsStore } from '@/models/options';
 import ChildrenModal from '../ChildrenModal';
 import { TiFlowChildren } from 'react-icons/ti';
 
@@ -48,7 +48,7 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [resource, setResource] = useState<ResourceModel>();
-  const uiOptions = store.useModelState('uiOptions');
+  const uiOptions = useUiOptionsStore(state => state.data);
 
   const loadResource = async () => {
     // @ts-ignore
@@ -151,13 +151,13 @@ export default ({
                 key="AdjustPropertyScopePriority"
                 startContent={<AppstoreOutlined className={'text-small'} />}
               >
-                {t('Adjust the display priority of property scopes')}
+                {t<string>('Adjust the display priority of property scopes')}
               </ListboxItem>
               <ListboxItem key="SortPropertiesInCategory" startContent={<ProfileOutlined className={'text-small'} />}>
-                {t('Adjust orders of linked properties for current category')}
+                {t<string>('Adjust orders of linked properties for current category')}
               </ListboxItem>
               <ListboxItem key="SortPropertiesGlobally" startContent={<ProfileOutlined className={'text-small'} />}>
-                {t('Adjust orders of properties globally')}
+                {t<string>('Adjust orders of properties globally')}
               </ListboxItem>
             </Listbox>
           </Popover>
@@ -198,7 +198,7 @@ export default ({
                           onPress={onClick}
                         >
                           <PlayCircleOutlined />
-                          {t('Play')}
+                          {t<string>('Play')}
                         </Button>
                       )}
                       resource={resource}
@@ -213,7 +213,7 @@ export default ({
                       }}
                     >
                       <FolderOpenOutlined />
-                      {t('Open')}
+                      {t<string>('Open')}
                     </Button>
                     {resource.hasChildren && (
                       <Button
@@ -225,7 +225,7 @@ export default ({
                         }}
                       >
                         <TiFlowChildren className='text-lg' />
-                        {t('View Children')}
+                        {t<string>('View Children')}
                       </Button>
                     )}
                     {/* <Button */}
@@ -233,7 +233,7 @@ export default ({
                     {/*   onClick={() => onRemoved?.()} */}
                     {/* > */}
                     {/*   <DeleteOutlined /> */}
-                    {/*   {t('Remove')} */}
+                    {/*   {t<string>('Remove')} */}
                     {/* </Button> */}
                   </ButtonGroup>
                 </div>
@@ -275,7 +275,7 @@ export default ({
                   <div className={'flex flex-col items-center gap-2 justify-center'}>
                     <div className={'w-4/5'}>
                       <DisconnectOutlined className={'text-base mr-1'} />
-                      {t('No custom property bound. You can bind them in media library template')}
+                      {t<string>('No custom property bound. You can bind them in media library template')}
                     </div>
                   </div>
                 )}
@@ -296,11 +296,11 @@ export default ({
                     className={'grid gap-x-4 gap-y-1 undefined items-center overflow-visible'}
                   >
                     <Chip size={'sm'} color={'default'} radius={'sm'} className={'text-right justify-self-end'}>
-                      {t('Last played at')}
+                      {t<string>('Last played at')}
                     </Chip>
                     <div className={'flex items-center gap-1'}>
                       {resource.playedAt}
-                      <Tooltip content={t('Mark as not played')}>
+                      <Tooltip content={t<string>('Mark as not played')}>
                         <Button
                           isIconOnly
                           variant={'light'}

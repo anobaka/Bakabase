@@ -21,14 +21,14 @@ import {
   Tooltip,
 } from '@/components/bakaui';
 import { BTaskStatus } from '@/sdk/constants';
-import store from '@/store';
-import BApi from '@/sdk/BApi';
+import { useTaskOptionsStore } from '@/models/options';
+import { useBTasksStore } from '@/models/bTasks';
 import type { BTask } from '@/core/models/BTask';
 
 export default () => {
   const { t } = useTranslation();
-  const taskOptions = store.useModelState('taskOptions');
-  const bTasks = store.useModelState('bTasks');
+  const taskOptions = useTaskOptionsStore(state => state.data);
+  const bTasks = useBTasksStore(state => state.tasks);
 
   const [editingOptions, setEditingOptions] = useState<Record<string, { interval?: string; enableAfter?: string }>>({});
 
@@ -80,13 +80,13 @@ export default () => {
         };
       }),
     });
-    toast.success(t('Saved'));
+    toast.success(t<string>('Saved'));
     setEditingOptions({});
   };
 
   const renderInterval = (task: BTask) => {
     if (!task.isPersistent) {
-      return t('Not supported');
+      return t<string>('Not supported');
     }
 
     const editingInterval = editingOptions[task.id]?.interval;
@@ -127,13 +127,13 @@ export default () => {
                 });
               }}
             >
-              {task.interval ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format('HH:mm:ss') : t('Not set')}
+              {task.interval ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format('HH:mm:ss') : t<string>('Not set')}
             </Button>
           </div>
           {task.interval && (
             <Tooltip content={(
               <div>
-                {t('Will start at')}
+                {t<string>('Will start at')}
                 &nbsp;
                 {dayjs(task.nextTimeStartAt).format('YYYY-MM-DD HH:mm:ss')}
               </div>
@@ -149,7 +149,7 @@ export default () => {
 
   const renderEnableAfter = (task: BTask) => {
     if (!task.isPersistent) {
-      return t('Not supported');
+      return t<string>('Not supported');
     }
 
     const format = 'YYYY-MM-DD HH:mm:ss';
@@ -191,7 +191,7 @@ export default () => {
             });
           }}
         >
-          {task.enableAfter ? dayjs(task.enableAfter).format(format) : t('Not set')}
+          {task.enableAfter ? dayjs(task.enableAfter).format(format) : t<string>('Not set')}
         </Button>
       );
     }
@@ -217,7 +217,7 @@ export default () => {
                 </div>
               </TableCell>
               <TableCell>
-                {t(BTaskStatus[task.status])}
+                {t<string>(BTaskStatus[task.status])}
                 {task.error && (
                   <Tooltip content={task.error} color={'danger'}>
                     <QuestionCircleOutlined />

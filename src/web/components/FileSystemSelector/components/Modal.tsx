@@ -37,7 +37,7 @@ export default (props: IProps) => {
   return (
     <Modal
       size={'xl'}
-      title={t(title)}
+      title={t<string>(title)}
       visible={visible}
       footer={false}
       onDestroyed={props.onDestroyed}

@@ -52,12 +52,12 @@ const Editor = ({
   const [newData, setNewData] = useState<string[]>([]);
 
   const operationDataSource = Object.keys(BmMultipleValueProcessorOperation).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
-    label: t(x),
+    label: t<string>(x),
     value: BmMultipleValueProcessorOperation[x],
   }));
 
   const filterByDataSource = Object.keys(BmMultipleValueProcessorFilterBy).filter(k => Number.isNaN(parseInt(k, 10))).map(x => ({
-    label: t(x),
+    label: t<string>(x),
     value: BmMultipleValueProcessorFilterBy[x],
   }));
 
@@ -87,7 +87,7 @@ const Editor = ({
       case BmMultipleValueProcessorOperation.Add:
       case BmMultipleValueProcessorOperation.SetWithFixedValue:
         componentsData.push({
-          label: t('Candidate(s)'),
+          label: t<string>('Candidate(s)'),
           comp: (
             <Select
               dataSource={candidates}
@@ -101,7 +101,7 @@ const Editor = ({
           ),
         });
         componentsData.push({
-          label: t('New data'),
+          label: t<string>('New data'),
           comp: (
             <Select
               dataSource={newData}
@@ -117,7 +117,7 @@ const Editor = ({
       case BmMultipleValueProcessorOperation.Remove:
       case BmMultipleValueProcessorOperation.Modify:
         componentsData.push({
-          label: t('Filter'),
+          label: t<string>('Filter'),
           comp: (
             <Radio.Group
               value={value.filterBy}
@@ -134,7 +134,7 @@ const Editor = ({
         });
         if (value.filterBy == BmMultipleValueProcessorFilterBy.Matching || value.filterBy == BmMultipleValueProcessorFilterBy.Containing) {
           componentsData.push({
-            label: t('Value'),
+            label: t<string>('Value'),
             comp: (
               <Input
                 value={value.find}
@@ -171,7 +171,7 @@ const Editor = ({
     <>
       <div className="block">
         <div className={'label'}>
-          {t('Operation')}
+          {t<string>('Operation')}
         </div>
         <div className="value">
           <Select
@@ -207,7 +207,7 @@ const Demonstrator = ({
     case BmMultipleValueProcessorOperation.Remove:
       return (
         <>
-          <div className="primary">{t('Remove')}</div>
+          <div className="primary">{t<string>('Remove')}</div>
           <Trans
             i18nKey={'BulkModification.Processor.Demonstrator.Operation.Filter.FilteredData'}
             values={{
@@ -215,7 +215,7 @@ const Demonstrator = ({
             }}
           >
             {/* Data filtered by xxx */}
-            {t(BmMultipleValueProcessorFilterBy[value.filterBy!])}
+            {t<string>(BmMultipleValueProcessorFilterBy[value.filterBy!])}
             {value.find != undefined && (
               <div className="secondary">{value.find}</div>
             )}
@@ -225,7 +225,7 @@ const Demonstrator = ({
     case BmMultipleValueProcessorOperation.Add:
       return (
         <>
-          <div className="primary">{t('Add')}</div>
+          <div className="primary">{t<string>('Add')}</div>
           {valueTexts.map((t, i) => {
             return (
               <React.Fragment key={i}>
@@ -261,12 +261,12 @@ const Demonstrator = ({
           <Trans
             i18nKey={'BulkModification.Processor.Demonstrator.Operation.FilterThenModifyWithTextProcessor'}
             values={{
-              filterBy: t(BmMultipleValueProcessorFilterBy[value.filterBy!]),
+              filterBy: t<string>(BmMultipleValueProcessorFilterBy[value.filterBy!]),
               find: value.find,
             }}
           >
             <div className="primary">
-              {t(BmMultipleValueProcessorFilterBy[value.filterBy!])}
+              {t<string>(BmMultipleValueProcessorFilterBy[value.filterBy!])}
             </div>
             {(value.find == undefined || value.find.length == 0) ? (<></>) : (
               <div className="secondary">{value.find}</div>
@@ -279,7 +279,7 @@ const Demonstrator = ({
     default:
       return (
         <>
-          {t('Unsupported value')}
+          {t<string>('Unsupported value')}
         </>
       );
   }

@@ -33,18 +33,18 @@ export default ({
   };
 
   return (
-    <OptionsCard header={t('Global')}>
+    <OptionsCard header={t<string>('Global')}>
       <div className={'flex justify-end'}>
         <NumberInput
           className={'w-[360px]'}
-          label={t('Max threads')}
+          label={t<string>('Max threads')}
           size={'sm'}
           minValue={1}
           onValueChange={maxThreads => {
             patchOptions({ maxThreads });
           }}
           value={options?.maxThreads}
-          description={t('To reduce synchronization time, we will, by default, use 40% of your CPU\'s maximum thread count (rounded down) for syncing the media library')}
+          description={t<string>('To reduce synchronization time, we will, by default, use 40% of your CPU\'s maximum thread count (rounded down) for syncing the media library')}
           isClearable
           onClear={() => {
             patchOptions({ maxThreads: undefined });
@@ -53,12 +53,12 @@ export default ({
       </div>
       <div />
       <BooleanOptions
-        subject={t(SubjectLabels.DeleteResourcesWithUnknownMediaLibrary)}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownMediaLibrary)}
         onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownMediaLibrary: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownMediaLibrary}
       />
       <BooleanOptions
-        subject={t(SubjectLabels.DeleteResourcesWithUnknownPath)}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
         onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownPath}
       />

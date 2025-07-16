@@ -80,7 +80,7 @@ export default ({ template,
     });
     setWrappers(wrappers);
 
-    const builtinPropertyNames = builtinPropertyForDisplayNames.map(v => t(`BuiltinPropertyForDisplayName.${v.label}`));
+    const builtinPropertyNames = builtinPropertyForDisplayNames.map(v => t<string>(`BuiltinPropertyForDisplayName.${v.label}`));
     const customPropertyNames = properties?.map(cp => cp.name!) ?? [];
 
     setVariables(builtinPropertyNames.concat(customPropertyNames));
@@ -109,7 +109,7 @@ export default ({ template,
     <Modal
       defaultVisible
       onDestroyed={props.onDestroyed}
-      title={t('Edit display name template for resources')}
+      title={t<string>('Edit display name template for resources')}
       onClose={close}
       size={'xl'}
       onOk={() => onSubmit?.(templateRef.current)}
@@ -119,7 +119,7 @@ export default ({ template,
           <div className={'flex flex-wrap'}>
             <InfoCircleOutlined className={'text-medium'} />
             &nbsp;
-            {t('You can use any combination of text and following properties in template, and you can add more properties in category configuration.')}
+            {t<string>('You can use any combination of text and following properties in template, and you can add more properties in category configuration.')}
           </div>
           <div className={'flex flex-wrap items-center'}>
             <InfoCircleOutlined className={'text-medium'} />
@@ -127,8 +127,8 @@ export default ({ template,
             <Trans
               i18nKey={'category.displayNameTemplate.propertyExample'}
               values={{
-                // samplePropertyName: propertiesRef.current[0]?.name ?? t('Name'),
-                samplePropertyName: variables?.[0] ?? t('Name'),
+                // samplePropertyName: propertiesRef.current[0]?.name ?? t<string>('Name'),
+                samplePropertyName: variables?.[0] ?? t<string>('Name'),
               }}
             >
               To add a property value as a variable in the template, you can use the following
@@ -140,7 +140,7 @@ export default ({ template,
           <div className={'flex flex-wrap'}>
             <InfoCircleOutlined className={'text-medium'} />
             &nbsp;
-            {t('Be careful if you have multiple properties with same name, only a random one will be replaced.')}
+            {t<string>('Be careful if you have multiple properties with same name, only a random one will be replaced.')}
           </div>
         </div>
         <div className={'flex flex-wrap gap-1 mt-2'}>
@@ -162,8 +162,8 @@ export default ({ template,
         <div className={'flex flex-wrap'}>
           <InfoCircleOutlined className={'text-medium'} />
           &nbsp;
-          {t('You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically.')}
-          {t('You can check and set the wrappers in special text configuration.')}
+          {t<string>('You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically.')}
+          {t<string>('You can check and set the wrappers in special text configuration.')}
         </div>
         <div className={'flex flex-wrap gap-1 mt-2'}>
           {wrappers.map(w => (
@@ -181,10 +181,10 @@ export default ({ template,
       <div className={'flex flex-wrap'}>
         <InfoCircleOutlined className={'text-medium'} />
         &nbsp;
-        {t('If you leave the template with empty value, the file name will be the display name.')}
+        {t<string>('If you leave the template with empty value, the file name will be the display name.')}
       </div>
       <div>
-        <div>{t('Display name template')}</div>
+        <div>{t<string>('Display name template')}</div>
         <ContentEditable
           key={'0'}
           autoFocus

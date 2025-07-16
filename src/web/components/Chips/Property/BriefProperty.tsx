@@ -40,7 +40,7 @@ export default ({
               return (<Chip size="sm" variant={'flat'} radius={'sm'}>{property.name}</Chip>);
           }
         })
-      ) : (t('Unknown property'))}
+      ) : (t<string>('Unknown property'))}
     </div>
   );
 };

@@ -88,7 +88,7 @@ const CategoryEnhancerOptionsDialog = ({
   return (
     <Modal
       size={'full'}
-      title={t('Configure enhancer:{{enhancerName}} for category:{{categoryName}}', {
+      title={t<string>('Configure enhancer:{{enhancerName}} for category:{{categoryName}}', {
         enhancerName: enhancer.name,
         categoryName: category.name,
       })}

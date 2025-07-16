@@ -11,7 +11,7 @@ import {
 } from '@ant-design/icons';
 import { buildLogger, standardizePath } from '@/components/utils';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useFileSystemOptionsStore } from '@/models/options';
 import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Chip, Divider, Input, Modal } from '@/components/bakaui';
@@ -46,7 +46,7 @@ export default (props: Props) => {
   const [visible, setVisible] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [keyword, setKeyword] = useState<string>();
-  const fsOptions = store.useModelState('fileSystemOptions');
+  const fsOptions = useFileSystemOptionsStore(state => state.data);
 
   // log(fsOptions);
 
@@ -73,7 +73,7 @@ export default (props: Props) => {
     }
     const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
     if (mlv2s.length > 0) {
-      data[0] = { id: 0, name: t('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: ml.paths })) };
+      data[0] = { id: 0, name: t<string>('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: ml.paths })) };
     }
     setCategories(Object.values(data));
   };
@@ -124,7 +124,7 @@ export default (props: Props) => {
       visible={visible}
       footer={false}
       size={'lg'}
-      title={t('Select a path')}
+      title={t<string>('Select a path')}
       onDestroyed={props.onDestroyed}
       onClose={() => {
         setVisible(false);
@@ -136,7 +136,7 @@ export default (props: Props) => {
             startContent={(
               <SearchOutlined className={'text-base'} />
             )}
-            placeholder={t('Quick filter')}
+            placeholder={t<string>('Quick filter')}
             size={'sm'}
             value={keyword}
             onValueChange={(v) => setKeyword(v)}
@@ -182,7 +182,7 @@ export default (props: Props) => {
                                         if (confirmation) {
                                           createPortal(Modal, {
                                             defaultVisible: true,
-                                            title: t('Are you sure to select this path?'),
+                                            title: t<string>('Are you sure to select this path?'),
                                             children: (
                                               <div className={'flex items-center gap-2'}>
                                                 <Chip

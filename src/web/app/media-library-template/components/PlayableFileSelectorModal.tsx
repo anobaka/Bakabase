@@ -45,7 +45,7 @@ export default ({
           }}
         />
         <ExtensionsInput
-          label={t('Limit file extensions')}
+          label={t<string>('Limit file extensions')}
           onValueChange={(v) => {
             setSelection({
               ...selection,
@@ -55,10 +55,10 @@ export default ({
           defaultValue={selection.extensions}
         />
         <div className={'flex flex-col gap-1'}>
-          <label className={'text-sm font-medium'}>{t('Maximum file count')}</label>
+          <label className={'text-sm font-medium'}>{t<string>('Maximum file count')}</label>
           <NumberInput
             minValue={1}
-            label={t('Leave empty for no limit')}
+            label={t<string>('Leave empty for no limit')}
             value={selection.maxFileCount}
             onValueChange={(v) => {
               setSelection({

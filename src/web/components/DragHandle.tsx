@@ -14,7 +14,7 @@ export default (props) => {
       style={{ cursor: 'all-scroll', ...style }}
       size={'small'}
       type={'menu'}
-      title={t('Drag to sort')}
+      title={t<string>('Drag to sort')}
       className={`drag-handle ${className || ''} cursor-pointer`}
       {...(otherProps || {})}
     />

@@ -101,7 +101,7 @@ export default ({
                 md.children ??= [];
                 md.children.push({
                   value: uuidv4(),
-                  label: buildUntitledLabel(t('Untitled'), md.children.map(c => c.label)),
+                  label: buildUntitledLabel(t<string>('Untitled'), md.children.map(c => c.label)),
                 });
                 patchOptions({ ...options });
                 const newExpandedKeys = expandKeys ?? [];
@@ -153,13 +153,13 @@ export default ({
             patchOptions({
               data: options.data.concat([{
                 value: uuidv4(),
-                label: buildUntitledLabel(t('Untitled'), options.data.map(c => c.label)),
+                label: buildUntitledLabel(t<string>('Untitled'), options.data.map(c => c.label)),
               }]),
             });
           }}
         >
           <PlusCircleOutlined className={'text-small'} />
-          {t('Add root data')}
+          {t<string>('Add root data')}
         </Button>
       </div>
       <Tree

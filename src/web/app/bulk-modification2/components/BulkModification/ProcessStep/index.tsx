@@ -87,7 +87,7 @@ export default ({
       case PropertyType.Tags:
         break;
     }
-    return t('Not supported');
+    return t<string>('Not supported');
   };
 
   return (
@@ -128,8 +128,8 @@ export default ({
           createPortal(
             Modal, {
               defaultVisible: true,
-              title: t('Delete a process step'),
-              children: t('Are you sure you want to delete this process step?'),
+              title: t<string>('Delete a process step'),
+              children: t<string>('Are you sure you want to delete this process step?'),
               onOk: async () => {
                 onDelete();
               },

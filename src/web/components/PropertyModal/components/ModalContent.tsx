@@ -151,12 +151,12 @@ export default ({
               {/*     }); */}
               {/*   }} */}
               {/* > */}
-              {/*   {t('Allow adding new options while choosing')} */}
+              {/*   {t<string>('Allow adding new options while choosing')} */}
               {/* </Switch> */}
               <Select
                 className={'mt-2'}
                 size={'sm'}
-                label={t('Default value')}
+                label={t<string>('Default value')}
                 selectionMode={multiple ? 'multiple' : 'single'}
                 selectedKeys={options?.defaultValue ? multiple
                   ? options.defaultValue : [options.defaultValue] : undefined}
@@ -183,7 +183,7 @@ export default ({
           return (
             <>
               <Select
-                label={t('Precision')}
+                label={t<string>('Precision')}
                 selectedKeys={[options.precision.toString()]}
                 dataSource={NumberPrecisions}
                 onSelectionChange={c => {
@@ -196,7 +196,7 @@ export default ({
                 }}
               />
               <Input
-                label={t('Preview')}
+                label={t<string>('Preview')}
                 disabled
                 value={previewValueStr}
               />
@@ -211,7 +211,7 @@ export default ({
           return (
             <>
               <Select
-                label={t('Precision')}
+                label={t<string>('Precision')}
                 selectedKeys={[options.precision.toString()]}
                 dataSource={NumberPrecisions}
                 onSelectionChange={c => {
@@ -234,10 +234,10 @@ export default ({
                     },
                   });
                 }}
-              >{t('Show progressbar')}</Switch>
+              >{t<string>('Show progressbar')}</Switch>
               {options?.showProgressbar ? (
                 <div>
-                  <div>{t('Preview')}</div>
+                  <div>{t<string>('Preview')}</div>
                   <Progress
                     className={'max-w-[70%]'}
                     label={<div className={'text-[color:var(--bakaui-color)]'}>{previewValueStr}</div>}
@@ -246,7 +246,7 @@ export default ({
                 </div>
               ) : (
                 <Input
-                  label={t('Preview')}
+                  label={t<string>('Preview')}
                   disabled
                   value={previewValueStr}
                 />
@@ -260,7 +260,7 @@ export default ({
           return (
             <>
               <Select
-                label={t('Max value')}
+                label={t<string>('Max value')}
                 selectedKeys={[options.maxValue.toString()]}
                 dataSource={RatingMaxValueDataSource}
                 onSelectionChange={c => {
@@ -291,7 +291,7 @@ export default ({
           return (
             <>
               <RadioGroup
-                label={t('Formula syntax')}
+                label={t<string>('Formula syntax')}
                 orientation="horizontal"
               >
                 <Radio value="buenos-aires">Javascript</Radio>
@@ -351,7 +351,7 @@ export default ({
               {/*     }); */}
               {/*   }} */}
               {/* > */}
-              {/*   {t('Allow adding new options while choosing')} */}
+              {/*   {t<string>('Allow adding new options while choosing')} */}
               {/* </Switch> */}
             </>
           );
@@ -370,7 +370,7 @@ export default ({
           setTypeGroupsVisible(true);
         }}
       >
-        {property.type == undefined ? t('Select a type') : (
+        {property.type == undefined ? t<string>('Select a type') : (
           <PropertyTypeIcon type={property.type} textVariant={'default'} />
         )}
       </Button>
@@ -379,7 +379,7 @@ export default ({
       // return btn;
       return (
         <div>
-          <Tooltip content={t('Click to change type')}>
+          <Tooltip content={t<string>('Click to change type')}>
             <div>
               {btn}
             </div>
@@ -431,13 +431,13 @@ export default ({
             {Object.keys(PropertyTypeGroup).map(group => {
               return (
                 <div className={'pb-2 mb-2 border-b-1 last:mb-0 last:border-b-0 last:pb-0'}>
-                  <div className={'mb-2 font-bold'}>{t(group)}</div>
+                  <div className={'mb-2 font-bold'}>{t<string>(group)}</div>
                   <div className="grid grid-cols-3 gap-x-2 text-sm leading-5">
                     {PropertyTypeGroup[group]!.map(type => {
                       if (group == UnderDevelopmentGroupKey) {
                         return (
                           <Tooltip content={(
-                            <FeatureStatusTip status={'developing'} name={t(PropertyType[type])} />
+                            <FeatureStatusTip status={'developing'} name={t<string>(PropertyType[type])} />
                           )}
                           >
                             <Button
@@ -461,15 +461,15 @@ export default ({
                                 const rules = r.data?.[property.type!]?.[type] ?? [];
                                 // change property type
                                 const model = Modal.show({
-                                  title: t('You are changing property type'),
+                                  title: t<string>('You are changing property type'),
                                   children: (
                                     <div>
                                       <div>
-                                        {t('Changing the property type may cause the loss of existing data. Click \'continue\' to check.')}
+                                        {t<string>('Changing the property type may cause the loss of existing data. Click \'continue\' to check.')}
                                       </div>
                                       {rules.length > 0 && (
                                         <div className={'mt-2'}>
-                                          <div className={'font-bold'}>{t('Following rule(s) will be applied')}</div>
+                                          <div className={'font-bold'}>{t<string>('Following rule(s) will be applied')}</div>
                                           <div className={'flex flex-wrap gap-2 items-center mt-1'}>
                                             {rules.map(r => {
                                               if (r.description == null) {
@@ -491,7 +491,7 @@ export default ({
                                   footer: {
                                     actions: ['ok', 'cancel'],
                                     okProps: {
-                                      children: t('Continue'),
+                                      children: t<string>('Continue'),
                                     },
                                   },
                                   onOk: async () => {
@@ -504,24 +504,24 @@ export default ({
                                         fromType,
                                       } = rsp.data;
                                       Modal.show({
-                                        title: t('Final check'),
+                                        title: t<string>('Final check'),
                                         size: changes.length! > 0 ? 'lg' : undefined,
                                         children: (
                                           <div>
                                             <div className={'text-medium'}>
-                                              {changes.length > 0 ? t('Found {{count}} data, and {{changedDataCount}} data will be modified or deleted', {
+                                              {changes.length > 0 ? t<string>('Found {{count}} data, and {{changedDataCount}} data will be modified or deleted', {
                                                 count: dataCount,
                                                 changedDataCount: changes.length!,
-                                              }) : t('Found {{count}} data, and all of them will be retained', { count: dataCount! })}
+                                              }) : t<string>('Found {{count}} data, and all of them will be retained', { count: dataCount! })}
                                             </div>
                                             <div className={'font-bold'}>
-                                              {t('Be careful, this process is irreversible')}
+                                              {t<string>('Be careful, this process is irreversible')}
                                             </div>
                                             {changes.length > 0 && (
                                               <Table>
                                                 <TableHeader>
-                                                  <TableColumn>{t('Source value')}</TableColumn>
-                                                  <TableColumn>{t('Converted value')}</TableColumn>
+                                                  <TableColumn>{t<string>('Source value')}</TableColumn>
+                                                  <TableColumn>{t<string>('Converted value')}</TableColumn>
                                                 </TableHeader>
                                                 <TableBody>
                                                   {changes.map(c => {
@@ -558,7 +558,7 @@ export default ({
                                         footer: {
                                           actions: ['ok', 'cancel'],
                                           okProps: {
-                                            children: t('Convert'),
+                                            children: t<string>('Convert'),
                                           },
                                         },
                                       });
@@ -588,7 +588,7 @@ export default ({
         <Input
           className={'flex-1'}
           size={'sm'}
-          label={t('Name')}
+          label={t<string>('Name')}
           value={property.name}
           onValueChange={name => patchProperty({
             ...property,

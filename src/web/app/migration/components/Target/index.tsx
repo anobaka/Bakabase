@@ -48,9 +48,9 @@ const Target = ({
 
   useEffect(() => {
     if (target.property == ResourceProperty.Volume && target.propertyKey != undefined) {
-      setLabel(t(`${ResourceProperty[target.property]}.${target.propertyKey}`));
+      setLabel(t<string>(`${ResourceProperty[target.property]}.${target.propertyKey}`));
     } else {
-      setLabel(target.propertyKey ?? t(ResourceProperty[target.property!]));
+      setLabel(target.propertyKey ?? t<string>(ResourceProperty[target.property!]));
     }
   }, []);
 
@@ -58,7 +58,7 @@ const Target = ({
     <div className={`flex ${isLeaf ? '' : 'flex-col'} gap-2 mt-1 mb-1`}>
       {isLeaf && (
         <Modal
-          title={t('Data')}
+          title={t<string>('Data')}
           size={'xl'}
           footer={{
             actions: ['ok'],
@@ -68,7 +68,7 @@ const Target = ({
         >
           <div>
             <div className={'italic mb-2'}>
-              {t('Data not relative to resource will not be migrated.')}
+              {t<string>('Data not relative to resource will not be migrated.')}
             </div>
             <div className={'flex flex-wrap gap-1'}>
               {target.dataForDisplay?.map(d => (
@@ -81,7 +81,7 @@ const Target = ({
       {
         hasLossData && (
           <Modal
-            title={t('Some data will be lost')}
+            title={t<string>('Some data will be lost')}
             size={'xl'}
             footer={{
               actions: ['ok'],
@@ -93,7 +93,7 @@ const Target = ({
               {Object.keys(lossData).map(k => {
                 const lossType = StandardValueConversionLoss[parseInt(k, 10)];
                 return (
-                  <Tab title={`${t(`StandardValueConversionLoss.${lossType}`)}(${lossData[k].length})`} key={k}>
+                  <Tab title={`${t<string>(`StandardValueConversionLoss.${lossType}`)}(${lossData[k].length})`} key={k}>
                     <div className={'flex flex-wrap gap-1'}>
                       {lossData[k].map(d => (
                         <Chip>{d}</Chip>
@@ -151,9 +151,9 @@ const Target = ({
               onMigrated?.();
             }}
           >
-            {t('Are you sure to migrate [{{target}}] to [{{property}}]?', { target: label, property: selectedProperty?.name })}
+            {t<string>('Are you sure to migrate [{{target}}] to [{{property}}]?', { target: label, property: selectedProperty?.name })}
           </Modal>
-          {t('Convert to')}
+          {t<string>('Convert to')}
           <SimplePropertySelector
             onSelected={p => setSelectedProperty(p)}
             valueTypes={target.targetCandidates?.map(tc => tc.type)}
@@ -168,7 +168,7 @@ const Target = ({
               }}
             >
               <InfoCircleOutlined className={'text-small'} />
-              {t('Some data will be lost')}, {t('check them here')}
+              {t<string>('Some data will be lost')}, {t<string>('check them here')}
             </Button>
           )}
           {selectedProperty && (
@@ -179,7 +179,7 @@ const Target = ({
                 setConfirmDialogVisible(true);
               }}
             >
-              {t('Migrate')}
+              {t<string>('Migrate')}
             </Button>
           )}
         </div>

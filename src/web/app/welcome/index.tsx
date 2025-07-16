@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { history } from 'ice';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { Button, Chip, Popover } from '@/components/bakaui';
 import BApi from '@/sdk/BApi';
@@ -9,6 +9,7 @@ import BApi from '@/sdk/BApi';
 export default () => {
   const [version, setVersion] = useState<string>();
   const { t } = useTranslation();
+  const router = useRouter();
 
   useEffect(() => {
     BApi.app.getAppInfo().then(a => {
@@ -32,7 +33,7 @@ export default () => {
           </span>
         </div>
         <div className={'flex items-center gap-1'}>
-          {t('Please read terms and conditions carefully before you start to use this app')}
+          {t<string>('Please read terms and conditions carefully before you start to use this app')}
           <Popover
             trigger={(
               <Button
@@ -41,11 +42,11 @@ export default () => {
                 radius={'sm'}
                 variant={'light'}
               >
-                {t('Click to check')}
+                {t<string>('Click to check')}
               </Button>
             )}
           >
-            {t('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
+            {t<string>('We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.')}
           </Popover>
         </div>
         <div className={'flex justify-center'}>
@@ -53,10 +54,10 @@ export default () => {
             color={'primary'}
             onPress={() => {
               BApi.app.acceptTerms().then((a) => {
-                history!.push('/');
+                router.push('/');
               });
             }}
-          >{t('Accept and start to use')}
+          >{t<string>('Accept and start to use')}
           </Button>
         </div>
       </div>

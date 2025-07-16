@@ -89,14 +89,14 @@ export default ({
         if (value == undefined) {
           return;
         }
-        return displayDataSources?.[BulkModificationProperty.Category]?.[value] ?? t('Invalid data');
+        return displayDataSources?.[BulkModificationProperty.Category]?.[value] ?? t<string>('Invalid data');
       }
       case BulkModificationProperty.MediaLibrary: {
         const value = ResourceDiffUtils.parseMediaLibrary(rawDiffValue);
         if (value == undefined) {
           return;
         }
-        return displayDataSources?.[BulkModificationProperty.MediaLibrary]?.[value] ?? t('Invalid data');
+        return displayDataSources?.[BulkModificationProperty.MediaLibrary]?.[value] ?? t<string>('Invalid data');
       }
       case BulkModificationProperty.Name:
       {
@@ -141,7 +141,7 @@ export default ({
         if (value == undefined) {
           return;
         }
-        return t(ResourceLanguage[value]);
+        return t<string>(ResourceLanguage[value]);
       }
       case BulkModificationProperty.Volume: {
         const volume = ResourceDiffUtils.parseVolume(rawDiffValue);
@@ -149,15 +149,15 @@ export default ({
           return (
             <div className={'volume'}>
               <div className="name">
-                <SimpleLabel status={'default'}>{t('Name')}</SimpleLabel>
+                <SimpleLabel status={'default'}>{t<string>('Name')}</SimpleLabel>
                 {volume.name}
               </div>
               <div className="title">
-                <SimpleLabel status={'default'}>{t('Title')}</SimpleLabel>
+                <SimpleLabel status={'default'}>{t<string>('Title')}</SimpleLabel>
                 {volume.title}
               </div>
               <div className="index">
-                <SimpleLabel status={'default'}>{t('Index')}</SimpleLabel>
+                <SimpleLabel status={'default'}>{t<string>('Index')}</SimpleLabel>
                 {volume.index}
               </div>
             </div>
@@ -202,10 +202,10 @@ export default ({
   return (
     <div className="diff">
       <div className="property">
-        {diff.property == BulkModificationProperty.CustomProperty ? diff.propertyKey : t(BulkModificationProperty[diff.property])}
+        {diff.property == BulkModificationProperty.CustomProperty ? diff.propertyKey : t<string>(BulkModificationProperty[diff.property])}
       </div>
       {/* <SimpleLabel className="type" status={TypeSimpleLabelStatusMap[diff.type]}> */}
-      {/*   {t(BulkModificationDiffType[diff.type])} */}
+      {/*   {t<string>(BulkModificationDiffType[diff.type])} */}
       {/* </SimpleLabel> */}
       <div className="current">{renderValue(diff.currentValue)}</div>
       <CustomIcon className={'type'} type={TypeIconMap[diff.type]} size={'small'} />

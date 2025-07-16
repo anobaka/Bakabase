@@ -46,17 +46,17 @@ const CategoryOptions = ({
     <OptionsCard header={(
       <div className={'flex items-center gap-1 line-through opacity-60'}>
         {category.name}
-        <Tooltip content={t('Category is deprecated and will be removed in a future version.')}>
+        <Tooltip content={t<string>('Category is deprecated and will be removed in a future version.')}>
           <div className={'flex items-center gap-1'}>
             <AiOutlineWarning className={'text-lg'} />
-            {t('Deprecated')}
+            {t<string>('Deprecated')}
           </div>
         </Tooltip>
       </div>
     )}
     >
       <BooleanOptions
-        subject={t(SubjectLabels.DeleteResourcesWithUnknownPath)}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
         onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownPath}
       />

@@ -46,14 +46,14 @@ export class PscMatcherValue implements IPscMatcherValue {
   static ToString(t: TFunction<'translation', undefined>, value: IPscMatcherValue): string {
     switch (value.valueType) {
       case ResourceMatcherValueType.FixedText:
-        return t('Fixed text: {{text}}', { text: value.fixedText });
+        return t<string>('Fixed text: {{text}}', { text: value.fixedText });
       case ResourceMatcherValueType.Regex:
-        return t('Regex: {{regex}}', { regex: value.regex });
+        return t<string>('Regex: {{regex}}', { regex: value.regex });
       case ResourceMatcherValueType.Layer:
         if (value.layer && value.layer < 0) {
-          return t('Layer: the {{layer}} layer to the last', { layer: -value.layer });
+          return t<string>('Layer: the {{layer}} layer to the last', { layer: -value.layer });
         } else {
-          return t('Layer: the {{layer}} layer', { layer: value.layer });
+          return t<string>('Layer: the {{layer}} layer', { layer: value.layer });
         }
     }
   }

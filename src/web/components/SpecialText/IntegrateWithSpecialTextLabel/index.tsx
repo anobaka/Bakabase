@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
-import { history, useLocation } from 'ice';
+import { useRouter, usePathname } from 'next/navigation';
 import { Chip, Link, Modal, Tooltip } from '@/components/bakaui';
 import { SpecialTextType } from '@/sdk/constants';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
@@ -17,7 +17,7 @@ export default ({ type }: IProps) => {
   let tooltipContent = '';
   switch (type) {
     case SpecialTextType.DateTime:
-      tooltipContent = t('Data will be attempted to be converted into date&time data according to relevant conversions.');
+      tooltipContent = t<string>('Data will be attempted to be converted into date&time data according to relevant conversions.');
       break;
     case SpecialTextType.Useless:
     case SpecialTextType.Language:
@@ -25,7 +25,7 @@ export default ({ type }: IProps) => {
     case SpecialTextType.Standardization:
     case SpecialTextType.Volume:
     case SpecialTextType.Trim:
-      tooltipContent = t('Data will be processed with special texts.');
+      tooltipContent = t<string>('Data will be processed with special texts.');
       break;
     default:
       break;
@@ -45,8 +45,8 @@ export default ({ type }: IProps) => {
               e.stopPropagation();
 
               createPortal(Modal, {
-                title: t('We are leaving current page'),
-                children: t('Are you sure?'),
+                title: t<string>('We are leaving current page'),
+                children: t<string>('Are you sure?'),
                 defaultVisible: true,
                 onOk: () => {
                   history?.push('/text');
@@ -54,7 +54,7 @@ export default ({ type }: IProps) => {
                 },
               );
             }}
-          >{t('Click to check special texts')}</Link>
+          >{t<string>('Click to check special texts')}</Link>
         </div>
       )}
     >
@@ -63,7 +63,7 @@ export default ({ type }: IProps) => {
         variant={'flat'}
         radius={'sm'}
       >
-        {t('Integrate with special text')}
+        {t<string>('Integrate with special text')}
       </Chip>
     </Tooltip>
   );

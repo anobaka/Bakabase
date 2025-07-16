@@ -62,7 +62,7 @@ export default ({
           <div className={'flex flex-col gap-1'}>
             <Input
               size={'sm'}
-              label={t('Text')}
+              label={t<string>('Text')}
               value={editingValue?.text}
               onValueChange={text => {
                 setEditingValue({
@@ -73,7 +73,7 @@ export default ({
             />
             <Input
               size={'sm'}
-              label={t('Link')}
+              label={t<string>('Link')}
               value={editingValue?.url}
               onValueChange={url => {
                 setEditingValue({
@@ -91,7 +91,7 @@ export default ({
                   setEditingValue(undefined);
                 }}
               >
-                {t('Submit')}
+                {t<string>('Submit')}
               </Button>
               <Button
                 size={'sm'}
@@ -99,7 +99,7 @@ export default ({
                   setEditingValue(undefined);
                 }}
               >
-                {t('Cancel')}
+                {t<string>('Cancel')}
               </Button>
             </div>
           </div>

@@ -70,7 +70,7 @@ export default ({ options, enhancer }: IProps) => {
     case Status.NotAllSet:
       return (
         <Tooltip
-          content={t('Some of targets are not mapped to a property, corresponding data will not be enhanced.')}
+          content={t<string>('Some of targets are not mapped to a property, corresponding data will not be enhanced.')}
         >
           <ExclamationCircleOutlined
             className={'text-small'}
@@ -81,7 +81,7 @@ export default ({ options, enhancer }: IProps) => {
     case Status.NotSet:
       return (
         <Tooltip
-          content={t('None of targets is mapped to a property, so no data will be enhanced.')}
+          content={t<string>('None of targets is mapped to a property, so no data will be enhanced.')}
         >
           <ExclamationCircleOutlined
             className={'text-small'}

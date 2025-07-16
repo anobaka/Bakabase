@@ -82,15 +82,15 @@ export default ({
             {/*   radius={'sm'} */}
             {/*   size={'sm'} */}
             {/*   classNames={{}} */}
-            {/* >{t('{{count}} categories', { count: categories.length })}</Chip> */}
+            {/* >{t<string>('{{count}} categories', { count: categories.length })}</Chip> */}
           </Tooltip>
         ) : (
           <Tooltip
             placement={'bottom'}
             content={(
               <div>
-                <div>{t('No category bound')}</div>
-                <div>{t('You can bind properties in category page')}</div>
+                <div>{t<string>('No category bound')}</div>
+                <div>{t<string>('You can bind properties in category page')}</div>
               </div>
             )}
           >
@@ -100,7 +100,7 @@ export default ({
         {property.valueCount != undefined && (
           <Tooltip
             placement={'bottom'}
-            content={t('{{count}} values', { count: property.valueCount })}
+            content={t<string>('{{count}} values', { count: property.valueCount })}
           >
             <div className={'flex gap-0.5 items-center'}>
               <DatabaseOutlined className={'text-sm'} />
@@ -146,9 +146,9 @@ export default ({
           await BApi.customProperty.removeCustomProperty(property.id);
           onRemoved?.();
         }}
-        title={t('Delete a property')}
+        title={t<string>('Delete a property')}
       >
-        {t('This operation can not be undone, are you sure?')}
+        {t<string>('This operation can not be undone, are you sure?')}
       </Modal>
       <div className={`${styles.line1} flex item-center justify-between gap-1`}>
         <div className={`${styles.left}`}>
@@ -156,12 +156,12 @@ export default ({
             <Chip
               size={'sm'}
               radius={'sm'}
-            >{t(`${PropertyPool[property.pool]}`)}</Chip>
+            >{t<string>(`${PropertyPool[property.pool]}`)}</Chip>
             {property.name}
           </div>
           <Tooltip
             color={'foreground'}
-            content={t(PropertyType[property.type!])}
+            content={t<string>(PropertyType[property.type!])}
           >
             <div className={styles.type}>
               <PropertyTypeIcon

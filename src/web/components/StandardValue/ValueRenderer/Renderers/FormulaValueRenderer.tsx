@@ -13,6 +13,6 @@ export default ({ value, variant, editor, ...props }: FormulaValueRendererProps)
   const v = variant ?? 'default';
 
   return (
-    <span>{t('Not supported')}</span>
+    <span>{t<string>('Not supported')}</span>
   );
 };

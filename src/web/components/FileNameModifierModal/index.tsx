@@ -28,7 +28,7 @@ const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, 
   return (
     <Modal defaultVisible onClose={onClose} title={(
       <div className="flex items-center gap-1">
-        {t('FileNameModifier.Title')}
+        {t<string>('FileNameModifier.Title')}
         <BetaChip />
       </div>
     )} footer={null} size='xl'>

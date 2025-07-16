@@ -39,7 +39,7 @@ export default (props: RatingValueRendererProps) => {
       <NumberValueEditor
         value={value}
         onValueChange={changeValue}
-        placeholder={t('Set rating')}
+        placeholder={t<string>('Set rating')}
       />
     );
   } else {

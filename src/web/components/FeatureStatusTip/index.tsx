@@ -58,7 +58,7 @@ export default ({
           onClick={() => {
             createPortal(Modal, {
               defaultVisible: true,
-              title: t('Join QQ group'),
+              title: t<string>('Join QQ group'),
               children: (
                 <img src={qqGroupImg} alt={'Qrcode for qq group'} />
               ),
@@ -90,7 +90,7 @@ export default ({
       {renderText()}
       {url && (
         <>
-          {t('For more information, you can visit:')}
+          {t<string>('For more information, you can visit:')}
           <ExternalLink
             href={url}
             className={'px-1'}

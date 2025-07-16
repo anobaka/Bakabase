@@ -30,21 +30,21 @@ export default ({
           <Checkbox
             onValueChange={v => setDeleteEmptyOnly(v)}
             size={'sm'}
-          >{t('Delete empty records only')}</Checkbox>
+          >{t<string>('Delete empty records only')}</Checkbox>
           <Tooltip
             color={'secondary'}
             className={'max-w-[600px]'}
             content={(
               <div>
-                <div>{t('When the enhancement is successfully executed but no data available for enhancement is retrieved, an empty enhancement record is generated.')}</div>
-                <div>{t('Enhancement will only be executed when there are no existing enhancement records, so in some cases, you may only need to delete the empty enhancement records.')}</div>
+                <div>{t<string>('When the enhancement is successfully executed but no data available for enhancement is retrieved, an empty enhancement record is generated.')}</div>
+                <div>{t<string>('Enhancement will only be executed when there are no existing enhancement records, so in some cases, you may only need to delete the empty enhancement records.')}</div>
               </div>
             )}
           >
             <QuestionCircleOutlined className={'text-base'} />
           </Tooltip>
         </div>
-        <div>{t('This operation cannot be undone. Would you like to proceed?')}</div>
+        <div>{t<string>('This operation cannot be undone. Would you like to proceed?')}</div>
       </div>
     </Modal>
   );

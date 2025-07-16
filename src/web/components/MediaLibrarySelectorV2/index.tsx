@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { DoubleRightOutlined, HistoryOutlined, SearchOutlined } from '@ant-design/icons';
 import { buildLogger, standardizePath } from '@/components/utils';
 import BApi from '@/sdk/BApi';
-import store from '@/store';
+import { useResourceOptionsStore } from '@/models/options';
 import { MediaLibraryAdditionalItem } from '@/sdk/constants';
 import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Chip, Divider, Input, Modal } from '@/components/bakaui';
@@ -37,7 +37,7 @@ export default (props: Props) => {
   const [visible, setVisible] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [keyword, setKeyword] = useState<string>();
-  const resourceOptions = store.useModelState('resourceOptions');
+  const resourceOptions = useResourceOptionsStore(state => state.data);
 
   const init = async () => {
     const mls = (await BApi.mediaLibrary.getAllMediaLibraries({ additionalItems: MediaLibraryAdditionalItem.Category })).data ?? [];
@@ -62,7 +62,7 @@ export default (props: Props) => {
     }
     const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
     if (mlv2s.length > 0) {
-      data[0] = { id: 0, name: t('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: [ml.path] })) };
+      data[0] = { id: 0, name: t<string>('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: [ml.path] })) };
     }
     setCategories(Object.values(data));
   };
@@ -96,7 +96,7 @@ export default (props: Props) => {
       visible={visible}
       footer={false}
       size={'lg'}
-      title={t('Select a media library')}
+      title={t<string>('Select a media library')}
       onDestroyed={props.onDestroyed}
       onClose={() => {
         setVisible(false);
@@ -108,7 +108,7 @@ export default (props: Props) => {
             startContent={(
               <SearchOutlined className={'text-base'} />
             )}
-            placeholder={t('Quick filter')}
+            placeholder={t<string>('Quick filter')}
             size={'sm'}
             value={keyword}
             onValueChange={(v) => setKeyword(v)}
@@ -130,7 +130,7 @@ export default (props: Props) => {
                         variant={'flat'}
                         radius={'sm'}
                       >
-                        {t('Deprecated')}
+                        {t<string>('Deprecated')}
                       </Chip>
                     )}
                   </div>
@@ -147,7 +147,7 @@ export default (props: Props) => {
                               if (confirmation) {
                                 createPortal(Modal, {
                                   defaultVisible: true,
-                                  title: t('Are you sure to select this media library?'),
+                                  title: t<string>('Are you sure to select this media library?'),
                                   children: (
                                     <div className={'flex items-center gap-2'}>
                                       <Chip

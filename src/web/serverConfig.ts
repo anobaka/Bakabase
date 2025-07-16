@@ -1,5 +1,5 @@
 const serverConfig = {
-  apiEndpoint: process.env.ICE_SERVER_ENDPOINT,
+  apiEndpoint: process.env.NEXT_PUBLIC_API_ENDPOINT,
 };
 
 export default serverConfig;

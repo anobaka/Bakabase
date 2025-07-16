@@ -30,9 +30,9 @@ export default (props: Props) => {
       content={(
         <div className={'flex flex-col gap-1'}>
           <div>
-            {t('We will automatically convert the value from {{fromType}} to {{toType}}.', {
-              fromType: t(`PropertyType.${PropertyType[fromType]}`),
-              toType: t(`PropertyType.${PropertyType[toType]}`),
+            {t<string>('We will automatically convert the value from {{fromType}} to {{toType}}.', {
+              fromType: t<string>(`PropertyType.${PropertyType[fromType]}`),
+              toType: t<string>(`PropertyType.${PropertyType[toType]}`),
             })}
           </div>
           <div>
@@ -44,7 +44,7 @@ export default (props: Props) => {
                 createPortal(TypeConversionRuleOverviewDialog, {});
               }}
             >
-              {t('You can check type conversion rules here')}
+              {t<string>('You can check type conversion rules here')}
             </Button>
           </div>
         </div>
@@ -61,7 +61,7 @@ export default (props: Props) => {
         color={'warning'}
       >
         <WarningOutlined className={'text-base'} />
-        {t('Type transformation')}
+        {t<string>('Type transformation')}
       </Chip>
     </Tooltip>
   );

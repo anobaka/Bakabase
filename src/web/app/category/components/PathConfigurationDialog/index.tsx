@@ -148,7 +148,7 @@ export default ({
         {(values).map((s, i) => {
           let label = s.propertyName;
           if (label == undefined || label.length == 0) {
-            label = t('Unknown property');
+            label = t<string>('Unknown property');
           }
           let isDeletable = !s.isResourceProperty;
           return (
@@ -175,7 +175,7 @@ export default ({
                   onClick={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t('Deleting property locator for {{propertyName}}', { propertyName: label }),
+                      title: t<string>('Deleting property locator for {{propertyName}}', { propertyName: label }),
                       onOk: async () => {
                         pc.rpmValues?.splice(i, 1);
                         await BApi.mediaLibrary.patchMediaLibrary(libraryId, {
@@ -210,11 +210,11 @@ export default ({
         onClose={() => {
           onClosed?.(pc);
         }}
-        title={t('Path configuration')}
+        title={t<string>('Path configuration')}
       >
         <div className="flex flex-col gap-2 shadow">
           <section>
-            <div className="text-base font-bold mb-1">{t('Root path')}</div>
+            <div className="text-base font-bold mb-1">{t<string>('Root path')}</div>
             <div>
               <Button
                 variant={'light'}
@@ -230,7 +230,7 @@ export default ({
                     defaultSelectedPath: pc?.path ?? undefined,
                   });
                 }}
-              >{pc?.path ?? t('Setup')}
+              >{pc?.path ?? t<string>('Setup')}
               </Button>
               {rootPathIsSet && (
                 <FolderOpenOutlined
@@ -247,13 +247,13 @@ export default ({
           <Divider />
           <section className="">
             <div className="text-base font-bold">
-              {t('Setup how to find resources and properties')}
+              {t<string>('Setup how to find resources and properties')}
             </div>
             {pc?.path && (
               <div className={'opacity-60 italic'}>
-                {t('To setup this item, you should pick up a file first within your root path.')}
+                {t<string>('To setup this item, you should pick up a file first within your root path.')}
                 <br />
-                {t('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
+                {t<string>('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
               </div>
             )}
             {renderRpmValues()}
@@ -277,8 +277,8 @@ export default ({
                         } else {
                           createPortal(Modal, {
                             defaultVisible: true,
-                            title: t('Error'),
-                            children: t('You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.'),
+                            title: t<string>('Error'),
+                            children: t<string>('You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.'),
                             footer: {
                               actions: ['cancel'],
                             },
@@ -288,7 +288,7 @@ export default ({
                     });
                   }}
                 >
-                  {t('Setup')}
+                  {t<string>('Setup')}
                 </Button>
               ) : (
                 <Chip
@@ -296,7 +296,7 @@ export default ({
                   variant={'light'}
                   color={'warning'}
                 >
-                  {t('You need to set up root path before configuring this item')}
+                  {t<string>('You need to set up root path before configuring this item')}
                 </Chip>
               )}
             </div>

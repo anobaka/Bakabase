@@ -2,11 +2,10 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import './index.scss';
-import { Icon } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { Chart, LineAdvance } from 'bizcharts';
-import { history } from 'ice';
-import { AiOutlinePlusCircle } from 'react-icons/ai';
+import { useRouter } from 'next/navigation';
+import { AiOutlineArrowRight, AiOutlinePlusCircle } from 'react-icons/ai';
 import BApi from '@/sdk/BApi';
 import type {
   BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
@@ -36,7 +35,7 @@ export default () => {
   const renderTrending = () => {
     if (data && data.resourceTrending) {
       const chartData = data.resourceTrending?.map(r => ({
-        week: r.offset == 0 ? t('This week') : r.offset == -1 ? t('Last week') : `${t('{{count}} weeks ago', { count: -(r.offset!) })}`,
+        week: r.offset == 0 ? t<string>('This week') : r.offset == -1 ? t<string>('Last week') : `${t<string>('{{count}} weeks ago', { count: -(r.offset!) })}`,
         count: r.count,
       }));
       return (
@@ -87,7 +86,7 @@ export default () => {
       <div className={'flex gap-2 max-h-full'}>
         <div className={'w-[160px]'}>
           <div className={'text-lg'}>
-            {t('Resource count')}
+            {t<string>('Resource count')}
           </div>
           <div className={'text-3xl'}>
             {total}
@@ -102,11 +101,11 @@ export default () => {
             variant={'flat'}
             color={'primary'}
             onPress={() => {
-              history!.push('/category');
+              useRouter().push('/category');
             }}
           >
             <AiOutlinePlusCircle className={'text-medium'} />
-            {t('Add your resources')}
+            {t<string>('Add your resources')}
           </Button>
         )}
       </div>
@@ -118,13 +117,13 @@ export default () => {
       {initializedRef.current ? (<>
         <section className={'h-1/3 max-h-1/3'}>
           <div className="block w-2/3">
-            <div className={'title'}>{t('Overview')}</div>
+            <div className={'title'}>{t<string>('Overview')}</div>
             <div className={'content min-h-0'}>
               {renderResourceCounts()}
             </div>
           </div>
           <div className="block trending" style={{ flex: 1 }}>
-            <div className="title">{t('Trending')}</div>
+            <div className="title">{t<string>('Trending')}</div>
             <div className="content">
               {renderTrending()}
             </div>
@@ -133,16 +132,16 @@ export default () => {
         <section style={{ maxHeight: '40%' }}>
           <div className="block" style={{ flex: 2.5 }}>
             <div className={'title flex items-center gap-2'}>
-              {t('Property value coverage')}
+              {t<string>('Property value coverage')}
               <div className={'text-sm opacity-60'}>
-                {t('As more data is filled in, property value coverage increases')}
+                {t<string>('As more data is filled in, property value coverage increases')}
               </div>
             </div>
             {property ? (
               <div className={'flex items-start gap-8 min-h-0'}>
                 <div className={'w-[200px]'}>
                   <div className={'text-lg'}>
-                    {t('Overall')}
+                    {t<string>('Overall')}
                   </div>
                   <div className={'text-3xl'}>
                     {property.totalExpectedPropertyValueCount > 0
@@ -156,7 +155,7 @@ export default () => {
                 </div>
                 <div className={'flex flex-col min-h-0 max-h-full'}>
                   <div className={'text-lg'}>
-                    {t('Details')}
+                    {t<string>('Details')}
                   </div>
                   <div className={'flex flex-wrap gap-2 min-h-0 overflow-auto'}>
                     {property.propertyValueCoverages?.map(x => {
@@ -193,16 +192,16 @@ export default () => {
         </section>
         <section>
           <div className="block" style={{ flex: 1.5 }}>
-            <div className={'title'}>{t('Downloader')}</div>
+            <div className={'title'}>{t<string>('Downloader')}</div>
             <div className="content">
               {(data.downloaderDataCounts && data.downloaderDataCounts.length > 0) ? (
                 <>
                   <div className={'downloader-item'}>
-                    <div>{t('Third party')}</div>
+                    <div>{t<string>('Third party')}</div>
                     {downloadTaskStatuses.map((s, i) => {
                       return (
                         <div key={i}>
-                          {t(s.label)}
+                          {t<string>(s.label)}
                         </div>
                       );
                     })}
@@ -210,7 +209,7 @@ export default () => {
                   {data.downloaderDataCounts?.map(c => {
                     return (
                       <div className={'downloader-item'}>
-                        <div>{t(ThirdPartyId[c.id]!)}</div>
+                        <div>{t<string>(ThirdPartyId[c.id]!)}</div>
                         {downloadTaskStatuses.map((s, i) => {
                           return (
                             <div key={i}>
@@ -223,7 +222,7 @@ export default () => {
                   })}
                 </>
               ) : (
-                t('No content')
+                t<string>('No content')
               )}
             </div>
           </div>
@@ -240,7 +239,7 @@ export default () => {
                               size={'sm'}
                               radius={'sm'}
                             >
-                              {t(c.name)}
+                              {t<string>(c.name)}
                             </Chip>
                             {c.count}
                           </div>
@@ -258,13 +257,13 @@ export default () => {
                   <div className="t-t-c file-mover">
                     <div className="left">
                       <div className="text">
-                        {t('File mover')}
+                        {t<string>('File mover')}
                       </div>
                     </div>
                     <div className="right">
                       <div className="count">
                         {data.fileMover?.sourceCount ?? 0}
-                        <Icon type="arrow-double-right" size={'xs'} />
+                        <AiOutlineArrowRight />
                         {data.fileMover?.targetCount ?? 0}
                       </div>
                     </div>

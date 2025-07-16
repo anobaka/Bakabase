@@ -99,7 +99,7 @@ export default ({
         if (!a.code) {
           playlist.items = items;
           forceUpdate();
-          Message.success(t('Add successfully'));
+          Message.success(t<string>('Add successfully'));
           return a;
         }
         throw new Error(a.message!);
@@ -125,11 +125,11 @@ export default ({
     // console.log(playerElement, playerElement?.currentTime);
     const totalSeconds = Math.floor(defaultNewItem!.totalSeconds || 0);
     if (totalSeconds == 0) {
-      return Message.error(t('Can not get duration of a media file'));
+      return Message.error(t<string>('Can not get duration of a media file'));
     }
     const duration = [0, totalSeconds];
     Dialog.show({
-      title: t('Select duration'),
+      title: t<string>('Select duration'),
       id: 'playlist-item-duration-selector',
       content: (
         <div className={'playlist-item-duration-selector'}>
@@ -174,7 +174,7 @@ export default ({
           }}
         >
           <CustomIcon type={'plus-circle'} size={'small'} />
-          {t(added ? 'Added' : 'Add it here')}
+          {t<string>(added ? 'Added' : 'Add it here')}
         </Button>
       );
       if (added) {
@@ -184,7 +184,7 @@ export default ({
             triggerType={'hover'}
             v2
           >
-            {t('You can add it more than once, and if you want to remove it from playlist, you should click the corresponding playlist first.')}
+            {t<string>('You can add it more than once, and if you want to remove it from playlist, you should click the corresponding playlist first.')}
           </Balloon.Tooltip>
         );
       }
@@ -240,14 +240,14 @@ export default ({
                               };
                               MediaPlayer.show(mpProps);
                             } else {
-                              Message.error(t('No playable contents'));
+                              Message.error(t<string>('No playable contents'));
                             }
                           }
                         });
                     }}
                   >
                     <CustomIcon type={'play-circle'} size={'small'} />
-                    {t('Play')}
+                    {t<string>('Play')}
                   </Button>
                 )}
                 <Button
@@ -255,7 +255,7 @@ export default ({
                   size={'small'}
                   onClick={() => {
                     Dialog.confirm({
-                      title: t('Sure to delete?'),
+                      title: t<string>('Sure to delete?'),
                       onOk: () => BApi.playlist.deletePlaylist(pl.id)
                         .then(a => {
                           if (!a.code) {
@@ -268,7 +268,7 @@ export default ({
                   }}
                 >
                   <CustomIcon type={'delete'} size={'small'} />
-                  {t('Delete')}
+                  {t<string>('Delete')}
                 </Button>
               </div>
             )}
@@ -276,7 +276,7 @@ export default ({
               <Button
                 onClick={() => {
                   const dialog = Dialog.show({
-                    title: t('Details of {{name}}', { name: pl.name }),
+                    title: t<string>('Details of {{name}}', { name: pl.name }),
                     closeMode: ['esc', 'mask', 'close'],
                     v2: true,
                     width: 800,
@@ -315,7 +315,7 @@ export default ({
           onClick={() => {
             let name;
             Dialog.show({
-              title: t('Creating playlist'),
+              title: t<string>('Creating playlist'),
               closeable: true,
               content: (
                 <Input onChange={(v) => {
@@ -325,7 +325,7 @@ export default ({
               ),
               onOk: () => new Promise((resolve, reject) => {
                 if (!name) {
-                  Message.error(t('Name can not be empty'));
+                  Message.error(t<string>('Name can not be empty'));
                   reject();
                   return;
                 }
@@ -344,7 +344,7 @@ export default ({
             });
           }}
         >
-          {t('Create')}
+          {t<string>('Create')}
         </Button>
       </div>
     </div>

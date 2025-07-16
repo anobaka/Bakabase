@@ -22,7 +22,7 @@ export default ({ matches, value, onDeleteMatcherValue }: Props) => {
   if (matches.length > 0) {
     return (
       <div className={'flex flex-col mt-2'}>
-        <div className="font-bold mb-1">{t('Global matches')}</div>
+        <div className="font-bold mb-1">{t<string>('Global matches')}</div>
         {matches.map(gm => {
           const v = value?.filter(v => v.property.equals(gm.property))?.[gm.valueIndex ?? 0]?.value;
           return (
@@ -34,7 +34,7 @@ export default ({ matches, value, onDeleteMatcherValue }: Props) => {
               {v && (
                 <span>{PscMatcherValue.ToString(t, v)}</span>
               )}
-              {t('Matched {{count}} results', { count: gm.matches.length })}
+              {t<string>('Matched {{count}} results', { count: gm.matches.length })}
               {gm.matches.map(m => (
                 <Chip
                   radius={'sm'}

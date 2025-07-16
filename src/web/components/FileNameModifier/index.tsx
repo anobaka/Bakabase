@@ -186,7 +186,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
           });
           setPreviewResults(results);
         } catch (e: any) {
-          setError(e?.message || t('FileNameModifier.PreviewFailed'));
+          setError(e?.message || t<string>('FileNameModifier.PreviewFailed'));
         }
       })();
     }, 300);
@@ -196,7 +196,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
   const handleExecuteModification = async () => {
     const validOperations = operations.filter(op => !validateOperation(op));
     if (validOperations.length === 0) {
-      setError(t('FileNameModifier.Error.NoValidOperation'));
+      setError(t<string>('FileNameModifier.Error.NoValidOperation'));
       return;
     }
     try {
@@ -209,7 +209,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       const result = rsp.data ?? [];
       
       Modal.show({
-        title: t('FileNameModifier.ModificationResult'),
+        title: t<string>('FileNameModifier.ModificationResult'),
         onClose: () => {},
         size: 'xl',
         footer: {
@@ -218,17 +218,17 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
         children: (
           <>
             <div className="mb-2">
-              <span className="text-green-600 font-semibold mr-4">{t('FileNameModifier.ModificationSuccessCount', { count: result.filter(r => r.success).length })}</span>
-              <span className="text-red-600 font-semibold">{t('FileNameModifier.ModificationFailCount', { count: result.filter(r => !r.success).length })}</span>
+              <span className="text-green-600 font-semibold mr-4">{t<string>('FileNameModifier.ModificationSuccessCount', { count: result.filter(r => r.success).length })}</span>
+              <span className="text-red-600 font-semibold">{t<string>('FileNameModifier.ModificationFailCount', { count: result.filter(r => !r.success).length })}</span>
             </div>
             {result.filter(r => !r.success).length > 0 && (
               <div className="max-h-48 overflow-y-auto border rounded p-2 bg-background border border-default">
-                <div className="font-semibold mb-1">{t('FileNameModifier.ModificationFailList')}</div>
+                <div className="font-semibold mb-1">{t<string>('FileNameModifier.ModificationFailList')}</div>
                 <ul className="text-xs">
                   {result.filter(r => !r.success).map(item => (
                     <li key={item.oldPath} className="mb-1">
                       <span className="text-foreground">{item.oldPath}</span>
-                      <span className="text-red-500 ml-2">{t('FileNameModifier.ModificationFailReason')}: {item.error}</span>
+                      <span className="text-red-500 ml-2">{t<string>('FileNameModifier.ModificationFailReason')}: {item.error}</span>
                     </li>
                   ))}
                 </ul>
@@ -241,7 +241,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       setModifying(false);
     } catch (e: any) {
       setModifying(false);
-      setError(e?.message || t('FileNameModifier.ModificationFailed'));
+      setError(e?.message || t<string>('FileNameModifier.ModificationFailed'));
     }
   };
 
@@ -250,7 +250,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       {/* 左侧：操作配置区域 */}
       <div className="flex-1 flex flex-col min-w-0">
         <h5 className="font-semibold mb-2">
-          {t('FileNameModifier.OperationsList')}
+          {t<string>('FileNameModifier.OperationsList')}
         </h5>
         <div className="flex-1 overflow-y-auto rounded p-2">
           {operations.map((op, idx) => (
@@ -258,23 +258,23 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
               key={idx}
               operation={op}
               index={idx}
-              errors={validateOperation(op) ? t(validateOperation(op)) : ''}
+              errors={validateOperation(op) ? t<string>(validateOperation(op)) : ''}
               onChange={op2 => handleOperationChange(idx, op2)}
               onDelete={() => handleOperationDelete(idx)}
               onMoveUp={idx > 0 ? () => handleOperationMoveUp(idx) : undefined}
               onMoveDown={idx < operations.length - 1 ? () => handleOperationMoveDown(idx) : undefined}
               onCopy={() => handleOperationCopy(idx)}
-              aria-label={t('FileNameModifier.OperationCardAria', { index: idx + 1 })}
+              aria-label={t<string>('FileNameModifier.OperationCardAria', { index: idx + 1 })}
             />
           ))}
           <Button
             onClick={() => setOperations(ops => [...ops, { ...defaultOperation }])}
             variant="light"
             className="w-full mt-2"
-            aria-label={t('FileNameModifier.AddOperation')}
+            aria-label={t<string>('FileNameModifier.AddOperation')}
           >
             <AiOutlinePlusCircle className='text-lg' />
-            {t('FileNameModifier.AddOperation')}
+            {t<string>('FileNameModifier.AddOperation')}
           </Button>
         </div>
         {/* 操作按钮 */}
@@ -283,11 +283,11 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
             <Button 
               variant="solid" 
               color="primary"
-              aria-label={t('FileNameModifier.ExecuteModification')}
+              aria-label={t<string>('FileNameModifier.ExecuteModification')}
               isLoading={modifying}
               onClick={handleExecuteModification}
             >
-              {t('FileNameModifier.ExecuteModification')}
+              {t<string>('FileNameModifier.ExecuteModification')}
             </Button>
           </div>
           {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
@@ -299,17 +299,17 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       <div className="flex-1 flex flex-col min-w-0">
         <div className="mb-2 flex justify-between items-center">
           <h5 className="font-semibold mb-0 flex items-center gap-1">
-            {showTextarea ? t('FileNameModifier.EditFileList') : t('FileNameModifier.PreviewResults')}
+            {showTextarea ? t<string>('FileNameModifier.EditFileList') : t<string>('FileNameModifier.PreviewResults')}
             {!showTextarea && (
               <Button
                 size="sm"
                 variant="light"
                 onClick={() => setShowFullPaths(!showFullPaths)}
                 className="text-xs"
-                aria-label={showFullPaths ? t('FileNameModifier.HideFullPaths') : t('FileNameModifier.ShowFullPaths')}
+                aria-label={showFullPaths ? t<string>('FileNameModifier.HideFullPaths') : t<string>('FileNameModifier.ShowFullPaths')}
               >
                 {showFullPaths ? <AiOutlineEyeInvisible className='text-base' /> : <AiOutlineEye className='text-base' />}
-                {showFullPaths ? t('FileNameModifier.HideFullPaths') : t('FileNameModifier.ShowFullPaths')}
+                {showFullPaths ? t<string>('FileNameModifier.HideFullPaths') : t<string>('FileNameModifier.ShowFullPaths')}
               </Button>
             )}
           </h5>
@@ -318,10 +318,10 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
               onClick={handleShowFileListEdit}
               size="sm"
               variant="light"
-              aria-label={t('FileNameModifier.EditFileList')}
+              aria-label={t<string>('FileNameModifier.EditFileList')}
             >
               <AiOutlineEdit className='text-base' />
-              {t('FileNameModifier.EditFileList')}
+              {t<string>('FileNameModifier.EditFileList')}
             </Button>
           )}
         </div>
@@ -331,24 +331,24 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
               <Textarea
                 value={filePaths.join('\n')}
                 onValueChange={e => setFilePaths(e.split('\n'))}
-                placeholder={t('FileNameModifier.FilePathsPlaceholder')}
-                aria-label={t('FileNameModifier.FilePathsTextarea')}
+                placeholder={t<string>('FileNameModifier.FilePathsPlaceholder')}
+                aria-label={t<string>('FileNameModifier.FilePathsTextarea')}
                 minRows={10}
                 maxRows={15}
               />
               <div className="mt-2 flex flex-wrap gap-2">
-                <Button onClick={handleConfirmPaths} variant="solid" color='primary' size="sm" aria-label={t('FileNameModifier.ConfirmPaths')}>
-                  {t('FileNameModifier.ConfirmPaths')}
+                <Button onClick={handleConfirmPaths} variant="solid" color='primary' size="sm" aria-label={t<string>('FileNameModifier.ConfirmPaths')}>
+                  {t<string>('FileNameModifier.ConfirmPaths')}
                 </Button>
                 <Button onClick={handleDeduplicatePaths} color='secondary'
-                  size="sm" variant="light" aria-label={t('FileNameModifier.Deduplicate')}>{t('FileNameModifier.Deduplicate')}</Button>
+                  size="sm" variant="light" aria-label={t<string>('FileNameModifier.Deduplicate')}>{t<string>('FileNameModifier.Deduplicate')}</Button>
                 <Button
                   onClick={() => setShowTextarea(false)}
                   size="sm"
                   variant="flat"
-                  aria-label={t('FileNameModifier.Cancel')}
+                  aria-label={t<string>('FileNameModifier.Cancel')}
                 >
-                  {t('FileNameModifier.Cancel')}
+                  {t<string>('FileNameModifier.Cancel')}
                 </Button>
               </div>
             </div>

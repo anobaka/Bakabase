@@ -38,7 +38,7 @@ export default ({
             }}
             className={'justify-self-center'}
             size={'sm'}
-          >{t(o ? 'Yes' : 'No')}</Checkbox>
+          >{t<string>(o ? 'Yes' : 'No')}</Checkbox>
         );
       })}
     </div>

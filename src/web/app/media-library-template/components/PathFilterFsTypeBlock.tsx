@@ -11,14 +11,14 @@ export default ({ type }: {type: PathFilterFsType}) => {
       return (
         <div className={'inline-flex items-center gap-1'}>
           <BsFileEarmark />
-          {t(PathFilterFsType[type])}
+          {t<string>(PathFilterFsType[type])}
         </div>
       );
     case PathFilterFsType.Directory:
       return (
         <div className={'inline-flex items-center gap-1'}>
           <BsFolder />
-          {t(PathFilterFsType[type])}
+          {t<string>(PathFilterFsType[type])}
         </div>
       );
   }
