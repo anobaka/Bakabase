@@ -1,9 +1,9 @@
 {
   "profiles": {
-    "Bakabase.InsideWorld.App": {
+    "Bakabase.Service": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "applicationUrl": "http://localhost:5000",
+      "commandLineArgs": "--port 8080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

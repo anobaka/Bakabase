@@ -1,4 +1,3 @@
-// import { Button, Collapse, Dialog, Icon, Input, Loading, Message } from '@alifd/next';
 // import SimpleLabel from '@/components/SimpleLabel';
 // import './index.scss';
 // import CustomIcon from '@/components/CustomIcon';

@@ -1,15 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Tag } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
-import { set } from 'immer/dist/utils/common';
 import {
   BulkModificationProperty,
   MediaLibraryAdditionalItem,
   ResourceLanguage,
-  TagAdditionalItem,
 } from '@/sdk/constants';
 import BApi from '@/sdk/BApi';
-import { Tag as TagDto } from '@/core/models/Tag';
 
 interface IProps {
   property: BulkModificationProperty;

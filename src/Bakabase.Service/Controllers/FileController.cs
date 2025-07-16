@@ -107,6 +107,70 @@ namespace Bakabase.Service.Controllers
                 .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase));
         }
 
+        [HttpGet("search-fs-entries")]
+        [SwaggerOperation(OperationId = "SearchFileSystemEntries")]
+        public async Task<ListResponse<FileSystemEntryNameViewModel>> SearchFileSystemEntries(
+            string? prefix = null, bool? isDirectory = true, int maxResults = 20)
+        {
+            prefix = prefix?.StandardizePath();
+            var results = new List<FileSystemEntryNameViewModel>();
+            string? parent = null;
+            if (prefix.IsNotEmpty())
+            {
+                if (System.IO.File.Exists(prefix))
+                {
+                    parent = Path.GetDirectoryName(prefix);
+                    results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), false));
+                }
+                else
+                {
+                    if (Directory.Exists(prefix))
+                    {
+                        parent = prefix;
+                        results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), true));
+                    }
+                    else
+                    {
+                        var dir = Path.GetDirectoryName(prefix);
+                        if (dir.IsNotEmpty())
+                        {
+                            if (Directory.Exists(dir))
+                            {
+                                parent = dir;
+                            }
+                            else
+                            {
+                                return new ListResponse<FileSystemEntryNameViewModel>(results);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (parent == null)
+            {
+                var drives = DriveInfo.GetDrives()
+                    .Where(d => d.IsReady)
+                    .Select(d =>
+                        new FileSystemEntryNameViewModel(d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
+                results.AddRange(drives
+                    .Where(d => prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase));
+            }
+            else
+            {
+                var dirs = Directory.GetDirectories(parent).Select(p => p.StandardizePath()!)
+                    .Where(d => d.StartsWith(prefix!, StringComparison.OrdinalIgnoreCase)).ToList();
+                var files = Directory.GetFiles(parent).Select(p => p.StandardizePath()!)
+                    .Where(d => d.StartsWith(prefix!, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                results.AddRange(dirs.Select(d => new FileSystemEntryNameViewModel(d, Path.GetFileName(d), true))
+                    .Concat(files.Select(f => new FileSystemEntryNameViewModel(f, Path.GetFileName(f), false))));
+            }
+
+            return new ListResponse<FileSystemEntryNameViewModel>(results.Take(maxResults));
+        }
+
         [HttpGet("iwfs-info")]
         [SwaggerOperation(OperationId = "GetIwFsInfo")]
         public async Task<SingletonResponse<IwFsEntryLazyInfo>> GetIwFsInfo(string path, IwFsType type)

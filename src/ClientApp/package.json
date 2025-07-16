@@ -2,18 +2,12 @@
    "name": "bxb",
    "version": "1.0.0",
    "dependencies": {
-      "@alifd/next": "^1.26.8",
-      "@alifd/theme-design-pro": "^0.8.1",
       "@ant-design/icons": "^5.3.5",
       "@antv/data-set": "^0.11.8",
       "@dnd-kit/core": "^6.0.7",
       "@dnd-kit/sortable": "^7.0.2",
       "@dnd-kit/utilities": "^3.2.1",
       "@heroui/react": "2.7.6",
-      "@ice/plugin-css-assets-local": "^1.0.1",
-      "@ice/runtime": "^1.4.0",
-      "@icedesign/dynamic-icon": "^0.1.8",
-      "@icedesign/label": "^1.0.6",
       "@loadable/component": "^5.16.3",
       "@microsoft/signalr": "^7.0.0",
       "@react-stately/data": "^3.12.0",
@@ -80,6 +74,7 @@
       "react-input-autosize": "^3.0.0",
       "react-json-view": "^1.21.3",
       "react-konva": "^16.13.0-3",
+      "react-microsoft-clarity": "^2.0.0",
       "react-player": "^3.0.0",
       "react-portal": "^4.2.2",
       "react-router": "^5.2.0",
@@ -96,12 +91,10 @@
       "use-image": "^1.0.7",
       "use-immer": "^0.7.0",
       "util": "^0.12.5",
-      "video.js": "^7.19.2"
+      "video.js": "^7.19.2",
+      "zustand": "^5.0.6"
    },
    "devDependencies": {
-      "@applint/spec": "^1.2.3",
-      "@ice/app": "^3.4.0",
-      "@ice/plugin-store": "^1.0.0",
       "@types/node": "^18.11.17",
       "@types/react": "^18.0.0",
       "@types/react-dom": "^18.0.0",
@@ -111,7 +104,6 @@
       "postcss": "^8.4.38",
       "stylelint": "^15.2.0",
       "swagger-typescript-api": "^12.0.2",
-      "swagger-vue": "^1.0.3",
       "tailwindcss": "^3.4.3",
       "typescript": "^4.8.4"
    },
@@ -119,7 +111,7 @@
       "start": "ice start --port 4444",
       "build": "ice build",
       "lint": "eslint . --ext '.js,.jsx' --fix",
-      "gen-sdk": "swagger-typescript-api --union-enums -p http://127.0.0.1:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/api-generator.js && npx openapi-typescript http://127.0.0.1:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
+      "gen-sdk": "swagger-typescript-api --union-enums -p http://127.0.0.1:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/constantsGen.js && npx openapi-typescript http://127.0.0.1:5000/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
       "postinstall": "patch-package"
    },
    "title": "bxb",

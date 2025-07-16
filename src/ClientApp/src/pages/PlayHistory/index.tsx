@@ -29,7 +29,6 @@ import {
   Tooltip,
 } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 
 type Form = {
   pageSize: 100;

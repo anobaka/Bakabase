@@ -5,7 +5,7 @@ import { Textarea } from '@heroui/react';
 import CookieValidator from '@/components/CookieValidator';
 import type { CookieValidatorTarget } from '@/sdk/constants';
 import { ThirdPartyId } from '@/sdk/constants';
-import FileSelector from '@/components/FileSelector';
+import { FileSystemSelectorButton } from '@/components/FileSystemSelector';
 import { Chip, NumberInput, Tooltip } from '@/components/bakaui';
 import type { components } from '@/sdk/BApi2';
 
@@ -66,18 +66,14 @@ export default ({
             <>
               <div>{t('Default download path')}</div>
               <div>
-                <FileSelector
-                  size={'medium'}
+                <FileSystemSelectorButton
                   // size={'small'}
-                  type={'folder'}
-                  value={options?.downloader?.defaultPath}
-                  multiple={false}
-                  onChange={(defaultPath) => onChange({
+                  fileSystemSelectorProps={{ targetType: 'folder', onSelected: e => onChange({
                     downloader: {
                       ...(options?.downloader || {}),
-                      defaultPath: defaultPath as string,
+                      defaultPath: e.path,
                     },
-                  })}
+                  }), defaultSelectedPath: options?.downloader?.defaultPath }}
                 />
               </div>
             </>,

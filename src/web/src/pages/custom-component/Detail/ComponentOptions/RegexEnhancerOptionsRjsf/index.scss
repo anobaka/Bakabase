@@ -1,0 +1,15 @@
+.regex-enhancer-options-rjsf {
+  .error {
+    color: red;
+    font-size: 12px;
+  }
+
+  .icon-delete {
+    color: #ff8f8f;
+    cursor: pointer;
+
+    &:hover {
+      color: red;
+    }
+  }
+}

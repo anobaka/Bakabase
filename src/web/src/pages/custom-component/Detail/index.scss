@@ -1,0 +1,25 @@
+.custom-component-detail-dialog {
+  min-width: 800px;
+
+  .next-dialog-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+
+    &>* {
+      align-items: center;
+      display: flex;
+    }
+
+    &>.value {
+      & > * {
+        width: 100%;
+      }
+    }
+
+    .base-components {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}

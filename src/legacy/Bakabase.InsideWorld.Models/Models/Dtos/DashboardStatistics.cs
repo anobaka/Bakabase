@@ -10,13 +10,9 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
 {
     public class DashboardStatistics
     {
-        public List<CategoryMediaLibraryCount> CategoryMediaLibraryCounts { get; set; } = [];
-        public List<TextAndCount> TodayAddedCategoryResourceCounts { get; set; } = new();
-        public List<TextAndCount> ThisWeekAddedCategoryResourceCounts { get; set; } = new();
-        public List<TextAndCount> ThisMonthAddedCategoryResourceCounts { get; set; } = new();
+        public List<TextAndCount> MediaLibraryResourceCounts { get; set; } = [];
         public List<WeekCount> ResourceTrending { get; set; } = new();
 
-        public List<TextAndCount> TagResourceCounts { get; set; } = new();
         public List<DownloaderTaskCount> DownloaderDataCounts { get; set; } = new();
         public List<ThirdPartyRequestCount> ThirdPartyRequestCounts { get; set; } = new();
         public FileMoverInfo FileMover { get; set; } = new(0, 0);
@@ -29,8 +25,6 @@ namespace Bakabase.InsideWorld.Models.Models.Dtos
             public string Name { get; set; } = Name ?? string.Empty;
             public int Count { get; set; } = Count;
         }
-
-        public record CategoryMediaLibraryCount(string CategoryName, List<TextAndCount> MediaLibraryCounts);
 
         public record DownloaderTaskCount(ThirdPartyId Id, Dictionary<int, int> StatusAndCounts);
 

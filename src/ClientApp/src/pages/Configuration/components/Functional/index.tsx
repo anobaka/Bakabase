@@ -3,21 +3,11 @@ import { Balloon, Checkbox, Input, List, Message, Radio, Select } from '@alifd/n
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import CustomIcon from '@/components/CustomIcon';
-import Title from '@/components/Title';
-import {
-  PatchAppOptions, PatchEnhancerOptions,
-  PatchExHentaiOptions,
-  PatchResourceOptions,
-  PatchThirdPartyOptions,
-  PatchUIOptions,
-  ValidateCookie,
-} from '@/sdk/apis';
 import {
   AdditionalCoverDiscoveringSource,
   additionalCoverDiscoveringSources,
   CloseBehavior,
   CookieValidatorTarget,
-  coverSaveLocations,
   DependentComponentStatus,
   startupPages,
 } from '@/sdk/constants';
@@ -38,6 +28,7 @@ import {
   Textarea,
   Tooltip,
 } from '@/components/bakaui';
+import BApi from '@/sdk/BApi';
 
 export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: any) => void}) => {
   const { t } = useTranslation();
@@ -114,7 +105,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                 color={'primary'}
                 size={'sm'}
                 onClick={() => {
-                  applyPatches(PatchExHentaiOptions, tmpExHentaiOptions);
+                  applyPatches(BApi.options.patchExHentaiOptions, tmpExHentaiOptions);
                 }}
               >{t('Save')}
               </Button>
@@ -124,10 +115,10 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
                 isLoading={validatingExHentaiCookie}
                 onClick={() => {
                   setValidatingExHentaiCookie(true);
-                  ValidateCookie({
+                  BApi.tool.validateCookie({
                     cookie: tmpExHentaiOptions.cookie,
                     target: CookieValidatorTarget.ExHentai,
-                  }).invoke((r) => {
+                  }).then((r) => {
                     if (r.code) {
                       Message.error(`${t('Invalid cookie')}:${r.message}`);
                     } else {
@@ -152,7 +143,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
           <Radio.Group
             value={uiOptions.startupPage}
             onChange={(v) => {
-              applyPatches(PatchUIOptions, {
+              applyPatches(BApi.options.patchUIOptions, {
                 startupPage: v,
               });
             }}
@@ -174,7 +165,7 @@ export default ({ applyPatches = () => {} }: {applyPatches: (API: any, patches: 
           <Radio.Group
             value={appOptions.closeBehavior}
             onChange={(v) => {
-              applyPatches(PatchAppOptions, {
+              applyPatches(BApi.options.patchAppOptions, {
                 closeBehavior: v,
               });
             }}

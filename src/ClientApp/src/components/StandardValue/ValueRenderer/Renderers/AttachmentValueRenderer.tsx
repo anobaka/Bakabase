@@ -10,7 +10,7 @@ import CustomIcon from '@/components/CustomIcon';
 import { Button, Snippet, Tooltip } from '@/components/bakaui';
 import { splitPathIntoSegments } from '@/components/utils';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
+import { FileSystemSelectorModal } from '@/components/FileSystemSelector';
 
 type AttachmentValueRendererProps = Omit<ValueRendererProps<string[]>, 'variant'> & {
   variant: ValueRendererProps<string[]>['variant'];
@@ -74,7 +74,7 @@ export default ({ value, variant, editor, ...props }: AttachmentValueRendererPro
                 color={'primary'}
                 variant={'light'}
                 onClick={() => {
-                  createPortal(FileSystemSelectorDialog, {
+                  createPortal(FileSystemSelectorModal, {
                     targetType: 'file',
                     onSelected: entry => {
                       const newValue = (value ?? []).concat([entry.path]);

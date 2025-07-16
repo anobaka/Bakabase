@@ -7,7 +7,6 @@ import { DisconnectOutlined, SettingOutlined } from '@ant-design/icons';
 import { history } from 'ice';
 import { TbPackageExport } from 'react-icons/tb';
 import FeatureStatusTip from '@/components/FeatureStatusTip';
-import { GetComponentDescriptors } from '@/sdk/apis';
 import SortableCategoryList from '@/pages/Category/components/SortableCategoryList';
 import MediaLibrarySynchronization from '@/pages/Category/components/MediaLibrarySynchronization';
 import store from '@/store';
@@ -75,7 +74,7 @@ export default () => {
     try {
       await loadAllCategories();
       await loadAllMediaLibraries();
-      await GetComponentDescriptors().invoke(a => {
+      await BApi.component.getComponentDescriptors().then(a => {
         setAllComponents(a.data || []);
       });
       const er = await BApi.enhancer.getAllEnhancerDescriptors();

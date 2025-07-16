@@ -943,8 +943,10 @@ namespace Bakabase.InsideWorld.Business.Services
                     {
                         var extensions = (pfl.Extensions ?? [])
                             .Concat(pfl.ExtensionGroups?.SelectMany(g => g.Extensions ?? []) ?? []).ToHashSet();
-                        var files = r.IsFile ? [r.Path] : Directory.GetFiles(r.Path, "*", SearchOption.AllDirectories);
+                        var files = r.IsFile ? new List<string> { r.Path } : Directory.EnumerateFiles(r.Path, "*", SearchOption.AllDirectories);
+
                         return files.Where(f => extensions.Contains(Path.GetExtension(f)))
+                            .Take(Math.Min(pfl.MaxFileCount ?? int.MaxValue, int.MaxValue))
                             .Select(f => f.StandardizePath()!).ToArray();
                     }
                 }
@@ -1044,13 +1046,15 @@ namespace Bakabase.InsideWorld.Business.Services
                                                             []).ToHashSet();
                                                     if (extensions.Any())
                                                     {
-                                                        var paths = resource.IsFile
-                                                            ? [resource.Path]
-                                                            : Directory.GetFiles(resource.Path, "*",
+                                                        var files = resource.IsFile
+                                                            ? new List<string> { resource.Path }
+                                                            : Directory.EnumerateFiles(resource.Path, "*",
                                                                 SearchOption.AllDirectories);
-                                                        playableFiles = paths.Where(p =>
-                                                            extensions.Contains(Path.GetExtension(p))).ToArray();
-                                                        ;
+                                                        playableFiles = files.Where(f =>
+                                                                extensions.Contains(Path.GetExtension(f)))
+                                                            .Take(Math.Min(ps.MaxFileCount ?? int.MaxValue,
+                                                                int.MaxValue))
+                                                            .Select(f => f.StandardizePath()!).ToArray().ToArray();
                                                     }
                                                 }
                                             }
@@ -1503,66 +1507,6 @@ namespace Bakabase.InsideWorld.Business.Services
         //     await _optionsManager.SaveAsync(t => t.LastNfoGenerationDt = DateTime.Now);
         //     return BaseResponseBuilder.Ok;
         // }
-
-        public async Task PopulateStatistics(DashboardStatistics statistics)
-        {
-            var categories = (await _categoryService.GetAll()).ToDictionary(a => a.Id, a => a.Name);
-            var allEntities = await GetAllDbModels();
-
-            var allEntitiesMap = allEntities.ToDictionary(a => a.Id, a => a);
-
-            // var totalCounts = allEntities.GroupBy(a => a.CategoryId)
-            //     .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-            //     .ToList();
-            //
-            // statistics.CategoryMediaLibraryCounts = totalCounts;
-
-            var today = DateTime.Today;
-            var todayCounts = allEntities.Where(a => a.CreateDt >= today).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0)
-                .OrderByDescending(a => a.Count)
-                .ToList();
-
-            statistics.TodayAddedCategoryResourceCounts = todayCounts;
-
-            var weekdayDiff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-            var monday = today.AddDays(-1 * weekdayDiff);
-            var thisWeekCounts = allEntities.Where(a => a.CreateDt >= monday).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0)
-                .OrderByDescending(a => a.Count)
-                .ToList();
-
-            statistics.ThisWeekAddedCategoryResourceCounts = thisWeekCounts;
-
-            var thisMonth = today.GetFirstDayOfMonth();
-            var thisMonthCounts = allEntities.Where(a => a.CreateDt >= thisMonth).GroupBy(a => a.CategoryId)
-                .Select(a => new DashboardStatistics.TextAndCount(categories.GetValueOrDefault(a.Key), a.Count()))
-                .Where(a => a.Count > 0)
-                .OrderByDescending(a => a.Count)
-                .ToList();
-
-            statistics.ThisMonthAddedCategoryResourceCounts = thisMonthCounts;
-
-            // 12 weeks added counts trending
-            {
-                var total = allEntities.Count;
-                for (var i = 0; i < 12; i++)
-                {
-                    var offset = -i * 7;
-                    var weekStart = today.AddDays(offset - weekdayDiff);
-                    var weekEnd = weekStart.AddDays(7);
-                    var count = allEntities.Count(a => a.CreateDt >= weekStart && a.CreateDt < weekEnd);
-                    statistics.ResourceTrending.Add(new DashboardStatistics.WeekCount(-i, total));
-                    total -= count;
-                }
-
-                statistics.ResourceTrending.Reverse();
-            }
-
-            const int maxPropertyCount = 30;
-        }
 
         // public async Task<BaseResponse> Patch(int id, ResourceUpdateRequestModel model)
         // {

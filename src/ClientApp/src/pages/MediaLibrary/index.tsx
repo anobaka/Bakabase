@@ -18,7 +18,7 @@ import { PiEmpty } from 'react-icons/pi';
 import type { Key } from '@react-types/shared';
 import type { MediaLibraryTemplate } from '../MediaLibraryTemplate/models';
 import SyncStatus from './components/SyncStatus';
-import { Button, Chip, Input, Modal, Select, Tooltip, ColorPicker } from '@/components/bakaui';
+import { Button, Chip, Input, Modal, Select, Tooltip, ColorPicker, Divider } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import BApi from '@/sdk/BApi';
 import { isNotEmpty } from '@/components/utils';
@@ -97,7 +97,7 @@ export default () => {
             variant={'flat'}
             onPress={() => BApi.tool.openFileOrDirectory({ path: p })}
           >
-            <AiOutlineFolderOpen className={'text-base'} />
+            <AiOutlineFolderOpen className={'text-lg'} />
             {p}
           </Button>
         ))}
@@ -152,9 +152,12 @@ export default () => {
       </div>
       {editingMediaLibraries ? (
         <>
-          <div className={'grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr auto 1fr auto' }}>
+          <div className={'grid gap-1 mt-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr 2fr 1fr auto' }}>
             {editingMediaLibraries.map((e, i) => {
               const paths = Array.isArray(e.paths) ? e.paths : (e.paths = []);
+              if (paths.length == 0) {
+                paths.push('');
+              }
               const pathsValid = paths.length > 0 && paths.every(p => !!p) && new Set(paths).size === paths.length;
               return (
                 <>
@@ -191,38 +194,42 @@ export default () => {
                             e.paths = paths.filter(Boolean);
                             forceUpdate();
                           }}
+                          endContent={(
+                            <div className='flex items-center gap-1'>
+                              <Button
+                                size="sm"
+                                color="primary"
+                                variant='light'
+                                isIconOnly
+                                onPress={() => {
+                                  paths.push('');
+                                  e.paths = paths;
+                                  forceUpdate();
+                                }}
+                              >
+                                <AiOutlinePlusCircle className='text-lg' />
+                              </Button>
+                              {paths.length > 1 && (
+                                <Button
+                                  size="sm"
+                                  color="danger"
+                                  isIconOnly
+                                  variant='light'
+                                  onPress={() => {
+                                    paths.splice(idx, 1);
+                                    e.paths = paths;
+                                    forceUpdate();
+                                  }}
+                                >
+                                  <MdOutlineDelete className={'text-lg'} />
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         />
-                        {paths.length > 1 && (
-                          <Button
-                            size="sm"
-                            color="danger"
-                            isIconOnly
-                            variant='light'
-                            onPress={() => {
-                              paths.splice(idx, 1);
-                              e.paths = paths;
-                              forceUpdate();
-                            }}
-                          >
-                            <MdOutlineDelete className={'text-lg'} />
-                          </Button>
-                        )}
                       </div>
                     ))}
                   </div>
-                  <Button
-                    size="sm"
-                    color="primary"
-                    variant='light'
-                    isIconOnly
-                    onPress={() => {
-                      paths.push('');
-                      e.paths = paths;
-                      forceUpdate();
-                    }}
-                  >
-                    <AiOutlinePlusCircle className='text-lg' />
-                  </Button>
                   <Select
                     size={'sm'}
                     label={t('MediaLibrary.Template')}
@@ -294,6 +301,9 @@ export default () => {
                       <MdOutlineDelete className={'text-lg'} />
                     </Button>
                   </div>
+                  {editingMediaLibraries.length > i + 1 && (
+                    <Divider className="col-span-full" />
+                  )}
                 </>
               );
             })}
@@ -351,92 +361,28 @@ export default () => {
           <div>
             <div
               className={'inline-grid gap-2 mt-2 items-center'}
-              style={{ gridTemplateColumns: 'repeat(7, auto)' }}
+              style={{ gridTemplateColumns: 'repeat(4, auto)' }}
             >
-              {mediaLibraries.map(ml => {
+              {mediaLibraries.map((ml, i) => {
                 const template = templates.find(t => t.id == ml.templateId);
                 const currentColor = ml.color ?? colors.color;
                 return (
                   <>
-                    <div style={{ color: currentColor }}>{ml.name}</div>
-                    <ColorPicker
-                      color={currentColor}
-                      onChange={async color => {
-                        const strColor = buildColorValueString(color);
-                        await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, {
-                          ...ml,
-                          color: strColor
-                        })
-                        ml.color = strColor;
-                        forceUpdate();
-                      }}
-                    />
-                    <Chip
-                      size={'sm'}
-                      variant={'light'}
-                      color={'success'}
-                      startContent={<AiOutlineProduct className={'text-lg'} />}
-                    >
-                      {ml.resourceCount}
-                    </Chip>
-                    <Tooltip content={t('MediaLibrary.SearchResources')} placement="top">
-                      <Button
-                        onPress={() => {
-                          createPortal(Modal, {
-                            title: t('MediaLibrary.Confirm'),
-                            children: t('MediaLibrary.LeavePageConfirm'),
-                            defaultVisible: true,
-                            onOk: async () => {
-                              // 先调用GetFilterValueProperty接口获取valueProperty
-                              const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
-                                propertyPool: PropertyPool.Internal,
-                                propertyId: InternalProperty.MediaLibraryV2, // MediaLibrary 属性ID
-                                operation: SearchOperation.Equals, // Equal
-                              });
-
-                              // 创建搜索表单，包含媒体库ID过滤条件
-                              const searchForm = {
-                                group: {
-                                  combinator: 1, // And
-                                  disabled: false,
-                                  filters: [{
-                                    propertyPool: PropertyPool.Internal,
-                                    propertyId: InternalProperty.MediaLibraryV2, // MediaLibrary 属性ID
-                                    operation: SearchOperation.Equals, // Equal
-                                    dbValue: ml.id.toString(),
-                                    bizValue: ml.name,
-                                    valueProperty: valuePropertyResponse.data,
-                                    disabled: false
-                                  }]
-                                },
-                                page: 1,
-                                pageSize: 100
-                              };
-
-                              // 跳转到Resource页面并带上搜索参数
-                              const query = encodeURIComponent(JSON.stringify(searchForm));
-                              history!.push(`/resource?query=${query}`);
-                            },
-                            footer: {
-                              actions: ['ok', 'cancel'],
-                              okProps: {
-                                children: t('MediaLibrary.Continue')
-                              },
-                              cancelProps: {
-                                children: t('MediaLibrary.Cancel')
-                              }
-                            }
-                          });
+                    <div className='flex items-center gap-1'>
+                      <div style={{ color: currentColor }}>{ml.name}</div>
+                      <ColorPicker
+                        color={currentColor}
+                        onChange={async color => {
+                          const strColor = buildColorValueString(color);
+                          await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, {
+                            ...ml,
+                            color: strColor
+                          })
+                          ml.color = strColor;
+                          forceUpdate();
                         }}
-                        size={'sm'}
-                        radius={'sm'}
-                        className={''}
-                        variant={'light'}
-                        isIconOnly
-                      >
-                        <AiOutlineSearch className={'text-lg'} />
-                      </Button>
-                    </Tooltip>
+                      />
+                    </div>
                     {renderPath(ml)}
                     <Button
                       size={'sm'}
@@ -458,16 +404,121 @@ export default () => {
                     >
                       {template?.name ?? t('MediaLibrary.Unknown')}
                     </Button>
-                    <SyncStatus
-                      id={ml.id}
-                      onSyncCompleted={() => {
-                        BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then(r => {
-                          if (!r.data) return;
-                          const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data! : m));
-                          setMediaLibraries(updatedMediaLibraries);
-                        });
-                      }}
-                    />
+                    <div className='flex items-center'>
+                      <Chip
+                        size={'sm'}
+                        variant={'light'}
+                        color={'success'}
+                        startContent={<AiOutlineProduct className={'text-lg'} />}
+                      >
+                        {ml.resourceCount}
+                      </Chip>
+                      <Tooltip content={t('MediaLibrary.SearchResources')} placement="top">
+                        <Button
+                          onPress={() => {
+                            createPortal(Modal, {
+                              title: t('MediaLibrary.Confirm'),
+                              children: t('MediaLibrary.LeavePageConfirm'),
+                              defaultVisible: true,
+                              onOk: async () => {
+                                // 先调用GetFilterValueProperty接口获取valueProperty
+                                const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
+                                  propertyPool: PropertyPool.Internal,
+                                  propertyId: InternalProperty.MediaLibraryV2, // MediaLibrary 属性ID
+                                  operation: SearchOperation.Equals, // Equal
+                                });
+
+                                // 创建搜索表单，包含媒体库ID过滤条件
+                                const searchForm = {
+                                  group: {
+                                    combinator: 1, // And
+                                    disabled: false,
+                                    filters: [{
+                                      propertyPool: PropertyPool.Internal,
+                                      propertyId: InternalProperty.MediaLibraryV2, // MediaLibrary 属性ID
+                                      operation: SearchOperation.Equals, // Equal
+                                      dbValue: ml.id.toString(),
+                                      bizValue: ml.name,
+                                      valueProperty: valuePropertyResponse.data,
+                                      disabled: false
+                                    }]
+                                  },
+                                  page: 1,
+                                  pageSize: 100
+                                };
+
+                                // 跳转到Resource页面并带上搜索参数
+                                const query = encodeURIComponent(JSON.stringify(searchForm));
+                                history!.push(`/resource?query=${query}`);
+                              },
+                              footer: {
+                                actions: ['ok', 'cancel'],
+                                okProps: {
+                                  children: t('MediaLibrary.Continue')
+                                },
+                                cancelProps: {
+                                  children: t('MediaLibrary.Cancel')
+                                }
+                              }
+                            });
+                          }}
+                          size={'sm'}
+                          radius={'sm'}
+                          className={''}
+                          variant={'light'}
+                          isIconOnly
+                        >
+                          <AiOutlineSearch className={'text-lg'} />
+                        </Button>
+                      </Tooltip>
+                      <SyncStatus
+                        id={ml.id}
+                        onSyncCompleted={() => {
+                          BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then(r => {
+                            if (!r.data) return;
+                            const updatedMediaLibraries = mediaLibraries.map(m => (m.id === ml.id ? r.data! : m));
+                            setMediaLibraries(updatedMediaLibraries);
+                          });
+                        }}
+                      />
+                      <Button
+                        color={'danger'}
+                        variant={'light'}
+                        isIconOnly
+                        onPress={() => {
+                          createPortal(Modal, {
+                            defaultVisible: true,
+                            title: t('MediaLibrary.Confirm'),
+                            children: <div>
+                              {t('MediaLibrary.DeleteConfirm')}
+                              <br />
+                              <span className="text-danger">{t('Be careful, this operation can not be undone')}</span>
+                            </div>,
+                            onOk: async () => {
+                              await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
+                              await loadMediaLibraries();
+                              forceUpdate();
+                            },
+                            footer: {
+                              actions: ['ok', 'cancel'],
+                              okProps: {
+                                children: t('Delete'),
+                                color: 'danger',
+                                autoFocus: true,
+                              },
+                              cancelProps: {
+                                children: t('MediaLibrary.Cancel'),
+                              },
+                            },
+                          });
+                        }}
+                      >
+                        <MdOutlineDelete className={'text-lg'} />
+                      </Button>
+                    </div>
+                    {mediaLibraries.length > i + 1 && (
+                      <Divider className="col-span-full" />
+                    )}
                   </>
                 );
               })}

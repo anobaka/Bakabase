@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/bakaui';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { FileSystemSelectorModal } from '@/components/FileSystemSelector';
 
 type Options = {
   downloader?: {
@@ -42,7 +42,7 @@ export default ({
           color={'primary'}
           variant={'light'}
           onPress={() => {
-             createPortal(FileSystemSelectorDialog, {
+             createPortal(FileSystemSelectorModal, {
                onSelected: e => {
                  onChange?.(e.path);
                },
