@@ -8,7 +8,6 @@ import { MediaLibraryAdditionalItem, ResourceProperty } from '@/sdk/constants';
 import PathSegmentsConfiguration, {
   PathSegmentConfigurationPropsMatcherOptions,
 } from '@/components/PathSegmentsConfiguration';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import BusinessConstants from '@/components/BusinessConstants';
 import { Button, Chip, Divider, Modal } from '@/components/bakaui';
 import type { DestroyableProps } from '@/components/bakaui/types';
@@ -20,6 +19,7 @@ import {
   convertToPscValueFromPathConfigurationDto,
 } from '@/components/PathSegmentsConfiguration/helpers';
 import type { BakabaseAbstractionsModelsDomainPathConfiguration } from '@/sdk/Api';
+import { FileSystemSelectorModal } from '@/components/FileSystemSelector';
 
 const log = buildLogger('PathConfigurationDialog');
 
@@ -219,7 +219,7 @@ export default ({
                 // size={'sm'}
                 color={'primary'}
                 onClick={() => {
-                  createPortal(FileSystemSelectorDialog, {
+                  createPortal(FileSystemSelectorModal, {
                     startPath: pc.path ?? undefined,
                     targetType: 'folder',
                     onSelected: e => {

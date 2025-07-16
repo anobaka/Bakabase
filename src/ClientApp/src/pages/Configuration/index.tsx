@@ -22,9 +22,7 @@ const ConfigurationPage = function (props) {
   }, []);
 
   const applyPatches = (API, patches = {}, success = (rsp) => {}) => {
-    API({
-      model: patches,
-    }).invoke((a) => {
+    API(patches).then((a) => {
       if (!a.code) {
         toast.success(t('Saved'));
         success(a);

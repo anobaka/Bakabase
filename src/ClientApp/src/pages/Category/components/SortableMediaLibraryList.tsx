@@ -1,12 +1,15 @@
 import React from 'react';
-import { closestCorners, DndContext, DragOverlay, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { closestCorners, DndContext, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableMediaLibrary from '@/pages/Category/components/SortableMediaLibrary';
-import SortableTagGroup from '@/pages/Tag/components/SortableTagGroup';
-import SortableTag from '@/pages/Tag/components/SortableTag';
-import { SortMediaLibrariesInCategory } from '@/sdk/apis';
+import BApi from '@/sdk/BApi';
 
-export default (({ libraries, loadAllMediaLibraries, forceUpdate, reloadMediaLibrary }) => {
+export default (({
+                   libraries,
+                   loadAllMediaLibraries,
+                   forceUpdate,
+                   reloadMediaLibrary,
+                 }) => {
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -35,12 +38,10 @@ export default (({ libraries, loadAllMediaLibraries, forceUpdate, reloadMediaLib
       }
     }
     forceUpdate();
-    SortMediaLibrariesInCategory({
-      model: {
-        ids: newIds,
-      },
+    BApi.mediaLibrary.sortMediaLibrariesInCategory({
+      ids: newIds,
     })
-      .invoke((t) => {
+      .then((t) => {
         if (!t.code) {
           for (let i = 0; i < libraries.length; i++) {
             libraries[i].order = i;

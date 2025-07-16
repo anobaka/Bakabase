@@ -42,15 +42,7 @@ export const storeConfig = defineStoreConfig(async () => {
       window.enableAnonymousDataTracking = data.enableAnonymousDataTracking;
       window.appVersion = data.version;
       const uiTheme = getUiTheme(data);
-      window.uiTheme = uiTheme;
-
-      // if (uiTheme == UiTheme.Dark) {
-      //   // import('@alifd/theme-4602/dist/next.css');
-      //   import('./tmp.variable.scss');
-      //   import('@alifd/theme-design-pro/dist/next.var.css');
-      // } else {
-      //   import('@alifd/theme-design-pro/dist/next.var.css');
-      // }
+      window.uiTheme = String(uiTheme);
 
       console.log('xxxxxxx', uiTheme);
 
@@ -62,6 +54,9 @@ export const storeConfig = defineStoreConfig(async () => {
 
       if (data.enableAnonymousDataTracking) {
         console.log('enable anonymous data tracking');
+        if (typeof window.clarity === 'function' && window.appVersion) {
+          window.clarity('set', 'appVersion', window.appVersion);
+        }
       }
     }
   } catch (e) {
@@ -72,3 +67,12 @@ export const storeConfig = defineStoreConfig(async () => {
     initialStates: {},
   };
 });
+
+declare global {
+  interface Window {
+    clarity?: (action: string, key: string, value: any) => void;
+    appVersion?: string;
+    enableAnonymousDataTracking?: boolean;
+    uiTheme?: string;
+  }
+}

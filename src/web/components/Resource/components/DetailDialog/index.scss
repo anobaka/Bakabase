@@ -1,0 +1,223 @@
+.resource-component-detail-dialog {
+
+  .next-dialog-body {
+    padding: 20px;
+    min-width: 1100px;
+
+    .property-value {
+      display: flex;
+      align-items: center;
+
+      .value {
+        margin-right: 10px;
+        &.empty {
+          margin-right: 0;
+        }
+      }
+
+      .edit-opts {
+        padding-left: 10px;
+        //margin-left: 50px;
+        border-left: 1px solid #ccc;
+
+        .submit, .cancel {
+          padding: 0 5px;
+          margin: 0 2px;
+        }
+      }
+    }
+
+    .top {
+      margin-bottom: 60px;
+      display: flex;
+      align-items: flex-start;
+
+      .left {
+        width: 400px;
+        height: 400px;
+        max-width: 400px;
+        max-height: 400px;
+        min-width: 400px;
+        min-height: 400px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        img {
+          max-width: 400px;
+          max-height: 400px;
+        }
+      }
+
+      .right {
+        margin-left: 40px;
+
+
+        & > .name {
+          margin: 20px 0 20px 0;
+          font-size: 22px;
+          font-weight: 500;
+          line-height: 30px;
+        }
+
+        & > .property {
+          display: flex;
+          align-items: center;
+          margin: 10px 0;
+
+          & > .label {
+            min-width: 100px;
+            max-width: 100px;
+            word-break: break-all;
+            width: 100px;
+            margin-right: 10px;
+            color: #999;
+            font-weight: 500;
+            text-align: right;
+          }
+
+          & > .value-container {
+            word-break: break-all;
+            display: flex;
+            align-items: center;
+
+            &.name {
+              .value {
+                font-size: 24px;
+              }
+            }
+
+            .value {
+
+              .publisher, .original, .series {
+                color: #298dff;
+                cursor: pointer;
+                margin: 2px;
+              }
+
+              .original {
+                padding: 2px;
+                border: 1px solid var(--theme-border-color-accent);
+                border-radius: 4px;
+              }
+            }
+          }
+        }
+
+        & > .opt {
+          display: flex;
+          margin-top: 30px;
+        }
+      }
+    }
+
+    .introduction-container, .file-entries-block, .children {
+      margin: 20px 0;
+      .label {
+        color: var(--theme-text-subtle);
+        font-weight: 500;
+        margin-bottom: 5px;
+      }
+    }
+
+    .next-pagination {
+      margin: 5px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .children {
+
+      .resources {
+        display: grid;
+        gap: 5px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
+    }
+
+    .file-entries-block {
+      .next-loading {
+        width: 100%;
+        min-height: 128px;
+      }
+      .label {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+
+        .left {
+          .path-segments {
+            user-select: none;
+            .path-segment {
+              cursor: pointer;
+              padding: 0 5px;
+              &:last-child {
+                &:hover {
+                  cursor: default;
+                  background: unset;
+                }
+              }
+              &:hover {
+                background: rgba(0, 0, 0, 0.05);
+              }
+            }
+          }
+        }
+
+        .right {
+          width: 160px;
+          display: flex;
+          align-items: center;
+          gap: 5px;
+        }
+
+
+      }
+
+      .entries {
+        display: grid;
+        gap: 5px;
+
+        .entry {
+
+          .square {
+            width: 100%;
+            padding-bottom: 100%;
+            height: 0;
+            position: relative;
+
+            .cover-container {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+              height: 100%;
+              border: 1px solid #ccc;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              &>* {
+                max-width: 100%;
+                max-height: 100%;
+              }
+            }
+          }
+          .name {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 2px;
+            user-select: auto;
+
+            word-break: break-all;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+          }
+        }
+      }
+    }
+  }
+}

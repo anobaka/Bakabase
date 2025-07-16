@@ -6,8 +6,6 @@ import type { Key } from '@react-types/shared';
 import toast from 'react-hot-toast';
 import { AiOutlineNumber } from 'react-icons/ai';
 import CustomIcon from '@/components/CustomIcon';
-import { PatchAppOptions } from '@/sdk/apis';
-import store from '@/store';
 import BApi from '@/sdk/BApi';
 import type { ChipProps, NumberInputProps } from '@/components/bakaui';
 import { Link } from '@/components/bakaui';
@@ -174,7 +172,7 @@ export default ({
             size={'small'}
             checked={appOptions.enablePreReleaseChannel}
             onChange={(checked) => {
-              applyPatches(PatchAppOptions, {
+              applyPatches(BApi.options.patchAppOptions, {
                 enablePreReleaseChannel: checked,
               }, () => {
               });
@@ -192,7 +190,7 @@ export default ({
             size={'small'}
             checked={appOptions.enableAnonymousDataTracking}
             onChange={(checked) => {
-              applyPatches(PatchAppOptions, {
+              applyPatches(BApi.options.patchAppOptions, {
                 enableAnonymousDataTracking: checked,
               }, () => {
               });

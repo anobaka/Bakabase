@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@config "../tailwind.config.js";
+
+/* ===== 以下为 icejs global.scss 及相关主题样式迁移 ===== */
+
+@font-face {
+  font-family: 'Artypa-Regular';
+  src: url('../assets/Artypa-Regular.woff') format('woff');
+}
+
+html, body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  user-select: none;
+  --scrollbar-size: 7px;
+  --path-separator-color: #ff8400;
+}
+
+/* 滚动条样式 */
+html, body, #ice-container {
+  ::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--theme-scrollbar-track-background);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--theme-scrollbar-thumb-background);
+    border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--theme-scrollbar-thumb-hover-background);
+  }
+}
+
+.confirmation-button-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.confirmation-button {
+  padding: 5px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+.icon {
+  vertical-align: -0.15em;
+  fill: currentColor;
+  overflow: hidden;
+}
+*,*:focus,*:hover{
+  outline:none;
+}
+.next-balloon { max-width: unset; }
+
+/* 表格圆角样式 */
+.next-table {
+  border-radius: 8px;
+  table {
+    border-radius: 8px;
+    tr:first-child {
+      th:first-child, td:first-child { border-top-left-radius: 8px !important; }
+      th:last-child, td:last-child { border-top-right-radius: 8px !important; }
+    }
+    tbody.next-table-body {
+      tr:last-child {
+        th:first-child, td:first-child { border-bottom-left-radius: 8px; }
+        th:last-child, td:last-child { border-bottom-right-radius: 8px; }
+      }
+    }
+    thead.next-table-header + tbody.next-table-body {
+      th:first-child, td:first-child { border-top-left-radius: 0!important; }
+      th:last-child, td:last-child { border-top-right-radius: 0!important; }
+    }
+  }
+}
+.ReactCollapse--collapse { transition: height 500ms; }
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* ===== 主题变量（dark/light） ===== */
+@import './global.dark.scss';
+@import './global.light.scss';
+
+/* ===== fusion design 覆盖 ===== */
+@import './global.fusion.design.overrides.scss';
+
+/* ===== reactour 覆盖 ===== */
+@import './global.reactour.overrides.scss';
+
+/* ===== bakaui 组件变量 ===== */
+@import '../components/bakaui/index.scss';
+@import '../components/bakaui/index.dark.scss';
+@import '../components/bakaui/index.light.scss';
+
+/* ===== END icejs 样式迁移 ===== */

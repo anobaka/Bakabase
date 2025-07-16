@@ -14,9 +14,9 @@ import PresetMediaLibraryTemplateBuilderTest from './cases/PresetMediaLibraryTem
 import LongTabs from './cases/LongTabs';
 import ReactPlayer from './cases/ReactPlayer';
 import HlsPlayer from './cases/HlsPlayer';
+import FileNameModifierTest from './cases/FileNameModifierTest';
 import { Button, Listbox } from '@/components/bakaui';
 import SimpleLabel from '@/components/SimpleLabel';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AntdMenu from '@/layouts/BasicLayout/components/PageNav/components/AntdMenu';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import OrderSelector from '@/pages/Resource/components/FilterPanel/OrderSelector';
@@ -25,9 +25,9 @@ import ResourceTransfer from '@/pages/Test/cases/ResourceTransfer';
 import { ProcessValueEditor } from '@/pages/BulkModification2/components/BulkModification/ProcessValue';
 import { PropertyType, StandardValueType } from '@/sdk/constants';
 import PropertyMatcher from '@/components/PropertyMatcher';
-import FileNameModifierTest from './cases/FileNameModifierTest';
 import BetaChip from '@/components/Chips/BetaChip';
 import DeprecatedChip from '@/components/Chips/DeprecatedChip';
+import { FileSystemSelectorButton } from '@/components/FileSystemSelector';
 
 
 const components = {
@@ -65,25 +65,18 @@ const components = {
   Sortable: <Sortable />,
   LongTabs: <LongTabs />,
   FileSelector: (
-    <Button
-      onClick={() => {
-        FileSystemSelectorDialog.show({
-          targetType: 'file',
-          startPath: 'I:\\Test\\updater\\AppData\\configs\\updater.json',
-          defaultSelectedPath: 'I:\\Test\\updater\\AppData\\configs\\updater.json',
-        });
-      }}
-    >File Selector</Button>
+    <FileSystemSelectorButton
+      targetType={'file'}
+      startPath={'I:\\Test\\updater\\AppData\\configs\\updater.json'}
+      defaultSelectedPath={'I:\\Test\\updater\\AppData\\configs\\updater.json'}
+      defaultLabel={'File Selector'}
+    />
   ),
   FolderSelector: (
-    <Button
-      onClick={() => {
-        FileSystemSelectorDialog.show({
-          targetType: 'folder',
-          startPath: 'I:\\Test',
-        });
-      }}
-    >Folder Selector</Button>
+    <FileSystemSelectorButton
+      defaultSelectedPath={'I:\\Test'}
+      targetType={'folder'}
+    />
   ),
   SimpleLabel: (
     ['dark', 'light'].map(t => {

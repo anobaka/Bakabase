@@ -1,0 +1,23 @@
+.bulk-modification-filter-dialog {
+  .filter-form {
+    min-width: 600px;
+    display: grid;
+    gap: 20px;
+    grid-template-columns: auto auto;
+    align-items: center;
+
+    &>.label {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    &>.value {
+      &>.next-input, &>.next-select, &>.next-number-picker {
+        width: 90%;
+      }
+    }
+  }
+}
+

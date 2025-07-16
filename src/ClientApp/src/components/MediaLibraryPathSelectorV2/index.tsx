@@ -15,6 +15,7 @@ import type { DestroyableProps } from '@/components/bakaui/types';
 import { Button, Chip, Divider, Input, Modal } from '@/components/bakaui';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import type { IdName } from '@/components/types';
+import DeprecatedChip from '../Chips/DeprecatedChip';
 
 type Props = {
   onSelect: (id: number, path: string, isLegacyMediaLibrary: boolean) => (Promise<any> | any);
@@ -70,7 +71,7 @@ export default (props: Props) => {
     }
     const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
     if (mlv2s.length > 0) {
-      data[0] = { id: 0, name: t('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: [ml.path] })) };
+      data[0] = { id: 0, name: t('/'), libraries: mlv2s.map(ml => ({ id: ml.id, name: ml.name, paths: ml.paths })) };
     }
     setCategories(Object.values(data));
   };
@@ -147,16 +148,10 @@ export default (props: Props) => {
                   className={'grid gap-1 items-center'}
                   style={{ gridTemplateColumns: '20% auto' }}
                 >
-                  <div>
+                  <div className='flexi items-center gap-1'>
                     {c.name}
                     {c.id != 0 && (
-                      <Chip
-                        size={'sm'}
-                        variant={'flat'}
-                        radius={'sm'}
-                      >
-                        {t('Deprecated')}
-                      </Chip>
+                      <DeprecatedChip />
                     )}
                   </div>
                   <div>

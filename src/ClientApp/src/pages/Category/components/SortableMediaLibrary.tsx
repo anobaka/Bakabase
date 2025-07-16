@@ -21,7 +21,6 @@ import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
 import { buildLogger } from '@/components/utils';
 import BApi from '@/sdk/BApi';
 import PathConfigurationDialog from '@/pages/Category/components/PathConfigurationDialog';
-import FileSystemSelectorDialog from '@/components/FileSystemSelector/Dialog';
 import AddRootPathsInBulkDialog from '@/pages/Category/components/AddRootPathsInBulkDialog';
 import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
 import { Alert, Button, Chip, Input, Modal, Tooltip } from '@/components/bakaui';
@@ -130,7 +129,7 @@ export default (({
   };
 
   const renderAddRootPathModal = () => {
-    FileSystemSelectorDialog.show({
+    createPortal(FileSystemSelectorModal, {
       targetType: 'folder',
       onSelected: e => {
         BApi.mediaLibrary.addMediaLibraryPathConfiguration(library.id,

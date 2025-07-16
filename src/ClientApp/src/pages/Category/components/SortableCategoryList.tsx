@@ -2,7 +2,7 @@ import React from 'react';
 import { closestCorners, DndContext, DragOverlay, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableCategory from '@/pages/Category/components/SortableCategory';
-import { SortCategories } from '@/sdk/apis';
+import BApi from '@/sdk/BApi';
 
 type Props = {
   categories: any[];
@@ -26,7 +26,7 @@ export default (({ categories, libraries,
     }),
   );
 
-  function onDragEnd(e) {
+  async function onDragEnd(e) {
     const activeId = e.active.id;
     const overId = e.over.id;
     const oldIndex = categories.findIndex(c => c.id == activeId);
@@ -36,11 +36,9 @@ export default (({ categories, libraries,
     categories.splice(newIndex, 0, oc);
     forceUpdate();
     const newIds = categories.map((t) => t.id);
-    SortCategories({
-      model: {
-        ids: newIds,
-      },
-    }).invoke((t) => {
+    await BApi.category.sortCategories({
+      ids: newIds,
+    }).then((t) => {
       if (!t.code) {
         for (let i = 0; i < categories.length; i++) {
           categories[i].order = i;

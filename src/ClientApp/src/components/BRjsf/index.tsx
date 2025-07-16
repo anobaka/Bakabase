@@ -9,11 +9,11 @@ import type { TitleFieldProps } from '@rjsf/utils';
 import './index.scss';
 import type { FieldProps } from '@rjsf/utils';
 import type { RegistryFieldsType } from '@rjsf/utils';
-import { Balloon, NumberPicker } from '@alifd/next';
 import type { FormValidation } from '@rjsf/utils';
 import { defaultData } from '@dnd-kit/core/dist/components/DndContext/defaults';
 import { uuidv4 } from '@/components/utils';
 import CustomIcon from '@/components/CustomIcon';
+import { Tooltip } from '@/components/bakaui';
 
 function TitleFieldTemplate(props: TitleFieldProps) {
   return;
@@ -84,13 +84,12 @@ const buildField = (fieldProps: FieldProps, bRjsfProps: BRjsfProperty, formRef: 
       <div className="label">
         {i18n.t(fieldProps.name)}
         {bRjsfProps.tip && (
-          <Balloon.Tooltip
-            triggerType={'hover'}
+          <Tooltip
+            content={bRjsfProps.tip}
             style={{ maxWidth: 'unset' }}
-            trigger={<CustomIcon type={'question-circle'} />}
           >
-            {bRjsfProps.tip}
-          </Balloon.Tooltip>
+            <CustomIcon type={'question-circle'} />
+          </Tooltip>
         )}
       </div>
       <div className="value">

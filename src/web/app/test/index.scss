@@ -1,0 +1,38 @@
+.test-page {
+
+  .media-previewer-container {
+    width: 240px;
+    height: 240px;
+    border: 1px solid #999;
+    background: #999;
+  }
+
+  .psc {
+    .values {
+      .matcher {
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+
+        &:hover {
+          cursor: pointer;
+          background: rgba(0, 0, 0, 0.1) !important;
+        }
+
+        &:nth-child(2n) {
+          background: rgba(0, 0, 0, 0.02);
+        }
+        padding: 5px 0;
+
+        .label {
+          width: 100px;
+          font-weight: bold;
+        }
+
+        .value {
+          flex: 1;
+        }
+      }
+    }
+  }
+}

@@ -8,7 +8,6 @@ import moment from 'moment';
 import Queue from 'queue';
 import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
 import { IconType, IwFsType, MediaType } from '@/sdk/constants';
-import { GetAllExtensionMediaTypes, PlayFileURL } from '@/sdk/apis';
 import CustomIcon from '@/components/CustomIcon';
 import {
   buildLogger,
@@ -244,8 +243,8 @@ const MediaPlayer = (props: IProps) => {
     setFileTree(tree);
     nodeMapRef.current = buildNodeMap(branches);
 
-    GetAllExtensionMediaTypes()
-      .invoke((t) => {
+    BApi.api.getAllExtensionMediaTypes()
+      .then((t) => {
         const map = Object.keys(t.data)
           .reduce((s, ext) => {
             s[ext] = t.data[ext];
@@ -388,9 +387,7 @@ const MediaPlayer = (props: IProps) => {
             }}
             playing={playing}
             controls
-            url={`${serverConfig.apiEndpoint}${PlayFileURL({
-              fullname: activeNode.key,
-            })}`}
+            url={`${serverConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(activeNode.key)}`}
             config={{
               file: {
                 attributes: {
@@ -406,9 +403,7 @@ const MediaPlayer = (props: IProps) => {
             crossOrigin={'anonymous'}
             ref={imageRef}
             className={'media'}
-            src={`${serverConfig.apiEndpoint}${PlayFileURL({
-              fullname: activeNode.key,
-            })}`}
+            src={`${serverConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(activeNode.key)}`}
             onLoad={() => {
               setCurrentInitialized(true);
               tryAutoGotoNextNode();

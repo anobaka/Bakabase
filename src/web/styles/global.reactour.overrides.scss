@@ -1,0 +1,11 @@
+.reactour__popover {
+  background-color: var(--theme-block-background) !important;
+
+  .reactour__close-button {
+    color: var(--theme-text-subtle);
+
+    &:hover {
+      color: var(--theme-text);
+    }
+  }
+}

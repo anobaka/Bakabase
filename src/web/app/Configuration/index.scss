@@ -1,0 +1,93 @@
+.configuration-page {
+  .group {
+    //margin-bottom: 10px;
+    .settings {
+      .key {
+        background: var(--theme-table-header-background);
+        .next-table-cell-wrapper {
+          display: flex;
+          align-items: center;
+        }
+      }
+      .key, .value {
+        padding: 0 12px;
+        .next-switch {
+          &.next-switch-off {
+            background-color: #ccc;
+          }
+        }
+        .iconfont {
+          margin-left: 2px;
+          //color: #888;
+          //&.error {
+          //  color: red;
+          //}
+        }
+        .balloon-container {
+          display: flex;
+          align-items: center;
+          .iconfont {
+            margin-left: 5px;
+          }
+        }
+      }
+      .value {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        word-break: break-all;
+        max-width: 800px;
+      }
+    }
+  }
+
+  .us, .others {
+    padding: 5px;
+    margin: 5px 0;
+    .title {
+      font-size: 16px;
+      font-weight: bold;
+    }
+  }
+
+  .others {
+    .settings {
+      display: grid;
+      grid-template-columns: 10% 1fr;
+      &>* {
+        display: flex;
+        align-items: center;
+      }
+    }
+  }
+
+  .us {
+    .contacts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      .contact {
+        display: flex;
+        align-items: center;
+        .label {
+          width: 20%;
+          font-weight: bold;
+          font-size: 15px;
+          text-align: center;
+        }
+        .value {
+          width: 80%;
+        }
+      }
+    }
+  }
+
+  .exhentai-options {
+    &>div:nth-child(n+1) {
+      margin-top: 5px;
+    }
+    .operations {
+      display: flex;
+      gap: 5px;
+    }
+  }
+}

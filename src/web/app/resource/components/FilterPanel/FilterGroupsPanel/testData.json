@@ -1,0 +1,10 @@
+{
+  "combinator": 1,
+  "filters": [
+    {
+      "propertyId": 20,
+      "isReservedProperty": true,
+      "operation": 1
+    }
+  ]
+}

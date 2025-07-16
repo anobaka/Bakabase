@@ -9,7 +9,6 @@ import BApi from '@/sdk/BApi';
 import { MediaType } from '@/sdk/constants';
 import ReactPlayer from 'react-player';
 import serverConfig from '@/serverConfig';
-import { PlayFileURL } from '@/sdk/apis';
 
 enum PreviewerStatus {
   Initializing = 0,
@@ -162,9 +161,7 @@ const MediaPreviewer = (props: IProps) => {
         case MediaType.Image:
           return (
             <img
-              src={`${serverConfig.apiEndpoint}${PlayFileURL({
-                fullname: currentItem.filePath,
-              })}`}
+              src={`${serverConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
               onLoad={e => {
                 clearTimeout(autoPlayTimeoutRef.current);
                 if (currentFrame < totalFrameCount && statusRef.current == PreviewerStatus.Playing) {
@@ -183,9 +180,7 @@ const MediaPreviewer = (props: IProps) => {
               width={mediaRef.current?.clientWidth}
               height={mediaRef.current?.clientHeight}
               ref={reactPlayerRef}
-              url={`${serverConfig.apiEndpoint}${PlayFileURL({
-                fullname: currentItem.filePath,
-              })}`}
+              url={`${serverConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
               onDuration={e => {
                 // console.log('duration', e);
               }}

@@ -1,0 +1,44 @@
+.bulk-modification-processor-dialog {
+  .filter-form {
+    display: flex;
+    gap: 10px;
+    flex-direction: column;
+
+    &>.container {
+      border: 1px solid var(--theme-border-color);
+      border-radius: 4px;
+      display: flex;
+      gap: 10px;
+      flex-direction: column;
+      padding: 10px 0;
+      box-sizing: border-box;
+      position: relative;
+      margin: 5px 0;
+
+      &>.title {
+        position: absolute;
+        top: -13px;
+        color: var(--theme-text-subtle);
+        left: 0;
+        text-align: right;
+        width: 100px;
+        font-size: 16px;
+      }
+    }
+
+    &>.block, &>.container>.block {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+
+      &>.label {
+        width: 100px;
+        min-width: 100px;
+        text-align: right;
+      }
+      &>.value {
+        min-width: 60%;
+      }
+    }
+  }
+}

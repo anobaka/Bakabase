@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Balloon, Dialog, Dropdown, Icon, Input, Menu, Message, Table, TimePicker2 } from '@alifd/next';
 import { useTranslation } from 'react-i18next';
 import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import FileSelector from '@/components/FileSelector';
+import { FileSystemSelectorButton } from '@/components/FileSystemSelector';
 import './index.scss';
 import CustomIcon from '@/components/CustomIcon';
 import AnimatedArrow from '@/components/AnimatedArrow';
@@ -353,20 +353,19 @@ export default () => {
                   <Dropdown
                     trigger={
                       <div>
-                        <FileSelector
-                          defaultLabel={t('Add target path')}
-                          multiple={false}
-                          type={'folder'}
-                          value={target ?? null}
-                          size={'small'}
-                          onChange={(newPath) => {
-                            if (!target) {
-                              addTarget(newPath);
-                            } else {
-                              updateTarget(target, newPath);
-                            }
+                        <FileSystemSelectorButton
+                          fileSystemSelectorProps={{
+                            targetType: 'folder', onSelected: e => {
+                              if (!target) {
+                                addTarget(e.path);
+                              } else {
+                                updateTarget(target, e.path);
+                              }
+                            }, defaultSelectedPath: target ?? null
                           }}
-                        />
+                        >
+                          {t('Add target path')}
+                        </FileSystemSelectorButton>
                       </div>
                     }
                     triggerType={['hover']}
@@ -467,18 +466,14 @@ export default () => {
               return (
                 <div className={'source'}>
                   <div className="left">
-                    <FileSelector
-                      multiple={false}
-                      type={'folder'}
-                      value={s}
-                      size={'small'}
-                      onChange={(newPath) => {
-                        // console.log(s, newPath, r);
-                        if (!s) {
-                          // console.log(r.target, newPath);
-                          addSource(r.target, newPath);
-                        } else {
-                          updateSource(r.target, s, newPath);
+                    <FileSystemSelectorButton
+                      fileSystemSelectorProps={{
+                        targetType: 'folder', onSelected: e => {
+                          if (!s) {
+                            addSource(r.target, e.path);
+                          } else {
+                            updateSource(r.target, s, e.path);
+                          }
                         }
                       }}
                     />

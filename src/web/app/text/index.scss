@@ -1,0 +1,21 @@
+.text-page {
+  .type {
+    font-weight: 500;
+  }
+  .texts {
+    .next-table-cell-wrapper {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+
+      .language, .transformer {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    }
+  }
+  &>.opt {
+    margin-top: 10px;
+  }
+}

@@ -1,0 +1,42 @@
+.log-page {
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  .opt {
+    display: flex;
+    margin-bottom: 5px;
+    justify-content: space-between;
+    .left {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 5px;
+      .item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+    }
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 5px 0;
+  }
+
+  .logs {
+    flex: 1;
+    .next-table-body {
+      .next-table-row {
+        font-size: 12px;
+
+        pre {
+          margin: 0;
+        }
+      }
+    }
+  }
+}

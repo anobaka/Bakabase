@@ -1,0 +1,104 @@
+.dashboard-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+
+  .hidden {
+    visibility: hidden;
+  }
+
+  section {
+    display: flex;
+    gap: 10px;
+    //align-items: flex-start;
+    &+section {
+      margin-top: 10px;
+    }
+    .block {
+      .title {
+        font-size: 18px;
+        border-left: 3px solid var(--theme-color-success);
+        padding-left: 10px;
+        color: var(--theme-text-subtle)
+      }
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      background: var(--theme-block-background);
+      border-radius: 4px;
+      overflow: auto;
+      gap: 10px;
+
+      &.trending {
+        .content {
+          flex: 1;
+        }
+      }
+
+      .content {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+
+        .downloader-item {
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          font-size: 14px;
+          //background: var(--theme-block-background-accent);
+          padding: 5px;
+          border-radius: 4px;
+
+          &:first-child {
+            background: unset;
+          }
+        }
+
+        // type-text-count
+        .t-t-c {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          .left {
+            background: var(--theme-block-background-accent);
+            border-radius: 4px;
+            padding: 3px;
+            .label {
+              font-size: 9px;
+              line-height: 9px;
+              margin-bottom: 3px;
+            }
+
+            .label, .text {
+              max-width: 140px;
+              text-overflow: ellipsis;
+              overflow: hidden;
+              white-space: nowrap;
+              line-height: 1em;
+            }
+
+            .text {
+              background: var(--theme-block-background-accent);
+              border-radius: 4px;
+              font-size: 12px;
+            }
+          }
+          .right {
+
+          }
+
+          .count {
+            font-size: 12px;
+          }
+        }
+      }
+    }
+  }
+
+  .file-mover {
+    .count {
+      line-height: 18px;
+    }
+  }
+}

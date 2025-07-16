@@ -5,7 +5,9 @@ import i18n from 'i18next';
 import { useUpdateEffect } from 'react-use';
 import type { BRjsfProps } from '@/components/BRjsf';
 import BRjsf from '@/components/BRjsf';
-import FileSelector from '@/components/FileSelector';
+import {
+  FileSystemSelectorButton,
+} from '@/components/FileSystemSelector';
 import CustomIcon from '@/components/CustomIcon';
 
 const CommandTemplatePlaceholder = i18n.t('Default is `{0}`. {0} will be replaced by filename');
@@ -28,12 +30,15 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
       ref={ref}
       properties={{
         executable: {
-          Component: FileSelector,
-          componentProps: {
-            size: 'small',
-            multiple: false,
-            type: 'file',
-          },
+          Component: (defaultValue, onChange) => (
+            <FileSystemSelectorButton
+              fileSystemSelectorProps={{
+                targetType: 'file',
+                onSelected: e => onChange(e.path),
+                defaultSelectedPath: defaultValue,
+              }}
+            />
+          ),
         },
         commandTemplate: {
           Component: Input,
@@ -88,14 +93,14 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                     dataIndex={'executable'}
                     cell={(f, i, r) => {
                       return (
-                        <FileSelector
-                          size={'small'}
-                          type={'file'}
-                          value={f}
-                          onChange={v => {
-                            value[i].executable = v;
-                            setValue([...value]);
-                          }}
+                        <FileSystemSelectorButton
+                          targetType={'file'}
+                          defaultSelectedPath={f}
+                          onSelected={e => setValue(prev => {
+                            const newValue = [...prev];
+                            newValue[i].executable = e.path;
+                            return newValue;
+                          })}
                         />
                       );
                     }}

@@ -5,9 +5,9 @@ import IceLabel from '@icedesign/label';
 import moment from 'moment';
 import { useUpdateEffect } from 'react-use';
 import i18n from 'i18next';
-import { ClearAllLog, GetAllLogs, ReadAllLog } from '@/sdk/apis';
-import { LogLevel, logLevels } from '@/sdk/constants';
+import { useTranslation } from 'react-i18next';
 import BApi from '@/sdk/BApi';
+import { LogLevel, logLevels } from '@/sdk/constants';
 
 const testLogs = [
   {
@@ -15,7 +15,7 @@ const testLogs = [
     logger: 'SyncService',
     level: LogLevel.Error,
     event: 'Complete',
-    message: 'Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad',
+    message: 'Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad',
     read: false,
   },
   {
@@ -23,12 +23,13 @@ const testLogs = [
     logger: 'SyncService',
     level: LogLevel.Error,
     event: 'Complete',
-    message: 'Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad',
+    message: 'Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad',
     read: true,
   },
 ];
 
 export default () => {
+  const { t } = useTranslation();
   const [logs, setLogs] = useState<any[]>([]);
   const [form, setForm] = useState({
     pageIndex: 1,
@@ -102,7 +103,7 @@ export default () => {
       <div className="opt">
         <div className="left">
           <div className="item">
-            <div className="label">{i18n.t('Time')}</div>
+            <div className="label">{t('Time')}</div>
             <div className="value">
               <DatePicker2.RangePicker
                 size={'small'}
@@ -124,7 +125,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{i18n.t('Level')}</div>
+            <div className="label">{t('Level')}</div>
             <div className="value">
               <Select
                 dataSource={logLevels}
@@ -138,7 +139,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{i18n.t('Logger')}</div>
+            <div className="label">{t('Logger')}</div>
             <div className="value">
               <Input
                 size={'small'}
@@ -151,7 +152,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{i18n.t('Event')}</div>
+            <div className="label">{t('Event')}</div>
             <div className="value">
               <Input
                 size={'small'}
@@ -164,7 +165,7 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{i18n.t('Message')}</div>
+            <div className="label">{t('Message')}</div>
             <div className="value">
               <Input
                 size={'small'}
@@ -182,10 +183,9 @@ export default () => {
           <Button
             type={'normal'}
             size={'small'}
-            onClick={() => ClearAllLog()
-              .invoke((a) => setLogs([]))}
+            onClick={() => BApi.log.clearAllLog().then((a) => setLogs([]))}
           >
-            {i18n.t('Clear all')}
+            {t('Clear all')}
           </Button>
         </div>
       </div>
@@ -200,7 +200,7 @@ export default () => {
           // sortable
           width={'8%'}
           dataIndex={'dateTime'}
-          title={i18n.t('Time')}
+          title={t('Time')}
           cell={(d) => moment(d)
             .format('MM-DD HH:mm:ss')}
         />
@@ -209,7 +209,7 @@ export default () => {
           align={'center'}
           width={'5%'}
           dataIndex={'level'}
-          title={i18n.t('Level')}
+          title={t('Level')}
           cell={(l) => (<IceLabel
             inverse={false}
             status={(l == LogLevel.Error || l == LogLevel.Critical || l == LogLevel.Warning) ? 'danger' : 'info'}
@@ -223,21 +223,21 @@ export default () => {
           // alignHeader={'center'}
           dataIndex={'logger'}
           className={'logger'}
-          title={i18n.t('Logger')}
+          title={t('Logger')}
         />
         <Table.Column
           // sortable
           align={'center'}
           width={'8%'}
           dataIndex={'event'}
-          title={i18n.t('Event')}
+          title={t('Event')}
         />
         <Table.Column
           // sortable
           width={'50%'}
           alignHeader={'center'}
           dataIndex={'message'}
-          title={i18n.t('Message')}
+          title={t('Message')}
           cell={(c) => <pre>{c}</pre>}
         />
         {/* <Table.Column */}
