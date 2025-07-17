@@ -1,113 +1,42 @@
-import { Route, Routes, Navigate } from "react-router-dom";
-
-import { buildLogger } from "@/components/utils";
+import { useRoutes, Navigate, RouteObject } from "react-router-dom";
+import { routesMenuConfig, RouteMenuItem } from "@/components/routesMenuConfig";
 import BasicLayout from "@/layouts/BasicLayout";
 import BlankLayout from "@/layouts/BlankLayout";
-import BakabaseContextProvider from "@/components/ContextProvider/BakabaseContextProvider";
+import type { ReactNode } from "react";
+import BakabaseContextProvider from "./components/ContextProvider/BakabaseContextProvider";
 
-const log = buildLogger("Router");
-
-// Import all pages dynamically - support both index.tsx and page.tsx
-const pages = import.meta.glob("./pages/**/*.tsx", { eager: true });
-
-interface RouteConfig {
-  path: string;
-  component: any;
-  layout?: "basic" | "blank" | "none";
-}
-
-// Create route mapping based on file structure
-const createRoutes = (): RouteConfig[] => {
-  const routes: RouteConfig[] = [];
-  const processedPaths = new Set<string>(); // Track processed paths to avoid duplicates
-
-  Object.entries(pages).forEach(([path, module]) => {
-    // Skip layout files
-    if (path.includes("layout.tsx")) {
-      return;
-    }
-
-    // Extract route path from file path
-    let routePath = path
-      .replace("./pages/", "")
-      .replace("/index.tsx", "")
-      .toLowerCase();
-
-    // Skip if we've already processed this route (index.tsx takes priority)
-    if (processedPaths.has(routePath)) {
-      return;
-    }
-
-    // Handle root page
-    if (routePath === "page") {
-      routes.push({
-        path: "/",
-        component: (module as any).default,
-        layout: "basic",
-      });
-      processedPaths.add("/");
-    } else {
-      // Determine layout based on route
-      const layout = routePath === "welcome" ? "blank" : "basic";
-
-      routes.push({
-        path: `/${routePath}`,
-        component: (module as any).default,
-        layout,
-      });
-      processedPaths.add(routePath);
-    }
-  });
-
-  return routes;
-};
-
-// Layout wrapper component
-const LayoutWrapper = ({
-  children,
-  layout = "basic",
-}: {
-  children: React.ReactNode;
-  layout?: "basic" | "blank" | "none";
-}) => {
+function getLayout(layout: string, children: ReactNode): ReactNode {
   switch (layout) {
     case "blank":
       return <BlankLayout>{children}</BlankLayout>;
     case "basic":
-      return <BasicLayout>{children}</BasicLayout>;
-    case "none":
-      return <>{children}</>;
     default:
       return <BasicLayout>{children}</BasicLayout>;
   }
-};
+}
 
-// Main router component
-export function AppRouter() {
-  const routes = createRoutes();
+function flattenRoutes(config: RouteMenuItem[]): RouteObject[] {
+  const result: RouteObject[] = [];
+  for (const r of config) {
+    if (r.children) {
+      result.push(...flattenRoutes(r.children));
+    }
+    if (r.path && r.component) {
+      result.push({
+        path: r.path,
+        element: getLayout(r.layout || "basic", <r.component />),
+      });
+    }
+  }
+  return result;
+}
 
-  log(
-    "Generated routes:",
-    routes.map((r) => ({ path: r.path, layout: r.layout })),
-  );
-
+export default function AppRouter() {
+  const routes = flattenRoutes(routesMenuConfig);
+  routes.push({ path: "*", element: <Navigate to="/" replace /> });
   return (
     <BakabaseContextProvider>
-      <Routes>
-        {routes.map(({ path, component: Component, layout }) => (
-          <Route
-            key={path}
-            element={
-              <LayoutWrapper layout={layout}>
-                <Component />
-              </LayoutWrapper>
-            }
-            path={path}
-          />
-        ))}
-        {/* Fallback route */}
-        <Route element={<Navigate replace to="/" />} path="*" />
-      </Routes>
+      {useRoutes(routes)}
     </BakabaseContextProvider>
-  );
+  )
 }

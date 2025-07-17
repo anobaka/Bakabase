@@ -1,31 +1,3 @@
-@import "tailwindcss";
-
-@config "../../tailwind.config.js";
-
-@font-face {
-  font-family: 'Artypa-Regular';
-  src: url('../assets/Artypa-Regular.woff') format('woff');
-}
-
-html, body {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  user-select: none;
-  --scrollbar-size: 7px;
-  --path-separator-color: #ff8400;
-}
-
-*,*:focus,*:hover{
-  outline:none;
-}
-
-.ReactCollapse--collapse { transition: height 500ms; }
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
 /* ===== 主题变量（dark/light） ===== */
 @import './global.dark.css';
 @import './global.light.css';
@@ -35,6 +7,45 @@ pre {
 
 /* ===== reactour 覆盖 ===== */
 @import './global.reactour.overrides.css';
+
+@import "tailwindcss";
+
+@config "../../tailwind.config.js";
+
+/* @tailwind base;
+@tailwind components;
+@tailwind utilities; */
+
+@font-face {
+  font-family: 'Artypa-Regular';
+  src: url('../assets/Artypa-Regular.woff') format('woff');
+}
+
+html,
+body {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  user-select: none;
+  --scrollbar-size: 7px;
+  --path-separator-color: #ff8400;
+  font-family: Microsoft Yahei, sans-serif;
+}
+
+*,
+*:focus,
+*:hover {
+  outline: none;
+}
+
+.ReactCollapse--collapse {
+  transition: height 500ms;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
 
 /* ===== bakaui 组件变量 ===== */
 @import '../components/bakaui/index.css';

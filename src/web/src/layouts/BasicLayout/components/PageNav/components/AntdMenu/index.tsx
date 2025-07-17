@@ -1,7 +1,7 @@
 "use client";
 
 import type { MenuProps } from "antd";
-import type { IMenuItem } from "../../menuConfig";
+import type { IMenuItem } from "./menuConfig";
 
 import React, { useRef } from "react";
 import { Menu } from "antd";
@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
-import { asideMenuConfig } from "../../menuConfig";
+import { asideMenuConfig } from "./menuConfig";
 
 import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
@@ -19,8 +19,6 @@ type MenuItem = Required<MenuProps>["items"][number];
 interface IProps {
   collapsed: boolean;
 }
-
-const IconStyle = { fontSize: 16 };
 
 const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const { t } = useTranslation();
@@ -58,7 +56,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
         {item.isDeprecated && <DeprecatedChip />}
       </div>,
       item.path,
-      <Icon className={"text-lg"} style={IconStyle} />,
+      <Icon className={"!text-lg"} />,
       item.children?.map(convertItem),
     );
   }

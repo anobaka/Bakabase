@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
-import { AppRouter } from "./router";
+import AppRouter from "./router";
 
 import { buildLogger } from "@/components/utils";
 
@@ -14,7 +14,9 @@ function App() {
     log("Current route:", location.pathname);
   }, [location]);
 
-  return <AppRouter />;
+  return (
+    <AppRouter />
+  );
 }
 
 export default App;
