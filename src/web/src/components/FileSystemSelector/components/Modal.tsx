@@ -1,20 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Modal } from '@/components/bakaui';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import type { FileSystemSelectorProps } from '@/components/FileSystemSelector/models';
-import { FileSystemSelectorPanel } from '@/components/FileSystemSelector';
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { FileSystemSelectorProps } from "@/components/FileSystemSelector/models";
 
-interface IProps extends FileSystemSelectorProps, DestroyableProps {
-}
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Modal } from "@/components/bakaui";
+import { FileSystemSelectorPanel } from "@/components/FileSystemSelector";
+
+interface IProps extends FileSystemSelectorProps, DestroyableProps {}
 
 export default (props: IProps) => {
   const { t } = useTranslation();
-  const {
-    ...fsProps
-  } = props;
+  const { ...fsProps } = props;
 
   const [visible, setVisible] = useState(true);
 
@@ -22,40 +21,41 @@ export default (props: IProps) => {
     setVisible(false);
   };
 
-  let title = 'Select file system entries';
+  let title = "Select file system entries";
+
   if (props.targetType != undefined) {
     switch (props.targetType) {
-      case 'file':
-        title = 'Select file';
+      case "file":
+        title = "Select file";
         break;
-      case 'folder':
-        title = 'Select folder';
+      case "folder":
+        title = "Select folder";
         break;
     }
   }
 
   return (
     <Modal
-      size={'xl'}
+      className={"h-full"}
+      footer={false}
+      size={"xl"}
       title={t<string>(title)}
       visible={visible}
-      footer={false}
-      onDestroyed={props.onDestroyed}
       onClose={close}
-      className={'h-full'}
+      onDestroyed={props.onDestroyed}
     >
       <FileSystemSelectorPanel
         {...fsProps}
-        onSelected={e => {
-          close();
-          if (fsProps.onSelected) {
-            fsProps.onSelected(e);
-          }
-        }}
         onCancel={() => {
           close();
           if (fsProps.onCancel) {
             fsProps.onCancel();
+          }
+        }}
+        onSelected={(e) => {
+          close();
+          if (fsProps.onSelected) {
+            fsProps.onSelected(e);
           }
         }}
       />

@@ -1,27 +1,26 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import OptionsCard from './OptionsCard';
-import BooleanOptions from './BooleanOptions';
-import type {
-  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel,
-} from '@/sdk/Api';
-import { SubjectLabels } from '@/pages/synchronization-options/models';
-import { enhancerIds } from '@/sdk/constants';
-import EnhancerOptions from '@/pages/synchronization-options/components/EnhancerOptions';
-import { Checkbox, NumberInput } from '@/components/bakaui';
+import type { BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel } from "@/sdk/Api";
 
-type Options = BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
+import { useTranslation } from "react-i18next";
+
+import OptionsCard from "./OptionsCard";
+import BooleanOptions from "./BooleanOptions";
+
+import { SubjectLabels } from "@/pages/synchronization-options/models";
+import { enhancerIds } from "@/sdk/constants";
+import EnhancerOptions from "@/pages/synchronization-options/components/EnhancerOptions";
+import { NumberInput } from "@/components/bakaui";
+
+type Options =
+  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
 
 type Props = {
   options?: Options;
   onChange?: (options: Options) => any;
 };
 
-export default ({
-                  options,
-                  onChange,
-                }: Props) => {
+export default ({ options, onChange }: Props) => {
   const { t } = useTranslation();
 
   const patchOptions = (patches: Partial<Options>) => {
@@ -29,57 +28,68 @@ export default ({
       ...options,
       ...patches,
     };
+
     onChange?.(newOptions);
   };
 
   return (
-    <OptionsCard header={t<string>('Global')}>
-      <div className={'flex justify-end'}>
+    <OptionsCard header={t<string>("Global")}>
+      <div className={"flex justify-end"}>
         <NumberInput
-          className={'w-[360px]'}
-          label={t<string>('Max threads')}
-          size={'sm'}
-          minValue={1}
-          onValueChange={maxThreads => {
-            patchOptions({ maxThreads });
-          }}
-          value={options?.maxThreads}
-          description={t<string>('To reduce synchronization time, we will, by default, use 40% of your CPU\'s maximum thread count (rounded down) for syncing the media library')}
           isClearable
+          className={"w-[360px]"}
+          description={t<string>(
+            "To reduce synchronization time, we will, by default, use 40% of your CPU's maximum thread count (rounded down) for syncing the media library",
+          )}
+          label={t<string>("Max threads")}
+          minValue={1}
+          size={"sm"}
+          value={options?.maxThreads}
           onClear={() => {
             patchOptions({ maxThreads: undefined });
+          }}
+          onValueChange={(maxThreads) => {
+            patchOptions({ maxThreads });
           }}
         />
       </div>
       <div />
       <BooleanOptions
-        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownMediaLibrary)}
-        onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownMediaLibrary: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownMediaLibrary}
+        subject={t<string>(
+          SubjectLabels.DeleteResourcesWithUnknownMediaLibrary,
+        )}
+        onSelect={(isSelected) =>
+          patchOptions({ deleteResourcesWithUnknownMediaLibrary: isSelected })
+        }
       />
       <BooleanOptions
-        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
-        onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownPath}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
+        onSelect={(isSelected) =>
+          patchOptions({ deleteResourcesWithUnknownPath: isSelected })
+        }
       />
 
-      {enhancerIds.map(e => {
-          return (
-            <EnhancerOptions
-              options={options?.enhancerOptionsMap?.[e.value]}
-              onChange={o => patchOptions({
+      {enhancerIds.map((e) => {
+        return (
+          <EnhancerOptions
+            enhancer={{
+              id: e.value,
+              name: e.label,
+            }}
+            options={options?.enhancerOptionsMap?.[e.value]}
+            onChange={(o) =>
+              patchOptions({
                 enhancerOptionsMap: {
                   ...options?.enhancerOptionsMap,
                   [e.value]: o,
                 },
-              })}
-              enhancer={{
-                id: e.value,
-                name: e.label,
-              }}
-            />
-          );
-        })}
+              })
+            }
+          />
+        );
+      })}
     </OptionsCard>
   );
 };

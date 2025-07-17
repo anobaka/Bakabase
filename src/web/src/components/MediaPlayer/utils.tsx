@@ -1,13 +1,15 @@
-'use client';
+"use client";
 
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import { uuidv4 } from '@/components/utils';
-import MediaPlayer from '@/components/MediaPlayer/index';
+import React from "react";
+import ReactDOM from "react-dom/client";
+
+import { uuidv4 } from "@/components/utils";
+import MediaPlayer from "@/components/MediaPlayer/index";
 
 const createMediaPlayer = (props) => {
   const { key = `message-${uuidv4()}` } = props;
-  const node = document.createElement('div');
+  const node = document.createElement("div");
+
   document.body.appendChild(node);
 
   const root = ReactDOM.createRoot(node);
@@ -20,10 +22,7 @@ const createMediaPlayer = (props) => {
 
   root.render(
     <React.StrictMode>
-      <MediaPlayer
-        {...props}
-        afterClose={unmount}
-      />
+      <MediaPlayer {...props} afterClose={unmount} />
     </React.StrictMode>,
   );
 
@@ -33,6 +32,4 @@ const createMediaPlayer = (props) => {
   };
 };
 
-export {
-  createMediaPlayer,
-};
+export { createMediaPlayer };

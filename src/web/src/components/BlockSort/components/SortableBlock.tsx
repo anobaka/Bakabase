@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Card, CardBody } from '@/components/bakaui';
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+import { Card, CardBody } from "@/components/bakaui";
 
 type Props = {
   id: any;
@@ -11,13 +12,8 @@ type Props = {
 };
 
 export default ({ id, name, idx }: Props) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-  } = useSortable({ id: id });
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -28,8 +24,7 @@ export default ({ id, name, idx }: Props) => {
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card>
         <CardBody>
-          [{idx + 1}]
-          {name}
+          [{idx + 1}]{name}
         </CardBody>
       </Card>
     </div>

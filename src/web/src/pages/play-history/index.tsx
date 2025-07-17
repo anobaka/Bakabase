@@ -1,26 +1,10 @@
-'use client';
+"use client";
 
-import React, { useEffect, useReducer, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useReducer, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import BApi from "@/sdk/BApi";
 import {
-  DeleteOutlined, DownloadOutlined,
-  EnterOutlined,
-  MergeOutlined,
-  PlusCircleOutlined,
-  SearchOutlined,
-  ToTopOutlined, UploadOutlined,
-} from '@ant-design/icons';
-import { AliasAdditionalItem } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
-import {
-  Button,
-  Card,
-  CardBody,
-  CardHeader,
-  Chip,
-  Divider,
-  Input,
-  Modal,
   Pagination,
   Table,
   TableBody,
@@ -28,9 +12,8 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tooltip,
-} from '@/components/bakaui';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+} from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Form = {
   pageSize: 100;
@@ -66,55 +49,55 @@ export default () => {
       ...form,
       ...pForm,
     };
+
     setForm(nf);
-    BApi.playHistory.searchPlayHistories(nf)
-      .then((a) => {
-        setPlayHistories(a.data ?? []);
-        setTotalCount(a.totalCount!);
-      });
+    BApi.playHistory.searchPlayHistories(nf).then((a) => {
+      setPlayHistories(a.data ?? []);
+      setTotalCount(a.totalCount!);
+    });
   };
 
   const renderPagination = () => {
     const pageCount = Math.ceil(totalCount / form.pageSize);
+
     if (pageCount > 1) {
       return (
-        <div className={'flex justify-center'}>
+        <div className={"flex justify-center"}>
           <Pagination
-            size={'sm'}
             page={form.pageIndex}
+            size={"sm"}
             total={pageCount}
             onChange={(p) => search({ pageIndex: p })}
           />
         </div>
       );
     }
+
     return;
   };
 
   return (
     <div className="">
       {playHistories.length > 0 ? (
-        <div className={'mt-1'}>
+        <div className={"mt-1"}>
           <Table
-            removeWrapper
-            topContent={renderPagination()}
-            bottomContent={renderPagination()}
-            isStriped
             isCompact
             isHeaderSticky
+            isStriped
+            removeWrapper
+            bottomContent={renderPagination()}
+            topContent={renderPagination()}
           >
             <TableHeader>
-              <TableColumn>{t<string>('Item')}</TableColumn>
-              <TableColumn>{t<string>('Played at')}</TableColumn>
+              <TableColumn>{t<string>("Item")}</TableColumn>
+              <TableColumn>{t<string>("Played at")}</TableColumn>
             </TableHeader>
             <TableBody>
-              {playHistories.map(a => {
+              {playHistories.map((a) => {
                 return (
                   <TableRow key={a.id}>
                     <TableCell>{a.item}</TableCell>
-                    <TableCell>
-                      {a.playedAt}
-                    </TableCell>
+                    <TableCell>{a.playedAt}</TableCell>
                   </TableRow>
                 );
               })}
@@ -122,9 +105,7 @@ export default () => {
           </Table>
         </div>
       ) : (
-        <div>
-          {t<string>('No play history')}
-        </div>
+        <div>{t<string>("No play history")}</div>
       )}
     </div>
   );

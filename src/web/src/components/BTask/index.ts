@@ -1,5 +1,3 @@
-import BTaskStopButton from './components/BTaskStopButton';
+import BTaskStopButton from "./components/BTaskStopButton";
 
-export {
-  BTaskStopButton,
-};
+export { BTaskStopButton };

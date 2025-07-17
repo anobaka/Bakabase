@@ -1,11 +1,10 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Button } from '@alifd/next';
-import './index.scss';
-import i18n from 'i18next';
-import { Link } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import React from "react";
+import { Button } from "@alifd/next";
+import "./index.scss";
+import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export default ({
   title,
@@ -16,29 +15,28 @@ export default ({
   const { t } = useTranslation();
 
   return (
-    <div className={'iw-title'}>
+    <div className={"iw-title"}>
       <div className="left">
         <div className="title">{t<string>(title)}</div>
-        {titleAfter && (
-          <div className={'title-after'}>
-            {titleAfter}
-          </div>
-        )}
+        {titleAfter && <div className={"title-after"}>{titleAfter}</div>}
         {buttons && (
           <div className="buttons">
             {buttons.map((b) => (
-              <div className={'button'} key={b.key}>
-                <img className={'icon'} src={b.icon} alt="" />
-                {b.type == 'link' ? (<Link to={b.to}>{t<string>(b.text)}</Link>)
-                  : (<Button type={'primary'} onClick={b.onClick} text>{t<string>(b.text)}</Button>)}
+              <div key={b.key} className={"button"}>
+                <img alt="" className={"icon"} src={b.icon} />
+                {b.type == "link" ? (
+                  <Link to={b.to}>{t<string>(b.text)}</Link>
+                ) : (
+                  <Button text type={"primary"} onClick={b.onClick}>
+                    {t<string>(b.text)}
+                  </Button>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
-      <div className="right">
-        {right}
-      </div>
+      <div className="right">{right}</div>
     </div>
   );
 };

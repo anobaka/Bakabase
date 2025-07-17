@@ -1,3 +1,5 @@
-import { Input, InputProps } from "@heroui/react";
+import type { InputProps } from "@heroui/react";
 
-export { Input, InputProps };
+import { Input } from "@heroui/react";
+
+export { Input, type InputProps };

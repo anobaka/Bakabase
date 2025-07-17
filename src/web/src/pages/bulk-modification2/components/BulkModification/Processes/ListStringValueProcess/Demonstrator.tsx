@@ -1,16 +1,15 @@
-'use client';
+"use client";
 
-import { Trans, useTranslation } from 'react-i18next';
-import React from 'react';
-import type { ListStringValueProcessOptions } from './models';
-import type { IProperty } from '@/components/Property/models';
-import { BulkModificationListStringProcessOperation } from '@/sdk/constants';
-import type { BulkModificationVariable } from '@/pages/bulk-modification2/components/BulkModification/models';
-import {
-  ProcessValueDemonstrator,
-} from '@/pages/bulk-modification2/components/BulkModification/ProcessValue';
-import { buildLogger } from '@/components/utils';
-import { ProcessValueEditor } from '@/pages/bulk-modification2/components/BulkModification/ProcessValue';
+import type { ListStringValueProcessOptions } from "./models";
+import type { IProperty } from "@/components/Property/models";
+import type { BulkModificationVariable } from "@/pages/bulk-modification2/components/BulkModification/models";
+
+import { Trans, useTranslation } from "react-i18next";
+import React from "react";
+
+import { BulkModificationListStringProcessOperation } from "@/sdk/constants";
+import { ProcessValueDemonstrator } from "@/pages/bulk-modification2/components/BulkModification/ProcessValue";
+import { buildLogger } from "@/components/utils";
 
 type Props = {
   property: IProperty;
@@ -19,15 +18,10 @@ type Props = {
   variables?: BulkModificationVariable[];
 };
 
-const log = buildLogger('ListStringValueProcess');
+const log = buildLogger("ListStringValueProcess");
 
 export default (props: Props) => {
-  const {
-    operation,
-    options,
-    variables,
-    property,
-  } = props;
+  const { operation, options, variables, property } = props;
   const { t } = useTranslation();
 
   log(props);
@@ -37,15 +31,17 @@ export default (props: Props) => {
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.SetDirectly'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.SetDirectly"
+            }
           >
             <div className="primary" />
             with fixed value
           </Trans>
           <ProcessValueDemonstrator
             property={property}
-            valueType={options?.valueType}
             value={options?.value}
+            valueType={options?.valueType}
             variables={variables}
           />
         </>
@@ -55,17 +51,22 @@ export default (props: Props) => {
     case BulkModificationListStringProcessOperation.AddToEnd:
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd'}
+          i18nKey={
+            "BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd"
+          }
           values={{
-            direction: operation == BulkModificationListStringProcessOperation.AddToStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
+            direction:
+              operation == BulkModificationListStringProcessOperation.AddToStart
+                ? t<string>("Position.Beginning")
+                : t<string>("Position.End"),
             value: options?.value,
           }}
         >
           Add
           <ProcessValueDemonstrator
             property={property}
-            valueType={options?.valueType}
             value={options?.value}
+            valueType={options?.valueType}
             variables={variables}
           />
           to
@@ -75,9 +76,13 @@ export default (props: Props) => {
     case BulkModificationListStringProcessOperation.AddToAnyPosition:
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition'}
+          i18nKey={
+            "BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition"
+          }
           values={{
-            direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
+            direction: options?.isPositioningDirectionReversed
+              ? t<string>("Position.End")
+              : t<string>("Position.Beginning"),
             position: options?.index,
             value: options?.value,
           }}
@@ -85,8 +90,8 @@ export default (props: Props) => {
           Add
           <ProcessValueDemonstrator
             property={property}
-            valueType={options?.valueType}
             value={options?.value}
+            valueType={options?.valueType}
             variables={variables}
           />
           to the
@@ -100,9 +105,15 @@ export default (props: Props) => {
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd"
+            }
             values={{
-              direction: operation == BulkModificationListStringProcessOperation.RemoveFromStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
+              direction:
+                operation ==
+                BulkModificationListStringProcessOperation.RemoveFromStart
+                  ? t<string>("Position.Beginning")
+                  : t<string>("Position.End"),
               count: options?.count,
             }}
           >
@@ -115,15 +126,22 @@ export default (props: Props) => {
       );
     case BulkModificationListStringProcessOperation.RemoveFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
+        direction: options?.isPositioningDirectionReversed
+          ? t<string>("Position.End")
+          : t<string>("Position.Beginning"),
         position: options?.index,
         count: options?.count,
-        removeDirection: options?.isOperationDirectionReversed ? t<string>('TextOperation.Backward') : t<string>('TextOperation.Forward'),
+        removeDirection: options?.isOperationDirectionReversed
+          ? t<string>("TextOperation.Backward")
+          : t<string>("TextOperation.Forward"),
       };
+
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromAnyPosition'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.RemoveFromAnyPosition"
+            }
             values={texts}
           >
             {/* delete 6 characters forward from the fifth character from the end */}
@@ -132,7 +150,7 @@ export default (props: Props) => {
             characters
             <span className="primary">{texts.removeDirection}</span>
             the
-            <span className={'secondary'}>{texts.position}</span>
+            <span className={"secondary"}>{texts.position}</span>
             character from the
             <span className="primary">{texts.direction}</span>
           </Trans>
@@ -142,14 +160,20 @@ export default (props: Props) => {
     case BulkModificationListStringProcessOperation.ReplaceFromStart:
     case BulkModificationListStringProcessOperation.ReplaceFromEnd: {
       const texts = {
-        direction: operation == BulkModificationListStringProcessOperation.ReplaceFromEnd ? t<string>('Position.End') : t<string>('Position.Beginning'),
+        direction:
+          operation == BulkModificationListStringProcessOperation.ReplaceFromEnd
+            ? t<string>("Position.End")
+            : t<string>("Position.Beginning"),
         replace: options?.replace,
         find: options?.find,
       };
+
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.ReplaceFromStartOrEnd'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.ReplaceFromStartOrEnd"
+            }
             values={texts}
           >
             {/* Replace xxx with yyy from start */}
@@ -162,8 +186,8 @@ export default (props: Props) => {
             {/* 3 */}
             <ProcessValueDemonstrator
               property={property}
-              valueType={options?.valueType}
               value={options?.replace}
+              valueType={options?.valueType}
               variables={variables}
             />
             {/* 4 */}
@@ -176,13 +200,16 @@ export default (props: Props) => {
     }
     case BulkModificationListStringProcessOperation.ReplaceFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t<string>('end') : t<string>('start'),
+        direction: options?.isPositioningDirectionReversed
+          ? t<string>("end")
+          : t<string>("start"),
         replace: options?.replace,
         find: options?.find,
       };
+
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.Replace'}
+          i18nKey={"BulkModification.Processor.Demonstrator.Operation.Replace"}
           values={texts}
         >
           {/* Replace xxx with yyy */}
@@ -195,8 +222,8 @@ export default (props: Props) => {
           {/* 3 */}
           <ProcessValueDemonstrator
             property={property}
-            valueType={options?.valueType}
             value={options?.replace}
+            valueType={options?.valueType}
             variables={variables}
           />
         </Trans>
@@ -207,9 +234,12 @@ export default (props: Props) => {
         replace: options?.replace,
         find: options?.find,
       };
+
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.ReplaceWithRegex'}
+          i18nKey={
+            "BulkModification.Processor.Demonstrator.Operation.ReplaceWithRegex"
+          }
           values={texts}
         >
           {/* Use regex to replace xxx with yyy */}
@@ -228,25 +258,17 @@ export default (props: Props) => {
           {/* 6 */}
           <ProcessValueDemonstrator
             property={property}
-            valueType={options?.valueType}
             value={options?.replace}
+            valueType={options?.valueType}
             variables={variables}
           />
         </Trans>
       );
     }
     case BulkModificationListStringProcessOperation.Delete: {
-      return (
-        <div className={'primary'}>
-          {t<string>('Delete')}
-        </div>
-      );
+      return <div className={"primary"}>{t<string>("Delete")}</div>;
     }
     default:
-      return (
-        <>
-          {t<string>('Unsupported value')}
-        </>
-      );
+      return <>{t<string>("Unsupported value")}</>;
   }
 };

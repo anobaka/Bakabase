@@ -1,7 +1,7 @@
-'use strict';
+"use strict";
 
-import type { IProperty } from '@/components/Property/models';
-import type { PropertyPool, SearchOperation } from '@/sdk/constants';
+import type { IProperty } from "@/components/Property/models";
+import type { PropertyPool, SearchOperation } from "@/sdk/constants";
 
 export enum GroupCombinator {
   And = 1,

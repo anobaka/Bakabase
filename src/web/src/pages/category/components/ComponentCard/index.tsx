@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Balloon } from '@alifd/next';
-import './index.scss';
-import i18n from 'i18next';
+import React, { useEffect, useState } from "react";
+import { Balloon } from "@alifd/next";
+import "./index.scss";
+import i18n from "i18next";
 
 export default ({
   name,
@@ -27,7 +27,7 @@ export default ({
 
   const coreComponent = (
     <div
-      className={`${className} component-card ${selected ? 'selected' : ''} ${disabled ? 'disabled' : ''}`}
+      className={`${className} component-card ${selected ? "selected" : ""} ${disabled ? "disabled" : ""}`}
       {...otherProps}
       onClick={() => {
         if (disabled) {
@@ -41,7 +41,7 @@ export default ({
         }
       }}
     >
-      <div className="select-cover" >
+      <div className="select-cover">
         {/* <Icon type="select" size={'large'} /> */}
       </div>
       <div className="name">{name}</div>
@@ -52,9 +52,11 @@ export default ({
     </div>
   );
 
-  return (
-    tip ? (
-      <Balloon.Tooltip trigger={coreComponent}>{i18n.t<string>(tip)}</Balloon.Tooltip>
-    ) : coreComponent
+  return tip ? (
+    <Balloon.Tooltip trigger={coreComponent}>
+      {i18n.t<string>(tip)}
+    </Balloon.Tooltip>
+  ) : (
+    coreComponent
   );
 };

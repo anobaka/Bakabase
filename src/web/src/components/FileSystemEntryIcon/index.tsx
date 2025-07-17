@@ -1,13 +1,15 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import i18n from 'i18next';
-import CustomIcon from '@/components/CustomIcon';
-import './index.scss';
-import { IconType } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
-import { splitPathIntoSegments } from '@/components/utils';
-import _ from 'lodash';
+import React, { useEffect, useState } from "react";
+import i18n from "i18next";
+
+import CustomIcon from "@/components/CustomIcon";
+import "./index.scss";
+import { IconType } from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+import { splitPathIntoSegments } from "@/components/utils";
+
+import _ from "lodash";
 
 type Props = {
   type: IconType;
@@ -17,24 +19,26 @@ type Props = {
 };
 
 const buildCacheKey = (type: IconType, path?: string): string => {
-  let suffix = '';
+  let suffix = "";
+
   switch (type) {
     case IconType.UnknownFile:
     case IconType.Directory:
       break;
     case IconType.Dynamic: {
       if (!path) {
-        throw new Error('Path is required for dynamic icon');
+        throw new Error("Path is required for dynamic icon");
       }
 
-      if (path.endsWith('.exe') || path.endsWith('.app')) {
+      if (path.endsWith(".exe") || path.endsWith(".app")) {
         suffix = path;
         break;
       }
 
       const filename = _.last(splitPathIntoSegments(path))!;
-      const filenameSegments = filename.split('.');
+      const filenameSegments = filename.split(".");
       const ext = filenameSegments[filenameSegments.length - 1];
+
       if (ext == undefined) {
         type = IconType.UnknownFile;
       } else {
@@ -43,31 +47,31 @@ const buildCacheKey = (type: IconType, path?: string): string => {
       break;
     }
   }
+
   return `${type}-${suffix}`;
 };
 
-export default ({
-                  path,
-                  type,
-                  size = 14,
-                  disableCache,
-                }: Props) => {
+export default ({ path, type, size = 14, disableCache }: Props) => {
   const cacheKey = buildCacheKey(type, path);
 
   const [icons, iconsDispatchers] = useState<{ [key: string]: string }>({});
-  const [iconImgData, setIconImgData] = useState(disableCache ? undefined : icons[cacheKey]);
+  const [iconImgData, setIconImgData] = useState(
+    disableCache ? undefined : icons[cacheKey],
+  );
 
   // console.log(path, type, size, iconImgData);
 
   useEffect(() => {
     if (!iconImgData) {
-      BApi.file.getIconData({
-        type,
-        path,
-      }).then(r => {
-        iconsDispatchers({ ...icons, [cacheKey]: r.data });
-        setIconImgData(r.data);
-      });
+      BApi.file
+        .getIconData({
+          type,
+          path,
+        })
+        .then((r) => {
+          iconsDispatchers({ ...icons, [cacheKey]: r.data });
+          setIconImgData(r.data);
+        });
     }
     // console.log(ext, icons);
     // if (!iconImgData && !type) {
@@ -92,7 +96,7 @@ export default ({
 
   return (
     <div
-      className={'file-system-entry-icon'}
+      className={"file-system-entry-icon"}
       style={{
         width: size,
         height: size,
@@ -106,15 +110,15 @@ export default ({
       {/*   </svg> */}
       {/* ) : */}
       {iconImgData ? (
-        <img src={iconImgData} alt={''} />
+        <img alt={""} src={iconImgData} />
       ) : (
         <CustomIcon
-          type={'question-circle'}
           style={{
-            color: '#ccc',
+            color: "#ccc",
             fontSize: size,
           }}
-          title={i18n.t<string>('Unknown file type')}
+          title={i18n.t<string>("Unknown file type")}
+          type={"question-circle"}
         />
       )}
     </div>

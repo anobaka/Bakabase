@@ -1,3 +1,5 @@
+import type { IconType } from "react-icons";
+
 import {
   AiOutlineAppstore,
   AiOutlineAppstoreAdd,
@@ -12,7 +14,6 @@ import {
   AiOutlineFileSync,
   AiOutlineFileText,
   AiOutlineForm,
-  AiOutlineHeatMap,
   AiOutlineHistory,
   AiOutlineInteraction,
   AiOutlinePicture,
@@ -23,9 +24,12 @@ import {
   AiOutlineSync,
   AiOutlineTool,
   AiOutlineUngroup,
-} from 'react-icons/ai';
-import type { IconType } from 'react-icons';
-import { MdDriveFileRenameOutline, MdOutlineIntegrationInstructions, MdOutlineTopic } from 'react-icons/md';
+} from "react-icons/ai";
+import {
+  MdDriveFileRenameOutline,
+  MdOutlineIntegrationInstructions,
+  MdOutlineTopic,
+} from "react-icons/md";
 
 const headerMenuConfig = [];
 
@@ -40,43 +44,43 @@ export interface IMenuItem {
 
 const asideMenuConfig: IMenuItem[] = [
   {
-    name: 'Resource',
-    path: '/resource',
+    name: "Resource",
+    path: "/resource",
     icon: AiOutlinePicture,
   },
   {
-    name: 'Media library',
+    name: "Media library",
     icon: AiOutlineProduct,
-    path: '/medialibrary',
+    path: "/medialibrary",
   },
   {
-    name: 'Media library template',
+    name: "Media library template",
     icon: AiOutlineAppstoreAdd,
-    path: '/medialibrarytemplate',
+    path: "/medialibrarytemplate",
   },
   {
-    name: 'Data',
+    name: "Data",
     icon: AiOutlineDatabase,
-    path: '/expandable-2',
+    path: "/expandable-2",
     children: [
       {
-        name: 'Synchronization options',
-        path: '/synchronizationoptions',
+        name: "Synchronization options",
+        path: "/synchronizationoptions",
         icon: AiOutlineSync,
       },
       {
-        name: 'Custom property',
-        path: '/customproperty',
+        name: "Custom property",
+        path: "/customproperty",
         icon: AiOutlineRadarChart,
       },
       {
-        name: 'Extension group',
-        path: '/extensiongroup',
+        name: "Extension group",
+        path: "/extensiongroup",
         icon: AiOutlineUngroup,
       },
       {
-        name: 'Bulk modification',
-        path: '/bulkmodification2',
+        name: "Bulk modification",
+        path: "/bulkmodification2",
         icon: AiOutlineForm,
       },
       // {
@@ -85,23 +89,23 @@ const asideMenuConfig: IMenuItem[] = [
       //   icon: AiOutlineTags,
       // },
       {
-        name: 'Cache',
-        path: '/cache',
+        name: "Cache",
+        path: "/cache",
         icon: AiOutlineDashboard,
       },
       {
-        name: 'Alias',
-        path: '/alias',
+        name: "Alias",
+        path: "/alias",
         icon: AiOutlineBranches,
       },
       {
-        name: 'Text',
-        path: '/text',
+        name: "Text",
+        path: "/text",
         icon: AiOutlineFieldString,
       },
       {
-        name: 'Play history',
-        path: '/playhistory',
+        name: "Play history",
+        path: "/playhistory",
         icon: AiOutlineHistory,
       },
       // {
@@ -110,42 +114,42 @@ const asideMenuConfig: IMenuItem[] = [
       //   icon: AiOutlineThunderbolt,
       // },
       {
-        name: 'Custom component',
-        path: '/customcomponent',
+        name: "Custom component",
+        path: "/customcomponent",
         icon: AiOutlineControl,
       },
       {
-        name: 'Media library',
+        name: "Media library",
         icon: AiOutlineProduct,
-        path: '/category',
+        path: "/category",
         isDeprecated: true,
       },
     ],
   },
   {
-    name: 'Tools',
+    name: "Tools",
     icon: AiOutlineTool,
-    path: '/expandable-3',
+    path: "/expandable-3",
     children: [
       {
-        name: 'File Processor',
-        path: '/fileprocessor',
+        name: "File Processor",
+        path: "/fileprocessor",
         icon: AiOutlineFileSync,
       },
       {
-        name: 'Downloader',
-        path: '/downloader',
+        name: "Downloader",
+        path: "/downloader",
         icon: AiOutlineDownload,
       },
       {
-        name: 'File Mover',
-        path: '/filemover',
+        name: "File Mover",
+        path: "/filemover",
         icon: AiOutlineFileSync,
       },
       {
-        name: 'File name modifier',
-        path: '/filenamemodifier',
-        icon: MdDriveFileRenameOutline ,
+        name: "File name modifier",
+        path: "/filenamemodifier",
+        icon: MdDriveFileRenameOutline,
         isBeta: true,
       },
       // {
@@ -161,66 +165,70 @@ const asideMenuConfig: IMenuItem[] = [
     ],
   },
   {
-    name: 'Experimental',
-    path: '/expandable-4',
+    name: "Experimental",
+    path: "/expandable-4",
     icon: AiOutlineExperiment,
     children: [
       {
-        name: 'Post parser',
-        path: '/postparser',
+        name: "Post parser",
+        path: "/postparser",
         icon: MdOutlineTopic,
       },
       {
-        name: '3rd Party integration',
-        path: '/3rdpartyintegration',
+        name: "3rd Party integration",
+        path: "/3rdpartyintegration",
         icon: MdOutlineIntegrationInstructions,
       },
     ],
   },
   {
-    name: 'System',
+    name: "System",
     icon: AiOutlineSetting,
-    path: '/expandable-5',
+    path: "/expandable-5",
     children: [
       {
-        name: 'Configuration',
-        path: '/configuration',
+        name: "Configuration",
+        path: "/configuration",
         icon: AiOutlineAppstore,
       },
       {
-        name: 'Background Task',
-        path: '/backgroundtask',
+        name: "Background Task",
+        path: "/backgroundtask",
         icon: AiOutlineInteraction,
       },
       {
-        name: 'Log',
-        path: '/log',
+        name: "Log",
+        path: "/log",
         icon: AiOutlineFileText,
       },
     ],
   },
-  ...(process.env.ICE_CORE_MODE == 'development' ? [{
-    name: 'Test',
-    path: '/expandable-6',
-    icon: undefined,
-    children: [
-      {
-        name: 'common',
-        path: '/test',
-        icon: AiOutlineCodepenCircle,
-      },
-      {
-        name: 'bakaui',
-        path: '/test/bakaui',
-        icon: AiOutlineSketch,
-      },
-      {
-        name: 'nextui',
-        path: '/test/nextui',
-        icon: AiOutlineSketch,
-      },
-    ],
-  }] : []),
+  ...(import.meta.env.DEV
+    ? [
+        {
+          name: "Test",
+          path: "/expandable-6",
+          icon: undefined,
+          children: [
+            {
+              name: "common",
+              path: "/test",
+              icon: AiOutlineCodepenCircle,
+            },
+            {
+              name: "bakaui",
+              path: "/test/bakaui",
+              icon: AiOutlineSketch,
+            },
+            {
+              name: "nextui",
+              path: "/test/nextui",
+              icon: AiOutlineSketch,
+            },
+          ],
+        },
+      ]
+    : []),
 ];
 
 export { headerMenuConfig, asideMenuConfig };

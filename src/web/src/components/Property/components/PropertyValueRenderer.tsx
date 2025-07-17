@@ -1,14 +1,17 @@
-'use client';
+"use client";
 
-'use strict';
+"use strict";
 
-import { useTranslation } from 'react-i18next';
-import React from 'react';
-import _ from 'lodash';
-import type { Dayjs } from 'dayjs';
-import type { Duration } from 'dayjs/plugin/duration';
-import type { IChoice, IProperty } from '@/components/Property/models';
-import { PropertyType, StandardValueType } from '@/sdk/constants';
+import type { Dayjs } from "dayjs";
+import type { Duration } from "dayjs/plugin/duration";
+import type { IChoice, IProperty } from "@/components/Property/models";
+import type { LinkValue, TagValue } from "@/components/StandardValue/models";
+
+import { useTranslation } from "react-i18next";
+import React from "react";
+import _ from "lodash";
+
+import { PropertyType, StandardValueType } from "@/sdk/constants";
 import {
   AttachmentValueRenderer,
   BooleanValueRenderer,
@@ -22,15 +25,13 @@ import {
   StringValueRenderer,
   TagsValueRenderer,
   TimeValueRenderer,
-} from '@/components/StandardValue';
+} from "@/components/StandardValue";
 import {
   deserializeStandardValue,
   findNodeChainInMultilevelData,
   serializeStandardValue,
-} from '@/components/StandardValue/helpers';
-import { buildLogger } from '@/components/utils';
-import type { LinkValue, TagValue } from '@/components/StandardValue/models';
-
+} from "@/components/StandardValue/helpers";
+import { buildLogger } from "@/components/utils";
 
 export type DataPool = {};
 
@@ -48,16 +49,16 @@ export type Props = {
    * Serialized
    */
   dbValue?: string;
-  variant?: 'default' | 'light';
+  variant?: "default" | "light";
   defaultEditing?: boolean;
 };
 
-const log = buildLogger('PropertyValueRenderer');
+const log = buildLogger("PropertyValueRenderer");
 
 export default (props: Props) => {
   const {
     property,
-    variant = 'default',
+    variant = "default",
     onValueChange,
     dbValue,
     bizValue,
@@ -70,268 +71,309 @@ export default (props: Props) => {
 
   log(props, bv, dv);
 
-  const simpleOnValueChange: ((dbValue?: any, bizValue?: any) => any) | undefined = onValueChange
+  const simpleOnValueChange:
+    | ((dbValue?: any, bizValue?: any) => any)
+    | undefined = onValueChange
     ? (dv, bv) => {
-      const sdv = serializeStandardValue(dv ?? null, property.dbValueType);
-      const sbv = serializeStandardValue(bv ?? null, property.bizValueType);
-      log('OnValueChange:Serialization:dv', dv, sdv);
-      log('OnValueChange:Serialization:bv', bv, sbv);
-      return onValueChange(sdv, sbv);
-    }
+        const sdv = serializeStandardValue(dv ?? null, property.dbValueType);
+        const sbv = serializeStandardValue(bv ?? null, property.bizValueType);
+
+        log("OnValueChange:Serialization:dv", dv, sdv);
+        log("OnValueChange:Serialization:bv", bv, sbv);
+
+        return onValueChange(sdv, sbv);
+      }
     : undefined;
 
-  const simpleEditor = simpleOnValueChange ? {
-    value: dv,
-    onValueChange: simpleOnValueChange,
-  } : undefined;
+  const simpleEditor = simpleOnValueChange
+    ? {
+        value: dv,
+        onValueChange: simpleOnValueChange,
+      }
+    : undefined;
 
   switch (property.type!) {
     case PropertyType.SingleLineText: {
       const typedDv = dv as string;
-      const typedBv = bv as string ?? typedDv;
+      const typedBv = (bv as string) ?? typedDv;
 
       return (
         <StringValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.MultilineText: {
       const typedDv = dv as string;
-      const typedBv = bv as string ?? typedDv;
+      const typedBv = (bv as string) ?? typedDv;
 
       bv ??= dv;
+
       return (
         <StringValueRenderer
-          value={typedBv}
-          variant={variant}
-          editor={simpleEditor}
           multiline
           defaultEditing={defaultEditing}
+          editor={simpleEditor}
+          value={typedBv}
+          variant={variant}
         />
       );
     }
     case PropertyType.SingleChoice: {
       const typedDv = dv as string;
 
-      const oc = onValueChange == undefined ? undefined : (dbValue?: string[], bizValue?: string[]) => {
-        onValueChange(
-          (dbValue && dbValue.length > 0) ? serializeStandardValue(dbValue[0], StandardValueType.String) : undefined,
-          (bizValue && bizValue.length > 0) ? serializeStandardValue(bizValue[0], StandardValueType.String) : undefined,
-        );
-      };
+      const oc =
+        onValueChange == undefined
+          ? undefined
+          : (dbValue?: string[], bizValue?: string[]) => {
+              onValueChange(
+                dbValue && dbValue.length > 0
+                  ? serializeStandardValue(dbValue[0], StandardValueType.String)
+                  : undefined,
+                bizValue && bizValue.length > 0
+                  ? serializeStandardValue(
+                      bizValue[0],
+                      StandardValueType.String,
+                    )
+                  : undefined,
+              );
+            };
 
-      const editor = oc ? {
-        value: typedDv == undefined ? undefined : [typedDv],
-        onValueChange: oc,
-      } : undefined;
+      const editor = oc
+        ? {
+            value: typedDv == undefined ? undefined : [typedDv],
+            onValueChange: oc,
+          }
+        : undefined;
 
       // console.log(editor, property);
 
-      const typedBv = (bv as string) ?? (property.options?.choices ?? []).find(x => x.value == typedDv)?.label;
-      const vas: IChoice[] = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
-        x => x.value == typedDv);
+      const typedBv =
+        (bv as string) ??
+        (property.options?.choices ?? []).find((x) => x.value == typedDv)
+          ?.label;
+      const vas: IChoice[] = _.sortBy(
+        property.options?.choices?.filter((o) => dv?.includes(o.value)) ?? [],
+        (x) => x.value == typedDv,
+      );
+
       return (
         <ChoiceValueRenderer
-          value={typedBv == undefined ? undefined : [typedBv]}
-          variant={variant}
+          defaultEditing={defaultEditing}
           editor={editor}
           getDataSource={async () => {
             return property.options?.choices ?? [];
           }}
-          defaultEditing={defaultEditing}
+          value={typedBv == undefined ? undefined : [typedBv]}
           valueAttributes={vas}
+          variant={variant}
         />
       );
     }
     case PropertyType.MultipleChoice: {
       const typedDv = dv as string[];
-      const typedBv = (bv as string[]) ?? (property.options?.choices ?? [])
-        .filter(x => typedDv?.includes(x.value)).map(x => x.label);
-      const vas: IChoice[] = _.sortBy(property.options?.choices?.filter(o => dv?.includes(o.value)) ?? [],
-        x => typedDv?.findIndex(d => d == x.value));
+      const typedBv =
+        (bv as string[]) ??
+        (property.options?.choices ?? [])
+          .filter((x) => typedDv?.includes(x.value))
+          .map((x) => x.label);
+      const vas: IChoice[] = _.sortBy(
+        property.options?.choices?.filter((o) => dv?.includes(o.value)) ?? [],
+        (x) => typedDv?.findIndex((d) => d == x.value),
+      );
+
       return (
         <ChoiceValueRenderer
-          value={typedBv}
-          variant={variant}
-          editor={simpleEditor}
           multiple
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           getDataSource={async () => {
             return property.options?.choices ?? [];
           }}
-          defaultEditing={defaultEditing}
+          value={typedBv}
           valueAttributes={vas}
+          variant={variant}
         />
       );
     }
     case PropertyType.Number: {
       const typedDv = dv as number;
-      const typedBv = bv as number ?? typedDv;
+      const typedBv = (bv as number) ?? typedDv;
 
       return (
         <NumberValueRenderer
+          as={"number"}
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
-          as={'number'}
         />
       );
     }
     case PropertyType.Percentage: {
       const typedDv = dv as number;
-      const typedBv = bv as number ?? typedDv;
+      const typedBv = (bv as number) ?? typedDv;
 
       return (
         <NumberValueRenderer
+          as={"progress"}
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
+          suffix={"%"}
           value={typedBv}
           variant={variant}
-          suffix={'%'}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
-          as={'progress'}
         />
       );
     }
     case PropertyType.Rating: {
       const typedDv = dv as number;
-      const typedBv = bv as number ?? typedDv;
+      const typedBv = (bv as number) ?? typedDv;
 
       return (
         <RatingValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.Boolean: {
       const typedDv = dv as boolean;
-      const typedBv = bv as boolean ?? typedDv;
+      const typedBv = (bv as boolean) ?? typedDv;
 
       return (
         <BooleanValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.Link: {
       const typedDv = dv as LinkValue;
-      const typedBv = bv as LinkValue ?? typedDv;
+      const typedBv = (bv as LinkValue) ?? typedDv;
 
       return (
         <LinkValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.Attachment: {
       const typedDv = dv as string[];
-      const typedBv = bv as string[] ?? typedDv;
+      const typedBv = (bv as string[]) ?? typedDv;
 
       return (
         <AttachmentValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.Date:
     case PropertyType.DateTime: {
       const typedDv = dv as Dayjs;
-      const typedBv = bv as Dayjs ?? typedDv;
+      const typedBv = (bv as Dayjs) ?? typedDv;
 
       return (
         <DateTimeValueRenderer
-          value={typedBv}
-          as={property.type == PropertyType.DateTime ? 'datetime' : 'date'}
-          variant={variant}
-          editor={simpleEditor}
+          as={property.type == PropertyType.DateTime ? "datetime" : "date"}
           defaultEditing={defaultEditing}
+          editor={simpleEditor}
+          value={typedBv}
+          variant={variant}
         />
       );
     }
     case PropertyType.Time: {
       const typedDv = dv as Duration;
-      const typedBv = bv as Duration ?? typedDv;
+      const typedBv = (bv as Duration) ?? typedDv;
 
       return (
         <TimeValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.Formula: {
       const typedDv = dv as string;
-      const typedBv = bv as string ?? typedDv;
+      const typedBv = (bv as string) ?? typedDv;
 
       return (
         <FormulaValueRenderer
+          defaultEditing={defaultEditing}
+          editor={simpleEditor}
           value={typedBv}
           variant={variant}
-          editor={simpleEditor}
-          defaultEditing={defaultEditing}
         />
       );
     }
     case PropertyType.Multilevel: {
       const typedDv = dv as string[];
       const tbv = typedDv
-        ?.map(v => findNodeChainInMultilevelData(property?.options?.data || [], v))
-        .filter(x => x != undefined);
-      const typedBv = bv as string[][] ?? tbv?.map(x => x!.map(y => y.label));
-      const vas = tbv?.map(v => v!.map(x => ({ color: x.color })));
+        ?.map((v) =>
+          findNodeChainInMultilevelData(property?.options?.data || [], v),
+        )
+        .filter((x) => x != undefined);
+      const typedBv =
+        (bv as string[][]) ?? tbv?.map((x) => x!.map((y) => y.label));
+      const vas = tbv?.map((v) => v!.map((x) => ({ color: x.color })));
 
       // log(tbv, bv, vas);
 
       return (
         <MultilevelValueRenderer
-          value={typedBv}
-          variant={variant}
+          defaultEditing={defaultEditing}
           editor={simpleEditor}
           getDataSource={async () => {
             return property?.options?.data || [];
           }}
           multiple={property?.options?.valueIsSingleton ?? true}
-          defaultEditing={defaultEditing}
+          value={typedBv}
           valueAttributes={vas}
+          variant={variant}
         />
       );
     }
     case PropertyType.Tags: {
       const typedDv = dv as string[];
 
-      const typedBv = bv as TagValue[] ?? (property.options?.tags || []).filter(x => dv?.includes(x.value)).map(x => ({
-        group: x.group,
-        name: x.name,
-      }));
-      const vas = _.sortBy(property.options?.tags?.filter(o => typedDv?.includes(o.value)) ?? [],
-        x => typedDv?.findIndex(d => d == x.value));
+      const typedBv =
+        (bv as TagValue[]) ??
+        (property.options?.tags || [])
+          .filter((x) => dv?.includes(x.value))
+          .map((x) => ({
+            group: x.group,
+            name: x.name,
+          }));
+      const vas = _.sortBy(
+        property.options?.tags?.filter((o) => typedDv?.includes(o.value)) ?? [],
+        (x) => typedDv?.findIndex((d) => d == x.value),
+      );
+
       return (
         <TagsValueRenderer
-          value={typedBv}
-          variant={variant}
+          defaultEditing={defaultEditing}
           editor={simpleEditor}
           getDataSource={async () => {
             return property?.options?.tags || [];
           }}
-          defaultEditing={defaultEditing}
+          value={typedBv}
           valueAttributes={vas}
+          variant={variant}
         />
       );
     }

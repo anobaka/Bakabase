@@ -1,4 +1,4 @@
-import type { SpecialTextType } from '@/sdk/constants';
+import type { SpecialTextType } from "@/sdk/constants";
 
 export type SpecialText = {
   id: number;

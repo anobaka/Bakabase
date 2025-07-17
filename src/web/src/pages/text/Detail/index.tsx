@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import React, { useState } from 'react';
-import type { SpecialText } from '@/pages/text/models';
-import { Input } from '@/components/bakaui';
-import { SpecialTextType } from '@/sdk/constants';
+import type { SpecialText } from "@/pages/text/models";
+
+import { useTranslation } from "react-i18next";
+import React, { useState } from "react";
+
+import { Input } from "@/components/bakaui";
+import { SpecialTextType } from "@/sdk/constants";
 
 interface Props {
   value: SpecialText;
@@ -13,13 +15,16 @@ interface Props {
 
 export default ({ value: propsValue, onChange }: Props) => {
   const { t } = useTranslation();
-  const [value, setValue] = useState<SpecialText>(JSON.parse(JSON.stringify(propsValue)));
+  const [value, setValue] = useState<SpecialText>(
+    JSON.parse(JSON.stringify(propsValue)),
+  );
 
   const change = (patches: Partial<SpecialText>) => {
     const nv = {
       ...value,
       ...patches,
     };
+
     setValue(nv);
     onChange(nv);
   };
@@ -32,9 +37,9 @@ export default ({ value: propsValue, onChange }: Props) => {
       return (
         <Input
           key="0"
-          placeholder={t<string>('Text')}
-          className={'w-full'}
           required
+          className={"w-full"}
+          placeholder={t<string>("Text")}
           value={value.value1}
           onValueChange={(value1) => {
             change({ value1 });
@@ -43,13 +48,12 @@ export default ({ value: propsValue, onChange }: Props) => {
       );
     case SpecialTextType.Language:
     case SpecialTextType.Standardization:
-
       return (
         <>
           <Input
             key="0"
-            placeholder={t<string>('Source text')}
             required
+            placeholder={t<string>("Source text")}
             value={value.value1}
             onValueChange={(value1) => {
               change({ value1 });
@@ -57,8 +61,8 @@ export default ({ value: propsValue, onChange }: Props) => {
           />
           <Input
             key="1"
-            placeholder={t<string>('Convert to')}
             required
+            placeholder={t<string>("Convert to")}
             value={value.value2}
             onValueChange={(value2) => {
               change({ value2 });
@@ -71,8 +75,8 @@ export default ({ value: propsValue, onChange }: Props) => {
         <>
           <Input
             key="0"
-            placeholder={t<string>('Left wrapper')}
             required
+            placeholder={t<string>("Left wrapper")}
             value={value.value1}
             onValueChange={(value1) => {
               change({ value1 });
@@ -80,8 +84,8 @@ export default ({ value: propsValue, onChange }: Props) => {
           />
           <Input
             key="1"
-            placeholder={t<string>('Right wrapper')}
             required
+            placeholder={t<string>("Right wrapper")}
             value={value.value2}
             onValueChange={(value2) => {
               change({ value2 });

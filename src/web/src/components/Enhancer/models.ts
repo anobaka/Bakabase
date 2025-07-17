@@ -1,5 +1,5 @@
-import type { PropertyPool, StandardValueType } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
+import type { PropertyPool, StandardValueType } from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
 
 export type Enhancement = {
   id: number;

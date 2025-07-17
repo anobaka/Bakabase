@@ -1,12 +1,14 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import toast from 'react-hot-toast';
-import type { PropertyType } from '@/sdk/constants';
-import { Modal } from '@/components/bakaui';
-import BlockSort from '@/components/BlockSort';
-import BApi from '@/sdk/BApi';
-import type { DestroyableProps } from '@/components/bakaui/types';
+import type { PropertyType } from "@/sdk/constants";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
+
+import { Modal } from "@/components/bakaui";
+import BlockSort from "@/components/BlockSort";
+import BApi from "@/sdk/BApi";
 
 type PropertyLike = {
   id: number;
@@ -20,25 +22,30 @@ type Props = {
 
 export default ({ properties, onDestroyed }: Props) => {
   const { t } = useTranslation();
+
   return (
     <Modal
       defaultVisible
-      size={'xl'}
       footer={{
-        actions: ['cancel'],
+        actions: ["cancel"],
         cancelProps: {
-          text: t<string>('Close'),
+          text: t<string>("Close"),
         },
       }}
-      title={t<string>('Adjust orders of properties')}
+      size={"xl"}
+      title={t<string>("Adjust orders of properties")}
       onDestroyed={onDestroyed}
     >
-      <div>{t<string>('You can adjust orders or properties by dragging and dropping them')}</div>
+      <div>
+        {t<string>(
+          "You can adjust orders or properties by dragging and dropping them",
+        )}
+      </div>
       <BlockSort
         blocks={properties}
-        onSorted={async ids => {
+        onSorted={async (ids) => {
           await BApi.customProperty.sortCustomProperties({ ids });
-          toast.success(t<string>('Saved'));
+          toast.success(t<string>("Saved"));
         }}
       />
     </Modal>

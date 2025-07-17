@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
-export enum SelectionMode{
+export enum SelectionMode {
   Normal = 1,
   Ctrl = 2,
   Shift = 3,
@@ -23,18 +23,18 @@ export default (props: Props) => {
 
   useEffect(() => {
     // Check if we're in browser environment
-    if (typeof window === 'undefined') {
+    if (typeof window === "undefined") {
       return;
     }
 
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
-    window.addEventListener('click', onClick);
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("click", onClick);
 
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('click', onClick);
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("click", onClick);
     };
   }, []);
 
@@ -52,13 +52,13 @@ export default (props: Props) => {
 
   const onKeyDown = useCallback((e: KeyboardEvent) => {
     switch (e.key) {
-      case 'Control':
+      case "Control":
         changeSelectionMode(SelectionMode.Ctrl);
         break;
-      case 'Shift':
+      case "Shift":
         changeSelectionMode(SelectionMode.Shift);
         break;
-      case 'Delete':
+      case "Delete":
         propsRef.current.onDelete?.();
         break;
       default:
@@ -69,10 +69,10 @@ export default (props: Props) => {
 
   const onKeyUp = useCallback((e: KeyboardEvent) => {
     switch (e.key) {
-      case 'Control':
+      case "Control":
         changeSelectionMode(SelectionMode.Normal);
         break;
-      case 'Shift':
+      case "Shift":
         changeSelectionMode(SelectionMode.Normal);
         break;
     }

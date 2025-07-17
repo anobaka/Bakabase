@@ -1,10 +1,20 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { closestCorners, DndContext, DragOverlay, MouseSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import SortableCategory from '@/pages/category/components/SortableCategory';
-import BApi from '@/sdk/BApi';
+import React from "react";
+import {
+  closestCorners,
+  DndContext,
+  MouseSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+
+import SortableCategory from "@/pages/category/components/SortableCategory";
+import BApi from "@/sdk/BApi";
 
 type Props = {
   categories: any[];
@@ -18,8 +28,17 @@ type Props = {
   reloadMediaLibrary: (id: number) => any;
 };
 
-export default (({ categories, libraries,
-  loadAllMediaLibraries, loadAllCategories, allComponents, forceUpdate, enhancers, reloadCategory, reloadMediaLibrary }: Props) => {
+export default ({
+  categories,
+  libraries,
+  loadAllMediaLibraries,
+  loadAllCategories,
+  allComponents,
+  forceUpdate,
+  enhancers,
+  reloadCategory,
+  reloadMediaLibrary,
+}: Props) => {
   const sensors = useSensors(
     useSensor(MouseSensor, {
       activationConstraint: {
@@ -31,24 +50,28 @@ export default (({ categories, libraries,
   async function onDragEnd(e) {
     const activeId = e.active.id;
     const overId = e.over.id;
-    const oldIndex = categories.findIndex(c => c.id == activeId);
-    const newIndex = categories.findIndex(c => c.id == overId);
+    const oldIndex = categories.findIndex((c) => c.id == activeId);
+    const newIndex = categories.findIndex((c) => c.id == overId);
     const oc = categories[oldIndex];
+
     categories.splice(oldIndex, 1);
     categories.splice(newIndex, 0, oc);
     forceUpdate();
     const newIds = categories.map((t) => t.id);
-    await BApi.category.sortCategories({
-      ids: newIds,
-    }).then((t) => {
-      if (!t.code) {
-        for (let i = 0; i < categories.length; i++) {
-          categories[i].order = i;
+
+    await BApi.category
+      .sortCategories({
+        ids: newIds,
+      })
+      .then((t) => {
+        if (!t.code) {
+          for (let i = 0; i < categories.length; i++) {
+            categories[i].order = i;
+          }
+          categories.sort((a, b) => a.order - b.order);
+          loadAllCategories();
         }
-        categories.sort((a, b) => a.order - b.order);
-        loadAllCategories();
-      }
-    });
+      });
   }
 
   // console.log('[SortableCategoryList]rendering');
@@ -56,41 +79,40 @@ export default (({ categories, libraries,
   return (
     <div className="categories">
       <DndContext
-        onDragStart={({ active }) => {
-        }}
-        sensors={sensors}
         collisionDetection={closestCorners}
-        onDragMove={e => {
-          // console.log('drag move', e)
-        }}
-        onDragOver={e => {
-
-        }}
+        sensors={sensors}
+        onDragCancel={(e) => {}}
         onDragEnd={(e) => {
-          console.log('drag end', e);
+          console.log("drag end", e);
           onDragEnd(e);
         }}
-        onDragCancel={e => {
+        onDragMove={(e) => {
+          // console.log('drag move', e)
         }}
+        onDragOver={(e) => {}}
+        onDragStart={({ active }) => {}}
       >
         <SortableContext
-          items={categories.map(g => g.id)!}
+          items={categories.map((g) => g.id)!}
           strategy={verticalListSortingStrategy}
         >
           {categories.map((c, index) => {
-            const mls = libraries.filter((t) => t.categoryId == c.id).sort((a, b) => a.order - b.order);
+            const mls = libraries
+              .filter((t) => t.categoryId == c.id)
+              .sort((a, b) => a.order - b.order);
+
             return (
               <SortableCategory
-                forceUpdate={forceUpdate}
-                category={c}
                 key={c.id}
-                loadAllMediaLibraries={loadAllMediaLibraries}
+                allComponents={allComponents}
+                category={c}
+                enhancers={enhancers}
+                forceUpdate={forceUpdate}
+                libraries={mls}
                 loadAllCategories={loadAllCategories}
+                loadAllMediaLibraries={loadAllMediaLibraries}
                 reloadCategory={reloadCategory}
                 reloadMediaLibrary={reloadMediaLibrary}
-                libraries={mls}
-                allComponents={allComponents}
-                enhancers={enhancers}
               />
             );
           })}
@@ -98,4 +120,4 @@ export default (({ categories, libraries,
       </DndContext>
     </div>
   );
-});
+};

@@ -1,14 +1,19 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from '../../sdk/Api';
-import type { FileNameModificationResult } from './index';
+import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from "../../sdk/Api";
+import type { FileNameModificationResult } from "./index";
+
+import { useState, useEffect } from "react";
 
 export type { FileNameModificationResult };
 
 export function useFileNameModifier(initialFilePaths: string[] = []) {
-  const [operations, setOperations] = useState<BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation[]>([]);
+  const [operations, setOperations] = useState<
+    BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation[]
+  >([]);
   const [filePaths, setFilePaths] = useState<string[]>(initialFilePaths);
-  const [previewResults, setPreviewResults] = useState<FileNameModificationResult[]>([]);
-  const [error, setError] = useState<string>('');
+  const [previewResults, setPreviewResults] = useState<
+    FileNameModificationResult[]
+  >([]);
+  const [error, setError] = useState<string>("");
 
   // 自动初始化预览
   useEffect(() => {
@@ -30,4 +35,4 @@ export function useFileNameModifier(initialFilePaths: string[] = []) {
     setError,
     // ... 其它操作方法
   };
-} 
+}

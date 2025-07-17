@@ -1,14 +1,13 @@
-import type { PropertyPool, StandardValueType } from '@/sdk/constants';
-
-import type { PropertyType } from '@/sdk/constants';
-import type { MultilevelData } from '@/components/StandardValue/models';
+import type { PropertyPool, StandardValueType } from "@/sdk/constants";
+import type { PropertyType } from "@/sdk/constants";
+import type { MultilevelData } from "@/components/StandardValue/models";
 
 export interface IProperty {
   id: number;
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;
   name: string;
-  categories?: {id: number; name: string}[];
+  categories?: { id: number; name: string }[];
   options?: any;
   pool: PropertyPool;
   type: PropertyType;
@@ -70,4 +69,3 @@ export interface MultilevelPropertyOptions {
   // allowAddingNewDataDynamically: boolean;
   defaultValue?: string;
 }
-

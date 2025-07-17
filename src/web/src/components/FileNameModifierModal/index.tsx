@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Modal } from '../bakaui';
-import { useTranslation } from 'react-i18next';
-import { DestroyableProps } from '../bakaui/types';
-import FileNameModifier from '../FileNameModifier';
-import BetaChip from '../Chips/BetaChip';
+import type { DestroyableProps } from "../bakaui/types";
+
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+import { Modal } from "../bakaui";
+import FileNameModifier from "../FileNameModifier";
+import BetaChip from "../Chips/BetaChip";
 
 export interface FileNameModificationResult {
   originalPath: string;
@@ -22,22 +24,28 @@ interface FileNameModifierModalProps extends DestroyableProps {
   initialFilePaths?: string[];
 }
 
-const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({ onClose, initialFilePaths = [] }) => {
+const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({
+  onClose,
+  initialFilePaths = [],
+}) => {
   const { t } = useTranslation();
 
   return (
-    <Modal defaultVisible onClose={onClose} title={(
-      <div className="flex items-center gap-1">
-        {t<string>('FileNameModifier.Title')}
-        <BetaChip />
-      </div>
-    )} footer={null} size='xl'>
-      <FileNameModifier 
-        initialFilePaths={initialFilePaths}
-        onClose={onClose}
-      />
+    <Modal
+      defaultVisible
+      footer={null}
+      size="xl"
+      title={
+        <div className="flex items-center gap-1">
+          {t<string>("FileNameModifier.Title")}
+          <BetaChip />
+        </div>
+      }
+      onClose={onClose}
+    >
+      <FileNameModifier initialFilePaths={initialFilePaths} onClose={onClose} />
     </Modal>
   );
 };
 
-export default FileNameModifierModal; 
+export default FileNameModifierModal;

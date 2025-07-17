@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Button, Icon, Input, Tree } from '@alifd/next';
-import './index.scss';
-import i18n from 'i18next';
+import React, { useEffect, useRef, useState } from "react";
+import { Button, Icon, Input, Tree } from "@alifd/next";
+import "./index.scss";
+import i18n from "i18next";
 
 export default ({ defaultValue = [], onChange = (tree) => {} }) => {
   const [value, setValue] = useState(JSON.parse(JSON.stringify(defaultValue)));
@@ -26,46 +26,58 @@ export default ({ defaultValue = [], onChange = (tree) => {} }) => {
     setEditingKey(undefined);
   };
 
-  const renderNodes = (dataSource = [], layerPrefix = '', parent = undefined) => {
+  const renderNodes = (
+    dataSource = [],
+    layerPrefix = "",
+    parent = undefined,
+  ) => {
     const nodes = [];
+
     for (let i = 0; i <= dataSource.length; i++) {
       const key = layerPrefix ? `${layerPrefix}-${i}` : i.toString();
       const isAddBtn = i == dataSource.length;
       const d = dataSource[i];
       const idx = i;
       const editing = editingKey == key;
+
       // console.log(d, key);
       nodes.push(
         <Tree.Node
           key={key}
-          label={(
-            <div className={'tree-node'}>
+          label={
+            <div className={"tree-node"}>
               <div className="label">
                 {editing ? (
-                  <Input value={editingValue} size={'small'} onChange={(v) => setEditingValue(v)} />
+                  <Input
+                    size={"small"}
+                    value={editingValue}
+                    onChange={(v) => setEditingValue(v)}
+                  />
+                ) : isAddBtn ? (
+                  <Button
+                    text
+                    type={"primary"}
+                    onClick={() => {
+                      setEditingKey(key);
+                    }}
+                  >
+                    {i18n.t<string>("Add")}
+                  </Button>
                 ) : (
-                  isAddBtn ? (
-                    <Button
-                      type={'primary'}
-                      text
-                      onClick={() => {
-                        setEditingKey(key);
-                      }}
-                    >{i18n.t<string>('Add')}
-                    </Button>
-                  ) : d.label
+                  d.label
                 )}
               </div>
               {(!isAddBtn || editing) && (
-                <div className={'opt'}>
+                <div className={"opt"}>
                   {editingKey == key ? (
                     <Icon
-                      type={'select'}
+                      type={"select"}
                       onClick={() => {
                         if (isAddBtn) {
                           const item = {
                             label: editingValue,
                           };
+
                           if (parent) {
                             parent.children ??= [];
                             parent.children.push(item);
@@ -82,19 +94,19 @@ export default ({ defaultValue = [], onChange = (tree) => {} }) => {
                     />
                   ) : (
                     <Icon
-                      type={'edit'}
+                      type={"edit"}
                       onClick={() => {
                         setEditingKey(key);
-                        setEditingValue(isAddBtn ? '' : d.label);
+                        setEditingValue(isAddBtn ? "" : d.label);
                       }}
                     />
                   )}
                   <Icon
-                    type={'close'}
+                    type={"close"}
                     onClick={() => {
                       if (editing) {
                         exitEditingMode();
-                      } else if (confirm('Sure to delete and its children?')) {
+                      } else if (confirm("Sure to delete and its children?")) {
                         dataSource.splice(idx, 1);
                         setValue([...value]);
                       }
@@ -103,21 +115,22 @@ export default ({ defaultValue = [], onChange = (tree) => {} }) => {
                 </div>
               )}
             </div>
-        )}
+          }
         >
           {!isAddBtn && renderNodes(d.children, key, d)}
         </Tree.Node>,
       );
     }
+
     return nodes;
   };
 
   return (
     <Tree
-      selectable={false}
-      className={'editable-tree'}
-      showLine
       defaultExpandAll
+      showLine
+      className={"editable-tree"}
+      selectable={false}
       onChange={(v) => console.log(v)}
     >
       {renderNodes(value)}

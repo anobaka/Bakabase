@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { AiOutlineWarning } from 'react-icons/ai';
-import OptionsCard from './OptionsCard';
-import type { IdName } from '@/pages/synchronization-options/models';
-import { SubjectLabels } from '@/pages/synchronization-options/models';
-import type {
-  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions,
-} from '@/sdk/Api';
-import BooleanOptions from '@/pages/synchronization-options/components/BooleanOptions';
-import EnhancerOptions from '@/pages/synchronization-options/components/EnhancerOptions';
-import { Tooltip } from '@/components/bakaui';
+import type { IdName } from "@/pages/synchronization-options/models";
+import type { BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions } from "@/sdk/Api";
 
-type Options = BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions;
+import { useTranslation } from "react-i18next";
 
-type MediaLibrary = IdName & { enhancers?: IdName[]};
+import OptionsCard from "./OptionsCard";
+
+import { SubjectLabels } from "@/pages/synchronization-options/models";
+import BooleanOptions from "@/pages/synchronization-options/components/BooleanOptions";
+import EnhancerOptions from "@/pages/synchronization-options/components/EnhancerOptions";
+
+type Options =
+  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions;
+
+type MediaLibrary = IdName & { enhancers?: IdName[] };
 
 type Props = {
   mediaLibrary: MediaLibrary;
@@ -22,11 +22,7 @@ type Props = {
   options?: Options;
 };
 
-export default ({
-                  mediaLibrary,
-                  onChange,
-                  options,
-                }: Props) => {
+export default ({ mediaLibrary, onChange, options }: Props) => {
   const { t } = useTranslation();
 
   const patchOptions = (patches: Partial<Options>) => {
@@ -34,6 +30,7 @@ export default ({
       ...options,
       ...patches,
     };
+
     onChange?.(newOptions);
   };
 
@@ -42,23 +39,27 @@ export default ({
   return (
     <OptionsCard header={mediaLibrary.name}>
       <BooleanOptions
-        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
-        onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownPath}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
+        onSelect={(isSelected) =>
+          patchOptions({ deleteResourcesWithUnknownPath: isSelected })
+        }
       />
       <div />
-      {mediaLibrary.enhancers?.map(e => {
+      {mediaLibrary.enhancers?.map((e) => {
         return (
           <>
             <EnhancerOptions
-              options={options?.enhancerOptionsMap?.[e.id]}
               enhancer={e}
-              onChange={o => patchOptions({
-                enhancerOptionsMap: {
-                  ...options?.enhancerOptionsMap,
-                  [e.id]: o,
-                },
-              })}
+              options={options?.enhancerOptionsMap?.[e.id]}
+              onChange={(o) =>
+                patchOptions({
+                  enhancerOptionsMap: {
+                    ...options?.enhancerOptionsMap,
+                    [e.id]: o,
+                  },
+                })
+              }
             />
           </>
         );

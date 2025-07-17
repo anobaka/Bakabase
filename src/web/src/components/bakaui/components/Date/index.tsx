@@ -1,7 +1,4 @@
-import DateInput from './DateInput';
-import DatePicker from './DatePicker';
+import DateInput from "./DateInput";
+import DatePicker from "./DatePicker";
 
-export {
-  DateInput,
-  DatePicker,
-};
+export { DateInput, DatePicker };

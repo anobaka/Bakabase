@@ -1,24 +1,27 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { useUpdate } from 'react-use';
-import _ from 'lodash';
-import DynamicTargets from './components/DynamicTargets';
-import FixedTargets from './components/FixedTargets';
-import RegexEnhancerOptions from './components/RegexEnhancerOptions';
-import { Modal } from '@/components/bakaui';
-import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
-import { EnhancerId, PropertyPool } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
+import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type {
-  EnhancerFullOptions, RegexEnhancerFullOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import type { IProperty } from '@/components/Property/models';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import BetaChip from '@/components/Chips/BetaChip';
-import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
+  EnhancerFullOptions,
+  RegexEnhancerFullOptions,
+} from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import { useUpdate } from "react-use";
+import _ from "lodash";
+
+import DynamicTargets from "./components/DynamicTargets";
+import FixedTargets from "./components/FixedTargets";
+import RegexEnhancerOptions from "./components/RegexEnhancerOptions";
+
+import { Modal } from "@/components/bakaui";
+import { EnhancerId, PropertyPool } from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 
 type Props<TOptions extends EnhancerFullOptions> = {
   enhancer: EnhancerDescriptor;
@@ -36,8 +39,12 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const [options, setOptions] = useState<EnhancerFullOptions>(propsOptions ?? {});
-  const [propertyMap, setPropertyMap] = useState<{ [key in PropertyPool]?: Record<number, IProperty> }>({});
+  const [options, setOptions] = useState<EnhancerFullOptions>(
+    propsOptions ?? {},
+  );
+  const [propertyMap, setPropertyMap] = useState<{
+    [key in PropertyPool]?: Record<number, IProperty>;
+  }>({});
 
   const init = async () => {
     await loadAllProperties();
@@ -47,10 +54,14 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
     init();
   }, []);
 
-
   const loadAllProperties = async () => {
-    const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
-    const ps = _.mapValues(_.groupBy(psr, x => x.pool), (v) => _.keyBy(v, x => x.id));
+    const psr =
+      (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const ps = _.mapValues(
+      _.groupBy(psr, (x) => x.pool),
+      (v) => _.keyBy(v, (x) => x.id),
+    );
+
     setPropertyMap(ps);
   };
 
@@ -58,18 +69,18 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
 
   return (
     <Modal
-      size={'xl'}
-      title={(
-        <div className={'flex items-center gap-x-2'}>
-          {t<string>('Configure enhancer')}
+      defaultVisible
+      footer={{
+        actions: ["cancel", "ok"],
+      }}
+      size={"xl"}
+      title={
+        <div className={"flex items-center gap-x-2"}>
+          {t<string>("Configure enhancer")}
           <BriefEnhancer enhancer={enhancer} />
         </div>
-      )}
-      defaultVisible
+      }
       onDestroyed={onDestroyed}
-      footer={{
-        actions: ['cancel', 'ok'],
-      }}
       onOk={() => onSubmit?.(options)}
     >
       {enhancer.id == EnhancerId.Regex ? (
@@ -77,39 +88,41 @@ export default function EnhancerOptionsModal<T extends EnhancerFullOptions>({
           enhancer={enhancer}
           options={options as RegexEnhancerFullOptions}
           propertyMap={propertyMap}
-          onPropertyChanged={loadAllProperties}
-          onChange={options => {
+          onChange={(options) => {
             setOptions({ ...options });
           }}
+          onPropertyChanged={loadAllProperties}
         />
-      ) : (options && (
-        <div className={'flex flex-col gap-y-4'}>
-          <FixedTargets
-            enhancer={enhancer}
-            optionsList={options.targetOptions}
-            onChange={list => {
-              setOptions({
-                ...options,
-                targetOptions: list,
-              });
-            }}
-            propertyMap={propertyMap}
-            onPropertyChanged={loadAllProperties}
-          />
-          <DynamicTargets
-            enhancer={enhancer}
-            optionsList={options.targetOptions}
-            onChange={list => {
-              setOptions({
-                ...options,
-                targetOptions: list,
-              });
-            }}
-            propertyMap={propertyMap}
-            onPropertyChanged={loadAllProperties}
-          />
-        </div>
-      ))}
+      ) : (
+        options && (
+          <div className={"flex flex-col gap-y-4"}>
+            <FixedTargets
+              enhancer={enhancer}
+              optionsList={options.targetOptions}
+              propertyMap={propertyMap}
+              onChange={(list) => {
+                setOptions({
+                  ...options,
+                  targetOptions: list,
+                });
+              }}
+              onPropertyChanged={loadAllProperties}
+            />
+            <DynamicTargets
+              enhancer={enhancer}
+              optionsList={options.targetOptions}
+              propertyMap={propertyMap}
+              onChange={(list) => {
+                setOptions({
+                  ...options,
+                  targetOptions: list,
+                });
+              }}
+              onPropertyChanged={loadAllProperties}
+            />
+          </div>
+        )
+      )}
     </Modal>
   );
 }

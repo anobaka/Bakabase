@@ -1,23 +1,22 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useUpdate } from 'react-use';
-import { useEffect, useState } from 'react';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import { Chip, Modal } from '@/components/bakaui';
-import Template from '@/pages/media-library-template/components/Template';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { MediaLibraryTemplate } from '@/pages/media-library-template/models';
-import BApi from '@/sdk/BApi';
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { MediaLibraryTemplate } from "@/pages/media-library-template/models";
+
+import { useTranslation } from "react-i18next";
+import { useUpdate } from "react-use";
+import { useEffect, useState } from "react";
+
+import { Chip, Modal } from "@/components/bakaui";
+import Template from "@/pages/media-library-template/components/Template";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import BApi from "@/sdk/BApi";
 
 type Props = {
   id: number;
 } & DestroyableProps;
 
-export default ({
-                  id,
-                  onDestroyed,
-                }: Props) => {
+export default ({ id, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
@@ -25,7 +24,7 @@ export default ({
   const [template, setTemplate] = useState<MediaLibraryTemplate>();
 
   useEffect(() => {
-    BApi.mediaLibraryTemplate.getMediaLibraryTemplate(id).then(r => {
+    BApi.mediaLibraryTemplate.getMediaLibraryTemplate(id).then((r) => {
       if (!r.code) {
         setTemplate(r.data!);
       }
@@ -34,28 +33,26 @@ export default ({
 
   return (
     <Modal
-      onDestroyed={onDestroyed}
-      size={'full'}
-      title={(
+      defaultVisible
+      footer={false}
+      size={"full"}
+      title={
         <div>
-          {t<string>('Editing media library template')}
+          {t<string>("Editing media library template")}
           &nbsp;
           <Chip
-            size={'lg'}
-            color={'success'}
-            variant={'light'}
-            className={'font-bold'}
-          >{template?.name}</Chip>
+            className={"font-bold"}
+            color={"success"}
+            size={"lg"}
+            variant={"light"}
+          >
+            {template?.name}
+          </Chip>
         </div>
-      )}
-      footer={false}
-      defaultVisible
+      }
+      onDestroyed={onDestroyed}
     >
-      {(template) && (
-        <Template
-          template={template}
-        />
-      )}
+      {template && <Template template={template} />}
     </Modal>
   );
 };

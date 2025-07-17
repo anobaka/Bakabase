@@ -1,17 +1,20 @@
-'use client';
+"use client";
 
-import React, { useRef } from 'react';
-import type { MenuProps } from 'antd';
-import { Menu } from 'antd';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { AiOutlineQuestionCircle } from 'react-icons/ai';
-import type { IMenuItem } from '../../menuConfig';
-import { asideMenuConfig } from '../../menuConfig';
-import BetaChip from '@/components/Chips/BetaChip';
-import DeprecatedChip from '@/components/Chips/DeprecatedChip';
+import type { MenuProps } from "antd";
+import type { IMenuItem } from "../../menuConfig";
 
-type MenuItem = Required<MenuProps>['items'][number];
+import React, { useRef } from "react";
+import { Menu } from "antd";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { AiOutlineQuestionCircle } from "react-icons/ai";
+
+import { asideMenuConfig } from "../../menuConfig";
+
+import BetaChip from "@/components/Chips/BetaChip";
+import DeprecatedChip from "@/components/Chips/DeprecatedChip";
+
+type MenuItem = Required<MenuProps>["items"][number];
 
 interface IProps {
   collapsed: boolean;
@@ -25,7 +28,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
   const { pathname } = useLocation();
   // console.log(pathname);
 
-  const onClick: MenuProps['onClick'] = (e) => {
+  const onClick: MenuProps["onClick"] = (e) => {
     navigate(e.key as string);
   };
 
@@ -34,7 +37,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
     key?: React.Key,
     icon?: React.ReactNode,
     children?: MenuItem[],
-    type?: 'group',
+    type?: "group",
   ): MenuItem {
     return {
       key,
@@ -47,45 +50,50 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
   function convertItem(item: IMenuItem): MenuItem {
     const Icon = item.icon ?? AiOutlineQuestionCircle;
-    return getItem((
-      <div className='flex items-center gap-x-0.5'>
+
+    return getItem(
+      <div className="flex items-center gap-x-0.5">
         {t<string>(item.name)}
         {item.isBeta && <BetaChip />}
         {item.isDeprecated && <DeprecatedChip />}
-      </div>
-    ), item.path, <Icon
-      style={IconStyle}
-      className={'text-lg'}
-    />, item.children?.map(convertItem));
+      </div>,
+      item.path,
+      <Icon className={"text-lg"} style={IconStyle} />,
+      item.children?.map(convertItem),
+    );
   }
 
-  const items: MenuProps['items'] = asideMenuConfig.map(convertItem);
+  const items: MenuProps["items"] = asideMenuConfig.map(convertItem);
 
-  const defaultOpenKeysRef = useRef(asideMenuConfig.filter(m => m.children?.some(c => pathname.includes(c.path!))).map(m => m.path!));
-  const defaultSelectedKeysRef = useRef([(() => {
-    for (const m of asideMenuConfig) {
-      if (m.path === pathname) {
-        return pathname;
-      }
-      for (const c of m.children || []) {
-        if (pathname.includes(c.path!)) {
-          return c.path!;
+  const defaultOpenKeysRef = useRef(
+    asideMenuConfig
+      .filter((m) => m.children?.some((c) => pathname.includes(c.path!)))
+      .map((m) => m.path!),
+  );
+  const defaultSelectedKeysRef = useRef([
+    (() => {
+      for (const m of asideMenuConfig) {
+        if (m.path === pathname) {
+          return pathname;
+        }
+        for (const c of m.children || []) {
+          if (pathname.includes(c.path!)) {
+            return c.path!;
+          }
         }
       }
-    }
-    return '';
-  })()]);
+
+      return "";
+    })(),
+  ]);
 
   return (
     <Menu
-      inlineIndent={12}
       defaultOpenKeys={defaultOpenKeysRef.current}
       defaultSelectedKeys={defaultSelectedKeysRef.current}
-      style={{
-        background: 'none',
-        border: 'none',
-        width: '100%',
-      }}
+      inlineCollapsed={collapsed}
+      inlineIndent={12}
+      mode="inline"
       selectedKeys={[(() => {
         for (const m of asideMenuConfig) {
           if (m.path === pathname) {
@@ -99,9 +107,12 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
         }
         return '';
       })()]}
-      inlineCollapsed={collapsed}
+      style={{
+        background: 'none',
+        border: 'none',
+        width: '100%',
+      }}
       onClick={onClick}
-      mode="inline"
       forceSubMenuRender
       // inlineIndent={0}
       items={items}

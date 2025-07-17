@@ -1,4 +1,8 @@
-import type { DownloadTaskAction, DownloadTaskDtoStatus, ThirdPartyId } from '@/sdk/constants';
+import type {
+  DownloadTaskAction,
+  DownloadTaskDtoStatus,
+  ThirdPartyId,
+} from "@/sdk/constants";
 
 export type DownloadTask = {
   id: number;

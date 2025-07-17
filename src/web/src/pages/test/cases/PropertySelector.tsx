@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import PropertySelector from '@/components/PropertySelector';
-import { Button } from '@/components/bakaui';
-import type { ResourceSearchFilter } from '@/pages/resource/components/FilterPanel/FilterGroupsPanel/models';
-import { PropertyPool } from '@/sdk/constants';
+import type { ResourceSearchFilter } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import PropertySelector from "@/components/PropertySelector";
+import { Button } from "@/components/bakaui";
+import { PropertyPool } from "@/sdk/constants";
 
 export default () => {
   const { t } = useTranslation();
@@ -13,14 +15,22 @@ export default () => {
 
   return (
     <Button
-      type={'primary'}
       text
+      size={"small"}
+      type={"primary"}
       onClick={() => {
         PropertySelector.show({
-          selection: { [filter.propertyPool == PropertyPool.Custom ? 'reservedPropertyIds' : 'customPropertyIds']: filter.propertyId == undefined ? undefined : [filter.propertyId] },
+          selection: {
+            [filter.propertyPool == PropertyPool.Custom
+              ? "reservedPropertyIds"
+              : "customPropertyIds"]:
+              filter.propertyId == undefined ? undefined : [filter.propertyId],
+          },
           onSubmit: async (selectedProperties) => {
-            const property = (selectedProperties.reservedProperties?.[0] ?? selectedProperties.customProperties?.[0])!;
+            const property = (selectedProperties.reservedProperties?.[0] ??
+              selectedProperties.customProperties?.[0])!;
             const cp = property as ICustomProperty;
+
             setFilter({
               ...filter,
               propertyId: property.id,
@@ -29,12 +39,11 @@ export default () => {
             });
           },
           multiple: false,
-          pool: 'all',
+          pool: "all",
         });
       }}
-      size={'small'}
     >
-      {filter.propertyId ? filter.propertyName : t<string>('Property')}
+      {filter.propertyId ? filter.propertyName : t<string>("Property")}
     </Button>
   );
 };

@@ -1,32 +1,36 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { GrInstallOption } from 'react-icons/gr';
-import { Accordion, AccordionItem, Alert, Button } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { TampermonkeyScript } from '@/sdk/constants';
+import { useTranslation } from "react-i18next";
+import { GrInstallOption } from "react-icons/gr";
+
+import { Accordion, AccordionItem, Alert, Button } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { TampermonkeyScript } from "@/sdk/constants";
 
 export default () => {
   const { t } = useTranslation();
+
   return (
     <Accordion
+      defaultSelectedKeys={"all"}
+      selectionMode={"multiple"}
       variant="splitted"
-      defaultSelectedKeys={'all'}
-      selectionMode={'multiple'}
     >
       <AccordionItem key="SoulPlus" title="SoulPlus">
         <div>
-          <div className={'flex items-center gap-2'}>
-            <div>{t<string>('Tampermonkey script')}</div>
+          <div className={"flex items-center gap-2"}>
+            <div>{t<string>("Tampermonkey script")}</div>
             <Button
-              variant={'light'}
-              color={'primary'}
+              color={"primary"}
+              variant={"light"}
               onPress={() => {
-                BApi.tampermonkey.installTampermonkeyScript({ script: TampermonkeyScript.SoulPlus });
+                BApi.tampermonkey.installTampermonkeyScript({
+                  script: TampermonkeyScript.SoulPlus,
+                });
               }}
             >
-              <GrInstallOption className={'text-medium'} />
-              {t<string>('One-click installation')}
+              <GrInstallOption className={"text-medium"} />
+              {t<string>("One-click installation")}
             </Button>
           </div>
           <Alert
@@ -44,17 +48,19 @@ export default () => {
       </AccordionItem>
       <AccordionItem key="ExHentai" title="ExHentai">
         <div>
-          <div className={'flex items-center gap-2'}>
-            <div>{t<string>('Tampermonkey script')}</div>
+          <div className={"flex items-center gap-2"}>
+            <div>{t<string>("Tampermonkey script")}</div>
             <Button
-              variant={'light'}
-              color={'primary'}
+              color={"primary"}
+              variant={"light"}
               onPress={() => {
-                BApi.tampermonkey.installTampermonkeyScript({ script: TampermonkeyScript.ExHentai });
+                BApi.tampermonkey.installTampermonkeyScript({
+                  script: TampermonkeyScript.ExHentai,
+                });
               }}
             >
-              <GrInstallOption className={'text-medium'} />
-              {t<string>('One-click installation')}
+              <GrInstallOption className={"text-medium"} />
+              {t<string>("One-click installation")}
             </Button>
           </div>
           <Alert

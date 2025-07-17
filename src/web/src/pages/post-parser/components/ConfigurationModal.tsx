@@ -1,57 +1,64 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { Modal, NumberInput, Tab, Tabs, Textarea } from '@/components/bakaui';
-import { useSoulPlusOptionsStore } from '@/models/options';
-import BApi from '@/sdk/BApi';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import { EditableValue } from '@/components/EditableValue';
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { useTranslation } from "react-i18next";
+
+import { Modal, NumberInput, Tab, Tabs, Textarea } from "@/components/bakaui";
+import { useSoulPlusOptionsStore } from "@/models/options";
+import BApi from "@/sdk/BApi";
+import { EditableValue } from "@/components/EditableValue";
 
 type Props = DestroyableProps;
 
 export default (props: Props) => {
   const { t } = useTranslation();
-  const soulPlusOptions = useSoulPlusOptionsStore(state => state.data);
+  const soulPlusOptions = useSoulPlusOptionsStore((state) => state.data);
+
   return (
     <Modal
       defaultVisible
-      size={'xl'}
-      onDestroyed={props.onDestroyed}
       footer={{
-        actions: ['cancel'],
+        actions: ["cancel"],
       }}
+      size={"xl"}
+      onDestroyed={props.onDestroyed}
     >
-      <Tabs aria-label="Options" isVertical>
-        <Tab key="soulplus" title={t<string>('SoulPlus')}>
-          <div className={'flex flex-col gap-2'}>
+      <Tabs isVertical aria-label="Options">
+        <Tab key="soulplus" title={t<string>("SoulPlus")}>
+          <div className={"flex flex-col gap-2"}>
             <EditableValue
-              Viewer={Textarea}
               Editor={Textarea}
-              label={t<string>('Cookie')}
-              description={t<string>('Cookie is used to access SoulPlus posts.')}
+              Viewer={Textarea}
+              description={t<string>(
+                "Cookie is used to access SoulPlus posts.",
+              )}
+              label={t<string>("Cookie")}
               value={soulPlusOptions.cookie}
-              onSubmit={async v => {
+              onSubmit={async (v) => {
                 await BApi.options.patchSoulPlusOptions({
                   cookie: v,
                 });
               }}
             />
             <EditableValue
-              Viewer={NumberInput}
               Editor={NumberInput}
+              Viewer={NumberInput}
+              description={t<string>(
+                "Items priced below this value will be bought automatically.",
+              )}
               editorProps={{
                 min: 0,
                 formatOptions: { useGrouping: false },
                 hideStepper: true,
               }}
+              label={t<string>("Auto buy threshold")}
+              value={soulPlusOptions.autoBuyThreshold}
               viewerProps={{
                 formatOptions: { useGrouping: false },
                 hideStepper: true,
               }}
-              label={t<string>('Auto buy threshold')}
-              description={t<string>('Items priced below this value will be bought automatically.')}
-              value={soulPlusOptions.autoBuyThreshold}
-              onSubmit={async v => {
+              onSubmit={async (v) => {
                 await BApi.options.patchSoulPlusOptions({
                   autoBuyThreshold: v,
                 });

@@ -1,29 +1,31 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import type { IChoice } from "../../../Property/models";
+
+import React, { useEffect, useRef, useState } from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { Input, Overlay } from '@alifd/next';
-import { useTranslation } from 'react-i18next';
-import {
-  AutoSizer,
-  CellMeasurer,
-  CellMeasurerCache,
-  createMasonryCellPositioner,
-  Masonry,
-  WindowScroller,
-  List,
-} from 'react-virtualized';
-import type { IChoice } from '../../../Property/models';
-import { SortableChoice } from './components/SortableChoice';
-import CustomIcon from '@/components/CustomIcon';
-import { uuidv4 } from '@/components/utils';
-import { Button, Chip, Popover, Textarea } from '@/components/bakaui';
+} from "@dnd-kit/sortable";
+import { Overlay } from "@alifd/next";
+import { useTranslation } from "react-i18next";
+import { AutoSizer, List } from "react-virtualized";
+
+import { SortableChoice } from "./components/SortableChoice";
+
+import CustomIcon from "@/components/CustomIcon";
+import { uuidv4 } from "@/components/utils";
+import { Button, Chip, Popover, Textarea } from "@/components/bakaui";
 
 const { Popup } = Overlay;
 
@@ -36,11 +38,16 @@ interface IProps {
 
 const lineHeight = 35;
 
-export default function ChoiceList({ choices: propsChoices, onChange, className, checkUsage }: IProps) {
+export default function ChoiceList({
+  choices: propsChoices,
+  onChange,
+  className,
+  checkUsage,
+}: IProps) {
   const { t } = useTranslation();
   const [choices, setChoices] = useState<IChoice[]>(propsChoices || []);
   const [editInBulkPopupVisible, setEditInBulkPopupVisible] = useState(false);
-  const [editInBulkText, setEditInBulkText] = useState('');
+  const [editInBulkText, setEditInBulkText] = useState("");
   const [bulkEditSummaries, setBulkEditSummaries] = useState<string[]>([]);
   const calculateBulkEditSummaryTimeoutRef = useRef<any>();
 
@@ -58,41 +65,63 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
   }, [choices]);
 
   const buildChoicesFromBulkText = (text: string): IChoice[] => {
-    return text.split('\n').map<IChoice | null>(c => {
-      const str = c.trim();
-      if (str.length == 0) {
-        return null;
-      }
+    return text
+      .split("\n")
+      .map<IChoice | null>((c) => {
+        const str = c.trim();
 
-      const t = choices.find(x => x.label == str);
+        if (str.length == 0) {
+          return null;
+        }
 
-      if (t) {
-        return t;
-      }
+        const t = choices.find((x) => x.label == str);
 
-      return {
-        label: str,
-        value: uuidv4(),
-      };
-    }).filter(x => x != null) as IChoice[];
+        if (t) {
+          return t;
+        }
+
+        return {
+          label: str,
+          value: uuidv4(),
+        };
+      })
+      .filter((x) => x != null) as IChoice[];
   };
 
   const calculateBulkEditSummary = (text: string) => {
     const ctxChoices = buildChoicesFromBulkText(text);
-    const addedChoicesCount = ctxChoices.filter(x => !choices.includes(x)).length;
-    const sameChoicesCount = ctxChoices.filter(x => choices.includes(x)).length;
+    const addedChoicesCount = ctxChoices.filter(
+      (x) => !choices.includes(x),
+    ).length;
+    const sameChoicesCount = ctxChoices.filter((x) =>
+      choices.includes(x),
+    ).length;
 
     const deletedChoicesCount = choices.length - sameChoicesCount;
+
     if (deletedChoicesCount > 0 || addedChoicesCount > 0) {
-      const tips = [deletedChoicesCount > 0 ? t<string>('{{count}} data will be deleted', { count: deletedChoicesCount }) : '', addedChoicesCount > 0 ? t<string>('{{count}} data will be added', { count: addedChoicesCount }) : ''];
-      setBulkEditSummaries(tips.filter(t => t));
+      const tips = [
+        deletedChoicesCount > 0
+          ? t<string>("{{count}} data will be deleted", {
+              count: deletedChoicesCount,
+            })
+          : "",
+        addedChoicesCount > 0
+          ? t<string>("{{count}} data will be added", {
+              count: addedChoicesCount,
+            })
+          : "",
+      ];
+
+      setBulkEditSummaries(tips.filter((t) => t));
     } else {
       setBulkEditSummaries([]);
     }
   };
 
   const addChoice = () => {
-    const newChoices = [...choices, { label: '', value: uuidv4() }];
+    const newChoices = [...choices, { label: "", value: uuidv4() }];
+
     setChoices(newChoices);
     setTimeout(() => {
       virtualListRef.current?.scrollToRow(newChoices.length - 1);
@@ -104,54 +133,51 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
     <div className={className}>
       <div className="flex justify-between items-center">
         <Button
-          size={'sm'}
-          variant={'light'}
+          size={"sm"}
+          variant={"light"}
           onClick={() => {
-            choices.sort((a, b) => (a.label || '').localeCompare(b.label || ''));
+            choices.sort((a, b) =>
+              (a.label || "").localeCompare(b.label || ""),
+            );
             setChoices([...choices]);
           }}
         >
-          <CustomIcon type={'sorting'} className={'text-medium'} />
-          {t<string>('Sort by alphabet')}
+          <CustomIcon className={"text-medium"} type={"sorting"} />
+          {t<string>("Sort by alphabet")}
         </Button>
       </div>
       <div className="mt-2 mb-2 flex flex-col gap-1">
         <DndContext
-          sensors={sensors}
           collisionDetection={closestCenter}
+          sensors={sensors}
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={choices?.map(c => ({ ...c, id: c.value }))}
+            items={choices?.map((c) => ({ ...c, id: c.value }))}
             strategy={verticalListSortingStrategy}
           >
             <div style={{ height: Math.min(choices.length, 6) * lineHeight }}>
               <AutoSizer>
-                {({
-                    width,
-                    height,
-                  }) => (
-                    <List
-                      ref={virtualListRef}
+                {({ width, height }) => (
+                  <List
+                    ref={virtualListRef}
                     // className={styles.List}
-                      height={height}
-                      rowCount={choices.length}
-                      rowHeight={lineHeight}
-                      rowRenderer={(ctx) => {
-                      const {
-                        key,
-                        index,
-                        style,
-                      } = ctx;
+                    height={height}
+                    rowCount={choices.length}
+                    rowHeight={lineHeight}
+                    rowRenderer={(ctx) => {
+                      const { key, index, style } = ctx;
                       const sc = choices[index]!;
+
                       return (
                         <SortableChoice
                           key={sc.value}
-                          style={style}
-                          checkUsage={checkUsage}
-                          // key={sc.value}
-                          id={sc.value}
                           choice={sc}
+                          style={style}
+                          onChange={t => {
+                            choices[index] = t;
+                            setChoices([...choices]);
+                          }}
                           onEnterKeyDown={() => {
                             addChoice();
                           }}
@@ -159,15 +185,14 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                             choices.splice(index, 1);
                             setChoices([...choices]);
                           }}
-                          onChange={t => {
-                            choices[index] = t;
-                            setChoices([...choices]);
-                          }}
+                          checkUsage={checkUsage}
+                          // key={sc.value}
+                          id={sc.value}
                         />
                       );
                     }}
-                      width={width}
-                    />
+                    width={width}
+                  />
                 )}
               </AutoSizer>
             </div>
@@ -191,60 +216,62 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
       </div>
       <div className="flex items-center justify-between">
         <Button
-          size={'sm'}
+          size={"sm"}
           onClick={() => {
             addChoice();
           }}
         >
-          <CustomIcon
-            type={'plus-circle'}
-            className={'text-medium'}
-          />
-          {t<string>('Add a choice')}
+          <CustomIcon className={"text-medium"} type={"plus-circle"} />
+          {t<string>("Add a choice")}
         </Button>
         <Popover
-          trigger={(
-            <Button
-              variant={'light'}
-              size={'sm'}
-            >
-              {t<string>('Add or delete in bulk')}
-            </Button>
-          )}
+          placement={"right"}
+          size={"lg"}
           style={{ zIndex: 100 }}
-          size={'lg'}
-          placement={'right'}
+          trigger={
+            <Button size={"sm"} variant={"light"}>
+              {t<string>("Add or delete in bulk")}
+            </Button>
+          }
           visible={editInBulkPopupVisible}
-          onVisibleChange={v => {
+          onVisibleChange={(v) => {
             if (v) {
-              const text = choices.map(t => t.label).join('\n');
+              const text = choices.map((t) => t.label).join("\n");
+
               setEditInBulkText(text);
             }
             setEditInBulkPopupVisible(v);
           }}
         >
-          <div className={'flex flex-col gap-2 m-2 '}>
-            <div className="text-medium">{t<string>('Add or delete choices in bulk')}</div>
-            <div className={'text-sm opacity-70'}>
-              <div>{t<string>('Choices will be separated by line breaks.')}</div>
-              <div>{t<string>('Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.')}</div>
-              <div>{t<string>('Be cautions: once you modify the text in one line, it will be treated as a new choice, and the original choice will be deleted.')}</div>
+          <div className={"flex flex-col gap-2 m-2 "}>
+            <div className="text-medium">
+              {t<string>("Add or delete choices in bulk")}
+            </div>
+            <div className={"text-sm opacity-70"}>
+              <div>
+                {t<string>("Choices will be separated by line breaks.")}
+              </div>
+              <div>
+                {t<string>(
+                  "Once you click the submit button, new choices will be added to the list, and missing choices will be deleted.",
+                )}
+              </div>
+              <div>
+                {t<string>(
+                  "Be cautions: once you modify the text in one line, it will be treated as a new choice, and the original choice will be deleted.",
+                )}
+              </div>
             </div>
             {bulkEditSummaries.length > 0 && (
-              <div className={'flex items-center gap-2 text-sm'}>
-                {bulkEditSummaries.map(s => (
-                  <Chip
-                    size={'sm'}
-                    variant={'light'}
-                    color={'success'}
-                  >{s}</Chip>
+              <div className={"flex items-center gap-2 text-sm"}>
+                {bulkEditSummaries.map((s) => (
+                  <Chip color={"success"} size={"sm"} variant={"light"}>
+                    {s}
+                  </Chip>
                 ))}
               </div>
             )}
             <Textarea
-              value={editInBulkText}
-              // onValueChange={v => setEditInBulkText(v)}
-              maxRows={16}
               onValueChange={v => {
                 setEditInBulkText(v);
                 calculateBulkEditSummaryTimeoutRef.current && clearTimeout(calculateBulkEditSummaryTimeoutRef.current);
@@ -253,27 +280,30 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
                   calculateBulkEditSummaryTimeoutRef.current = undefined;
                 }, 1000);
               }}
+              value={editInBulkText}
+              // onValueChange={v => setEditInBulkText(v)}
+              maxRows={16}
             />
             <div className="flex justify-end items-center">
               <Button
-                variant={'light'}
-                size={'sm'}
+                size={"sm"}
+                variant={"light"}
                 onClick={() => {
                   setEditInBulkPopupVisible(false);
                 }}
               >
-                {t<string>('Cancel')}
+                {t<string>("Cancel")}
               </Button>
               <Button
-                color={'primary'}
-                size={'sm'}
+                color={"primary"}
                 isLoading={!!calculateBulkEditSummaryTimeoutRef.current}
+                size={"sm"}
                 onClick={() => {
                   setChoices(buildChoicesFromBulkText(editInBulkText));
                   setEditInBulkPopupVisible(false);
                 }}
               >
-                {t<string>('Submit')}
+                {t<string>("Submit")}
               </Button>
             </div>
           </div>
@@ -283,10 +313,7 @@ export default function ChoiceList({ choices: propsChoices, onChange, className,
   );
 
   function handleDragEnd(event) {
-    const {
-      active,
-      over,
-    } = event;
+    const { active, over } = event;
 
     if (active.value !== over.value) {
       setChoices((items) => {

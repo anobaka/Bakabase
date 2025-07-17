@@ -1,21 +1,27 @@
-'use client';
+"use client";
 
-'use strict';
-import { useTranslation } from 'react-i18next';
-import React, { useEffect, useState } from 'react';
-import { DeleteOutlined } from '@ant-design/icons';
-import { useUpdateEffect } from 'react-use';
-import { StringValueProcessDemonstrator } from '../Processes/StringValueProcess';
-import { ListStringValueProcessDemonstrator } from '../Processes/ListStringValueProcess';
-import { Button, Chip, Modal } from '@/components/bakaui';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { IProperty } from '@/components/Property/models';
+"use strict";
+import type { IProperty } from "@/components/Property/models";
 import type {
   BulkModificationProcessStep,
   BulkModificationVariable,
-} from '@/pages/bulk-modification2/components/BulkModification/models';
-import ProcessStepModal from '@/pages/bulk-modification2/components/BulkModification/ProcessStepModal';
-import { type BulkModificationProcessorValueType, PropertyType } from '@/sdk/constants';
+} from "@/pages/bulk-modification2/components/BulkModification/models";
+
+import { useTranslation } from "react-i18next";
+import React, { useState } from "react";
+import { DeleteOutlined } from "@ant-design/icons";
+import { useUpdateEffect } from "react-use";
+
+import { StringValueProcessDemonstrator } from "../Processes/StringValueProcess";
+import { ListStringValueProcessDemonstrator } from "../Processes/ListStringValueProcess";
+
+import { Button, Chip, Modal } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ProcessStepModal from "@/pages/bulk-modification2/components/BulkModification/ProcessStepModal";
+import {
+  type BulkModificationProcessorValueType,
+  PropertyType,
+} from "@/sdk/constants";
 
 type Props = {
   no: any;
@@ -29,15 +35,15 @@ type Props = {
 };
 
 export default ({
-                  no,
-                  step: propsStep,
-                  property,
-                  onChange,
-                  variables,
-                  editable,
-                  availableValueTypes,
-                  onDelete,
-                }: Props) => {
+  no,
+  step: propsStep,
+  property,
+  onChange,
+  variables,
+  editable,
+  availableValueTypes,
+  onDelete,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -55,19 +61,19 @@ export default ({
       case PropertyType.SingleChoice:
         return (
           <StringValueProcessDemonstrator
-            variables={variables}
             operation={step.operation}
             options={step.options}
+            variables={variables}
           />
         );
       case PropertyType.MultipleChoice:
       case PropertyType.Attachment:
         return (
           <ListStringValueProcessDemonstrator
-            property={property}
-            variables={variables}
             operation={step.operation}
             options={step.options}
+            property={property}
+            variables={variables}
           />
         );
       case PropertyType.Number:
@@ -87,57 +93,60 @@ export default ({
       case PropertyType.Tags:
         break;
     }
-    return t<string>('Not supported');
+
+    return t<string>("Not supported");
   };
 
   return (
     <div
-      className={`flex items-center flex-wrap gap-1 ${editable ? 'cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded' : ''}`}
-      onClick={editable ? () => {
-        createPortal(
-          ProcessStepModal, {
-            property: property,
-            availableValueTypes,
-            onSubmit: (operation, options) => {
-              const newStep = {
-                ...step,
-                operation,
-                options,
-              };
-              setStep(newStep);
-              onChange?.(newStep);
-            },
-            variables: variables,
-            operation: step.operation,
-            options: step.options,
-          },
-        );
-      } : undefined}
+      className={`flex items-center flex-wrap gap-1 ${editable ? "cursor-pointer hover:bg-[var(--bakaui-overlap-background)] rounded" : ""}`}
+      onClick={
+        editable
+          ? () => {
+              createPortal(ProcessStepModal, {
+                property: property,
+                availableValueTypes,
+                onSubmit: (operation, options) => {
+                  const newStep = {
+                    ...step,
+                    operation,
+                    options,
+                  };
+
+                  setStep(newStep);
+                  onChange?.(newStep);
+                },
+                variables: variables,
+                operation: step.operation,
+                options: step.options,
+              });
+            }
+          : undefined
+      }
     >
-      <Chip
-        size={'sm'}
-        radius={'sm'}
-      >{no}</Chip>
+      <Chip radius={"sm"} size={"sm"}>
+        {no}
+      </Chip>
       {renderDemonstrator()}
       <Button
-        size={'sm'}
-        variant={'light'}
-        color={'danger'}
-        className={'min-w-fit px-2'}
+        className={"min-w-fit px-2"}
+        color={"danger"}
+        size={"sm"}
+        variant={"light"}
         onClick={() => {
-          createPortal(
-            Modal, {
-              defaultVisible: true,
-              title: t<string>('Delete a process step'),
-              children: t<string>('Are you sure you want to delete this process step?'),
-              onOk: async () => {
-                onDelete();
-              },
+          createPortal(Modal, {
+            defaultVisible: true,
+            title: t<string>("Delete a process step"),
+            children: t<string>(
+              "Are you sure you want to delete this process step?",
+            ),
+            onOk: async () => {
+              onDelete();
             },
-          );
+          });
         }}
       >
-        <DeleteOutlined className={'text-base'} />
+        <DeleteOutlined className={"text-base"} />
       </Button>
     </div>
   );

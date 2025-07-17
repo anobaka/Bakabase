@@ -1,5 +1,10 @@
-import type { BulkModificationProcessorValueType, PropertyPool, PropertyType, PropertyValueScope } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
+import type {
+  BulkModificationProcessorValueType,
+  PropertyPool,
+  PropertyType,
+  PropertyValueScope,
+} from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
 
 export type BulkModificationProcessStep = {
   operation: number;

@@ -1,6 +1,8 @@
-import type { TFunction } from 'react-i18next';
-import { PscPropertyType } from './PscPropertyType';
-import { ResourceProperty } from '@/sdk/constants';
+import type { TFunction } from "react-i18next";
+
+import { PscPropertyType } from "./PscPropertyType";
+
+import { ResourceProperty } from "@/sdk/constants";
 
 export interface IPscProperty {
   id: number;
@@ -22,7 +24,7 @@ class PscProperty implements IPscProperty {
   };
 
   get key(): string {
-    return `${(this.isCustom ? 'c' : 'r')}-${this.id}`;
+    return `${this.isCustom ? "c" : "r"}-${this.id}`;
   }
 
   get type(): PscPropertyType | undefined {
@@ -30,6 +32,7 @@ class PscProperty implements IPscProperty {
       return PscPropertyType.CustomProperty;
     } else {
       const rp = this.id as ResourceProperty;
+
       switch (rp) {
         case ResourceProperty.RootPath:
           return PscPropertyType.RootPath;
@@ -55,8 +58,8 @@ class PscProperty implements IPscProperty {
     return !this.isCustom && this.id == ResourceProperty.Resource;
   }
 
-  toString(t: TFunction<'translation', undefined>, index?: number): string {
-    return `${(this.isCustom ? this.name : t<string>(ResourceProperty[this.id]))}${index == undefined ? '' : index + 1}`;
+  toString(t: TFunction<"translation", undefined>, index?: number): string {
+    return `${this.isCustom ? this.name : t<string>(ResourceProperty[this.id])}${index == undefined ? "" : index + 1}`;
   }
 
   static fromPscType(type: PscPropertyType): PscProperty {

@@ -1,36 +1,46 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import type { ValueRendererProps } from '../models';
-import { Checkbox, Switch } from '@/components/bakaui';
+import type { ValueRendererProps } from "../models";
 
-type BooleanValueRendererProps = Omit<ValueRendererProps<boolean>, 'variant'> & {
-  variant: ValueRendererProps<boolean>['variant'] | 'switch';
+import { useTranslation } from "react-i18next";
+
+import { Checkbox, Switch } from "@/components/bakaui";
+
+type BooleanValueRendererProps = Omit<
+  ValueRendererProps<boolean>,
+  "variant"
+> & {
+  variant: ValueRendererProps<boolean>["variant"] | "switch";
 };
 
-export default ({ value, variant, editor, ...props }: BooleanValueRendererProps) => {
+export default ({
+  value,
+  variant,
+  editor,
+  ...props
+}: BooleanValueRendererProps) => {
   const { t } = useTranslation();
 
-  const v = variant ?? 'default';
+  const v = variant ?? "default";
 
   switch (v) {
-    case 'default':
-    case 'light':
+    case "default":
+    case "light":
       return (
         <Checkbox
-          size={'sm'}
           disableAnimation={!editor}
           isSelected={value}
-          onValueChange={v => editor?.onValueChange?.(v, v)}
+          size={"sm"}
+          onValueChange={(v) => editor?.onValueChange?.(v, v)}
         />
       );
-    case 'switch':
+    case "switch":
       return (
         <Switch
-          size={'sm'}
           disableAnimation={!editor}
           isSelected={value}
-          onValueChange={v => editor?.onValueChange?.(v, v)}
+          size={"sm"}
+          onValueChange={(v) => editor?.onValueChange?.(v, v)}
         />
       );
   }

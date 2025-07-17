@@ -1,20 +1,23 @@
-'use client';
+"use client";
 
-import React, { useCallback } from 'react';
-import { toast } from '@/components/bakaui';
-import dayjs from 'dayjs';
-import {Range} from '@alifd/next';
-import { useTranslation } from 'react-i18next';
+import React, { useCallback } from "react";
+import dayjs from "dayjs";
+import { Range } from "@alifd/next";
+import { useTranslation } from "react-i18next";
+
+import { toast } from "@/components/bakaui";
 
 const MarkCount = 5;
 
 export default ({
-                  duration,
-                  onChange: propsOnChange = (values) => {
-                  },
-                  onProcess: propsOnProcess = (values) => {
-                  },
-                }: { onProcess?: (values: number[]) => void; onChange?: (values: number[]) => void; duration: any }) => {
+  duration,
+  onChange: propsOnChange = (values) => {},
+  onProcess: propsOnProcess = (values) => {},
+}: {
+  onProcess?: (values: number[]) => void;
+  onChange?: (values: number[]) => void;
+  duration: any;
+}) => {
   const { t } = useTranslation();
   const marks = {};
   const totalSeconds = duration.asSeconds();
@@ -23,6 +26,7 @@ export default ({
   const restSeconds = totalSeconds - secondsPerMark * MarkCount;
 
   let idx = 0;
+
   while (idx <= MarkCount) {
     if (idx == MarkCount) {
       if (restSeconds / secondsPerMark < 0.4) {
@@ -30,44 +34,50 @@ export default ({
       }
     }
     const ts = secondsPerMark * idx;
-    marks[ts] = dayjs.duration(ts * 1000)
-      .format('HH:mm:ss');
+
+    marks[ts] = dayjs.duration(ts * 1000).format("HH:mm:ss");
     idx++;
   }
 
-  marks[totalSeconds] = duration.format('HH:mm:ss');
+  marks[totalSeconds] = duration.format("HH:mm:ss");
 
   // console.log(marks, totalSeconds);
 
-  const onChange = useCallback((value: number | [number, number]) => {
-    if (value instanceof Array) {
-      propsOnChange(value);
-    } else {
-      toast.error(t<string>('Not supported'));
-    }
-  }, [propsOnChange]);
+  const onChange = useCallback(
+    (value: number | [number, number]) => {
+      if (value instanceof Array) {
+        propsOnChange(value);
+      } else {
+        toast.error(t<string>("Not supported"));
+      }
+    },
+    [propsOnChange],
+  );
 
-  const onProcess = useCallback((value: number | [number, number]) => {
-    if (value instanceof Array) {
-      propsOnProcess(value);
-    } else {
-      toast.error(t<string>('Not supported'));
-    }
-  }, [propsOnProcess]);
+  const onProcess = useCallback(
+    (value: number | [number, number]) => {
+      if (value instanceof Array) {
+        propsOnProcess(value);
+      } else {
+        toast.error(t<string>("Not supported"));
+      }
+    },
+    [propsOnProcess],
+  );
 
   return (
     <Range
       tooltipVisible
+      defaultValue={[0, totalSeconds]}
+      marks={marks}
+      max={totalSeconds}
+      min={0}
+      onChange={onChange}
+      onProcess={onProcess}
       slider="double"
       // @ts-ignore
       tipRender={(v) => dayjs.duration(v * 1000)
         .format('HH:mm:ss')}
-      defaultValue={[0, totalSeconds]}
-      onChange={onChange}
-      onProcess={onProcess}
-      min={0}
-      marks={marks}
-      max={totalSeconds}
     />
   );
 };

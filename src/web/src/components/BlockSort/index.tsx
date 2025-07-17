@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -8,15 +8,14 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
-  arrayMove, horizontalListSortingStrategy,
+  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { useUpdate } from 'react-use';
-import SortableBlock from '@/components/BlockSort/components/SortableBlock';
+} from "@dnd-kit/sortable";
+
+import SortableBlock from "@/components/BlockSort/components/SortableBlock";
 
 type Block = {
   id: any;
@@ -40,21 +39,21 @@ export default ({ blocks, onSorted }: Props) => {
   // console.log(items);
 
   return (
-    <div className={'flex flex-wrap gap-y-2 gap-x-4'}>
+    <div className={"flex flex-wrap gap-y-2 gap-x-4"}>
       <DndContext
-        sensors={sensors}
         collisionDetection={closestCenter}
+        sensors={sensors}
         onDragEnd={handleDragEnd}
       >
-        <SortableContext
-          items={items}
-        >
-          {items.map((id, idx) => (<SortableBlock
-            key={id}
-            id={id}
-            idx={idx}
-            name={blocks.find(b => b.id == id)!.name}
-          />))}
+        <SortableContext items={items}>
+          {items.map((id, idx) => (
+            <SortableBlock
+              key={id}
+              id={id}
+              idx={idx}
+              name={blocks.find((b) => b.id == id)!.name}
+            />
+          ))}
         </SortableContext>
       </DndContext>
     </div>
@@ -73,6 +72,7 @@ export default ({ blocks, onSorted }: Props) => {
         const newBlocks = arrayMove(items, oldIndex, newIndex);
 
         onSorted?.(newBlocks);
+
         return newBlocks;
       });
     }

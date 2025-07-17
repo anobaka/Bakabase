@@ -1,5 +1,4 @@
-import type { BulkModificationProcessorValueType } from '@/sdk/constants';
-import type { BulkModificationProcessValue } from '@/pages/bulk-modification2/components/BulkModification/models';
+import type { BulkModificationProcessValue } from "@/pages/bulk-modification2/components/BulkModification/models";
 
 export type StringProcessOptions = {
   value?: BulkModificationProcessValue;

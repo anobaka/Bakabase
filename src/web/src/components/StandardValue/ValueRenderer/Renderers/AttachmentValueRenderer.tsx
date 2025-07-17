@@ -1,107 +1,120 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { DeleteOutlined, FileAddOutlined, LoadingOutlined, UploadOutlined } from '@ant-design/icons';
-import { Img } from 'react-image';
-import React from 'react';
-import type { ValueRendererProps } from '../models';
-import serverConfig from '@/serverConfig';
-import BApi from '@/sdk/BApi';
-import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
-import CustomIcon from '@/components/CustomIcon';
-import { Button, Snippet, Tooltip } from '@/components/bakaui';
-import { splitPathIntoSegments } from '@/components/utils';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { FileSystemSelectorModal } from '@/components/FileSystemSelector';
+import type { ValueRendererProps } from "../models";
 
-type AttachmentValueRendererProps = Omit<ValueRendererProps<string[]>, 'variant'> & {
-  variant: ValueRendererProps<string[]>['variant'];
+import { useTranslation } from "react-i18next";
+import {
+  DeleteOutlined,
+  FileAddOutlined,
+  LoadingOutlined,
+} from "@ant-design/icons";
+import { Img } from "react-image";
+import React from "react";
+
+import envConfig from "@/config/env";
+import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import CustomIcon from "@/components/CustomIcon";
+import { Button } from "@/components/bakaui";
+import { splitPathIntoSegments } from "@/components/utils";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+
+type AttachmentValueRendererProps = Omit<
+  ValueRendererProps<string[]>,
+  "variant"
+> & {
+  variant: ValueRendererProps<string[]>["variant"];
 };
 
-export default ({ value, variant, editor, ...props }: AttachmentValueRendererProps) => {
+export default ({
+  value,
+  variant,
+  editor,
+  ...props
+}: AttachmentValueRendererProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const v = variant ?? 'default';
+  const v = variant ?? "default";
 
   const editable = !!editor;
 
   switch (v) {
-    case 'default':
+    case "default":
       return (
-        <div className={'flex items-center gap-2 flex-wrap'}>
-          {value?.map(v => {
+        <div className={"flex items-center gap-2 flex-wrap"}>
+          {value?.map((v) => {
             const pathSegments = splitPathIntoSegments(v);
+
             return (
-              <div className={'flex flex-col gap-1 max-w-[100px] relative group'}>
+              <div
+                className={"flex flex-col gap-1 max-w-[100px] relative group"}
+              >
                 <Img
-                  src={[`${serverConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(v)}`]}
-                  loader={(
-                    <LoadingOutlined className={'text-2xl'} />
-                  )}
-                  unloader={(
-                    <CustomIcon type={'image-slash'} className={'text-2xl'} />
-                  )}
-                  alt={''}
+                  alt={""}
+                  loader={<LoadingOutlined className={"text-2xl"} />}
+                  src={[
+                    `${envConfig.apiEndpoint}/tool/thumbnail?path=${encodeURIComponent(v)}`,
+                  ]}
                   style={{
                     maxWidth: 100,
                     maxHeight: 100,
                   }}
                   title={v}
+                  unloader={
+                    <CustomIcon className={"text-2xl"} type={"image-slash"} />
+                  }
                 />
                 <Button
                   isIconOnly
                   color={'danger'}
-                  size={'sm'}
-                  // variant={'light'}
-                  className={'top-0 right-0 absolute hidden group-hover:block'}
                   style={{ transform: 'translate(50%, -50%)', zIndex: 1 }}
                   onClick={() => {
                     const newValue = value.filter(e => e != v);
                     editor?.onValueChange?.(newValue, newValue);
                   }}
+                  size={'sm'}
+                  // variant={'light'}
+                  className={'top-0 right-0 absolute hidden group-hover:block'}
                 >
-                  <DeleteOutlined className={'text-lg'} />
+                  <DeleteOutlined className={"text-lg"} />
                 </Button>
               </div>
             );
           })}
           {editable && (
             <div
-              className={'flex items-center justify-center w-[80px] h-[80px] border-1 rounded'}
-              style={{ borderColor: 'var(--bakaui-overlap-background)' }}
+              className={
+                "flex items-center justify-center w-[80px] h-[80px] border-1 rounded"
+              }
+              style={{ borderColor: "var(--bakaui-overlap-background)" }}
             >
               <Button
                 isIconOnly
-                color={'primary'}
-                variant={'light'}
+                color={"primary"}
+                variant={"light"}
                 onClick={() => {
                   createPortal(FileSystemSelectorModal, {
-                    targetType: 'file',
-                    onSelected: entry => {
+                    targetType: "file",
+                    onSelected: (entry) => {
                       const newValue = (value ?? []).concat([entry.path]);
+
                       editor?.onValueChange?.(newValue, newValue);
                     },
                   });
                 }}
               >
-                <FileAddOutlined className={'text-lg'} />
+                <FileAddOutlined className={"text-lg"} />
               </Button>
             </div>
           )}
         </div>
       );
-    case 'light':
+    case "light":
       if (!value || value.length == 0) {
-        return (
-          <NotSet />
-        );
+        return <NotSet />;
       } else {
-        return (
-          <span className={'break-all'}>
-            {(value.join(','))}
-          </span>
-        );
+        return <span className={"break-all"}>{value.join(",")}</span>;
       }
   }
 };

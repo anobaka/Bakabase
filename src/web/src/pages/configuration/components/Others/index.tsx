@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import { Switch } from '@alifd/next';
-import React, { useEffect, useState } from 'react';
-import Cookies from 'universal-cookie';
-import { useTranslation } from 'react-i18next';
-import type { Key } from '@react-types/shared';
-import toast from 'react-hot-toast';
-import { AiOutlineNumber } from 'react-icons/ai';
-import CustomIcon from '@/components/CustomIcon';
-import BApi from '@/sdk/BApi';
-import type { ChipProps, NumberInputProps } from '@/components/bakaui';
-import { Link } from '@/components/bakaui';
+import type { Key } from "@react-types/shared";
+import type { ChipProps, NumberInputProps } from "@/components/bakaui";
+import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from "@/sdk/Api";
+
+import { Switch } from "@alifd/next";
+import React, { useEffect, useState } from "react";
+import Cookies from "universal-cookie";
+import { useTranslation } from "react-i18next";
+import toast from "react-hot-toast";
+import { AiOutlineNumber } from "react-icons/ai";
+
+import CustomIcon from "@/components/CustomIcon";
+import BApi from "@/sdk/BApi";
 import {
   Button,
   Chip,
@@ -25,12 +27,15 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
-} from '@/components/bakaui';
-import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from '@/sdk/Api';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { EditableValue } from '@/components/EditableValue';
-import { useThirdPartyOptionsStore, useNetworkOptionsStore, useAppOptionsStore } from '@/models/options';
-import { useAppContextStore } from '@/models/appContext';
+} from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { EditableValue } from "@/components/EditableValue";
+import {
+  useThirdPartyOptionsStore,
+  useNetworkOptionsStore,
+  useAppOptionsStore,
+} from "@/models/options";
+import { useAppContextStore } from "@/models/appContext";
 
 const cookies = new Cookies();
 
@@ -41,9 +46,10 @@ enum ProxyMode {
 }
 
 export default ({
-                  applyPatches = () => {
-                  },
-                }: { applyPatches: (API: any, patches: any, success: (rsp: any) => void) => void }) => {
+  applyPatches = () => {},
+}: {
+  applyPatches: (API: any, patches: any, success: (rsp: any) => void) => void;
+}) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -53,28 +59,31 @@ export default ({
   const appContext = useAppContextStore((state) => state);
 
   const [proxy, setProxy] = useState(networkOptions.proxy);
+
   useEffect(() => {
     setProxy(networkOptions.proxy);
   }, [networkOptions]);
 
   const proxies = [
     {
-      label: t<string>('Do not use proxy'),
+      label: t<string>("Do not use proxy"),
       value: ProxyMode.DoNotUse.toString(),
     },
     {
-      label: t<string>('Use system proxy'),
+      label: t<string>("Use system proxy"),
       value: ProxyMode.UseSystem.toString(),
     },
-    ...(networkOptions.customProxies?.map(c => ({
+    ...(networkOptions.customProxies?.map((c) => ({
       label: c.address!,
       value: c.id!,
     })) ?? []),
   ];
 
   let selectedProxy: Key | undefined;
+
   if (networkOptions?.proxy) {
     const p = networkOptions.proxy;
+
     if (p.mode == ProxyMode.UseCustom) {
       selectedProxy = p.customProxyId!;
     } else {
@@ -88,20 +97,24 @@ export default ({
 
   const otherSettings = [
     {
-      label: 'Proxy',
-      tip: 'You can set a proxy for network requests, such as socks5://127.0.0.1:18888',
+      label: "Proxy",
+      tip: "You can set a proxy for network requests, such as socks5://127.0.0.1:18888",
       renderValue: () => {
         return (
-          <div className={'flex items-center gap-2'}>
+          <div className={"flex items-center gap-2"}>
             <div style={{ width: 300 }}>
               <Select
-                multiple={false}
                 dataSource={proxies}
-                selectedKeys={selectedProxy == undefined ? undefined : [selectedProxy]}
-                size={'sm'}
-                onSelectionChange={keys => {
+                multiple={false}
+                selectedKeys={
+                  selectedProxy == undefined ? undefined : [selectedProxy]
+                }
+                size={"sm"}
+                onSelectionChange={(keys) => {
                   const key = Array.from(keys)[0] as string;
-                  const patches: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel = {};
+                  const patches: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel =
+                    {};
+
                   if (key == ProxyMode.DoNotUse.toString()) {
                     patches.proxy = {
                       mode: ProxyMode.DoNotUse,
@@ -121,9 +134,9 @@ export default ({
                     }
                   }
                   console.log(key, keys, patches);
-                  BApi.options.patchNetworkOptions(patches).then(x => {
+                  BApi.options.patchNetworkOptions(patches).then((x) => {
                     if (!x.code) {
-                      toast.success(t<string>('Saved'));
+                      toast.success(t<string>("Saved"));
                     }
                   });
                 }}
@@ -131,24 +144,27 @@ export default ({
             </div>
 
             <Button
-              size={'sm'}
-              color={'primary'}
+              color={"primary"}
+              size={"sm"}
               onClick={() => {
                 let p: string;
+
                 createPortal(Modal, {
                   defaultVisible: true,
-                  size: 'lg',
-                  title: t<string>('Add a proxy'),
+                  size: "lg",
+                  title: t<string>("Add a proxy"),
                   children: (
                     <Input
-                      placeholder={t<string>('You can set a proxy for network requests, such as socks5://127.0.0.1:18888')}
-                      onValueChange={v => p = v}
+                      placeholder={t<string>(
+                        "You can set a proxy for network requests, such as socks5://127.0.0.1:18888",
+                      )}
+                      onValueChange={(v) => (p = v)}
                     />
                   ),
                   onOk: async () => {
                     if (p == undefined || p.length == 0) {
-                      Notification.error(t<string>('Invalid Data'));
-                      throw new Error('Invalid data');
+                      Notification.error(t<string>("Invalid Data"));
+                      throw new Error("Invalid data");
                     }
                     await BApi.options.patchNetworkOptions({
                       customProxies: [
@@ -160,95 +176,116 @@ export default ({
                 });
               }}
             >
-              {t<string>('Add')}
+              {t<string>("Add")}
             </Button>
           </div>
         );
       },
     },
     {
-      label: 'Enable pre-release channel',
-      tip: 'Prefer pre-release version which has new features but less stability',
+      label: "Enable pre-release channel",
+      tip: "Prefer pre-release version which has new features but less stability",
       renderValue: () => {
         return (
           <Switch
-            size={'small'}
             checked={appOptions.enablePreReleaseChannel}
+            size={"small"}
             onChange={(checked) => {
-              applyPatches(BApi.options.patchAppOptions, {
-                enablePreReleaseChannel: checked,
-              }, () => {
-              });
+              applyPatches(
+                BApi.options.patchAppOptions,
+                {
+                  enablePreReleaseChannel: checked,
+                },
+                () => {},
+              );
             }}
           />
         );
       },
     },
     {
-      label: 'Enable anonymous data tracking',
-      tip: 'We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.',
+      label: "Enable anonymous data tracking",
+      tip: "We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.",
       renderValue: () => {
         return (
           <Switch
-            size={'small'}
             checked={appOptions.enableAnonymousDataTracking}
+            size={"small"}
             onChange={(checked) => {
-              applyPatches(BApi.options.patchAppOptions, {
-                enableAnonymousDataTracking: checked,
-              }, () => {
-              });
+              applyPatches(
+                BApi.options.patchAppOptions,
+                {
+                  enableAnonymousDataTracking: checked,
+                },
+                () => {},
+              );
             }}
           />
         );
       },
     },
     {
-      label: 'Listening port',
-      tip: 'You can set a fixed port for Bakabase to listen on.',
+      label: "Listening port",
+      tip: "You can set a fixed port for Bakabase to listen on.",
       renderValue: () => {
         const minPort = 5000;
         const maxPort = 65000;
+
         return (
-          <EditableValue<number, NumberInputProps, ChipProps & { value: number }>
-            Viewer={({
-                       value,
-                       ...props
-                     }) => (
-                       value ? <Chip
-                         variant={'flat'}
-                         radius={'sm'}
-                         startContent={<AiOutlineNumber className={'text-medium'} />}
-                         {...props}
-                       >
-                         {value}
-                       </Chip> : null
+          <EditableValue<
+            number,
+            NumberInputProps,
+            ChipProps & { value: number }
+          >
+            Editor={(props) => (
+              <NumberInput
+                className={"max-w-[320px]"}
+                description={
+                  <div>
+                    <div>
+                      {t<string>("Current listening port is {{port}}", {
+                        port: appContext?.listeningAddresses?.[0]
+                          ?.split(":")
+                          .slice(-1)[0],
+                      })}
+                    </div>
+                    <div>
+                      {t<string>(
+                        "The configurable port range is {{min}}-{{max}}",
+                        {
+                          min: minPort,
+                          max: maxPort,
+                        },
+                      )}
+                    </div>
+                    <div>
+                      {t<string>(
+                        "Changes will take effect after restarting the application",
+                      )}
+                    </div>
+                  </div>
+                }
+                formatOptions={{ useGrouping: false }}
+                max={maxPort}
+                min={minPort}
+                placeholder={t<string>("Port number")}
+                {...props}
+              />
             )}
-            Editor={(props) => (<NumberInput
-              formatOptions={{ useGrouping: false }}
-              min={minPort}
-              max={maxPort}
-              placeholder={t<string>('Port number')}
-              className={'max-w-[320px]'}
-              description={(
-                <div>
-                  <div>
-                    {t<string>('Current listening port is {{port}}', { port: appContext?.listeningAddresses?.[0]?.split(':').slice(-1)[0] })}
-                  </div>
-                  <div>
-                    {t<string>('The configurable port range is {{min}}-{{max}}', {
-                      min: minPort,
-                      max: maxPort,
-                    })}
-                  </div>
-                  <div>
-                    {t<string>('Changes will take effect after restarting the application')}
-                  </div>
-                </div>
-              )}
-              {...props}
-            />)}
+            Viewer={({ value, ...props }) =>
+              value ? (
+                <Chip
+                  radius={"sm"}
+                  startContent={<AiOutlineNumber className={"text-medium"} />}
+                  variant={"flat"}
+                  {...props}
+                >
+                  {value}
+                </Chip>
+              ) : null
+            }
             value={appOptions.listeningPort}
-            onSubmit={async v => {
+            onSubmit={async (v) => {
               await BApi.options.putAppOptions({
                 ...appOptions,
                 listeningPort: v,
@@ -264,44 +301,46 @@ export default ({
     <div className="group">
       {/* <Title title={i18n.t<string>('Other settings')} /> */}
       <div className="settings">
-        <Table
-          removeWrapper
-        >
+        <Table removeWrapper>
           <TableHeader>
-            <TableColumn width={200}>{t<string>('Other settings')}</TableColumn>
+            <TableColumn width={200}>{t<string>("Other settings")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
             {otherSettings.map((c, i) => {
               return (
-                <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+                <TableRow
+                  key={i}
+                  className={"hover:bg-[var(--bakaui-overlap-background)]"}
+                >
                   <TableCell>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                      }}
                     >
                       {t<string>(c.label)}
                       {c.tip && (
                         <>
                           &nbsp;
                           <Tooltip
-                            placement={'right'}
                             content={t<string>(c.tip)}
+                            placement={"right"}
                           >
-                            <CustomIcon type={'question-circle'} className={'text-base'} />
+                            <CustomIcon
+                              className={"text-base"}
+                              type={"question-circle"}
+                            />
                           </Tooltip>
                         </>
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {c.renderValue()}
-                  </TableCell>
+                  <TableCell>{c.renderValue()}</TableCell>
                 </TableRow>
               );
             })}
-
           </TableBody>
         </Table>
         {/* <Table */}

@@ -1,14 +1,21 @@
-'use client';
+"use client";
 
-import { Trans, useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Accordion, AccordionItem, Link, Modal, Snippet, Spacer } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { createPortalOfComponent } from '@/components/utils';
+import { Trans, useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-interface IProps {
-}
+import {
+  Accordion,
+  AccordionItem,
+  Link,
+  Modal,
+  Snippet,
+  Spacer,
+} from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { createPortalOfComponent } from "@/components/utils";
+
+interface IProps {}
 
 const ErrorModal = ({}: IProps) => {
   const { t } = useTranslation();
@@ -17,7 +24,7 @@ const ErrorModal = ({}: IProps) => {
   const [appInfo, setAppInfo] = useState<{ logPath: string }>();
 
   useEffect(() => {
-    BApi.app.getAppInfo().then(rsp => {
+    BApi.app.getAppInfo().then((rsp) => {
       if (!rsp.code) {
         setAppInfo({
           logPath: rsp.data!.logPath!,
@@ -29,87 +36,87 @@ const ErrorModal = ({}: IProps) => {
   return (
     <Modal
       defaultVisible
-      title={t<string>('We have encountered some problems. You could try the following steps:')}
-      size={'lg'}
       footer={{
-        actions: ['cancel'],
+        actions: ["cancel"],
       }}
+      size={"lg"}
+      title={t<string>(
+        "We have encountered some problems. You could try the following steps:",
+      )}
     >
-      <Accordion
-        selectedKeys={'all'}
-        selectionMode={'multiple'}
-        isCompact
-      >
+      <Accordion isCompact selectedKeys={"all"} selectionMode={"multiple"}>
         <AccordionItem
           key="1"
-          title={(
-            <span className={'font-bold'}>{t<string>('Simply retry')}</span>
-          )}
+          title={
+            <span className={"font-bold"}>{t<string>("Simply retry")}</span>
+          }
         >
-          {t<string>('Press \'F5\' to reload the page.')}
+          {t<string>("Press 'F5' to reload the page.")}
         </AccordionItem>
         <AccordionItem
           key="2"
-          title={(
-            <span className={'font-bold'}>{t<string>('Restart the app')}</span>
-          )}
+          title={
+            <span className={"font-bold"}>{t<string>("Restart the app")}</span>
+          }
         >
-          {t<string>('Shutdown and restart the app completely.')}
+          {t<string>("Shutdown and restart the app completely.")}
         </AccordionItem>
         <AccordionItem
           key="3"
-          title={(
-            <span className={'font-bold'}>{t<string>('Contact support')}</span>
-          )}
+          title={
+            <span className={"font-bold"}>{t<string>("Contact support")}</span>
+          }
         >
-          <div className={'flex flex-col gap-1 mb-2'}>
+          <div className={"flex flex-col gap-1 mb-2"}>
             <div>
-              {t<string>('You can find the latest log file at')}
+              {t<string>("You can find the latest log file at")}
               <Spacer y={1} />
               <Snippet
-                size={'sm'}
                 hideSymbol
-                style={{ color: 'var(--bakaui-primary)' }}
-                className={'cursor-pointer'}
+                className={"cursor-pointer"}
+                size={"sm"}
+                style={{ color: "var(--bakaui-primary)" }}
                 onClick={() => {
                   if (appInfo?.logPath) {
                     BApi.tool.openFileOrDirectory({ path: appInfo.logPath });
                   }
                 }}
               >
-                <span className={'break-all whitespace-break-spaces'}>
+                <span className={"break-all whitespace-break-spaces"}>
                   {appInfo?.logPath}
                 </span>
               </Snippet>
               <Spacer y={1} />
             </div>
-            <div className={''}>
-              <span className={'font-bold'}>
-                {t<string>('If you have no programming experience,')}
+            <div className={""}>
+              <span className={"font-bold"}>
+                {t<string>("If you have no programming experience,")}
               </span>
               &nbsp;
-              {t<string>('please provide the latest log file to the support team.')}
+              {t<string>(
+                "please provide the latest log file to the support team.",
+              )}
             </div>
-            <div className={''}>
-              <span className={'font-bold'}>
-                {t<string>('Otherwise,')}
-              </span>
+            <div className={""}>
+              <span className={"font-bold"}>{t<string>("Otherwise,")}</span>
               &nbsp;
-              {t<string>('you can locate and collect the error messages in the log file, and provide they to the support team. (open an issue on github, or send to developer directly)')}
+              {t<string>(
+                "you can locate and collect the error messages in the log file, and provide they to the support team. (open an issue on github, or send to developer directly)",
+              )}
             </div>
-            <div className={'mt-2'}>
+            <div className={"mt-2"}>
               <Trans
-                i18nKey={'ErrorHandlingModal.FindContactInConfigurationPage'}
+                i18nKey={"ErrorHandlingModal.FindContactInConfigurationPage"}
               >
                 You can find the concat at the bottom of
                 <Link
-                  size={'sm'}
-                  className={'cursor-pointer'}
+                  className={"cursor-pointer"}
+                  size={"sm"}
                   onClick={() => {
-                    navigate('/configuration');
+                    navigate("/configuration");
                   }}
                 >
-                  {t<string>('Configuration page')}
+                  {t<string>("Configuration page")}
                 </Link>
               </Trans>
             </div>
@@ -117,18 +124,20 @@ const ErrorModal = ({}: IProps) => {
         </AccordionItem>
         <AccordionItem
           key="4"
-          title={(
-            <span className={'font-bold'}>{t<string>('Try other features')}</span>
-          )}
+          title={
+            <span className={"font-bold"}>
+              {t<string>("Try other features")}
+            </span>
+          }
         >
           <Link
-            size={'sm'}
-            className={'cursor-pointer'}
+            className={"cursor-pointer"}
+            size={"sm"}
             onClick={() => {
-                              navigate('/');
+              navigate("/");
             }}
           >
-            {t<string>('Return to homepage')}
+            {t<string>("Return to homepage")}
           </Link>
         </AccordionItem>
       </Accordion>

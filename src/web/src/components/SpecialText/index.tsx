@@ -1,5 +1,3 @@
-import IntegrateWithSpecialTextLabel from './IntegrateWithSpecialTextLabel';
+import IntegrateWithSpecialTextLabel from "./IntegrateWithSpecialTextLabel";
 
-export {
-  IntegrateWithSpecialTextLabel,
-};
+export { IntegrateWithSpecialTextLabel };

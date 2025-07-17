@@ -1,27 +1,38 @@
-'use client';
+"use client";
 
-import { FolderOpenOutlined, SyncOutlined, UploadOutlined } from '@ant-design/icons';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import OperationButton from '../OperationButton';
-import type { Entry } from '@/core/models/FileExplorer/Entry';
-import BApi from '@/sdk/BApi';
-import { IwFsType } from '@/sdk/constants';
-import { Button, Tooltip } from '@/components/bakaui';
-import type { TreeEntryProps } from '@/pages/file-processor/TreeEntry';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import ExtractModal from '@/pages/file-processor/RootTreeEntry/components/ExtractModal';
+import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { TreeEntryProps } from "@/pages/file-processor/TreeEntry";
+
+import {
+  FolderOpenOutlined,
+  SyncOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+import OperationButton from "../OperationButton";
+
+import BApi from "@/sdk/BApi";
+import { IwFsType } from "@/sdk/constants";
+import { Button, Tooltip } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ExtractModal from "@/pages/file-processor/RootTreeEntry/components/ExtractModal";
 
 type Props = {
   entry: Entry;
-} & Pick<TreeEntryProps, 'capabilities'>;
+} & Pick<TreeEntryProps, "capabilities">;
 
 export default (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { entry, capabilities } = props;
 
-  const isExtractable = capabilities?.includes('extract') && entry.isDirectory && entry.childrenCount && entry.childrenCount > 0;
+  const isExtractable =
+    capabilities?.includes("extract") &&
+    entry.isDirectory &&
+    entry.childrenCount &&
+    entry.childrenCount > 0;
 
   return (
     <>
@@ -35,17 +46,19 @@ export default (props: Props) => {
           });
         }}
       >
-        <FolderOpenOutlined className={'text-base'} />
+        <FolderOpenOutlined className={"text-base"} />
       </OperationButton>
       {isExtractable && (
         <Tooltip
-          content={`(E)${t<string>('Extract children to parent and delete current directory')}`}
-          placement={'top'}
+          content={`(E)${t<string>("Extract children to parent and delete current directory")}`}
+          placement={"top"}
         >
           <Button
-            className={'w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100'}
             isIconOnly
-            variant={'light'}
+            className={
+              "w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"
+            }
+            variant={"light"}
             onClick={(e) => {
               e.stopPropagation();
               createPortal(ExtractModal, {
@@ -53,7 +66,7 @@ export default (props: Props) => {
               });
             }}
           >
-            <UploadOutlined className={'text-base'} />
+            <UploadOutlined className={"text-base"} />
           </Button>
         </Tooltip>
       )}
@@ -64,7 +77,7 @@ export default (props: Props) => {
             entry.ref?.expand(true);
           }}
         >
-          <SyncOutlined className={'text-base'} />
+          <SyncOutlined className={"text-base"} />
         </OperationButton>
       )}
     </>

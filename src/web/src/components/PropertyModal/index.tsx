@@ -1,15 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import ModalContent from './components/ModalContent';
-import { buildLogger, createPortalOfComponent } from '@/components/utils';
-import type { PropertyType } from '@/sdk/constants';
-import './index.scss';
-import BApi from '@/sdk/BApi';
-import { Modal } from '@/components/bakaui';
-import type { IProperty } from '@/components/Property/models';
-import type { DestroyableProps } from '@/components/bakaui/types';
+import type { PropertyType } from "@/sdk/constants";
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { IProperty } from "@/components/Property/models";
+
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import ModalContent from "./components/ModalContent";
+
+import { buildLogger } from "@/components/utils";
+import "./index.scss";
+import BApi from "@/sdk/BApi";
+import { Modal } from "@/components/bakaui";
 
 type Props = {
   value?: CustomPropertyForm;
@@ -24,14 +27,9 @@ type CustomPropertyForm = {
   options?: any;
 };
 
-const log = buildLogger('PropertyModal');
+const log = buildLogger("PropertyModal");
 
-export default ({
-                          value,
-                          onSaved,
-                          validValueTypes,
-                          ...props
-                        }: Props) => {
+export default ({ value, onSaved, validValueTypes, ...props }: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   const [property, setProperty] = useState<CustomPropertyForm>();
@@ -44,19 +42,19 @@ export default ({
 
   return (
     <Modal
-      size={'lg'}
-      visible={visible}
-      title={t<string>('Custom property')}
-      onClose={close}
       footer={{
-        actions: ['ok', 'cancel'],
+        actions: ["ok", "cancel"],
         okProps: {
           isDisabled: !property,
         },
       }}
+      size={"lg"}
+      title={t<string>("Custom property")}
+      visible={visible}
+      onClose={close}
       onOk={async () => {
         if (!property) {
-          throw new Error('Property is required');
+          throw new Error("Property is required");
         }
         const model = {
           ...property,
@@ -64,11 +62,12 @@ export default ({
           options: JSON.stringify(property.options),
         };
 
-        const isUpdate = (property.id != undefined && property.id > 0);
+        const isUpdate = property.id != undefined && property.id > 0;
 
         const rsp = isUpdate
           ? await BApi.customProperty.putCustomProperty(property.id!, model)
           : await BApi.customProperty.addCustomProperty(model);
+
         if (!rsp.code) {
           // console.log('on saved', onSaved);
           onSaved?.(rsp.data!);
@@ -78,9 +77,9 @@ export default ({
       {...props}
     >
       <ModalContent
-        value={value}
         validValueTypes={validValueTypes}
-        onChange={v => setProperty(v)}
+        value={value}
+        onChange={(v) => setProperty(v)}
       />
     </Modal>
   );

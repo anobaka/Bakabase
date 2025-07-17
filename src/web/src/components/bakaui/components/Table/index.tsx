@@ -1,3 +1,5 @@
+import type { TableRowProps } from "@heroui/react";
+
 import {
   Table,
   TableHeader,
@@ -5,7 +7,6 @@ import {
   TableColumn,
   TableRow,
   TableCell,
-  TableRowProps,
 } from "@heroui/react";
 
 export {
@@ -15,5 +16,5 @@ export {
   TableColumn,
   TableRow,
   TableCell,
-  TableRowProps,
+  type TableRowProps,
 };

@@ -1,73 +1,76 @@
-'use client';
+"use client";
 
-import { ApartmentOutlined, FileZipOutlined, SendOutlined } from '@ant-design/icons';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import DecompressBalloon from '../DecompressBalloon';
-import type { Entry } from '@/core/models/FileExplorer/Entry';
-import { IwFsEntryAction } from '@/core/models/FileExplorer/Entry';
-import { Button, Kbd } from '@/components/bakaui';
-import type { TreeEntryProps } from '@/pages/file-processor/TreeEntry';
-import WrapModal from '@/pages/file-processor/RootTreeEntry/components/WrapModal';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import MediaLibraryPathSelectorV2 from '@/components/MediaLibraryPathSelectorV2';
-import BApi from '@/sdk/BApi';
+import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { TreeEntryProps } from "@/pages/file-processor/TreeEntry";
+
+import {
+  ApartmentOutlined,
+  FileZipOutlined,
+  SendOutlined,
+} from "@ant-design/icons";
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+import DecompressBalloon from "../DecompressBalloon";
+
+import { IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
+import { Button, Kbd } from "@/components/bakaui";
+import WrapModal from "@/pages/file-processor/RootTreeEntry/components/WrapModal";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
+import BApi from "@/sdk/BApi";
 
 type Props = {
   entry: Entry;
-} & Pick<TreeEntryProps, 'capabilities'>;
+} & Pick<TreeEntryProps, "capabilities">;
 
-export default ({
-                  entry,
-                  capabilities,
-                }: Props) => {
+export default ({ entry, capabilities }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { actions } = entry;
-  const isDecompressible = capabilities?.includes('decompress') && actions.includes(IwFsEntryAction.Decompress);
-  const isWrappable = capabilities?.includes('wrap') && entry.isDirectory;
-  const isMovable = capabilities?.includes('move');
+  const isDecompressible =
+    capabilities?.includes("decompress") &&
+    actions.includes(IwFsEntryAction.Decompress);
+  const isWrappable = capabilities?.includes("wrap") && entry.isDirectory;
+  const isMovable = capabilities?.includes("move");
 
   return (
     <>
       {isDecompressible && (
         <DecompressBalloon
-          key={'decompress'}
+          key={"decompress"}
           entry={entry}
           passwords={entry.passwordsForDecompressing}
-          trigger={(
-            <Button
-              size={'sm'}
-              variant={'ghost'}
-            >
-              <FileZipOutlined className={'text-sm'} />
-              {t<string>('Decompress')}<Kbd>d</Kbd>
+          trigger={
+            <Button size={"sm"} variant={"ghost"}>
+              <FileZipOutlined className={"text-sm"} />
+              {t<string>("Decompress")}
+              <Kbd>d</Kbd>
             </Button>
-          )}
+          }
         />
       )}
       {isWrappable && (
         <Button
-          variant={'ghost'}
-          key={'wrap'}
-          size={'sm'}
+          key={"wrap"}
+          size={"sm"}
+          variant={"ghost"}
           onClick={() => {
-            createPortal(
-              WrapModal, {
-                entries: [entry],
-              },
-            );
+            createPortal(WrapModal, {
+              entries: [entry],
+            });
           }}
         >
-          <ApartmentOutlined className={'text-sm'} />
-          {t<string>('Wrap')}<Kbd>w</Kbd>
+          <ApartmentOutlined className={"text-sm"} />
+          {t<string>("Wrap")}
+          <Kbd>w</Kbd>
         </Button>
       )}
       {isMovable && (
         <Button
-          variant={'ghost'}
-          key={'move'}
-          size={'sm'}
+          key={"move"}
+          size={"sm"}
+          variant={"ghost"}
           onClick={(e) => {
             createPortal(MediaLibraryPathSelectorV2, {
               onSelect: (id, path, isLegacyMediaLibrary) => {
@@ -79,8 +82,9 @@ export default ({
             });
           }}
         >
-          <SendOutlined className={'text-sm'} />
-          {t<string>('Move')}<Kbd>m</Kbd>
+          <SendOutlined className={"text-sm"} />
+          {t<string>("Move")}
+          <Kbd>m</Kbd>
         </Button>
       )}
     </>

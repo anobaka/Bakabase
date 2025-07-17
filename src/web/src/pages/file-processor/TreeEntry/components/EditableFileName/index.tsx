@@ -1,11 +1,18 @@
-'use client';
+"use client";
 
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { useUpdateEffect } from 'react-use';
-import { AutoTextSize } from 'auto-text-size';
-import { buildLogger, createSelection, forceFocus, getFileNameWithoutExtension, useTraceUpdate } from '@/components/utils';
-import BApi from '@/sdk/BApi';
-import { Input } from '@/components/bakaui';
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useUpdateEffect } from "react-use";
+import { AutoTextSize } from "auto-text-size";
+
+import {
+  buildLogger,
+  createSelection,
+  forceFocus,
+  getFileNameWithoutExtension,
+  useTraceUpdate,
+} from "@/components/utils";
+import BApi from "@/sdk/BApi";
+import { Input } from "@/components/bakaui";
 
 interface Props {
   path: string;
@@ -14,15 +21,10 @@ interface Props {
   disabled?: boolean;
 }
 
-const log = buildLogger('EditableText');
+const log = buildLogger("EditableText");
 
 const EditableText = memo((props: Props) => {
-  const {
-    path,
-    name,
-    isDirectory,
-    disabled = false,
-  } = props;
+  const { path, name, isDirectory, disabled = false } = props;
 
   const propsRef = useRef(props);
 
@@ -34,20 +36,22 @@ const EditableText = memo((props: Props) => {
   const [value, setValue] = useState(name);
   const valueRef = useRef(value);
 
-  useTraceUpdate(props, 'EditableText');
-  log('Rendering', props);
+  useTraceUpdate(props, "EditableText");
+  log("Rendering", props);
 
   useEffect(() => {
     // log('Init');
 
-    return () => {
-    };
+    return () => {};
   }, []);
 
   useUpdateEffect(() => {
     editingRef.current = editing;
     if (editing) {
-      const selection = isDirectory ? valueRef.current : getFileNameWithoutExtension(valueRef.current);
+      const selection = isDirectory
+        ? valueRef.current
+        : getFileNameWithoutExtension(valueRef.current);
+
       createSelection(inputRef.current, 0, selection!.length);
     }
   }, [editing]);
@@ -62,35 +66,33 @@ const EditableText = memo((props: Props) => {
     }
   }, [name]);
 
-  const enterEditingModeKeyDownHandler = useCallback(
-    (e) => {
-      if (disabled || editingRef.current) {
-        return;
-      }
-      if (e.key == 'F2') {
-        setEditing(true);
-        e.stopPropagation();
-      }
-    }, []);
+  const enterEditingModeKeyDownHandler = useCallback((e) => {
+    if (disabled || editingRef.current) {
+      return;
+    }
+    if (e.key == "F2") {
+      setEditing(true);
+      e.stopPropagation();
+    }
+  }, []);
 
-  const inputKeyDownHandler = useCallback(
-    (e) => {
-      log('Key down', e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
-      switch (e.key) {
-        case 'Enter':
-          submit();
-          break;
-        case 'Escape':
-          cancel();
-          break;
-        case 'Delete':
-          break;
-        default:
-          // Propagation
-          return;
-      }
-      // e.stopPropagation();
-    }, []);
+  const inputKeyDownHandler = useCallback((e) => {
+    log("Key down", e.key, e.ctrlKey, e.shiftKey, e.altKey, e.metaKey, e);
+    switch (e.key) {
+      case "Enter":
+        submit();
+        break;
+      case "Escape":
+        cancel();
+        break;
+      case "Delete":
+        break;
+      default:
+        // Propagation
+        return;
+    }
+    // e.stopPropagation();
+  }, []);
 
   const cancel = useCallback(() => {
     if (editingRef.current) {
@@ -106,6 +108,7 @@ const EditableText = memo((props: Props) => {
         fullname: path,
         newName: valueRef.current,
       });
+
       if (!rsp.code) {
         setValue(valueRef.current);
       }
@@ -119,17 +122,15 @@ const EditableText = memo((props: Props) => {
 
   return (
     <div
-      className={'fp-te-et'}
-      style={editing ? { flex: 1 } : undefined}
-      onKeyDown={enterEditingModeKeyDownHandler}
-      ref={r => {
+      ref={(r) => {
         if (r) {
           nodeRef.current = r;
           let e: HTMLElement | null = r.parentElement;
+
           while (e) {
-            if (e.className.includes('entry-keydown-listener')) {
-              e.removeEventListener('keydown', enterEditingModeKeyDownHandler);
-              e.addEventListener('keydown', enterEditingModeKeyDownHandler);
+            if (e.className.includes("entry-keydown-listener")) {
+              e.removeEventListener("keydown", enterEditingModeKeyDownHandler);
+              e.addEventListener("keydown", enterEditingModeKeyDownHandler);
               break;
             } else {
               e = e.parentElement;
@@ -137,18 +138,17 @@ const EditableText = memo((props: Props) => {
           }
         }
       }}
+      className={"fp-te-et"}
+      style={editing ? { flex: 1 } : undefined}
+      onKeyDown={enterEditingModeKeyDownHandler}
     >
       {editing ? (
         <Input
           // can't remove outline by outline-none or ring-0
-          className={'w-full'}
           ref={inputRef}
-          value={value}
-          onClick={e => {
-            log('onClick', e);
-            e.stopPropagation();
-            e.preventDefault();
-          }}
+          className={'w-full'}
+          data-focus={false}
+          radius={'none'}
           onDoubleClick={e => {
             log('onDoubleClick', e);
             e.stopPropagation();
@@ -156,18 +156,20 @@ const EditableText = memo((props: Props) => {
           }}
           // autoFocus
           size={'sm'}
-          radius={'none'}
-          data-focus={false}
+          value={value}
+          onBlur={submit}
+          onClick={e => {
+            log('onClick', e);
+            e.stopPropagation();
+            e.preventDefault();
+          }}
           onKeyDown={inputKeyDownHandler}
           onValueChange={v => {
             setValue(v);
           }}
-          onBlur={submit}
         />
       ) : (
-        <AutoTextSize maxFontSizePx={14}>
-          {value}
-        </AutoTextSize>
+        <AutoTextSize maxFontSizePx={14}>{value}</AutoTextSize>
       )}
     </div>
   );

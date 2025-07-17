@@ -1,3 +1,3 @@
-import { Carousel } from 'antd';
+import { Carousel } from "antd";
 
 export default Carousel;

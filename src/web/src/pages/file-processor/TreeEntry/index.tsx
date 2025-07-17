@@ -1,48 +1,68 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from '@/components/bakaui';
-;
-import { List } from 'react-virtualized';
-import { diff } from 'deep-diff';
-import { useUpdate, useUpdateEffect } from 'react-use';
-import { useTranslation } from 'react-i18next';
-import { CloseCircleOutlined, EyeOutlined, FileOutlined, InfoCircleOutlined } from '@ant-design/icons';
-import EditableFileName from './components/EditableFileName';
-import OperationButton from './components/OperationButton';
-import RightOperations from './components/RightOperations';
-import { BTaskStatus, IconType, IwFsType } from '@/sdk/constants';
-import '@szhsin/react-menu/dist/index.css';
-import '@szhsin/react-menu/dist/transitions/slide.css';
-import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
-import { Entry, EntryProperty, EntryStatus, IwFsEntryAction } from '@/core/models/FileExplorer/Entry';
-import { buildLogger, humanFileSize, standardizePath, uuidv4 } from '@/components/utils';
-import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
-import MediaPlayer from '@/components/MediaPlayer';
-import BApi from '@/sdk/BApi';
-import './index.scss';
-import { Button, Chip, Modal, Spinner } from '@/components/bakaui';
-import TailingOperations from './components/TailingOperations';
-import LeftIcon from './components/LeftIcon';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { BTaskStopButton } from '@/components/BTask';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import {
+  CloseCircleOutlined,
+  EyeOutlined,
+  FileOutlined,
+  InfoCircleOutlined,
+} from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { useUpdate, useUpdateEffect } from "react-use";
+import { diff } from "deep-diff";
+import { List } from "react-virtualized";
+
+import OperationButton from "./components/OperationButton";
+import EditableFileName from "./components/EditableFileName";
+import RightOperations from "./components/RightOperations";
+
+import { toast } from "@/components/bakaui";
+import { BTaskStatus, IconType, IwFsType } from "@/sdk/constants";
+
+import "@szhsin/react-menu/dist/index.css";
+import "@szhsin/react-menu/dist/transitions/slide.css";
+import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
+
+import {
+  Entry,
+  EntryProperty,
+  EntryStatus,
+  IwFsEntryAction,
+} from "@/core/models/FileExplorer/Entry";
+import {
+  buildLogger,
+  humanFileSize,
+  standardizePath,
+  uuidv4,
+} from "@/components/utils";
+import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
+import MediaPlayer from "@/components/MediaPlayer";
+import BApi from "@/sdk/BApi";
+import "./index.scss";
+import { Button, Chip, Modal, Spinner } from "@/components/bakaui";
+
+import TailingOperations from "./components/TailingOperations";
+import LeftIcon from "./components/LeftIcon";
+
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { BTaskStopButton } from "@/components/BTask";
 
 export type Capability =
-  'wrap'
-  | 'extract'
-  | 'move'
-  | 'delete'
-  | 'rename'
-  | 'decompress'
-  | 'delete-all-by-name'
-  | 'group'
-  | 'play';
+  | "wrap"
+  | "extract"
+  | "move"
+  | "delete"
+  | "rename"
+  | "decompress"
+  | "delete-all-by-name"
+  | "group"
+  | "play";
 
 export type TreeEntryProps = {
   entry: Entry;
   onDoubleClick?: (event, entry: Entry) => void;
   /*
-    * Return false will block the selection of the entry
+   * Return false will block the selection of the entry
    */
   switchSelective?: (e: Entry) => boolean;
   onChildrenLoaded?: (e: Entry) => void;
@@ -65,10 +85,8 @@ const TreeEntry = (props: TreeEntryProps) => {
     onDoubleClick,
     capabilities,
     onChildrenLoaded,
-    onContextMenu = (e, entry) => {
-    },
-    onLoadFail = (rsp, entry) => {
-    },
+    onContextMenu = (e, entry) => {},
+    onLoadFail = (rsp, entry) => {},
     expandable = true,
   } = props;
   const { t } = useTranslation();
@@ -102,10 +120,10 @@ const TreeEntry = (props: TreeEntryProps) => {
     // console.trace();
 
     e.path = standardizePath(e.path)!;
-    log('Initializing', e);
+    log("Initializing", e);
 
     if (entryRef.current) {
-      log('Disposing previous entry', entryRef.current);
+      log("Disposing previous entry", entryRef.current);
       await entryRef.current.dispose();
     }
 
@@ -116,7 +134,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         if (entryRef.current?.selected != selected) {
           entryRef.current.selected = selected;
           if (selected) {
-            log('Focus');
+            log("Focus");
             currentEntryDomRef.current?.focus();
           }
           forceUpdate();
@@ -133,23 +151,32 @@ const TreeEntry = (props: TreeEntryProps) => {
       expand: expand,
       collapse: collapse,
       scrollTo: (path: string) => {
-        const row = entryRef.current.filteredChildren.findIndex(e => e.path == path);
-        log('scrolling to', path, row, virtualListRef.current);
+        const row = entryRef.current.filteredChildren.findIndex(
+          (e) => e.path == path,
+        );
+
+        log("scrolling to", path, row, virtualListRef.current);
         virtualListRef.current?.scrollToRow(row);
       },
       setLoading,
     };
 
-    log('initializing, status: ', EntryStatus[entryRef.current.status],
-      'expanded:', entryRef.current.expanded,
+    log(
+      "initializing, status: ",
+      EntryStatus[entryRef.current.status],
+      "expanded:",
+      entryRef.current.expanded,
       `children size:${entryRef.current.childrenWidth}x${entryRef.current.childrenHeight}`,
-      'filtered children', entryRef.current.filteredChildren);
+      "filtered children",
+      entryRef.current.filteredChildren,
+    );
 
     await entryRef.current.initialize();
 
     if (entryRef.current.expanded) {
-      log('Expanding');
+      log("Expanding");
       const rendered = await expand();
+
       if (!rendered) {
         entryRef.current.renderChildren();
       }
@@ -157,7 +184,7 @@ const TreeEntry = (props: TreeEntryProps) => {
     if (!entryRef.current.recalculateChildrenWidth()) {
       forceUpdate();
     }
-    log('Initialized');
+    log("Initialized");
   }, []);
 
   useEffect(() => {
@@ -166,11 +193,13 @@ const TreeEntry = (props: TreeEntryProps) => {
 
     const resizeObserver = new ResizeObserver((c) => {
       if (domRef.current) {
-        log('Size changed', domRef.current, domRef.current?.clientWidth);
-        entryRef.current.childrenWidth = domRef.current!.clientWidth - (entryRef.current.isRoot ? 0 : 15);
+        log("Size changed", domRef.current, domRef.current?.clientWidth);
+        entryRef.current.childrenWidth =
+          domRef.current!.clientWidth - (entryRef.current.isRoot ? 0 : 15);
         forceUpdate();
       }
     });
+
     resizeObserver.observe(domRef.current!);
 
     return () => {
@@ -186,93 +215,110 @@ const TreeEntry = (props: TreeEntryProps) => {
   const renderFileSystemInfo = useCallback(() => {
     // log('Rendering fs info');
     const en = entryRef.current;
+
     if (en.type != IwFsType.Invalid) {
       const elements: any[] = [];
-      if (en.childrenCount != undefined && en.isDirectoryOrDrive && en.properties.includes(EntryProperty.ChildrenCount)) {
+
+      if (
+        en.childrenCount != undefined &&
+        en.isDirectoryOrDrive &&
+        en.properties.includes(EntryProperty.ChildrenCount)
+      ) {
         elements.push(
-          <Chip
-            size={'sm'}
-            variant={'light'}
-            color={'secondary'}
-          >
-            <FileOutlined className={'text-sm'} />
+          <Chip color={"secondary"} size={"sm"} variant={"light"}>
+            <FileOutlined className={"text-sm"} />
             {en.childrenCount}
           </Chip>,
         );
       }
-      if (en.size != undefined && en.size > 0 && en.properties.includes(EntryProperty.Size)) {
+      if (
+        en.size != undefined &&
+        en.size > 0 &&
+        en.properties.includes(EntryProperty.Size)
+      ) {
         elements.push(
-          <Chip
-            size={'sm'}
-            variant={'light'}
-            color={'secondary'}
-          >
+          <Chip color={"secondary"} size={"sm"} variant={"light"}>
             {humanFileSize(en.size, false)}
           </Chip>,
         );
       }
 
       if (elements.length > 0) {
-        return (
-          <div className={'flex items-center'}>
-            {elements}
-          </div>
-        );
+        return <div className={"flex items-center"}>{elements}</div>;
       }
     }
+
     return;
   }, []);
 
-  const virtualListRowHeightCallback = useCallback(({ index }) => {
-    const child = entryRef.current.filteredChildren[index];
-    if (child) {
-      const h = child.totalHeight;
-      log(`[VirtualListRowHeight] Getting row height of [${child?.name}]:${h}, with children height:[${child.childrenHeight}]`);
-      return h;
-    } else {
-      log(`[VirtualListRowHeight] Getting row height of [${index}]:Unknown`);
-      return 0;
-    }
-  }, [entryRef.current.children, entryRef.current.expanded]);
+  const virtualListRowHeightCallback = useCallback(
+    ({ index }) => {
+      const child = entryRef.current.filteredChildren[index];
 
-  const virtualListRowRendererCallback = useCallback(({
-                                                        index,
-                                                        style,
-                                                        isVisible,
-                                                        isScrolling,
-                                                      }) => {
-    if (entryRef.current.filteredChildren.length <= index) {
-      log(`[VirtualListRowRenderer] Rendering a child with overflow index: ${index} >= count of children: ${entryRef.current.filteredChildren.length}, ignoring`);
-      return;
-    }
-    // todo: style always causes the re-rendering of the child, even if it's the same
-    const e = entryRef.current.filteredChildren[index];
-    log(`[VirtualListRowRenderer]Rendering children row:[${e.name}]`, `height:[${style.height}]`, `children height:[${e.childrenHeight}]`, 'status:', EntryStatus[e.status]);
-    const prevStyle = childrenStylesRef.current[e.path];
-    const differences = diff(prevStyle, style);
-    if (differences) {
-      // log(`[VirtualList]Applying new style: ${e.path}`, differences, prevStyle, style);
-      childrenStylesRef.current[e.path] = style;
-      style.id = uuidv4();
-    }
+      if (child) {
+        const h = child.totalHeight;
 
-    const s = childrenStylesRef.current[e.path];
+        log(
+          `[VirtualListRowHeight] Getting row height of [${child?.name}]:${h}, with children height:[${child.childrenHeight}]`,
+        );
 
-    return (
-      <MemoTreeEntry
-        onContextMenu={onContextMenu}
-        filter={filter}
-        capabilities={capabilities}
-        onDoubleClick={onDoubleClick}
-        key={e.id}
-        entry={e}
-        switchSelective={switchSelective}
-        style={s}
-        onLoadFail={onLoadFail}
-        expandable={e.expandable}
-      />
-    );
-  }, [entryRef.current.children, entryRef.current.expanded, onDoubleClick]);
+        return h;
+      } else {
+        log(`[VirtualListRowHeight] Getting row height of [${index}]:Unknown`);
+
+        return 0;
+      }
+    },
+    [entryRef.current.children, entryRef.current.expanded],
+  );
+
+  const virtualListRowRendererCallback = useCallback(
+    ({ index, style, isVisible, isScrolling }) => {
+      if (entryRef.current.filteredChildren.length <= index) {
+        log(
+          `[VirtualListRowRenderer] Rendering a child with overflow index: ${index} >= count of children: ${entryRef.current.filteredChildren.length}, ignoring`,
+        );
+
+        return;
+      }
+      // todo: style always causes the re-rendering of the child, even if it's the same
+      const e = entryRef.current.filteredChildren[index];
+
+      log(
+        `[VirtualListRowRenderer]Rendering children row:[${e.name}]`,
+        `height:[${style.height}]`,
+        `children height:[${e.childrenHeight}]`,
+        "status:",
+        EntryStatus[e.status],
+      );
+      const prevStyle = childrenStylesRef.current[e.path];
+      const differences = diff(prevStyle, style);
+
+      if (differences) {
+        // log(`[VirtualList]Applying new style: ${e.path}`, differences, prevStyle, style);
+        childrenStylesRef.current[e.path] = style;
+        style.id = uuidv4();
+      }
+
+      const s = childrenStylesRef.current[e.path];
+
+      return (
+        <MemoTreeEntry
+          key={e.id}
+          capabilities={capabilities}
+          entry={e}
+          expandable={e.expandable}
+          filter={filter}
+          style={s}
+          switchSelective={switchSelective}
+          onContextMenu={onContextMenu}
+          onDoubleClick={onDoubleClick}
+          onLoadFail={onLoadFail}
+        />
+      );
+    },
+    [entryRef.current.children, entryRef.current.expanded, onDoubleClick],
+  );
 
   const domCallback = useCallback((node?: HTMLElement | null) => {
     domRef.current = node!;
@@ -287,12 +333,18 @@ const TreeEntry = (props: TreeEntryProps) => {
    * Height of only one row will cause the full-re-rendering of the list, so we do not need to render a specific child.
    */
   const renderChildren = useCallback(() => {
-    log('Rendering children', entryRef.current, entryRef.current.filteredChildren);
+    log(
+      "Rendering children",
+      entryRef.current,
+      entryRef.current.filteredChildren,
+    );
 
     pendingRenderingRef.current = true;
 
     if (domRef.current?.parentElement) {
-      const newWidth = domRef.current.parentElement.clientWidth + (entryRef.current.isRoot ? 0 : -15);
+      const newWidth =
+        domRef.current.parentElement.clientWidth +
+        (entryRef.current.isRoot ? 0 : -15);
       const newHeight = entryRef.current.childrenHeight;
 
       log(`Recalculated children size: ${newWidth}x${newHeight}`);
@@ -327,7 +379,7 @@ const TreeEntry = (props: TreeEntryProps) => {
     }
     if (refresh) {
       entryRef.current.clearChildren();
-      log('Clear children');
+      log("Clear children");
     }
     if (!entryRef.current.expanded || !entryRef.current.children) {
       if (!entryRef.current.children) {
@@ -337,35 +389,44 @@ const TreeEntry = (props: TreeEntryProps) => {
         loadingChildrenRef.current = true;
         setLoading(true);
         // @ts-ignore
-        const rsp = await BApi.file.getChildrenIwFsInfo({ root: entryRef.current.path }, { ignoreError: () => true });
+        const rsp = await BApi.file.getChildrenIwFsInfo(
+          { root: entryRef.current.path },
+          { ignoreError: () => true },
+        );
+
         log(`Loaded ${rsp.data?.entries?.length} children`);
         setLoading(false);
         if (rsp.code) {
           onLoadFail(rsp, entryRef.current);
+
           return false;
         }
         if (rsp.data) {
-          const {
-            entries = [],
-          } = rsp.data || {};
+          const { entries = [] } = rsp.data || {};
+
           // @ts-ignore
-          entryRef.current.children = entries!.map((e) => new Entry({
-            ...e,
-            parent: entryRef.current,
-            properties: entryRef.current.properties,
-          }));
+          entryRef.current.children = entries!.map(
+            (e) =>
+              new Entry({
+                ...e,
+                parent: entryRef.current,
+                properties: entryRef.current.properties,
+              }),
+          );
         }
       }
       entryRef.current.expanded = true;
       entryRef.current.expireFilteredChildren();
       entryRef.current.renderChildren();
+
       return true;
     }
+
     return false;
   };
 
   const triggerChildrenLoaded = useCallback(() => {
-    log('Trigger onChildrenLoaded', entryRef.current);
+    log("Trigger onChildrenLoaded", entryRef.current);
     onChildrenLoaded?.(entryRef.current);
   }, []);
 
@@ -379,43 +440,44 @@ const TreeEntry = (props: TreeEntryProps) => {
   const renderTaskError = () => {
     if (entryRef.current.task && entryRef.current.task.error) {
       const text = `${entryRef.current.task.name}:${entryRef.current.task.error}`;
+
       return (
         <Button
-          size={'sm'}
-          variant={'light'}
+          color={"danger"}
           isIconOnly={!entryRef.current.task.briefError}
-          color={'danger'}
+          size={"sm"}
+          variant={"light"}
           onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
-              size: 'xl',
-              title: t<string>('Error'),
-              children: (
-                <pre>{text}</pre>
-              ),
+              size: "xl",
+              title: t<string>("Error"),
+              children: <pre>{text}</pre>,
             });
           }}
         >
-          <CloseCircleOutlined className={'text-base'} />
+          <CloseCircleOutlined className={"text-base"} />
           {entryRef.current.task.briefError}
         </Button>
       );
     }
+
     return;
   };
 
   const play = useCallback((entry) => {
     if (entry.type == IwFsType.Directory) {
-      BApi.file.getAllFiles({
-        path: entry.path,
-      })
+      BApi.file
+        .getAllFiles({
+          path: entry.path,
+        })
         .then((x) => {
           if (!x.code) {
-            if (!x.data || (x.data.length == 0)) {
-              return toast.info(t<string>('No files to preview'));
+            if (!x.data || x.data.length == 0) {
+              return toast.info(t<string>("No files to preview"));
             }
             MediaPlayer.show({
-              files: x.data!.map(a => ({
+              files: x.data!.map((a) => ({
                 path: a,
               })),
               defaultActiveIndex: 0,
@@ -435,20 +497,20 @@ const TreeEntry = (props: TreeEntryProps) => {
 
   return (
     <div
-      className={`tree-entry ${entryRef.current.isRoot ? 'h-full' : ''}`}
-      tabIndex={0}
-      style={propsStyle}
       ref={domCallback}
-      onDoubleClick={e => {
+      className={`tree-entry ${entryRef.current.isRoot ? "h-full" : ""}`}
+      style={propsStyle}
+      tabIndex={0}
+      onDoubleClick={(e) => {
         e.stopPropagation();
-        log('Double clicked', entryRef.current);
+        log("Double clicked", entryRef.current);
         onDoubleClick?.(e, entryRef.current);
       }}
     >
       {!entryRef.current.isRoot && (
         <div
-          className={'entry-main-container'}
-          onClick={e => {
+          className={"entry-main-container"}
+          onClick={(e) => {
             e.stopPropagation();
           }}
         >
@@ -457,28 +519,48 @@ const TreeEntry = (props: TreeEntryProps) => {
           )}
           {entryRef.current.task && !entryRef.current.task.error && (
             <div className="running-task-cover">
-              <div
-                className="progress"
-              >
-                <div className={'bar'} style={{ width: `${entryRef.current.task.percentage}%` }} />
+              <div className="progress">
+                <div
+                  className={"bar"}
+                  style={{ width: `${entryRef.current.task.percentage}%` }}
+                />
                 <Spinner size="sm" />
                 &nbsp;
                 <div className="percentage">
                   {entryRef.current.task.name}
                   &nbsp;
-                  {entryRef.current.task.status == BTaskStatus.NotStarted ? t<string>('Waiting') : `${entryRef.current.task.percentage}%`}
+                  {entryRef.current.task.status == BTaskStatus.NotStarted
+                    ? t<string>("Waiting")
+                    : `${entryRef.current.task.percentage}%`}
                 </div>
               </div>
               <div className="stop">
                 <BTaskStopButton
-                  color={'warning'}
-                  size={'small'}
+                  color={"warning"}
                   id={entryRef.current.task.id}
+                  size={"small"}
                 />
               </div>
             </div>
           )}
           <div
+            ref={(r) => {
+              currentEntryDomRef.current = r;
+              // log('dom ref retrived', r);
+            }}
+            className={`entry-main entry-keydown-listener ${entryRef.current?.selected ? "selected" : ""} ${entryRef.current.expanded ? "expanded" : ""}`}
+            tabIndex={0}
+            onClick={() => {
+              const r = !switchSelective || switchSelective(entryRef.current);
+
+              log(
+                `Trying ${entryRef.current?.selected ? "unselect" : "select"} ${entryRef.current?.name}, and get blocked: ${!r}`,
+              );
+              if (r) {
+                entryRef.current.selected = !entryRef.current?.selected;
+                forceUpdate();
+              }
+            }}
             onContextMenu={(e) => {
               if (!entryRef.current.selected) {
                 if (!switchSelective || switchSelective(entryRef.current)) {
@@ -487,20 +569,6 @@ const TreeEntry = (props: TreeEntryProps) => {
                 }
               }
               onContextMenu(e, entryRef.current);
-            }}
-            ref={r => {
-              currentEntryDomRef.current = r;
-              // log('dom ref retrived', r);
-            }}
-            tabIndex={0}
-            className={`entry-main entry-keydown-listener ${entryRef.current?.selected ? 'selected' : ''} ${entryRef.current.expanded ? 'expanded' : ''}`}
-            onClick={() => {
-              const r = !switchSelective || switchSelective(entryRef.current);
-              log(`Trying ${entryRef.current?.selected ? 'unselect' : 'select'} ${entryRef.current?.name}, and get blocked: ${!r}`);
-              if (r) {
-                entryRef.current.selected = !entryRef.current?.selected;
-                forceUpdate();
-              }
             }}
           >
             <div className="left">
@@ -513,85 +581,94 @@ const TreeEntry = (props: TreeEntryProps) => {
                 {entryRef.current && (
                   <div className="item">
                     <FileSystemEntryIcon
-                      size={18}
                       path={entryRef.current.path}
-                      type={entry.isDirectoryOrDrive ? IconType.Directory : IconType.Dynamic}
+                      size={18}
+                      type={
+                        entry.isDirectoryOrDrive
+                          ? IconType.Directory
+                          : IconType.Dynamic
+                      }
                     />
                   </div>
                 )}
               </div>
               <EditableFileName
+                disabled={
+                  entry.isDrive ||
+                  !capabilities?.includes("rename") ||
+                  entry.status == EntryStatus.Error
+                }
                 isDirectory={entry.isDirectoryOrDrive}
-                path={entry.path}
                 name={entry.name}
-                disabled={entry.isDrive || !capabilities?.includes('rename') || entry.status == EntryStatus.Error}
+                path={entry.path}
               />
               <div className="flex items-center">
-                {actions.includes(IwFsEntryAction.Play) && capabilities?.includes('play') && (
-                  <OperationButton
-                    onClick={(e) => {
-                      play(entryRef.current);
-                    }}
-                    isIconOnly
-                    color={'primary'}
-                  >
-                    <EyeOutlined className={'text-base'} />
-                  </OperationButton>
-                )}
+                {actions.includes(IwFsEntryAction.Play) &&
+                  capabilities?.includes("play") && (
+                    <OperationButton
+                      isIconOnly
+                      color={"primary"}
+                      onClick={(e) => {
+                        play(entryRef.current);
+                      }}
+                    >
+                      <EyeOutlined className={"text-base"} />
+                    </OperationButton>
+                  )}
                 &nbsp;
-                <TailingOperations
-                  entry={entry}
-                  capabilities={capabilities}
-                />
+                <TailingOperations capabilities={capabilities} entry={entry} />
                 {renderFileSystemInfo()}
                 {renderTaskError()}
               </div>
             </div>
             <div className="right">
               <RightOperations
-                entry={entryRef.current}
                 capabilities={capabilities}
+                entry={entryRef.current}
               />
             </div>
           </div>
         </div>
       )}
-      {entryRef.current.expanded && ((entryRef.current.filteredChildren?.length > 0) ? (
-        <div
-          className={`entry-children ${entryRef.current.isRoot ? 'root' : ''}`}
-        >
-          {entryRef.current.childrenHeight > 0 && (
-            <List
-              ref={r => {
-                log('VirtualList ref', r);
-                virtualListRef.current = r;
-                if (r) {
-                  if (pendingRenderingRef.current) {
-                    pendingRenderingRef.current = false;
-                    triggerChildrenLoaded();
+      {entryRef.current.expanded &&
+        (entryRef.current.filteredChildren?.length > 0 ? (
+          <div
+            className={`entry-children ${entryRef.current.isRoot ? "root" : ""}`}
+          >
+            {entryRef.current.childrenHeight > 0 && (
+              <List
+                ref={(r) => {
+                  log("VirtualList ref", r);
+                  virtualListRef.current = r;
+                  if (r) {
+                    if (pendingRenderingRef.current) {
+                      pendingRenderingRef.current = false;
+                      triggerChildrenLoaded();
+                    }
                   }
-                }
-              }}
-              rowHeight={virtualListRowHeightCallback}
-              width={entryRef.current.childrenWidth}
-              height={entryRef.current.childrenHeight}
-              rowCount={entryRef.current.filteredChildren.length}
-              rowRenderer={virtualListRowRendererCallback}
-              renderHash={hashRef.current}
-              overscanRowCount={5}
-            />
-          )}
-        </div>
-      ) : loading ? (
-        <div className={'flex justify-center items-center py-2'}>
-          <Spinner size={'sm'} />
-        </div>
-      ) : (
-        <div className={'flex justify-center items-center gap-2 opacity-70 py-2'}>
-          <InfoCircleOutlined />
-          <div>{t<string>('No content')}</div>
-        </div>
-      ))}
+                }}
+                height={entryRef.current.childrenHeight}
+                overscanRowCount={5}
+                renderHash={hashRef.current}
+                rowCount={entryRef.current.filteredChildren.length}
+                rowHeight={virtualListRowHeightCallback}
+                rowRenderer={virtualListRowRendererCallback}
+                width={entryRef.current.childrenWidth}
+              />
+            )}
+          </div>
+        ) : loading ? (
+          <div className={"flex justify-center items-center py-2"}>
+            <Spinner size={"sm"} />
+          </div>
+        ) : (
+          <div
+            className={"flex justify-center items-center gap-2 opacity-70 py-2"}
+          >
+            <InfoCircleOutlined />
+            <div>{t<string>("No content")}</div>
+          </div>
+        ))}
     </div>
   );
 };

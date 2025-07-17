@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import dayjs from 'dayjs';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import type { Resource } from '@/core/models/Resource';
+import type { Resource } from "@/core/models/Resource";
+
+import dayjs from "dayjs";
+import React from "react";
+import { useTranslation } from "react-i18next";
 
 type Props = {
   resource: Resource;
@@ -11,37 +12,44 @@ type Props = {
 
 const dateTimes = [
   {
-    key: 'fileCreateDt',
-    label: 'File Add Date',
+    key: "fileCreateDt",
+    label: "File Add Date",
   },
   {
-    key: 'fileModifyDt',
-    label: 'File Modify Date',
+    key: "fileModifyDt",
+    label: "File Modify Date",
   },
   {
-    key: 'createDt',
-    label: 'Resource Create Date',
+    key: "createDt",
+    label: "Resource Create Date",
   },
   {
-    key: 'updateDt',
-    label: 'Resource Update Date',
+    key: "updateDt",
+    label: "Resource Update Date",
   },
 ];
 
 export default ({ resource }: Props) => {
   const { t } = useTranslation();
+
   return (
-    <div className={'grid justify-evenly gap-y-1'} style={{ gridTemplateColumns: 'repeat(2, auto)' }}>
+    <div
+      className={"grid justify-evenly gap-y-1"}
+      style={{ gridTemplateColumns: "repeat(2, auto)" }}
+    >
       {dateTimes.map((dateTime, i) => {
         const label = t<string>(dateTime.label);
-          const value = dayjs(resource[dateTime.key]).format('YYYY-MM-DD HH:mm:ss');
-          return (
-            <div key={i} className={'flex flex-col'}>
-              <div className={'text-xs opacity-60'}>{label}</div>
-              <div>{value}</div>
-            </div>
-          );
-        })}
+        const value = dayjs(resource[dateTime.key]).format(
+          "YYYY-MM-DD HH:mm:ss",
+        );
+
+        return (
+          <div key={i} className={"flex flex-col"}>
+            <div className={"text-xs opacity-60"}>{label}</div>
+            <div>{value}</div>
+          </div>
+        );
+      })}
     </div>
   );
 };

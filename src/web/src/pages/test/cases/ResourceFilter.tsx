@@ -1,34 +1,25 @@
-'use client';
+"use client";
 
-import React, { useRef, useState } from 'react';
-import ReactJson from 'react-json-view';
-import type {
-  ResourceSearchFilterGroup,
-} from '@/pages/resource/components/FilterPanel/FilterGroupsPanel/models';
-import {
-  GroupCombinator,
-} from '@/pages/resource/components/FilterPanel/FilterGroupsPanel/models';
-import FilterGroupsPanel from '@/pages/resource/components/FilterPanel/FilterGroupsPanel';
-import { Button } from '@/components/bakaui';
+import type { ResourceSearchFilterGroup } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+
+import React, { useState } from "react";
+import ReactJson from "react-json-view";
+
+import { GroupCombinator } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import FilterGroupsPanel from "@/pages/resource/components/FilterPanel/FilterGroupsPanel";
 
 export default () => {
-  const [group, setGroup] = useState<ResourceSearchFilterGroup>({ combinator: GroupCombinator.And });
+  const [group, setGroup] = useState<ResourceSearchFilterGroup>({
+    combinator: GroupCombinator.And,
+  });
 
   return (
     <div>
       <div>
-        <FilterGroupsPanel
-          group={group}
-          onChange={g => setGroup(g)}
-        />
+        <FilterGroupsPanel group={group} onChange={(g) => setGroup(g)} />
       </div>
       <div>
-        <ReactJson
-          name={'Data'}
-          src={group}
-          theme={'monokai'}
-          collapsed
-        />
+        <ReactJson collapsed name={"Data"} src={group} theme={"monokai"} />
       </div>
     </div>
   );

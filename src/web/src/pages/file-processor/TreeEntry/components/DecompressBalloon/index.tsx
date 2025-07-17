@@ -1,15 +1,18 @@
-'use client';
+"use client";
 
-import {Button, Dialog, Input, Tag, Notification} from '@alifd/next';
-import { toast } from '@/components/bakaui';
-import React, { useCallback, useRef, useState } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
-import './index.scss';
-import i18n from 'i18next';
-import BApi from '@/sdk/BApi';
-import { PasswordSearchOrder } from '@/sdk/constants';
-import PasswordSelector from '@/components/PasswordSelector';
-import { Popover, Tooltip } from '@/components/bakaui';
+import { Button, Dialog, Input, Tag } from "@alifd/next";
+
+import { toast } from "@/components/bakaui";
+
+import React, { useCallback, useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import "./index.scss";
+import i18n from "i18next";
+
+import BApi from "@/sdk/BApi";
+import { PasswordSearchOrder } from "@/sdk/constants";
+import PasswordSelector from "@/components/PasswordSelector";
+import { Tooltip } from "@/components/bakaui";
 
 const QuickPasswordCount = 5;
 
@@ -27,27 +30,28 @@ interface Props {
   passwords?: string[];
 }
 
-const loadTopNPasswords = async (type: PasswordSearchOrder): Promise<IPassword[]> => {
+const loadTopNPasswords = async (
+  type: PasswordSearchOrder,
+): Promise<IPassword[]> => {
   const rsp = await BApi.password.searchPasswords({
     // @ts-ignore
     order: type,
     pageSize: QuickPasswordCount,
   });
+
   // @ts-ignore
   return rsp.data || [];
 };
 
 export default (props: Props) => {
-  const {
-    trigger,
-    entry,
-    passwords = [],
-  } = props;
+  const { trigger, entry, passwords = [] } = props;
   const { t } = useTranslation();
   const customPasswordRef = useRef<string>();
 
   const [recentPasswords, setRecentPasswords] = useState<IPassword[]>([]);
-  const [frequentlyUsedPasswords, setFrequentlyUsedPasswords] = useState<IPassword[]>([]);
+  const [frequentlyUsedPasswords, setFrequentlyUsedPasswords] = useState<
+    IPassword[]
+  >([]);
 
   const [visible, setVisible] = useState(false);
 
@@ -59,7 +63,8 @@ export default (props: Props) => {
     //   //   "This is the content of the notification. This is the content of the notification. This is the content of the notification.",
     //   // type
     // });
-    toast.info(t<string>('Start decompressing'));
+    toast.info(t<string>("Start decompressing"));
+
     return BApi.file.decompressFiles({
       paths: [path],
       password,
@@ -68,7 +73,9 @@ export default (props: Props) => {
 
   const onBalloonVisible = useCallback(async () => {
     setRecentPasswords(await loadTopNPasswords(PasswordSearchOrder.Latest));
-    setFrequentlyUsedPasswords(await loadTopNPasswords(PasswordSearchOrder.Frequency));
+    setFrequentlyUsedPasswords(
+      await loadTopNPasswords(PasswordSearchOrder.Frequency),
+    );
   }, []);
 
   const openPasswordSelector = useCallback(() => {
@@ -79,156 +86,182 @@ export default (props: Props) => {
     });
   }, []);
 
-  const renderTopNPasswords = useCallback((type: PasswordSearchOrder) => {
-    let label;
-    let passwords: IPassword[];
-    switch (type) {
-      case PasswordSearchOrder.Latest:
-        label = 'recently used';
-        passwords = recentPasswords;
-        break;
-      case PasswordSearchOrder.Frequency:
-        label = 'frequently used';
-        passwords = frequentlyUsedPasswords;
-        break;
-    }
-    if (passwords.length > 0) {
-      return (
-        <div className={'secondary'}>
-          <div className="tip">
-            {t<string>(`Alternatively, you can choose a password from ${label} passwords:`)}
-            {passwords.length == 5 && (<Button
-              className={'show-more'}
-              text
-              size={'small'}
-              type={'primary'}
-              onClick={openPasswordSelector}
-            >{t<string>('Show more')}</Button>)}
-          </div>
-          <div className="passwords">
-            {passwords.map(p => {
-              return (
-                <Tag.Closeable
-                  key={p.text}
-                  size={'small'}
-                  onClick={() => {
-                    decompress(entry.path, p.text);
-                  }}
-                  onClose={(from) => {
-                    Dialog.confirm({
-                      title: t<string>('Delete password from history?'),
-                      closeable: true,
-                      onOk: () => BApi.password.deletePassword(p.text),
-                    });
-                    return false;
-                  }}
+  const renderTopNPasswords = useCallback(
+    (type: PasswordSearchOrder) => {
+      let label;
+      let passwords: IPassword[];
+
+      switch (type) {
+        case PasswordSearchOrder.Latest:
+          label = "recently used";
+          passwords = recentPasswords;
+          break;
+        case PasswordSearchOrder.Frequency:
+          label = "frequently used";
+          passwords = frequentlyUsedPasswords;
+          break;
+      }
+      if (passwords.length > 0) {
+        return (
+          <div className={"secondary"}>
+            <div className="tip">
+              {t<string>(
+                `Alternatively, you can choose a password from ${label} passwords:`,
+              )}
+              {passwords.length == 5 && (
+                <Button
+                  text
+                  className={"show-more"}
+                  size={"small"}
+                  type={"primary"}
+                  onClick={openPasswordSelector}
                 >
-                  {p.text}
-                  {/* | {p.lastUsedAt} */}
-                </Tag.Closeable>
-              );
-            })}
+                  {t<string>("Show more")}
+                </Button>
+              )}
+            </div>
+            <div className="passwords">
+              {passwords.map((p) => {
+                return (
+                  <Tag.Closeable
+                    key={p.text}
+                    size={"small"}
+                    onClick={() => {
+                      decompress(entry.path, p.text);
+                    }}
+                    onClose={(from) => {
+                      Dialog.confirm({
+                        title: t<string>("Delete password from history?"),
+                        closeable: true,
+                        onOk: () => BApi.password.deletePassword(p.text),
+                      });
+
+                      return false;
+                    }}
+                  >
+                    {p.text}
+                    {/* | {p.lastUsedAt} */}
+                  </Tag.Closeable>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      );
-    }
-    return;
-  }, [recentPasswords, frequentlyUsedPasswords]);
+        );
+      }
+
+      return;
+    },
+    [recentPasswords, frequentlyUsedPasswords],
+  );
 
   return (
     <Tooltip
-      content={(<div>
-        <div className="common-tip">
-          {t<string>('Contents will be decompressed to the same directory as the compressed file.')}
-        </div>
-        <div className="password-guides">
-          {passwords.length > 0 && (
-            <div className={'default'}>
-
-              <Trans
-                i18nKey={'fp.te.db.defaultPassword'}
-                values={{
-                  password: passwords[0],
-                }}
-              >
-                By default, we will use <Button type={'primary'} text>password</Button> as password.
-              </Trans>
-            </div>
-          )}
-          {passwords.length > 1 && (
-            <div className={'secondary'}>
-              <div className="tip">
-                {t<string>('Alternatively, you can choose a password from the following candidates:')}
+      autoFocus={false}
+      className="fp-te-db"
+      content={
+        <div>
+          <div className="common-tip">
+            {t<string>(
+              "Contents will be decompressed to the same directory as the compressed file.",
+            )}
+          </div>
+          <div className="password-guides">
+            {passwords.length > 0 && (
+              <div className={"default"}>
+                <Trans
+                  i18nKey={"fp.te.db.defaultPassword"}
+                  values={{
+                    password: passwords[0],
+                  }}
+                >
+                  By default, we will use{" "}
+                  <Button text type={"primary"}>
+                    password
+                  </Button>{" "}
+                  as password.
+                </Trans>
               </div>
-              <div className="passwords">
-                {passwords.slice(1).map((password: string) => (
+            )}
+            {passwords.length > 1 && (
+              <div className={"secondary"}>
+                <div className="tip">
+                  {t<string>(
+                    "Alternatively, you can choose a password from the following candidates:",
+                  )}
+                </div>
+                <div className="passwords">
+                  {passwords.slice(1).map((password: string) => (
+                    <Button
+                      key={password}
+                      size={"small"}
+                      type={"normal"}
+                      onClick={() => {
+                        decompress(entry.path, password);
+                      }}
+                    >
+                      {password}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {renderTopNPasswords(PasswordSearchOrder.Latest)}
+            {renderTopNPasswords(PasswordSearchOrder.Frequency)}
+
+            <div className={"secondary"}>
+              <div className="tip">
+                {t<string>("Or you can use a custom password:")}
+              </div>
+              <Input.Group
+                addonAfter={
                   <Button
-                    key={password}
-                    size={'small'}
-                    type={'normal'}
+                    size={"small"}
+                    type={"normal"}
                     onClick={() => {
-                      decompress(entry.path, password);
+                      if (customPasswordRef.current) {
+                        decompress(entry.path, customPasswordRef.current);
+                      } else {
+                        toast.error(
+                          i18n.t<string>("Password can not be empty"),
+                        );
+                      }
                     }}
                   >
-                    {password}
+                    {t<string>("Use custom password to decompress")}
                   </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {renderTopNPasswords(PasswordSearchOrder.Latest)}
-          {renderTopNPasswords(PasswordSearchOrder.Frequency)}
-
-          <div className={'secondary'}>
-            <div className="tip">{t<string>('Or you can use a custom password:')}</div>
-            <Input.Group addonAfter={(
-              <Button
-                type={'normal'}
-                size={'small'}
-                onClick={() => {
-                  if (customPasswordRef.current) {
-                    decompress(entry.path, customPasswordRef.current);
-                  } else {
-                    toast.error(i18n.t<string>('Password can not be empty'));
-                  }
-                }}
+                }
               >
-                {t<string>('Use custom password to decompress')}
-              </Button>
-            )}
-            >
-              <Input
-                size={'small'}
-                placeholder={i18n.t<string>('Password')}
-                style={{ width: '100%' }}
-                hasClear
-                onKeyDown={e => {
-                  e.stopPropagation();
-                }}
-                onChange={(v) => {
-                  customPasswordRef.current = v;
-                }}
-              />
-            </Input.Group>
+                <Input
+                  hasClear
+                  placeholder={i18n.t<string>("Password")}
+                  size={"small"}
+                  style={{ width: "100%" }}
+                  onChange={(v) => {
+                    customPasswordRef.current = v;
+                  }}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                  }}
+                />
+              </Input.Group>
+            </div>
           </div>
         </div>
-      </div>)}
-      onOpenChange={v => {
+      }
+      delay={500}
+      placement={"left"}
+      onClick={(e) => {
+        e.stopPropagation();
+      }}
+      onOpenChange={(v) => {
         if (v) {
           onBalloonVisible();
         }
       }}
-      delay={500}
-      className="fp-te-db"
-      placement={'left'}
-      autoFocus={false}
-      onClick={e => {
-        e.stopPropagation();
-      }}
     >
       {React.cloneElement(trigger, {
-        onContextMenu: e => {
+        onContextMenu: (e) => {
           // e.stopPropagation();
           // e.preventDefault();
           // setVisible(true);

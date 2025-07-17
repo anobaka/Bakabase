@@ -1,14 +1,17 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import type { BTask } from "@/core/models/BTask";
+
+import React, { useEffect, useState } from "react";
 // import './index.scss';
-import { useTranslation } from 'react-i18next';
-import { ClockCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
-import moment from 'moment';
-import toast from 'react-hot-toast';
+import { useTranslation } from "react-i18next";
+import { ClockCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import dayjs from "dayjs";
+import moment from "moment";
+import toast from "react-hot-toast";
+
 import {
-  Button, Chip,
+  Button,
   DateInput,
   Progress,
   Table,
@@ -19,92 +22,97 @@ import {
   TableRow,
   TimeInput,
   Tooltip,
-} from '@/components/bakaui';
-import { BTaskStatus } from '@/sdk/constants';
-import { useTaskOptionsStore } from '@/models/options';
-import { useBTasksStore } from '@/models/bTasks';
-import type { BTask } from '@/core/models/BTask';
+} from "@/components/bakaui";
+import { BTaskStatus } from "@/sdk/constants";
+import { useTaskOptionsStore } from "@/models/options";
+import { useBTasksStore } from "@/models/bTasks";
 
 export default () => {
   const { t } = useTranslation();
-  const taskOptions = useTaskOptionsStore(state => state.data);
-  const bTasks = useBTasksStore(state => state.tasks);
+  const taskOptions = useTaskOptionsStore((state) => state.data);
+  const bTasks = useBTasksStore((state) => state.tasks);
 
-  const [editingOptions, setEditingOptions] = useState<Record<string, { interval?: string; enableAfter?: string }>>({});
+  const [editingOptions, setEditingOptions] = useState<
+    Record<string, { interval?: string; enableAfter?: string }>
+  >({});
 
   const columns = [
     {
-      key: 'name',
-      label: 'Name',
+      key: "name",
+      label: "Name",
     },
     {
-      key: 'status',
-      label: 'Status',
+      key: "status",
+      label: "Status",
     },
     {
-      key: 'progress',
-      label: 'Progress',
+      key: "progress",
+      label: "Progress",
     },
     {
-      key: 'startedAt',
-      label: 'Started At',
+      key: "startedAt",
+      label: "Started At",
     },
     {
-      key: 'interval',
-      label: 'Interval',
+      key: "interval",
+      label: "Interval",
     },
     {
-      key: 'nextTimeStartAt',
-      label: 'Next time start at',
+      key: "nextTimeStartAt",
+      label: "Next time start at",
     },
     {
-      key: 'elapsed',
-      label: 'Elapsed',
+      key: "elapsed",
+      label: "Elapsed",
     },
     {
-      key: 'enableAfter',
-      label: 'Enable after',
+      key: "enableAfter",
+      label: "Enable after",
     },
   ];
 
-  useEffect(() => {
-  }, []);
+  useEffect(() => {}, []);
 
   const patchOptions = async () => {
     await BApi.options.patchTaskOptions({
-      tasks: bTasks.filter(t => t.isPersistent).map(t => {
-        return {
-          id: t.id,
-          interval: editingOptions[t.id]?.interval ?? t.interval!,
-          enableAfter: editingOptions[t.id]?.enableAfter ?? t.enableAfter,
-        };
-      }),
+      tasks: bTasks
+        .filter((t) => t.isPersistent)
+        .map((t) => {
+          return {
+            id: t.id,
+            interval: editingOptions[t.id]?.interval ?? t.interval!,
+            enableAfter: editingOptions[t.id]?.enableAfter ?? t.enableAfter,
+          };
+        }),
     });
-    toast.success(t<string>('Saved'));
+    toast.success(t<string>("Saved"));
     setEditingOptions({});
   };
 
   const renderInterval = (task: BTask) => {
     if (!task.isPersistent) {
-      return t<string>('Not supported');
+      return t<string>("Not supported");
     }
 
     const editingInterval = editingOptions[task.id]?.interval;
+
     if (editingInterval) {
       return (
         <TimeInput
           autoFocus
+          granularity={"second"}
+          size={"sm"}
+          value={dayjs.duration(
+            moment.duration(editingInterval).asMilliseconds(),
+          )}
           onBlur={() => {
             patchOptions();
           }}
-          size={'sm'}
-          granularity={'second'}
-          value={dayjs.duration(moment.duration(editingInterval).asMilliseconds())}
-          onChange={v => {
+          onChange={(v) => {
             setEditingOptions({
               ...editingOptions,
               [task.id]: {
-                interval: v.format('HH:mm:ss'),
+                interval: v.format("HH:mm:ss"),
               },
             });
           }}
@@ -112,12 +120,9 @@ export default () => {
       );
     } else {
       return (
-        <div className={'flex items-center gap-1'}>
+        <div className={"flex items-center gap-1"}>
           <div>
             <Button
-              variant={'light'}
-              // color={'primary'}
-              size={'sm'}
               onPress={() => {
                 setEditingOptions({
                   ...editingOptions,
@@ -126,20 +131,28 @@ export default () => {
                   },
                 });
               }}
+              variant={'light'}
+              // color={'primary'}
+              size={'sm'}
             >
-              {task.interval ? dayjs.duration(moment.duration(task.interval).asMilliseconds()).format('HH:mm:ss') : t<string>('Not set')}
+              {task.interval
+                ? dayjs
+                    .duration(moment.duration(task.interval).asMilliseconds())
+                    .format("HH:mm:ss")
+                : t<string>("Not set")}
             </Button>
           </div>
           {task.interval && (
-            <Tooltip content={(
-              <div>
-                {t<string>('Will start at')}
-                &nbsp;
-                {dayjs(task.nextTimeStartAt).format('YYYY-MM-DD HH:mm:ss')}
-              </div>
-            )}
+            <Tooltip
+              content={
+                <div>
+                  {t<string>("Will start at")}
+                  &nbsp;
+                  {dayjs(task.nextTimeStartAt).format("YYYY-MM-DD HH:mm:ss")}
+                </div>
+              }
             >
-              <ClockCircleOutlined className={'text-base'} />
+              <ClockCircleOutlined className={"text-base"} />
             </Tooltip>
           )}
         </div>
@@ -149,23 +162,24 @@ export default () => {
 
   const renderEnableAfter = (task: BTask) => {
     if (!task.isPersistent) {
-      return t<string>('Not supported');
+      return t<string>("Not supported");
     }
 
-    const format = 'YYYY-MM-DD HH:mm:ss';
+    const format = "YYYY-MM-DD HH:mm:ss";
 
     const editingEnableAfter = editingOptions[task.id]?.enableAfter;
+
     if (editingEnableAfter) {
       return (
         <DateInput
           autoFocus
+          granularity={"second"}
+          size={"sm"}
+          value={dayjs(editingEnableAfter)}
           onBlur={() => {
             patchOptions();
           }}
-          size={'sm'}
-          granularity={'second'}
-          value={dayjs(editingEnableAfter)}
-          onChange={v => {
+          onChange={(v) => {
             setEditingOptions({
               ...editingOptions,
               [task.id]: {
@@ -178,9 +192,6 @@ export default () => {
     } else {
       return (
         <Button
-          variant={task.enableAfter ? 'light' : 'flat'}
-          // color={'primary'}
-          size={'sm'}
           onPress={() => {
             const initValue = task.enableAfter ? dayjs(task.enableAfter) : dayjs().add(1, 'h');
             setEditingOptions({
@@ -190,28 +201,37 @@ export default () => {
               },
             });
           }}
+          variant={task.enableAfter ? 'light' : 'flat'}
+          // color={'primary'}
+          size={'sm'}
         >
-          {task.enableAfter ? dayjs(task.enableAfter).format(format) : t<string>('Not set')}
+          {task.enableAfter
+            ? dayjs(task.enableAfter).format(format)
+            : t<string>("Not set")}
         </Button>
       );
     }
   };
 
   return (
-    <Table aria-label="Example table with dynamic content" removeWrapper isStriped>
+    <Table
+      isStriped
+      removeWrapper
+      aria-label="Example table with dynamic content"
+    >
       <TableHeader columns={columns}>
         {(column) => <TableColumn key={column.key}>{column.label}</TableColumn>}
       </TableHeader>
       <TableBody>
-        {bTasks.map(task => {
+        {bTasks.map((task) => {
           return (
             <TableRow key={task.id}>
               <TableCell>
-                <div className={'flex items-center gap-1'}>
+                <div className={"flex items-center gap-1"}>
                   {task.name}
                   {task.description && (
-                    <Tooltip content={task.description} color={'secondary'}>
-                      <QuestionCircleOutlined className={'text-base'} />
+                    <Tooltip color={"secondary"} content={task.description}>
+                      <QuestionCircleOutlined className={"text-base"} />
                     </Tooltip>
                   )}
                 </div>
@@ -219,44 +239,47 @@ export default () => {
               <TableCell>
                 {t<string>(BTaskStatus[task.status])}
                 {task.error && (
-                  <Tooltip content={task.error} color={'danger'}>
+                  <Tooltip color={"danger"} content={task.error}>
                     <QuestionCircleOutlined />
                   </Tooltip>
                 )}
                 {task.reasonForUnableToStart && (
-                  <Tooltip content={task.reasonForUnableToStart} color={'warning'}>
-                    <QuestionCircleOutlined className={'text-base'} />
+                  <Tooltip
+                    color={"warning"}
+                    content={task.reasonForUnableToStart}
+                  >
+                    <QuestionCircleOutlined className={"text-base"} />
                   </Tooltip>
                 )}
               </TableCell>
               <TableCell>
-                <div className={'relative'}>
-                  <Progress
-                    color="primary"
-                    size="sm"
-                    value={task.percentage}
-                  />
+                <div className={"relative"}>
+                  <Progress color="primary" size="sm" value={task.percentage} />
                   <div
-                    className={'absolute top-0 left-0 flex items-center justify-center w-full h-full'}
-                  >{task.percentage}%
+                    className={
+                      "absolute top-0 left-0 flex items-center justify-center w-full h-full"
+                    }
+                  >
+                    {task.percentage}%
                   </div>
                 </div>
               </TableCell>
               <TableCell>
-                {task.startedAt && dayjs(task.startedAt).format('YYYY-MM-DD HH:mm:ss')}
+                {task.startedAt &&
+                  dayjs(task.startedAt).format("YYYY-MM-DD HH:mm:ss")}
+              </TableCell>
+              <TableCell>{renderInterval(task)}</TableCell>
+              <TableCell>
+                {task.nextTimeStartAt &&
+                  dayjs(task.nextTimeStartAt).format("YYYY-MM-DD HH:mm:ss")}
               </TableCell>
               <TableCell>
-                {renderInterval(task)}
+                {task.elapsed &&
+                  dayjs
+                    .duration(moment.duration(task.elapsed).asMilliseconds())
+                    .format("HH:mm:ss")}
               </TableCell>
-              <TableCell>
-                {task.nextTimeStartAt && dayjs(task.nextTimeStartAt).format('YYYY-MM-DD HH:mm:ss')}
-              </TableCell>
-              <TableCell>
-                {task.elapsed && dayjs.duration(moment.duration(task.elapsed).asMilliseconds()).format('HH:mm:ss')}
-              </TableCell>
-              <TableCell>
-                {renderEnableAfter(task)}
-              </TableCell>
+              <TableCell>{renderEnableAfter(task)}</TableCell>
             </TableRow>
           );
         })}

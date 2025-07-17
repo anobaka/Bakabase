@@ -1,5 +1,6 @@
-import type { TFunction } from 'react-i18next';
-import { ResourceMatcherValueType } from '@/sdk/constants';
+import type { TFunction } from "react-i18next";
+
+import { ResourceMatcherValueType } from "@/sdk/constants";
 
 export interface IPscMatcherValue {
   valueType: ResourceMatcherValueType;
@@ -16,7 +17,6 @@ export class PscMatcherValue implements IPscMatcherValue {
   layer?: number | undefined;
   regex?: string | undefined;
   fixedText?: string | undefined;
-
 
   constructor(v: IPscMatcherValue) {
     Object.assign(this, v);
@@ -43,17 +43,24 @@ export class PscMatcherValue implements IPscMatcherValue {
     });
   }
 
-  static ToString(t: TFunction<'translation', undefined>, value: IPscMatcherValue): string {
+  static ToString(
+    t: TFunction<"translation", undefined>,
+    value: IPscMatcherValue,
+  ): string {
     switch (value.valueType) {
       case ResourceMatcherValueType.FixedText:
-        return t<string>('Fixed text: {{text}}', { text: value.fixedText });
+        return t<string>("Fixed text: {{text}}", { text: value.fixedText });
       case ResourceMatcherValueType.Regex:
-        return t<string>('Regex: {{regex}}', { regex: value.regex });
+        return t<string>("Regex: {{regex}}", { regex: value.regex });
       case ResourceMatcherValueType.Layer:
         if (value.layer && value.layer < 0) {
-          return t<string>('Layer: the {{layer}} layer to the last', { layer: -value.layer });
+          return t<string>("Layer: the {{layer}} layer to the last", {
+            layer: -value.layer,
+          });
         } else {
-          return t<string>('Layer: the {{layer}} layer', { layer: value.layer });
+          return t<string>("Layer: the {{layer}} layer", {
+            layer: value.layer,
+          });
         }
     }
   }
@@ -70,10 +77,11 @@ export class PscMatcherValue implements IPscMatcherValue {
       case ResourceMatcherValueType.FixedText:
         return this.fixedText === other.fixedText;
     }
+
     return false;
   }
 
-  buildDisplayText(t: TFunction<'translation', undefined>): string {
+  buildDisplayText(t: TFunction<"translation", undefined>): string {
     return PscMatcherValue.ToString(t, this);
   }
 }

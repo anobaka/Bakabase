@@ -1,5 +1,3 @@
-import { create } from 'zustand';
-import BApi from '@/sdk/BApi';
 import type {
   BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
@@ -20,10 +18,17 @@ import type {
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptions,
   BakabaseServiceModelsInputResourceOptionsPatchInputModel,
-} from '@/sdk/Api';
+} from "@/sdk/Api";
+
+import { create } from "zustand";
+
+import BApi from "@/sdk/BApi";
 
 // 通用工厂
-function createOptionStore<T, TPatch>(updateApi: (patch: TPatch) => Promise<any>, putApi?: (data: T) => Promise<any>) {
+function createOptionStore<T, TPatch>(
+  updateApi: (patch: TPatch) => Promise<any>,
+  putApi?: (data: T) => Promise<any>,
+) {
   return create<{
     data: T;
     initialized?: boolean;
@@ -33,17 +38,18 @@ function createOptionStore<T, TPatch>(updateApi: (patch: TPatch) => Promise<any>
   }>((set, get) => ({
     data: {} as T,
     initialized: false,
-    update: (payload) => set((state) => ({
-      data: { ...state.data, ...payload },
-      initialized: true,
-    })),
+    update: (payload) =>
+      set((state) => ({
+        data: { ...state.data, ...payload },
+        initialized: true,
+      })),
     patch: async (patches) => {
       await updateApi(patches);
     },
     put: putApi
       ? async (data) => {
-        await putApi(data);
-      }
+          await putApi(data);
+        }
       : undefined,
   }));
 }

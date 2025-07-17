@@ -1,31 +1,35 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { Modal } from '@/components/bakaui';
-import type { DestroyableProps } from '@/components/bakaui/types';
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { useTranslation } from "react-i18next";
+
+import { Modal } from "@/components/bakaui";
 
 type Props = {
   onOk: () => any;
 } & DestroyableProps;
 
-export default ({
-                  onOk,
-                  onDestroyed,
-                }: Props) => {
+export default ({ onOk, onDestroyed }: Props) => {
   const { t } = useTranslation();
+
   return (
     <Modal
-      size={'md'}
       defaultVisible
+      size={"md"}
+      title={t<string>("Synchronize resource data")}
       onDestroyed={onDestroyed}
-      title={t<string>('Synchronize resource data')}
       onOk={onOk}
     >
-      <div className={''}>
-        {t<string>('All eligible files or folders under the specified root directory will be saved to the media library.')}
+      <div className={""}>
+        {t<string>(
+          "All eligible files or folders under the specified root directory will be saved to the media library.",
+        )}
       </div>
-      <div className={'text-warning text-sm'}>
-        {t<string>('Please note, if you modify the resource path (generally the file name), a new resource associated with the new path will be created after synchronization. You can transfer historical resource data to the new resource or directly delete the historical resource through the resource page.')}
+      <div className={"text-warning text-sm"}>
+        {t<string>(
+          "Please note, if you modify the resource path (generally the file name), a new resource associated with the new path will be created after synchronization. You can transfer historical resource data to the new resource or directly delete the historical resource through the resource page.",
+        )}
       </div>
     </Modal>
   );

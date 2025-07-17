@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import _ from 'lodash';
-import { DeleteOutlined, PlusCircleOutlined } from '@ant-design/icons';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button, ColorPicker, Input, Tree } from '@/components/bakaui';
-import { buildUntitledLabel, uuidv4 } from '@/components/utils';
-import type { MultilevelPropertyOptions } from '@/components/Property/models';
-import { buildColorValueString } from '@/components/bakaui/components/ColorPicker';
-import colors from '@/components/bakaui/colors';
+import type { MultilevelPropertyOptions } from "@/components/Property/models";
+
+import _ from "lodash";
+import { DeleteOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Button, ColorPicker, Input, Tree } from "@/components/bakaui";
+import { buildUntitledLabel, uuidv4 } from "@/components/utils";
+import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
+import colors from "@/components/bakaui/colors";
 
 type Props = {
   options?: MultilevelPropertyOptions;
@@ -31,59 +33,60 @@ type TreeData = {
   disableCheckbox?: boolean;
 };
 
-export default ({
-                  options: propOptions,
-                  onChange,
-                }: Props) => {
+export default ({ options: propOptions, onChange }: Props) => {
   const { t } = useTranslation();
 
   const [options, setOptions] = useState(propOptions ?? {});
   const [editingKey, setEditingKey] = useState<string>();
-  const [expandKeys, setExpandKeys] = useState<React.Key[] | undefined>(options.data?.map(d => d.value));
+  const [expandKeys, setExpandKeys] = useState<React.Key[] | undefined>(
+    options.data?.map((d) => d.value),
+  );
 
   const patchOptions = (patches: Partial<MultilevelPropertyOptions>) => {
     const newOptions = {
       ...options,
       ...patches,
     };
+
     setOptions(newOptions);
     onChange?.(newOptions);
   };
 
   const buildTreeDataSource = (data: MultilevelData[]): TreeData[] => {
     const ret: TreeData[] = [];
+
     for (const md of data) {
       const td: TreeData = {
         selectable: false,
         checkable: false,
         disableCheckbox: true,
         title: (
-          <div className={'flex items-center gap-1'}>
+          <div className={"flex items-center gap-1"}>
             <ColorPicker
               color={md.color ?? colors.color}
-              onChange={c => {
+              onChange={(c) => {
                 md.color = buildColorValueString(c);
                 patchOptions({ ...options });
               }}
             />
             {editingKey == md.value ? (
               <Input
-                size={'sm'}
-                variant={'flat'}
+                size={"sm"}
                 value={md.label}
-                onValueChange={v => {
-                  md.label = v;
-                  patchOptions({ ...options });
-                }}
+                variant={"flat"}
                 onBlur={() => {
                   setEditingKey(undefined);
+                }}
+                onValueChange={(v) => {
+                  md.label = v;
+                  patchOptions({ ...options });
                 }}
               />
             ) : (
               <Button
-                variant={'light'}
-                size={'sm'}
-                radius={'sm'}
+                radius={"sm"}
+                size={"sm"}
+                variant={"light"}
                 onPress={() => {
                   setEditingKey(md.value);
                 }}
@@ -93,44 +96,49 @@ export default ({
             )}
 
             <Button
-              variant={'light'}
               isIconOnly
-              size={'sm'}
-              radius={'sm'}
+              radius={"sm"}
+              size={"sm"}
+              variant={"light"}
               onPress={() => {
                 md.children ??= [];
                 md.children.push({
                   value: uuidv4(),
-                  label: buildUntitledLabel(t<string>('Untitled'), md.children.map(c => c.label)),
+                  label: buildUntitledLabel(
+                    t<string>("Untitled"),
+                    md.children.map((c) => c.label),
+                  ),
                 });
                 patchOptions({ ...options });
                 const newExpandedKeys = expandKeys ?? [];
+
                 if (!newExpandedKeys.includes(md.value)) {
                   newExpandedKeys.push(md.value);
                 }
                 setExpandKeys([...newExpandedKeys]);
               }}
             >
-              <PlusCircleOutlined className={'text-small'} />
+              <PlusCircleOutlined className={"text-small"} />
             </Button>
             <Button
-              variant={'light'}
               isIconOnly
-              size={'sm'}
-              radius={'sm'}
-              color={'danger'}
+              color={"danger"}
+              radius={"sm"}
+              size={"sm"}
+              variant={"light"}
               onPress={() => {
                 data.splice(data.indexOf(md), 1);
                 patchOptions({ ...options });
               }}
             >
-              <DeleteOutlined className={'text-small'} />
+              <DeleteOutlined className={"text-small"} />
             </Button>
           </div>
         ),
         key: md.value,
         children: md.children ? buildTreeDataSource(md.children) : undefined,
       };
+
       ret.push(td);
     }
 
@@ -146,32 +154,39 @@ export default ({
     <div>
       <div>
         <Button
-          size={'sm'}
-          variant={'light'}
+          size={"sm"}
+          variant={"light"}
           onPress={() => {
             options.data ??= [];
             patchOptions({
-              data: options.data.concat([{
-                value: uuidv4(),
-                label: buildUntitledLabel(t<string>('Untitled'), options.data.map(c => c.label)),
-              }]),
+              data: options.data.concat([
+                {
+                  value: uuidv4(),
+                  label: buildUntitledLabel(
+                    t<string>("Untitled"),
+                    options.data.map((c) => c.label),
+                  ),
+                },
+              ]),
             });
           }}
         >
-          <PlusCircleOutlined className={'text-small'} />
-          {t<string>('Add root data')}
+          <PlusCircleOutlined className={"text-small"} />
+          {t<string>("Add root data")}
         </Button>
       </div>
       <Tree
-        selectable={false}
-        checkable={false}
         showLine
+        checkable={false}
         expandedKeys={expandKeys}
+        selectable={false}
         treeData={data}
-        onExpand={(keys, {
-          expanded,
-        }) => {
-          setExpandKeys(expanded ? _.union(expandKeys, keys) : _.intersection(expandKeys, keys));
+        onExpand={(keys, { expanded }) => {
+          setExpandKeys(
+            expanded
+              ? _.union(expandKeys, keys)
+              : _.intersection(expandKeys, keys),
+          );
         }}
       />
     </div>

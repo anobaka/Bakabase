@@ -1,33 +1,35 @@
-'use client';
+"use client";
 
-import React, { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useUpdateEffect } from 'react-use';
-import { SortAscendingOutlined } from '@ant-design/icons';
-import CustomIcon from '@/components/CustomIcon';
-import type { SearchFormOrderModel } from '@/pages/resource/models';
-import { resourceSearchSortableProperties, type ResourceSearchSortableProperty } from '@/sdk/constants';
-import type { SelectProps } from '@/components/bakaui';
-import { Select } from '@/components/bakaui';
+import type { SearchFormOrderModel } from "@/pages/resource/models";
 
-const directionDataSource: { label: string; asc: boolean }[] = [{
-  label: 'Asc',
-  asc: true,
-}, {
-  label: 'Desc',
-  asc: false,
-}];
+import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useUpdateEffect } from "react-use";
+
+import CustomIcon from "@/components/CustomIcon";
+import {
+  resourceSearchSortableProperties,
+  type ResourceSearchSortableProperty,
+} from "@/sdk/constants";
+import { Select } from "@/components/bakaui";
+
+const directionDataSource: { label: string; asc: boolean }[] = [
+  {
+    label: "Asc",
+    asc: true,
+  },
+  {
+    label: "Desc",
+    asc: false,
+  },
+];
 
 interface IProps extends React.ComponentPropsWithoutRef<any> {
   value?: SearchFormOrderModel[];
   onChange?: (value: SearchFormOrderModel[]) => any;
 }
 
-export default ({
-                  value: propsValue,
-                  onChange,
-  ...otherProps
-                }: IProps) => {
+export default ({ value: propsValue, onChange, ...otherProps }: IProps) => {
   const { t } = useTranslation();
 
   const [value, setValue] = useState(propsValue);
@@ -36,44 +38,48 @@ export default ({
     setValue(propsValue);
   }, [propsValue]);
 
-  const orderDataSourceRef = useRef(resourceSearchSortableProperties.reduce<{ label: any; value: string; textValue: string }[]>((s, x) => {
-    directionDataSource.forEach((y) => {
-      s.push({
-        label: (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
-            title={t<string>(y.label)}
-          >
-            <CustomIcon type={y.asc ? 'sort-ascending' : 'sort-descending'} className={'text-lg'} />
-            {t<string>(x.label)}
-          </div>
-        ),
-        value: `${x.value}-${y.asc}`,
-        textValue: `${x.label}${t<string>(y.asc ? 'Asc' : 'Desc')}`,
+  const orderDataSourceRef = useRef(
+    resourceSearchSortableProperties.reduce<
+      { label: any; value: string; textValue: string }[]
+    >((s, x) => {
+      directionDataSource.forEach((y) => {
+        s.push({
+          label: (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 5,
+              }}
+              title={t<string>(y.label)}
+            >
+              <CustomIcon
+                className={"text-lg"}
+                type={y.asc ? "sort-ascending" : "sort-descending"}
+              />
+              {t<string>(x.label)}
+            </div>
+          ),
+          value: `${x.value}-${y.asc}`,
+          textValue: `${x.label}${t<string>(y.asc ? "Asc" : "Desc")}`,
+        });
       });
-    });
 
-    return s;
-  }, []));
+      return s;
+    }, []),
+  );
 
   return (
     <div>
       <Select
         aria-label={t<string>('Orders')}
+        selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
         selectionMode={'multiple'}
+        size={'sm'}
         style={{
           maxWidth: 500,
           minWidth: 200,
         }}
-        placeholder={t<string>('Select orders')}
-        // label={t<string>('Order')}
-        dataSource={orderDataSourceRef.current}
-        selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
-        size={'sm'}
         onSelectionChange={(arr) => {
           const set = arr as Set<string>;
           const orderAscMap: {[key in ResourceSearchSortableProperty]?: boolean} = {};
@@ -93,8 +99,10 @@ export default ({
           setValue(orders);
           onChange?.(orders);
         }}
+        placeholder={t<string>('Select orders')}
+        // label={t<string>('Order')}
+        dataSource={orderDataSourceRef.current}
         {...otherProps}
-
       />
     </div>
   );

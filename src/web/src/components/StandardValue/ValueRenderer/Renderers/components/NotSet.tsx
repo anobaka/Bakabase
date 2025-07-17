@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/bakaui';
+import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/bakaui";
 
 type Props = {
   onClick?: () => any;
@@ -13,18 +14,11 @@ export default (props: Props) => {
 
   if (onClick) {
     return (
-      <Button
-        onClick={onClick}
-        radius={'sm'}
-        variant={'light'}
-        size={'sm'}
-      >
-        <span className={'opacity-40'}>{t<string>('Click to set')}</span>
+      <Button radius={"sm"} size={"sm"} variant={"light"} onClick={onClick}>
+        <span className={"opacity-40"}>{t<string>("Click to set")}</span>
       </Button>
     );
   } else {
-    return (
-      <span className={'opacity-40'}>{t<string>('Not set')}</span>
-    );
+    return <span className={"opacity-40"}>{t<string>("Not set")}</span>;
   }
 };

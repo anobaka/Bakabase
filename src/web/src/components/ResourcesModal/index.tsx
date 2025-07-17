@@ -1,12 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { Resource } from '@/core/models/Resource';
-import type { Pageable } from '@/components/types';
-import BApi from '@/sdk/BApi';
-import type { components } from '@/sdk/BApi2';
+import type { Resource } from "@/core/models/Resource";
+import type { Pageable } from "@/components/types";
+import type { components } from "@/sdk/BApi2";
 
-type Form = components['schemas']['Bakabase.Service.Models.Input.ResourceSearchInputModel'];
+import { useState } from "react";
+
+import BApi from "@/sdk/BApi";
+
+type Form =
+  components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
 
 type Props = {
   form?: Form;
@@ -35,9 +38,5 @@ export default ({ form }: Props) => {
     setResources(resources);
   };
 
-  return (
-    <div>
-      123
-    </div>
-  );
+  return <div>123</div>;
 };

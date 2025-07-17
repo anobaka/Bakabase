@@ -74,6 +74,7 @@ export default defineConfig([globalIgnores([
             ecmaFeatures: {
                 jsx: true,
             },
+            project: './tsconfig.json',
         },
     },
 
@@ -146,6 +147,13 @@ export default defineConfig([globalIgnores([
             blankLine: "any",
             prev: ["const", "let", "var"],
             next: ["const", "let", "var"],
+        }],
+        '@typescript-eslint/consistent-type-imports': ['error', {
+            prefer: 'type-imports',
+            fixStyle: 'separate-type-imports', // 分离导入值和类型
+        }],
+        '@typescript-eslint/consistent-type-exports': ['error', {
+            fixMixedExportsWithInlineTypeSpecifier: true, // 自动拆分类型导出
         }],
     },
 }]);

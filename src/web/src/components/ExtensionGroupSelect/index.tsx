@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import BApi from '@/sdk/BApi';
-import { Select } from '@/components/bakaui';
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import BApi from "@/sdk/BApi";
+import { Select } from "@/components/bakaui";
 
 type ExtensionGroup = {
   id: number;
@@ -29,16 +30,18 @@ export default ({ value = [], onSelectionChange }: Props) => {
 
   return (
     <Select
-      selectionMode={'multiple'}
-      label={t<string>('Limit file extension groups')}
-      placeholder={t<string>('Select from extension groups')}
-      dataSource={extensionGroups?.map(l => ({
+      dataSource={extensionGroups?.map((l) => ({
         label: l.name,
         value: l.id.toString(),
       }))}
-      selectedKeys={(value ?? []).map(x => x.toString())}
-      onSelectionChange={keys => {
-        onSelectionChange?.(Array.from(keys).map(k => parseInt(k as string, 10)));
+      label={t<string>("Limit file extension groups")}
+      placeholder={t<string>("Select from extension groups")}
+      selectedKeys={(value ?? []).map((x) => x.toString())}
+      selectionMode={"multiple"}
+      onSelectionChange={(keys) => {
+        onSelectionChange?.(
+          Array.from(keys).map((k) => parseInt(k as string, 10)),
+        );
       }}
     />
   );

@@ -1,12 +1,14 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import PropertySelector from '@/components/PropertySelector';
-import { Button } from '@/components/bakaui';
-import type { PropertyType, StandardValueType } from '@/sdk/constants';
-import { PropertyPool } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
+import type { PropertyType, StandardValueType } from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
+
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+
+import PropertySelector from "@/components/PropertySelector";
+import { Button } from "@/components/bakaui";
+import { PropertyPool } from "@/sdk/constants";
 
 interface IProps {
   onSelected?: (property: IProperty) => any;
@@ -20,10 +22,10 @@ export default (props: IProps) => {
 
   return (
     <Button
-      size={'sm'}
-      color={'primary'}
-      variant={'light'}
-      className={'ml-2'}
+      className={"ml-2"}
+      color={"primary"}
+      size={"sm"}
+      variant={"light"}
       onClick={() => {
         PropertySelector.show({
           editable: true,
@@ -31,16 +33,19 @@ export default (props: IProps) => {
           addable: true,
           pool: PropertyPool.Custom | PropertyPool.Reserved,
           multiple: false,
-          valueTypes: props.valueTypes?.map(v => v as unknown as StandardValueType),
+          valueTypes: props.valueTypes?.map(
+            (v) => v as unknown as StandardValueType,
+          ),
           onSubmit: async (selected) => {
             const p = selected![0];
+
             setProperty(p);
             props.onSelected?.(p);
           },
         });
       }}
     >
-      {property ? property.name : t<string>('Select a property')}
+      {property ? property.name : t<string>("Select a property")}
     </Button>
   );
 };

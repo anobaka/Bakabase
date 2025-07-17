@@ -1,46 +1,53 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { AiOutlineQuestionCircle } from 'react-icons/ai';
-import NameIcon from '@/pages/downloader/components/NameIcon';
-import { ThirdPartyId } from '@/sdk/constants';
+import { useTranslation } from "react-i18next";
+import { AiOutlineQuestionCircle } from "react-icons/ai";
+
+import NameIcon from "@/pages/downloader/components/NameIcon";
+import { ThirdPartyId } from "@/sdk/constants";
 
 type Props = {
   thirdPartyId: ThirdPartyId;
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
 };
 
 export default ({ thirdPartyId, size }: Props) => {
   const { t } = useTranslation();
 
   let sizeValue = 18;
+
   if (size) {
     switch (size) {
-      case 'sm':
+      case "sm":
         sizeValue = 18;
         break;
-      case 'md':
+      case "md":
         sizeValue = 24;
         break;
-      case 'lg':
+      case "lg":
         sizeValue = 32;
         break;
     }
   }
 
-  const style = { width: sizeValue, height: sizeValue, maxWidth: sizeValue, maxHeight: sizeValue };
+  const style = {
+    width: sizeValue,
+    height: sizeValue,
+    maxWidth: sizeValue,
+    maxHeight: sizeValue,
+  };
 
   const img = NameIcon[thirdPartyId];
+
   if (!img) {
-    return (
-      <AiOutlineQuestionCircle style={style} />
-    );
+    return <AiOutlineQuestionCircle style={style} />;
   }
+
   return (
     <img
-      style={style}
-      src={img}
       alt={t<string>(`ThirdPartyId.${ThirdPartyId[thirdPartyId]}`)}
+      src={img}
+      style={style}
     />
   );
 };

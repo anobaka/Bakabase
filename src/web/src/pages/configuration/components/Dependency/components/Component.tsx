@@ -1,22 +1,29 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button, Icon } from '@alifd/next';
-import { usePrevious } from 'react-use';
-import { CheckCircleOutlined } from '@ant-design/icons';
-import BApi from '@/sdk/BApi';
-import { useDependentComponentContextsStore } from '@/models/dependentComponentContexts';
-import { DependentComponentStatus } from '@/sdk/constants';
-import ClickableIcon from '@/components/ClickableIcon';
-import { Chip, Modal } from '@/components/bakaui';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Button, Icon } from "@alifd/next";
+import { usePrevious } from "react-use";
+import { CheckCircleOutlined } from "@ant-design/icons";
+
+import BApi from "@/sdk/BApi";
+import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
+import { DependentComponentStatus } from "@/sdk/constants";
+import ClickableIcon from "@/components/ClickableIcon";
+import { Chip, Modal } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 export default ({ id }: { id: string }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const context = useDependentComponentContextsStore((state) => state.contexts).find(a => a.id == id);
-  const [latestVersion, setLatestVersion] = useState<{ version?: string; canUpdate: boolean; error?: string | null }>();
+  const context = useDependentComponentContextsStore(
+    (state) => state.contexts,
+  ).find((a) => a.id == id);
+  const [latestVersion, setLatestVersion] = useState<{
+    version?: string;
+    canUpdate: boolean;
+    error?: string | null;
+  }>();
   // const prevInstallationProgress = usePrevious(context);
   const [discovering, setDiscovering] = useState(true);
   const [findingNewVersion, setFindingNewVersion] = useState(false);
@@ -24,7 +31,10 @@ export default ({ id }: { id: string }) => {
   const prevStatus = usePrevious(context?.status);
 
   useEffect(() => {
-    if (context?.status == DependentComponentStatus.Installed && prevStatus == DependentComponentStatus.Installing) {
+    if (
+      context?.status == DependentComponentStatus.Installed &&
+      prevStatus == DependentComponentStatus.Installing
+    ) {
       init();
     }
   }, [context]);
@@ -36,10 +46,15 @@ export default ({ id }: { id: string }) => {
       setDiscovering(false);
     }
 
-    if (context?.isRequired || context?.status == DependentComponentStatus.NotInstalled) {
+    if (
+      context?.isRequired ||
+      context?.status == DependentComponentStatus.NotInstalled
+    ) {
       setFindingNewVersion(true);
       try {
-        const latestVersionRsp = await BApi.component.getDependentComponentLatestVersion({ id });
+        const latestVersionRsp =
+          await BApi.component.getDependentComponentLatestVersion({ id });
+
         if (!latestVersionRsp.code) {
           // @ts-ignore
           setLatestVersion(latestVersionRsp.data);
@@ -76,19 +91,15 @@ export default ({ id }: { id: string }) => {
       if (latestVersion.error) {
         elements.push(
           <ClickableIcon
-            type={'error'}
-            colorType={'danger'}
             useInBuildIcon
+            colorType={"danger"}
+            type={"error"}
             onClick={() => {
               createPortal(Modal, {
                 defaultVisible: true,
-                title: t<string>('Failed to get information of new version'),
-                children: (
-                  <pre>
-                    {latestVersion.error}
-                  </pre>
-                ),
-                size: 'lg',
+                title: t<string>("Failed to get information of new version"),
+                children: <pre>{latestVersion.error}</pre>,
+                size: "lg",
               });
             }}
           />,
@@ -99,26 +110,31 @@ export default ({ id }: { id: string }) => {
             elements.push(
               <Button
                 text
-                type={'primary'}
-                size={'small'}
+                size={"small"}
+                type={"primary"}
                 onClick={() => {
                   BApi.component.installDependentComponent({ id });
                 }}
               >
-                {t<string>('Click to update to version')}: {latestVersion.version}
+                {t<string>("Click to update to version")}:{" "}
+                {latestVersion.version}
               </Button>,
             );
           }
         } else {
           elements.push(
-            <CheckCircleOutlined className={'text-base text-success'} />,
+            <CheckCircleOutlined className={"text-base text-success"} />,
           );
         }
       }
     } else {
       if (findingNewVersion) {
         elements.push(
-          <Icon type={'loading'} size={'small'} title={t<string>('Checking new version')} />,
+          <Icon
+            size={"small"}
+            title={t<string>("Checking new version")}
+            type={"loading"}
+          />,
         );
       }
     }
@@ -127,65 +143,62 @@ export default ({ id }: { id: string }) => {
     if (context && context.status == DependentComponentStatus.Installing) {
       elements.push(
         <>
-          {t<string>('Updating')}: {context.installationProgress}%
-          <Icon type={'loading'} size={'small'} />
+          {t<string>("Updating")}: {context.installationProgress}%
+          <Icon size={"small"} type={"loading"} />
         </>,
       );
     }
     if (context?.error) {
       elements.push(
         <ClickableIcon
-          type={'error'}
-          colorType={'danger'}
           useInBuildIcon
+          colorType={"danger"}
+          type={"error"}
           onClick={() => {
             createPortal(Modal, {
               defaultVisible: true,
-              title: t<string>('Error'),
-              children: (
-                <pre>
-                  {context.error}
-                </pre>
-              ),
-              size: 'lg',
+              title: t<string>("Error"),
+              children: <pre>{context.error}</pre>,
+              size: "lg",
             });
           }}
         />,
       );
     }
+
     return elements;
   }, [latestVersion, context, discovering]);
 
   return (
     <div
-      className={'third-party-component'}
+      className={"third-party-component"}
       style={{
-        display: 'flex',
+        display: "flex",
         gap: 10,
-        alignItems: 'center',
+        alignItems: "center",
       }}
     >
-      <div className={'installed'}>
-        {
-          discovering ? (
-            <Icon type={'loading'} size={'small'} />
-          ) : (
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-              title={context?.location ?? undefined}
-            >{context?.version ?? t<string>('Not installed')}</Chip>
-          )
-        }
+      <div className={"installed"}>
+        {discovering ? (
+          <Icon size={"small"} type={"loading"} />
+        ) : (
+          <Chip
+            radius={"sm"}
+            size={"sm"}
+            title={context?.location ?? undefined}
+          >
+            {context?.version ?? t<string>("Not installed")}
+          </Chip>
+        )}
       </div>
       {!discovering && (
         <div
           className="new-version"
           style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 5,
-        }}
+            display: "flex",
+            alignItems: "center",
+            gap: 5,
+          }}
         >
           {renderNewVersionInner()}
         </div>

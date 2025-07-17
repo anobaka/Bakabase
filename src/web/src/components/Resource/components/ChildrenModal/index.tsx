@@ -1,23 +1,30 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Modal, Spinner } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import Resource from '@/components/Resource';
-import { buildLogger } from '@/components/utils';
-import { ResourceAdditionalItem, SearchCombinator, SearchOperation, PropertyPool, InternalProperty } from '@/sdk/constants';
-import { DestroyableProps } from '@/components/bakaui/types';
+import type { DestroyableProps } from "@/components/bakaui/types";
 
-const log = buildLogger('ChildrenModal');
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 
-type ChildrenModalProps ={
+import { Modal, Spinner } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import Resource from "@/components/Resource";
+import { buildLogger } from "@/components/utils";
+import {
+  SearchCombinator,
+  SearchOperation,
+  PropertyPool,
+  InternalProperty,
+} from "@/sdk/constants";
+
+const log = buildLogger("ChildrenModal");
+
+type ChildrenModalProps = {
   resourceId: number;
 } & DestroyableProps;
 
 const ChildrenModal: React.FC<ChildrenModalProps> = ({
   resourceId,
-  onDestroyed
+  onDestroyed,
 }) => {
   const { t } = useTranslation();
   const [children, setChildren] = useState<any[]>([]);
@@ -37,24 +44,29 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         group: {
           combinator: SearchCombinator.And,
           disabled: false,
-          filters: [{
-            propertyPool: PropertyPool.Internal,
-            propertyId: InternalProperty.ParentResource, // ParentResource 属性ID
-            operation: SearchOperation.Equals,
-            dbValue: resourceId.toString(),
-            disabled: false
-          }]
+          filters: [
+            {
+              propertyPool: PropertyPool.Internal,
+              propertyId: InternalProperty.ParentResource, // ParentResource 属性ID
+              operation: SearchOperation.Equals,
+              dbValue: resourceId.toString(),
+              disabled: false,
+            },
+          ],
         },
         page: 1,
-        pageSize: 1000 // 获取更多子资源
+        pageSize: 1000, // 获取更多子资源
       };
 
-      const response = await BApi.resource.searchResources(searchForm, { saveSearch: false });
+      const response = await BApi.resource.searchResources(searchForm, {
+        saveSearch: false,
+      });
+
       setChildren(response.data || []);
-      log('Found children:', response.data?.length || 0);
+      log("Found children:", response.data?.length || 0);
     } catch (err) {
-      console.error('Failed to search children:', err);
-      setError(t<string>('Failed to load children'));
+      console.error("Failed to search children:", err);
+      setError(t<string>("Failed to load children"));
     } finally {
       setLoading(false);
     }
@@ -65,45 +77,45 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
     if (resourceId) {
       searchChildren();
     }
-  }, [ resourceId]);
+  }, [resourceId]);
 
   return (
     <Modal
       defaultVisible
-      title={t<string>('Resource Children')}
-      onDestroyed={onDestroyed}
-      size="xl"
       footer={false}
+      size="xl"
+      title={t<string>("Resource Children")}
+      onDestroyed={onDestroyed}
     >
       <div className="p-4">
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <Spinner size="lg" />
-            <span className="ml-2">{t<string>('Loading children...')}</span>
+            <span className="ml-2">{t<string>("Loading children...")}</span>
           </div>
         ) : error ? (
-          <div className="text-center text-red-500 p-4">
-            {error}
-          </div>
+          <div className="text-center text-red-500 p-4">{error}</div>
         ) : children.length === 0 ? (
           <div className="text-center text-gray-500 p-4">
-            {t<string>('No children found')}
+            {t<string>("No children found")}
           </div>
         ) : (
-          <div className='flex flex-col gap-2'>
+          <div className="flex flex-col gap-2">
             <div>
-              {t<string>('Found {{count}} children', { count: children.length })}
+              {t<string>("Found {{count}} children", {
+                count: children.length,
+              })}
             </div>
             <div className="grid grid-cols-6 gap-4">
               {children.map((child) => (
                 <Resource
                   key={child.id}
-                  resource={child}
                   mode="default"
+                  resource={child}
                   selected={false}
-                  onSelectedResourcesChanged={() => {}}
-                  onSelected={() => {}}
                   selectedResourceIds={[]}
+                  onSelected={() => {}}
+                  onSelectedResourcesChanged={() => {}}
                 />
               ))}
             </div>

@@ -1,9 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import type { FileNameModificationResult } from './index';
-import PreviewItem from './PreviewItem';
-import { useTranslation } from 'react-i18next';
+import type { FileNameModificationResult } from "./index";
+
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+import PreviewItem from "./PreviewItem";
 
 export type { FileNameModificationResult };
 
@@ -13,23 +15,33 @@ interface PreviewListProps {
   commonPrefix: string;
 }
 
-const PreviewList: React.FC<PreviewListProps> = ({ results, showFullPaths, commonPrefix }) => {
+const PreviewList: React.FC<PreviewListProps> = ({
+  results,
+  showFullPaths,
+  commonPrefix,
+}) => {
   const { t } = useTranslation();
+
   if (!results.length) {
-    return <div className="text-gray-400 text-center py-5">{t<string>('FileNameModifier.NoPreviewResults')}</div>;
+    return (
+      <div className="text-gray-400 text-center py-5">
+        {t<string>("FileNameModifier.NoPreviewResults")}
+      </div>
+    );
   }
+
   return (
     <div className="preview-list min-h-0 max-h-full overflow-y-auto">
       {results.map((result, idx) => (
         <PreviewItem
           key={idx}
+          commonPrefix={commonPrefix}
           result={result}
           showFullPaths={showFullPaths}
-          commonPrefix={commonPrefix}
         />
       ))}
     </div>
   );
 };
 
-export default PreviewList; 
+export default PreviewList;

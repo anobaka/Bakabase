@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { Divider, Listbox, ListboxItem, ListboxSection, Spacer, Spinner } from '@/components/bakaui';
-import { ResourceProperty } from '@/sdk/constants';
-import type { MigrationTarget } from '@/pages/migration/components/Target';
-import Target from '@/pages/migration/components/Target';
-import BApi from '@/sdk/BApi';
-import { ErrorLabel } from '@/components/Error';
+import type { MigrationTarget } from "@/pages/migration/components/Target";
+
+import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+
+import { Divider, Spacer, Spinner } from "@/components/bakaui";
+import Target from "@/pages/migration/components/Target";
+import BApi from "@/sdk/BApi";
+import { ErrorLabel } from "@/components/Error";
 
 export default () => {
   const { t } = useTranslation();
@@ -22,10 +23,12 @@ export default () => {
     setLoadingTargets(true);
     try {
       const rsp = await BApi.migration.getMigrationTargets();
+
       if (rsp.code) {
         setError(true);
       } else {
         const ts = rsp.data || [];
+
         // @ts-ignore
         setTargets(ts);
         if (ts.length == 0) {
@@ -46,37 +49,43 @@ export default () => {
   const renderInner = () => {
     if (loadingTargets) {
       return (
-        <div className={'min-h-full flex items-center justify-center text-2xl'}>
+        <div className={"min-h-full flex items-center justify-center text-2xl"}>
           <Spinner />
           <Spacer x={5} />
-          {t<string>('We are checking all the data, this may take up to 1 minute, please wait.')}
+          {t<string>(
+            "We are checking all the data, this may take up to 1 minute, please wait.",
+          )}
         </div>
       );
     }
     if (error) {
       return (
-        <div className={'min-h-full flex items-center justify-center text-2xl'}>
+        <div className={"min-h-full flex items-center justify-center text-2xl"}>
           <ErrorLabel />
-        </div>);
-    }
-    if (allMigrationsAreDone) {
-      return (
-        <div className={'min-h-full flex items-center justify-center text-2xl'}>
-          {t<string>('Congratulations, all data has been migrated')}
         </div>
       );
     }
+    if (allMigrationsAreDone) {
+      return (
+        <div className={"min-h-full flex items-center justify-center text-2xl"}>
+          {t<string>("Congratulations, all data has been migrated")}
+        </div>
+      );
+    }
+
     return (
       <>
-        <div className={'opacity-70'}>
-          {t<string>('Because the new feature is not compatible with some historical data, please complete the data migration before using it.')}
+        <div className={"opacity-70"}>
+          {t<string>(
+            "Because the new feature is not compatible with some historical data, please complete the data migration before using it.",
+          )}
         </div>
         <div>
-          {targets.map(t => (
+          {targets.map((t) => (
             <>
               <Target
-                target={t}
                 isLeaf={!t.subTargets}
+                target={t}
                 onMigrated={loadTargets}
               />
               <Divider />
@@ -89,7 +98,7 @@ export default () => {
   };
 
   return (
-    <div className={'h-full min-h-full max-h-full overflow-auto flex flex-col'}>
+    <div className={"h-full min-h-full max-h-full overflow-auto flex flex-col"}>
       {renderInner()}
     </div>
   );

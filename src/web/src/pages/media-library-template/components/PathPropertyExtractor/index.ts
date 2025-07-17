@@ -1,7 +1,4 @@
-import PathPropertyExtractorDemonstrator from './Demonstrator';
-import PathPropertyExtractorModal from './Modal';
+import PathPropertyExtractorDemonstrator from "./Demonstrator";
+import PathPropertyExtractorModal from "./Modal";
 
-export {
-  PathPropertyExtractorDemonstrator,
-  PathPropertyExtractorModal,
-};
+export { PathPropertyExtractorDemonstrator, PathPropertyExtractorModal };

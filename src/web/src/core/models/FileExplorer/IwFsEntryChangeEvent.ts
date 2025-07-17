@@ -1,4 +1,4 @@
-import type { IwFsEntryChangeType } from '@/sdk/constants';
+import type { IwFsEntryChangeType } from "@/sdk/constants";
 
 export default class {
   type: IwFsEntryChangeType;

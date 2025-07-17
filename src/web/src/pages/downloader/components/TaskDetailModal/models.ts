@@ -1,6 +1,7 @@
-import type { components } from '@/sdk/BApi2';
+import type { components } from "@/sdk/BApi2";
 
-type Form = components['schemas']['Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel'];
+type Form =
+  components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
 
 export type ThirdPartyFormComponentProps<TEnumType> = {
   type: TEnumType;

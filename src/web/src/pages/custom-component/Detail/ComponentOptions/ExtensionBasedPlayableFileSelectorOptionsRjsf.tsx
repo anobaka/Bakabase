@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { NumberPicker, Select } from '@alifd/next';
-import React, { useEffect, useRef, useState } from 'react';
-import { useUpdateEffect } from 'react-use';
-import type { BRjsfProps } from '@/components/BRjsf';
-import BRjsf from '@/components/BRjsf';
+import type { BRjsfProps } from "@/components/BRjsf";
+
+import { NumberPicker, Select } from "@alifd/next";
+import React, { useRef, useState } from "react";
+import { useUpdateEffect } from "react-use";
+
+import BRjsf from "@/components/BRjsf";
 
 export default React.forwardRef((props: BRjsfProps, ref) => {
   // const value = props.value || {};
@@ -21,37 +23,40 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
           }
         }, [value]);
 
-        const convertValue = v => {
+        const convertValue = (v) => {
           if (v && v.length > 0) {
             for (let i = 0; i < v.length; i++) {
-              if (v[i] != undefined && !v[i]?.startsWith('.')) {
+              if (v[i] != undefined && !v[i]?.startsWith(".")) {
                 v[i] = `.${v[i]}`;
               }
             }
           }
-          return v.filter(a => a != undefined);
+
+          return v.filter((a) => a != undefined);
         };
 
         return (
           <Select
             {...props}
             value={value}
-            onChange={v => {
+            onChange={(v) => {
               const av = convertValue(v);
+
               setValue(av);
             }}
-          />);
+          />
+        );
       },
       componentProps: {
-        mode: 'tag',
-        size: 'small',
+        mode: "tag",
+        size: "small",
       },
     },
     maxFileCount: {
-      convertValue: v => parseInt(v),
+      convertValue: (v) => parseInt(v),
       Component: NumberPicker,
       componentProps: {
-        size: 'small',
+        size: "small",
       },
     },
   });

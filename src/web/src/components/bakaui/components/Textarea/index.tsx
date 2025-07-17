@@ -1,6 +1,6 @@
-import { Textarea, TextAreaProps } from '@heroui/react';
+import type { TextAreaProps } from "@heroui/react";
 
-export {
-  TextAreaProps as TextareaProps,
-  Textarea,
-};
+import { Textarea } from "@heroui/react";
+
+export { Textarea };
+export type { TextAreaProps as TextareaProps };

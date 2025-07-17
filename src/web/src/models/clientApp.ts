@@ -1,14 +1,11 @@
 export default {
   state: {
-    firstPageViewed: false
+    firstPageViewed: false,
   },
 
   // 定义改变该模型状态的纯函数
-  reducers: {
-
-  },
+  reducers: {},
 
   // 定义处理该模型副作用的函数
-  effects: (dispatch) => ({
-  }),
+  effects: (dispatch) => ({}),
 };

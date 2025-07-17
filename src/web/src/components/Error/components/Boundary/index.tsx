@@ -1,5 +1,6 @@
-import React from 'react';
-import ErrorModal from '../Modal';
+import React from "react";
+
+import ErrorModal from "../Modal";
 
 interface IErrorProps {
   children?: any;
@@ -28,6 +29,7 @@ class ErrorBoundary extends React.Component<IErrorProps, IErrorState> {
 
   render() {
     const { error } = this.state;
+
     if (error) {
       return <ErrorModal />;
     }

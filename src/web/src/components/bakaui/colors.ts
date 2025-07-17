@@ -1,3 +1,3 @@
 export default {
-  color: getComputedStyle(document.body).getPropertyValue('color'),
+  color: getComputedStyle(document.body).getPropertyValue("color"),
 };

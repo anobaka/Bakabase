@@ -1,3 +1,4 @@
-import type { components } from '@/sdk/BApi2';
+import type { components } from "@/sdk/BApi2";
 
-export type PostParserTask = components['schemas']['Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask'];
+export type PostParserTask =
+  components["schemas"]["Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain.PostParserTask"];

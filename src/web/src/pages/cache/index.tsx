@@ -1,11 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { DeleteOutlined } from '@ant-design/icons';
-import BApi from '@/sdk/BApi';
-import { Button, Card, CardBody, CardFooter, CardHeader, Chip, Divider } from '@/components/bakaui';
-import { ResourceCacheType } from '@/sdk/constants';
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { DeleteOutlined } from "@ant-design/icons";
+
+import BApi from "@/sdk/BApi";
+import {
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Chip,
+  Divider,
+} from "@/components/bakaui";
+import { ResourceCacheType } from "@/sdk/constants";
 
 type CategoryCacheOverview = {
   categoryId: number;
@@ -25,13 +33,13 @@ type CacheOverview = {
   mediaLibraryCaches: MediaLibraryCacheOverview[];
 };
 
-
 export default () => {
   const { t } = useTranslation();
   const [cacheOverview, setCacheOverview] = useState<CacheOverview>();
 
   const reload = async () => {
     const r = await BApi.cache.getCacheOverview();
+
     setCacheOverview(r.data);
   };
 
@@ -41,45 +49,53 @@ export default () => {
 
   return (
     <div>
-      <div className={'text-xl font-bold'}>{t<string>('Media library caches')}</div>
-      <div className={'flex flex-col gap-2'}>
-        {(cacheOverview?.mediaLibraryCaches && cacheOverview.mediaLibraryCaches.length > 0) ? (
-          <div className={'grid grid-cols-4 gap-2'}>
+      <div className={"text-xl font-bold"}>
+        {t<string>("Media library caches")}
+      </div>
+      <div className={"flex flex-col gap-2"}>
+        {cacheOverview?.mediaLibraryCaches &&
+        cacheOverview.mediaLibraryCaches.length > 0 ? (
+          <div className={"grid grid-cols-4 gap-2"}>
             {cacheOverview.mediaLibraryCaches.map((item, idx) => {
               return (
                 <Card>
                   <CardHeader>
                     <div>
                       <div className="text-md">{item.mediaLibraryName}</div>
-                      <div className="text-small text-default-500">{t<string>('Resource count')}: {item.resourceCount}</div>
+                      <div className="text-small text-default-500">
+                        {t<string>("Resource count")}: {item.resourceCount}
+                      </div>
                     </div>
                   </CardHeader>
                   <Divider />
                   <CardBody>
                     {Object.keys(item.resourceCacheCountMap).map((key, idx) => {
                       return (
-                        <div key={idx} className={'flex items-center gap-2'}>
-                          <Chip
-                            size={'sm'}
-                            radius={'sm'}
-                          >
-                            {t<string>('Cached')} {t<string>(ResourceCacheType[key])}
+                        <div key={idx} className={"flex items-center gap-2"}>
+                          <Chip radius={"sm"} size={"sm"}>
+                            {t<string>("Cached")}{" "}
+                            {t<string>(ResourceCacheType[key])}
                           </Chip>
                           {item.resourceCacheCountMap[key]}
                           <Button
-                            size={'sm'}
                             isIconOnly
-                            color={'danger'}
-                            variant={'light'}
+                            color={"danger"}
+                            size={"sm"}
+                            variant={"light"}
                             onClick={() => {
-                              BApi.cache.deleteResourceCacheByMediaLibraryIdAndCacheType(item.mediaLibraryId, parseInt(key, 10) as ResourceCacheType).then(r => {
-                                if (!r.code) {
-                                  reload();
-                                }
-                              });
+                              BApi.cache
+                                .deleteResourceCacheByMediaLibraryIdAndCacheType(
+                                  item.mediaLibraryId,
+                                  parseInt(key, 10) as ResourceCacheType,
+                                )
+                                .then((r) => {
+                                  if (!r.code) {
+                                    reload();
+                                  }
+                                });
                             }}
                           >
-                            <DeleteOutlined className={'text-base'} />
+                            <DeleteOutlined className={"text-base"} />
                           </Button>
                         </div>
                       );
@@ -95,9 +111,12 @@ export default () => {
               );
             })}
           </div>
-        ) : t<string>('No cache for now')}
-        {(cacheOverview?.categoryCaches && cacheOverview.categoryCaches.length > 0) ? (
-          <div className={'grid grid-cols-4 gap-2'}>
+        ) : (
+          t<string>("No cache for now")
+        )}
+        {cacheOverview?.categoryCaches &&
+        cacheOverview.categoryCaches.length > 0 ? (
+          <div className={"grid grid-cols-4 gap-2"}>
             {cacheOverview.categoryCaches.map((item, idx) => {
               return (
                 <Card>
@@ -105,41 +124,44 @@ export default () => {
                     <div>
                       <div className="text-md">
                         {item.categoryName}
-                        <Chip
-                          size={'sm'}
-                          variant={'flat'}
-                          radius={'sm'}
-                        >{t<string>('Deprecated')}</Chip>
+                        <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                          {t<string>("Deprecated")}
+                        </Chip>
                       </div>
-                      <div className="text-small text-default-500">{t<string>('Resource count')}: {item.resourceCount}</div>
+                      <div className="text-small text-default-500">
+                        {t<string>("Resource count")}: {item.resourceCount}
+                      </div>
                     </div>
                   </CardHeader>
                   <Divider />
                   <CardBody>
                     {Object.keys(item.resourceCacheCountMap).map((key, idx) => {
                       return (
-                        <div key={idx} className={'flex items-center gap-2'}>
-                          <Chip
-                            size={'sm'}
-                            radius={'sm'}
-                          >
-                            {t<string>('Cached')} {t<string>(ResourceCacheType[key])}
+                        <div key={idx} className={"flex items-center gap-2"}>
+                          <Chip radius={"sm"} size={"sm"}>
+                            {t<string>("Cached")}{" "}
+                            {t<string>(ResourceCacheType[key])}
                           </Chip>
                           {item.resourceCacheCountMap[key]}
                           <Button
-                            size={'sm'}
                             isIconOnly
-                            color={'danger'}
-                            variant={'light'}
+                            color={"danger"}
+                            size={"sm"}
+                            variant={"light"}
                             onClick={() => {
-                              BApi.cache.deleteResourceCacheByCategoryIdAndCacheType(item.categoryId, parseInt(key, 10) as ResourceCacheType).then(r => {
-                                if (!r.code) {
-                                  reload();
-                                }
-                              });
+                              BApi.cache
+                                .deleteResourceCacheByCategoryIdAndCacheType(
+                                  item.categoryId,
+                                  parseInt(key, 10) as ResourceCacheType,
+                                )
+                                .then((r) => {
+                                  if (!r.code) {
+                                    reload();
+                                  }
+                                });
                             }}
                           >
-                            <DeleteOutlined className={'text-base'} />
+                            <DeleteOutlined className={"text-base"} />
                           </Button>
                         </div>
                       );
@@ -155,7 +177,9 @@ export default () => {
               );
             })}
           </div>
-        ) : t<string>('No cache for now')}
+        ) : (
+          t<string>("No cache for now")
+        )}
       </div>
     </div>
   );

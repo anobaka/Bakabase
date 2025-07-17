@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import CoverSelectOrderComp from './CoverSelectOrder';
-import type {
-  EnhancerTargetFullOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import type { CoverSelectOrder } from '@/sdk/constants';
-import { EnhancerTargetOptionsItem } from '@/sdk/constants';
-import { Checkbox } from '@/components/bakaui';
+import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
+import type { CoverSelectOrder } from "@/sdk/constants";
+
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import CoverSelectOrderComp from "./CoverSelectOrder";
+
+import { EnhancerTargetOptionsItem } from "@/sdk/constants";
 
 type Options = {
   autoMatchMultilevelString?: boolean;
@@ -23,10 +23,14 @@ type Props = {
   isDisabled?: boolean;
 };
 
-export default ({ options: propsOptions, optionsItems, onChange, isDisabled }: Props) => {
+export default ({
+  options: propsOptions,
+  optionsItems,
+  onChange,
+  isDisabled,
+}: Props) => {
   const { t } = useTranslation();
   const [options, setOptions] = useState<Options>(propsOptions ?? {});
-
 
   useEffect(() => {
     setOptions(propsOptions ?? {});
@@ -37,6 +41,7 @@ export default ({ options: propsOptions, optionsItems, onChange, isDisabled }: P
       ...options,
       ...patches,
     };
+
     setOptions(no);
     if (triggerChange) {
       onChange?.(no);
@@ -72,10 +77,10 @@ export default ({ options: propsOptions, optionsItems, onChange, isDisabled }: P
           case EnhancerTargetOptionsItem.CoverSelectOrder:
             return (
               <CoverSelectOrderComp
-                isDisabled={isDisabled}
                 key={item}
                 coverSelectOrder={finalOptions.coverSelectOrder}
-                onChange={o => patchOptions({ coverSelectOrder: o })}
+                isDisabled={isDisabled}
+                onChange={(o) => patchOptions({ coverSelectOrder: o })}
               />
             );
           default:

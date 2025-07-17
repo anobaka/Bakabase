@@ -1,5 +1,8 @@
-import type { ResourceSearchFilterGroup } from './components/FilterPanel/FilterGroupsPanel/models';
-import type { ResourceSearchSortableProperty, ResourceTag } from '@/sdk/constants';
+import type { ResourceSearchFilterGroup } from "./components/FilterPanel/FilterGroupsPanel/models";
+import type {
+  ResourceSearchSortableProperty,
+  ResourceTag,
+} from "@/sdk/constants";
 
 export type SearchForm = {
   group?: ResourceSearchFilterGroup;

@@ -1,9 +1,11 @@
-import toast from 'react-hot-toast';
-import type { FullRequestParams, HttpResponse, ApiConfig } from '@/sdk/Api';
-import { Api, ContentType } from '@/sdk/Api';
-import serverConfig from '@/serverConfig';
-import { buildLogger } from '@/components/utils';
-import { ErrorToast } from '@/components/Error';
+import type { FullRequestParams } from "@/sdk/Api";
+
+import toast from "react-hot-toast";
+
+import { Api } from "@/sdk/Api";
+import envConfig from "@/config/env";
+import { buildLogger } from "@/components/utils";
+import { ErrorToast } from "@/components/Error";
 
 interface BFullRequestParams extends FullRequestParams {
   ignoreError: (rsp) => boolean;
@@ -14,20 +16,24 @@ interface BResponse {
   message?: string;
 }
 
-const log = buildLogger('BApi');
+const log = buildLogger("BApi");
 
 export class BApi extends Api<any> {
   constructor(endpoint: string) {
-    log('Initialize new instance with endpoint', endpoint);
+    log("Initialize new instance with endpoint", endpoint);
     super({
       baseUrl: endpoint,
     });
     const originalRequest = this.request;
-    this.request = async <T = any, E = any>(params: BFullRequestParams): Promise<T> => {
+
+    this.request = async <T = any, E = any>(
+      params: BFullRequestParams,
+    ): Promise<T> => {
       try {
         log(params);
         const rsp = await originalRequest<T, E>(params);
         const typedRsp = rsp as BResponse;
+
         switch (typedRsp?.code) {
           case 0:
             break;
@@ -37,13 +43,27 @@ export class BApi extends Api<any> {
                 return rsp;
               }
             }
-            if ((typedRsp?.code >= 400 || typedRsp?.code < 200)) {
-              if (!params.ignoreError && !typedRsp.message?.includes('SQLite Error')) {
+            if (typedRsp?.code >= 400 || typedRsp?.code < 200) {
+              if (
+                !params.ignoreError &&
+                !typedRsp.message?.includes("SQLite Error")
+              ) {
                 const title = `[${typedRsp.code}]${params.path}`;
-                toast(tst => <ErrorToast toast={tst} title={title} description={typedRsp.message} />, { duration: 5000 });
+
+                toast(
+                  (tst) => (
+                    <ErrorToast
+                      description={typedRsp.message}
+                      title={title}
+                      toast={tst}
+                    />
+                  ),
+                  { duration: 5000 },
+                );
               }
             }
         }
+
         return rsp;
       } catch (error) {
         // switch (error.code) {
@@ -57,16 +77,22 @@ export class BApi extends Api<any> {
         if (!params.signal?.aborted) {
           const title = `${params.path}: 请求异常，请稍后再试。`;
           let description: string;
-          if (typeof error === 'string') {
+
+          if (typeof error === "string") {
             description = error;
-          } else if (error && typeof error.message === 'string') {
+          } else if (error && typeof error.message === "string") {
             description = error.message;
-          } else if (error && typeof error.toString === 'function') {
+          } else if (error && typeof error.toString === "function") {
             description = error.toString();
           } else {
-            description = 'Unknown error';
+            description = "Unknown error";
           }
-          toast(tst => <ErrorToast toast={tst} title={title} description={description} />, { duration: 5000 });
+          toast(
+            (tst) => (
+              <ErrorToast description={description} title={title} toast={tst} />
+            ),
+            { duration: 5000 },
+          );
         }
 
         throw error;
@@ -75,4 +101,4 @@ export class BApi extends Api<any> {
   }
 }
 
-export default new BApi(serverConfig.apiEndpoint!);
+export default new BApi(envConfig.apiEndpoint);

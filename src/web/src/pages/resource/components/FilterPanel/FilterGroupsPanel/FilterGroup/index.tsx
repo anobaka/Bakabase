@@ -1,21 +1,37 @@
-'use client';
+"use client";
 
-'use strict';
+"use strict";
 
-import {useTranslation} from 'react-i18next';
-import React, {useCallback, useEffect, useRef} from 'react';
-import {useUpdate, useUpdateEffect} from 'react-use';
-import {ApiOutlined, AppstoreOutlined, DeleteOutlined, DisconnectOutlined, FilterOutlined} from '@ant-design/icons';
-import type {ResourceSearchFilterGroup} from '../models';
-import {GroupCombinator} from '../models';
-import styles from './index.module.scss';
-import Filter from './Filter';
-import {Button, Checkbox, CheckboxGroup, Divider, Popover, Tooltip} from '@/components/bakaui';
-import {resourceTags, type ResourceTag} from '@/sdk/constants';
-import {buildLogger} from '@/components/utils';
-import ClickableIcon from "@/components/ClickableIcon";
+import type { ResourceSearchFilterGroup } from "../models";
+
+import { useTranslation } from "react-i18next";
+import React, { useCallback, useEffect, useRef } from "react";
+import { useUpdate, useUpdateEffect } from "react-use";
+import {
+  ApiOutlined,
+  AppstoreOutlined,
+  DeleteOutlined,
+  DisconnectOutlined,
+  FilterOutlined,
+} from "@ant-design/icons";
+import { TbFilterPlus } from "react-icons/tb";
+
+import { GroupCombinator } from "../models";
+
+import styles from "./index.module.scss";
+import Filter from "./Filter";
+
+import {
+  Button,
+  Checkbox,
+  CheckboxGroup,
+  Divider,
+  Popover,
+  Tooltip,
+} from "@/components/bakaui";
+import { resourceTags, type ResourceTag } from "@/sdk/constants";
+import { buildLogger } from "@/components/utils";
 import QuickFilter from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/QuickFilter";
-import { TbFilterPlus } from 'react-icons/tb';
 
 type Props = {
   group: ResourceSearchFilterGroup;
@@ -27,82 +43,79 @@ type Props = {
   onTagsChange?: (tags: ResourceTag[]) => void;
 };
 
-const log = buildLogger('FilterGroup');
+const log = buildLogger("FilterGroup");
 
 const FilterGroup = ({
-                       group: propsGroup,
-                       onRemove,
-                       onChange,
-                       isRoot = false,
-                       tags,
-                       onTagsChange,
-                       renderToParent
-                     }: Props) => {
-  const {t} = useTranslation();
+  group: propsGroup,
+  onRemove,
+  onChange,
+  isRoot = false,
+  tags,
+  onTagsChange,
+  renderToParent,
+}: Props) => {
+  const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
-  const [group, setGroup] = React.useState<ResourceSearchFilterGroup>(propsGroup);
+  const [group, setGroup] =
+    React.useState<ResourceSearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
 
+  useEffect(() => {}, []);
 
-  useEffect(() => {
-  }, []);
-
-  const changeGroup = useCallback((newGroup: ResourceSearchFilterGroup) => {
-    setGroup(newGroup);
-    onChange?.(newGroup);
-  }, [onChange]);
+  const changeGroup = useCallback(
+    (newGroup: ResourceSearchFilterGroup) => {
+      setGroup(newGroup);
+      onChange?.(newGroup);
+    },
+    [onChange],
+  );
 
   const renderAddHandler = useCallback(() => {
     return (
       <Popover
         showArrow
-        trigger={(
-          <Button
-            size={'sm'}
-            isIconOnly
-          >
-            <TbFilterPlus className={'text-lg'} />
+        placement={"bottom"}
+        style={{ zIndex: 10 }}
+        trigger={
+          <Button isIconOnly size={"sm"}>
+            <TbFilterPlus className={"text-lg"} />
           </Button>
-        )}
-        placement={'bottom'}
-        style={{zIndex: 10}}
+        }
       >
         <div
-          className={'grid items-center gap-2 my-3 mx-1'}
-          style={{gridTemplateColumns: 'auto auto'}}
+          className={"grid items-center gap-2 my-3 mx-1"}
+          style={{ gridTemplateColumns: "auto auto" }}
         >
-          <QuickFilter onAdded={newFilter => {
-            changeGroup({
-              ...groupRef.current,
-              filters: [
-                ...(groupRef.current.filters || []),
-                newFilter,
-              ],
-            });
-          }}
+          <QuickFilter
+            onAdded={(newFilter) => {
+              changeGroup({
+                ...groupRef.current,
+                filters: [...(groupRef.current.filters || []), newFilter],
+              });
+            }}
           />
-          <div/>
-          <Divider orientation={'horizontal'}/>
-          <div>{t<string>('Advance filter')}</div>
-          <div className={'flex items-center gap-2'}>
+          <div />
+          <Divider orientation={"horizontal"} />
+          <div>{t<string>("Advance filter")}</div>
+          <div className={"flex items-center gap-2"}>
             <Button
-              size={'sm'}
+              size={"sm"}
               onClick={() => {
                 changeGroup({
                   ...groupRef.current,
                   filters: [
                     ...(groupRef.current.filters || []),
-                    {disabled: false},
+                    { disabled: false },
                   ],
                 });
               }}
             >
-              <FilterOutlined className={'text-base'}/>
-              {t<string>('Filter')}
+              <FilterOutlined className={"text-base"} />
+              {t<string>("Filter")}
             </Button>
             <Button
-              size={'sm'}
+              size={"sm"}
               onClick={() => {
                 changeGroup({
                   ...groupRef.current,
@@ -116,24 +129,26 @@ const FilterGroup = ({
                 });
               }}
             >
-              <AppstoreOutlined className={'text-base'}/>
-              {t<string>('Filter group')}
+              <AppstoreOutlined className={"text-base"} />
+              {t<string>("Filter group")}
             </Button>
           </div>
-          <div/>
-          <Divider orientation={'horizontal'}/>
-          <div>{t<string>('Special filters')}</div>
+          <div />
+          <Divider orientation={"horizontal"} />
+          <div>{t<string>("Special filters")}</div>
           <div>
             <CheckboxGroup
-              value={tags?.map(t => t.toString())}
-              onChange={ts => {
-                onTagsChange?.(ts.map(t => parseInt(t, 10) as ResourceTag));
+              size={"sm"}
+              value={tags?.map((t) => t.toString())}
+              onChange={(ts) => {
+                onTagsChange?.(ts.map((t) => parseInt(t, 10) as ResourceTag));
               }}
-              size={'sm'}
             >
-              {resourceTags.map(rt => {
+              {resourceTags.map((rt) => {
                 return (
-                  <Checkbox value={rt.value.toString()}>{t<string>(`ResourceTag.${rt.label}`)}</Checkbox>
+                  <Checkbox value={rt.value.toString()}>
+                    {t<string>(`ResourceTag.${rt.label}`)}
+                  </Checkbox>
                 );
               })}
             </CheckboxGroup>
@@ -144,7 +159,7 @@ const FilterGroup = ({
   }, [changeGroup, tags, onTagsChange, t]);
 
   useEffect(() => {
-    renderToParent?.(renderAddHandler())
+    renderToParent?.(renderAddHandler());
   }, [renderToParent, tags, onTagsChange, renderAddHandler]);
 
   useUpdateEffect(() => {
@@ -155,51 +170,47 @@ const FilterGroup = ({
     setGroup(propsGroup);
   }, [propsGroup]);
 
-  const {
-    filters,
-    groups,
-    combinator,
-  } = group;
+  const { filters, groups, combinator } = group;
 
-  const conditionElements: any[] = (filters || []).map((f, i) => (
-    <Filter
-      key={`f-${i}`}
-      filter={f}
-      onRemove={() => {
-        changeGroup(
-          {
+  const conditionElements: any[] = (filters || [])
+    .map((f, i) => (
+      <Filter
+        key={`f-${i}`}
+        filter={f}
+        onChange={(tf) => {
+          changeGroup({
             ...group,
-            filters: (group.filters || []).filter(fil => fil !== f),
-          },
-        );
-      }}
-      onChange={tf => {
-        changeGroup(
-          {
+            filters: (group.filters || []).map((fil) => (fil === f ? tf : fil)),
+          });
+        }}
+        onRemove={() => {
+          changeGroup({
             ...group,
-            filters: (group.filters || []).map(fil => (fil === f ? tf : fil)),
-          },
-        );
-      }}
-    />
-  )).concat((groups || []).map((g, i) => (
-    <FilterGroup
-      key={`g-${i}`}
-      group={g}
-      onRemove={() => {
-        changeGroup({
-          ...group,
-          groups: (group.groups || []).filter(gr => gr !== g),
-        });
-      }}
-      onChange={tg => {
-        changeGroup({
-          ...group,
-          groups: (group.groups || []).map(gr => (gr === g ? tg : gr)),
-        });
-      }}
-    />
-  )));
+            filters: (group.filters || []).filter((fil) => fil !== f),
+          });
+        }}
+      />
+    ))
+    .concat(
+      (groups || []).map((g, i) => (
+        <FilterGroup
+          key={`g-${i}`}
+          group={g}
+          onChange={(tg) => {
+            changeGroup({
+              ...group,
+              groups: (group.groups || []).map((gr) => (gr === g ? tg : gr)),
+            });
+          }}
+          onRemove={() => {
+            changeGroup({
+              ...group,
+              groups: (group.groups || []).filter((gr) => gr !== g),
+            });
+          }}
+        />
+      )),
+    );
 
   const allElements = conditionElements.reduce((acc, el, i) => {
     acc.push(el);
@@ -207,14 +218,17 @@ const FilterGroup = ({
       acc.push(
         <Button
           key={`c-${i}`}
-          className={'min-w-fit pl-2 pr-2'}
-          color={'default'}
-          variant={'light'}
-          size={'sm'}
+          className={"min-w-fit pl-2 pr-2"}
+          color={"default"}
+          size={"sm"}
+          variant={"light"}
           onClick={() => {
             changeGroup({
               ...group,
-              combinator: GroupCombinator.And == group.combinator ? GroupCombinator.Or : GroupCombinator.And,
+              combinator:
+                GroupCombinator.And == group.combinator
+                  ? GroupCombinator.Or
+                  : GroupCombinator.And,
             });
           }}
         >
@@ -222,29 +236,33 @@ const FilterGroup = ({
         </Button>,
       );
     }
+
     return acc;
   }, []);
 
   // log('tags ', tags?.map(t => t.toString()));
 
   const renderGroup = () => {
-    log('render group');
+    log("render group");
+
     return (
       <div
-        className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ''} ${styles.removable} relative`}
+        className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ""} ${styles.removable} relative`}
       >
         {group.disabled && (
           <div
-            className={'absolute top-0 left-0 w-full h-full flex items-center justify-center z-20 group/group-disable-cover rounded cursor-not-allowed'}
-            style={{backgroundColor: 'hsla(from var(--bakaui-color) h s l / 50%)'}}
+            className={
+              "absolute top-0 left-0 w-full h-full flex items-center justify-center z-20 group/group-disable-cover rounded cursor-not-allowed"
+            }
+            style={{
+              backgroundColor: "hsla(from var(--bakaui-color) h s l / 50%)",
+            }}
           >
-            <Tooltip
-              content={t<string>('Click to enable')}
-            >
+            <Tooltip content={t<string>("Click to enable")}>
               <Button
-                size={'sm'}
-                variant={'light'}
                 isIconOnly
+                size={"sm"}
+                variant={"light"}
                 onClick={() => {
                   changeGroup({
                     ...group,
@@ -252,52 +270,57 @@ const FilterGroup = ({
                   });
                 }}
               >
-                <ApiOutlined className={'text-base group-hover/group-disable-cover:block text-success hidden'}/>
-                <DisconnectOutlined className={'text-base group-hover/group-disable-cover:hidden block'}/>
+                <ApiOutlined
+                  className={
+                    "text-base group-hover/group-disable-cover:block text-success hidden"
+                  }
+                />
+                <DisconnectOutlined
+                  className={
+                    "text-base group-hover/group-disable-cover:hidden block"
+                  }
+                />
               </Button>
             </Tooltip>
           </div>
         )}
         {allElements}
-        {
-          !renderToParent && (
-            renderAddHandler()
-          )
-        }
+        {!renderToParent && renderAddHandler()}
       </div>
     );
   };
 
-  return isRoot ? renderGroup() : (
-    <Tooltip content={(
-      <div
-        className={'flex items-center gap-1'}
-      >
-        <Button
-          size={'sm'}
-          variant={'light'}
-          color={'warning'}
-          onClick={() => {
-            changeGroup({
-              ...group,
-              disabled: true,
-            });
-          }}
-        >
-          <DisconnectOutlined className={'text-base'}/>
-          {t<string>('Disable group')}
-        </Button>
-        <Button
-          size={'sm'}
-          variant={'light'}
-          color={'danger'}
-          onClick={onRemove}
-        >
-          <DeleteOutlined className={'text-base'}/>
-          {t<string>('Delete group')}
-        </Button>
-      </div>
-    )}
+  return isRoot ? (
+    renderGroup()
+  ) : (
+    <Tooltip
+      content={
+        <div className={"flex items-center gap-1"}>
+          <Button
+            color={"warning"}
+            size={"sm"}
+            variant={"light"}
+            onClick={() => {
+              changeGroup({
+                ...group,
+                disabled: true,
+              });
+            }}
+          >
+            <DisconnectOutlined className={"text-base"} />
+            {t<string>("Disable group")}
+          </Button>
+          <Button
+            color={"danger"}
+            size={"sm"}
+            variant={"light"}
+            onClick={onRemove}
+          >
+            <DeleteOutlined className={"text-base"} />
+            {t<string>("Delete group")}
+          </Button>
+        </div>
+      }
     >
       {renderGroup()}
     </Tooltip>

@@ -1,6 +1,6 @@
-import type { EnhancerId, ReservedProperty } from '@/sdk/constants';
-import type { PropertyPool } from '@/sdk/constants';
-import type { EnhancerTargetDescriptor } from '@/components/EnhancerSelectorV2/models';
+import type { EnhancerId } from "@/sdk/constants";
+import type { PropertyPool } from "@/sdk/constants";
+import type { EnhancerTargetDescriptor } from "@/components/EnhancerSelectorV2/models";
 
 export interface CategoryEnhancerFullOptions {
   categoryId: number;
@@ -22,11 +22,15 @@ export interface EnhancerTargetFullOptions {
   propertyPool?: PropertyPool;
 }
 
-export function createEnhancerTargetOptions(descriptor: EnhancerTargetDescriptor): EnhancerTargetFullOptions {
+export function createEnhancerTargetOptions(
+  descriptor: EnhancerTargetDescriptor,
+): EnhancerTargetFullOptions {
   const eto: EnhancerTargetFullOptions = {
     target: descriptor.id,
   };
+
   if (descriptor.optionsItems != undefined) {
   }
+
   return eto;
 }

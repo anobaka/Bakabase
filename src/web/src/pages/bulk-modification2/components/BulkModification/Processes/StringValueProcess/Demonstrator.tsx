@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { Trans, useTranslation } from 'react-i18next';
-import React from 'react';
-import type { StringProcessOptions } from './models';
-import { TextProcessingOperation } from '@/sdk/constants';
-import type { BulkModificationVariable } from '@/pages/bulk-modification2/components/BulkModification/models';
-import {
-  ProcessValueDemonstrator,
-} from '@/pages/bulk-modification2/components/BulkModification/ProcessValue';
-import { buildLogger } from '@/components/utils';
+import type { StringProcessOptions } from "./models";
+import type { BulkModificationVariable } from "@/pages/bulk-modification2/components/BulkModification/models";
+
+import { Trans, useTranslation } from "react-i18next";
+import React from "react";
+
+import { TextProcessingOperation } from "@/sdk/constants";
+import { ProcessValueDemonstrator } from "@/pages/bulk-modification2/components/BulkModification/ProcessValue";
+import { buildLogger } from "@/components/utils";
 
 type Props = {
   operation?: TextProcessingOperation;
@@ -16,14 +16,10 @@ type Props = {
   variables?: BulkModificationVariable[];
 };
 
-const log = buildLogger('StringValueProcessDemonstrator');
+const log = buildLogger("StringValueProcessDemonstrator");
 
 export default (props: Props) => {
-  const {
-    operation,
-    options,
-    variables,
-  } = props;
+  const { operation, options, variables } = props;
   const { t } = useTranslation();
 
   log(props);
@@ -33,7 +29,9 @@ export default (props: Props) => {
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.SetDirectly'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.SetDirectly"
+            }
           >
             <div className="primary" />
             with fixed value
@@ -49,9 +47,14 @@ export default (props: Props) => {
     case TextProcessingOperation.AddToEnd:
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd'}
+          i18nKey={
+            "BulkModification.Processor.Demonstrator.Operation.AddToStartOrEnd"
+          }
           values={{
-            direction: operation == TextProcessingOperation.AddToStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
+            direction:
+              operation == TextProcessingOperation.AddToStart
+                ? t<string>("Position.Beginning")
+                : t<string>("Position.End"),
             value: options?.value,
           }}
         >
@@ -67,9 +70,13 @@ export default (props: Props) => {
     case TextProcessingOperation.AddToAnyPosition:
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition'}
+          i18nKey={
+            "BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition"
+          }
           values={{
-            direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
+            direction: options?.isPositioningDirectionReversed
+              ? t<string>("Position.End")
+              : t<string>("Position.Beginning"),
             position: options?.index,
             value: options?.value,
           }}
@@ -90,9 +97,14 @@ export default (props: Props) => {
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.RemoveFromStartOrEnd"
+            }
             values={{
-              direction: operation == TextProcessingOperation.RemoveFromStart ? t<string>('Position.Beginning') : t<string>('Position.End'),
+              direction:
+                operation == TextProcessingOperation.RemoveFromStart
+                  ? t<string>("Position.Beginning")
+                  : t<string>("Position.End"),
               count: options?.count,
             }}
           >
@@ -105,15 +117,22 @@ export default (props: Props) => {
       );
     case TextProcessingOperation.RemoveFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t<string>('Position.End') : t<string>('Position.Beginning'),
+        direction: options?.isPositioningDirectionReversed
+          ? t<string>("Position.End")
+          : t<string>("Position.Beginning"),
         position: options?.index,
         count: options?.count,
-        removeDirection: options?.isOperationDirectionReversed ? t<string>('TextOperation.Backward') : t<string>('TextOperation.Forward'),
+        removeDirection: options?.isOperationDirectionReversed
+          ? t<string>("TextOperation.Backward")
+          : t<string>("TextOperation.Forward"),
       };
+
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.RemoveFromAnyPosition'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.RemoveFromAnyPosition"
+            }
             values={texts}
           >
             {/* delete 6 characters forward from the fifth character from the end */}
@@ -122,7 +141,7 @@ export default (props: Props) => {
             characters
             <span className="primary">{texts.removeDirection}</span>
             the
-            <span className={'secondary'}>{texts.position}</span>
+            <span className={"secondary"}>{texts.position}</span>
             character from the
             <span className="primary">{texts.direction}</span>
           </Trans>
@@ -132,13 +151,19 @@ export default (props: Props) => {
     case TextProcessingOperation.ReplaceFromStart:
     case TextProcessingOperation.ReplaceFromEnd: {
       const texts = {
-        direction: operation == TextProcessingOperation.ReplaceFromEnd ? t<string>('Position.End') : t<string>('Position.Beginning'),
+        direction:
+          operation == TextProcessingOperation.ReplaceFromEnd
+            ? t<string>("Position.End")
+            : t<string>("Position.Beginning"),
         find: options?.find,
       };
+
       return (
         <>
           <Trans
-            i18nKey={'BulkModification.Processor.Demonstrator.Operation.ReplaceFromStartOrEnd'}
+            i18nKey={
+              "BulkModification.Processor.Demonstrator.Operation.ReplaceFromStartOrEnd"
+            }
             values={texts}
           >
             {/* Replace xxx with yyy from start */}
@@ -163,12 +188,15 @@ export default (props: Props) => {
     }
     case TextProcessingOperation.ReplaceFromAnyPosition: {
       const texts = {
-        direction: options?.isPositioningDirectionReversed ? t<string>('end') : t<string>('start'),
+        direction: options?.isPositioningDirectionReversed
+          ? t<string>("end")
+          : t<string>("start"),
         find: options?.find,
       };
+
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.Replace'}
+          i18nKey={"BulkModification.Processor.Demonstrator.Operation.Replace"}
           values={texts}
         >
           {/* Replace xxx with yyy */}
@@ -189,7 +217,9 @@ export default (props: Props) => {
     case TextProcessingOperation.ReplaceWithRegex: {
       return (
         <Trans
-          i18nKey={'BulkModification.Processor.Demonstrator.Operation.ReplaceWithRegex'}
+          i18nKey={
+            "BulkModification.Processor.Demonstrator.Operation.ReplaceWithRegex"
+          }
           values={{
             find: options?.find,
           }}
@@ -216,17 +246,9 @@ export default (props: Props) => {
       );
     }
     case TextProcessingOperation.Delete: {
-      return (
-        <div className={'primary'}>
-          {t<string>('Delete')}
-        </div>
-      );
+      return <div className={"primary"}>{t<string>("Delete")}</div>;
     }
     default:
-      return (
-        <>
-          {t<string>('Unsupported value')}
-        </>
-      );
+      return <>{t<string>("Unsupported value")}</>;
   }
 };

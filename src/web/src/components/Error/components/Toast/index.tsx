@@ -1,11 +1,18 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import { CheckOutlined, CloseOutlined, CopyOutlined, WarningOutlined } from '@ant-design/icons';
-import type { Toast } from 'react-hot-toast';
-import toast from 'react-hot-toast';
-import { Button, Chip } from '@/components/bakaui';
+import type { Toast } from "react-hot-toast";
+
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import {
+  CheckOutlined,
+  CloseOutlined,
+  CopyOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import toast from "react-hot-toast";
+
+import { Button, Chip } from "@/components/bakaui";
 
 type Props = {
   toast: Toast;
@@ -14,57 +21,55 @@ type Props = {
 };
 
 export default (props: Props) => {
-  const {
-    toast: tst,
-    title,
-    description,
-  } = props;
+  const { toast: tst, title, description } = props;
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
+
   return (
-    <div className={'flex items-center gap-4'}>
-      <Chip
-        variant={'light'}
-        color={'danger'}
-        classNames={{ content: 'flex' }}
-      ><WarningOutlined className={'text-xl'} /></Chip>
-      <div className={'flex flex-col gap-1 break-all'}>
+    <div className={"flex items-center gap-4"}>
+      <Chip classNames={{ content: "flex" }} color={"danger"} variant={"light"}>
+        <WarningOutlined className={"text-xl"} />
+      </Chip>
+      <div className={"flex flex-col gap-1 break-all"}>
         <div>{title}</div>
-        {description && <pre className={'opacity-80 text-xs'}>{description}</pre>}
+        {description && (
+          <pre className={"opacity-80 text-xs"}>{description}</pre>
+        )}
       </div>
-      <div className={'flex items-center'}>
+      <div className={"flex items-center"}>
         <Button
-          size={'sm'}
           isIconOnly
+          size={"sm"}
+          variant={"light"}
           onClick={async () => {
             try {
               let text = title;
+
               if (description) {
                 text += `\n${description}`;
               }
               await navigator.clipboard.writeText(text);
               setCopied(true);
-              console.log('Text copied to clipboard');
+              console.log("Text copied to clipboard");
             } catch (err) {
-              console.error('Failed to copy text: ', err);
+              console.error("Failed to copy text: ", err);
               setCopied(false);
             }
           }}
-          variant={'light'}
         >
           {copied ? (
-            <CheckOutlined className={'text-base'} />
+            <CheckOutlined className={"text-base"} />
           ) : (
-            <CopyOutlined className={'text-base'} />
+            <CopyOutlined className={"text-base"} />
           )}
         </Button>
         <Button
-          size={'sm'}
-          onClick={() => toast.dismiss(tst.id)}
           isIconOnly
-          variant={'light'}
+          size={"sm"}
+          variant={"light"}
+          onClick={() => toast.dismiss(tst.id)}
         >
-          <CloseOutlined className={'text-base'} />
+          <CloseOutlined className={"text-base"} />
         </Button>
       </div>
     </div>

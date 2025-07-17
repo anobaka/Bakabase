@@ -1,10 +1,14 @@
-'use client';
+"use client";
 
-'use strict';
+"use strict";
 
-import { useTranslation } from 'react-i18next';
-import { useEffect, useState } from 'react';
-import { ArrowRightOutlined, SearchOutlined } from '@ant-design/icons';
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
+import { ArrowRightOutlined, SearchOutlined } from "@ant-design/icons";
+
 import {
   Chip,
   Input,
@@ -18,11 +22,9 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-} from '@/components/bakaui';
-import type { IProperty } from '@/components/Property/models';
-import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
-import BApi from '@/sdk/BApi';
-import type { DestroyableProps } from '@/components/bakaui/types';
+} from "@/components/bakaui";
+import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
+import BApi from "@/sdk/BApi";
 
 type BulkModificationDiff = {
   resourcePath: string;
@@ -58,18 +60,19 @@ export default ({ bmId, onDestroyed }: Props) => {
   const TPagination = () => {
     if (pageable.total > 1) {
       return (
-        <div className={'flex justify-end'}>
+        <div className={"flex justify-end"}>
           <Pagination
-            size={'sm'}
-            total={pageable.total}
             page={pageable.page}
-            onChange={page => {
+            size={"sm"}
+            total={pageable.total}
+            onChange={(page) => {
               search(keyword, page);
             }}
           />
         </div>
       );
     }
+
     return null;
   };
 
@@ -78,108 +81,115 @@ export default ({ bmId, onDestroyed }: Props) => {
       ...pageable,
       page,
     });
-    BApi.bulkModification.searchBulkModificationDiffs(bmId, {
-      path: keyword,
-      pageIndex: page,
-      pageSize: PageSize,
-    }).then(r => {
-      setData(r.data || []);
-      setPageable({
-        ...pageable,
-        total: Math.ceil(r.totalCount / PageSize),
+    BApi.bulkModification
+      .searchBulkModificationDiffs(bmId, {
+        path: keyword,
+        pageIndex: page,
+        pageSize: PageSize,
+      })
+      .then((r) => {
+        setData(r.data || []);
+        setPageable({
+          ...pageable,
+          total: Math.ceil(r.totalCount / PageSize),
+        });
       });
-    });
   };
 
   return (
-    <Modal
-      onDestroyed={onDestroyed}
-      defaultVisible
-      size={'xl'}
-    >
+    <Modal defaultVisible size={"xl"} onDestroyed={onDestroyed}>
       <div>
-        <div className={'flex items-center gap-8'}>
+        <div className={"flex items-center gap-8"}>
           <Input
-            size={'sm'}
-            startContent={<SearchOutlined className={'text-base'} />}
-            placeholder={t<string>('Search')}
+            endContent={<Kbd keys={["enter"]} />}
+            placeholder={t<string>("Search")}
+            size={"sm"}
+            startContent={<SearchOutlined className={"text-base"} />}
             value={keyword}
-            onValueChange={e => setKeyword(e)}
-            onKeyDown={e => {
-              if (e.key == 'Enter') {
+            onKeyDown={(e) => {
+              if (e.key == "Enter") {
                 search(keyword, 1);
               }
             }}
-            endContent={<Kbd keys={['enter']} />}
+            onValueChange={(e) => setKeyword(e)}
           />
           <TPagination />
         </div>
       </div>
-      {data ? data.length == 0 ? (
-        <div className={'flex justify-center mt-4'}>
-          <div>
-            <div>{t<string>('No data')}</div>
-            <div>1. {t<string>('Please ensure that the calculation operation has been executed.')}</div>
-            <div>2. {t<string>('If the calculation operation has been executed, there may be no resources that will be changed.')}</div>
-            <div>3. {t<string>('Please check the search criteria.')}</div>
+      {data ? (
+        data.length == 0 ? (
+          <div className={"flex justify-center mt-4"}>
+            <div>
+              <div>{t<string>("No data")}</div>
+              <div>
+                1.{" "}
+                {t<string>(
+                  "Please ensure that the calculation operation has been executed.",
+                )}
+              </div>
+              <div>
+                2.{" "}
+                {t<string>(
+                  "If the calculation operation has been executed, there may be no resources that will be changed.",
+                )}
+              </div>
+              <div>3. {t<string>("Please check the search criteria.")}</div>
+            </div>
           </div>
-        </div>
-      ) : (
-        <Table removeWrapper>
-          <TableHeader>
-            <TableColumn>{t<string>('Resource')}</TableColumn>
-            <TableColumn>{t<string>('Diffs')}</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {data.map(d => {
-              return (
-                <TableRow>
-                  <TableCell>
-                    <div className={'max-w-[600px] break-all'}>
-                      {d.resourcePath}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {d.diffs.map(diff => {
-                      return (
-                        <div className={'flex items-center gap-2'}>
-                          <div className={'flex items-center gap-1'}>
-                            <Chip
-                              size={'sm'}
-                              color={'secondary'}
-                              variant={'flat'}
-                            >
-                              {diff.property.poolName}
-                            </Chip>
-                            <Chip
-                              size={'sm'}
-                              color={'primary'}
-                            >
-                              {diff.property.name}
-                            </Chip>
+        ) : (
+          <Table removeWrapper>
+            <TableHeader>
+              <TableColumn>{t<string>("Resource")}</TableColumn>
+              <TableColumn>{t<string>("Diffs")}</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {data.map((d) => {
+                return (
+                  <TableRow>
+                    <TableCell>
+                      <div className={"max-w-[600px] break-all"}>
+                        {d.resourcePath}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {d.diffs.map((diff) => {
+                        return (
+                          <div className={"flex items-center gap-2"}>
+                            <div className={"flex items-center gap-1"}>
+                              <Chip
+                                color={"secondary"}
+                                size={"sm"}
+                                variant={"flat"}
+                              >
+                                {diff.property.poolName}
+                              </Chip>
+                              <Chip color={"primary"} size={"sm"}>
+                                {diff.property.name}
+                              </Chip>
+                            </div>
+                            <div className={"flex items-center gap-1"}>
+                              <PropertyValueRenderer
+                                bizValue={diff.value1}
+                                property={diff.property}
+                              />
+                              <ArrowRightOutlined className={"text-base"} />
+                              <PropertyValueRenderer
+                                bizValue={diff.value2}
+                                property={diff.property}
+                              />
+                            </div>
                           </div>
-                          <div className={'flex items-center gap-1'}>
-                            <PropertyValueRenderer
-                              bizValue={diff.value1}
-                              property={diff.property}
-                            />
-                            <ArrowRightOutlined className={'text-base'} />
-                            <PropertyValueRenderer
-                              bizValue={diff.value2}
-                              property={diff.property}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                        );
+                      })}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )
       ) : (
-        <div className={'flex justify-center mt-12'}>
+        <div className={"flex justify-center mt-12"}>
           <Spinner />
         </div>
       )}

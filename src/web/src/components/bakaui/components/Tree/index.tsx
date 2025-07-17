@@ -1,3 +1,3 @@
-import { Tree } from 'antd';
+import { Tree } from "antd";
 
 export default Tree;

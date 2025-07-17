@@ -1,10 +1,14 @@
-'use client';
+"use client";
 
-import { SketchPicker } from 'react-color';
-import React, { useEffect, useState } from 'react';
-import { Popover } from '@/components/bakaui';
+import { SketchPicker } from "react-color";
+import React, { useEffect, useState } from "react";
 
-type Color = string | { r: number; g: number; b: number; a: number } | { h: number; s: number; l: number; a: number };
+import { Popover } from "@/components/bakaui";
+
+type Color =
+  | string
+  | { r: number; g: number; b: number; a: number }
+  | { h: number; s: number; l: number; a: number };
 
 interface ColorPickerProps {
   trigger?: any;
@@ -15,53 +19,58 @@ interface ColorPickerProps {
 
 export function buildColorValueString(color: Color) {
   const strColor = color as string;
+
   if (strColor) {
     return strColor;
   }
   const rgbColor = color as { r: number; g: number; b: number; a: number };
+
   if (rgbColor) {
     return `rgba(${rgbColor.r},${rgbColor.g},${rgbColor.b},${rgbColor.a})`;
   }
   const hslColor = color as { h: number; s: number; l: number; a: number };
+
   if (hslColor) {
     return `hsla(${hslColor.h},${hslColor.s}%,${hslColor.l}%,${hslColor.a})`;
   }
-  return '';
+
+  return "";
 }
 
-const ColorPicker = ({
-                       trigger,
-                       ...props
-                     }: ColorPickerProps) => {
+const ColorPicker = ({ trigger, ...props }: ColorPickerProps) => {
   const [panelVisible, setPanelVisible] = React.useState(false);
   const [color, setColor] = useState(props.defaultColor ?? props.color);
 
   useEffect(() => {
     setColor(props.color);
-  }, [props.color])
+  }, [props.color]);
 
   // console.log(props, color);
 
   return (
     <Popover
-      closeMode={['mask', 'esc']}
-      trigger={(
+      closeMode={["mask", "esc"]}
+      trigger={
         trigger ?? (
           <div
-            className={'inline-block rounded cursor-pointer border border-gray-300 p-0.5 text-center'}
+            className={
+              "inline-block rounded cursor-pointer border border-gray-300 p-0.5 text-center"
+            }
             onClick={() => {
               setPanelVisible(true);
             }}
           >
             <div
-              className={'p-2'}
+              className={"p-2"}
               style={{
-                backgroundColor: color ? buildColorValueString(color) : 'var(--bakaui-color)',
+                backgroundColor: color
+                  ? buildColorValueString(color)
+                  : "var(--bakaui-color)",
               }}
             />
           </div>
         )
-      )}
+      }
       visible={panelVisible}
       onVisibleChange={setPanelVisible}
     >

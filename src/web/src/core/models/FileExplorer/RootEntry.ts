@@ -1,16 +1,23 @@
-import diff from 'deep-diff';
-import _ from 'lodash';
-import type { IEntryFilter } from '@/core/models/FileExplorer/Entry';
-import { Entry } from '@/core/models/FileExplorer/Entry';
-import BusinessConstants from '@/components/BusinessConstants';
-import BApi from '@/sdk/BApi';
-import { buildLogger, splitPathIntoSegments } from '@/components/utils';
-import { BTaskResourceType, BTaskStatus, IwFsEntryChangeType, IwFsType } from '@/sdk/constants';
-import type { BTask } from '@/core/models/BTask';
-import { useBTasksStore } from '@/models/bTasks';
-import { useIwFsEntryChangeEventsStore } from '@/models/iwFsEntryChangeEvents';
+import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
+import type { BTask } from "@/core/models/BTask";
 
-const log = buildLogger('RootEntry');
+import diff from "deep-diff";
+import _ from "lodash";
+
+import { Entry } from "@/core/models/FileExplorer/Entry";
+import BusinessConstants from "@/components/BusinessConstants";
+import BApi from "@/sdk/BApi";
+import { buildLogger, splitPathIntoSegments } from "@/components/utils";
+import {
+  BTaskResourceType,
+  BTaskStatus,
+  IwFsEntryChangeType,
+  IwFsType,
+} from "@/sdk/constants";
+import { useBTasksStore } from "@/models/bTasks";
+import { useIwFsEntryChangeEventsStore } from "@/models/iwFsEntryChangeEvents";
+
+const log = buildLogger("RootEntry");
 
 enum RenderType {
   ForceUpdate = 1,
@@ -31,21 +38,25 @@ class RenderingQueue {
 
   deQueueAll(): RenderingQueueItem[] {
     const q = this._queue;
+
     this._queue = [];
+
     return q;
   }
 
   shrink() {
     const map: { [key: string]: RenderType } = {};
+
     for (const i in this._queue) {
       const item = this._queue[i]!;
+
       if (item.path in map) {
         map[item.path] |= item.type;
       } else {
         map[item.path] = item.type;
       }
     }
-    this._queue = Object.keys(map).map<RenderingQueueItem>(x => ({
+    this._queue = Object.keys(map).map<RenderingQueueItem>((x) => ({
       path: x,
       type: map[x]!,
     }));
@@ -75,20 +86,30 @@ class RootEntry extends Entry {
   async _compareBTasks(renderingQueue: RenderingQueue) {
     const self = this;
     const bTasks = useBTasksStore.getState().tasks;
-    const targetTasks = bTasks.filter(x => x.resourceType == BTaskResourceType.FileSystemEntry &&
-      (x.status == BTaskStatus.Running || x.status == BTaskStatus.Paused || x.status == BTaskStatus.Error || x.status == BTaskStatus.NotStarted));
-    const targetTasksMap: Record<string, BTask[]> = _.flatMap(targetTasks, t => (t.resourceKeys ?? []).map(k => ({
-      path: k as string,
-      task: t,
-    })))
-      .reduce((s, t) => {
-        if (t.path in s) {
-          s[t.path].push(t.task);
-        } else {
-          s[t.path] = [t.task];
-        }
-        return s;
-      }, {});
+    const targetTasks = bTasks.filter(
+      (x) =>
+        x.resourceType == BTaskResourceType.FileSystemEntry &&
+        (x.status == BTaskStatus.Running ||
+          x.status == BTaskStatus.Paused ||
+          x.status == BTaskStatus.Error ||
+          x.status == BTaskStatus.NotStarted),
+    );
+    const targetTasksMap: Record<string, BTask[]> = _.flatMap(
+      targetTasks,
+      (t) =>
+        (t.resourceKeys ?? []).map((k) => ({
+          path: k as string,
+          task: t,
+        })),
+    ).reduce((s, t) => {
+      if (t.path in s) {
+        s[t.path].push(t.task);
+      } else {
+        s[t.path] = [t.task];
+      }
+
+      return s;
+    }, {});
 
     // log(targetTasks);
 
@@ -97,8 +118,9 @@ class RootEntry extends Entry {
       const prevTask = node.task;
       const incomingTasks = targetTasksMap[path] ?? [];
       let task = incomingTasks[0];
+
       if (incomingTasks.length > 1) {
-        task = _.sortBy(incomingTasks, x => {
+        task = _.sortBy(incomingTasks, (x) => {
           switch (x.status) {
             case BTaskStatus.Error:
               return -1;
@@ -115,8 +137,16 @@ class RootEntry extends Entry {
         })[0];
       }
       const differences = diff(prevTask, task);
+
       if (differences) {
-        log('TaskChanged', differences, 'current: ', task, 'previous: ', prevTask);
+        log(
+          "TaskChanged",
+          differences,
+          "current: ",
+          task,
+          "previous: ",
+          prevTask,
+        );
         renderingQueue.push(path, RenderType.ForceUpdate);
         node.task = task;
       }
@@ -132,8 +162,9 @@ class RootEntry extends Entry {
       // ... 其它 action如有
     };
     const { events } = data;
+
     if (events.length > 0) {
-      log('handling events', events, self);
+      log("handling events", events, self);
       dispatchers.clear();
 
       // Performance optimization
@@ -145,8 +176,10 @@ class RootEntry extends Entry {
       // path - event index
       const taskCache: { [key: string]: number } = {};
       const redundantTaskEventIndexes: number[] = [];
+
       for (let i = 0; i < events.length; i++) {
         const e = events[i]!;
+
         if (e.type == IwFsEntryChangeType.TaskChanged) {
           if (e.path in taskCache) {
             redundantTaskEventIndexes.push(taskCache[e.path]!);
@@ -154,27 +187,51 @@ class RootEntry extends Entry {
           taskCache[e.path] = i;
         }
       }
-      const filteredEvents = events.filter((_, i) => !redundantTaskEventIndexes.includes(i));
+      const filteredEvents = events.filter(
+        (_, i) => !redundantTaskEventIndexes.includes(i),
+      );
+
       if (filteredEvents.length != events.length) {
-        log(`Reduced ${events.length - filteredEvents.length} task events for same path`, filteredEvents);
+        log(
+          `Reduced ${events.length - filteredEvents.length} task events for same path`,
+          filteredEvents,
+        );
       }
 
       for (let i = 0; i < filteredEvents.length; i++) {
         const evt = filteredEvents[i]!;
-        const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
+        const changedEntryPath =
+          evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
         const changedEntry: Entry | undefined = self.nodeMap[changedEntryPath];
         const segments = splitPathIntoSegments(evt.path);
-        const parentPath = segments.slice(0, segments.length - 1).join(BusinessConstants.pathSeparator);
+        const parentPath = segments
+          .slice(0, segments.length - 1)
+          .join(BusinessConstants.pathSeparator);
         const parent: Entry | undefined = self.nodeMap[parentPath];
-        log('Try to locate parent', 'path:', parentPath, 'parent:', parent, 'nodeMap:', self.nodeMap);
-        log(`File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`, 'Event: ', evt, 'Entry: ', changedEntry);
+
+        log(
+          "Try to locate parent",
+          "path:",
+          parentPath,
+          "parent:",
+          parent,
+          "nodeMap:",
+          self.nodeMap,
+        );
+        log(
+          `File system entry changed: [${IwFsEntryChangeType[evt.type]}]${evt.path}`,
+          "Event: ",
+          evt,
+          "Entry: ",
+          changedEntry,
+        );
 
         if (!changedEntry) {
           if (parent) {
             switch (evt.type) {
               case IwFsEntryChangeType.Created:
                 await parent.addChildByPath(evt.path, false);
-                log('Add to children', evt.path, parent.children);
+                log("Add to children", evt.path, parent.children);
                 renderingQueue.push(parent.path, RenderType.Children);
                 break;
               case IwFsEntryChangeType.Renamed:
@@ -223,14 +280,18 @@ class RootEntry extends Entry {
   async initialize() {
     if (!this._initialized) {
       this._initialized = true;
-      log('Initializing...', this);
+      log("Initializing...", this);
       await this._stop();
       // @ts-ignore
       if (this.path) {
-        log('Start watching', this.path, this);
-        await BApi.file.startWatchingChangesInFileProcessorWorkspace({ path: this.path }, { ignoreError: () => true });
+        log("Start watching", this.path, this);
+        await BApi.file.startWatchingChangesInFileProcessorWorkspace(
+          { path: this.path },
+          { ignoreError: () => true },
+        );
         const renderingQueue = new RenderingQueue();
         const self = this;
+
         this._fsWatcher = setInterval(async () => {
           if (self._processingFsEvents) {
             return;
@@ -241,17 +302,17 @@ class RootEntry extends Entry {
           await self._compareBTasks(renderingQueue);
 
           const originalRenderingTimes = renderingQueue.length;
+
           renderingQueue.shrink();
           let actualRenderingTimes = 0;
 
           const rq = renderingQueue.deQueueAll();
+
           // log('RenderingQueue', rq);
           for (let i = 0; i < rq.length; i++) {
-            const {
-              path,
-              type,
-            } = rq[i]!;
+            const { path, type } = rq[i]!;
             const entry = self.nodeMap[path];
+
             if (entry) {
               if (type & RenderType.Children) {
                 entry.renderChildren();
@@ -265,7 +326,10 @@ class RootEntry extends Entry {
           }
 
           if (actualRenderingTimes != originalRenderingTimes) {
-            log(`Reduced ${originalRenderingTimes - actualRenderingTimes} rendering times totally`, rq);
+            log(
+              `Reduced ${originalRenderingTimes - actualRenderingTimes} rendering times totally`,
+              rq,
+            );
           }
 
           self._processingFsEvents = false;
@@ -276,7 +340,8 @@ class RootEntry extends Entry {
 
       this._resizeObserver = new ResizeObserver((c) => {
         const parent = c[0];
-        log('Size of parent changed', parent);
+
+        log("Size of parent changed", parent);
         this.recalculateChildrenWidth();
       });
       this._resizeObserver.observe(this._ref!.dom!);
@@ -286,13 +351,12 @@ class RootEntry extends Entry {
   async _stop() {
     // if (this._fsWatcher) {
     // console.trace();
-    log('Stopping watcher', this, this.path, this._fsWatcher);
+    log("Stopping watcher", this, this.path, this._fsWatcher);
     clearInterval(this._fsWatcher);
     await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
     useIwFsEntryChangeEventsStore.getState().clear();
     // }
   }
-
 
   async dispose(): Promise<void> {
     await this._stop();
@@ -306,6 +370,5 @@ class RootEntry extends Entry {
     this.nodeMap[this.path] = this;
   }
 }
-
 
 export default RootEntry;

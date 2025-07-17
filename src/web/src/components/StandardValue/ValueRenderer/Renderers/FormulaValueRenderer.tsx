@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import type { ValueRendererProps } from '../models';
+import type { ValueRendererProps } from "../models";
 
-type FormulaValueRendererProps = Omit<ValueRendererProps<string>, 'variant'> & {
-  variant: ValueRendererProps<string>['variant'];
+import { useTranslation } from "react-i18next";
+
+type FormulaValueRendererProps = Omit<ValueRendererProps<string>, "variant"> & {
+  variant: ValueRendererProps<string>["variant"];
 };
 
-export default ({ value, variant, editor, ...props }: FormulaValueRendererProps) => {
+export default ({
+  value,
+  variant,
+  editor,
+  ...props
+}: FormulaValueRendererProps) => {
   const { t } = useTranslation();
 
-  const v = variant ?? 'default';
+  const v = variant ?? "default";
 
-  return (
-    <span>{t<string>('Not supported')}</span>
-  );
+  return <span>{t<string>("Not supported")}</span>;
 };

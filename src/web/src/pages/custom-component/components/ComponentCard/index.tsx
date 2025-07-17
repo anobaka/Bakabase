@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import './index.scss';
-import type { DOMAttributes } from 'react';
-import i18n from 'i18next';
-import { Balloon, Button, Dialog } from '@alifd/next';
-import { useEffect, useRef, useState } from 'react';
-import IceLabel from '@icedesign/label';
-import { useTranslation } from 'react-i18next';
-import type { BakabaseInsideWorldModelsModelsDtosComponentDescriptor } from '@/sdk/Api';
-import CustomIcon from '@/components/CustomIcon';
-import { ComponentDescriptorType, ComponentType } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
-import ComponentDetail from '@/pages/custom-component/Detail';
-import { extractEnhancerTargetDescription } from '@/components/utils';
-import ClickableIcon from '@/components/ClickableIcon';
-import SimpleLabel from '@/components/SimpleLabel';
+import "./index.scss";
+import type { DOMAttributes } from "react";
+import type { BakabaseInsideWorldModelsModelsDtosComponentDescriptor } from "@/sdk/Api";
+
+import { Dialog } from "@alifd/next";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import CustomIcon from "@/components/CustomIcon";
+import { ComponentDescriptorType, ComponentType } from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+import ComponentDetail from "@/pages/custom-component/Detail";
+import { extractEnhancerTargetDescription } from "@/components/utils";
+import ClickableIcon from "@/components/ClickableIcon";
+import SimpleLabel from "@/components/SimpleLabel";
 
 interface DescriptorCardProps extends DOMAttributes<unknown> {
   descriptor: BakabaseInsideWorldModelsModelsDtosComponentDescriptor;
@@ -24,12 +24,12 @@ interface DescriptorCardProps extends DOMAttributes<unknown> {
 
 const TypeLabelProps = {
   [ComponentDescriptorType.Fixed]: {
-    status: 'default',
-    label: 'Reserved',
+    status: "default",
+    label: "Reserved",
   },
   [ComponentDescriptorType.Instance]: {
-    status: 'info',
-    label: 'Custom',
+    status: "info",
+    label: "Custom",
   },
 };
 
@@ -50,15 +50,20 @@ export default (props: DescriptorCardProps) => {
     setDescriptor(propsDescriptor);
   }, [propsDescriptor]);
 
-  console.log('Rendering', props);
+  console.log("Rendering", props);
 
   const renderExtra = () => {
     switch (descriptor.componentType) {
       case ComponentType.Enhancer: {
         if (descriptor.targets?.length > 0) {
-          const descriptions = descriptor.targets.map(t => extractEnhancerTargetDescription(t));
-          const descriptionGroups = descriptions.reduce<{type: string; keys: string[]}[]>((s, t) => {
-            let g = s.find(g => g.type == t.type);
+          const descriptions = descriptor.targets.map((t) =>
+            extractEnhancerTargetDescription(t),
+          );
+          const descriptionGroups = descriptions.reduce<
+            { type: string; keys: string[] }[]
+          >((s, t) => {
+            let g = s.find((g) => g.type == t.type);
+
             if (g == undefined) {
               g = {
                 type: t.type,
@@ -67,21 +72,28 @@ export default (props: DescriptorCardProps) => {
               s.push(g);
             }
             g.keys.push(t.key);
+
             return s;
           }, []);
+
           return (
-            <div className={'target-groups'}>
+            <div className={"target-groups"}>
               {descriptionGroups.map((t, i) => {
                 return (
-                  <div className={'group'} key={t.type}>
+                  <div key={t.type} className={"group"}>
                     {t.type}
-                    {t.keys.map(k => (<SimpleLabel key={k} status={'default'}>{k}</SimpleLabel>))}
+                    {t.keys.map((k) => (
+                      <SimpleLabel key={k} status={"default"}>
+                        {k}
+                      </SimpleLabel>
+                    ))}
                   </div>
                 );
               })}
             </div>
           );
         }
+
         return;
       }
       default:
@@ -92,24 +104,35 @@ export default (props: DescriptorCardProps) => {
   const categories = descriptor?.associatedCategories ?? [];
 
   return (
-    <div className={`component-card ${selected ? 'selected' : ''}`} {...otherProps} ref={domRef}>
+    <div
+      className={`component-card ${selected ? "selected" : ""}`}
+      {...otherProps}
+      ref={domRef}
+    >
       {selected && (
-        <CustomIcon className={'selected-icon'} type={'check-circle'} size={'large'} />
+        <CustomIcon
+          className={"selected-icon"}
+          size={"large"}
+          type={"check-circle"}
+        />
       )}
       {descriptor.type == ComponentDescriptorType.Instance && (
-        <div className={'top-right-operations'}>
+        <div className={"top-right-operations"}>
           <div
-            className={'edit'}
-            onClick={e => {
+            className={"edit"}
+            onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               ComponentDetail.show({
                 componentType: descriptor.componentType,
                 componentKey: descriptor.id,
-                onClosed: hasChanges => {
+                onClosed: (hasChanges) => {
                   if (hasChanges) {
-                    BApi.component.getComponentDescriptorByKey({ key: descriptor.optionsId })
-                      .then(a => {
+                    BApi.component
+                      .getComponentDescriptorByKey({
+                        key: descriptor.optionsId,
+                      })
+                      .then((a) => {
                         setDescriptor(a.data);
                       });
                   }
@@ -117,29 +140,32 @@ export default (props: DescriptorCardProps) => {
               });
             }}
           >
-            <ClickableIcon colorType={'normal'} type={'edit-square'} />
+            <ClickableIcon colorType={"normal"} type={"edit-square"} />
           </div>
           <div
-            className={'delete'}
-            onClick={e => {
+            className={"delete"}
+            onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
               Dialog.confirm({
-                title: t<string>('Sure to delete?'),
-                content: t<string>(''),
+                title: t<string>("Sure to delete?"),
+                content: t<string>(""),
                 v2: true,
-                closeMode: ['mask', 'esc', 'close'],
-                onOk: () => BApi.componentOptions.removeComponentOptions(descriptor.optionsId).then(a => {
-                  if (!a.code) {
-                    if (onDeleted) {
-                      onDeleted();
-                    }
-                  }
-                }),
+                closeMode: ["mask", "esc", "close"],
+                onOk: () =>
+                  BApi.componentOptions
+                    .removeComponentOptions(descriptor.optionsId)
+                    .then((a) => {
+                      if (!a.code) {
+                        if (onDeleted) {
+                          onDeleted();
+                        }
+                      }
+                    }),
               });
             }}
           >
-            <ClickableIcon colorType={'danger'} type={'delete'} />
+            <ClickableIcon colorType={"danger"} type={"delete"} />
           </div>
         </div>
       )}
@@ -147,33 +173,43 @@ export default (props: DescriptorCardProps) => {
         <div className="name">
           {labelProps && (
             <>
-              <SimpleLabel status={labelProps.status}>{t<string>(labelProps.label)}</SimpleLabel>
+              <SimpleLabel status={labelProps.status}>
+                {t<string>(labelProps.label)}
+              </SimpleLabel>
               &nbsp;
             </>
           )}
           {t<string>(descriptor.name)}
         </div>
-        {descriptor.description && <div className="description">{t<string>(descriptor.description)}</div>}
+        {descriptor.description && (
+          <div className="description">{t<string>(descriptor.description)}</div>
+        )}
         {renderExtra()}
       </div>
       <div className="bottom">
         {categories.length > 0 && (
           <div className="categories">
             <div className="label">
-              {t<string>('Applied to {{count}} categories', { count: categories.length })}
+              {t<string>("Applied to {{count}} categories", {
+                count: categories.length,
+              })}
             </div>
           </div>
         )}
         <div className="versions">
           <SimpleLabel
-            status={'default'}
-            className={`version ${descriptor.version?.length > 0 ? '' : 'empty'}`}
-            title={`${t<string>('Version')}:${t<string>('May be different in incoming versions of app')}`}
-          >{descriptor.version}</SimpleLabel>
+            className={`version ${descriptor.version?.length > 0 ? "" : "empty"}`}
+            status={"default"}
+            title={`${t<string>("Version")}:${t<string>("May be different in incoming versions of app")}`}
+          >
+            {descriptor.version}
+          </SimpleLabel>
           <SimpleLabel
-            className={`version ${descriptor.dataVersion?.length > 0 ? '' : 'empty'}`}
-            title={`${t<string>('Data version')}:${t<string>('May be different after configuration change')}`}
-          >{descriptor.dataVersion}</SimpleLabel>
+            className={`version ${descriptor.dataVersion?.length > 0 ? "" : "empty"}`}
+            title={`${t<string>("Data version")}:${t<string>("May be different after configuration change")}`}
+          >
+            {descriptor.dataVersion}
+          </SimpleLabel>
         </div>
       </div>
     </div>

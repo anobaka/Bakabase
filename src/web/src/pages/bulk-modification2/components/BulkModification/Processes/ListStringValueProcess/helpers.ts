@@ -1,11 +1,11 @@
-import { validate as validateStringValueProcessOptions } from '../StringValueProcess/helpers';
-import type { EditingListStringValueProcessOptions } from './models';
+import type { EditingListStringValueProcessOptions } from "./models";
+
+import { validate as validateStringValueProcessOptions } from "../StringValueProcess/helpers";
+
 import {
   BulkModificationListStringProcessOperation,
   BulkModificationProcessorOptionsItemsFilterBy,
-} from '@/sdk/constants';
-import type { RecursivePartial } from '@/components/types';
-import { validate as validateValue } from '@/pages/bulk-modification2/components/BulkModification/ProcessValue/helpers';
+} from "@/sdk/constants";
 
 export const validate = (
   operation: BulkModificationListStringProcessOperation,
@@ -16,38 +16,42 @@ export const validate = (
   }
 
   if (!options) {
-    return 'Please provide valid options';
+    return "Please provide valid options";
   }
 
-  const {
-    value,
-    valueType,
-    isOperationDirectionReversed,
-    modifyOptions,
-  } = options;
+  const { value, valueType, isOperationDirectionReversed, modifyOptions } =
+    options;
 
   switch (operation) {
     case BulkModificationListStringProcessOperation.SetWithFixedValue:
     case BulkModificationListStringProcessOperation.Append:
     case BulkModificationListStringProcessOperation.Prepend:
       if (!value) {
-        return 'Value is required';
+        return "Value is required";
       }
       break;
     case BulkModificationListStringProcessOperation.Modify:
       if (modifyOptions == undefined) {
-        return 'Modify options are required';
+        return "Modify options are required";
       }
 
-      if (modifyOptions.filterBy != BulkModificationProcessorOptionsItemsFilterBy.All && (modifyOptions.filterValue == undefined || modifyOptions.filterValue.length == 0)) {
-        return 'Filter value is required';
+      if (
+        modifyOptions.filterBy !=
+          BulkModificationProcessorOptionsItemsFilterBy.All &&
+        (modifyOptions.filterValue == undefined ||
+          modifyOptions.filterValue.length == 0)
+      ) {
+        return "Filter value is required";
       }
 
       if (modifyOptions.operation == undefined) {
-        return 'Operation is required';
+        return "Operation is required";
       }
 
-      return validateStringValueProcessOptions(modifyOptions.operation, modifyOptions.options);
+      return validateStringValueProcessOptions(
+        modifyOptions.operation,
+        modifyOptions.options,
+      );
   }
 
   return;

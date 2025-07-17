@@ -1,13 +1,17 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useAsyncList } from '@react-stately/data';
-import { useState } from 'react';
-import { ReloadOutlined } from '@ant-design/icons';
-import { Autocomplete, AutocompleteItem, Button, Chip } from '@/components/bakaui';
-import type { Resource as ResourceModel } from '@/core/models/Resource';
-import BApi from '@/sdk/BApi';
-import { buildLogger } from '@/components/utils';
+import { useTranslation } from "react-i18next";
+import { useAsyncList } from "@react-stately/data";
+import { ReloadOutlined } from "@ant-design/icons";
+
+import {
+  Autocomplete,
+  AutocompleteItem,
+  Button,
+  Chip,
+} from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { buildLogger } from "@/components/utils";
 
 type Props = {
   onSelect: (id: number) => any;
@@ -20,33 +24,33 @@ type Item = {
   id: number;
 };
 
-const log = buildLogger('ToResourceSelector');
+const log = buildLogger("ToResourceSelector");
 
-export default ({
-                  onSelect,
-                  fromResourcePath,
-                }: Props) => {
+export default ({ onSelect, fromResourcePath }: Props) => {
   const { t } = useTranslation();
 
   const targetResourceCandidates = useAsyncList<Item>({
-    async load({
-                 signal,
-                 filterText,
-               }) {
+    async load({ signal, filterText }) {
       if (filterText != undefined && filterText.length > 0) {
         const trim = filterText.trim();
-        const res = await BApi.resource.searchResourcePaths({ keyword: trim }, { signal });
+        const res = await BApi.resource.searchResourcePaths(
+          { keyword: trim },
+          { signal },
+        );
         const data = res.data || [];
         const isOverflow = data.length > 20;
-        const listItems: Item[] = data.slice(0, 20).map(d => ({
+        const listItems: Item[] = data.slice(0, 20).map((d) => ({
           id: d.id,
           path: d.path,
           fileName: d.fileName,
         }));
+
         if (isOverflow) {
           listItems.push({
             id: 0,
-            fileName: t<string>('20 results can be shown at most, please refine your search'),
+            fileName: t<string>(
+              "20 results can be shown at most, please refine your search",
+            ),
           });
         }
 
@@ -65,43 +69,51 @@ export default ({
   // log('default input value');
 
   return (
-    <div className={'mb-4'}>
+    <div className={"mb-4"}>
       <Autocomplete
-        isRequired
-        label={t<string>('Input keyword of the resource path to select the target resource')}
-        inputValue={targetResourceCandidates.filterText}
         fullWidth
-        onInputChange={targetResourceCandidates.setFilterText}
-        items={targetResourceCandidates.items}
-        radius={'none'}
-        size={'sm'}
+        isRequired
+        description={t<string>(
+          "You may need modify the default keyword to search the expected resources",
+        )}
+        inputValue={targetResourceCandidates.filterText}
         isLoading={targetResourceCandidates.isLoading}
+        items={targetResourceCandidates.items}
+        label={t<string>(
+          "Input keyword of the resource path to select the target resource",
+        )}
         listboxProps={{
-          emptyContent: t<string>('Can not find any resource'),
+          emptyContent: t<string>("Can not find any resource"),
         }}
-        onSelectionChange={key => {
+        radius={"none"}
+        size={"sm"}
+        onInputChange={targetResourceCandidates.setFilterText}
+        onSelectionChange={(key) => {
           log(key);
           const id = parseInt(key as string, 10);
+
           if (id) {
             onSelect(id);
           }
         }}
-        description={t<string>('You may need modify the default keyword to search the expected resources')}
       >
         {(rc: Item) => {
           const isFromResource = fromResourcePath == rc.path;
           const isDisabled = rc.id == 0 || isFromResource;
+
           return (
             <AutocompleteItem
               key={rc.id}
-              title={rc.path}
+              className={`${isDisabled ? "opacity-60" : ""}`}
               isDisabled={isDisabled}
-              className={`${isDisabled ? 'opacity-60' : ''}`}
-              startContent={isFromResource
-                ? <Chip
-                    size={'sm'}
-                    radius={'sm'}
-                >{t<string>('Current path')}</Chip> : undefined}
+              startContent={
+                isFromResource ? (
+                  <Chip radius={"sm"} size={"sm"}>
+                    {t<string>("Current path")}
+                  </Chip>
+                ) : undefined
+              }
+              title={rc.path}
             >
               {rc.fileName}
             </AutocompleteItem>
@@ -109,14 +121,14 @@ export default ({
         }}
       </Autocomplete>
       <Button
-        size={'sm'}
-        variant={'light'}
+        size={"sm"}
+        variant={"light"}
         onClick={() => {
           targetResourceCandidates.setFilterText(fromResourcePath);
         }}
       >
-        <ReloadOutlined className={'text-base'} />
-        {t<string>('Reset keyword to path of from resource')}
+        <ReloadOutlined className={"text-base"} />
+        {t<string>("Reset keyword to path of from resource")}
       </Button>
     </div>
   );

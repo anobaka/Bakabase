@@ -1,17 +1,20 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import './index.scss';
-import { useTranslation } from 'react-i18next';
-import { useCookie, useUpdateEffect } from 'react-use';
-import RootTreeEntry from './RootTreeEntry';
-import type { Entry } from '@/core/models/FileExplorer/Entry';
-import type RootEntry from '@/core/models/FileExplorer/RootEntry';
-import { buildLogger } from '@/components/utils';
-import { useFileSystemOptionsStore } from '@/models/options';
-import BApi from '@/sdk/BApi';
+import React, { useEffect, useReducer, useRef, useState } from "react";
+import "./index.scss";
+import { useTranslation } from "react-i18next";
+import { useUpdateEffect } from "react-use";
 
-const log = buildLogger('FileProcessor');
+import RootTreeEntry from "./RootTreeEntry";
+
+import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type RootEntry from "@/core/models/FileExplorer/RootEntry";
+
+import { buildLogger } from "@/components/utils";
+import { useFileSystemOptionsStore } from "@/models/options";
+import BApi from "@/sdk/BApi";
+
+const log = buildLogger("FileProcessor");
 
 // todo: optimize
 export default () => {
@@ -24,7 +27,7 @@ export default () => {
   const selectedEntriesRef = useRef<Entry[]>([]);
   const [allSelected, setAllSelected] = useState(false);
 
-  const options = useFileSystemOptionsStore(state => state.data);
+  const options = useFileSystemOptionsStore((state) => state.data);
   const [rootPath, setRootPath] = useState<string>();
   const [rootPathInitialized, setRootPathInitialized] = useState(false);
 
@@ -33,12 +36,13 @@ export default () => {
       rootRef.current!.dispose();
     }
     rootRef.current = root;
-    console.log('Root change to', root);
+    console.log("Root change to", root);
   }, [root]);
 
   useEffect(() => {
     if (!rootPathInitialized && options.initialized) {
       const p = options.fileProcessor?.workingDirectory;
+
       if (p) {
         setRootPath(p);
       }
@@ -54,13 +58,15 @@ export default () => {
 
   useEffect(() => {
     selectedEntriesRef.current = selectedEntries;
-    console.log('SelectedEntries changed', selectedEntries);
+    console.log("SelectedEntries changed", selectedEntries);
     const filteredEntries = rootRef.current?.filteredChildren || [];
-    console.log('Current selection', selectedEntries);
+
+    console.log("Current selection", selectedEntries);
     // console.log(selectedEntries, filteredEntries);
     if (selectedEntries.length == filteredEntries.length) {
       for (const se of selectedEntries) {
         let exist = false;
+
         for (const re of filteredEntries) {
           if (se == re) {
             exist = true;
@@ -70,8 +76,11 @@ export default () => {
           console.log(se);
         }
       }
-      if (selectedEntries.length > 0 && selectedEntries.every((e) => filteredEntries.some((a) => a == e))) {
-        console.log('all selected');
+      if (
+        selectedEntries.length > 0 &&
+        selectedEntries.every((e) => filteredEntries.some((a) => a == e))
+      ) {
+        console.log("all selected");
         setAllSelected(true);
       } else {
         setAllSelected(false);
@@ -82,33 +91,41 @@ export default () => {
   }, [selectedEntries]);
 
   useEffect(() => {
-    console.log('set all selected', allSelected);
+    console.log("set all selected", allSelected);
   }, [allSelected]);
 
   // console.log('render all selected', allSelected);
 
   return (
-    <div className={'file-explorer-page'}>
-      <div className={'file-explorer'}>
-        <div
-          className="root relative overflow-hidden"
-          tabIndex={0}
-        >
-          <div className={'absolute top-0 left-0 w-full h-full flex flex-col'} >
+    <div className={"file-explorer-page"}>
+      <div className={"file-explorer"}>
+        <div className="root relative overflow-hidden" tabIndex={0}>
+          <div className={"absolute top-0 left-0 w-full h-full flex flex-col"}>
             {rootPathInitialized && (
               <RootTreeEntry
+                expandable
+                capabilities={[
+                  "decompress",
+                  "wrap",
+                  "move",
+                  "extract",
+                  "delete",
+                  "rename",
+                  "delete-all-by-name",
+                  "group",
+                ]}
+                rootPath={rootPath}
+                selectable={"multiple"}
                 onDoubleClick={(evt, en) => {
                   if (!en.isDirectoryOrDrive) {
                     BApi.tool.openFile({ path: en.path });
+
                     return false;
                   }
+
                   return true;
                 }}
-                selectable={'multiple'}
-                expandable
-                capabilities={['decompress', 'wrap', 'move', 'extract', 'delete', 'rename', 'delete-all-by-name', 'group']}
-                rootPath={rootPath}
-                onInitialized={v => {
+                onInitialized={(v) => {
                   if (v != undefined) {
                     BApi.options.patchFileSystemOptions({
                       ...options,

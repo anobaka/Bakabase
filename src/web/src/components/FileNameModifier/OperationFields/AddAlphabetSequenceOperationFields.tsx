@@ -1,43 +1,49 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { Input, NumberInput } from '../../bakaui';
-import { FileNameModifierPosition } from '@/sdk/constants';
+import React from "react";
+
+import { Input, NumberInput } from "../../bakaui";
+
+import { FileNameModifierPosition } from "@/sdk/constants";
 const PositionType = FileNameModifierPosition;
 
-const AddAlphabetSequenceOperationFields: React.FC<any> = ({ operation, t, onChange }) => (
+const AddAlphabetSequenceOperationFields: React.FC<any> = ({
+  operation,
+  t,
+  onChange,
+}) => (
   <>
     <Input
-      value={operation.alphabetStartChar}
-      onValueChange={e => onChange({ ...operation, alphabetStartChar: e })}
-      placeholder={t<string>('FileNameModifier.Placeholder.StartChar')}
-      label={t<string>('FileNameModifier.Label.StartChar')}
-      size="sm"
-      isRequired={!operation.alphabetStartChar}
-      maxLength={1}
       className="w-[100px]"
+      isRequired={!operation.alphabetStartChar}
+      label={t<string>("FileNameModifier.Label.StartChar")}
+      maxLength={1}
+      placeholder={t<string>("FileNameModifier.Placeholder.StartChar")}
+      size="sm"
+      value={operation.alphabetStartChar}
+      onValueChange={(e) => onChange({ ...operation, alphabetStartChar: e })}
     />
     <NumberInput
-      value={operation.alphabetCount}
-      onValueChange={e => onChange({ ...operation, alphabetCount: e })}
-      placeholder={t<string>('FileNameModifier.Placeholder.Count')}
-      label={t<string>('FileNameModifier.Label.Count')}
-      size="sm"
-      isRequired={operation.alphabetCount == null}
       className="w-[100px]"
+      isRequired={operation.alphabetCount == null}
+      label={t<string>("FileNameModifier.Label.Count")}
+      placeholder={t<string>("FileNameModifier.Placeholder.Count")}
+      size="sm"
+      value={operation.alphabetCount}
+      onValueChange={(e) => onChange({ ...operation, alphabetCount: e })}
     />
     {operation.position === PositionType.AtPosition && (
       <NumberInput
-        value={operation.positionIndex}
-        onValueChange={e => onChange({ ...operation, positionIndex: e })}
-        placeholder={t<string>('FileNameModifier.Placeholder.PositionIndex')}
-        label={t<string>('FileNameModifier.Label.PositionIndex')}
-        size="sm"
-        isRequired={true}
         className="w-[120px]"
+        isRequired={true}
+        label={t<string>("FileNameModifier.Label.PositionIndex")}
+        placeholder={t<string>("FileNameModifier.Placeholder.PositionIndex")}
+        size="sm"
+        value={operation.positionIndex}
+        onValueChange={(e) => onChange({ ...operation, positionIndex: e })}
       />
     )}
   </>
 );
 
-export default AddAlphabetSequenceOperationFields; 
+export default AddAlphabetSequenceOperationFields;

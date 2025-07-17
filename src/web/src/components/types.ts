@@ -1,11 +1,12 @@
-import type { PropertyPool } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
+import type { PropertyPool } from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
 
 export type RecursivePartial<T> = {
   [P in keyof T]?: RecursivePartial<T[P]>;
 };
 
-export type PartialExcept<T, K extends keyof T> = RecursivePartial<T> & Pick<T, K>;
+export type PartialExcept<T, K extends keyof T> = RecursivePartial<T> &
+  Pick<T, K>;
 
 export type IdName<T = number> = {
   id: T;
@@ -22,7 +23,7 @@ export type LabelValue<TL = string, TV = number> = {
   value: TV;
 };
 
-export type PropertyMap = {[key in PropertyPool]?: Record<number, IProperty>};
+export type PropertyMap = { [key in PropertyPool]?: Record<number, IProperty> };
 
 export type Pageable = {
   page: number;

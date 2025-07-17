@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import type { CSSProperties } from 'react';
-import React from 'react';
-import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { Chip, Input } from '@/components/bakaui';
-import FileSystemEntryIcon from '@/components/FileSystemEntryIcon';
-import { IconType } from '@/sdk/constants';
+import type { CSSProperties } from "react";
+
+import React from "react";
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+
+import { Chip, Input } from "@/components/bakaui";
+import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
+import { IconType } from "@/sdk/constants";
 
 type Props = {
-  type: 'others' | 'added' | 'deleted' | 'default' | 'error';
+  type: "others" | "added" | "deleted" | "default" | "error";
   layer?: number;
   text?: string;
   path?: string;
@@ -24,7 +26,7 @@ export default (props: Props) => {
     type,
     editable = false,
     layer = 0,
-    text = '',
+    text = "",
     path,
     onChange,
     isDirectory = false,
@@ -38,65 +40,59 @@ export default (props: Props) => {
 
   const renderInner = () => {
     switch (type) {
-      case 'error':
+      case "error":
         return (
           <>
             <Chip
-              size={'sm'}
-              variant={'light'}
-              color={'danger'}
-              className={'px-0 whitespace-normal h-auto'}
-              classNames={{ content: 'px-0' }}
+              className={"px-0 whitespace-normal h-auto"}
+              classNames={{ content: "px-0" }}
+              color={"danger"}
+              size={"sm"}
+              variant={"light"}
             >
-              <div className={'flex items-center gap-2'}>
+              <div className={"flex items-center gap-2"}>
                 {!hideIcon && (
-                  <ExclamationCircleOutlined style={{ fontSize: '18px' }} />
+                  <ExclamationCircleOutlined style={{ fontSize: "18px" }} />
                 )}
                 {text}
               </div>
             </Chip>
           </>
         );
-      case 'others':
+      case "others":
         return (
           <>
-            <FileSystemEntryIcon
-              type={IconType.UnknownFile}
-              size={20}
-            />
+            <FileSystemEntryIcon size={20} type={IconType.UnknownFile} />
             <Chip
-              size={'sm'}
-              variant={'light'}
-              className={'px-0 whitespace-break-spaces'}
-              classNames={{ content: 'px-0' }}
+              className={"px-0 whitespace-break-spaces"}
+              classNames={{ content: "px-0" }}
+              size={"sm"}
+              variant={"light"}
             >
               {text}
             </Chip>
           </>
         );
-      case 'added': {
+      case "added": {
         if (editable) {
           return (
             <>
               <Chip
-                size={'sm'}
-                variant={'light'}
-                color={'success'}
-                className={'px-0'}
-                classNames={{ content: 'px-0' }}
+                className={"px-0"}
+                classNames={{ content: "px-0" }}
+                color={"success"}
+                size={"sm"}
+                variant={"light"}
               >
-                <FileSystemEntryIcon
-                  type={IconType.Directory}
-                  size={20}
-                />
+                <FileSystemEntryIcon size={20} type={IconType.Directory} />
               </Chip>
               <Input
-                radius={'none'}
+                radius={"none"}
                 // classNames={{
                 //   inputWrapper: 'px-0',
                 // }}
-                size={'sm'}
                 defaultValue={text}
+                size={'sm'}
                 onValueChange={v => {
                   onChange?.(v);
                 }}
@@ -107,18 +103,24 @@ export default (props: Props) => {
           return (
             <>
               <Chip
-                size={'sm'}
-                variant={'light'}
-                color={'success'}
-                className={'px-0'}
-                classNames={{ content: 'px-0' }}
+                className={"px-0"}
+                classNames={{ content: "px-0" }}
+                color={"success"}
+                size={"sm"}
+                variant={"light"}
               >
-                <div className={'flex items-center gap-2'}>
+                <div className={"flex items-center gap-2"}>
                   {!hideIcon && (
                     <FileSystemEntryIcon
                       path={path}
-                      type={isDirectory ? IconType.Directory : path ? IconType.Dynamic : IconType.UnknownFile}
                       size={20}
+                      type={
+                        isDirectory
+                          ? IconType.Directory
+                          : path
+                            ? IconType.Dynamic
+                            : IconType.UnknownFile
+                      }
                     />
                   )}
                   {text}
@@ -128,22 +130,28 @@ export default (props: Props) => {
           );
         }
       }
-      case 'deleted':
+      case "deleted":
         return (
           <>
             <Chip
-              size={'sm'}
-              variant={'light'}
-              color={'danger'}
-              className={'line-through px-0 whitespace-normal h-auto'}
-              classNames={{ content: 'px-0' }}
+              className={"line-through px-0 whitespace-normal h-auto"}
+              classNames={{ content: "px-0" }}
+              color={"danger"}
+              size={"sm"}
+              variant={"light"}
             >
-              <div className={'flex items-center gap-2'}>
+              <div className={"flex items-center gap-2"}>
                 {!hideIcon && (
                   <FileSystemEntryIcon
                     path={path}
-                    type={isDirectory ? IconType.Directory : path ? IconType.Dynamic : IconType.UnknownFile}
                     size={20}
+                    type={
+                      isDirectory
+                        ? IconType.Directory
+                        : path
+                          ? IconType.Dynamic
+                          : IconType.UnknownFile
+                    }
                   />
                 )}
                 {text}
@@ -151,13 +159,10 @@ export default (props: Props) => {
             </Chip>
           </>
         );
-      case 'default':
+      case "default":
         return (
           <>
-            <FileSystemEntryIcon
-              type={IconType.Directory}
-              size={20}
-            />
+            <FileSystemEntryIcon size={20} type={IconType.Directory} />
             {text}
           </>
         );

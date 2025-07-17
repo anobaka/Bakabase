@@ -1,17 +1,20 @@
-'use client';
+"use client";
 
-'use strict';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { StringValueProcessEditor } from '../Processes/StringValueProcess';
-import { ListStringValueProcessEditor } from '../Processes/ListStringValueProcess';
-import { Chip, Modal } from '@/components/bakaui';
-import type { IProperty } from '@/components/Property/models';
-import { BulkModificationProcessorValueType } from '@/sdk/constants';
-import { PropertyType } from '@/sdk/constants';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import type { BulkModificationVariable } from '@/pages/bulk-modification2/components/BulkModification/models';
-import { buildLogger } from '@/components/utils';
+"use strict";
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BulkModificationVariable } from "@/pages/bulk-modification2/components/BulkModification/models";
+
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { StringValueProcessEditor } from "../Processes/StringValueProcess";
+import { ListStringValueProcessEditor } from "../Processes/ListStringValueProcess";
+
+import { Modal } from "@/components/bakaui";
+import { BulkModificationProcessorValueType } from "@/sdk/constants";
+import { PropertyType } from "@/sdk/constants";
+import { buildLogger } from "@/components/utils";
 
 type Props = {
   property: IProperty;
@@ -22,24 +25,26 @@ type Props = {
   availableValueTypes?: BulkModificationProcessorValueType[];
 } & DestroyableProps;
 
-const log = buildLogger('ProcessStepModal');
+const log = buildLogger("ProcessStepModal");
 
 export default ({
-                  property,
-                  operation: propsOperation,
-                  options: propsOptions,
-                  onDestroyed,
-                  onSubmit,
-                  variables,
-                  availableValueTypes = [BulkModificationProcessorValueType.ManuallyInput],
-                }: Props) => {
+  property,
+  operation: propsOperation,
+  options: propsOptions,
+  onDestroyed,
+  onSubmit,
+  variables,
+  availableValueTypes = [BulkModificationProcessorValueType.ManuallyInput],
+}: Props) => {
   const { t } = useTranslation();
 
-  const [operation, setOperation] = useState<number | undefined>(propsOperation);
+  const [operation, setOperation] = useState<number | undefined>(
+    propsOperation,
+  );
   const [options, setOptions] = useState<any>(propsOptions);
   const [error, setError] = useState<string | undefined>();
 
-  log('property', property, 'operation', operation, 'options', options);
+  log("property", property, "operation", operation, "options", options);
 
   const renderOptions = () => {
     switch (property.type) {
@@ -49,32 +54,32 @@ export default ({
       case PropertyType.SingleChoice:
         return (
           <StringValueProcessEditor
-            options={options}
+            availableValueTypes={availableValueTypes}
             operation={operation}
+            options={options}
             propertyType={property.type}
+            variables={variables}
             onChange={(operation, options, error) => {
               setOperation(operation);
               setOptions(options);
               setError(error);
             }}
-            variables={variables}
-            availableValueTypes={availableValueTypes}
           />
         );
       case PropertyType.MultipleChoice:
       case PropertyType.Attachment:
         return (
           <ListStringValueProcessEditor
-            options={options}
+            availableValueTypes={availableValueTypes}
             operation={operation}
+            options={options}
             property={property}
+            variables={variables}
             onChange={(operation, options, error) => {
               setOperation(operation);
               setOptions(options);
               setError(error);
             }}
-            variables={variables}
-            availableValueTypes={availableValueTypes}
           />
         );
       case PropertyType.Number:
@@ -94,31 +99,32 @@ export default ({
       case PropertyType.Tags:
         break;
     }
-    return t<string>('Not supported');
+
+    return t<string>("Not supported");
   };
 
   return (
     <Modal
       defaultVisible
-      size={'xl'}
-      onDestroyed={onDestroyed}
       footer={{
-        actions: ['ok', 'cancel'],
+        actions: ["ok", "cancel"],
         okProps: {
           isDisabled: !!error,
         },
       }}
+      size={"xl"}
+      onDestroyed={onDestroyed}
       onOk={() => {
         if (operation != undefined) {
-          log('onSubmit', 'operation', operation, 'options', options);
+          log("onSubmit", "operation", operation, "options", options);
           onSubmit?.(operation!, options);
         }
       }}
     >
       {renderOptions()}
       {error && (
-        <div className={'whitespace-break-spaces text-danger'} >
-          {t<string>('ERROR')}: {error}
+        <div className={"whitespace-break-spaces text-danger"}>
+          {t<string>("ERROR")}: {error}
         </div>
       )}
     </Modal>

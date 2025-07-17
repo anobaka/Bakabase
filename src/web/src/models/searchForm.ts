@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface SearchFormState {
   orders: any[];
@@ -7,8 +7,8 @@ interface SearchFormState {
   releaseDts: any[];
   fileCreateDts: any[];
   fileModifyDts: any[];
-  patch: (payload: Partial<Omit<SearchFormState, 'patch' | 'replace'>>) => void;
-  replace: (payload: Omit<SearchFormState, 'patch' | 'replace'>) => void;
+  patch: (payload: Partial<Omit<SearchFormState, "patch" | "replace">>) => void;
+  replace: (payload: Omit<SearchFormState, "patch" | "replace">) => void;
 }
 
 export const useSearchFormStore = create<SearchFormState>((set, get) => ({
@@ -24,12 +24,15 @@ export const useSearchFormStore = create<SearchFormState>((set, get) => ({
       ...prevState,
       ...payload,
     };
-    console.log('patching search form', { ...prevState }, 'with', { ...payload });
-    console.log('search form after patching', model);
+
+    console.log("patching search form", { ...prevState }, "with", {
+      ...payload,
+    });
+    console.log("search form after patching", model);
     set(model);
   },
   replace: (payload) => {
-    console.log('replacing search form with', payload);
+    console.log("replacing search form with", payload);
     set(payload);
   },
 }));

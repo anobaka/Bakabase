@@ -1,4 +1,4 @@
-import { MatchResultType } from '@/sdk/constants';
+import { MatchResultType } from "@/sdk/constants";
 
 class PscMatchResult {
   type: MatchResultType;
@@ -26,6 +26,4 @@ class PscMatchResult {
   }
 }
 
-export {
-  PscMatchResult,
-};
+export { PscMatchResult };

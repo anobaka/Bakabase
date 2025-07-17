@@ -1,18 +1,26 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import { DatabaseOutlined, DisconnectOutlined, LinkOutlined } from '@ant-design/icons';
-import { useBakabaseContext } from '../ContextProvider/BakabaseContextProvider';
-import styles from './index.module.scss';
-import type { IProperty } from './models';
-import Label from './components/Label';
-import ClickableIcon from '@/components/ClickableIcon';
-import PropertyModal from '@/components/PropertyModal';
-import { Chip, Icon, Modal, Tooltip } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { PropertyPool, PropertyType, ResourceProperty } from '@/sdk/constants';
-import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
+import type { IProperty } from "./models";
+
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import {
+  DatabaseOutlined,
+  DisconnectOutlined,
+  LinkOutlined,
+} from "@ant-design/icons";
+
+import { useBakabaseContext } from "../ContextProvider/BakabaseContextProvider";
+
+import styles from "./index.module.scss";
+import Label from "./components/Label";
+
+import ClickableIcon from "@/components/ClickableIcon";
+import PropertyModal from "@/components/PropertyModal";
+import { Chip, Modal, Tooltip } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { PropertyPool, PropertyType } from "@/sdk/constants";
+import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 
 type Props = {
   property: IProperty;
@@ -21,30 +29,29 @@ type Props = {
 
   removable?: boolean;
   editable?: boolean;
-  editablePortal?: 'click' | 'edit-icon';
+  editablePortal?: "click" | "edit-icon";
   onSaved?: (property: IProperty) => any;
   onRemoved?: () => any;
 
   onDialogDestroyed?: () => any;
 };
 
-export {
-  Label as PropertyLabel,
-};
+export { Label as PropertyLabel };
 
 export default ({
-                  property,
-                  onClick,
-                  editablePortal = 'edit-icon',
-                  onSaved,
-                  onRemoved,
-                  onDialogDestroyed,
-                  disabled,
-                  ...props
-                }: Props) => {
+  property,
+  onClick,
+  editablePortal = "edit-icon",
+  onSaved,
+  onRemoved,
+  onDialogDestroyed,
+  disabled,
+  ...props
+}: Props) => {
   const { t } = useTranslation();
 
-  const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] = useState(false);
+  const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] =
+    useState(false);
   const { createPortal } = useBakabaseContext();
 
   const editable = property.pool == PropertyPool.Custom && props.editable;
@@ -55,27 +62,26 @@ export default ({
       return null;
     }
     const categories = property.categories || [];
+
     return (
       <div className={`${styles.bottom} mt-1 pt-1 flex flex-wrap gap-2`}>
         {categories.length > 0 ? (
           <Tooltip
-            placement={'bottom'}
-            content={<div className={'flex flex-wrap gap-1 max-w-[600px]'}>
-              {categories.map(c => {
-                return (
-                  <Chip
-                    size={'sm'}
-                    radius={'sm'}
-                    key={c.id}
-                  >
-                    {c.name}
-                  </Chip>
-                );
-              })}
-            </div>}
+            content={
+              <div className={"flex flex-wrap gap-1 max-w-[600px]"}>
+                {categories.map((c) => {
+                  return (
+                    <Chip key={c.id} radius={"sm"} size={"sm"}>
+                      {c.name}
+                    </Chip>
+                  );
+                })}
+              </div>
+            }
+            placement={"bottom"}
           >
-            <div className={'flex gap-0.5 items-center'}>
-              <LinkOutlined className={'text-sm'} />
+            <div className={"flex gap-0.5 items-center"}>
+              <LinkOutlined className={"text-sm"} />
               {categories.length}
             </div>
             {/* <Chip */}
@@ -86,24 +92,28 @@ export default ({
           </Tooltip>
         ) : (
           <Tooltip
-            placement={'bottom'}
-            content={(
+            content={
               <div>
-                <div>{t<string>('No category bound')}</div>
-                <div>{t<string>('You can bind properties in category page')}</div>
+                <div>{t<string>("No category bound")}</div>
+                <div>
+                  {t<string>("You can bind properties in category page")}
+                </div>
               </div>
-            )}
+            }
+            placement={"bottom"}
           >
-            <DisconnectOutlined className={'text-sm'} />
+            <DisconnectOutlined className={"text-sm"} />
           </Tooltip>
         )}
         {property.valueCount != undefined && (
           <Tooltip
-            placement={'bottom'}
-            content={t<string>('{{count}} values', { count: property.valueCount })}
+            content={t<string>("{{count}} values", {
+              count: property.valueCount,
+            })}
+            placement={"bottom"}
           >
-            <div className={'flex gap-0.5 items-center'}>
-              <DatabaseOutlined className={'text-sm'} />
+            <div className={"flex gap-0.5 items-center"}>
+              <DatabaseOutlined className={"text-sm"} />
               {property.valueCount}
             </div>
           </Tooltip>
@@ -118,9 +128,10 @@ export default ({
         ...property,
         type: property.type as unknown as PropertyType,
       },
-      onSaved: p => onSaved?.({
-        ...p,
-      }),
+      onSaved: (p) =>
+        onSaved?.({
+          ...p,
+        }),
       onDestroyed: onDialogDestroyed,
     });
   };
@@ -128,57 +139,57 @@ export default ({
   return (
     <div
       key={property.id}
-      className={`${styles.property} group px-2 py-1 rounded ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-[var(--bakaui-overlap-background)]'}`}
+      className={`${styles.property} group px-2 py-1 rounded ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-[var(--bakaui-overlap-background)]"}`}
       onClick={() => {
         if (disabled) {
           return;
         }
-        if (editable && editablePortal == 'click') {
+        if (editable && editablePortal == "click") {
           showDetail();
         }
         onClick?.();
       }}
     >
       <Modal
+        title={t<string>("Delete a property")}
         visible={removeConfirmingDialogVisible}
         onClose={() => setRemoveConfirmingDialogVisible(false)}
         onOk={async () => {
           await BApi.customProperty.removeCustomProperty(property.id);
           onRemoved?.();
         }}
-        title={t<string>('Delete a property')}
       >
-        {t<string>('This operation can not be undone, are you sure?')}
+        {t<string>("This operation can not be undone, are you sure?")}
       </Modal>
       <div className={`${styles.line1} flex item-center justify-between gap-1`}>
         <div className={`${styles.left}`}>
-          <div className={'flex items-center gap-1'}>
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-            >{t<string>(`${PropertyPool[property.pool]}`)}</Chip>
+          <div className={"flex items-center gap-1"}>
+            <Chip radius={"sm"} size={"sm"}>
+              {t<string>(`${PropertyPool[property.pool]}`)}
+            </Chip>
             {property.name}
           </div>
           <Tooltip
-            color={'foreground'}
+            color={"foreground"}
             content={t<string>(PropertyType[property.type!])}
           >
             <div className={styles.type}>
-              <PropertyTypeIcon
-                type={property.type}
-                textVariant={'none'}
-              />
+              <PropertyTypeIcon textVariant={"none"} type={property.type} />
             </div>
           </Tooltip>
         </div>
         {property.pool == PropertyPool.Custom && (
-          <div className={'ml-1 flex gap-0.5 items-center invisible group-hover:visible'}>
-            {editable && editablePortal == 'edit-icon' && (
+          <div
+            className={
+              "ml-1 flex gap-0.5 items-center invisible group-hover:visible"
+            }
+          >
+            {editable && editablePortal == "edit-icon" && (
               <ClickableIcon
-                colorType={'normal'}
-                className={'text-medium'}
-                type={'edit-square'}
-                onClick={e => {
+                className={"text-medium"}
+                colorType={"normal"}
+                type={"edit-square"}
+                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   showDetail();
@@ -187,9 +198,9 @@ export default ({
             )}
             {removable && (
               <ClickableIcon
-                colorType={'danger'}
-                className={'text-medium'}
-                type={'delete'}
+                className={"text-medium"}
+                colorType={"danger"}
+                type={"delete"}
                 onClick={async (e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -204,4 +215,3 @@ export default ({
     </div>
   );
 };
-

@@ -1,70 +1,67 @@
-'use client';
+"use client";
 
-import { EditOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
-import { useRef, useState } from 'react';
-import type { ValueRendererProps } from '../models';
-import type { LinkValue } from '../../models';
-import ExternalLink from '@/components/ExternalLink';
-import { Button, Input, Popover } from '@/components/bakaui';
+import type { ValueRendererProps } from "../models";
+import type { LinkValue } from "../../models";
 
-type LinkValueRendererProps = ValueRendererProps<LinkValue> & {
-};
+import { EditOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+
+import ExternalLink from "@/components/ExternalLink";
+import { Button, Input, Popover } from "@/components/bakaui";
+
+type LinkValueRendererProps = ValueRendererProps<LinkValue> & {};
 
 export default ({
-                  value,
-                  editor,
-                  variant,
-                  ...props
-                }: LinkValueRendererProps) => {
+  value,
+  editor,
+  variant,
+  ...props
+}: LinkValueRendererProps) => {
   const { t } = useTranslation();
   const [editingValue, setEditingValue] = useState<LinkValue>();
 
   const renderInner = () => {
     if (value?.url) {
       return (
-        <ExternalLink href={value.url}>
-          {value.text ?? value.url}
-        </ExternalLink>
+        <ExternalLink href={value.url}>{value.text ?? value.url}</ExternalLink>
       );
     } else {
       if (value?.text != undefined && value.text.length > 0) {
-        return (
-          <span>
-            {value.text}
-          </span>
-        );
+        return <span>{value.text}</span>;
       }
     }
+
     return null;
   };
 
   const inner = renderInner();
+
   if (editor) {
     return (
-      <span className={'flex items-center gap-2'}>
+      <span className={"flex items-center gap-2"}>
         {inner}
         <Popover
-          isOpen={!!editingValue}
           isKeyboardDismissDisabled
+          isOpen={!!editingValue}
           shouldCloseOnBlur={false}
-          onOpenChange={isOpen => {
+          trigger={
+            <Button isIconOnly size={"sm"}>
+              <EditOutlined className={"text-base"} />
+            </Button>
+          }
+          onOpenChange={(isOpen) => {
             if (isOpen) {
               setEditingValue({ ...value });
             }
           }}
-          trigger={(
-            <Button size={'sm'} isIconOnly>
-              <EditOutlined className={'text-base'} />
-            </Button>
-          )}
         >
-          <div className={'flex flex-col gap-1'}>
+          <div className={"flex flex-col gap-1"}>
             <Input
-              size={'sm'}
-              label={t<string>('Text')}
+              label={t<string>("Text")}
+              size={"sm"}
               value={editingValue?.text}
-              onValueChange={text => {
+              onValueChange={(text) => {
                 setEditingValue({
                   ...editingValue,
                   text,
@@ -72,34 +69,34 @@ export default ({
               }}
             />
             <Input
-              size={'sm'}
-              label={t<string>('Link')}
+              label={t<string>("Link")}
+              size={"sm"}
               value={editingValue?.url}
-              onValueChange={url => {
+              onValueChange={(url) => {
                 setEditingValue({
                   ...editingValue,
                   url,
                 });
               }}
             />
-            <div className={'flex items-center gap-2 justify-center'}>
+            <div className={"flex items-center gap-2 justify-center"}>
               <Button
-                size={'sm'}
-                color={'primary'}
+                color={"primary"}
+                size={"sm"}
                 onClick={() => {
                   editor?.onValueChange?.(editingValue, editingValue);
                   setEditingValue(undefined);
                 }}
               >
-                {t<string>('Submit')}
+                {t<string>("Submit")}
               </Button>
               <Button
-                size={'sm'}
+                size={"sm"}
                 onClick={() => {
                   setEditingValue(undefined);
                 }}
               >
-                {t<string>('Cancel')}
+                {t<string>("Cancel")}
               </Button>
             </div>
           </div>

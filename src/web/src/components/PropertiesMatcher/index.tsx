@@ -1,13 +1,15 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useCallback } from 'react';
-import { IoLocate } from 'react-icons/io5';
-import type { IProperty } from '../Property/models';
-import { Button, Tooltip } from '@/components/bakaui';
-import type { PropertyType } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { IProperty } from "../Property/models";
+import type { PropertyType } from "@/sdk/constants";
+
+import { useTranslation } from "react-i18next";
+import { useCallback } from "react";
+import { IoLocate } from "react-icons/io5";
+
+import { Button, Tooltip } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Property = {
   name: string;
@@ -20,38 +22,40 @@ type Props = {
   onValueChanged?: (properties: (IProperty | undefined)[]) => any;
 };
 
-export default ({
-                  properties,
-                  onValueChanged: propsOnValueChanged,
-                }: Props) => {
+export default ({ properties, onValueChanged: propsOnValueChanged }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const onValueChange = useCallback((properties: (IProperty | undefined)[]) => {
-    console.log(properties);
-    propsOnValueChanged?.(properties);
-  }, [propsOnValueChanged]);
+  const onValueChange = useCallback(
+    (properties: (IProperty | undefined)[]) => {
+      console.log(properties);
+      propsOnValueChanged?.(properties);
+    },
+    [propsOnValueChanged],
+  );
 
   return (
-    <Tooltip content={t<string>('Automatically match property')}>
+    <Tooltip content={t<string>("Automatically match property")}>
       <Button
-        size={'sm'}
         isIconOnly
-        color={'primary'}
-        variant={'light'}
+        color={"primary"}
+        size={"sm"}
+        variant={"light"}
         onPress={async () => {
           const ret: (IProperty | undefined)[] = [];
+
           for (const property of properties) {
             const candidate = await BApi.property.findBestMatchingProperty({
               type: property.type,
               name: property.name,
             });
+
             ret.push(candidate.data);
           }
           onValueChange(ret);
         }}
       >
-        <IoLocate className={'text-base'} />
+        <IoLocate className={"text-base"} />
       </Button>
     </Tooltip>
   );

@@ -1,5 +1,3 @@
-import PropertyValueScopeSelectorLabel from './components/PropertyValueScopeSelectorLabel';
+import PropertyValueScopeSelectorLabel from "./components/PropertyValueScopeSelectorLabel";
 
-export {
-  PropertyValueScopeSelectorLabel,
-};
+export { PropertyValueScopeSelectorLabel };

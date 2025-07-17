@@ -1,5 +1,3 @@
-import TimeInput from './TimeInput';
+import TimeInput from "./TimeInput";
 
-export {
-  TimeInput,
-};
+export { TimeInput };

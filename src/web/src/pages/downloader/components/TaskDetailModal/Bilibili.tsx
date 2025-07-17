@@ -1,34 +1,42 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import React, { useEffect, useState } from 'react';
-import type { ThirdPartyFormComponentProps } from './models';
-import OptionsBasedDownloadPathSelector from './OptionsBasedDownloadPathSelector';
-import { Alert, Button, Checkbox, CheckboxGroup, Spinner } from '@/components/bakaui';
-import { BilibiliDownloadTaskType, DependentComponentStatus } from '@/sdk/constants';
-import PageRange from '@/pages/downloader/components/TaskDetailModal/PageRange';
-import { useBilibiliOptionsStore } from '@/models/options';
-import { useDependentComponentContextsStore } from '@/models/dependentComponentContexts';
-import type { components } from '@/sdk/BApi2';
-import BApi from '@/sdk/BApi';
-import dependentComponentIds from '@/core/models/Constants/DependentComponentIds';
-import Configurations from '@/pages/downloader/components/Configurations';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { ThirdPartyFormComponentProps } from "./models";
+import type { components } from "@/sdk/BApi2";
+
+import { useTranslation } from "react-i18next";
+import React, { useEffect, useState } from "react";
+
+import OptionsBasedDownloadPathSelector from "./OptionsBasedDownloadPathSelector";
+
+import {
+  Alert,
+  Button,
+  Checkbox,
+  CheckboxGroup,
+  Spinner,
+} from "@/components/bakaui";
+import {
+  BilibiliDownloadTaskType,
+  DependentComponentStatus,
+} from "@/sdk/constants";
+import PageRange from "@/pages/downloader/components/TaskDetailModal/PageRange";
+import { useBilibiliOptionsStore } from "@/models/options";
+import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
+import BApi from "@/sdk/BApi";
+import dependentComponentIds from "@/core/models/Constants/DependentComponentIds";
+import Configurations from "@/pages/downloader/components/Configurations";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = ThirdPartyFormComponentProps<BilibiliDownloadTaskType>;
 
-type Favorites =
-  Omit<components['schemas']['Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites'], 'id'>
-  & {
+type Favorites = Omit<
+  components["schemas"]["Bakabase.Modules.ThirdParty.ThirdParties.Bilibili.Models.Favorites"],
+  "id"
+> & {
   id: string;
 };
 
-export default ({
-                  type,
-                  form,
-                  onChange,
-                  isReadOnly,
-                }: Props) => {
+export default ({ type, form, onChange, isReadOnly }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [loadingFavorites, setLoadingFavorites] = useState(false);
@@ -36,10 +44,17 @@ export default ({
 
   const bilibiliOptions = useBilibiliOptionsStore((state) => state.data);
 
-  const dependentComponentContexts = useDependentComponentContextsStore((state) => state.contexts);
-  const luxState = dependentComponentContexts?.find(d => d.id == dependentComponentIds.Lux);
-  const ffmpegState = dependentComponentContexts?.find(d => d.id == dependentComponentIds.FFMpeg);
-  const missComponents = luxState?.status != DependentComponentStatus.Installed ||
+  const dependentComponentContexts = useDependentComponentContextsStore(
+    (state) => state.contexts,
+  );
+  const luxState = dependentComponentContexts?.find(
+    (d) => d.id == dependentComponentIds.Lux,
+  );
+  const ffmpegState = dependentComponentContexts?.find(
+    (d) => d.id == dependentComponentIds.FFMpeg,
+  );
+  const missComponents =
+    luxState?.status != DependentComponentStatus.Installed ||
     ffmpegState?.status != DependentComponentStatus.Installed;
 
   useEffect(() => {
@@ -49,12 +64,15 @@ export default ({
   const loadFavorites = async () => {
     setLoadingFavorites(true);
     try {
-      const r = (await BApi.bilibili.getBiliBiliFavorites());
+      const r = await BApi.bilibili.getBiliBiliFavorites();
+
       if (!r.code) {
-        setFavorites((r.data || []).map(f => ({
-          ...f,
-          id: f.id.toString(),
-        })));
+        setFavorites(
+          (r.data || []).map((f) => ({
+            ...f,
+            id: f.id.toString(),
+          })),
+        );
       }
     } finally {
       setLoadingFavorites(false);
@@ -66,16 +84,19 @@ export default ({
       case BilibiliDownloadTaskType.Favorites: {
         return (
           <>
-            <div>{t<string>('Favorites')}</div>
+            <div>{t<string>("Favorites")}</div>
             <div>
               {loadingFavorites ? (
                 <Spinner size="sm" />
               ) : favorites.length === 0 ? (
-                <div className={''}>
-                  {t<string>('Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.')}
+                <div className={""}>
+                  {t<string>(
+                    "Unable to retrieve Bilibili favorites. Please ensure your cookie is correctly set and that you have at least one favorite created.",
+                  )}
                   <Button
-                    variant={'light'}
-                    size={'sm'}
+                    color={"primary"}
+                    size={"sm"}
+                    variant={"light"}
                     onPress={() => {
                       createPortal(Configurations, {
                         onSubmitted: async () => {
@@ -83,23 +104,24 @@ export default ({
                         },
                       });
                     }}
-                    color={'primary'}
-                  >{t<string>('Setup now')}
+                  >
+                    {t<string>("Setup now")}
                   </Button>
                 </div>
               ) : (
                 <CheckboxGroup
                   // color="secondary"
-                  label={t<string>('Select favorites')}
-                  orientation="horizontal"
-                  size={'sm'}
                   isDisabled={isReadOnly}
+                  label={t<string>("Select favorites")}
+                  orientation="horizontal"
+                  size={"sm"}
                   onChange={(values) => {
                     const kn = form?.keyAndNames || {};
+
                     if (values.length === 0) {
-                      Object.keys(kn).forEach(k => delete kn[k]);
+                      Object.keys(kn).forEach((k) => delete kn[k]);
                     } else {
-                      favorites.forEach(f => {
+                      favorites.forEach((f) => {
                         if (values.includes(f.id)) {
                           kn[f.id] = f.title;
                         } else {
@@ -113,17 +135,19 @@ export default ({
                     });
                   }}
                 >
-                  {favorites.map(f => {
+                  {favorites.map((f) => {
                     return (
-                      <Checkbox value={f.id.toString()}>{f.title}({f.mediaCount})</Checkbox>
+                      <Checkbox value={f.id.toString()}>
+                        {f.title}({f.mediaCount})
+                      </Checkbox>
                     );
                   })}
                 </CheckboxGroup>
               )}
             </div>
             <PageRange
-              start={form?.startPage}
               end={form?.endPage}
+              start={form?.startPage}
               onChange={(s, e) => {
                 onChange?.({
                   startPage: s,
@@ -143,9 +167,11 @@ export default ({
     return (
       <Alert
         // className={'col-span-2'}
-        className={'col-start-2'}
-        color={'danger'}
-        title={t<string>('This function is not working because lux or ffmpeg is not found, check them in system configurations')}
+        className={"col-start-2"}
+        color={"danger"}
+        title={t<string>(
+          "This function is not working because lux or ffmpeg is not found, check them in system configurations",
+        )}
       />
     );
   }
@@ -154,14 +180,15 @@ export default ({
     <>
       {renderOptions()}
       <OptionsBasedDownloadPathSelector
-        options={bilibiliOptions}
-        onChange={dp => onChange({
-          ...form,
-          downloadPath: dp,
-        })}
         downloadPath={form?.downloadPath}
+        options={bilibiliOptions}
+        onChange={(dp) =>
+          onChange({
+            ...form,
+            downloadPath: dp,
+          })
+        }
       />
     </>
   );
 };
-

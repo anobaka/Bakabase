@@ -7,12 +7,11 @@ export class AliasCommon {
     if (this.preferredAlias?.length > 0) {
       return this.preferredAlias;
     }
+
     return this.name;
   }
 
-  set displayName(v) {
-
-  }
+  set displayName(v) {}
 
   constructor(init?: Partial<AliasCommon>) {
     Object.assign(this, init);

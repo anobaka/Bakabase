@@ -1,19 +1,21 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { FolderAddOutlined } from '@ant-design/icons';
-import { useUpdate } from 'react-use';
-import type { Entry } from '@/core/models/FileExplorer/Entry';
-import BApi from '@/sdk/BApi';
-import { buildLogger } from '@/components/utils';
-import { IwFsType } from '@/sdk/constants';
-import { Button, Chip } from '@/components/bakaui';
-import type { RootTreeEntryRef } from '@/pages/file-processor/RootTreeEntry';
-import RootTreeEntry from '@/pages/file-processor/RootTreeEntry';
-import type { FileSystemSelectorProps } from '@/components/FileSystemSelector/models';
+import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { RootTreeEntryRef } from "@/pages/file-processor/RootTreeEntry";
+import type { FileSystemSelectorProps } from "@/components/FileSystemSelector/models";
 
-const log = buildLogger('FileSystemSelector');
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { FolderAddOutlined } from "@ant-design/icons";
+import { useUpdate } from "react-use";
+
+import BApi from "@/sdk/BApi";
+import { buildLogger } from "@/components/utils";
+import { IwFsType } from "@/sdk/constants";
+import { Button, Chip } from "@/components/bakaui";
+import RootTreeEntry from "@/pages/file-processor/RootTreeEntry";
+
+const log = buildLogger("FileSystemSelector");
 
 export default (props: FileSystemSelectorProps) => {
   const { t } = useTranslation();
@@ -24,7 +26,7 @@ export default (props: FileSystemSelectorProps) => {
     targetType,
     onSelected,
     onCancel,
-    filter: propsFilter = e => true,
+    filter: propsFilter = (e) => true,
     defaultSelectedPath,
   } = props;
 
@@ -39,17 +41,25 @@ export default (props: FileSystemSelectorProps) => {
     // };
   }, []);
 
-
-  const filter = (e: Entry, mode: 'visible' | 'select') => {
-    log('filter', e, mode, targetType);
+  const filter = (e: Entry, mode: "visible" | "select") => {
+    log("filter", e, mode, targetType);
     if (!e.path) {
       return false;
     }
     if (targetType) {
       switch (targetType) {
-        case 'file':
-          if (![IwFsType.Audio, IwFsType.CompressedFilePart, IwFsType.CompressedFileEntry, IwFsType.Image, IwFsType.Unknown, IwFsType.Video].includes(e.type)) {
-            if (mode == 'select') {
+        case "file":
+          if (
+            ![
+              IwFsType.Audio,
+              IwFsType.CompressedFilePart,
+              IwFsType.CompressedFileEntry,
+              IwFsType.Image,
+              IwFsType.Unknown,
+              IwFsType.Video,
+            ].includes(e.type)
+          ) {
+            if (mode == "select") {
               return false;
             } else {
               if (e.type != IwFsType.Directory && e.type != IwFsType.Drive) {
@@ -58,7 +68,7 @@ export default (props: FileSystemSelectorProps) => {
             }
           }
           break;
-        case 'folder':
+        case "folder":
           if (e.type != IwFsType.Directory && e.type != IwFsType.Drive) {
             return false;
           }
@@ -68,13 +78,14 @@ export default (props: FileSystemSelectorProps) => {
     if (propsFilter && !propsFilter(e)) {
       return false;
     }
+
     return true;
   };
 
-  log('selected', selected);
+  log("selected", selected);
 
   const trySelectRootOrClearSelection = () => {
-    if (rootRef.current?.root && filter(rootRef.current.root, 'select')) {
+    if (rootRef.current?.root && filter(rootRef.current.root, "select")) {
       setSelected(rootRef.current.root);
     } else {
       setSelected(undefined);
@@ -82,21 +93,35 @@ export default (props: FileSystemSelectorProps) => {
   };
 
   return (
-    <div className={'flex flex-col gap-2 grow max-h-full'}>
+    <div className={"flex flex-col gap-2 grow max-h-full"}>
       <RootTreeEntry
-        rootPath={startPath}
+        ref={(r) => {
+          rootRef.current = r;
+          log("ref", r);
+        }}
+        capabilities={["rename"]}
         defaultSelectedPath={defaultSelectedPath}
         filter={{
-          custom: e => filter(e, 'visible'),
+          custom: (e) => filter(e, "visible"),
         }}
-        selectable={'single'}
-        capabilities={['rename']}
-        onSelected={es => {
+        rootPath={startPath}
+        selectable={"single"}
+        onInitialized={() => {
+          log("onInitialized", rootRef.current?.root);
+          if (rootRef.current?.root) {
+            trySelectRootOrClearSelection();
+            if (rootRef.current.root.isDirectory) {
+              setCurrentDirPath(rootRef.current.root.path);
+            }
+          }
+        }}
+        onSelected={(es) => {
           const e = es[0];
+
           log(rootRef.current);
 
           if (e) {
-            if (filter(e, 'select')) {
+            if (filter(e, "select")) {
               setSelected(e);
             } else {
               setSelected(undefined);
@@ -105,43 +130,23 @@ export default (props: FileSystemSelectorProps) => {
             trySelectRootOrClearSelection();
           }
         }}
-        ref={r => {
-          rootRef.current = r;
-          log('ref', r);
-        }}
-        onInitialized={() => {
-          log('onInitialized', rootRef.current?.root);
-          if (rootRef.current?.root) {
-            trySelectRootOrClearSelection();
-            if (rootRef.current.root.isDirectory) {
-              setCurrentDirPath(rootRef.current.root.path);
-            }
-          }
-        }}
       />
-      {
-        selected && (
-          <div className="flex items-center gap-2">
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-              variant={'light'}
-              color={'success'}
-            >
-              {t<string>('Selected')}
-            </Chip>
-            <Chip
-              size={'sm'}
-              radius={'sm'}
-              variant={'light'}
-              color={'success'}
-              className={'whitespace-break-spaces h-auto'}
-            >
-              {selected.path}
-            </Chip>
-          </div>
-        )
-      }
+      {selected && (
+        <div className="flex items-center gap-2">
+          <Chip color={"success"} radius={"sm"} size={"sm"} variant={"light"}>
+            {t<string>("Selected")}
+          </Chip>
+          <Chip
+            className={"whitespace-break-spaces h-auto"}
+            color={"success"}
+            radius={"sm"}
+            size={"sm"}
+            variant={"light"}
+          >
+            {selected.path}
+          </Chip>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-2">
         <Button
           // size={'small'}
@@ -150,19 +155,19 @@ export default (props: FileSystemSelectorProps) => {
             BApi.file.createDirectory({ parent: currentDirPath });
           }}
         >
-          <FolderAddOutlined className={'text-base'} />
-          {t<string>('New Folder')}
+          <FolderAddOutlined className={"text-base"} />
+          {t<string>("New Folder")}
         </Button>
         <div className="flex items-center gap-2">
           <Button
-            color={'primary'}
+            color={"primary"}
             // size={'small'}
             disabled={!selected}
             onClick={() => {
               onSelected?.(selected!);
             }}
           >
-            {t<string>('OK')}
+            {t<string>("OK")}
           </Button>
           <Button
             // size={'small'}
@@ -170,7 +175,7 @@ export default (props: FileSystemSelectorProps) => {
               onCancel?.();
             }}
           >
-            {t<string>('Cancel')}
+            {t<string>("Cancel")}
           </Button>
         </div>
       </div>

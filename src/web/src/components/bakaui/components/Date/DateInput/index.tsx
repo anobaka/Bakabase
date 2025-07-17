@@ -1,31 +1,49 @@
-'use client';
+"use client";
 
 import type { DateInputProps as NextUIDateInputProps } from "@heroui/react";
-import { CalendarDate } from "@heroui/react";
-import { DateInput } from "@heroui/react";
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
-import { CalendarDateTime } from '@internationalized/date';
-import { useEffect, useState } from 'react';
-import { buildLogger } from '@/components/utils';
+import type { Dayjs } from "dayjs";
 
-interface DateInputProps extends Omit<NextUIDateInputProps, 'value' | 'onChange' | 'defaultValue'> {
+import { DateInput } from "@heroui/react";
+import dayjs from "dayjs";
+import { CalendarDateTime } from "@internationalized/date";
+import { useEffect, useState } from "react";
+
+import { buildLogger } from "@/components/utils";
+
+interface DateInputProps
+  extends Omit<NextUIDateInputProps, "value" | "onChange" | "defaultValue"> {
   value?: Dayjs;
   defaultValue?: Dayjs;
   onChange?: (value?: Dayjs) => void;
 }
 
-const log = buildLogger('DateInput');
+const log = buildLogger("DateInput");
 
-const convertToCalendarDateTime = (value: Dayjs | undefined): CalendarDateTime | undefined => {
+const convertToCalendarDateTime = (
+  value: Dayjs | undefined,
+): CalendarDateTime | undefined => {
   if (!value) {
     return;
   }
   const date = value.toDate();
-  return new CalendarDateTime(date.getFullYear(), date.getMonth() + 1, date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds());
+
+  return new CalendarDateTime(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+    date.getHours(),
+    date.getMinutes(),
+    date.getSeconds(),
+    date.getMilliseconds(),
+  );
 };
 
-export default ({ value: propsValue, onChange, defaultValue, ...props }: DateInputProps) => {
+export default ({
+  value: propsValue,
+  onChange,
+  defaultValue,
+  ...props
+}: DateInputProps) => {
   const [value, setValue] = useState<CalendarDateTime>();
 
   log(propsValue);
@@ -39,11 +57,11 @@ export default ({ value: propsValue, onChange, defaultValue, ...props }: DateInp
 
   return (
     <DateInput
-      hourCycle={24}
-      aria-label={'Date Input'}
+      aria-label={"Date Input"}
       defaultValue={dv}
+      hourCycle={24}
       value={value}
-      onChange={v => {
+      onChange={(v) => {
         onChange?.(v ? dayjs(v.toString()) : undefined);
       }}
       {...props}

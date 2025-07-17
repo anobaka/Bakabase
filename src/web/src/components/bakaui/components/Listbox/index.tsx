@@ -1,11 +1,3 @@
-import {
-  Listbox,
-  ListboxSection,
-  ListboxItem,
-} from '@heroui/react';
+import { Listbox, ListboxSection, ListboxItem } from "@heroui/react";
 
-export {
-  Listbox,
-  ListboxSection,
-  ListboxItem,
-};
+export { Listbox, ListboxSection, ListboxItem };

@@ -1,27 +1,38 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import './index.scss';
-import { useUpdateEffect } from 'react-use';
-import i18n from 'i18next';
-import { useTranslation } from 'react-i18next';
-import BApi from '@/sdk/BApi';
-import ComponentCard from '@/pages/custom-component/components/ComponentCard';
-import type { ComponentType } from '@/sdk/constants';
-import { ComponentDescriptorAdditionalItem, ComponentDescriptorType } from '@/sdk/constants';
-import CustomIcon from '@/components/CustomIcon';
-import ComponentDetail from '@/pages/custom-component/Detail';
+import React, { useEffect, useRef, useState } from "react";
+import "./index.scss";
+import { useUpdateEffect } from "react-use";
+import { useTranslation } from "react-i18next";
+
+import BApi from "@/sdk/BApi";
+import ComponentCard from "@/pages/custom-component/components/ComponentCard";
+
+import type { ComponentType } from "@/sdk/constants";
+
+import {
+  ComponentDescriptorAdditionalItem,
+  ComponentDescriptorType,
+} from "@/sdk/constants";
+import CustomIcon from "@/components/CustomIcon";
+import ComponentDetail from "@/pages/custom-component/Detail";
 
 export default ({
-                  componentType,
-                  value: propsValue = undefined,
-                  onChange,
-                  maxCount = 1,
-                }: { componentType: ComponentType; value?: string[]; onChange?: (v: string[]) => void; maxCount?: number}) => {
+  componentType,
+  value: propsValue = undefined,
+  onChange,
+  maxCount = 1,
+}: {
+  componentType: ComponentType;
+  value?: string[];
+  onChange?: (v: string[]) => void;
+  maxCount?: number;
+}) => {
   const { t } = useTranslation();
   const [allCurrentTypeComponents, setAllCurrentTypeComponents] = useState([]);
   const [value, setValue] = useState(propsValue ?? []);
-  const adjustValue = v => v?.filter(a => allCurrentTypeComponents.some(b => b.id == a));
+  const adjustValue = (v) =>
+    v?.filter((a) => allCurrentTypeComponents.some((b) => b.id == a));
   const adjustedPropsValueRef = useRef();
 
   const loadAllComponents = async () => {
@@ -29,32 +40,46 @@ export default ({
       type: componentType,
       additionalItems: ComponentDescriptorAdditionalItem.AssociatedCategories,
     });
-    console.log(rsp.data.filter(b => b.type != ComponentDescriptorType.Configurable));
-    setAllCurrentTypeComponents(rsp.data.filter(b => b.type != ComponentDescriptorType.Configurable));
+
+    console.log(
+      rsp.data.filter((b) => b.type != ComponentDescriptorType.Configurable),
+    );
+    setAllCurrentTypeComponents(
+      rsp.data.filter((b) => b.type != ComponentDescriptorType.Configurable),
+    );
   };
 
   useUpdateEffect(() => {
     if (adjustedPropsValueRef.current != value) {
-      console.log('[BasicCategoryComponent]OnChange', adjustedPropsValueRef.current, value);
+      console.log(
+        "[BasicCategoryComponent]OnChange",
+        adjustedPropsValueRef.current,
+        value,
+      );
       onChange && onChange(value);
     }
   }, [value]);
 
   useUpdateEffect(() => {
     const av = adjustValue(propsValue);
+
     adjustedPropsValueRef.current = av;
     setValue(av);
-    console.log('[BasicCategoryComponent]On props value change', adjustedPropsValueRef.current, value);
+    console.log(
+      "[BasicCategoryComponent]On props value change",
+      adjustedPropsValueRef.current,
+      value,
+    );
   }, [propsValue]);
 
   useEffect(() => {
     loadAllComponents();
   }, []);
 
-  console.log('BasicCategoryComponentSelector', allCurrentTypeComponents);
+  console.log("BasicCategoryComponentSelector", allCurrentTypeComponents);
 
   return (
-    <div className={'basic-category-component-selector'}>
+    <div className={"basic-category-component-selector"}>
       {allCurrentTypeComponents?.map((c, i) => {
         return (
           <ComponentCard
@@ -63,6 +88,7 @@ export default ({
             onClick={() => {
               const newValue = value?.slice() ?? [];
               const idx = newValue.indexOf(c.id);
+
               if (idx > -1) {
                 newValue.splice(idx, 1);
               } else {
@@ -83,7 +109,7 @@ export default ({
         onClick={() => {
           ComponentDetail.show({
             componentType: componentType,
-            onClosed: hasChanges => {
+            onClosed: (hasChanges) => {
               if (hasChanges) {
                 loadAllComponents();
               }
@@ -91,8 +117,8 @@ export default ({
           });
         }}
       >
-        <CustomIcon type={'plus-circle'} />
-        {t<string>('Add')}
+        <CustomIcon type={"plus-circle"} />
+        {t<string>("Add")}
       </div>
     </div>
   );

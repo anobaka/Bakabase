@@ -1,9 +1,12 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import React, { useEffect, useState } from 'react';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import toast from 'react-hot-toast';
+import type { BootstrapModelsResponseModelsBaseResponse } from "@/sdk/Api";
+
+import { useTranslation } from "react-i18next";
+import React, { useEffect, useState } from "react";
+import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
+import toast from "react-hot-toast";
+
 import {
   Button,
   Chip,
@@ -16,10 +19,9 @@ import {
   TableHeader,
   TableRow,
   Textarea,
-} from '@/components/bakaui';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import BApi from '@/sdk/BApi';
-import type { BootstrapModelsResponseModelsBaseResponse } from '@/sdk/Api';
+} from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import BApi from "@/sdk/BApi";
 
 export type ExtensionGroup = {
   id: number;
@@ -56,7 +58,13 @@ export type ExtensionGroup = {
 // ];
 
 function extractExtensions(text: string): string[] {
-  const extensions = text.replace(/\n/g, ' ').split(' ').map(x => x.trim().replace(/^\.+|\.+$/g, '')).filter(x => x.length > 0).map(x => `.${x}`);
+  const extensions = text
+    .replace(/\n/g, " ")
+    .split(" ")
+    .map((x) => x.trim().replace(/^\.+|\.+$/g, ""))
+    .filter((x) => x.length > 0)
+    .map((x) => `.${x}`);
+
   return Array.from(new Set(extensions));
 }
 
@@ -64,11 +72,14 @@ export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [groups, setGroups] = useState<ExtensionGroup[]>([]);
-  const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(undefined);
-  const [editingExtensionsText, setEditingExtensionsText] = useState<string>('');
+  const [editingGroup, setEditingGroup] = useState<ExtensionGroup | undefined>(
+    undefined,
+  );
+  const [editingExtensionsText, setEditingExtensionsText] =
+    useState<string>("");
 
   useEffect(() => {
-    BApi.extensionGroup.getAllExtensionGroups().then(r => {
+    BApi.extensionGroup.getAllExtensionGroups().then((r) => {
       setGroups(r.data || []);
     });
   }, []);
@@ -76,19 +87,27 @@ export default () => {
   return (
     <div>
       <Modal
+        title={t<string>("Editing extension group")}
         visible={!!editingGroup}
-        title={t<string>('Editing extension group')}
         onClose={() => setEditingGroup(undefined)}
         onOk={async () => {
           let r: BootstrapModelsResponseModelsBaseResponse;
+
           if (editingGroup!.id == 0) {
             r = await BApi.extensionGroup.addExtensionGroup(editingGroup!);
             if (!r.code) {
               groups.push(editingGroup!);
             }
           } else {
-            r = await BApi.extensionGroup.putExtensionGroup(editingGroup!.id, editingGroup!);
-            groups.splice(groups.findIndex(x => x == editingGroup), 1, editingGroup!);
+            r = await BApi.extensionGroup.putExtensionGroup(
+              editingGroup!.id,
+              editingGroup!,
+            );
+            groups.splice(
+              groups.findIndex((x) => x == editingGroup),
+              1,
+              editingGroup!,
+            );
           }
           if (r.code) {
             toast.error(r.message!);
@@ -98,35 +117,37 @@ export default () => {
         }}
       >
         <Input
-          label={t<string>('Name')}
-          onValueChange={v => {
+          isRequired
+          label={t<string>("Name")}
+          value={editingGroup?.name}
+          onValueChange={(v) => {
             setEditingGroup({
               ...editingGroup!,
               name: v,
             });
           }}
-          value={editingGroup?.name}
-          isRequired
         />
         <div>
           <Textarea
-            label={t<string>('Extensions')}
-            placeholder={t<string>('Separate by space or newline')}
+            fullWidth
+            label={t<string>("Extensions")}
+            minRows={4}
+            placeholder={t<string>("Separate by space or newline")}
             value={editingExtensionsText}
-            onValueChange={v => {
+            onValueChange={(v) => {
               setEditingExtensionsText(v);
               setEditingGroup({
                 ...editingGroup!,
                 extensions: extractExtensions(v)!,
               });
             }}
-            fullWidth
-            minRows={4}
           />
-          <div className={'mt-2 flex flex-wrap gap-1'}>
+          <div className={"mt-2 flex flex-wrap gap-1"}>
             {editingGroup?.extensions.map((ext, i) => {
               return (
-                <Chip size={'sm'} variant={'flat'} radius={'sm'}>{ext}</Chip>
+                <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                  {ext}
+                </Chip>
               );
             })}
           </div>
@@ -134,80 +155,89 @@ export default () => {
       </Modal>
       <div>
         <Button
-          size={'sm'}
-          color={'primary'}
+          color={"primary"}
+          size={"sm"}
           onPress={() => {
-            setEditingExtensionsText('');
+            setEditingExtensionsText("");
             setEditingGroup({
               id: 0,
-              name: '',
+              name: "",
               extensions: [],
             });
           }}
         >
-          {t<string>('Add a group')}
+          {t<string>("Add a group")}
         </Button>
       </div>
-      <Table isStriped removeWrapper className={'mt-2'}>
+      <Table isStriped removeWrapper className={"mt-2"}>
         <TableHeader>
-          <TableColumn>{t<string>('Name')}</TableColumn>
-          <TableColumn>{t<string>('Extensions')}</TableColumn>
-          <TableColumn>{t<string>('Operations')}</TableColumn>
+          <TableColumn>{t<string>("Name")}</TableColumn>
+          <TableColumn>{t<string>("Extensions")}</TableColumn>
+          <TableColumn>{t<string>("Operations")}</TableColumn>
         </TableHeader>
         <TableBody>
           {groups.map((eg, i) => {
             return (
               <TableRow>
                 <TableCell>{eg.name}</TableCell>
-                <TableCell>{eg.extensions?.map((ext, j) => {
-                  return (
-                    <Chip
-                      size={'sm'}
-                      variant={'flat'}
-                      isCloseable
-                      onClose={async () => {
-                        eg.extensions?.splice(j, 1);
-                        await BApi.extensionGroup.putExtensionGroup(eg.id, eg);
-                        setGroups([...groups]);
-                      }}
-                    >
-                      {ext}
-                    </Chip>
-                  );
-                })}</TableCell>
                 <TableCell>
-                  <div className={'flex items-center gap-1'}>
+                  {eg.extensions?.map((ext, j) => {
+                    return (
+                      <Chip
+                        isCloseable
+                        size={"sm"}
+                        variant={"flat"}
+                        onClose={async () => {
+                          eg.extensions?.splice(j, 1);
+                          await BApi.extensionGroup.putExtensionGroup(
+                            eg.id,
+                            eg,
+                          );
+                          setGroups([...groups]);
+                        }}
+                      >
+                        {ext}
+                      </Chip>
+                    );
+                  })}
+                </TableCell>
+                <TableCell>
+                  <div className={"flex items-center gap-1"}>
                     <Button
-                      size={'sm'}
-                      color={'primary'}
                       isIconOnly
-                      variant={'light'}
+                      color={"primary"}
+                      size={"sm"}
+                      variant={"light"}
                       onPress={() => {
-                        setEditingExtensionsText(eg.extensions.join(' '));
+                        setEditingExtensionsText(eg.extensions.join(" "));
                         setEditingGroup(JSON.parse(JSON.stringify(eg)));
                       }}
                     >
-                      <EditOutlined className={'text-medium'} />
+                      <EditOutlined className={"text-medium"} />
                     </Button>
                     <Button
-                      size={'sm'}
-                      color={'danger'}
                       isIconOnly
-                      variant={'light'}
+                      color={"danger"}
+                      size={"sm"}
+                      variant={"light"}
                       onPress={() => {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t<string>('Sure to delete?'),
-                          children: t<string>('Be careful, this operation can not be undone'),
+                          title: t<string>("Sure to delete?"),
+                          children: t<string>(
+                            "Be careful, this operation can not be undone",
+                          ),
                           onOk: async () => {
-                            await BApi.extensionGroup.deleteExtensionGroup(eg.id);
+                            await BApi.extensionGroup.deleteExtensionGroup(
+                              eg.id,
+                            );
                             groups.splice(i, 1);
                             setGroups(groups.slice());
                           },
                         });
                       }}
                     >
-                      <DeleteOutlined className={'text-medium'} />
+                      <DeleteOutlined className={"text-medium"} />
                     </Button>
                   </div>
                 </TableCell>

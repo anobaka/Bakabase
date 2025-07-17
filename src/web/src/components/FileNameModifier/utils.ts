@@ -7,5 +7,5 @@ export function truncatePath(path: string, maxLength = 40): string {
 // 公共前缀检测
 export function detectCommonPrefix(paths: string[]): string {
   // TODO: 实现前缀检测
-  return '';
-} 
+  return "";
+}

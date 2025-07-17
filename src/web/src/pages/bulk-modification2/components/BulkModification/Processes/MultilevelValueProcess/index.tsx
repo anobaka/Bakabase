@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import { Select } from '@/components/bakaui';
-import { MultilevelValueRenderer } from '@/components/StandardValue';
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+
+import { Select } from "@/components/bakaui";
+import { MultilevelValueRenderer } from "@/components/StandardValue";
 
 enum MultilevelProcessorOperation {
   Set = 1,
@@ -12,19 +13,18 @@ enum MultilevelProcessorOperation {
   AddLayer = 4,
 }
 
-const multilevelProcessorOperations = Object.keys(MultilevelProcessorOperation).map(x => ({
+const multilevelProcessorOperations = Object.keys(
+  MultilevelProcessorOperation,
+).map((x) => ({
   label: x,
   value: MultilevelProcessorOperation[x],
 }));
 
 type MultilevelProcessorOptions = {
   operation?: MultilevelProcessorOperation;
-
 };
 
-type Props = {
-
-};
+type Props = {};
 
 export default ({}: Props) => {
   const { t } = useTranslation();
@@ -40,41 +40,40 @@ export default ({}: Props) => {
       case MultilevelProcessorOperation.AddBranches:
         return (
           <>
-            <div>
-              {t<string>('Value')}
-            </div>
-            <MultilevelValueRenderer editor={{ }} />
+            <div>{t<string>("Value")}</div>
+            <MultilevelValueRenderer editor={{}} />
           </>
         );
       case MultilevelProcessorOperation.ModifyNode:
         return (
           <>
-            <div>{t<string>('Filter branches by')}</div>
+            <div>{t<string>("Filter branches by")}</div>
           </>
         );
       case MultilevelProcessorOperation.AddLayer:
-        return (
-          <>
-          </>
-        );
+        return <></>;
     }
   };
 
   return (
-    <div className={'grid items-center gap-2'} style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}>
-      <div>
-        {t<string>('Operation')}
-      </div>
+    <div
+      className={"grid items-center gap-2"}
+      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
+    >
+      <div>{t<string>("Operation")}</div>
       <Select
-        dataSource={multilevelProcessorOperations.map(tpo => ({
+        dataSource={multilevelProcessorOperations.map((tpo) => ({
           label: tpo.label,
           value: tpo.value,
         }))}
-        selectionMode={'single'}
-        onSelectionChange={keys => {
+        selectionMode={"single"}
+        onSelectionChange={(keys) => {
           setOptions({
             ...options,
-            operation: parseInt(Array.from(keys || [])[0] as string, 10) as MultilevelProcessorOperation,
+            operation: parseInt(
+              Array.from(keys || [])[0] as string,
+              10,
+            ) as MultilevelProcessorOperation,
           });
         }}
       />

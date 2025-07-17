@@ -1,9 +1,16 @@
-import { MdOutlineAccessTime, MdOutlineCheckBox, MdOutlineTextFormat, MdOutlineTextSnippet } from 'react-icons/md';
-import type { IconType } from 'react-icons';
-import { TbNumber123 } from 'react-icons/tb';
-import { LuCalendarDays, LuLink, LuTags } from 'react-icons/lu';
-import { PiTreeView } from 'react-icons/pi';
-import { StandardValueType } from '@/sdk/constants';
+import type { IconType } from "react-icons";
+
+import {
+  MdOutlineAccessTime,
+  MdOutlineCheckBox,
+  MdOutlineTextFormat,
+  MdOutlineTextSnippet,
+} from "react-icons/md";
+import { TbNumber123 } from "react-icons/tb";
+import { LuCalendarDays, LuLink, LuTags } from "react-icons/lu";
+import { PiTreeView } from "react-icons/pi";
+
+import { StandardValueType } from "@/sdk/constants";
 
 type Props = IconType & {
   valueType: StandardValueType;
@@ -23,10 +30,6 @@ const StandardValueTypeIconMap: Record<StandardValueType, IconType> = {
 
 export default ({ valueType, ...props }: Props) => {
   const Icon = StandardValueTypeIconMap[valueType];
-  return (
-    <Icon
-      className={'text-medium'}
-      {...props}
-    />
-  );
+
+  return <Icon className={"text-medium"} {...props} />;
 };

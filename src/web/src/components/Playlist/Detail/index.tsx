@@ -1,13 +1,12 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import './index.scss';
-import { Button, Input, NumberPicker, TimePicker2 } from '@alifd/next';
-import i18n from 'i18next';
-import CustomIcon from '@/components/CustomIcon';
-import { PlaylistItemType } from '@/sdk/constants';
-import SortablePlaylistItemList from '@/components/Playlist/Detail/components/SortablePlaylistItemList';
-import BApi from '@/sdk/BApi';
+import React, { useEffect, useState } from "react";
+import "./index.scss";
+import { Input, NumberPicker } from "@alifd/next";
+import i18n from "i18next";
+
+import SortablePlaylistItemList from "@/components/Playlist/Detail/components/SortablePlaylistItemList";
+import BApi from "@/sdk/BApi";
 
 export default ({ id, onChange }) => {
   const [playlist, setPlaylist] = useState({});
@@ -16,16 +15,27 @@ export default ({ id, onChange }) => {
   useEffect(() => {
     BApi.playlist.getPlaylist(id).then((a) => {
       const pl = a.data;
+
       setPlaylist(pl);
-      const resourceIds = (pl.items?.map((b) => b.resourceId) ?? []).filter(a => a)!;
-      const distinctResourceIds = resourceIds.filter((t, i) => resourceIds.indexOf(t) == i);
+      const resourceIds = (pl.items?.map((b) => b.resourceId) ?? []).filter(
+        (a) => a,
+      )!;
+      const distinctResourceIds = resourceIds.filter(
+        (t, i) => resourceIds.indexOf(t) == i,
+      );
+
       if (distinctResourceIds.length > 0) {
-        BApi.resource.getResourcesByKeys({ ids: distinctResourceIds }).then((c) => {
-          setResources((c.data || []).reduce((s, t) => {
-            s[t.id] = t;
-            return s;
-          }, {}));
-        });
+        BApi.resource
+          .getResourcesByKeys({ ids: distinctResourceIds })
+          .then((c) => {
+            setResources(
+              (c.data || []).reduce((s, t) => {
+                s[t.id] = t;
+
+                return s;
+              }, {}),
+            );
+          });
       }
     });
   }, []);
@@ -35,12 +45,14 @@ export default ({ id, onChange }) => {
       ...playlist,
       ...(patches || {}),
     };
+
     setPlaylist(pl);
     onChange(pl);
   };
 
   const renderPlaylistItems = () => {
     const items = playlist.items || [];
+
     return (
       <SortablePlaylistItemList
         useDragHandle
@@ -53,6 +65,7 @@ export default ({ id, onChange }) => {
         }}
         onSortEnd={({ newIndex, oldIndex }) => {
           const oi = items[oldIndex];
+
           items.splice(oldIndex, 1);
           items.splice(newIndex, 0, oi);
           patchPlaylist();
@@ -62,12 +75,10 @@ export default ({ id, onChange }) => {
   };
 
   return (
-    <div className={'play-list-detail'}>
+    <div className={"play-list-detail"}>
       <div className="info">
         <div className="name">
-          <div className="label">
-            {i18n.t<string>('Name')}
-          </div>
+          <div className="label">{i18n.t<string>("Name")}</div>
           <div className="value">
             <Input
               value={playlist.name}
@@ -80,11 +91,10 @@ export default ({ id, onChange }) => {
           </div>
         </div>
         <div className="interval">
-          <div className="label">
-            {i18n.t<string>('Interval')}
-          </div>
+          <div className="label">{i18n.t<string>("Interval")}</div>
           <div className="value">
             <NumberPicker
+              innerAfter={i18n.t<string>("ms")}
               min={0}
               value={playlist.interval}
               onChange={(v) => {
@@ -92,14 +102,11 @@ export default ({ id, onChange }) => {
                   interval: v,
                 });
               }}
-              innerAfter={i18n.t<string>('ms')}
             />
           </div>
         </div>
       </div>
-      <div className="items">
-        {renderPlaylistItems()}
-      </div>
+      <div className="items">{renderPlaylistItems()}</div>
     </div>
   );
 };

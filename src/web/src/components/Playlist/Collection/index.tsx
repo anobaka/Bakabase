@@ -1,19 +1,20 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { toast } from '@/components/bakaui';
-import {Balloon, Button, Dialog, Input, List} from '@alifd/next';
-import * as dayjs from 'dayjs';
-import { useTranslation } from 'react-i18next';
-import { useUpdate } from 'react-use';
-import styles from './index.module.scss';
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Balloon, Button, Dialog, Input, List } from "@alifd/next";
+import * as dayjs from "dayjs";
+import { useTranslation } from "react-i18next";
+import { useUpdate } from "react-use";
 
-import PlaylistDetail from '@/components/Playlist/Detail/index';
-import CustomIcon from '@/components/CustomIcon';
-import { PlaylistItemType } from '@/sdk/constants';
-import TimeRanger from '@/components/TimeRanger';
-import BApi from '@/sdk/BApi';
-import MediaPlayer from '@/components/MediaPlayer';
+import styles from "./index.module.scss";
+
+import { toast } from "@/components/bakaui";
+import PlaylistDetail from "@/components/Playlist/Detail/index";
+import CustomIcon from "@/components/CustomIcon";
+import { PlaylistItemType } from "@/sdk/constants";
+import TimeRanger from "@/components/TimeRanger";
+import BApi from "@/sdk/BApi";
+import MediaPlayer from "@/components/MediaPlayer";
 
 interface IPlaylistItem {
   type: PlaylistItemType;
@@ -38,7 +39,14 @@ class PlaylistItem implements IPlaylistItem {
     if (a.file && b.file && a.file == b.file) {
       return true;
     }
-    return !!(!a.file && !b.file && a.resourceId && b.resourceId && a.resourceId == b.resourceId);
+
+    return !!(
+      !a.file &&
+      !b.file &&
+      a.resourceId &&
+      b.resourceId &&
+      a.resourceId == b.resourceId
+    );
   }
 }
 
@@ -63,14 +71,15 @@ interface IProps {
   className?: string;
 }
 
-export default ({
-                  defaultNewItem,
-                  className,
-                }: IProps) => {
+export default ({ defaultNewItem, className }: IProps) => {
   const [playlists, setPlaylists] = useState<IPlaylist[]>([]);
-  const newItemRef = useRef<IPlaylistItem | undefined>(defaultNewItem ? {
-    ...defaultNewItem,
-  } : undefined);
+  const newItemRef = useRef<IPlaylistItem | undefined>(
+    defaultNewItem
+      ? {
+          ...defaultNewItem,
+        }
+      : undefined,
+  );
 
   const forceUpdate = useUpdate();
 
@@ -81,72 +90,92 @@ export default ({
   }, []);
 
   const loadPlaylists = useCallback(() => {
-    BApi.playlist.getAllPlaylists()
-      .then(a => {
-        // @ts-ignore
-        setPlaylists(a.data || []);
-      });
-  }, []);
-
-  const saveItemToPlaylist = useCallback((item: IPlaylistItem, playlist: IPlaylist) => {
-    const items = playlist.items?.slice() || [];
-    items.push(item);
-    return BApi.playlist.putPlaylist({
-      ...playlist,
+    BApi.playlist.getAllPlaylists().then((a) => {
       // @ts-ignore
-      items,
-    })
-      .then((a) => {
-        if (!a.code) {
-          playlist.items = items;
-          forceUpdate();
-          toast.success(t<string>('Add successfully'));
-          return a;
-        }
-        throw new Error(a.message!);
-      });
-  }, []);
-
-  const setDurationTime = useCallback((currentValue: number[], newValue: number[] | undefined, key: 'startTime' | 'endTime') => {
-    if (newValue) {
-      const idx = key == 'startTime' ? 0 : 1;
-      const value = newValue[idx];
-      if (value != undefined && currentValue[idx] != value) {
-        currentValue[idx] = value;
-        newItemRef.current![key] = dayjs.duration(value * 1000)
-          .format('HH:mm:ss');
-        if (defaultNewItem?.onTimeSelected) {
-          defaultNewItem.onTimeSelected(value);
-        }
-      }
-    }
-  }, []);
-
-  const showDurationSelector = useCallback((item: IPlaylistItem, playlist: IPlaylist) => {
-    // console.log(playerElement, playerElement?.currentTime);
-    const totalSeconds = Math.floor(defaultNewItem!.totalSeconds || 0);
-    if (totalSeconds == 0) {
-      return toast.error(t<string>('Can not get duration of a media file'));
-    }
-    const duration = [0, totalSeconds];
-    Dialog.show({
-      title: t<string>('Select duration'),
-      id: 'playlist-item-duration-selector',
-      content: (
-        <div className={'playlist-item-duration-selector'}>
-          <TimeRanger
-            duration={dayjs.duration(totalSeconds * 1000)}
-            onProcess={(seconds) => {
-              setDurationTime(duration, seconds, 'startTime');
-              setDurationTime(duration, seconds, 'endTime');
-            }}
-          />
-        </div>
-      ),
-      closeMode: ['close', 'esc', 'mask'],
-      onOk: () => saveItemToPlaylist(item, playlist),
+      setPlaylists(a.data || []);
     });
   }, []);
+
+  const saveItemToPlaylist = useCallback(
+    (item: IPlaylistItem, playlist: IPlaylist) => {
+      const items = playlist.items?.slice() || [];
+
+      items.push(item);
+
+      return BApi.playlist
+        .putPlaylist({
+          ...playlist,
+          // @ts-ignore
+          items,
+        })
+        .then((a) => {
+          if (!a.code) {
+            playlist.items = items;
+            forceUpdate();
+            toast.success(t<string>("Add successfully"));
+
+            return a;
+          }
+          throw new Error(a.message!);
+        });
+    },
+    [],
+  );
+
+  const setDurationTime = useCallback(
+    (
+      currentValue: number[],
+      newValue: number[] | undefined,
+      key: "startTime" | "endTime",
+    ) => {
+      if (newValue) {
+        const idx = key == "startTime" ? 0 : 1;
+        const value = newValue[idx];
+
+        if (value != undefined && currentValue[idx] != value) {
+          currentValue[idx] = value;
+          newItemRef.current![key] = dayjs
+            .duration(value * 1000)
+            .format("HH:mm:ss");
+          if (defaultNewItem?.onTimeSelected) {
+            defaultNewItem.onTimeSelected(value);
+          }
+        }
+      }
+    },
+    [],
+  );
+
+  const showDurationSelector = useCallback(
+    (item: IPlaylistItem, playlist: IPlaylist) => {
+      // console.log(playerElement, playerElement?.currentTime);
+      const totalSeconds = Math.floor(defaultNewItem!.totalSeconds || 0);
+
+      if (totalSeconds == 0) {
+        return toast.error(t<string>("Can not get duration of a media file"));
+      }
+      const duration = [0, totalSeconds];
+
+      Dialog.show({
+        title: t<string>("Select duration"),
+        id: "playlist-item-duration-selector",
+        content: (
+          <div className={"playlist-item-duration-selector"}>
+            <TimeRanger
+              duration={dayjs.duration(totalSeconds * 1000)}
+              onProcess={(seconds) => {
+                setDurationTime(duration, seconds, "startTime");
+                setDurationTime(duration, seconds, "endTime");
+              }}
+            />
+          </div>
+        ),
+        closeMode: ["close", "esc", "mask"],
+        onOk: () => saveItemToPlaylist(item, playlist),
+      });
+    },
+    [],
+  );
 
   const addNewItem = useCallback((newItem: IPlaylistItem, playlist: any) => {
     if (newItem) {
@@ -163,43 +192,46 @@ export default ({
     }
   }, []);
 
-  const renderAddButton = useCallback((newItem: IPlaylistItem | undefined, playlist: IPlaylist) => {
-    if (newItem) {
-      const added = playlist.items?.find(a => PlaylistItem.equals(a, newItem));
-      const btn = (
-        <Button
-          size={'small'}
-          type={'normal'}
-          onClick={() => {
-            addNewItem(newItem, playlist);
-          }}
-        >
-          <CustomIcon type={'plus-circle'} size={'small'} />
-          {t<string>(added ? 'Added' : 'Add it here')}
-        </Button>
-      );
-      if (added) {
-        return (
-          <Balloon.Tooltip
-            trigger={btn}
-            triggerType={'hover'}
-            v2
-          >
-            {t<string>('You can add it more than once, and if you want to remove it from playlist, you should click the corresponding playlist first.')}
-          </Balloon.Tooltip>
+  const renderAddButton = useCallback(
+    (newItem: IPlaylistItem | undefined, playlist: IPlaylist) => {
+      if (newItem) {
+        const added = playlist.items?.find((a) =>
+          PlaylistItem.equals(a, newItem),
         );
+        const btn = (
+          <Button
+            size={"small"}
+            type={"normal"}
+            onClick={() => {
+              addNewItem(newItem, playlist);
+            }}
+          >
+            <CustomIcon size={"small"} type={"plus-circle"} />
+            {t<string>(added ? "Added" : "Add it here")}
+          </Button>
+        );
+
+        if (added) {
+          return (
+            <Balloon.Tooltip v2 trigger={btn} triggerType={"hover"}>
+              {t<string>(
+                "You can add it more than once, and if you want to remove it from playlist, you should click the corresponding playlist first.",
+              )}
+            </Balloon.Tooltip>
+          );
+        }
+
+        return btn;
       }
-      return btn;
-    }
-    return;
-  }, []);
+
+      return;
+    },
+    [],
+  );
 
   return (
     <div className={`${styles.playlistCollection} ${className}`}>
       <List
-        size="small"
-        // header={<div>Notifications</div>}
-        dataSource={playlists}
         renderItem={(pl, i) => (
           <List.Item
             key={i}
@@ -308,44 +340,52 @@ export default ({
             }
           />
         )}
+        size="small"
+        // header={<div>Notifications</div>}
+        dataSource={playlists}
       />
       <div className={styles.opt}>
         <Button
-          type={'normal'}
-          size={'small'}
+          size={"small"}
+          type={"normal"}
           onClick={() => {
             let name;
+
             Dialog.show({
-              title: t<string>('Creating playlist'),
+              title: t<string>("Creating playlist"),
               closeable: true,
               content: (
-                <Input onChange={(v) => {
-                  name = v;
-                }}
+                <Input
+                  onChange={(v) => {
+                    name = v;
+                  }}
                 />
               ),
-              onOk: () => new Promise((resolve, reject) => {
-                if (!name) {
-                  toast.error(t<string>('Name can not be empty'));
-                  reject();
-                  return;
-                }
-                BApi.playlist.addPlaylist({
-                  name,
-                })
-                  .then(a => {
-                    if (!a.code) {
-                      loadPlaylists();
-                      resolve(a);
-                    } else {
-                      reject();
-                    }
-                  });
-              }),
+              onOk: () =>
+                new Promise((resolve, reject) => {
+                  if (!name) {
+                    toast.error(t<string>("Name can not be empty"));
+                    reject();
+
+                    return;
+                  }
+                  BApi.playlist
+                    .addPlaylist({
+                      name,
+                    })
+                    .then((a) => {
+                      if (!a.code) {
+                        loadPlaylists();
+                        resolve(a);
+                      } else {
+                        reject();
+                      }
+                    });
+                }),
             });
           }}
         >
-          {t<string>('Create')}
+          {t<string>("Create")}
         </Button>
       </div>
     </div>

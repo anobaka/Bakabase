@@ -1,43 +1,58 @@
-'use client';
+"use client";
 
-import {Overlay} from '@alifd/next';
-import { toast } from '@/components/bakaui';
-import React from 'react';
-import * as dayjs from 'dayjs';
-import * as duration from 'dayjs/plugin/duration';
-import type ReactPlayer from 'react-player';
-import MediaPlayer from '@/components/MediaPlayer';
-import { MediaType } from '@/sdk/constants';
-import { captureVideoFrame } from '@/components/utils';
-import BApi from '@/sdk/BApi';
-import CoverSaveButton from '@/components/Resource/components/CoverSaveButton';
+import type ReactPlayer from "react-player";
+
+import { Overlay } from "@alifd/next";
+import React from "react";
+import * as dayjs from "dayjs";
+import * as duration from "dayjs/plugin/duration";
+
+import { toast } from "@/components/bakaui";
+import MediaPlayer from "@/components/MediaPlayer";
+import { MediaType } from "@/sdk/constants";
+import { captureVideoFrame } from "@/components/utils";
+import BApi from "@/sdk/BApi";
+import CoverSaveButton from "@/components/Resource/components/CoverSaveButton";
 
 dayjs.extend(duration);
 
 const { Popup } = Overlay;
 
-export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (base64String: string) => any, t: any, isSingleFileResource: boolean) => {
+export default (
+  resourceId: number,
+  resourcePath: string,
+  onSaveAsNewCover: (base64String: string) => any,
+  t: any,
+  isSingleFileResource: boolean,
+) => {
   // const { t } = useTranslation();
 
-  console.log('Showing resource media player');
+  console.log("Showing resource media player");
 
-
-  BApi.file.getAllFiles({
-    path: resourcePath,
-  })
-    .then(a => {
+  BApi.file
+    .getAllFiles({
+      path: resourcePath,
+    })
+    .then((a) => {
       if (!a.code && a.data) {
         if (a.data.length == 0) {
-          return toast.info(t<string>('No files to preview'));
+          return toast.info(t<string>("No files to preview"));
         }
         const files = a.data;
+
         MediaPlayer.show({
-          id: 'media-player',
-          files: files.map(f => ({
+          id: "media-player",
+          files: files.map((f) => ({
             path: f,
           })),
           defaultActiveIndex: 0,
-          renderOperations: (filePath: string, mediaType: MediaType, playing: boolean, reactPlayer: ReactPlayer | null, image: HTMLImageElement | null): any => {
+          renderOperations: (
+            filePath: string,
+            mediaType: MediaType,
+            playing: boolean,
+            reactPlayer: ReactPlayer | null,
+            image: HTMLImageElement | null,
+          ): any => {
             console.log(filePath, mediaType, playing, reactPlayer);
             console.log(reactPlayer, reactPlayer?.getDuration());
             const components: any[] = [
@@ -55,6 +70,7 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
               //   </Button>
               // ),
             ];
+
             // if (mediaType == MediaType.Image || mediaType == MediaType.Audio || mediaType == MediaType.Video) {
             //   let playlistItemType: PlaylistItemType = PlaylistItemType.Resource;
             //   switch (mediaType) {
@@ -102,19 +118,29 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
               case MediaType.Video: {
                 components.push(
                   <CoverSaveButton
-                    resourceId={resourceId}
+                    disabledReason={
+                      playing
+                        ? t<string>("Available when video is paused")
+                        : undefined
+                    }
                     getDataURL={() => {
                       // Call captureVideoFrame() when you want to record a screenshot
-                      const frame = captureVideoFrame(reactPlayer!.getInternalPlayer(), 'jpeg', 1);
+                      const frame = captureVideoFrame(
+                        reactPlayer!.getInternalPlayer(),
+                        "jpeg",
+                        1,
+                      );
+
                       if (frame) {
                         return frame.dataUri;
                       } else {
-                        const msg = t<string>('Failed to capture video frame');
+                        const msg = t<string>("Failed to capture video frame");
+
                         toast.error(msg);
                         throw new Error(msg);
                       }
                     }}
-                    disabledReason={playing ? t<string>('Available when video is paused') : undefined}
+                    resourceId={resourceId}
                   />,
                 );
               }
@@ -122,26 +148,26 @@ export default (resourceId: number, resourcePath: string, onSaveAsNewCover: (bas
                 if (image) {
                   components.push(
                     <CoverSaveButton
-                      resourceId={resourceId}
                       getDataURL={() => {
-                        let canvas = document.createElement('canvas');
+                        let canvas = document.createElement("canvas");
+
                         canvas.width = image.width;
                         canvas.height = image.height;
-                        let ctx = canvas.getContext('2d')!;
+                        let ctx = canvas.getContext("2d")!;
+
                         ctx.drawImage(image, 0, 0);
+
                         return canvas.toDataURL();
                       }}
+                      resourceId={resourceId}
                     />,
                   );
                 }
                 break;
               }
             }
-            return (
-              <div className={'operations'}>
-                {components}
-              </div>
-            );
+
+            return <div className={"operations"}>{components}</div>;
           },
         });
       }

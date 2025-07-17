@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import { Badge, Dialog, Radio } from '@alifd/next';
-import { useCallback, useEffect, useState } from 'react';
-import { createPortalOfComponent } from '@/components/utils';
-import BApi from '@/sdk/BApi';
-import { PasswordSearchOrder, passwordSearchOrders } from '@/sdk/constants';
+import { Badge, Dialog, Radio } from "@alifd/next";
+import { useCallback, useEffect, useState } from "react";
 
-import './index.scss';
-import { useTranslation } from 'react-i18next';
-import ClickableIcon from '@/components/ClickableIcon';
+import { createPortalOfComponent } from "@/components/utils";
+import BApi from "@/sdk/BApi";
+import { PasswordSearchOrder } from "@/sdk/constants";
+
+import "./index.scss";
+import { useTranslation } from "react-i18next";
+
+import ClickableIcon from "@/components/ClickableIcon";
 
 interface IProps {
   onSelect: (password: string) => any;
@@ -16,18 +18,18 @@ interface IProps {
 }
 
 function PasswordSelector(props: IProps) {
-  const {
-    onSelect,
-    afterClose,
-  } = props;
+  const { onSelect, afterClose } = props;
   const { t } = useTranslation();
 
-  const [passwords, setPasswords] = useState<{ text: string; usedTimes: number; lastUsedAt: string }[]>([]);
+  const [passwords, setPasswords] = useState<
+    { text: string; usedTimes: number; lastUsedAt: string }[]
+  >([]);
   const [visible, setVisible] = useState(true);
   const [order, setOrder] = useState(PasswordSearchOrder.Latest);
 
   const initialize = useCallback(async () => {
     const rsp = await BApi.password.getAllPasswords();
+
     // @ts-ignore
     setPasswords(rsp.data || []);
   }, []);
@@ -41,8 +43,13 @@ function PasswordSelector(props: IProps) {
   }, []);
 
   const renderPasswords = useCallback(() => {
-    const filtered = passwords.sort((a, b) => (order === PasswordSearchOrder.Latest ? (b.lastUsedAt.localeCompare(a.lastUsedAt)) : (b.usedTimes - a.usedTimes)));
-    return filtered.map(p => {
+    const filtered = passwords.sort((a, b) =>
+      order === PasswordSearchOrder.Latest
+        ? b.lastUsedAt.localeCompare(a.lastUsedAt)
+        : b.usedTimes - a.usedTimes,
+    );
+
+    return filtered.map((p) => {
       return (
         <div
           className="password"
@@ -54,13 +61,13 @@ function PasswordSelector(props: IProps) {
           <div className="top">
             <div className="text">{p.text}</div>
             <ClickableIcon
-              type={'delete'}
-              colorType={'danger'}
+              colorType={"danger"}
+              type={"delete"}
               onClick={(e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 Dialog.confirm({
-                  title: t<string>('Delete password from history?'),
+                  title: t<string>("Delete password from history?"),
                   closeable: true,
                   onOk: () => BApi.password.deletePassword(p.text),
                 });
@@ -79,33 +86,33 @@ function PasswordSelector(props: IProps) {
 
   return (
     <Dialog
-      title={t<string>('Passwords')}
-      afterClose={afterClose}
-      visible={visible}
-      className={'password-selector-dialog'}
       v2
-      width={'auto'}
-      footerActions={['cancel']}
-      closeMode={['close', 'mask', 'esc']}
-      onClose={close}
+      afterClose={afterClose}
+      className={"password-selector-dialog"}
+      closeMode={["close", "mask", "esc"]}
+      footerActions={["cancel"]}
+      title={t<string>("Passwords")}
+      visible={visible}
+      width={"auto"}
       onCancel={close}
+      onClose={close}
     >
       <div className="orders">
-        <div className="title">{t<string>('Order')}</div>
+        <div className="title">{t<string>("Order")}</div>
         <div className="content">
           <Radio.Group
-            value={order}
             dataSource={[
               {
-                label: t<string>('Used recently'),
+                label: t<string>("Used recently"),
                 value: PasswordSearchOrder.Latest,
               },
               {
-                label: t<string>('Used frequently'),
+                label: t<string>("Used frequently"),
                 value: PasswordSearchOrder.Frequency,
               },
             ]}
-            onChange={v => {
+            value={order}
+            onChange={(v) => {
               // @ts-ignore
               setOrder(v);
             }}
@@ -113,15 +120,14 @@ function PasswordSelector(props: IProps) {
         </div>
       </div>
       <div className="passwords">
-        <div className="title">{t<string>('Passwords')}</div>
-        <div className="content">
-          {renderPasswords()}
-        </div>
+        <div className="title">{t<string>("Passwords")}</div>
+        <div className="content">{renderPasswords()}</div>
       </div>
     </Dialog>
   );
 }
 
-PasswordSelector.show = props => createPortalOfComponent(PasswordSelector, props);
+PasswordSelector.show = (props) =>
+  createPortalOfComponent(PasswordSelector, props);
 
 export default PasswordSelector;

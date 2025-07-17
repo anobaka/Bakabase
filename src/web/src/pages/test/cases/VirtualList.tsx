@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useRef } from 'react';
-import { List } from 'react-virtualized';
+import React, { useState, useRef } from "react";
+import { List } from "react-virtualized";
 
 export default () => {
   const [items, setItems] = useState([1, 2, 3, 4, 5]);
@@ -15,7 +15,6 @@ export default () => {
   return (
     <List
       ref={listRef}
-      width={300}
       height={300}
       rowCount={items.length}
       rowHeight={20}
@@ -25,6 +24,7 @@ export default () => {
           <button onClick={() => removeItem(index)}>Remove</button>
         </div>
       )}
+      width={300}
     />
   );
 };

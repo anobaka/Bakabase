@@ -1,6 +1,5 @@
-import PscMatcher from './models/PscMatcher';
-import { PscPropertyType } from './models/PscPropertyType';
-
+import PscMatcher from "./models/PscMatcher";
+import { PscPropertyType } from "./models/PscPropertyType";
 
 const RootPathMatcher = new PscMatcher({
   propertyType: PscPropertyType.RootPath,
@@ -46,14 +45,20 @@ const allMatchers = [
 // Set check order of matchers
 const notSetCheckOrderMatchers = allMatchers.slice();
 const setCheckOrderMatchers: PscMatcher[] = [];
+
 while (setCheckOrderMatchers.length < notSetCheckOrderMatchers.length) {
   const doneCount = setCheckOrderMatchers.length;
+
   for (const m of notSetCheckOrderMatchers) {
     if (!setCheckOrderMatchers.includes(m)) {
       if (m.prerequisites.length == 0) {
         setCheckOrderMatchers.push(m);
       } else {
-        if (m.prerequisites.every(p => setCheckOrderMatchers.some(m => m.propertyType == p))) {
+        if (
+          m.prerequisites.every((p) =>
+            setCheckOrderMatchers.some((m) => m.propertyType == p),
+          )
+        ) {
           setCheckOrderMatchers.push(m);
         }
       }
@@ -61,7 +66,7 @@ while (setCheckOrderMatchers.length < notSetCheckOrderMatchers.length) {
   }
 
   if (doneCount == setCheckOrderMatchers.length) {
-    throw new Error('There is a loop in resource prerequisites');
+    throw new Error("There is a loop in resource prerequisites");
   }
 }
 
@@ -69,28 +74,35 @@ for (let i = 0; i < setCheckOrderMatchers.length; i++) {
   setCheckOrderMatchers[i].checkOrder = i;
 }
 
-console.log('[AllPathSegmentMatchers]', allMatchers);
+console.log("[AllPathSegmentMatchers]", allMatchers);
 
-const matchersAfter: { [type in PscPropertyType]?: PscMatcher[] } = allMatchers.reduce((s, t) => {
-  s[t.propertyType] = allMatchers.filter(m => m.order > t.order);
-  return s;
-}, {});
+const matchersAfter: { [type in PscPropertyType]?: PscMatcher[] } =
+  allMatchers.reduce((s, t) => {
+    s[t.propertyType] = allMatchers.filter((m) => m.order > t.order);
 
-const matchersBefore: { [type in PscPropertyType]?: PscMatcher[] } = allMatchers.reduce((s, t) => {
-  s[t.propertyType] = allMatchers.filter(m => m.order < t.order);
-  return s;
-}, {});
-
-const buildSimpleMatcherOrders = (data: { [type in PscPropertyType]?: PscMatcher[] }): {
-  [type: string]: string[];
-} => Object.keys(data)
-  .reduce<{ [type: string]: string[] }>((s, t) => {
-    s[PscPropertyType[t]] = data[t]?.map(m => PscPropertyType[m.type]);
     return s;
   }, {});
 
-console.log('[MatchersAfter]', buildSimpleMatcherOrders(matchersAfter));
-console.log('[MatchersBefore]', buildSimpleMatcherOrders(matchersBefore));
+const matchersBefore: { [type in PscPropertyType]?: PscMatcher[] } =
+  allMatchers.reduce((s, t) => {
+    s[t.propertyType] = allMatchers.filter((m) => m.order < t.order);
+
+    return s;
+  }, {});
+
+const buildSimpleMatcherOrders = (data: {
+  [type in PscPropertyType]?: PscMatcher[];
+}): {
+  [type: string]: string[];
+} =>
+  Object.keys(data).reduce<{ [type: string]: string[] }>((s, t) => {
+    s[PscPropertyType[t]] = data[t]?.map((m) => PscPropertyType[m.type]);
+
+    return s;
+  }, {});
+
+console.log("[MatchersAfter]", buildSimpleMatcherOrders(matchersAfter));
+console.log("[MatchersBefore]", buildSimpleMatcherOrders(matchersBefore));
 
 export {
   allMatchers,
@@ -99,4 +111,3 @@ export {
   RootPathMatcher,
   ResourceMatcher,
 };
-

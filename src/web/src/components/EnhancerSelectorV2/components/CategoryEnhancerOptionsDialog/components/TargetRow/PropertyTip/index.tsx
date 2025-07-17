@@ -1,20 +1,22 @@
-'use client';
+"use client";
 
-import { ExclamationCircleOutlined } from '@ant-design/icons';
-import { useTranslation } from 'react-i18next';
-import type { ReactElement } from 'react';
-import React from 'react';
-import { Button, Modal, Tooltip } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { IProperty } from '@/components/Property/models';
-import { PropertyType, PropertyPool } from '@/sdk/constants';
+import type { ReactElement } from "react";
+import type { IProperty } from "@/components/Property/models";
+
+import { ExclamationCircleOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
+import React from "react";
+
+import { Button, Modal, Tooltip } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { PropertyType, PropertyPool } from "@/sdk/constants";
 
 interface IProps {
   // onAllowAddingNewDataDynamicallyEnabled?: () => any;
   onPropertyBoundToCategory?: () => any;
   property: IProperty;
-  category: {name: string; id: number; customPropertyIds?: number[]};
+  category: { name: string; id: number; customPropertyIds?: number[] };
 }
 
 const PropertyTypesWithDynamicData = [
@@ -25,8 +27,11 @@ const PropertyTypesWithDynamicData = [
 ];
 
 export default ({
-                  // onAllowAddingNewDataDynamicallyEnabled,
-                  onPropertyBoundToCategory, property, category }: IProps) => {
+  // onAllowAddingNewDataDynamicallyEnabled,
+  onPropertyBoundToCategory,
+  property,
+  category,
+}: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -61,29 +66,40 @@ export default ({
     //   );
     // }
 
-    if (category.customPropertyIds?.includes(property.id) != true && property.pool == PropertyPool.Custom) {
+    if (
+      category.customPropertyIds?.includes(property.id) != true &&
+      property.pool == PropertyPool.Custom
+    ) {
       tips.push(
-        <div className={'flex items-center gap-1'} key={2}>
-          {t<string>('This property is not bound to the category, its data will not be displayed.')}
+        <div key={2} className={"flex items-center gap-1"}>
+          {t<string>(
+            "This property is not bound to the category, its data will not be displayed.",
+          )}
           <Button
-            size={'sm'}
-            color={'primary'}
-            variant={'light'}
+            color={"primary"}
+            size={"sm"}
+            variant={"light"}
             onClick={() => {
               createPortal(Modal, {
-                title: t<string>('Bind property {{propertyName}} to category {{categoryName}}', {
-                  propertyName: property.name,
-                  categoryName: category.name,
-                }),
+                title: t<string>(
+                  "Bind property {{propertyName}} to category {{categoryName}}",
+                  {
+                    propertyName: property.name,
+                    categoryName: category.name,
+                  },
+                ),
                 defaultVisible: true,
                 onOk: async () => {
-                  await BApi.category.bindCustomPropertyToCategory(category.id, property.id);
+                  await BApi.category.bindCustomPropertyToCategory(
+                    category.id,
+                    property.id,
+                  );
                   onPropertyBoundToCategory?.();
                 },
               });
             }}
           >
-            {t<string>('Bind now')}
+            {t<string>("Bind now")}
           </Button>
         </div>,
       );
@@ -93,21 +109,17 @@ export default ({
   };
 
   const tips = renderTips();
+
   if (tips.length) {
     return (
-      <Tooltip
-        content={(
-          <div className={'flex flex-col gap-1'}>
-            {tips}
-          </div>
-        )}
-      >
+      <Tooltip content={<div className={"flex flex-col gap-1"}>{tips}</div>}>
         <ExclamationCircleOutlined
-          className={'text-small cursor-pointer'}
-          style={{ color: 'var(--bakaui-warning)' }}
+          className={"text-small cursor-pointer"}
+          style={{ color: "var(--bakaui-warning)" }}
         />
       </Tooltip>
     );
   }
+
   return null;
 };

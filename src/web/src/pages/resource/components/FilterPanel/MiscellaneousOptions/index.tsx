@@ -1,4 +1,6 @@
-'use client';
+"use client";
+
+import type { BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions } from "@/sdk/Api";
 
 import {
   AppstoreAddOutlined,
@@ -8,24 +10,35 @@ import {
   PlayCircleOutlined,
   QuestionCircleOutlined,
   ZoomInOutlined,
-} from '@ant-design/icons';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { AiOutlineFieldNumber } from 'react-icons/ai';
-import { BiCarousel } from 'react-icons/bi';
-import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tooltip } from '@/components/bakaui';
-import { CoverFit, ResourceDisplayContent, resourceDisplayContents } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
-import { useUiOptionsStore } from '@/models/options';
-import type { BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions } from '@/sdk/Api';
-import { buildLogger } from '@/components/utils';
+} from "@ant-design/icons";
+import React from "react";
+import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { AiOutlineFieldNumber } from "react-icons/ai";
+import { BiCarousel } from "react-icons/bi";
+
+import {
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Tooltip,
+} from "@/components/bakaui";
+import {
+  CoverFit,
+  ResourceDisplayContent,
+  resourceDisplayContents,
+} from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+import { useUiOptionsStore } from "@/models/options";
+import { buildLogger } from "@/components/utils";
 
 type Props = {
   rearrangeResources?: () => any;
 };
 
-const log = buildLogger('MiscellaneousOptions');
+const log = buildLogger("MiscellaneousOptions");
 
 type Item = {
   key: ListBoxItemKey;
@@ -35,73 +48,78 @@ type Item = {
 };
 
 type ListBoxItemKey =
-  'FillCover'
-  | 'ShowLargerCoverOnHover'
-  | 'PreviewOnHover'
-  | 'UseCache'
-  | 'CoverCarousel'
-  | 'DisplayResourceId';
+  | "FillCover"
+  | "ShowLargerCoverOnHover"
+  | "PreviewOnHover"
+  | "UseCache"
+  | "CoverCarousel"
+  | "DisplayResourceId";
 
 export default ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
-  const uiOptions = useUiOptionsStore(state => state.data);
+  const uiOptions = useUiOptionsStore((state) => state.data);
   const options = uiOptions.resource;
 
-  const currentResourceDisplayContents = uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
-  const selectableResourceDisplayContents = resourceDisplayContents.filter(d => d.value != ResourceDisplayContent.All).map(x => ({
-    label: t<string>('Show') + t<string>(x.label),
-    value: x.value.toString(),
-  }));
+  const currentResourceDisplayContents =
+    uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
+  const selectableResourceDisplayContents = resourceDisplayContents
+    .filter((d) => d.value != ResourceDisplayContent.All)
+    .map((x) => ({
+      label: t<string>("Show") + t<string>(x.label),
+      value: x.value.toString(),
+    }));
 
   const items: Item[] = [
-    ...selectableResourceDisplayContents.map(d => ({
+    ...selectableResourceDisplayContents.map((d) => ({
       key: `DisplayContent-${d.value.toString()}` as ListBoxItemKey,
       label: d.label,
       Icon: EyeOutlined,
     })),
     {
-      key: 'FillCover',
-      label: t<string>('Fill cover'),
+      key: "FillCover",
+      label: t<string>("Fill cover"),
       Icon: FullscreenOutlined,
     },
     {
-      key: 'ShowLargerCoverOnHover',
-      label: t<string>('Show larger cover on mouse hover'),
+      key: "ShowLargerCoverOnHover",
+      label: t<string>("Show larger cover on mouse hover"),
       Icon: ZoomInOutlined,
     },
     {
-      key: 'PreviewOnHover',
-      label: t<string>('Preview files of a resource on mouse hover'),
+      key: "PreviewOnHover",
+      label: t<string>("Preview files of a resource on mouse hover"),
       Icon: PlayCircleOutlined,
     },
     {
-      key: 'UseCache',
-      label: t<string>('Use cache'),
+      key: "UseCache",
+      label: t<string>("Use cache"),
       Icon: DashboardOutlined,
       tip: (
-        <div className={'max-w-[400px]'}>
-          {t<string>('Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.')}
+        <div className={"max-w-[400px]"}>
+          {t<string>(
+            "Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.",
+          )}
           <Button
-            size={'sm'}
-            variant={'flat'}
+            size={"sm"}
+            variant={"flat"}
             // color={'secondary'}
             onClick={() => {
-              navigate('/cache');
+              navigate("/cache");
             }}
           >
-            {t<string>('Manage cache')}
+            {t<string>("Manage cache")}
           </Button>
         </div>
       ),
     },
     {
-      key: 'CoverCarousel',
-      label: t<string>('Cover carousel'),
+      key: "CoverCarousel",
+      label: t<string>("Cover carousel"),
       Icon: BiCarousel,
     },
     {
-      key: 'DisplayResourceId',
-      label: t<string>('Display resource ID'),
+      key: "DisplayResourceId",
+      label: t<string>("Display resource ID"),
       Icon: AiOutlineFieldNumber,
     },
   ];
@@ -110,17 +128,18 @@ export default ({ rearrangeResources }: Props) => {
 
   const buildSelectedKeys = () => {
     const keys: ListBoxItemKey[] = [];
+
     if (options?.coverFit === CoverFit.Cover) {
-      keys.push('FillCover');
+      keys.push("FillCover");
     }
     if (!options?.disableCache) {
-      keys.push('UseCache');
+      keys.push("UseCache");
     }
     if (options?.showBiggerCoverWhileHover) {
-      keys.push('ShowLargerCoverOnHover');
+      keys.push("ShowLargerCoverOnHover");
     }
     if (!options?.disableMediaPreviewer) {
-      keys.push('PreviewOnHover');
+      keys.push("PreviewOnHover");
     }
     for (const d of selectableResourceDisplayContents) {
       if (currentResourceDisplayContents & d.value) {
@@ -128,10 +147,10 @@ export default ({ rearrangeResources }: Props) => {
       }
     }
     if (!options?.disableCoverCarousel) {
-      keys.push('CoverCarousel');
+      keys.push("CoverCarousel");
     }
     if (options?.displayResourceId) {
-      keys.push('DisplayResourceId');
+      keys.push("DisplayResourceId");
     }
 
     return keys;
@@ -142,24 +161,15 @@ export default ({ rearrangeResources }: Props) => {
   return (
     <Dropdown>
       <DropdownTrigger>
-        <Button
-          size={'sm'}
-          isIconOnly
-          variant={'light'}
-        >
-          <AppstoreAddOutlined
-            className={'text-xl'}
-          />
+        <Button isIconOnly size={"sm"} variant={"light"}>
+          <AppstoreAddOutlined className={"text-xl"} />
         </Button>
       </DropdownTrigger>
       <DropdownMenu
         aria-label="Multiple selection example"
-        variant="flat"
-        color={'primary'}
         closeOnSelect={false}
-        selectionMode="multiple"
-        // selectedKeys={selectableResourceDisplayContents.filter(c => currentResourceDisplayContents & c.value).map(c => c.value.toString())}
-        selectedKeys={selectedKeys}
+        color={'primary'}
+        variant="flat"
         onSelectionChange={keys => {
           if (keys instanceof Set) {
             const stringKeys: ListBoxItemKey[] = Array.from(keys).map(k => k.toString() as ListBoxItemKey);
@@ -191,25 +201,26 @@ export default ({ rearrangeResources }: Props) => {
             });
           }
         }}
+        selectionMode="multiple"
+        // selectedKeys={selectableResourceDisplayContents.filter(c => currentResourceDisplayContents & c.value).map(c => c.value.toString())}
+        selectedKeys={selectedKeys}
       >
-        {items.map(item => {
+        {items.map((item) => {
           return (
             <DropdownItem
-              startContent={(
-                <item.Icon className={'text-base'} />
-              )}
-              className={selectedKeys.includes(item.key) ? 'text-primary' : ''}
               key={item.key}
+              className={selectedKeys.includes(item.key) ? "text-primary" : ""}
+              startContent={<item.Icon className={"text-base"} />}
             >
               {item.tip ? (
-                <div className={'flex items-center gap-1'}>
+                <div className={"flex items-center gap-1"}>
                   {item.label}
                   <Tooltip
-                    placement={'left'}
+                    color={"secondary"}
                     content={item.tip}
-                    color={'secondary'}
+                    placement={"left"}
                   >
-                    <QuestionCircleOutlined className={'text-base'} />
+                    <QuestionCircleOutlined className={"text-base"} />
                   </Tooltip>
                 </div>
               ) : (

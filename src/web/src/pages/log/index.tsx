@@ -1,32 +1,41 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import './index.scss';
-import { Button, DatePicker2, Icon, Input, Pagination, Select, Table } from '@alifd/next';
+import React, { useEffect, useState } from "react";
+import "./index.scss";
+import {
+  Button,
+  DatePicker2,
+  Input,
+  Pagination,
+  Select,
+  Table,
+} from "@alifd/next";
 // TODO: 迁移 IceLabel 相关用法，Next.js 无内置替代。
 // import IceLabel from '@icedesign/label';
-import moment from 'moment';
-import { useUpdateEffect } from 'react-use';
-import i18n from 'i18next';
-import { useTranslation } from 'react-i18next';
-import BApi from '@/sdk/BApi';
-import { LogLevel, logLevels } from '@/sdk/constants';
+import moment from "moment";
+import { useUpdateEffect } from "react-use";
+import { useTranslation } from "react-i18next";
+
+import BApi from "@/sdk/BApi";
+import { LogLevel, logLevels } from "@/sdk/constants";
 
 const testLogs = [
   {
-    dateTime: '2021-02-02 12:12:12',
-    logger: 'SyncService',
+    dateTime: "2021-02-02 12:12:12",
+    logger: "SyncService",
     level: LogLevel.Error,
-    event: 'Complete',
-    message: 'Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad',
+    event: "Complete",
+    message:
+      "Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad",
     read: false,
   },
   {
-    dateTime: '2021-02-02 12:12:13',
-    logger: 'SyncService',
+    dateTime: "2021-02-02 12:12:13",
+    logger: "SyncService",
     level: LogLevel.Error,
-    event: 'Complete',
-    message: 'Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad',
+    event: "Complete",
+    message:
+      "Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad",
     read: true,
   },
 ];
@@ -55,6 +64,7 @@ export default () => {
 
   const search = async () => {
     const d = await BApi.log.searchLogs(form);
+
     setLogs(d.data);
     setPageable({
       pageIndex: d.pageIndex,
@@ -65,17 +75,18 @@ export default () => {
   const renderPagination = () => {
     if (pageable.totalCount > 0) {
       return (
-        <div className={'pagination'}>
+        <div className={"pagination"}>
           <Pagination
-            total={pageable.totalCount}
-            pageSize={form.pageSize}
             current={pageable.pageIndex}
-            size={'small'}
-            onChange={p => {
+            pageSize={form.pageSize}
+            size={"small"}
+            total={pageable.totalCount}
+            onChange={(p) => {
               const newPageable = {
                 ...pageable,
                 pageIndex: p,
               };
+
               setPageable(newPageable);
               setForm({
                 ...form,
@@ -86,6 +97,7 @@ export default () => {
         </div>
       );
     }
+
     return undefined;
   };
 
@@ -102,25 +114,27 @@ export default () => {
   };
 
   return (
-    <div className={'log-page'}>
+    <div className={"log-page"}>
       <div className="opt">
         <div className="left">
           <div className="item">
-            <div className="label">{t<string>('Time')}</div>
+            <div className="label">{t<string>("Time")}</div>
             <div className="value">
               <DatePicker2.RangePicker
-                size={'small'}
-                format="YYYY/MM/DD HH:mm:ss"
                 showTime
-                onChange={dayjsArr => {
+                format="YYYY/MM/DD HH:mm:ss"
+                size={"small"}
+                onChange={(dayjsArr) => {
                   if (dayjsArr) {
                     const d1 = dayjsArr[0];
+
                     if (d1) {
-                      patchForm({ startDt: d1.format('YYYY MM DD HH:mm:ss') });
+                      patchForm({ startDt: d1.format("YYYY MM DD HH:mm:ss") });
                     }
                     const d2 = dayjsArr[1];
+
                     if (d2) {
-                      patchForm({ endDt: d2.format('YYYY MM DD HH:mm:ss') });
+                      patchForm({ endDt: d2.format("YYYY MM DD HH:mm:ss") });
                     }
                   }
                 }}
@@ -128,12 +142,12 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t<string>('Level')}</div>
+            <div className="label">{t<string>("Level")}</div>
             <div className="value">
               <Select
                 dataSource={logLevels}
-                size={'small'}
-                onChange={level => {
+                size={"small"}
+                onChange={(level) => {
                   patchForm({
                     level,
                   });
@@ -142,11 +156,11 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t<string>('Logger')}</div>
+            <div className="label">{t<string>("Logger")}</div>
             <div className="value">
               <Input
-                size={'small'}
-                onChange={logger => {
+                size={"small"}
+                onChange={(logger) => {
                   patchForm({
                     logger,
                   });
@@ -155,11 +169,11 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t<string>('Event')}</div>
+            <div className="label">{t<string>("Event")}</div>
             <div className="value">
               <Input
-                size={'small'}
-                onChange={event => {
+                size={"small"}
+                onChange={(event) => {
                   patchForm({
                     event,
                   });
@@ -168,11 +182,11 @@ export default () => {
             </div>
           </div>
           <div className="item">
-            <div className="label">{t<string>('Message')}</div>
+            <div className="label">{t<string>("Message")}</div>
             <div className="value">
               <Input
-                size={'small'}
-                onChange={message => {
+                size={"small"}
+                onChange={(message) => {
                   patchForm({
                     message,
                   });
@@ -180,74 +194,71 @@ export default () => {
               />
             </div>
           </div>
-
         </div>
         <div className="right">
           <Button
-            type={'normal'}
-            size={'small'}
+            size={"small"}
+            type={"normal"}
             onClick={() => BApi.log.clearAllLog().then((a) => setLogs([]))}
           >
-            {t<string>('Clear all')}
+            {t<string>("Clear all")}
           </Button>
         </div>
       </div>
       {renderPagination()}
-      <Table
-        className={'logs'}
-        size={'small'}
-        dataSource={logs}
-      >
+      <Table className={"logs"} dataSource={logs} size={"small"}>
         <Table.Column
+          cell={(d) => moment(d)
+            .format('MM-DD HH:mm:ss')}
+          dataIndex={'dateTime'}
+          title={t<string>('Time')}
           align={'center'}
           // sortable
           width={'8%'}
-          dataIndex={'dateTime'}
-          title={t<string>('Time')}
-          cell={(d) => moment(d)
-            .format('MM-DD HH:mm:ss')}
         />
         <Table.Column
           // sortable
-          align={'center'}
-          width={'5%'}
-          dataIndex={'level'}
-          title={t<string>('Level')}
+          align={"center"}
           cell={(l) => (
             <span
               className={`ice-label ice-label-${
-                l == LogLevel.Error || l == LogLevel.Critical || l == LogLevel.Warning
-                  ? 'danger'
-                  : 'info'
+                l == LogLevel.Error ||
+                l == LogLevel.Critical ||
+                l == LogLevel.Warning
+                  ? "danger"
+                  : "info"
               }`}
             >
-              {l == LogLevel.Information ? 'Info' : LogLevel[l]}
+              {l == LogLevel.Information ? "Info" : LogLevel[l]}
             </span>
           )}
+          dataIndex={"level"}
+          title={t<string>("Level")}
+          width={"5%"}
         />
         <Table.Column
           // sortable
           align={'center'}
+          className={'logger'}
+          title={t<string>('Logger')}
           width={'25%'}
           // alignHeader={'center'}
           dataIndex={'logger'}
-          className={'logger'}
-          title={t<string>('Logger')}
         />
         <Table.Column
           // sortable
-          align={'center'}
-          width={'8%'}
-          dataIndex={'event'}
-          title={t<string>('Event')}
+          align={"center"}
+          dataIndex={"event"}
+          title={t<string>("Event")}
+          width={"8%"}
         />
         <Table.Column
           // sortable
-          width={'50%'}
-          alignHeader={'center'}
-          dataIndex={'message'}
-          title={t<string>('Message')}
+          alignHeader={"center"}
           cell={(c) => <pre>{c}</pre>}
+          dataIndex={"message"}
+          title={t<string>("Message")}
+          width={"50%"}
         />
         {/* <Table.Column */}
         {/*  // sortable */}

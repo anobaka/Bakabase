@@ -1,18 +1,21 @@
-'use client';
+"use client";
 
-import { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useUpdateEffect } from 'react-use';
-import type { ValueRendererProps } from '../models';
-import NumberValueEditor from '../../ValueEditor/Editors/NumberValueEditor';
-import { Input, Progress, Rating } from '@/components/bakaui';
-import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
-import { buildLogger } from '@/components/utils';
+import type { ValueRendererProps } from "../models";
+
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useUpdateEffect } from "react-use";
+
+import NumberValueEditor from "../../ValueEditor/Editors/NumberValueEditor";
+
+import { Rating } from "@/components/bakaui";
+import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import { buildLogger } from "@/components/utils";
 type RatingValueRendererProps = ValueRendererProps<number, number> & {
   allowHalf?: boolean;
 };
 
-const log = buildLogger('RatingValueRenderer');
+const log = buildLogger("RatingValueRenderer");
 
 export default (props: RatingValueRendererProps) => {
   const { value: propsValue, editor, variant, allowHalf = true } = props;
@@ -37,36 +40,30 @@ export default (props: RatingValueRendererProps) => {
   if (editing) {
     return (
       <NumberValueEditor
+        placeholder={t<string>("Set rating")}
         value={value}
         onValueChange={changeValue}
-        placeholder={t<string>('Set rating')}
       />
     );
   } else {
-    if (variant == 'light') {
+    if (variant == "light") {
       if (value != undefined && value > 0) {
-        return (
-          <span
-            onClick={startEditing}
-          >{value}</span>
-        );
+        return <span onClick={startEditing}>{value}</span>;
       } else {
-        return (
-          <NotSet onClick={startEditing} />
-        );
+        return <NotSet onClick={startEditing} />;
       }
     } else {
       return (
-        <div className={'flex gap-1'}>
+        <div className={"flex gap-1"}>
           <Rating
+            allowHalf={allowHalf}
             value={value}
-            onChange={r => {
+            onChange={(r) => {
               if (value == undefined) {
                 setValue(r);
               }
               setEditing(true);
             }}
-            allowHalf={allowHalf}
           />
           {value}
         </div>

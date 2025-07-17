@@ -1,33 +1,47 @@
-'use client';
+"use client";
 
-import { Overlay } from '@alifd/next';
-import { useTranslation } from 'react-i18next';
-import React, { useEffect, useRef, useState } from 'react';
-import { useUpdateEffect } from 'react-use';
+import type { SearchForm } from "@/pages/resource/models";
+import type { SavedSearchRef } from "@/pages/resource/components/FilterPanel/SavedSearches";
+
+import { Overlay } from "@alifd/next";
+import { useTranslation } from "react-i18next";
+import React, { useEffect, useRef, useState } from "react";
+import { useUpdateEffect } from "react-use";
 import {
   OrderedListOutlined,
   QuestionCircleOutlined,
   SaveOutlined,
   SearchOutlined,
   SnippetsOutlined,
-} from '@ant-design/icons';
-import toast from 'react-hot-toast';
-import { AiOutlineFilter, AiOutlineSearch } from 'react-icons/ai';
-import styles from './index.module.scss';
-import FilterGroupsPanel from './FilterGroupsPanel';
-import OrderSelector from './OrderSelector';
-import BApi from '@/sdk/BApi';
-import { useUiOptionsStore } from '@/models/options';
-import { PlaylistCollection } from '@/components/Playlist';
-import type { SearchForm } from '@/pages/resource/models';
-import { Autocomplete, AutocompleteItem, Button, Checkbox, Chip, Input, Modal, Popover, Spinner, Tooltip } from '@/components/bakaui';
-import CustomIcon from '@/components/CustomIcon';
-import type { SavedSearchRef } from '@/pages/resource/components/FilterPanel/SavedSearches';
-import SavedSearches from '@/pages/resource/components/FilterPanel/SavedSearches';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import MiscellaneousOptions from '@/pages/resource/components/FilterPanel/MiscellaneousOptions';
-import { ResourceTag } from '@/sdk/constants';
-import HandleUnknownResources from '@/components/HandleUnknownResources';
+} from "@ant-design/icons";
+import toast from "react-hot-toast";
+import { AiOutlineSearch } from "react-icons/ai";
+
+import styles from "./index.module.scss";
+import FilterGroupsPanel from "./FilterGroupsPanel";
+import OrderSelector from "./OrderSelector";
+
+import BApi from "@/sdk/BApi";
+import { useUiOptionsStore } from "@/models/options";
+import { PlaylistCollection } from "@/components/Playlist";
+import {
+  Autocomplete,
+  AutocompleteItem,
+  Button,
+  Checkbox,
+  Chip,
+  Input,
+  Modal,
+  Popover,
+  Spinner,
+  Tooltip,
+} from "@/components/bakaui";
+import CustomIcon from "@/components/CustomIcon";
+import SavedSearches from "@/pages/resource/components/FilterPanel/SavedSearches";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
+import { ResourceTag } from "@/sdk/constants";
+import HandleUnknownResources from "@/components/HandleUnknownResources";
 
 const { Popup } = Overlay;
 
@@ -67,27 +81,35 @@ export default ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const uiOptions = useUiOptionsStore(state => state.data);
+  const uiOptions = useUiOptionsStore((state) => state.data);
 
-  const [colCountsDataSource, setColCountsDataSource] = useState<{ label: any; value: number }[]>([]);
+  const [colCountsDataSource, setColCountsDataSource] = useState<
+    { label: any; value: number }[]
+  >([]);
   const colCount = uiOptions.resource?.colCount ?? DefaultResourceColCount;
 
   const [selectedAll, setSelectedAll] = useState(false);
 
-  const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
+  const [searchForm, setSearchForm] = useState<SearchForm>(
+    propsSearchForm || defaultSearchForm(),
+  );
   const [searching, setSearching] = useState(false);
 
-  const [selectingAllFilteredResources, setSelectingAllFilteredResources] = useState(false);
+  const [selectingAllFilteredResources, setSelectingAllFilteredResources] =
+    useState(false);
 
   const savedSearchesRef = useRef<SavedSearchRef>(null);
 
   const [isLoadingKeywords, setIsLoadingKeywords] = React.useState(false);
-  const [keywordCandidates, setKeywordCandidates] = React.useState<string[]>([]);
+  const [keywordCandidates, setKeywordCandidates] = React.useState<string[]>(
+    [],
+  );
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const [filterGroupPortal, setFilterGroupPortal] = useState<React.ReactNode>(null);
+  const [filterGroupPortal, setFilterGroupPortal] =
+    useState<React.ReactNode>(null);
 
-  console.log('filterGroupPortal', filterGroupPortal);
+  console.log("filterGroupPortal", filterGroupPortal);
 
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || defaultSearchForm());
@@ -95,6 +117,7 @@ export default ({
 
   useEffect(() => {
     const ccds: { label: any; value: number }[] = [];
+
     for (let i = MinResourceColCount; i <= maxResourceColCount; i++) {
       ccds.push({
         label: i,
@@ -105,7 +128,7 @@ export default ({
   }, [maxResourceColCount]);
 
   useUpdateEffect(() => {
-    console.log('Search form changed', searchForm);
+    console.log("Search form changed", searchForm);
   }, [searchForm]);
 
   const search = async (patches: Partial<SearchForm>) => {
@@ -122,87 +145,91 @@ export default ({
     }
   };
 
-  console.log('resource page filter panel rerender');
+  console.log("resource page filter panel rerender");
 
   return (
     <div className={`${styles.filterPanel}`}>
-      <div className={'flex items-center gap-4'}>
+      <div className={"flex items-center gap-4"}>
         <Autocomplete
-          isLoading={isLoadingKeywords}
-          startContent={(
-            <SearchOutlined className={'text-xl'} />
-          )}
-          className={'w-1/4 min-w-[200px]'}
-          placeholder={t<string>('Search everything')}
-          onValueChange={v => {
-            setSearchForm({
-              ...searchForm,
-              keyword: v,
-            });
-          }}
           isClearable
+          className={"w-1/4 min-w-[200px]"}
           inputValue={searchForm.keyword}
-          onKeyDown={e => {
-            if (e.key == 'Enter') {
-              search({
-                ...searchForm,
-                page: 1,
-              });
-            }
-          }}
+          isLoading={isLoadingKeywords}
+          items={keywordCandidates.map((k) => ({ label: k, value: k }))}
+          placeholder={t<string>("Search everything")}
           selectedKey={null}
-          onSelectionChange={k => {
-            console.log('onSelectionChange', k);
-            if (k) {
-              const nf = {
-                keyword: k as string,
-                page: 1,
-              };
-              search(nf)
-            }
-          }
-          }
-          items={keywordCandidates.map(k => ({ label: k, value: k }))}
-          onInputChange={v => {
+          startContent={<SearchOutlined className={"text-xl"} />}
+          onInputChange={(v) => {
             if (debounceTimer.current) {
               clearTimeout(debounceTimer.current);
             }
             if (v != undefined && v.length > 0) {
               setIsLoadingKeywords(true);
               debounceTimer.current = setTimeout(() => {
-                BApi.resource.getResourceSearchKeywordRecommendation({
-                  keyword: v,
-                }).then(ret => {
-                  setKeywordCandidates(ret.data ?? []);
-                }).finally(() => {
-                  setIsLoadingKeywords(false);
-                });
+                BApi.resource
+                  .getResourceSearchKeywordRecommendation({
+                    keyword: v,
+                  })
+                  .then((ret) => {
+                    setKeywordCandidates(ret.data ?? []);
+                  })
+                  .finally(() => {
+                    setIsLoadingKeywords(false);
+                  });
               }, 300);
             }
           }}
+          onKeyDown={(e) => {
+            if (e.key == "Enter") {
+              search({
+                ...searchForm,
+                page: 1,
+              });
+            }
+          }}
+          onSelectionChange={(k) => {
+            console.log("onSelectionChange", k);
+            if (k) {
+              const nf = {
+                keyword: k as string,
+                page: 1,
+              };
+
+              search(nf);
+            }
+          }}
+          onValueChange={(v) => {
+            setSearchForm({
+              ...searchForm,
+              keyword: v,
+            });
+          }}
         >
-          {(item) => <AutocompleteItem title={item.label}
-            key={item.value}>{item.label}</AutocompleteItem>}
+          {(item) => (
+            <AutocompleteItem key={item.value} title={item.label}>
+              {item.label}
+            </AutocompleteItem>
+          )}
         </Autocomplete>
         {filterGroupPortal}
         <SavedSearches
           ref={savedSearchesRef}
-          onSelect={nf => {
+          onSelect={(nf) => {
             search(nf);
           }}
         />
       </div>
       <FilterGroupsPanel
-        renderToParent={setFilterGroupPortal}
         group={searchForm.group}
-        onChange={v => {
+        renderToParent={setFilterGroupPortal}
+        tags={searchForm.tags}
+        onChange={(v) => {
           setSearchForm({
             ...searchForm,
             group: v,
           });
         }}
-        tags={searchForm.tags}
-        onTagsChange={tags => {
+        onTagsChange={(tags) => {
           setSearchForm({
             ...searchForm,
             tags,
@@ -210,17 +237,17 @@ export default ({
         }}
       />
       {searchForm.tags && searchForm.tags.length > 0 && (
-        <div className={'flex flex-wrap gap-1 mb-2'}>
+        <div className={"flex flex-wrap gap-1 mb-2"}>
           {searchForm.tags.map((tag, i) => {
             return (
               <Chip
                 key={i}
-                size={'sm'}
                 isCloseable
+                size={"sm"}
                 onClose={() => {
                   setSearchForm({
                     ...searchForm,
-                    tags: searchForm.tags?.filter(t => t != tag),
+                    tags: searchForm.tags?.filter((t) => t != tag),
                   });
                 }}
               >
@@ -230,42 +257,45 @@ export default ({
           })}
         </div>
       )}
-      <div className={'flex items-center justify-between'}>
-        <div className={'flex items-center gap-4'}>
+      <div className={"flex items-center justify-between"}>
+        <div className={"flex items-center gap-4"}>
           <Button
-            color={'primary'}
-            size={'sm'}
+            color={"primary"}
+            isLoading={searching}
+            size={"sm"}
             onPress={async () => {
               await search({
                 ...searchForm,
                 page: 1,
               });
             }}
-            isLoading={searching}
           >
-            <AiOutlineSearch className={'text-medium'} />
-            {t<string>('Search')}
+            <AiOutlineSearch className={"text-medium"} />
+            {t<string>("Search")}
           </Button>
           <Tooltip
-            content={t<string>('Save current search to quick search')}
-            placement={'right'}
+            content={t<string>("Save current search to quick search")}
+            placement={"right"}
           >
             <Button
-              size={'sm'}
               isIconOnly
+              size={"sm"}
               onPress={() => {
-                let name = `${t<string>('Untitled search')}1`;
+                let name = `${t<string>("Untitled search")}1`;
+
                 createPortal(Modal, {
                   defaultVisible: true,
-                  size: 'lg',
-                  title: t<string>('Save current search'),
+                  size: "lg",
+                  title: t<string>("Save current search"),
                   children: (
                     <Input
-                      label={t<string>('Name')}
-                      onValueChange={v => name = v?.trim()}
-                      defaultValue={name}
-                      placeholder={t<string>('Please set a name for current search')}
                       isRequired
+                      defaultValue={name}
+                      label={t<string>("Name")}
+                      placeholder={t<string>(
+                        "Please set a name for current search",
+                      )}
+                      onValueChange={(v) => (name = v?.trim())}
                     />
                   ),
                   onOk: async () => {
@@ -277,130 +307,157 @@ export default ({
                       });
                       savedSearchesRef.current?.reload();
                     } else {
-                      toast.error(t<string>('Name is required'));
-                      throw new Error('Name is required');
+                      toast.error(t<string>("Name is required"));
+                      throw new Error("Name is required");
                     }
                   },
                 });
               }}
             >
-              <SaveOutlined className={'text-base'} />
+              <SaveOutlined className={"text-base"} />
             </Button>
           </Tooltip>
         </div>
-        <div className={'flex items-center gap-2'}>
+        <div className={"flex items-center gap-2"}>
           {multiSelection && (
-            <Chip variant={'light'} color={'success'}>
-              <SnippetsOutlined className={'text-base'} />
+            <Chip color={"success"} variant={"light"}>
+              <SnippetsOutlined className={"text-base"} />
             </Chip>
           )}
           <Popover
-            trigger={<QuestionCircleOutlined className={'text-base'} />}
-            color={'success'}
+            color={"success"}
+            trigger={<QuestionCircleOutlined className={"text-base"} />}
           >
-            <div className={'flex flex-col gap-1'}>
-              <div>{t<string>('Hold down Ctrl to select multiple resources.')}</div>
-              <div>{t<string>('You can perform more actions by right-clicking on the resource.')}</div>
+            <div className={"flex flex-col gap-1"}>
+              <div>
+                {t<string>("Hold down Ctrl to select multiple resources.")}
+              </div>
+              <div>
+                {t<string>(
+                  "You can perform more actions by right-clicking on the resource.",
+                )}
+              </div>
             </div>
           </Popover>
           <Tooltip
-            content={(
-              <div className={'flex items-center gap-1'}>
-                {t<string>('Resources loaded in current page')}
+            content={
+              <div className={"flex items-center gap-1"}>
+                {t<string>("Resources loaded in current page")}
                 {selectingAllFilteredResources ? (
-                  <Spinner size={'sm'} />
-                ) : (totalFilteredResourceCount != resourceCount) && (
-                  <Button
-                    size={'sm'}
-                    variant={'light'}
-                    color={'primary'}
-                    onPress={async () => {
-                      setSelectedAll(true);
-                      setSelectingAllFilteredResources(true);
-                      try {
-                        const ret = onSelectAllChange(true, true);
-                        if (!!ret && typeof ret.then === 'function') {
-                          await ret;
+                  <Spinner size={"sm"} />
+                ) : (
+                  totalFilteredResourceCount != resourceCount && (
+                    <Button
+                      color={"primary"}
+                      size={"sm"}
+                      variant={"light"}
+                      onPress={async () => {
+                        setSelectedAll(true);
+                        setSelectingAllFilteredResources(true);
+                        try {
+                          const ret = onSelectAllChange(true, true);
+
+                          if (!!ret && typeof ret.then === "function") {
+                            await ret;
+                          }
+                        } finally {
+                          setSelectingAllFilteredResources(false);
                         }
-                      } finally {
-                        setSelectingAllFilteredResources(false);
-                      }
-                    }}
-                  >{t<string>('Select all {{count}} filtered resources (including those not currently loaded).', { count: totalFilteredResourceCount })}</Button>
+                      }}
+                    >
+                      {t<string>(
+                        "Select all {{count}} filtered resources (including those not currently loaded).",
+                        { count: totalFilteredResourceCount },
+                      )}
+                    </Button>
+                  )
                 )}
               </div>
-            )}
+            }
           >
             <Checkbox
-              isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
-              onValueChange={isSelected => {
+              isSelected={
+                selectedAll &&
+                selectedResourceIds &&
+                selectedResourceIds?.length > 0
+              }
+              size={"sm"}
+              onValueChange={(isSelected) => {
                 onSelectAllChange(isSelected);
                 setSelectedAll(isSelected);
               }}
-              size={'sm'}
-            >{selectedAll ? t<string>('{{count}} items selected', { count: selectedResourceIds?.length }) : t<string>('Select all')}</Checkbox>
+            >
+              {selectedAll
+                ? t<string>("{{count}} items selected", {
+                    count: selectedResourceIds?.length,
+                  })
+                : t<string>("Select all")}
+            </Checkbox>
           </Tooltip>
           <HandleUnknownResources onHandled={() => search({})} />
-          {(totalFilteredResourceCount && totalFilteredResourceCount > 0) ? (
-            <div className={'flex items-center gap-1'}>
-              <Tooltip content={t<string>('Loaded resources')}>
-                <span className={'text-success'} >{resourceCount}</span>
+          {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
+            <div className={"flex items-center gap-1"}>
+              <Tooltip content={t<string>("Loaded resources")}>
+                <span className={"text-success"}>{resourceCount}</span>
               </Tooltip>
               /
-              <Tooltip content={t<string>('All filtered resources')}>
-                <span className={'text-secondary'} >{totalFilteredResourceCount}</span>
+              <Tooltip content={t<string>("All filtered resources")}>
+                <span className={"text-secondary"}>
+                  {totalFilteredResourceCount}
+                </span>
               </Tooltip>
             </div>
           ) : null}
           <OrderSelector
-            className={'mr-2'}
+            className={"mr-2"}
             value={searchForm.orders}
-            onChange={orders => {
+            onChange={(orders) => {
               const nf = {
                 ...searchForm,
                 orders,
               };
+
               setSearchForm(nf);
               search(nf);
             }}
           />
-          <Popover trigger={(
-            <Button
-              color={'default'}
-              size={'sm'}
-              startContent={<CustomIcon
-                type={'playlistplay'}
-                className={'text-xl'}
-              />}
-            >
-              {t<string>('Playlist')}
-            </Button>
-          )}
+          <Popover
+            trigger={
+              <Button
+                color={"default"}
+                size={"sm"}
+                startContent={
+                  <CustomIcon className={"text-xl"} type={"playlistplay"} />
+                }
+              >
+                {t<string>("Playlist")}
+              </Button>
+            }
           >
-            <PlaylistCollection className={'resource-page'} />
+            <PlaylistCollection className={"resource-page"} />
           </Popover>
           <Popover
-            placement={'bottom-end'}
-            trigger={(
+            placement={"bottom-end"}
+            trigger={
               <Button
+                color={"default"}
+                size={"sm"}
                 startContent={<OrderedListOutlined />}
-                color={'default'}
-                size={'sm'}
               >
-                {t<string>('Column count')}
+                {t<string>("Column count")}
                 &nbsp;
                 {colCount}
               </Button>
-            )}
+            }
           >
-            <div className={'grid grid-cols-4 gap-1 p-1 rounded'}>
+            <div className={"grid grid-cols-4 gap-1 p-1 rounded"}>
               {colCountsDataSource.map((cc, i) => {
                 return (
                   <Button
                     key={i}
-                    color={'default'}
-                    size={'sm'}
-                    className={'min-w-0 pl-2 pr-2'}
+                    className={"min-w-0 pl-2 pr-2"}
+                    color={"default"}
+                    size={"sm"}
                     onClick={async () => {
                       const patches = {
                         resource: {
@@ -408,6 +465,7 @@ export default ({
                           colCount: cc.value,
                         },
                       };
+
                       await BApi.options.patchUiOptions(patches);
                     }}
                   >

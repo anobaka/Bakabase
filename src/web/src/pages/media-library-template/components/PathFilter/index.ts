@@ -1,7 +1,4 @@
-import PathFilterDemonstrator from './Demonstrator';
-import PathFilterModal from './Modal';
+import PathFilterDemonstrator from "./Demonstrator";
+import PathFilterModal from "./Modal";
 
-export {
-  PathFilterDemonstrator,
-  PathFilterModal,
-};
+export { PathFilterDemonstrator, PathFilterModal };

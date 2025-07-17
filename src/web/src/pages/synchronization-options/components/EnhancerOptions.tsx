@@ -1,15 +1,16 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import BooleanOptions from '@/pages/synchronization-options/components/BooleanOptions';
-import type {
-  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions,
-} from '@/sdk/Api';
-import { Chip } from '@/components/bakaui';
-import { EnhancerIcon } from '@/components/Enhancer';
-import { SubjectLabels } from '@/pages/synchronization-options/models';
+import type { BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions } from "@/sdk/Api";
 
-type Options = BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions;
+import { useTranslation } from "react-i18next";
+
+import BooleanOptions from "@/pages/synchronization-options/components/BooleanOptions";
+import { Chip } from "@/components/bakaui";
+import { EnhancerIcon } from "@/components/Enhancer";
+import { SubjectLabels } from "@/pages/synchronization-options/models";
+
+type Options =
+  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationEnhancerOptions;
 
 type Props = {
   enhancer: { id: number; name: string };
@@ -20,21 +21,17 @@ type Props = {
 };
 
 export default ({
-                  enhancer,
-                  options,
-                  onChange,
-                  subject,
-                  isSecondary,
-                }: Props) => {
+  enhancer,
+  options,
+  onChange,
+  subject,
+  isSecondary,
+}: Props) => {
   const { t } = useTranslation();
   const enhancerChip = (
-    <Chip
-      size={'sm'}
-      radius={'sm'}
-      variant={'flat'}
-    >
-      <div className={'flex items-center gap-1'}>
-        {t<string>('Enhancer')}
+    <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+      <div className={"flex items-center gap-1"}>
+        {t<string>("Enhancer")}
         <EnhancerIcon id={enhancer.id} />
         {t<string>(enhancer.name)}
       </div>
@@ -46,35 +43,41 @@ export default ({
       ...options,
       ...patches,
     };
+
     onChange?.(newOptions);
   };
+
   return (
     <>
       <BooleanOptions
-        subject={subject ?? (
-          <>
-            {enhancerChip}
-            {t<string>(SubjectLabels.EnhancerReApply)}
-          </>
-        )}
+        isSecondary={isSecondary}
         isSelected={options?.reApply}
-        onSelect={isSelected => {
+        subject={
+          subject ?? (
+            <>
+              {enhancerChip}
+              {t<string>(SubjectLabels.EnhancerReApply)}
+            </>
+          )
+        }
+        onSelect={(isSelected) => {
           patchOptions({ reApply: isSelected });
         }}
-        isSecondary={isSecondary}
       />
       <BooleanOptions
-        subject={subject ?? (
-          <>
-            {enhancerChip}
-            {t<string>(SubjectLabels.EnhancerReEnhance)}
-          </>
-        )}
+        isSecondary={isSecondary}
         isSelected={options?.reEnhance}
-        onSelect={isSelected => {
+        subject={
+          subject ?? (
+            <>
+              {enhancerChip}
+              {t<string>(SubjectLabels.EnhancerReEnhance)}
+            </>
+          )
+        }
+        onSelect={(isSelected) => {
           patchOptions({ reEnhance: isSelected });
         }}
-        isSecondary={isSecondary}
       />
     </>
   );

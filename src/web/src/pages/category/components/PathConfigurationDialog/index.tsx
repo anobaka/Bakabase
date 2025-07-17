@@ -1,31 +1,40 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { DeleteOutlined, FolderOpenOutlined } from '@ant-design/icons';
-import { useUpdate } from 'react-use';
-import BApi from '@/sdk/BApi';
-import { buildLogger, splitPathIntoSegments, standardizePath } from '@/components/utils';
-import { MediaLibraryAdditionalItem, ResourceProperty } from '@/sdk/constants';
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BakabaseAbstractionsModelsDomainPathConfiguration } from "@/sdk/Api";
+
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { DeleteOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { useUpdate } from "react-use";
+
+import BApi from "@/sdk/BApi";
+import {
+  buildLogger,
+  splitPathIntoSegments,
+  standardizePath,
+} from "@/components/utils";
+import { MediaLibraryAdditionalItem } from "@/sdk/constants";
 import PathSegmentsConfiguration, {
   PathSegmentConfigurationPropsMatcherOptions,
-} from '@/components/PathSegmentsConfiguration';
-import BusinessConstants from '@/components/BusinessConstants';
-import { Button, Chip, Divider, Modal } from '@/components/bakaui';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import { PscPropertyType } from '@/components/PathSegmentsConfiguration/models/PscPropertyType';
-import { PscMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscMatcherValue';
+} from "@/components/PathSegmentsConfiguration";
+import { Button, Chip, Divider, Modal } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { PscPropertyType } from "@/components/PathSegmentsConfiguration/models/PscPropertyType";
+import { PscMatcherValue } from "@/components/PathSegmentsConfiguration/models/PscMatcherValue";
 import {
   convertToPathConfigurationDtoFromPscValue,
   convertToPscValueFromPathConfigurationDto,
-} from '@/components/PathSegmentsConfiguration/helpers';
-import type { BakabaseAbstractionsModelsDomainPathConfiguration } from '@/sdk/Api';
-import { FileSystemSelectorModal } from '@/components/FileSystemSelector';
+} from "@/components/PathSegmentsConfiguration/helpers";
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
 
-const log = buildLogger('PathConfigurationDialog');
+const log = buildLogger("PathConfigurationDialog");
 
-type Library = { id: number; pathConfigurations: BakabaseAbstractionsModelsDomainPathConfiguration[]; name: string };
+type Library = {
+  id: number;
+  pathConfigurations: BakabaseAbstractionsModelsDomainPathConfiguration[];
+  name: string;
+};
 
 interface Props extends DestroyableProps {
   libraryId: number;
@@ -33,36 +42,41 @@ interface Props extends DestroyableProps {
   onClosed: (pc: BakabaseAbstractionsModelsDomainPathConfiguration) => any;
 }
 
-export default ({
-                  libraryId,
-                  pcIdx,
-                  onClosed,
-                  ...props
-                }: Props) => {
+export default ({ libraryId, pcIdx, onClosed, ...props }: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const { createPortal } = useBakabaseContext();
 
   const [library, setLibrary] = useState<Library>();
-  const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, { name: string }>>({});
+  const [customPropertyMap, setCustomPropertyMap] = useState<
+    Record<number, { name: string }>
+  >({});
 
   useEffect(() => {
-    log('Initialize with', props);
+    log("Initialize with", props);
 
     loadLibrary();
 
-    BApi.customProperty.getAllCustomProperties().then(r => {
+    BApi.customProperty.getAllCustomProperties().then((r) => {
       const ps = r.data || [];
-      setCustomPropertyMap(ps.reduce<Record<number, { name: string }>>((s, t) => {
-        s[t.id!] = { name: t.name! };
-        return s;
-      }, {}));
+
+      setCustomPropertyMap(
+        ps.reduce<Record<number, { name: string }>>((s, t) => {
+          s[t.id!] = { name: t.name! };
+
+          return s;
+        }, {}),
+      );
     });
   }, []);
 
   const loadLibrary = async () => {
-    const r = await BApi.mediaLibrary.getMediaLibrary(libraryId, { additionalItems: MediaLibraryAdditionalItem.PathConfigurationBoundProperties });
+    const r = await BApi.mediaLibrary.getMediaLibrary(libraryId, {
+      additionalItems:
+        MediaLibraryAdditionalItem.PathConfigurationBoundProperties,
+    });
     const l = r.data;
+
     if (l) {
       setLibrary({
         id: l.id!,
@@ -78,17 +92,28 @@ export default ({
 
   const pc = library.pathConfigurations[pcIdx];
 
-  const save = async (patches: Partial<BakabaseAbstractionsModelsDomainPathConfiguration>) => {
+  const save = async (
+    patches: Partial<BakabaseAbstractionsModelsDomainPathConfiguration>,
+  ) => {
     const newPcs = library.pathConfigurations.slice();
+
     newPcs.splice(pcIdx, 1, { ...pc, ...patches });
-    log(`Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`, pc, newPcs);
+    log(
+      `Saving ${pcIdx} of ${library.pathConfigurations.length} in ${library.name}`,
+      pc,
+      newPcs,
+    );
     await BApi.mediaLibrary.patchMediaLibrary(library.id, {
       pathConfigurations: newPcs,
     });
     await loadLibrary();
   };
 
-  const showPsc = (segments: string[], pc: BakabaseAbstractionsModelsDomainPathConfiguration, isDirectory: boolean) => {
+  const showPsc = (
+    segments: string[],
+    pc: BakabaseAbstractionsModelsDomainPathConfiguration,
+    isDirectory: boolean,
+  ) => {
     const simpleMatchers = {
       [PscPropertyType.RootPath]: true,
       [PscPropertyType.Resource]: false,
@@ -97,33 +122,38 @@ export default ({
       [PscPropertyType.Rating]: false,
       [PscPropertyType.Introduction]: false,
     };
-    const matchers = Object.keys(simpleMatchers)
-      .reduce<PathSegmentConfigurationPropsMatcherOptions[]>((ts, t) => {
-        ts.push(new PathSegmentConfigurationPropsMatcherOptions({
+    const matchers = Object.keys(simpleMatchers).reduce<
+      PathSegmentConfigurationPropsMatcherOptions[]
+    >((ts, t) => {
+      ts.push(
+        new PathSegmentConfigurationPropsMatcherOptions({
           propertyType: parseInt(t, 10),
           readonly: simpleMatchers[t],
-        }));
-        return ts;
-      }, []);
+        }),
+      );
+
+      return ts;
+    }, []);
 
     let tmpValue = convertToPscValueFromPathConfigurationDto(pc);
 
     createPortal(Modal, {
       defaultVisible: true,
-      size: 'xl',
+      size: "xl",
       children: (
         <PathSegmentsConfiguration
+          defaultValue={tmpValue}
           isDirectory={isDirectory || false}
+          matchers={matchers}
           segments={segments!}
-          onChange={value => {
+          onChange={(value) => {
             tmpValue = value;
           }}
-          matchers={matchers}
-          defaultValue={tmpValue}
         />
       ),
       onOk: async () => {
         const dto = convertToPathConfigurationDtoFromPscValue(tmpValue);
+
         console.log(5555, dto);
         await save(dto);
         onClosed(dto);
@@ -137,6 +167,7 @@ export default ({
 
   const renderRpmValues = () => {
     const values = pc?.rpmValues || [];
+
     if (values.length == 0) {
       return null;
     }
@@ -145,19 +176,23 @@ export default ({
 
     return (
       <div className="flex flex-col gap-1 my-1">
-        {(values).map((s, i) => {
+        {values.map((s, i) => {
           let label = s.propertyName;
+
           if (label == undefined || label.length == 0) {
-            label = t<string>('Unknown property');
+            label = t<string>("Unknown property");
           }
           let isDeletable = !s.isResourceProperty;
+
           return (
-            <div className={'flex items-center gap-2'}>
+            <div className={"flex items-center gap-2"}>
               <Chip
-                radius={'sm'}
-                size={'sm'}
-                color={s.isResourceProperty ? 'primary' : 'default'}
-              >{label}</Chip>
+                color={s.isResourceProperty ? "primary" : "default"}
+                radius={"sm"}
+                size={"sm"}
+              >
+                {label}
+              </Chip>
               <div className="value select-text">
                 {PscMatcherValue.ToString(t, {
                   fixedText: s.fixedText ?? undefined,
@@ -168,14 +203,17 @@ export default ({
               </div>
               {isDeletable && (
                 <Button
-                  size={'sm'}
                   isIconOnly
-                  color={'danger'}
-                  variant={'light'}
+                  color={"danger"}
+                  size={"sm"}
+                  variant={"light"}
                   onClick={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>('Deleting property locator for {{propertyName}}', { propertyName: label }),
+                      title: t<string>(
+                        "Deleting property locator for {{propertyName}}",
+                        { propertyName: label },
+                      ),
                       onOk: async () => {
                         pc.rpmValues?.splice(i, 1);
                         await BApi.mediaLibrary.patchMediaLibrary(libraryId, {
@@ -186,7 +224,7 @@ export default ({
                     });
                   }}
                 >
-                  <DeleteOutlined className={'text-base'} />
+                  <DeleteOutlined className={"text-base"} />
                 </Button>
               )}
             </div>
@@ -201,25 +239,24 @@ export default ({
   return (
     <>
       <Modal
-        size={'xl'}
         defaultVisible
-        onDestroyed={props.onDestroyed}
         footer={{
-          actions: ['cancel'],
+          actions: ["cancel"],
         }}
+        size={"xl"}
+        title={t<string>("Path configuration")}
         onClose={() => {
           onClosed?.(pc);
         }}
-        title={t<string>('Path configuration')}
+        onDestroyed={props.onDestroyed}
       >
         <div className="flex flex-col gap-2 shadow">
           <section>
-            <div className="text-base font-bold mb-1">{t<string>('Root path')}</div>
+            <div className="text-base font-bold mb-1">
+              {t<string>("Root path")}
+            </div>
             <div>
               <Button
-                variant={'light'}
-                // size={'sm'}
-                color={'primary'}
                 onClick={() => {
                   createPortal(FileSystemSelectorModal, {
                     startPath: pc.path ?? undefined,
@@ -230,11 +267,15 @@ export default ({
                     defaultSelectedPath: pc?.path ?? undefined,
                   });
                 }}
-              >{pc?.path ?? t<string>('Setup')}
+                variant={'light'}
+                // size={'sm'}
+                color={'primary'}
+              >
+                {pc?.path ?? t<string>("Setup")}
               </Button>
               {rootPathIsSet && (
                 <FolderOpenOutlined
-                  className={'text-base cursor-pointer ml-1'}
+                  className={"text-base cursor-pointer ml-1"}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -247,22 +288,26 @@ export default ({
           <Divider />
           <section className="">
             <div className="text-base font-bold">
-              {t<string>('Setup how to find resources and properties')}
+              {t<string>("Setup how to find resources and properties")}
             </div>
             {pc?.path && (
-              <div className={'opacity-60 italic'}>
-                {t<string>('To setup this item, you should pick up a file first within your root path.')}
+              <div className={"opacity-60 italic"}>
+                {t<string>(
+                  "To setup this item, you should pick up a file first within your root path.",
+                )}
                 <br />
-                {t<string>('If you want to populate properties as many as possible, you should pick up a file with more layers in path.')}
+                {t<string>(
+                  "If you want to populate properties as many as possible, you should pick up a file with more layers in path.",
+                )}
               </div>
             )}
             {renderRpmValues()}
-            <div className={''}>
+            <div className={""}>
               {pc?.path ? (
                 <Button
                   // size={'sm'}
-                  variant={'light'}
-                  color={'primary'}
+                  color={"primary"}
+                  variant={"light"}
                   onClick={() => {
                     createPortal(FileSystemSelectorDialog, {
                       // targetType: 'folder',
@@ -271,16 +316,20 @@ export default ({
                       onSelected: (e) => {
                         const std = standardizePath(e.path)!;
                         const stdPrev = standardizePath(pc.path!);
+
                         if (stdPrev && std.startsWith(stdPrev)) {
                           const segments = splitPathIntoSegments(e.path);
+
                           showPsc(segments, pc, e.isDirectory);
                         } else {
                           createPortal(Modal, {
                             defaultVisible: true,
-                            title: t<string>('Error'),
-                            children: t<string>('You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.'),
+                            title: t<string>("Error"),
+                            children: t<string>(
+                              "You cannot select a file outside the root folder. If you want to change the root folder of your library, you should click on your root folder.",
+                            ),
                             footer: {
-                              actions: ['cancel'],
+                              actions: ["cancel"],
                             },
                           });
                         }
@@ -288,15 +337,13 @@ export default ({
                     });
                   }}
                 >
-                  {t<string>('Setup')}
+                  {t<string>("Setup")}
                 </Button>
               ) : (
-                <Chip
-                  size={'sm'}
-                  variant={'light'}
-                  color={'warning'}
-                >
-                  {t<string>('You need to set up root path before configuring this item')}
+                <Chip color={"warning"} size={"sm"} variant={"light"}>
+                  {t<string>(
+                    "You need to set up root path before configuring this item",
+                  )}
                 </Chip>
               )}
             </div>

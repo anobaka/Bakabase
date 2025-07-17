@@ -1,35 +1,52 @@
-'use client';
+"use client";
 
-import { IoLocate, IoPlayCircleOutline, IoRocketOutline } from 'react-icons/io5';
-import { AiOutlineDelete, AiOutlineEdit, AiOutlinePlusCircle, AiOutlineSisternode } from 'react-icons/ai';
-import { CiFilter } from 'react-icons/ci';
-import { TbDatabase } from 'react-icons/tb';
-import { QuestionCircleOutlined } from '@ant-design/icons';
-import { TiChevronRightOutline, TiFlowChildren } from 'react-icons/ti';
-import { MdOutlineSubtitles } from 'react-icons/md';
-import React, { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useUpdate, useUpdateEffect } from 'react-use';
-import toast from 'react-hot-toast';
-import _ from 'lodash';
-import type { MediaLibraryTemplate } from '../models';
-import Block from '@/pages/media-library-template/components/Block';
-import { PathFilterDemonstrator, PathFilterModal } from '@/pages/media-library-template/components/PathFilter';
-import { Button, Chip, Modal, Select, Tooltip } from '@/components/bakaui';
-import PlayableFileSelectorModal from '@/pages/media-library-template/components/PlayableFileSelectorModal';
-import PropertySelector from '@/components/PropertySelector';
-import { PropertyPool } from '@/sdk/constants';
-import BriefProperty from '@/components/Chips/Property/BriefProperty';
-import { PathPropertyExtractorDemonstrator, PathPropertyExtractorModal } from '@/pages/media-library-template/components/PathPropertyExtractor';
-import EnhancerSelectorModal from '@/pages/media-library-template/components/EnhancerSelectorModal';
-import BriefEnhancer from '@/components/Chips/Enhancer/BriefEnhancer';
-import EnhancerOptionsModal from '@/components/EnhancerSelectorV2/components/EnhancerOptionsModal';
-import DisplayNameTemplateEditorModal from '@/pages/media-library-template/components/DisplayNameTemplateEditorModal';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import BApi from '@/sdk/BApi';
-import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
-import type { PropertyMap } from '@/components/types';
-import { willCauseCircleReference } from '@/components/utils';
+import type { MediaLibraryTemplate } from "../models";
+import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
+import type { PropertyMap } from "@/components/types";
+
+import {
+  IoLocate,
+  IoPlayCircleOutline,
+  IoRocketOutline,
+} from "react-icons/io5";
+import {
+  AiOutlineDelete,
+  AiOutlineEdit,
+  AiOutlinePlusCircle,
+  AiOutlineSisternode,
+} from "react-icons/ai";
+import { CiFilter } from "react-icons/ci";
+import { TbDatabase } from "react-icons/tb";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { TiChevronRightOutline, TiFlowChildren } from "react-icons/ti";
+import { MdOutlineSubtitles } from "react-icons/md";
+import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { useUpdate, useUpdateEffect } from "react-use";
+import toast from "react-hot-toast";
+import _ from "lodash";
+
+import Block from "@/pages/media-library-template/components/Block";
+import {
+  PathFilterDemonstrator,
+  PathFilterModal,
+} from "@/pages/media-library-template/components/PathFilter";
+import { Button, Chip, Modal, Select, Tooltip } from "@/components/bakaui";
+import PlayableFileSelectorModal from "@/pages/media-library-template/components/PlayableFileSelectorModal";
+import PropertySelector from "@/components/PropertySelector";
+import { PropertyPool } from "@/sdk/constants";
+import BriefProperty from "@/components/Chips/Property/BriefProperty";
+import {
+  PathPropertyExtractorDemonstrator,
+  PathPropertyExtractorModal,
+} from "@/pages/media-library-template/components/PathPropertyExtractor";
+import EnhancerSelectorModal from "@/pages/media-library-template/components/EnhancerSelectorModal";
+import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
+import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
+import DisplayNameTemplateEditorModal from "@/pages/media-library-template/components/DisplayNameTemplateEditorModal";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import BApi from "@/sdk/BApi";
+import { willCauseCircleReference } from "@/components/utils";
 
 type Props = {
   template: MediaLibraryTemplate;
@@ -40,23 +57,29 @@ type Props = {
 };
 
 export default ({
-                  template,
-                  onChange,
-                  enhancersCache,
-                  propertyMapCache,
-                  templatesCache,
-                }: Props) => {
+  template,
+  onChange,
+  enhancersCache,
+  propertyMapCache,
+  templatesCache,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const [enhancers, setEnhancers] = React.useState<EnhancerDescriptor[]>(enhancersCache ?? []);
-  const [propertyMap, setPropertyMap] = React.useState<PropertyMap>(propertyMapCache ?? {});
-  const [templates, setTemplates] = React.useState<MediaLibraryTemplate[]>(templatesCache ?? []);
+  const [enhancers, setEnhancers] = React.useState<EnhancerDescriptor[]>(
+    enhancersCache ?? [],
+  );
+  const [propertyMap, setPropertyMap] = React.useState<PropertyMap>(
+    propertyMapCache ?? {},
+  );
+  const [templates, setTemplates] = React.useState<MediaLibraryTemplate[]>(
+    templatesCache ?? [],
+  );
 
   useEffect(() => {
     if (!enhancersCache) {
-      BApi.enhancer.getAllEnhancerDescriptors().then(r => {
+      BApi.enhancer.getAllEnhancerDescriptors().then((r) => {
         setEnhancers(r.data ?? []);
       });
     }
@@ -64,7 +87,7 @@ export default ({
       loadProperties();
     }
     if (!templatesCache) {
-      BApi.mediaLibraryTemplate.getAllMediaLibraryTemplates().then(r => {
+      BApi.mediaLibraryTemplate.getAllMediaLibraryTemplates().then((r) => {
         setTemplates(r.data ?? []);
       });
     }
@@ -83,15 +106,24 @@ export default ({
   }, [templatesCache]);
 
   const loadProperties = async () => {
-    const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
-    const ps = _.mapValues(_.groupBy(psr, x => x.pool), (v) => _.keyBy(v, x => x.id));
+    const psr =
+      (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const ps = _.mapValues(
+      _.groupBy(psr, (x) => x.pool),
+      (v) => _.keyBy(v, (x) => x.id),
+    );
+
     setPropertyMap(ps);
   };
 
   const putTemplate = async (tpl: MediaLibraryTemplate) => {
-    const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(tpl.id, tpl);
+    const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(
+      tpl.id,
+      tpl,
+    );
+
     if (!r.code) {
-      toast.success(t<string>('Saved successfully'));
+      toast.success(t<string>("Saved successfully"));
       onChange?.();
       forceUpdate();
     }
@@ -99,36 +131,48 @@ export default ({
 
   const renderChildSelector = (tpl: MediaLibraryTemplate) => {
     const willCauseLoopKeys = new Set<string>(
-      templates.filter(t1 => {
-        return willCauseCircleReference(tpl, t1.id, templates,
-          x => x.id,
-          x => x.childTemplateId,
-          (x, k) => x.childTemplateId = k,
-        );
-      }).map(x => x.id.toString()),
+      templates
+        .filter((t1) => {
+          return willCauseCircleReference(
+            tpl,
+            t1.id,
+            templates,
+            (x) => x.id,
+            (x) => x.childTemplateId,
+            (x, k) => (x.childTemplateId = k),
+          );
+        })
+        .map((x) => x.id.toString()),
     );
 
-    console.log(tpl.childTemplateId, tpl.childTemplateId ? [tpl.childTemplateId.toString()] : undefined);
+    console.log(
+      tpl.childTemplateId,
+      tpl.childTemplateId ? [tpl.childTemplateId.toString()] : undefined,
+    );
 
     return (
-      <div className={'inline-flex items-center gap-2'}>
+      <div className={"inline-flex items-center gap-2"}>
         <Select
-          className={'min-w-[320px]'}
-          label={`${t<string>('Child template')} (${t<string>('optional')})`}
-          placeholder={t<string>('Select a child template')}
-          size={'sm'}
-          selectedKeys={tpl.childTemplateId ? [tpl.childTemplateId.toString()] : []}
-          fullWidth={false}
-          disabledKeys={willCauseLoopKeys}
-          dataSource={templates.map(t1 => {
+          className={"min-w-[320px]"}
+          dataSource={templates.map((t1) => {
             const hasLoop = willCauseLoopKeys.has(t1.id.toString());
+
             return {
-              label: `[#${t1.id}] ${t1.name}${hasLoop ? ` (${t<string>('Loop detected')})` : ''}`,
+              label: `[#${t1.id}] ${t1.name}${hasLoop ? ` (${t<string>("Loop detected")})` : ""}`,
               value: t1.id.toString(),
             };
           })}
-          onSelectionChange={keys => {
+          disabledKeys={willCauseLoopKeys}
+          fullWidth={false}
+          label={`${t<string>("Child template")} (${t<string>("optional")})`}
+          placeholder={t<string>("Select a child template")}
+          selectedKeys={
+            tpl.childTemplateId ? [tpl.childTemplateId.toString()] : []
+          }
+          size={"sm"}
+          onSelectionChange={(keys) => {
             const id = parseInt(Array.from(keys)[0] as string, 10);
+
             tpl.childTemplateId = id;
             putTemplate(tpl);
           }}
@@ -136,76 +180,75 @@ export default ({
         {tpl.childTemplateId && (
           <Button
             isIconOnly
-            color={'danger'}
+            color={"danger"}
             // size={'sm'}
-            variant={'light'}
+            variant={"light"}
             onPress={() => {
               tpl.childTemplateId = undefined;
               tpl.child = undefined;
               putTemplate(tpl);
             }}
           >
-            <AiOutlineDelete className={'text-base'} />
+            <AiOutlineDelete className={"text-base"} />
           </Button>
         )}
-      </div>);
+      </div>
+    );
   };
 
   return (
-    <div className={'flex flex-col gap-2'}>
+    <div className={"flex flex-col gap-2"}>
       <Block
-        leftIcon={<IoLocate className={'text-large'} />}
-        title={t<string>('Resource filter')}
-        description={t<string>('Determine which files or folders will be considered as resources')}
-        rightIcon={<AiOutlinePlusCircle className={'text-large'} />}
+        description={t<string>(
+          "Determine which files or folders will be considered as resources",
+        )}
+        leftIcon={<IoLocate className={"text-large"} />}
+        rightIcon={<AiOutlinePlusCircle className={"text-large"} />}
+        title={t<string>("Resource filter")}
         onRightIconPress={() => {
-          createPortal(
-            PathFilterModal, {
-              onSubmit: async f => {
-                (template.resourceFilters ??= []).push(f);
-                await putTemplate(template);
-                forceUpdate();
-              },
+          createPortal(PathFilterModal, {
+            onSubmit: async (f) => {
+              (template.resourceFilters ??= []).push(f);
+              await putTemplate(template);
+              forceUpdate();
             },
-          );
+          });
         }}
       >
         <div>
           {template.resourceFilters?.map((f, i) => {
             return (
-              <div className={'flex items-center gap-1'}>
-                <CiFilter className={'text-medium'} />
+              <div className={"flex items-center gap-1"}>
+                <CiFilter className={"text-medium"} />
                 <PathFilterDemonstrator filter={f} />
                 <Button
-                  color={'default'}
-                  variant={'light'}
-                  size={'sm'}
                   isIconOnly
+                  color={"default"}
+                  size={"sm"}
+                  variant={"light"}
                   onPress={() => {
-                    createPortal(
-                      PathFilterModal, {
-                        filter: f,
-                        onSubmit: async nf => {
-                          Object.assign(f, nf);
-                          await putTemplate(template);
-                          forceUpdate();
-                        },
+                    createPortal(PathFilterModal, {
+                      filter: f,
+                      onSubmit: async (nf) => {
+                        Object.assign(f, nf);
+                        await putTemplate(template);
+                        forceUpdate();
                       },
-                    );
+                    });
                   }}
                 >
-                  <AiOutlineEdit className={'text-medium'} />
+                  <AiOutlineEdit className={"text-medium"} />
                 </Button>
                 <Button
-                  color={'danger'}
-                  variant={'light'}
-                  size={'sm'}
                   isIconOnly
+                  color={"danger"}
+                  size={"sm"}
+                  variant={"light"}
                   onPress={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>('Delete resource filter'),
-                      children: t<string>('Sure to delete?'),
+                      title: t<string>("Delete resource filter"),
+                      children: t<string>("Sure to delete?"),
                       onOk: async () => {
                         template.resourceFilters?.splice(i, 1);
                         await putTemplate(template);
@@ -214,7 +257,7 @@ export default ({
                     });
                   }}
                 >
-                  <AiOutlineDelete className={'text-medium'} />
+                  <AiOutlineDelete className={"text-medium"} />
                 </Button>
               </div>
             );
@@ -222,120 +265,116 @@ export default ({
         </div>
       </Block>
       <Block
-        title={t<string>('Playable(Runnable) files')}
-        description={t<string>('Determine which files be considered as playable files')}
-        leftIcon={<IoPlayCircleOutline className={'text-large'} />}
-        rightIcon={<AiOutlineEdit className={'text-medium'} />}
+        description={t<string>(
+          "Determine which files be considered as playable files",
+        )}
+        leftIcon={<IoPlayCircleOutline className={"text-large"} />}
+        rightIcon={<AiOutlineEdit className={"text-medium"} />}
+        title={t<string>("Playable(Runnable) files")}
         onRightIconPress={() => {
-          createPortal(
-            PlayableFileSelectorModal, {
-              selection: template.playableFileLocator,
-              onSubmit: async selection => {
-                template.playableFileLocator = selection;
-                await putTemplate(template);
-                forceUpdate();
-              },
+          createPortal(PlayableFileSelectorModal, {
+            selection: template.playableFileLocator,
+            onSubmit: async (selection) => {
+              template.playableFileLocator = selection;
+              await putTemplate(template);
+              forceUpdate();
             },
-          );
+          });
         }}
       >
-        <div className={'flex items-center gap-1'}>
-          {template.playableFileLocator?.extensionGroups?.map(group => {
+        <div className={"flex items-center gap-1"}>
+          {template.playableFileLocator?.extensionGroups?.map((group) => {
             return (
-              <Chip radius={'sm'} size={'sm'} variant={'flat'}>
+              <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                 {group?.name}
               </Chip>
             );
           })}
-          {template.playableFileLocator?.extensions?.map(ext => {
+          {template.playableFileLocator?.extensions?.map((ext) => {
             return (
-              <Chip size={'sm'} variant={'flat'}>
+              <Chip size={"sm"} variant={"flat"}>
                 {ext}
               </Chip>
             );
           })}
           {template.playableFileLocator?.maxFileCount && (
-            <Chip size={'sm'} variant={'flat'} color={'warning'}>
-              {t<string>('Max: {{count}}', { count: template.playableFileLocator.maxFileCount })}
+            <Chip color={"warning"} size={"sm"} variant={"flat"}>
+              {t<string>("Max: {{count}}", {
+                count: template.playableFileLocator.maxFileCount,
+              })}
             </Chip>
           )}
         </div>
       </Block>
       <Block
-        title={t<string>('Properties')}
-        description={t<string>('You can configure which properties your resource includes')}
-        leftIcon={<TbDatabase className={'text-large'} />}
-        rightIcon={<AiOutlineEdit className={'text-large'} />}
+        description={t<string>(
+          "You can configure which properties your resource includes",
+        )}
+        leftIcon={<TbDatabase className={"text-large"} />}
+        rightIcon={<AiOutlineEdit className={"text-large"} />}
+        title={t<string>("Properties")}
         onRightIconPress={() => {
-          createPortal(
-            PropertySelector, {
-              v2: true,
-              selection: template.properties,
-              pool: PropertyPool.Reserved | PropertyPool.Custom,
-              editable: true,
-              addable: true,
-              onSubmit: async properties => {
-                template.properties = properties.map(p => ({
-                  pool: p.pool,
-                  id: p.id,
-                  property: p,
-                  valueLocators: [],
-                }));
-                await putTemplate(template);
-                forceUpdate();
-              },
+          createPortal(PropertySelector, {
+            v2: true,
+            selection: template.properties,
+            pool: PropertyPool.Reserved | PropertyPool.Custom,
+            editable: true,
+            addable: true,
+            onSubmit: async (properties) => {
+              template.properties = properties.map((p) => ({
+                pool: p.pool,
+                id: p.id,
+                property: p,
+                valueLocators: [],
+              }));
+              await putTemplate(template);
+              forceUpdate();
             },
-          );
+          });
         }}
       >
-        <div className={'flex flex-col gap-1'}>
+        <div className={"flex flex-col gap-1"}>
           {template.properties?.map((p, i) => {
             return (
-              <div className={'flex items-center gap-2'}>
+              <div className={"flex items-center gap-2"}>
                 <BriefProperty property={p.property} />
-                <div className={'flex items-center gap-1'}>
-                  {p.valueLocators?.map(v => {
+                <div className={"flex items-center gap-1"}>
+                  {p.valueLocators?.map((v) => {
                     return (
-                      <Chip
-                        size={'sm'}
-                        radius={'sm'}
-                        variant={'bordered'}
-                      >
+                      <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
                         <PathPropertyExtractorDemonstrator locator={v} />
                       </Chip>
                     );
                   })}
                 </div>
-                <div className={'flex items-center gap-1'}>
+                <div className={"flex items-center gap-1"}>
                   <Button
-                    variant={'light'}
-                    size={'sm'}
                     isIconOnly
+                    size={"sm"}
+                    variant={"light"}
                     onPress={() => {
-                      createPortal(
-                        PathPropertyExtractorModal, {
-                          locators: p.valueLocators,
-                          onSubmit: async vls => {
-                            p.valueLocators = vls;
-                            await putTemplate(template);
-                            forceUpdate();
-                          },
+                      createPortal(PathPropertyExtractorModal, {
+                        locators: p.valueLocators,
+                        onSubmit: async (vls) => {
+                          p.valueLocators = vls;
+                          await putTemplate(template);
+                          forceUpdate();
                         },
-                      );
+                      });
                     }}
                   >
-                    <IoLocate className={'text-medium'} />
+                    <IoLocate className={"text-medium"} />
                   </Button>
                   <Button
                     isIconOnly
-                    size={'sm'}
-                    color={'danger'}
-                    variant={'light'}
+                    color={"danger"}
+                    size={"sm"}
+                    variant={"light"}
                     onPress={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t<string>('Delete resource filter'),
-                        children: t<string>('Sure to delete?'),
+                        title: t<string>("Delete resource filter"),
+                        children: t<string>("Sure to delete?"),
                         onOk: async () => {
                           template.properties?.splice(i, 1);
                           await putTemplate(template);
@@ -344,7 +383,7 @@ export default ({
                       });
                     }}
                   >
-                    <AiOutlineDelete className={'text-medium'} />
+                    <AiOutlineDelete className={"text-medium"} />
                   </Button>
                 </div>
               </div>
@@ -353,66 +392,66 @@ export default ({
         </div>
       </Block>
       <Block
-        title={t<string>('Enhancers')}
-        description={t<string>('You can use enhancers to automatically populate resource information or files')}
-        leftIcon={<IoRocketOutline className={'text-large'} />}
-        rightIcon={<AiOutlineEdit className={'text-large'} />}
+        description={t<string>(
+          "You can use enhancers to automatically populate resource information or files",
+        )}
+        leftIcon={<IoRocketOutline className={"text-large"} />}
+        rightIcon={<AiOutlineEdit className={"text-large"} />}
+        title={t<string>("Enhancers")}
         onRightIconPress={() => {
-          createPortal(
-            EnhancerSelectorModal, {
-              selectedIds: template.enhancers?.map(e => e.enhancerId),
-              onSubmit: async ids => {
-                template.enhancers = ids.map(id => ({
-                  enhancerId: id,
-                  options: template.enhancers?.find(x => x.enhancerId == id),
-                }));
-                await putTemplate(template);
-                forceUpdate();
-              },
+          createPortal(EnhancerSelectorModal, {
+            selectedIds: template.enhancers?.map((e) => e.enhancerId),
+            onSubmit: async (ids) => {
+              template.enhancers = ids.map((id) => ({
+                enhancerId: id,
+                options: template.enhancers?.find((x) => x.enhancerId == id),
+              }));
+              await putTemplate(template);
+              forceUpdate();
             },
-          );
+          });
         }}
       >
-        <div className={'flex flex-col gap-1'}>
+        <div className={"flex flex-col gap-1"}>
           {template.enhancers?.map((e, i) => {
-            const enhancer = enhancers.find(x => x.id == e.enhancerId);
+            const enhancer = enhancers.find((x) => x.id == e.enhancerId);
+
             if (!enhancer) {
-              return t<string>('Unknown enhancer');
+              return t<string>("Unknown enhancer");
             }
+
             return (
               <div>
-                <div className={'flex items-center gap-1'}>
+                <div className={"flex items-center gap-1"}>
                   <BriefEnhancer enhancer={enhancer} />
                   <Button
-                    variant={'light'}
-                    size={'sm'}
                     isIconOnly
+                    size={"sm"}
+                    variant={"light"}
                     onPress={async () => {
-                      createPortal(
-                        EnhancerOptionsModal, {
-                          enhancer,
-                          options: e,
-                          onSubmit: async options => {
-                            Object.assign(e, options);
-                            await putTemplate(template);
-                            forceUpdate();
-                          },
+                      createPortal(EnhancerOptionsModal, {
+                        enhancer,
+                        options: e,
+                        onSubmit: async (options) => {
+                          Object.assign(e, options);
+                          await putTemplate(template);
+                          forceUpdate();
                         },
-                      );
+                      });
                     }}
                   >
-                    <AiOutlineEdit className={'text-medium'} />
+                    <AiOutlineEdit className={"text-medium"} />
                   </Button>
                   <Button
                     isIconOnly
-                    size={'sm'}
-                    color={'danger'}
-                    variant={'light'}
+                    color={"danger"}
+                    size={"sm"}
+                    variant={"light"}
                     onPress={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t<string>('Delete resource filter'),
-                        children: t<string>('Sure to delete?'),
+                        title: t<string>("Delete resource filter"),
+                        children: t<string>("Sure to delete?"),
                         onOk: async () => {
                           template.enhancers?.splice(i, 1);
                           await putTemplate(template);
@@ -421,72 +460,93 @@ export default ({
                       });
                     }}
                   >
-                    <AiOutlineDelete className={'text-medium'} />
+                    <AiOutlineDelete className={"text-medium"} />
                   </Button>
                 </div>
-                {(e.expressions && e.expressions.length > 0) && (
+                {e.expressions && e.expressions.length > 0 && (
                   <div>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                      variant={'flat'}
-                    >
-                      {t<string>('Expressions')}
+                    <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                      {t<string>("Expressions")}
                     </Chip>
-                    {e.expressions.map(x => (
+                    {e.expressions.map((x) => (
                       <div>{x}</div>
                     ))}
                   </div>
                 )}
                 <div>
                   {e.targetOptions ? (
-                    <div className={'flex flex-col gap-1'}>
-                      {enhancer?.targets?.map(target => {
-                        const tos = e.targetOptions!.filter(x => x.target == target.id);
+                    <div className={"flex flex-col gap-1"}>
+                      {enhancer?.targets?.map((target) => {
+                        const tos = e.targetOptions!.filter(
+                          (x) => x.target == target.id,
+                        );
+
                         if (!tos || tos.length == 0) {
                           return null;
                         }
                         if (target.isDynamic) {
-                          const mainOptions = tos.find(x => x.dynamicTarget == undefined);
-                          const otherOptions = tos.filter(x => x != mainOptions);
+                          const mainOptions = tos.find(
+                            (x) => x.dynamicTarget == undefined,
+                          );
+                          const otherOptions = tos.filter(
+                            (x) => x != mainOptions,
+                          );
+
                           return (
                             <>
-                              <div
-                                className={'flex items-center gap-1'}
-                              >
+                              <div className={"flex items-center gap-1"}>
                                 <Chip
-                                  size={'sm'}
-                                  radius={'sm'}
-                                  variant={'flat'}
+                                  radius={"sm"}
+                                  size={"sm"}
+                                  variant={"flat"}
                                 >
                                   {target.name}
                                 </Chip>
                                 {target.description && (
                                   <Tooltip content={target.description}>
-                                    <QuestionCircleOutlined className={'text-medium'} />
+                                    <QuestionCircleOutlined
+                                      className={"text-medium"}
+                                    />
                                   </Tooltip>
                                 )}
-                                {mainOptions?.autoBindProperty && t<string>('Auto bind property')}
-                                {mainOptions?.autoMatchMultilevelString && t<string>('Auto match multilevel string')}
+                                {mainOptions?.autoBindProperty &&
+                                  t<string>("Auto bind property")}
+                                {mainOptions?.autoMatchMultilevelString &&
+                                  t<string>("Auto match multilevel string")}
                               </div>
-                              {otherOptions.map(to => {
-                                const property = (to.propertyPool != undefined && to.propertyId != undefined)
-                                  ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
+                              {otherOptions.map((to) => {
+                                const property =
+                                  to.propertyPool != undefined &&
+                                  to.propertyId != undefined
+                                    ? propertyMap[to.propertyPool]?.[
+                                        to.propertyId
+                                      ]
+                                    : undefined;
+
                                 return (
-                                  <div className={'flex items-center gap-1'}>
-                                    <AiOutlineSisternode className={'text-medium'} />
+                                  <div className={"flex items-center gap-1"}>
+                                    <AiOutlineSisternode
+                                      className={"text-medium"}
+                                    />
                                     <Chip
-                                      size={'sm'}
-                                      radius={'sm'}
-                                      variant={'flat'}
+                                      radius={"sm"}
+                                      size={"sm"}
+                                      variant={"flat"}
                                     >
                                       {to.dynamicTarget}
                                     </Chip>
-                                    <TiChevronRightOutline className={'text-medium'} />
-                                    {to.autoBindProperty ? t<string>('Auto bind property') : property ? (
+                                    <TiChevronRightOutline
+                                      className={"text-medium"}
+                                    />
+                                    {to.autoBindProperty ? (
+                                      t<string>("Auto bind property")
+                                    ) : property ? (
                                       <BriefProperty property={property} />
-                                    ) : t<string>('Unknown property')}
-                                    {to.autoMatchMultilevelString && t<string>('Auto match multilevel string')}
+                                    ) : (
+                                      t<string>("Unknown property")
+                                    )}
+                                    {to.autoMatchMultilevelString &&
+                                      t<string>("Auto match multilevel string")}
                                   </div>
                                 );
                               })}
@@ -494,42 +554,53 @@ export default ({
                           );
                         } else {
                           const to = tos[0]!;
-                          const property = (to.propertyPool != undefined && to.propertyId != undefined)
-                            ? propertyMap[to.propertyPool]?.[to.propertyId] : undefined;
+                          const property =
+                            to.propertyPool != undefined &&
+                            to.propertyId != undefined
+                              ? propertyMap[to.propertyPool]?.[to.propertyId]
+                              : undefined;
+
                           return (
-                            <div className={'flex items-center gap-1'}>
+                            <div className={"flex items-center gap-1"}>
                               {target.description ? (
-                                <Tooltip
-                                  content={target.description}
-                                >
+                                <Tooltip content={target.description}>
                                   <Chip
-                                    size={'sm'}
-                                    radius={'sm'}
-                                    variant={'flat'}
+                                    radius={"sm"}
+                                    size={"sm"}
+                                    variant={"flat"}
                                   >
                                     {target.name}
                                   </Chip>
                                 </Tooltip>
                               ) : (
                                 <Chip
-                                  size={'sm'}
-                                  radius={'sm'}
-                                  variant={'flat'}
+                                  radius={"sm"}
+                                  size={"sm"}
+                                  variant={"flat"}
                                 >
                                   {target.name}
                                 </Chip>
                               )}
-                              <TiChevronRightOutline className={'text-medium'} />
-                              {to.autoBindProperty ? t<string>('Auto bind property') : property ? (
+                              <TiChevronRightOutline
+                                className={"text-medium"}
+                              />
+                              {to.autoBindProperty ? (
+                                t<string>("Auto bind property")
+                              ) : property ? (
                                 <BriefProperty property={property} />
-                              ) : t<string>('Unknown property')}
-                              {to.autoMatchMultilevelString && t<string>('Auto match multilevel string')}
+                              ) : (
+                                t<string>("Unknown property")
+                              )}
+                              {to.autoMatchMultilevelString &&
+                                t<string>("Auto match multilevel string")}
                             </div>
                           );
                         }
                       })}
                     </div>
-                  ) : t<string>('Not configured')}
+                  ) : (
+                    t<string>("Not configured")
+                  )}
                 </div>
               </div>
             );
@@ -537,31 +608,31 @@ export default ({
         </div>
       </Block>
       <Block
-        title={t<string>('Display name template')}
-        description={t<string>('You can customize the display name of the resource')}
-        leftIcon={<MdOutlineSubtitles className={'text-large'} />}
-        rightIcon={<AiOutlineEdit className={'text-large'} />}
+        description={t<string>(
+          "You can customize the display name of the resource",
+        )}
+        leftIcon={<MdOutlineSubtitles className={"text-large"} />}
+        rightIcon={<AiOutlineEdit className={"text-large"} />}
+        title={t<string>("Display name template")}
         onRightIconPress={() => {
-          createPortal(
-            DisplayNameTemplateEditorModal, {
-              properties: template.properties?.map(p => p.property!) ?? [],
-              template: template.displayNameTemplate,
-              onSubmit: async templateStr => {
-                template.displayNameTemplate = templateStr;
-                await putTemplate(template);
-                forceUpdate();
-              },
+          createPortal(DisplayNameTemplateEditorModal, {
+            properties: template.properties?.map((p) => p.property!) ?? [],
+            template: template.displayNameTemplate,
+            onSubmit: async (templateStr) => {
+              template.displayNameTemplate = templateStr;
+              await putTemplate(template);
+              forceUpdate();
             },
-          );
+          });
         }}
       >
         {template.displayNameTemplate}
       </Block>
       <Block
-        title={t<string>('Subresource')}
         description={t<string>('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
         descriptionPlacement={'bottom'}
-        leftIcon={<TiFlowChildren className={'text-large'} />}
+        title={t<string>('Subresource')}
+        leftIcon={<TiFlowChildren className={"text-large"} />}
         // rightIcon={<AiOutlineEdit className={'text-large'} />}
         // onRightIconPress={() => {
         //   createPortal(

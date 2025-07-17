@@ -1,17 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useUpdateEffect } from 'react-use';
-import { useTranslation } from 'react-i18next';
-import { PscMatcherValue } from '../models/PscMatcherValue';
-import type { IPscProperty } from '../models/PscProperty';
-import ByLayer from './ByLayer';
-import ByRegex from './ByRegex';
-import { ResourceMatcherValueType, ResourceProperty } from '@/sdk/constants';
-import type { ChipProps } from '@/components/bakaui';
-import { Tooltip } from '@/components/bakaui';
-import { Chip, Modal } from '@/components/bakaui';
-import type { DestroyableProps } from '@/components/bakaui/types';
+import type { IPscProperty } from "../models/PscProperty";
+import type { ChipProps } from "@/components/bakaui";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import React, { useState } from "react";
+import { useUpdateEffect } from "react-use";
+import { useTranslation } from "react-i18next";
+
+import { PscMatcherValue } from "../models/PscMatcherValue";
+
+import ByLayer from "./ByLayer";
+import ByRegex from "./ByRegex";
+
+import { ResourceMatcherValueType, ResourceProperty } from "@/sdk/constants";
+import { Tooltip } from "@/components/bakaui";
+import { Chip, Modal } from "@/components/bakaui";
 
 interface IValue {
   layer?: number;
@@ -46,9 +50,11 @@ export type SegmentMatcherConfigurationProps = DestroyableProps & {
   segmentMarkers: Record<number, SegmentIndexMarker>;
 };
 
-type SegmentIndexMarker = 'root' | 'resource' | 'current';
+type SegmentIndexMarker = "root" | "resource" | "current";
 
-const getDefaultValue = (modesData: SegmentMatcherConfigurationProps['modesData']): IValue | undefined => {
+const getDefaultValue = (
+  modesData: SegmentMatcherConfigurationProps["modesData"],
+): IValue | undefined => {
   if (modesData) {
     if (modesData.layers.length > 0) {
       return {
@@ -56,45 +62,54 @@ const getDefaultValue = (modesData: SegmentMatcherConfigurationProps['modesData'
       };
     }
   }
+
   return;
 };
 
-const PathSegmentRenderOptions: Record<SegmentIndexMarker, { color: ChipProps['color']; tip: string }> = {
+const PathSegmentRenderOptions: Record<
+  SegmentIndexMarker,
+  { color: ChipProps["color"]; tip: string }
+> = {
   root: {
-    color: 'warning',
-    tip: 'Segment of root path',
+    color: "warning",
+    tip: "Segment of root path",
   },
   resource: {
-    color: 'warning',
-    tip: 'Segment of resource',
+    color: "warning",
+    tip: "Segment of resource",
   },
   current: {
-    color: 'primary',
-    tip: 'Current segment',
+    color: "primary",
+    tip: "Current segment",
   },
 };
 
 export default ({
-                                       defaultValue,
-                                       modesData = new SegmentMatcherConfigurationModesData(),
-                                       onSubmit,
-                                       property,
-                                       segments,
-                                       segmentMarkers,
-                                       ...props
-                                     }: SegmentMatcherConfigurationProps) => {
+  defaultValue,
+  modesData = new SegmentMatcherConfigurationModesData(),
+  onSubmit,
+  property,
+  segments,
+  segmentMarkers,
+  ...props
+}: SegmentMatcherConfigurationProps) => {
   const { t } = useTranslation();
-  const defaultMode = modesData.layers.length > 0 ? 'layer' : Object.keys(modesData)[0] as ('layer' | 'regex');
+  const defaultMode =
+    modesData.layers.length > 0
+      ? "layer"
+      : (Object.keys(modesData)[0] as "layer" | "regex");
   const [mode, setMode] = useState(defaultMode);
-  const [value, setValue] = useState<IValue | undefined>(defaultValue ?? getDefaultValue(modesData));
+  const [value, setValue] = useState<IValue | undefined>(
+    defaultValue ?? getDefaultValue(modesData),
+  );
 
   // console.log(modesData);
 
   useUpdateEffect(() => {
     switch (mode) {
-      case 'layer':
+      case "layer":
         break;
-      case 'regex':
+      case "regex":
         setValue({
           ...(value || {}),
           layer: undefined,
@@ -105,81 +120,90 @@ export default ({
 
   return (
     <Modal
-      onDestroyed={props.onDestroyed}
-      size={'lg'}
       defaultVisible
-      title={t<string>('Configure [{{property}}] property for path segment', { property: property.name })}
-      onOk={async () => {
-        onSubmit?.(new PscMatcherValue({
-          ...value,
-          valueType: mode == 'layer' ? ResourceMatcherValueType.Layer : ResourceMatcherValueType.Regex,
-        }));
-      }}
       footer={{
-        actions: ['ok', 'cancel'],
+        actions: ["ok", "cancel"],
         okProps: {
-          isDisabled: !value || (mode == 'layer' && !value.layer) || (mode == 'regex' && (!value.regex)),
+          isDisabled:
+            !value ||
+            (mode == "layer" && !value.layer) ||
+            (mode == "regex" && !value.regex),
         },
       }}
+      size={"lg"}
+      title={t<string>("Configure [{{property}}] property for path segment", {
+        property: property.name,
+      })}
+      onDestroyed={props.onDestroyed}
+      onOk={async () => {
+        onSubmit?.(
+          new PscMatcherValue({
+            ...value,
+            valueType:
+              mode == "layer"
+                ? ResourceMatcherValueType.Layer
+                : ResourceMatcherValueType.Regex,
+          }),
+        );
+      }}
     >
-      <div className={''}>
-        <div className={'font-bold'}>{t<string>('Path segment')}</div>
-        <div className={'flex items-center gap-1 mb-2'}>
+      <div className={""}>
+        <div className={"font-bold"}>{t<string>("Path segment")}</div>
+        <div className={"flex items-center gap-1 mb-2"}>
           {segments.map((segment, index) => {
-            const marker: SegmentIndexMarker | undefined = segmentMarkers[index];
+            const marker: SegmentIndexMarker | undefined =
+              segmentMarkers[index];
             const options = PathSegmentRenderOptions[marker];
+
             return (
               <>
                 {options != undefined ? (
-                  <Tooltip
-                    content={t<string>(options.tip)}
-                  >
-                    <Chip
-                      variant={'light'}
-                      color={options.color}
-                    >
+                  <Tooltip content={t<string>(options.tip)}>
+                    <Chip color={options.color} variant={"light"}>
                       {segment}
                     </Chip>
                   </Tooltip>
                 ) : (
                   <span>{segment}</span>
                 )}
-                {index != segments.length - 1 && <span className={''}>/</span>}
+                {index != segments.length - 1 && <span className={""}>/</span>}
               </>
             );
           })}
         </div>
         <ByLayer
           layers={modesData.layers}
-          onSelectLayer={layer => {
-            if (mode != 'layer') {
-              setMode('layer');
+          modeIsSelected={mode == "layer"}
+          selectedLayer={value?.layer}
+          onSelectLayer={(layer) => {
+            if (mode != "layer") {
+              setMode("layer");
             }
             setValue({
               ...value,
               layer,
             });
           }}
-          selectedLayer={value?.layer}
-          modeIsSelected={mode == 'layer'}
           onSelectMode={() => {
-            setMode('layer');
+            setMode("layer");
           }}
         />
         <ByRegex
+          isResourceProperty={
+            property.id == ResourceProperty.Resource && !property.isCustom
+          }
+          modeIsSelected={mode == "regex"}
           regex={value?.regex}
-          modeIsSelected={mode == 'regex'}
-          onSelectMode={() => {
-            setMode('regex');
-          }}
           textToBeMatched={modesData.regex?.text}
-          onRegexChange={v => {
+          onRegexChange={(v) => {
             setValue({
               ...value,
               regex: v,
             });
           }}
-          isResourceProperty={property.id == ResourceProperty.Resource && !property.isCustom}
+          onSelectMode={() => {
+            setMode("regex");
+          }}
         />
       </div>
     </Modal>

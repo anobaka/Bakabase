@@ -1,101 +1,114 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-;
-import { useTranslation } from 'react-i18next';
-import { EllipsisOutlined, FileOutlined, FolderAddOutlined, FolderOutlined } from '@ant-design/icons';
-import _ from 'lodash';
-import FileSystemEntryChangeExampleMiscellaneousItem from './FileSystemEntryChangeExampleMiscellaneousItem';
-import type { Entry } from '@/core/models/FileExplorer/Entry';
-import BApi from '@/sdk/BApi';
-import { Chip, Input, Modal } from '@/components/bakaui';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import BusinessConstants from '@/components/BusinessConstants';
-import FileSystemEntryChangeItem from '@/pages/file-processor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
-import FileSystemEntryChangeExampleItem
-  from '@/pages/file-processor/RootTreeEntry/components/FileSystemEntryChangeExampleItem';
+import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import _ from "lodash";
+
+import FileSystemEntryChangeExampleMiscellaneousItem from "./FileSystemEntryChangeExampleMiscellaneousItem";
+
+import BApi from "@/sdk/BApi";
+import { Modal } from "@/components/bakaui";
+import BusinessConstants from "@/components/BusinessConstants";
+import FileSystemEntryChangeItem from "@/pages/file-processor/RootTreeEntry/components/FileSystemEntryChangeExampleItem";
+import FileSystemEntryChangeExampleItem from "@/pages/file-processor/RootTreeEntry/components/FileSystemEntryChangeExampleItem";
 
 type Props = { entries: Entry[] } & DestroyableProps;
 
-export default ({
-                  entries = [],
-                  onDestroyed,
-                }: Props) => {
+export default ({ entries = [], onDestroyed }: Props) => {
   const { t } = useTranslation();
-  const groupsRef = useRef(_.groupBy(entries, e => e.parent?.path));
-  const [newParentNames, setNewParentNames] = useState(_.mapValues(groupsRef.current, g => g[0]!.meaningfulName));
-  useEffect(() => {
+  const groupsRef = useRef(_.groupBy(entries, (e) => e.parent?.path));
+  const [newParentNames, setNewParentNames] = useState(
+    _.mapValues(groupsRef.current, (g) => g[0]!.meaningfulName),
+  );
 
-  }, []);
+  useEffect(() => {}, []);
 
   console.log(newParentNames);
 
   return (
     <Modal
       defaultVisible
-      size={'xl'}
-      onDestroyed={onDestroyed}
-      title={t<string>('Wrapping {{count}} file entries', { count: entries.length })}
-      onOk={async () => {
-        await Promise.all(_.keys(groupsRef.current).map(async p => {
-          const innerEntries = groupsRef.current[p]!;
-          const parentEntry = innerEntries[0]!.parent!;
-          const d = [parentEntry.path, newParentNames[p]].join(BusinessConstants.pathSeparator);
-          await BApi.file.moveEntries({
-            destDir: d,
-            entryPaths: innerEntries.map((e) => e.path),
-          });
-        }));
-      }}
       footer={{
-        actions: ['ok', 'cancel'],
+        actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>('Wrap')}(Enter)`,
+          children: `${t<string>("Wrap")}(Enter)`,
           autoFocus: true,
-          disabled: _.values(newParentNames).some(x => !x || x.length == 0),
+          disabled: _.values(newParentNames).some((x) => !x || x.length == 0),
         },
       }}
+      size={"xl"}
+      title={t<string>("Wrapping {{count}} file entries", {
+        count: entries.length,
+      })}
+      onDestroyed={onDestroyed}
+      onOk={async () => {
+        await Promise.all(
+          _.keys(groupsRef.current).map(async (p) => {
+            const innerEntries = groupsRef.current[p]!;
+            const parentEntry = innerEntries[0]!.parent!;
+            const d = [parentEntry.path, newParentNames[p]].join(
+              BusinessConstants.pathSeparator,
+            );
+
+            await BApi.file.moveEntries({
+              destDir: d,
+              entryPaths: innerEntries.map((e) => e.path),
+            });
+          }),
+        );
+      }}
     >
-      <div className={'flex flex-col gap-1'}>
+      <div className={"flex flex-col gap-1"}>
         {Object.keys(groupsRef.current).map((parent) => {
           const innerEntries = groupsRef.current[parent] ?? [];
-          const newParentName = newParentNames[parent] ?? '';
+          const newParentName = newParentNames[parent] ?? "";
+
           return (
             <>
-              <FileSystemEntryChangeExampleItem type={'default'} text={parent ?? '.'} isDirectory />
+              <FileSystemEntryChangeExampleItem
+                isDirectory
+                text={parent ?? "."}
+                type={"default"}
+              />
               <FileSystemEntryChangeItem
-                type={'added'}
                 editable
+                isDirectory
+                layer={1}
                 text={newParentName}
-                onChange={v => {
+                type={"added"}
+                onChange={(v) => {
                   setNewParentNames((old) => ({ ...old, [parent]: v }));
                 }}
-                layer={1}
-                isDirectory
               />
               {innerEntries.map((e, i) => {
                 return (
                   <FileSystemEntryChangeExampleItem
-                    type={'added'}
-                    text={e.name}
-                    layer={2}
                     isDirectory={e.isDirectory}
+                    layer={2}
                     path={e.path}
+                    text={e.name}
+                    type={"added"}
                   />
                 );
               })}
               {innerEntries.map((e, i) => {
                 return (
                   <FileSystemEntryChangeExampleItem
-                    type={'deleted'}
-                    text={e.name}
-                    layer={1}
                     isDirectory={e.isDirectory}
+                    layer={1}
                     path={e.path}
+                    text={e.name}
+                    type={"deleted"}
                   />
                 );
               })}
-              <FileSystemEntryChangeExampleMiscellaneousItem parent={parent} indent={1} />
+              <FileSystemEntryChangeExampleMiscellaneousItem
+                indent={1}
+                parent={parent}
+              />
             </>
           );
         })}

@@ -1,9 +1,10 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import { Input, NumberInput, Radio, RadioGroup } from '@/components/bakaui';
-import DirectionSelector from '@/pages/bulk-modification2/components/BulkModification/DirectionSelector';
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+
+import { Input, NumberInput, Radio, RadioGroup } from "@/components/bakaui";
+import DirectionSelector from "@/pages/bulk-modification2/components/BulkModification/DirectionSelector";
 
 enum Mode {
   All = 1,
@@ -38,41 +39,44 @@ export default ({ options: propsOptions, title }: Props) => {
       case Mode.Matching:
         return (
           <>
-            <div>
-              {t<string>('Value')}
-            </div>
+            <div>{t<string>("Value")}</div>
             <div>
               <Input
                 value={options.value}
-                onValueChange={value => setOptions({ value })}
+                onValueChange={(value) => setOptions({ value })}
               />
             </div>
           </>
         );
       case Mode.Index:
         let nv = 1;
+
         if (options.value != undefined) {
           const int = parseInt(options.value, 10);
+
           if (!Number.isNaN(int)) {
             nv = int;
           }
         }
+
         return (
           <>
-            <div>
-              {t<string>('Sequence number')}
-            </div>
+            <div>{t<string>("Sequence number")}</div>
             <div>
               <DirectionSelector
-                subject={'positioning'}
                 isReversed={options.isPositioningDirectionReversed}
-                onChange={v => setOptions({
-                  isPositioningDirectionReversed: v,
-                })}
+                subject={"positioning"}
+                onChange={(v) =>
+                  setOptions({
+                    isPositioningDirectionReversed: v,
+                  })
+                }
               />
               <NumberInput
                 value={nv}
-                onValueChange={value => setOptions({ value: value.toString() })}
+                onValueChange={(value) =>
+                  setOptions({ value: value.toString() })
+                }
               />
             </div>
           </>
@@ -82,18 +86,22 @@ export default ({ options: propsOptions, title }: Props) => {
 
   return (
     <>
-      <div>{t<string>('Mode')}</div>
+      <div>{t<string>("Mode")}</div>
       <div>
         <RadioGroup
-          orientation={'horizontal'}
+          orientation={"horizontal"}
           value={options.mode?.toString()}
-          onValueChange={(mode) => setOptions({
-            ...options,
-            mode: parseInt(mode, 10),
-          })}
+          onValueChange={(mode) =>
+            setOptions({
+              ...options,
+              mode: parseInt(mode, 10),
+            })
+          }
         >
           {Object.keys(Mode).map((x) => (
-            <Radio key={Mode[x]} value={Mode[x]}>{x}</Radio>
+            <Radio key={Mode[x]} value={Mode[x]}>
+              {x}
+            </Radio>
           ))}
         </RadioGroup>
       </div>
@@ -101,5 +109,3 @@ export default ({ options: propsOptions, title }: Props) => {
     </>
   );
 };
-
-

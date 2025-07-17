@@ -1,59 +1,65 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { toast } from '@/components/bakaui';
-import serverConfig from '@/serverConfig';
-import {Dialog} from '@alifd/next';
-import i18n from 'i18next';
-import {HubConnection, HubConnectionBuilder, HubConnectionState, LogLevel} from "@microsoft/signalr";
+import type { HubConnection } from "@microsoft/signalr";
+
+import React, { useEffect, useRef } from "react";
+import { Dialog } from "@alifd/next";
+import i18n from "i18next";
+import {
+  HubConnectionBuilder,
+  HubConnectionState,
+  LogLevel,
+} from "@microsoft/signalr";
+
+import envConfig from "@/config/env";
+import { toast } from "@/components/bakaui";
 import { sleep } from "@/components/utils";
 
-const progressorHubUri = '/hub/progressor';
+const progressorHubUri = "/hub/progressor";
 
 enum ProgressorClientAction {
   Start = 1,
   Stop = 2,
-  Initialize = 3
+  Initialize = 3,
 }
 
 enum ProgressorSignalRClientMethod {
   StateChanged = "StateChanged",
   ProgressChanged = "ProgressChanged",
-  ErrorOccurred = 'ErrorOccurred'
+  ErrorOccurred = "ErrorOccurred",
 }
 
 enum ProgressorSignalRServerMethod {
-  Invoke = "Invoke"
+  Invoke = "Invoke",
 }
 
 enum ProgressorStatus {
   Idle = 1,
   Running = 2,
   Complete = 3,
-  Suspended = 4
+  Suspended = 4,
 }
 
 type IProgressorState = {
-  status: ProgressorStatus,
-  message: string
-}
+  status: ProgressorStatus;
+  message: string;
+};
 
 type IProgressorProgress = {
-  percentage: number,
-  elapsedMilliseconds: number
-}
+  percentage: number;
+  elapsedMilliseconds: number;
+};
 
 type IHubConnectionStateOptions<TProgress extends IProgressorProgress> = {
-  id: string,
-  url: string,
-  onConnectionStateChange: (state: HubConnectionState) => void,
-  onStateChange: (state: IProgressorState) => void,
-  onProgressChange: (progress: TProgress) => void
-  onFatalError: (code: number, msg: string) => void
-}
+  id: string;
+  url: string;
+  onConnectionStateChange: (state: HubConnectionState) => void;
+  onStateChange: (state: IProgressorState) => void;
+  onProgressChange: (progress: TProgress) => void;
+  onFatalError: (code: number, msg: string) => void;
+};
 
 class ProgressorHubConnection<TProgress extends IProgressorProgress> {
-
   public _id: string;
   public _url: string;
   private _conn: HubConnection;
@@ -69,22 +75,26 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
 
   private _log = (...args) => {
     console.log(`[Progressor:${this._id}]`, ...args);
-  }
+  };
 
   private _daemon = async () => {
     while (!this._disposed) {
       const conn = this._conn;
+
       if (conn.state !== this._connStatus) {
         this.onConnectionStateChange(conn.state);
         this._connStatus = conn.state;
       }
       if (conn.state === HubConnectionState.Disconnected) {
         try {
-          await conn
-            .start()
-            .then(() => {
-              conn.invoke(ProgressorSignalRServerMethod.Invoke, this._id, ProgressorClientAction.Initialize, null);
-            });
+          await conn.start().then(() => {
+            conn.invoke(
+              ProgressorSignalRServerMethod.Invoke,
+              this._id,
+              ProgressorClientAction.Initialize,
+              null,
+            );
+          });
         } catch (e) {
           console.log(e);
         }
@@ -95,11 +105,11 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
 
   public connect = () => {
     if (!this._conn) {
-      this._log('Initializing');
-      const conn = this._conn = new HubConnectionBuilder()
+      this._log("Initializing");
+      const conn = (this._conn = new HubConnectionBuilder()
         .withUrl(this._url)
         .configureLogging(LogLevel.Information)
-        .build();
+        .build());
 
       conn.onreconnecting((e) => {
         this._log("onreconnecting", e);
@@ -108,7 +118,7 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
         this._log("onclose", e);
       });
       conn.onreconnected((connectionId) => {
-        this._log('onreconnected', connectionId);
+        this._log("onreconnected", connectionId);
       });
 
       const methods = {
@@ -118,7 +128,10 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
             this.onStateChange(varState);
           }
         },
-        [ProgressorSignalRClientMethod.ProgressChanged]: (varKey, varProgress) => {
+        [ProgressorSignalRClientMethod.ProgressChanged]: (
+          varKey,
+          varProgress,
+        ) => {
           if (varKey === this._id) {
             this.progress = varProgress;
             this.onProgressChange(varProgress);
@@ -128,19 +141,21 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
           if (varKey == this._id) {
             this.onFatalError(-1, varMessage);
           }
-        }
+        },
       };
 
       const self = this;
 
-      Object.keys(methods).map(t => conn.on(t, function () {
-        // self._log(`${t}: `, ...arguments);
-        methods[t](...arguments);
-      }));
+      Object.keys(methods).map((t) =>
+        conn.on(t, function () {
+          // self._log(`${t}: `, ...arguments);
+          methods[t](...arguments);
+        }),
+      );
 
       this._daemon();
     }
-  }
+  };
 
   public dispose = async () => {
     if (this._conn) {
@@ -148,36 +163,52 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
       await this._conn.stop();
       this._log(`connection to hub: ${this._url} disposed`);
     }
-  }
+  };
 
   public start = async (params) => {
     this.connect();
-    await this._conn.send(ProgressorSignalRServerMethod.Invoke, this._id, ProgressorClientAction.Start, params ? JSON.stringify(params) : undefined)
-  }
+    await this._conn.send(
+      ProgressorSignalRServerMethod.Invoke,
+      this._id,
+      ProgressorClientAction.Start,
+      params ? JSON.stringify(params) : undefined,
+    );
+  };
 
   public stop = async () => {
     this.connect();
-    console.log(this._conn)
-    const aaa = await this._conn.send(ProgressorSignalRServerMethod.Invoke, this._id, ProgressorClientAction.Stop, undefined);
-    console.log('sended', aaa)
-  }
+    console.log(this._conn);
+    const aaa = await this._conn.send(
+      ProgressorSignalRServerMethod.Invoke,
+      this._id,
+      ProgressorClientAction.Stop,
+      undefined,
+    );
+
+    console.log("sended", aaa);
+  };
 
   constructor(options: IHubConnectionStateOptions<TProgress>) {
     this._id = options.id;
     this._url = options.url;
-    this.onConnectionStateChange = options.onConnectionStateChange
-    this.onStateChange = options.onStateChange
-    this.onProgressChange = options.onProgressChange
-    this.onFatalError = options.onFatalError
+    this.onConnectionStateChange = options.onConnectionStateChange;
+    this.onStateChange = options.onStateChange;
+    this.onProgressChange = options.onProgressChange;
+    this.onFatalError = options.onFatalError;
   }
 }
 
-
-function useProgressorHubConnection(id: string, onProgressChange = (progress) => {}, onStateChange = (state) => {}, onConnected = (connection) => { }) {
+function useProgressorHubConnection(
+  id: string,
+  onProgressChange = (progress) => {},
+  onStateChange = (state) => {},
+  onConnected = (connection) => {},
+) {
   const progressorRef = useRef();
   const dialogRef = useRef();
+
   useEffect(() => {
-    const url = `${serverConfig.apiEndpoint}${progressorHubUri}`;
+    const url = `${envConfig.apiEndpoint}${progressorHubUri}`;
     const progressor = new ProgressorHubConnection({
       id,
       url,
@@ -188,25 +219,34 @@ function useProgressorHubConnection(id: string, onProgressChange = (progress) =>
         if (state != HubConnectionState.Connected) {
           dialogRef.current = Dialog.show({
             content: (
-              <div style={{ textAlign: 'center' }}>Hub{i18n.t<string>('Connecting...')}</div>
+              <div style={{ textAlign: "center" }}>
+                Hub{i18n.t<string>("Connecting...")}
+              </div>
             ),
-            width: 'auto',
+            width: "auto",
             footer: false,
-            className: 'hub-connection-dialog',
+            className: "hub-connection-dialog",
             centered: true,
             v2: true,
             hasMask: false,
           });
         } else {
-          toast.success(`[${progressorHubUri}]${i18n.t<string>('Hub connected')}`);
+          toast.success(
+            `[${progressorHubUri}]${i18n.t<string>("Hub connected")}`,
+          );
         }
       },
-      onFatalError: (code: number, msg: string) => Dialog.error({
-        v2: true,
-        width: 'auto',
-        title: i18n.t<string>('Error'),
-        content: <pre>Code: {code}, message: {msg}</pre>,
-      }),
+      onFatalError: (code: number, msg: string) =>
+        Dialog.error({
+          v2: true,
+          width: "auto",
+          title: i18n.t<string>("Error"),
+          content: (
+            <pre>
+              Code: {code}, message: {msg}
+            </pre>
+          ),
+        }),
     });
 
     progressor.connect();
@@ -225,8 +265,8 @@ function useProgressorHubConnection(id: string, onProgressChange = (progress) =>
 
 export {
   ProgressorHubConnection,
-  IProgressorProgress,
-  IProgressorState,
+  type IProgressorProgress,
+  type IProgressorState,
   ProgressorStatus,
-  useProgressorHubConnection
+  useProgressorHubConnection,
 };

@@ -1,21 +1,26 @@
-'use client';
+"use client";
 
-import { useRef, useState } from 'react';
-import type { ValueRendererProps } from '../models';
-import NumberValueEditor from '../../ValueEditor/Editors/NumberValueEditor';
-import { Input, Progress } from '@/components/bakaui';
-import NotSet from '@/components/StandardValue/ValueRenderer/Renderers/components/NotSet';
-import { buildLogger } from '@/components/utils';
+import type { ValueRendererProps } from "../models";
+
+import { useState } from "react";
+
+import NumberValueEditor from "../../ValueEditor/Editors/NumberValueEditor";
+
+import { Progress } from "@/components/bakaui";
+import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import { buildLogger } from "@/components/utils";
 type NumberValueRendererProps = ValueRendererProps<number, number> & {
   precision?: number;
-  as?: 'number' | 'progress';
+  as?: "number" | "progress";
   suffix?: string;
 };
 
-const log = buildLogger('NumberValueRenderer');
+const log = buildLogger("NumberValueRenderer");
 
 export default (props: NumberValueRendererProps) => {
-  const { value, precision, editor, variant, suffix, as, ...otherProps } = props;
+  const { value, precision, editor, variant, suffix, as, ...otherProps } =
+    props;
+
   log(props);
 
   const [editing, setEditing] = useState(false);
@@ -35,24 +40,17 @@ export default (props: NumberValueRendererProps) => {
   }
 
   if (value == undefined) {
-    return (
-      <NotSet onClick={startEditing} />
-    );
+    return <NotSet onClick={startEditing} />;
   }
 
-  if (variant == 'light' || as == 'number') {
+  if (variant == "light" || as == "number") {
     return (
-      <span
-        onClick={startEditing}
-      >{value}{suffix}</span>
+      <span onClick={startEditing}>
+        {value}
+        {suffix}
+      </span>
     );
   } else {
-    return (
-      <Progress
-        size={'sm'}
-        value={value}
-        onClick={startEditing}
-      />
-    );
+    return <Progress size={"sm"} value={value} onClick={startEditing} />;
   }
 };

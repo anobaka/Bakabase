@@ -1,4 +1,4 @@
-import { AliasCommon } from '@/core/models/AliasCommon';
+import { AliasCommon } from "@/core/models/AliasCommon";
 
 export class Tag extends AliasCommon {
   color: string;

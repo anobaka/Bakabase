@@ -1,6 +1,6 @@
-import { AliasCommon } from '@/core/models/AliasCommon';
-import { Tag } from '@/core/models/Tag';
-import i18n from 'i18next';
+import type { Tag } from "@/core/models/Tag";
+
+import { AliasCommon } from "@/core/models/AliasCommon";
 
 export class TagGroup extends AliasCommon {
   order: number;

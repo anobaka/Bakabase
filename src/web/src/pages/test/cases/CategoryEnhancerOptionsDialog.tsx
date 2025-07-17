@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Button } from '@/components/bakaui';
-import CategoryEnhancerOptionsDialog from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog';
-import BApi from '@/sdk/BApi';
-import type { EnhancerDescriptor } from '@/components/EnhancerSelectorV2/models';
+import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
+
+import { useEffect, useState } from "react";
+
+import { Button } from "@/components/bakaui";
+import CategoryEnhancerOptionsDialog from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
+import BApi from "@/sdk/BApi";
 
 export default () => {
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
@@ -14,9 +16,12 @@ export default () => {
 
   const init = async () => {
     const categories = (await BApi.category.getAllCategories()).data || [];
+
     setCategories(categories);
     setCategoryId(categories[0]?.id);
-    const enhancers = (await BApi.enhancer.getAllEnhancerDescriptors()).data || [];
+    const enhancers =
+      (await BApi.enhancer.getAllEnhancerDescriptors()).data || [];
+
     // @ts-ignore
     setEnhancers(enhancers);
   };
@@ -28,23 +33,25 @@ export default () => {
   return (
     <div>
       <div>
-        {categories.map(c => {
+        {categories.map((c) => {
           return (
             <Button
-              size={'sm'}
-              color={categoryId == c.id ? 'primary' : 'default'}
+              color={categoryId == c.id ? "primary" : "default"}
+              size={"sm"}
               onClick={() => {
                 setCategoryId(c.id);
               }}
-            >{c.name}</Button>
+            >
+              {c.name}
+            </Button>
           );
         })}
       </div>
       <div>
-        {enhancers.map(e => {
+        {enhancers.map((e) => {
           return (
             <Button
-              size={'sm'}
+              size={"sm"}
               onClick={() => {
                 if (categoryId) {
                   CategoryEnhancerOptionsDialog.show({
@@ -53,7 +60,9 @@ export default () => {
                   });
                 }
               }}
-            >{e.name}</Button>
+            >
+              {e.name}
+            </Button>
           );
         })}
       </div>

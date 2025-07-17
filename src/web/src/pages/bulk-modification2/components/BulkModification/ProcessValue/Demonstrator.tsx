@@ -1,28 +1,27 @@
-'use client';
+"use client";
 
-'use strict';
-import { useTranslation } from 'react-i18next';
-import React from 'react';
-import { BulkModificationProcessorValueType } from '@/sdk/constants';
+"use strict";
 import type {
   BulkModificationProcessValue,
   BulkModificationVariable,
-} from '@/pages/bulk-modification2/components/BulkModification/models';
-import { Chip } from '@/components/bakaui';
-import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
-import { buildLogger } from '@/components/utils';
+} from "@/pages/bulk-modification2/components/BulkModification/models";
+
+import { useTranslation } from "react-i18next";
+import React from "react";
+
+import { BulkModificationProcessorValueType } from "@/sdk/constants";
+import { Chip } from "@/components/bakaui";
+import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
+import { buildLogger } from "@/components/utils";
 
 type Props = {
   variables?: BulkModificationVariable[];
   value?: BulkModificationProcessValue;
 };
 
-const log = buildLogger('BulkModificationProcessValueDemonstrator');
+const log = buildLogger("BulkModificationProcessValueDemonstrator");
 
-export default ({
-                  variables,
-                  value,
-                }: Props) => {
+export default ({ variables, value }: Props) => {
   const { t } = useTranslation();
 
   log(value, variables);
@@ -30,12 +29,12 @@ export default ({
   if (!value) {
     return (
       <Chip
+        isDisabled
         size={'sm'}
         // color={'danger'}
         radius={'sm'}
-        isDisabled
       >
-        {t<string>('No set')}
+        {t<string>("No set")}
       </Chip>
     );
   }
@@ -44,16 +43,12 @@ export default ({
     case BulkModificationProcessorValueType.ManuallyInput:
       if (!value.property) {
         return (
-          <Chip
-            size={'sm'}
-            color={'danger'}
-            radius={'sm'}
-            isDisabled
-          >
-            {t<string>('Unable to get property information')}
+          <Chip isDisabled color={"danger"} radius={"sm"} size={"sm"}>
+            {t<string>("Unable to get property information")}
           </Chip>
         );
       }
+
       return (
         <PropertyValueRenderer
           bizValue={value.followPropertyChanges ? undefined : value.value}
@@ -64,20 +59,14 @@ export default ({
       );
     case BulkModificationProcessorValueType.Variable:
       return (
-        <div className={'flex items-center gap-1'}>
-          <Chip
-            size={'sm'}
-            radius={'sm'}
-            color={'secondary'}
-            variant={'flat'}
-          >
-            {t<string>(`BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`)}
+        <div className={"flex items-center gap-1"}>
+          <Chip color={"secondary"} radius={"sm"} size={"sm"} variant={"flat"}>
+            {t<string>(
+              `BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`,
+            )}
           </Chip>
-          <Chip
-            size={'sm'}
-            radius={'sm'}
-          >
-            {variables?.find(v => v.key === value.value)?.name}
+          <Chip radius={"sm"} size={"sm"}>
+            {variables?.find((v) => v.key === value.value)?.name}
           </Chip>
         </div>
       );

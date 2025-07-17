@@ -1,14 +1,17 @@
-'use client';
+"use client";
 
-'use strict';
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useUpdateEffect } from 'react-use';
-import type { ResourceSearchFilterGroup } from './models';
-import { GroupCombinator } from './models';
-import FilterGroup from './FilterGroup';
-import type { ResourceTag } from '@/sdk/constants';
-import { buildLogger } from '@/components/utils';
+"use strict";
+import type { ResourceSearchFilterGroup } from "./models";
+import type { ResourceTag } from "@/sdk/constants";
+
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useUpdateEffect } from "react-use";
+
+import { GroupCombinator } from "./models";
+import FilterGroup from "./FilterGroup";
+
+import { buildLogger } from "@/components/utils";
 
 interface IProps {
   group?: ResourceSearchFilterGroup;
@@ -18,43 +21,46 @@ interface IProps {
   renderToParent: any;
 }
 
-const log = buildLogger('FilterGroupsPanel');
+const log = buildLogger("FilterGroupsPanel");
 
 export default ({
-                  group: propsGroup,
-                  onChange,
-                  renderToParent,
-                  tags,
-                  onTagsChange,
-                }: IProps) => {
+  group: propsGroup,
+  onChange,
+  renderToParent,
+  tags,
+  onTagsChange,
+}: IProps) => {
   const { t } = useTranslation();
 
-  const [group, setGroup] = useState<ResourceSearchFilterGroup>(propsGroup ?? {
-    combinator: GroupCombinator.And,
-    disabled: false,
-  });
-
-  useEffect(() => {
-  }, []);
-
-  useUpdateEffect(() => {
-    setGroup(propsGroup ?? {
+  const [group, setGroup] = useState<ResourceSearchFilterGroup>(
+    propsGroup ?? {
       combinator: GroupCombinator.And,
       disabled: false,
-    });
+    },
+  );
+
+  useEffect(() => {}, []);
+
+  useUpdateEffect(() => {
+    setGroup(
+      propsGroup ?? {
+        combinator: GroupCombinator.And,
+        disabled: false,
+      },
+    );
   }, [propsGroup]);
 
   return (
-    <div className={'group flex flex-wrap gap-2 item-center'}>
+    <div className={"group flex flex-wrap gap-2 item-center"}>
       <FilterGroup
-        group={group}
         isRoot
+        group={group}
         renderToParent={renderToParent}
-        onChange={group => {
+        tags={tags}
+        onChange={(group) => {
           setGroup(group);
           onChange?.(group);
         }}
-        tags={tags}
         onTagsChange={onTagsChange}
       />
     </div>

@@ -1,19 +1,38 @@
-'use client';
+"use client";
 
-import { CheckOutlined, DeleteOutlined, SaveOutlined } from '@ant-design/icons';
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useUpdate } from 'react-use';
-import { ResourceSearchSortableProperty, ResourceTag, SearchCombinator, SearchOperation } from '@/sdk/constants';
-import { Button, Chip, Divider, Input, Popover, Tooltip } from '@/components/bakaui';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { SearchForm } from '@/pages/resource/models';
+import type { SearchForm } from "@/pages/resource/models";
 import type {
   ResourceSearchFilter,
   ResourceSearchFilterGroup,
-} from '@/pages/resource/components/FilterPanel/FilterGroupsPanel/models';
-import PropertyValueRenderer from '@/components/Property/components/PropertyValueRenderer';
-import BApi from '@/sdk/BApi';
+} from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+
+import { CheckOutlined, DeleteOutlined, SaveOutlined } from "@ant-design/icons";
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
+import { useTranslation } from "react-i18next";
+import { useUpdate } from "react-use";
+
+import {
+  ResourceSearchSortableProperty,
+  ResourceTag,
+  SearchCombinator,
+  SearchOperation,
+} from "@/sdk/constants";
+import {
+  Button,
+  Chip,
+  Divider,
+  Input,
+  Popover,
+  Tooltip,
+} from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
+import BApi from "@/sdk/BApi";
 
 type SavedSearch = {
   name: string;
@@ -43,6 +62,7 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
 
   const reload = async () => {
     const searches = await BApi.resource.getSavedSearches();
+
     setSavedSearches(searches.data || []);
   };
 
@@ -51,21 +71,28 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
   }));
 
   const renderFilterValue = (filter: ResourceSearchFilter) => {
-    if (filter.operation == SearchOperation.IsNotNull || filter.operation == SearchOperation.IsNull || !filter.valueProperty) {
+    if (
+      filter.operation == SearchOperation.IsNotNull ||
+      filter.operation == SearchOperation.IsNull ||
+      !filter.valueProperty
+    ) {
       return null;
     }
+
     return (
       <Chip
         variant={'light'}
         // color={'primary'}
         size={'sm'}
       >
-        {filter.dbValue == undefined ? t<string>('Not set') : (
+        {filter.dbValue == undefined ? (
+          t<string>("Not set")
+        ) : (
           <PropertyValueRenderer
-            variant={'light'}
-            property={filter.valueProperty}
-            dbValue={filter.dbValue}
             bizValue={filter.bizValue}
+            dbValue={filter.dbValue}
+            property={filter.valueProperty}
+            variant={"light"}
           />
         )}
       </Chip>
@@ -74,44 +101,46 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
 
   const renderFilter = (filter: ResourceSearchFilter, isOutermost: boolean) => {
     return (
-      <div className={`flex items-center gap-1 ${isOutermost ? '' : 'p-1'} `}>
-        <Chip
-          variant={'light'}
-          color={'primary'}
-          size={'sm'}
-        >{filter.property?.name ?? t<string>('Not set')}</Chip>
-        <Chip
-          variant={'light'}
-          color={'secondary'}
-          size={'sm'}
-        >{filter.operation == undefined ? t<string>('Not set') : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}</Chip>
+      <div className={`flex items-center gap-1 ${isOutermost ? "" : "p-1"} `}>
+        <Chip color={"primary"} size={"sm"} variant={"light"}>
+          {filter.property?.name ?? t<string>("Not set")}
+        </Chip>
+        <Chip color={"secondary"} size={"sm"} variant={"light"}>
+          {filter.operation == undefined
+            ? t<string>("Not set")
+            : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
+        </Chip>
         {renderFilterValue(filter)}
       </div>
     );
   };
 
-  const renderGroup = (group: ResourceSearchFilterGroup, isOutermost: boolean) => {
+  const renderGroup = (
+    group: ResourceSearchFilterGroup,
+    isOutermost: boolean,
+  ) => {
     const groups = group.groups ?? [];
     const filters = group.filters ?? [];
+
     if (groups.length + filters.length == 0) {
-      return (
-        <div />
-      );
+      return <div />;
     }
+
     return (
       <div
-        className={`flex items-center gap-1 flex-wrap rounded bg-[var(--bakaui-overlap-background)] p-1 ${isOutermost ? '' : 'p-1'} `}
+        className={`flex items-center gap-1 flex-wrap rounded bg-[var(--bakaui-overlap-background)] p-1 ${isOutermost ? "" : "p-1"} `}
       >
         {filters.map((filter, i) => {
           return (
             <>
               {renderFilter(filter, isOutermost)}
-              {(i != group.filters!.length - 1 || (group.groups && group.groups.length > 0)) && (
-                <Chip
-                  variant={'light'}
-                  size={'sm'}
-                  color={'success'}
-                >{t<string>(`Combinator.${SearchCombinator[group.combinator]}`)}</Chip>
+              {(i != group.filters!.length - 1 ||
+                (group.groups && group.groups.length > 0)) && (
+                <Chip color={"success"} size={"sm"} variant={"light"}>
+                  {t<string>(
+                    `Combinator.${SearchCombinator[group.combinator]}`,
+                  )}
+                </Chip>
               )}
             </>
           );
@@ -121,11 +150,11 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
             <>
               {renderGroup(subGroup, false)}
               {i != group.groups!.length - 1 && (
-                <Chip
-                  variant={'light'}
-                  size={'sm'}
-                  color={'success'}
-                >{t<string>(`Combinator.${SearchCombinator[group.combinator]}`)}</Chip>
+                <Chip color={"success"} size={"sm"} variant={"light"}>
+                  {t<string>(
+                    `Combinator.${SearchCombinator[group.combinator]}`,
+                  )}
+                </Chip>
               )}
             </>
           );
@@ -134,134 +163,123 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
     );
   };
 
-  console.log('saved search rerender');
+  console.log("saved search rerender");
 
   return (
-    <div className={'flex items-center flex-wrap gap-1'}>
+    <div className={"flex items-center flex-wrap gap-1"}>
       {savedSearches.map((savedSearch, idx) => {
-        const {
-          search,
-          name,
-        } = savedSearch;
+        const { search, name } = savedSearch;
+
         return (
           <Tooltip
             classNames={{
-              content: 'max-w-[800px] py-2',
+              content: "max-w-[800px] py-2",
             }}
-            content={(
-              <div className={'flex flex-col gap-2'}>
-                <div className={'flex items-center gap-1'}>
+            content={
+              <div className={"flex flex-col gap-2"}>
+                <div className={"flex items-center gap-1"}>
                   <Button
-                    size={'sm'}
                     isIconOnly
-                    variant={'light'}
-                    color={'primary'}
+                    color={"primary"}
                     isDisabled={name == undefined || name.length == 0}
+                    size={"sm"}
+                    variant={"light"}
                     onClick={() => {
                       BApi.resource.putSavedSearchName(idx, name);
                     }}
                   >
-                    <SaveOutlined className={'text-large'} />
+                    <SaveOutlined className={"text-large"} />
                   </Button>
                   <Input
-                    size={'sm'}
+                    size={"sm"}
                     value={name}
-                    onValueChange={n => {
+                    onValueChange={(n) => {
                       savedSearch.name = n;
                       forceUpdate();
                     }}
                   />
                   <Popover
-                    trigger={(
+                    trigger={
                       <Button
-                        size={'sm'}
                         isIconOnly
-                        variant={'light'}
-                        color={'danger'}
+                        color={"danger"}
+                        size={"sm"}
+                        variant={"light"}
                       >
-                        <DeleteOutlined className={'text-large'} />
+                        <DeleteOutlined className={"text-large"} />
                       </Button>
-                    )}
+                    }
                   >
-                    <div className={'flex items-center gap-2'}>
+                    <div className={"flex items-center gap-2"}>
                       <Button
-                        size={'sm'}
                         isIconOnly
-                        variant={'light'}
-                        color={'danger'}
+                        color={"danger"}
+                        size={"sm"}
+                        variant={"light"}
                         onClick={() => {
-                          BApi.resource.deleteSavedSearch(idx).then(r => {
+                          BApi.resource.deleteSavedSearch(idx).then((r) => {
                             if (!r.code) {
                               reload();
                             }
                           });
                         }}
                       >
-                        <CheckOutlined className={'text-large'} />
+                        <CheckOutlined className={"text-large"} />
                       </Button>
                     </div>
                   </Popover>
                 </div>
-                <Divider orientation={'horizontal'} />
-                <div className={'grid gap-1 items-center'} style={{ gridTemplateColumns: 'auto minmax(0, 1fr)' }}>
-                  <div className={'text-right'}>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                      variant={'bordered'}
-                    >{t<string>('Keyword')}</Chip>
+                <Divider orientation={"horizontal"} />
+                <div
+                  className={"grid gap-1 items-center"}
+                  style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
+                >
+                  <div className={"text-right"}>
+                    <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                      {t<string>("Keyword")}
+                    </Chip>
                   </div>
                   <div>{search.keyword}</div>
-                  <div className={'text-right'}>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                      variant={'bordered'}
-                    >{t<string>('Filters')}</Chip>
+                  <div className={"text-right"}>
+                    <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                      {t<string>("Filters")}
+                    </Chip>
                   </div>
-                  <div>
-                    {search.group && renderGroup(search.group, true)}
+                  <div>{search.group && renderGroup(search.group, true)}</div>
+                  <div className={"text-right"}>
+                    <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                      {t<string>("Order")}
+                    </Chip>
                   </div>
-                  <div className={'text-right'}>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                      variant={'bordered'}
-                    >{t<string>('Order')}</Chip>
-                  </div>
-                  <div className={'flex items-center gap-1'}>
-                    {search.orders?.map(o => {
+                  <div className={"flex items-center gap-1"}>
+                    {search.orders?.map((o) => {
                       return (
-                        <Chip
-                          size={'sm'}
-                          radius={'sm'}
-                        >
-                          {t<string>(ResourceSearchSortableProperty[o.property])}{t<string>(o.asc ? 'Asc' : 'Desc')}
+                        <Chip radius={"sm"} size={"sm"}>
+                          {t<string>(
+                            ResourceSearchSortableProperty[o.property],
+                          )}
+                          {t<string>(o.asc ? "Asc" : "Desc")}
                         </Chip>
                       );
                     })}
                   </div>
-                  <div className={'text-right'}>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                      variant={'bordered'}
-                    >{t<string>('Page')}</Chip>
+                  <div className={"text-right"}>
+                    <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                      {t<string>("Page")}
+                    </Chip>
                   </div>
                   <div>{search.page}</div>
-                  <div className={'text-right'}>
-                    <Chip
-                      size={'sm'}
-                      radius={'sm'}
-                      variant={'bordered'}
-                    >{t<string>('Special filters')}</Chip>
+                  <div className={"text-right"}>
+                    <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                      {t<string>("Special filters")}
+                    </Chip>
                   </div>
-                  <div className={'flex flex-wrap gap-1'}>
-                    {search.tags?.map(x => {
+                  <div className={"flex flex-wrap gap-1"}>
+                    {search.tags?.map((x) => {
                       return (
                         <Chip
                           size={'sm'}
-                          radius={'sm'}
+                          radius={"sm"}
                           // variant={'bordered'}
                         >
                           {t<string>(`ResourceTag.${ResourceTag[x]}`)}
@@ -271,11 +289,11 @@ const SavedSearches = forwardRef<SavedSearchRef, Props>((props, ref) => {
                   </div>
                 </div>
               </div>
-            )}
+            }
           >
             <Button
-              size={'sm'}
-              variant={'ghost'}
+              size={"sm"}
+              variant={"ghost"}
               onClick={() => {
                 onSelect?.(search);
               }}

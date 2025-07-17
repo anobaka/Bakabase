@@ -1,20 +1,27 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { AiOutlineWarning } from 'react-icons/ai';
-import OptionsCard from './OptionsCard';
-import type { IdName } from '@/pages/synchronization-options/models';
-import { SubjectLabels } from '@/pages/synchronization-options/models';
-import type {
-  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions,
-} from '@/sdk/Api';
-import BooleanOptions from '@/pages/synchronization-options/components/BooleanOptions';
-import EnhancerOptions from '@/pages/synchronization-options/components/EnhancerOptions';
-import { Tooltip } from '@/components/bakaui';
+import type { IdName } from "@/pages/synchronization-options/models";
+import type { BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions } from "@/sdk/Api";
 
-type Options = BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions;
+import { useTranslation } from "react-i18next";
+import { AiOutlineWarning } from "react-icons/ai";
 
-type Category = { name: string; id: number; enhancers?: IdName[]; mediaLibraries?: IdName[] };
+import OptionsCard from "./OptionsCard";
+
+import { SubjectLabels } from "@/pages/synchronization-options/models";
+import BooleanOptions from "@/pages/synchronization-options/components/BooleanOptions";
+import EnhancerOptions from "@/pages/synchronization-options/components/EnhancerOptions";
+import { Tooltip } from "@/components/bakaui";
+
+type Options =
+  BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions;
+
+type Category = {
+  name: string;
+  id: number;
+  enhancers?: IdName[];
+  mediaLibraries?: IdName[];
+};
 
 type Props = {
   category: Category;
@@ -25,11 +32,7 @@ type Props = {
 /**
  * @deprecated
  */
-const CategoryOptions = ({
-                           category,
-                           onChange,
-                           options,
-                         }: Props) => {
+const CategoryOptions = ({ category, onChange, options }: Props) => {
   const { t } = useTranslation();
 
   const patchOptions = (patches: Partial<Options>) => {
@@ -37,81 +40,102 @@ const CategoryOptions = ({
       ...options,
       ...patches,
     };
+
     onChange?.(newOptions);
   };
 
   // console.log(options, mediaLibrariesOptionsMap);
 
   return (
-    <OptionsCard header={(
-      <div className={'flex items-center gap-1 line-through opacity-60'}>
-        {category.name}
-        <Tooltip content={t<string>('Category is deprecated and will be removed in a future version.')}>
-          <div className={'flex items-center gap-1'}>
-            <AiOutlineWarning className={'text-lg'} />
-            {t<string>('Deprecated')}
-          </div>
-        </Tooltip>
-      </div>
-    )}
+    <OptionsCard
+      header={
+        <div className={"flex items-center gap-1 line-through opacity-60"}>
+          {category.name}
+          <Tooltip
+            content={t<string>(
+              "Category is deprecated and will be removed in a future version.",
+            )}
+          >
+            <div className={"flex items-center gap-1"}>
+              <AiOutlineWarning className={"text-lg"} />
+              {t<string>("Deprecated")}
+            </div>
+          </Tooltip>
+        </div>
+      }
     >
       <BooleanOptions
-        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
-        onSelect={isSelected => patchOptions({ deleteResourcesWithUnknownPath: isSelected })}
         isSelected={options?.deleteResourcesWithUnknownPath}
+        subject={t<string>(SubjectLabels.DeleteResourcesWithUnknownPath)}
+        onSelect={(isSelected) =>
+          patchOptions({ deleteResourcesWithUnknownPath: isSelected })
+        }
       />
       <div />
-      {category.mediaLibraries?.map(l => {
+      {category.mediaLibraries?.map((l) => {
         return (
           <BooleanOptions
             isSecondary
+            isSelected={
+              options?.mediaLibraryOptionsMap?.[l.id]
+                ?.deleteResourcesWithUnknownPath
+            }
             subject={l.name}
-            onSelect={isSelected => patchOptions({
-              mediaLibraryOptionsMap: {
-                ...options?.mediaLibraryOptionsMap,
-                [l.id]: {
-                  ...options?.mediaLibraryOptionsMap?.[l.id],
-                  deleteResourcesWithUnknownPath: isSelected,
+            onSelect={(isSelected) =>
+              patchOptions({
+                mediaLibraryOptionsMap: {
+                  ...options?.mediaLibraryOptionsMap,
+                  [l.id]: {
+                    ...options?.mediaLibraryOptionsMap?.[l.id],
+                    deleteResourcesWithUnknownPath: isSelected,
+                  },
                 },
-              },
-            })}
-            isSelected={options?.mediaLibraryOptionsMap?.[l.id]?.deleteResourcesWithUnknownPath}
+              })
+            }
           />
         );
       })}
       <div />
-      {category.enhancers?.map(e => {
+      {category.enhancers?.map((e) => {
         return (
           <>
             <EnhancerOptions
-              options={options?.enhancerOptionsMap?.[e.id]}
               enhancer={e}
-              onChange={o => patchOptions({
-                enhancerOptionsMap: {
-                  ...options?.enhancerOptionsMap,
-                  [e.id]: o,
-                },
-              })}
+              options={options?.enhancerOptionsMap?.[e.id]}
+              onChange={(o) =>
+                patchOptions({
+                  enhancerOptionsMap: {
+                    ...options?.enhancerOptionsMap,
+                    [e.id]: o,
+                  },
+                })
+              }
             />
-            {category.mediaLibraries?.map(l => {
+            {category.mediaLibraries?.map((l) => {
               return (
                 <EnhancerOptions
                   isSecondary
-                  options={options?.mediaLibraryOptionsMap?.[l.id]?.enhancerOptionsMap?.[e.id]}
                   enhancer={e}
-                  onChange={o => patchOptions({
-                    mediaLibraryOptionsMap: {
-                      ...options?.mediaLibraryOptionsMap,
-                      [l.id]: {
-                        ...options?.mediaLibraryOptionsMap?.[l.id],
-                        enhancerOptionsMap: {
-                          ...options?.mediaLibraryOptionsMap?.[l.id]?.enhancerOptionsMap,
-                          [e.id]: o,
+                  options={
+                    options?.mediaLibraryOptionsMap?.[l.id]
+                      ?.enhancerOptionsMap?.[e.id]
+                  }
+                  subject={l.name}
+                  onChange={(o) =>
+                    patchOptions({
+                      mediaLibraryOptionsMap: {
+                        ...options?.mediaLibraryOptionsMap,
+                        [l.id]: {
+                          ...options?.mediaLibraryOptionsMap?.[l.id],
+                          enhancerOptionsMap: {
+                            ...options?.mediaLibraryOptionsMap?.[l.id]
+                              ?.enhancerOptionsMap,
+                            [e.id]: o,
+                          },
                         },
                       },
-                    },
-                  })}
-                  subject={l.name}
+                    })
+                  }
                 />
               );
             })}

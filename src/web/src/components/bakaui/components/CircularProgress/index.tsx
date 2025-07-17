@@ -1,3 +1,5 @@
-import { CircularProgress, CircularProgressProps } from '@heroui/react';
+import type { CircularProgressProps } from "@heroui/react";
 
-export { CircularProgressProps, CircularProgress };
+import { CircularProgress } from "@heroui/react";
+
+export { type CircularProgressProps, CircularProgress };

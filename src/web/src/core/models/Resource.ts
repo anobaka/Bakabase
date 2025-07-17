@@ -1,5 +1,10 @@
-import type { PropertyValueScope, ResourceCacheType, ResourceTag, StandardValueType } from '@/sdk/constants';
-import type { PropertyPool } from '@/sdk/constants';
+import type {
+  PropertyValueScope,
+  ResourceCacheType,
+  ResourceTag,
+  StandardValueType,
+} from "@/sdk/constants";
+import type { PropertyPool } from "@/sdk/constants";
 
 type Value = {
   scope: PropertyValueScope;
@@ -33,11 +38,11 @@ export type Resource = {
   fileCreatedAt: string;
   fileModifiedAt: string;
   parent?: Resource;
-  properties?: {[key in PropertyPool]?: Record<number, Property>};
+  properties?: { [key in PropertyPool]?: Record<number, Property> };
   coverPaths?: string[];
   mediaLibraryName?: string;
   mediaLibraryColor?: string;
-  category?: {id: number; name: string};
+  category?: { id: number; name: string };
   pinned: boolean;
   tags: ResourceTag[];
   playedAt?: string;

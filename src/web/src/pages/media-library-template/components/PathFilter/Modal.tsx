@@ -1,44 +1,56 @@
-'use client';
+"use client";
 
-import { BsFileEarmark, BsFolder } from 'react-icons/bs';
-import { useTranslation } from 'react-i18next';
-import { useState } from 'react';
-import { AiOutlineDelete } from 'react-icons/ai';
-import { Button, Divider, Input, Modal, Radio, RadioGroup, Select } from '@/components/bakaui';
-import type { PathFilter } from '@/pages/media-library-template/models';
-import { PathFilterFsType } from '@/pages/media-library-template/models';
-import { pathFilterFsTypes, PathPositioner, pathPositioners } from '@/sdk/constants';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import ExtensionsInput from '@/components/ExtensionsInput';
-import ExtensionGroupSelect from '@/components/ExtensionGroupSelect';
+import type { PathFilter } from "@/pages/media-library-template/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { BsFileEarmark, BsFolder } from "react-icons/bs";
+import { useTranslation } from "react-i18next";
+import { useState } from "react";
+import { AiOutlineDelete } from "react-icons/ai";
+
+import {
+  Button,
+  Divider,
+  Input,
+  Modal,
+  Radio,
+  RadioGroup,
+  Select,
+} from "@/components/bakaui";
+import { PathFilterFsType } from "@/pages/media-library-template/models";
+import {
+  pathFilterFsTypes,
+  PathPositioner,
+  pathPositioners,
+} from "@/sdk/constants";
+import ExtensionsInput from "@/components/ExtensionsInput";
+import ExtensionGroupSelect from "@/components/ExtensionGroupSelect";
 
 type Props = {
   filter?: PathFilter;
   onSubmit?: (filter: PathFilter) => Promise<any>;
 } & DestroyableProps;
 
-export default ({
-                  filter: propsFilter,
-                  onSubmit,
-                  onDestroyed,
-                }: Props) => {
+export default ({ filter: propsFilter, onSubmit, onDestroyed }: Props) => {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<Partial<PathFilter>>(propsFilter ?? { positioner: PathPositioner.Layer });
+  const [filter, setFilter] = useState<Partial<PathFilter>>(
+    propsFilter ?? { positioner: PathPositioner.Layer },
+  );
 
   const renderFsItem = (type: PathFilterFsType) => {
     switch (type) {
       case PathFilterFsType.File:
         return (
-          <div className={'inline-flex items-center gap-1'}>
+          <div className={"inline-flex items-center gap-1"}>
             <BsFileEarmark />
-            {t<string>('File')}
+            {t<string>("File")}
           </div>
         );
       case PathFilterFsType.Directory:
         return (
-          <div className={'inline-flex items-center gap-1'}>
+          <div className={"inline-flex items-center gap-1"}>
             <BsFolder />
-            {t<string>('Folder')}
+            {t<string>("Folder")}
           </div>
         );
     }
@@ -50,30 +62,33 @@ export default ({
         return (
           <Select
             isRequired
-            label={t<string>('Layer')}
-            dataSource={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(l => ({
+            dataSource={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((l) => ({
               label: l,
               value: l.toString(),
             }))}
-            selectedKeys={filter.layer == undefined ? undefined : [filter.layer.toString()]}
-            onSelectionChange={keys => {
+            description={t<string>("Layer 0 is directory of media library")}
+            label={t<string>("Layer")}
+            selectedKeys={
+              filter.layer == undefined ? undefined : [filter.layer.toString()]
+            }
+            onSelectionChange={(keys) => {
               const layer = parseInt(Array.from(keys)[0] as string, 10);
+
               setFilter({
                 ...filter,
                 layer,
               });
             }}
-            description={t<string>('Layer 0 is directory of media library')}
           />
         );
       case PathPositioner.Regex:
         return (
           <Input
             isRequired
-            label={t<string>('Regex')}
-            placeholder={t<string>('Regex to match sub path')}
+            label={t<string>("Regex")}
+            placeholder={t<string>("Regex to match sub path")}
             value={filter.regex}
-            onValueChange={v => {
+            onValueChange={(v) => {
               setFilter({
                 ...filter,
                 regex: v,
@@ -82,7 +97,7 @@ export default ({
           />
         );
       default:
-        return t<string>('Not supported');
+        return t<string>("Not supported");
     }
   };
 
@@ -97,41 +112,45 @@ export default ({
     }
   };
 
-  console.log(filter, pathFilterFsTypes.map(t => ({
-    label: renderFsItem(t.value),
-    value: t.value.toString(),
-    textValue: t.label,
-  })));
+  console.log(
+    filter,
+    pathFilterFsTypes.map((t) => ({
+      label: renderFsItem(t.value),
+      value: t.value.toString(),
+      textValue: t.label,
+    })),
+  );
 
   return (
     <Modal
-      size={'lg'}
       defaultVisible
-      onDestroyed={onDestroyed}
       footer={{
-        actions: ['ok', 'cancel'],
+        actions: ["ok", "cancel"],
         okProps: {
           isDisabled: !isValid(),
         },
       }}
+      size={"lg"}
+      onDestroyed={onDestroyed}
       onOk={async () => await onSubmit?.(filter as PathFilter)}
     >
-      <div className={'flex flex-col gap-2'}>
+      <div className={"flex flex-col gap-2"}>
         <RadioGroup
-          label={t<string>('Positioning')}
-          onValueChange={v => {
+          isRequired
+          label={t<string>("Positioning")}
+          orientation="horizontal"
+          value={filter.positioner?.toString()}
+          onValueChange={(v) => {
             const nv = parseInt(v, 10);
+
             if (filter.positioner != nv) {
               setFilter({
                 positioner: nv,
               });
             }
           }}
-          value={filter.positioner?.toString()}
-          orientation="horizontal"
-          isRequired
         >
-          {pathPositioners.map(p => (
+          {pathPositioners.map((p) => (
             <Radio value={p.value.toString()}>{t<string>(p.label)}</Radio>
           ))}
         </RadioGroup>
@@ -140,66 +159,75 @@ export default ({
             {renderPositioner()}
             <Divider className="my-4" />
             <Select
-              label={t<string>('Limit path type')}
-              placeholder={t<string>('No limited')}
-              dataSource={pathFilterFsTypes.map(t => ({
-                  label: renderFsItem(t.value),
-                  value: t.value.toString(),
-                  textValue: t.label,
-                }))}
-              onSelectionChange={keys => {
-                  const fsType: PathFilterFsType = parseInt(Array.from(keys)[0] as string, 10);
-                  setFilter({
-                    ...filter,
-                    fsType,
-                  });
-                }}
+              dataSource={pathFilterFsTypes.map((t) => ({
+                label: renderFsItem(t.value),
+                value: t.value.toString(),
+                textValue: t.label,
+              }))}
               disallowEmptySelection={false}
-              selectedKeys={filter.fsType ? [filter.fsType.toString()] : []}
-              selectionMode={'single'}
-              endContent={(
+              endContent={
                 <Button
                   isIconOnly
-                  size={'sm'}
-                  variant={'light'}
-                  color={'danger'}
+                  color={"danger"}
+                  size={"sm"}
+                  variant={"light"}
                   onPress={() => {
-                      setFilter({
-                        ...filter,
-                        fsType: undefined,
-                      });
-                    }}
+                    setFilter({
+                      ...filter,
+                      fsType: undefined,
+                    });
+                  }}
                 >
-                  <AiOutlineDelete className={'text-base'} />
+                  <AiOutlineDelete className={"text-base"} />
                 </Button>
-                )}
-              renderValue={items => {
-                  return items.map(t => renderFsItem(parseInt((t.data as { value: string })!.value, 10)));
-                }}
+              }
+              label={t<string>("Limit path type")}
+              placeholder={t<string>("No limited")}
+              renderValue={(items) => {
+                return items.map((t) =>
+                  renderFsItem(
+                    parseInt((t.data as { value: string })!.value, 10),
+                  ),
+                );
+              }}
+              selectedKeys={filter.fsType ? [filter.fsType.toString()] : []}
+              selectionMode={"single"}
+              onSelectionChange={(keys) => {
+                const fsType: PathFilterFsType = parseInt(
+                  Array.from(keys)[0] as string,
+                  10,
+                );
+
+                setFilter({
+                  ...filter,
+                  fsType,
+                });
+              }}
             />
-              {(filter.fsType == undefined || filter.fsType == PathFilterFsType.File) && (
-                <>
-                  <ExtensionGroupSelect
-                    value={filter.extensionGroupIds}
-                    onSelectionChange={ids => {
-                      setFilter({
-                        ...filter,
-                        extensionGroupIds: ids,
-                      });
-                    }}
-                  />
-                  <ExtensionsInput
-                    label={t<string>('Limit file extensions')}
-                    onValueChange={v => {
-                      setFilter({
-                        ...filter,
-                        extensions: v,
-                      });
-                    }}
-                    defaultValue={filter.extensions}
-                  />
-                </>
-              )}
+            {(filter.fsType == undefined ||
+              filter.fsType == PathFilterFsType.File) && (
+              <>
+                <ExtensionGroupSelect
+                  value={filter.extensionGroupIds}
+                  onSelectionChange={(ids) => {
+                    setFilter({
+                      ...filter,
+                      extensionGroupIds: ids,
+                    });
+                  }}
+                />
+                <ExtensionsInput
+                  defaultValue={filter.extensions}
+                  label={t<string>("Limit file extensions")}
+                  onValueChange={(v) => {
+                    setFilter({
+                      ...filter,
+                      extensions: v,
+                    });
+                  }}
+                />
+              </>
+            )}
           </>
         )}
         {/* <pre>{JSON.stringify(filter)}</pre> */}

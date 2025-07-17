@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface IconsState {
   icons: Record<string, any>;
@@ -7,11 +7,14 @@ interface IconsState {
 
 export const useIconsStore = create<IconsState>((set, get) => ({
   icons: {},
-  add: (icons) => set((state) => {
-    const newIcons = { ...state.icons };
-    Object.keys(icons).forEach((e) => {
-      newIcons[e] = icons[e];
-    });
-    return { icons: newIcons };
-  }),
+  add: (icons) =>
+    set((state) => {
+      const newIcons = { ...state.icons };
+
+      Object.keys(icons).forEach((e) => {
+        newIcons[e] = icons[e];
+      });
+
+      return { icons: newIcons };
+    }),
 }));

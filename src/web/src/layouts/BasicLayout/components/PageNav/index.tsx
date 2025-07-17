@@ -1,22 +1,23 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
   SunOutlined,
   TranslationOutlined,
-} from '@ant-design/icons';
-import AntdMenu from './components/AntdMenu';
+} from "@ant-design/icons";
 
-import styles from './index.module.scss';
-import { Button, Spinner } from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { useAppOptionsStore } from '@/models/options';
-import { UiTheme } from '@/sdk/constants';
+import AntdMenu from "./components/AntdMenu";
+import styles from "./index.module.scss";
+
+import { Button } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { useAppOptionsStore } from "@/models/options";
+import { UiTheme } from "@/sdk/constants";
 
 const OptIconStyle = { fontSize: 20 };
 
@@ -24,9 +25,9 @@ const Navigation = () => {
   const { t } = useTranslation();
   const { pathname } = useLocation();
 
-  const appOptions = useAppOptionsStore(state => state.data);
+  const appOptions = useAppOptionsStore((state) => state.data);
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
-  const isEnglish = appOptions.language == 'en';
+  const isEnglish = appOptions.language == "en";
 
   const [loading, setLoading] = useState(false);
   const prevPathRef = useRef<string>(pathname);
@@ -39,10 +40,12 @@ const Navigation = () => {
     }
   }, [pathname]);
 
-  console.log('PageNav', pathname);
+  console.log("PageNav", pathname);
 
   return (
-    <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ''}`}>
+    <div
+      className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ""}`}
+    >
       {/* {loading && (
         <div style={{
           position: 'fixed',
@@ -60,7 +63,7 @@ const Navigation = () => {
         </div>
       )} */}
       <div className={styles.top}>
-        <Link to="/">{isCollapsed ? 'B' : 'Bakabase'}</Link>
+        <Link to="/">{isCollapsed ? "B" : "Bakabase"}</Link>
       </div>
       <div className={styles.menu}>
         <AntdMenu collapsed={isCollapsed} />
@@ -68,43 +71,55 @@ const Navigation = () => {
       <div className={styles.opts}>
         <Button
           isIconOnly
-          color={'default'}
-          variant={'light'}
+          color={"default"}
+          variant={"light"}
           onPress={() => {
             setLoading(true);
-            BApi.options.patchAppOptions({
-              uiTheme: isDarkMode ? UiTheme.Light : UiTheme.Dark,
-            }).then(() => {
-              location.reload();
-            });
+            BApi.options
+              .patchAppOptions({
+                uiTheme: isDarkMode ? UiTheme.Light : UiTheme.Dark,
+              })
+              .then(() => {
+                location.reload();
+              });
           }}
         >
-          {isDarkMode ? <SunOutlined style={OptIconStyle} /> : <MoonOutlined style={OptIconStyle} />}
+          {isDarkMode ? (
+            <SunOutlined style={OptIconStyle} />
+          ) : (
+            <MoonOutlined style={OptIconStyle} />
+          )}
         </Button>
         <Button
           isIconOnly
-          color={'default'}
-          variant={'light'}
+          color={"default"}
+          variant={"light"}
           onPress={() => {
             setLoading(true);
-            BApi.options.patchAppOptions({
-              language: isEnglish ? 'cn' : 'en',
-            }).then(() => {
-              location.reload();
-            });
+            BApi.options
+              .patchAppOptions({
+                language: isEnglish ? "cn" : "en",
+              })
+              .then(() => {
+                location.reload();
+              });
           }}
         >
           <TranslationOutlined style={OptIconStyle} />
         </Button>
         <Button
           isIconOnly
-          color={'default'}
-          variant={'light'}
+          color={"default"}
+          variant={"light"}
           onPress={() => {
             setIsCollapsed(!isCollapsed);
           }}
         >
-          {isCollapsed ? <MenuUnfoldOutlined style={OptIconStyle} /> : <MenuFoldOutlined style={OptIconStyle} />}
+          {isCollapsed ? (
+            <MenuUnfoldOutlined style={OptIconStyle} />
+          ) : (
+            <MenuFoldOutlined style={OptIconStyle} />
+          )}
         </Button>
       </div>
     </div>

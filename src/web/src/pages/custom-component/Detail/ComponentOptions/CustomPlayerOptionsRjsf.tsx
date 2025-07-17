@@ -1,26 +1,35 @@
-'use client';
+"use client";
 
-import type { FieldProps } from '@rjsf/utils';
-import { Balloon, Button, Input, NumberPicker, Select, Table } from '@alifd/next';
-import React, { useState } from 'react';
-import i18n from 'i18next';
-import { useUpdateEffect } from 'react-use';
-import type { BRjsfProps } from '@/components/BRjsf';
-import BRjsf from '@/components/BRjsf';
-import {
-  FileSystemSelectorButton,
-} from '@/components/FileSystemSelector';
-import CustomIcon from '@/components/CustomIcon';
+import type { BRjsfProps } from "@/components/BRjsf";
 
-const CommandTemplatePlaceholder = i18n.t<string>('Default is `{0}`. {0} will be replaced by filename');
+import { Balloon, Button, Input, Select, Table } from "@alifd/next";
+import React, { useState } from "react";
+import i18n from "i18next";
+import { useUpdateEffect } from "react-use";
 
-const commandTemplateTip = (<>
-  {i18n.t<string>('You can change the command template for some specific scenarios. The `{0}` will be replaced by filename and the default command template is `{0}`.')}{i18n.t<string>('For example')}
-  <br />
-  {i18n.t<string>('If the command template is `-i {0} --windowed`, the full command at runtime will be')} <br />
-  "C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe" -i "D:\anime\dragon ball\1.mp4" --windowed'
-</>);
+import BRjsf from "@/components/BRjsf";
+import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
+import CustomIcon from "@/components/CustomIcon";
 
+const CommandTemplatePlaceholder = i18n.t<string>(
+  "Default is `{0}`. {0} will be replaced by filename",
+);
+
+const commandTemplateTip = (
+  <>
+    {i18n.t<string>(
+      "You can change the command template for some specific scenarios. The `{0}` will be replaced by filename and the default command template is `{0}`.",
+    )}
+    {i18n.t<string>("For example")}
+    <br />
+    {i18n.t<string>(
+      "If the command template is `-i {0} --windowed`, the full command at runtime will be",
+    )}{" "}
+    <br />
+    "C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe" -i "D:\anime\dragon
+    ball\1.mp4" --windowed'
+  </>
+);
 
 export default React.forwardRef((props: BRjsfProps, ref) => {
   const value = props.value || {};

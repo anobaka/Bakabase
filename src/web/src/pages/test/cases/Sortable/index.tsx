@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -8,15 +8,15 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+} from "@dnd-kit/sortable";
 
-import { SortableItem } from './SortableItem';
+import { SortableItem } from "./SortableItem";
 
 export default function Sortable() {
   const [items, setItems] = useState([1, 2, 3]);
@@ -29,15 +29,14 @@ export default function Sortable() {
 
   return (
     <DndContext
-      sensors={sensors}
       collisionDetection={closestCenter}
+      sensors={sensors}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext
-        items={items}
-        strategy={verticalListSortingStrategy}
-      >
-        {items.map(id => <SortableItem key={id} id={id} />)}
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
+        {items.map((id) => (
+          <SortableItem key={id} id={id} />
+        ))}
       </SortableContext>
     </DndContext>
   );

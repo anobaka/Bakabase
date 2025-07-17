@@ -1,10 +1,10 @@
-import type { IdName } from '@/components/types';
-import type { PathPropertyExtractorBasePathType, PropertyPool } from '@/sdk/constants';
-import type { IProperty } from '@/components/Property/models';
-import type { EnhancerTargetFullOptions } from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
-import {
-  EnhancerFullOptions,
-} from '@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models';
+import type { IdName } from "@/components/types";
+import type {
+  PathPropertyExtractorBasePathType,
+  PropertyPool,
+} from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
+import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
 
 export enum PathPositioner {
   Layer = 1,
@@ -15,7 +15,6 @@ export enum PathFilterFsType {
   File = 1,
   Directory = 2,
 }
-
 
 export type PathFilter = {
   positioner: PathPositioner;
@@ -50,11 +49,10 @@ export type MediaLibraryTemplate = {
   child?: MediaLibraryTemplate;
 };
 
-
 export type MediaLibraryTemplateProperty = {
   pool: PropertyPool;
   id: number;
-  property: Omit<IProperty, 'bizValueType' | 'dbValueType'>;
+  property: Omit<IProperty, "bizValueType" | "dbValueType">;
   valueLocators?: PathPropertyExtractor[];
 };
 

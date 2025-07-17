@@ -1,13 +1,15 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { BsRegex } from 'react-icons/bs';
-import { IoLayersOutline } from 'react-icons/io5';
-import type { PathFilter } from '@/pages/media-library-template/models';
-import { PathFilterFsType } from '@/pages/media-library-template/models';
-import { pathFilterFsTypes, PathPositioner } from '@/sdk/constants';
-import PathFilterFsTypeBlock from '@/pages/media-library-template/components/PathFilterFsTypeBlock';
-import { Chip } from '@/components/bakaui';
+import type { PathFilter } from "@/pages/media-library-template/models";
+
+import { useTranslation } from "react-i18next";
+import { BsRegex } from "react-icons/bs";
+import { IoLayersOutline } from "react-icons/io5";
+
+import { PathFilterFsType } from "@/pages/media-library-template/models";
+import { pathFilterFsTypes, PathPositioner } from "@/sdk/constants";
+import PathFilterFsTypeBlock from "@/pages/media-library-template/components/PathFilterFsTypeBlock";
+import { Chip } from "@/components/bakaui";
 
 type Props = {
   filter: PathFilter;
@@ -21,30 +23,34 @@ export default ({ filter }: Props) => {
       case PathPositioner.Layer:
         return (
           <>
-            <IoLayersOutline className={'text-medium'} />
-            {t<string>('Layer')}
+            <IoLayersOutline className={"text-medium"} />
+            {t<string>("Layer")}
           </>
         );
       case PathPositioner.Regex:
         return (
           <>
-            <BsRegex className={'text-medium'} />
-            {t<string>('Regex')}
+            <BsRegex className={"text-medium"} />
+            {t<string>("Regex")}
           </>
         );
       default:
-        return t<string>('Not supported');
+        return t<string>("Not supported");
     }
   };
 
   const renderLayerOrRegex = () => {
     switch (filter.positioner) {
       case PathPositioner.Layer:
-        return filter.layer == undefined ? t<string>('Not set') : filter.layer == 0 ? t<string>('Directory of media library') : t<string>('The {{layer}} layer', { layer: filter.layer });
+        return filter.layer == undefined
+          ? t<string>("Not set")
+          : filter.layer == 0
+            ? t<string>("Directory of media library")
+            : t<string>("The {{layer}} layer", { layer: filter.layer });
       case PathPositioner.Regex:
-        return filter.regex ?? t<string>('Not set');
+        return filter.regex ?? t<string>("Not set");
       default:
-        return t<string>('Not supported');
+        return t<string>("Not supported");
     }
   };
 
@@ -52,17 +58,22 @@ export default ({ filter }: Props) => {
     if (filter.fsType) {
       return <PathFilterFsTypeBlock type={filter.fsType} />;
     } else {
-      return pathFilterFsTypes.map(t => <PathFilterFsTypeBlock type={t.value} />);
+      return pathFilterFsTypes.map((t) => (
+        <PathFilterFsTypeBlock type={t.value} />
+      ));
     }
   };
 
   const renderExtensions = () => {
-    const texts = (filter.extensionGroups?.map(x => x.name) ?? []).concat(filter.extensions ?? []);
+    const texts = (filter.extensionGroups?.map((x) => x.name) ?? []).concat(
+      filter.extensions ?? [],
+    );
+
     return (
-      <div className={'flex items-center gap-1'}>
-        {texts.map(t => {
+      <div className={"flex items-center gap-1"}>
+        {texts.map((t) => {
           return (
-            <Chip size={'sm'} radius={'sm'} variant={'flat'}>
+            <Chip radius={"sm"} size={"sm"} variant={"flat"}>
               {t}
             </Chip>
           );
@@ -72,17 +83,13 @@ export default ({ filter }: Props) => {
   };
 
   return (
-    <div className={'flex items-center gap-2'}>
-      <div className={'flex items-center gap-1'}>
-        {t<string>('Through')}
+    <div className={"flex items-center gap-2"}>
+      <div className={"flex items-center gap-1"}>
+        {t<string>("Through")}
         {renderPositioner()}
       </div>
-      <div className={'flex items-center gap-1'}>
-        {renderLayerOrRegex()}
-      </div>
-      <div className={'flex items-center gap-1'}>
-        {renderFsTypeBlocks()}
-      </div>
+      <div className={"flex items-center gap-1"}>{renderLayerOrRegex()}</div>
+      <div className={"flex items-center gap-1"}>{renderFsTypeBlocks()}</div>
       {filter.fsType == PathFilterFsType.File && renderExtensions()}
     </div>
   );

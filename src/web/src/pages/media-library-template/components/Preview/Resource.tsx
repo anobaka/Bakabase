@@ -1,7 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import type { PreviewResource } from '@/pages/media-library-template/components/Preview/index';
+import type { PreviewResource } from "@/pages/media-library-template/components/Preview/index";
 
 type Props = {
   resource: PreviewResource;
@@ -9,7 +8,7 @@ type Props = {
 
 export default ({ resource }: Props) => {
   return (
-    <div className={'flex gap-1 items-center'}>
+    <div className={"flex gap-1 items-center"}>
       <div>
         <img />
       </div>

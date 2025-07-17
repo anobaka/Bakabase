@@ -1,17 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import PropertyModal from '../PropertyModal';
-import type { IProperty } from '@/components/Property/models';
-import Property from '@/components/Property';
-import PropertyV2 from '@/components/Property/v2';
-import { buildLogger, createPortalOfComponent } from '@/components/utils';
-import { PropertyPool, PropertyType, StandardValueType } from '@/sdk/constants';
-import BApi from '@/sdk/BApi';
-import { Button, Chip, Divider, Modal, Spacer } from '@/components/bakaui';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+import type { IProperty } from "@/components/Property/models";
+import type { DestroyableProps } from "@/components/bakaui/types";
+
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import PropertyModal from "../PropertyModal";
+
+import Property from "@/components/Property";
+import PropertyV2 from "@/components/Property/v2";
+import { buildLogger, createPortalOfComponent } from "@/components/utils";
+import { PropertyPool, PropertyType, StandardValueType } from "@/sdk/constants";
+import BApi from "@/sdk/BApi";
+import { Button, Chip, Divider, Modal, Spacer } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Key = {
   id: number;
@@ -33,10 +36,10 @@ interface IProps extends DestroyableProps {
   v2?: boolean;
 }
 
-const log = buildLogger('PropertySelector');
+const log = buildLogger("PropertySelector");
 
 const PropertySelector = (props: IProps) => {
-  log('props', props);
+  log("props", props);
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const {
@@ -63,6 +66,7 @@ const PropertySelector = (props: IProps) => {
 
   const loadProperties = async () => {
     const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
+
     // @ts-ignore
     setProperties(psr);
   };
@@ -72,40 +76,52 @@ const PropertySelector = (props: IProps) => {
   }, []);
 
   const renderProperty = (property: IProperty) => {
-    const selected = selection.some(s => s.id == property.id && s.pool == property.pool);
+    const selected = selection.some(
+      (s) => s.id == property.id && s.pool == property.pool,
+    );
 
     if (v2) {
       return (
         <PropertyV2
           key={`${property.id}-${property.pool}`}
+          disabled={isDisabled?.(property)}
+          editable={editable}
           property={property}
+          removable={removable}
           onClick={async () => {
             if (multiple) {
               if (selected) {
-                setSelection(selection.filter(s => s.id != property.id || s.pool != property.pool));
+                setSelection(
+                  selection.filter(
+                    (s) => s.id != property.id || s.pool != property.pool,
+                  ),
+                );
               } else {
-                setSelection([...selection, {
-                  id: property.id,
-                  pool: property.pool,
-                }]);
+                setSelection([
+                  ...selection,
+                  {
+                    id: property.id,
+                    pool: property.pool,
+                  },
+                ]);
               }
             } else {
               if (selected) {
                 setSelection([]);
               } else {
-                const ns: Key[] = [{
-                  id: property.id,
-                  pool: property.pool,
-                }];
+                const ns: Key[] = [
+                  {
+                    id: property.id,
+                    pool: property.pool,
+                  },
+                ];
+
                 setSelection(ns);
                 await onSubmit(ns);
               }
             }
           }}
-          editable={editable}
-          removable={removable}
           onSaved={loadProperties}
-          disabled={isDisabled?.(property)}
         />
       );
     }
@@ -113,34 +129,44 @@ const PropertySelector = (props: IProps) => {
     return (
       <Property
         key={`${property.id}-${property.pool}`}
+        disabled={isDisabled?.(property)}
+        editable={editable}
         property={property}
+        removable={removable}
         onClick={async () => {
           if (multiple) {
             if (selected) {
-              setSelection(selection.filter(s => s.id != property.id || s.pool != property.pool));
+              setSelection(
+                selection.filter(
+                  (s) => s.id != property.id || s.pool != property.pool,
+                ),
+              );
             } else {
-              setSelection([...selection, {
-                id: property.id,
-                pool: property.pool,
-              }]);
+              setSelection([
+                ...selection,
+                {
+                  id: property.id,
+                  pool: property.pool,
+                },
+              ]);
             }
           } else {
             if (selected) {
               setSelection([]);
             } else {
-              const ns: Key[] = [{
-                id: property.id,
-                pool: property.pool,
-              }];
+              const ns: Key[] = [
+                {
+                  id: property.id,
+                  pool: property.pool,
+                },
+              ];
+
               setSelection(ns);
               await onSubmit(ns);
             }
           }
         }}
-        editable={editable}
-        removable={removable}
         onSaved={loadProperties}
-        disabled={isDisabled?.(property)}
       />
     );
   };
@@ -148,19 +174,24 @@ const PropertySelector = (props: IProps) => {
   const onSubmit = async (selection: Key[]) => {
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
-      await propsOnSubmit(selection.map(s => properties.find(p => p.id == s.id && p.pool == s.pool))
-        .filter(x => x != undefined) as IProperty[]);
+      await propsOnSubmit(
+        selection
+          .map((s) => properties.find((p) => p.id == s.id && p.pool == s.pool))
+          .filter((x) => x != undefined) as IProperty[],
+      );
     }
     setVisible(false);
-};
+  };
 
   // console.log('render', reservedProperties, customProperties);
 
   const renderFilter = () => {
     const filters: any[] = [];
+
     if (pool != PropertyPool.All) {
-      Object.keys(PropertyPool).forEach(k => {
+      Object.keys(PropertyPool).forEach((k) => {
         const v = parseInt(k, 10) as PropertyPool;
+
         if (Number.isNaN(v)) {
           return;
         }
@@ -170,10 +201,9 @@ const PropertySelector = (props: IProps) => {
             case PropertyPool.Reserved:
             case PropertyPool.Custom:
               filters.push(
-                <Chip
-                  key={'pool'}
-                  size={'sm'}
-                >{t<string>(PropertyPool[v])}</Chip>,
+                <Chip key={"pool"} size={"sm"}>
+                  {t<string>(PropertyPool[v])}
+                </Chip>,
               );
               break;
             default:
@@ -184,26 +214,28 @@ const PropertySelector = (props: IProps) => {
     }
     if (valueTypes) {
       filters.push(
-        ...valueTypes.map(vt => (<Chip
-          key={vt}
-          size={'sm'}
-        >{t<string>(StandardValueType[vt])}</Chip>)),
+        ...valueTypes.map((vt) => (
+          <Chip key={vt} size={"sm"}>
+            {t<string>(StandardValueType[vt])}
+          </Chip>
+        )),
       );
     }
 
     if (types) {
       filters.push(
-        ...types.map(pt => (<Chip
-          key={pt}
-          size={'sm'}
-        >{t<string>(PropertyType[pt])}</Chip>)),
+        ...types.map((pt) => (
+          <Chip key={pt} size={"sm"}>
+            {t<string>(PropertyType[pt])}
+          </Chip>
+        )),
       );
     }
 
     if (filters.length > 0) {
       return (
-        <div className={'flex gap-1 items-center mb-2 flex-wrap'}>
-          {t<string>('Filtering')}
+        <div className={"flex gap-1 items-center mb-2 flex-wrap"}>
+          {t<string>("Filtering")}
           <Spacer />
           {filters}
         </div>
@@ -213,7 +245,7 @@ const PropertySelector = (props: IProps) => {
     }
   };
 
-  const filteredProperties = properties.filter(p => {
+  const filteredProperties = properties.filter((p) => {
     if (valueTypes && !valueTypes.includes(p.dbValueType)) {
       return false;
     }
@@ -221,30 +253,39 @@ const PropertySelector = (props: IProps) => {
     if (types && !types.includes(p.type)) {
       return false;
     }
+
     return true;
   });
-  const selectedProperties = selection.map(s => filteredProperties.find(p => p.id == s.id && p.pool == s.pool))
-    .filter(x => x).map(x => x!);
-  const unselectedProperties = filteredProperties.filter(p => !selection.some(s => s.id == p.id && s.pool == p.pool));
+  const selectedProperties = selection
+    .map((s) =>
+      filteredProperties.find((p) => p.id == s.id && p.pool == s.pool),
+    )
+    .filter((x) => x)
+    .map((x) => x!);
+  const unselectedProperties = filteredProperties.filter(
+    (p) => !selection.some((s) => s.id == p.id && s.pool == p.pool),
+  );
   const propertyCount = selectedProperties.length + unselectedProperties.length;
 
   const renderProperties = () => {
     if (propertyCount == 0) {
       return (
-        <div className={'flex items-center justify-center gap-2 mt-6'}>
-          {t<string>('No properties available')}
+        <div className={"flex items-center justify-center gap-2 mt-6"}>
+          {t<string>("No properties available")}
           {addable && (
             <Button
-              color={'primary'}
-              size={'sm'}
+              color={"primary"}
+              size={"sm"}
               onPress={() => {
                 createPortal(PropertyModal, {
                   onSaved: loadProperties,
-                  validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
+                  validValueTypes: valueTypes?.map(
+                    (v) => v as unknown as PropertyType,
+                  ),
                 });
               }}
             >
-              {t<string>('Add a property')}
+              {t<string>("Add a property")}
             </Button>
           )}
         </div>
@@ -254,22 +295,22 @@ const PropertySelector = (props: IProps) => {
     // todo: make framer-motion up-to-date once https://github.com/heroui-inc/heroui/issues/4805 is resolved.
 
     return (
-      <div className={'flex flex-col gap-2'}>
-        <div className={'flex items-start gap-2'}>
+      <div className={"flex flex-col gap-2"}>
+        <div className={"flex items-start gap-2"}>
           <div
-            className={'w-[100px] min-w-[100px] text-medium'}
-          >{`${t<string>('Selected')}(${selectedProperties.length})`}</div>
-          <div className={'flex flex-wrap gap-2 items-start'}>
-            {selectedProperties.map(p => renderProperty(p))}
+            className={"w-[100px] min-w-[100px] text-medium"}
+          >{`${t<string>("Selected")}(${selectedProperties.length})`}</div>
+          <div className={"flex flex-wrap gap-2 items-start"}>
+            {selectedProperties.map((p) => renderProperty(p))}
           </div>
         </div>
         <Divider />
-        <div className={'flex items-start gap-2'}>
+        <div className={"flex items-start gap-2"}>
           <div
-            className={'w-[100px] min-w-[100px] text-medium'}
-          >{`${t<string>('Not selected')}(${unselectedProperties.length})`}</div>
-          <div className={'flex flex-wrap gap-2 items-start'}>
-            {unselectedProperties.map(p => renderProperty(p))}
+            className={"w-[100px] min-w-[100px] text-medium"}
+          >{`${t<string>("Not selected")}(${unselectedProperties.length})`}</div>
+          <div className={"flex flex-wrap gap-2 items-start"}>
+            {unselectedProperties.map((p) => renderProperty(p))}
           </div>
         </div>
       </div>
@@ -278,16 +319,18 @@ const PropertySelector = (props: IProps) => {
 
   return (
     <Modal
-      size={'xl'}
+      footer={multiple && propertyCount > 0 ? true : <Spacer />}
+      size={"xl"}
+      title={
+        title ?? t<string>(multiple ? "Select properties" : "Select a property")
+      }
       visible={visible}
-      onOk={async () => {
-        await onSubmit(selection);
-      }}
-      onDestroyed={onDestroyed}
-      title={title ?? t<string>(multiple ? 'Select properties' : 'Select a property')}
-      footer={(multiple && propertyCount > 0) ? true : (<Spacer />)}
       onClose={() => {
         setVisible(false);
+      }}
+      onDestroyed={onDestroyed}
+      onOk={async () => {
+        await onSubmit(selection);
       }}
     >
       <div>
@@ -296,18 +339,19 @@ const PropertySelector = (props: IProps) => {
         <div>
           {addable && (
             <Button
-              color={'primary'}
-              size={'sm'}
-              className={'mt-2'}
+              className={"mt-2"}
+              color={"primary"}
+              size={"sm"}
               onPress={() => {
                 createPortal(PropertyModal, {
-                    onSaved: loadProperties,
-                    validValueTypes: valueTypes?.map(v => v as unknown as PropertyType),
-                  },
-                );
+                  onSaved: loadProperties,
+                  validValueTypes: valueTypes?.map(
+                    (v) => v as unknown as PropertyType,
+                  ),
+                });
               }}
             >
-              {t<string>('Add a property')}
+              {t<string>("Add a property")}
             </Button>
           )}
         </div>
@@ -316,7 +360,7 @@ const PropertySelector = (props: IProps) => {
   );
 };
 
-
-PropertySelector.show = (props: IProps) => createPortalOfComponent(PropertySelector, props);
+PropertySelector.show = (props: IProps) =>
+  createPortalOfComponent(PropertySelector, props);
 
 export default PropertySelector;

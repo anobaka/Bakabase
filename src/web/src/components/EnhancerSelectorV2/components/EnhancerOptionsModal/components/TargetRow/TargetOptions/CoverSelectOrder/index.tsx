@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { Radio, RadioGroup } from '@/components/bakaui';
-import { CoverSelectOrder } from '@/sdk/constants';
+import { useTranslation } from "react-i18next";
+
+import { Radio, RadioGroup } from "@/components/bakaui";
+import { CoverSelectOrder } from "@/sdk/constants";
 
 type Props = {
   coverSelectOrder?: CoverSelectOrder;
@@ -10,30 +11,30 @@ type Props = {
   isDisabled?: boolean;
 };
 
-export default ({
-                  coverSelectOrder,
-                  onChange,
-                  isDisabled,
-                }: Props) => {
+export default ({ coverSelectOrder, onChange, isDisabled }: Props) => {
   const { t } = useTranslation();
 
   console.log(coverSelectOrder);
 
   return (
     <RadioGroup
+      isDisabled={isDisabled}
+      orientation="horizontal"
+      size={"sm"}
       value={coverSelectOrder?.toString()}
-      onValueChange={c => {
+      onValueChange={(c) => {
         onChange?.(parseInt(c, 10));
       }}
-      size={'sm'}
-      orientation="horizontal"
-      isDisabled={isDisabled}
     >
-      {Object.keys(CoverSelectOrder).filter(x => !Number.isNaN(parseInt(x, 10))).map(x => {
-        return (
-          <Radio value={x}>{t<string>(`CoverSelectOrder.${CoverSelectOrder[x]}`)}</Radio>
-        );
-      })}
+      {Object.keys(CoverSelectOrder)
+        .filter((x) => !Number.isNaN(parseInt(x, 10)))
+        .map((x) => {
+          return (
+            <Radio value={x}>
+              {t<string>(`CoverSelectOrder.${CoverSelectOrder[x]}`)}
+            </Radio>
+          );
+        })}
     </RadioGroup>
   );
 };

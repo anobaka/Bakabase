@@ -1,11 +1,15 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import { IoLayersOutline } from 'react-icons/io5';
-import { BsRegex } from 'react-icons/bs';
-import type { PathFilter, PathPropertyExtractor } from '@/pages/media-library-template/models';
-import { pathFilterFsTypes, PathPositioner, PathPropertyExtractorBasePathType } from '@/sdk/constants';
-import PathFilterFsTypeBlock from '@/pages/media-library-template/components/PathFilterFsTypeBlock';
+import type { PathPropertyExtractor } from "@/pages/media-library-template/models";
+
+import { useTranslation } from "react-i18next";
+import { IoLayersOutline } from "react-icons/io5";
+import { BsRegex } from "react-icons/bs";
+
+import {
+  PathPositioner,
+  PathPropertyExtractorBasePathType,
+} from "@/sdk/constants";
 
 type Props = {
   locator: PathPropertyExtractor;
@@ -19,54 +23,61 @@ export default ({ locator }: Props) => {
       case PathPositioner.Layer:
         return (
           <>
-            <IoLayersOutline className={'text-medium'} />
-            {t<string>('Layer')}
+            <IoLayersOutline className={"text-medium"} />
+            {t<string>("Layer")}
           </>
         );
       case PathPositioner.Regex:
         return (
           <>
-            <BsRegex className={'text-medium'} />
-            {t<string>('Regex')}
+            <BsRegex className={"text-medium"} />
+            {t<string>("Regex")}
           </>
         );
       default:
-        return t<string>('Not supported');
+        return t<string>("Not supported");
     }
   };
-
 
   const renderLayerOrRegex = () => {
     switch (locator.positioner) {
       case PathPositioner.Layer:
-        const basePathType = locator.basePathType ?? PathPropertyExtractorBasePathType.MediaLibrary;
+        const basePathType =
+          locator.basePathType ??
+          PathPropertyExtractorBasePathType.MediaLibrary;
+
         if (locator.layer == undefined) {
-          return t<string>('Not set');
+          return t<string>("Not set");
         }
         if (locator.layer === 0) {
-          return t<string>('Self');
+          return t<string>("Self");
         }
         if (locator.layer > 0) {
-          return t<string>('The {{n}}th layer after {{basePathType}}', { basePathType: t<string>(PathPropertyExtractorBasePathType[basePathType]), n: locator.layer });
+          return t<string>("The {{n}}th layer after {{basePathType}}", {
+            basePathType: t<string>(
+              PathPropertyExtractorBasePathType[basePathType],
+            ),
+            n: locator.layer,
+          });
         } else {
-          return t<string>('The {{n}}th layer before {{basePathType}}', { basePathType: t<string>(PathPropertyExtractorBasePathType[basePathType]), n: Math.abs(locator.layer) });
+          return t<string>("The {{n}}th layer before {{basePathType}}", {
+            basePathType: t<string>(
+              PathPropertyExtractorBasePathType[basePathType],
+            ),
+            n: Math.abs(locator.layer),
+          });
         }
       case PathPositioner.Regex:
-        return locator.regex ?? t<string>('Not set');
+        return locator.regex ?? t<string>("Not set");
       default:
-        return t<string>('Not supported');
+        return t<string>("Not supported");
     }
   };
 
-
   return (
-    <div className={'flex items-center gap-1'}>
-      <div className={'flex items-center gap-1'}>
-        {renderPositioner()}
-      </div>
-      <div className={'flex items-center gap-1'}>
-        {renderLayerOrRegex()}
-      </div>
+    <div className={"flex items-center gap-1"}>
+      <div className={"flex items-center gap-1"}>{renderPositioner()}</div>
+      <div className={"flex items-center gap-1"}>{renderLayerOrRegex()}</div>
     </div>
   );
 };

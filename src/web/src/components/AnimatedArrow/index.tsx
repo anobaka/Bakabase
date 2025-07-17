@@ -1,32 +1,31 @@
-import './index.scss';
+import "./index.scss";
 
 interface Props {
   color?: string;
-  direction?: 'left' | 'right' | 'up' | 'down';
+  direction?: "left" | "right" | "up" | "down";
   className?: string;
 }
-export default ({ color = '#999', direction = 'right', className }: Props) => {
+export default ({ color = "#999", direction = "right", className }: Props) => {
   const spans: any[] = [];
 
   let rotate = -90;
+
   switch (direction) {
-    case 'left':
+    case "left":
       rotate = 90;
       break;
-    case 'right':
+    case "right":
       break;
-    case 'up':
+    case "up":
       rotate = 180;
       break;
-    case 'down':
+    case "down":
       rotate = 0;
       break;
   }
 
   for (let i = 0; i < 3; i++) {
-    spans.push(
-      <span style={{ borderColor: color }} key={i} />,
-    );
+    spans.push(<span key={i} style={{ borderColor: color }} />);
   }
 
   return (

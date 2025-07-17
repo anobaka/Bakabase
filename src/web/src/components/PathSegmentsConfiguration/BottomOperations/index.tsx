@@ -1,11 +1,13 @@
-'use client';
+"use client";
 
-import { Dialog } from '@alifd/next';
-import React from 'react';
-import { useTranslation } from 'react-i18next';
-import Validate from './Validate';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
-import type { IPscPropertyMatcherValue } from '@/components/PathSegmentsConfiguration/models/PscPropertyMatcherValue';
+import type { IPscPropertyMatcherValue } from "@/components/PathSegmentsConfiguration/models/PscPropertyMatcherValue";
+
+import React from "react";
+import { useTranslation } from "react-i18next";
+
+import Validate from "./Validate";
+
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {
   value: IPscPropertyMatcherValue[];
@@ -18,7 +20,7 @@ export default ({ value, hasError }: Props) => {
 
   return (
     <div className="">
-      <Validate value={value} isDisabled={hasError} />
+      <Validate isDisabled={hasError} value={value} />
     </div>
   );
 };

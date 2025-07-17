@@ -1,12 +1,14 @@
-'use client';
+"use client";
 
-import { useTranslation } from 'react-i18next';
-import type { IProperty } from '@/components/Property/models';
-import { Chip } from '@/components/bakaui';
-import { PropertyPool } from '@/sdk/constants';
-import PropertyTypeIcon from '@/components/Property/components/PropertyTypeIcon';
+import type { IProperty } from "@/components/Property/models";
 
-type SimpleProperty = Pick<IProperty, 'name' | 'type' | 'pool'>;
+import { useTranslation } from "react-i18next";
+
+import { Chip } from "@/components/bakaui";
+import { PropertyPool } from "@/sdk/constants";
+import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
+
+type SimpleProperty = Pick<IProperty, "name" | "type" | "pool">;
 
 interface IProps {
   property: SimpleProperty;
@@ -14,19 +16,16 @@ interface IProps {
 }
 
 export default ({ property, showPool }: IProps) => {
-const { t } = useTranslation();
+  const { t } = useTranslation();
+
   return (
-    <div className={'inline-flex items-center'}>
+    <div className={"inline-flex items-center"}>
       {showPool && (
-        <Chip
-          size={'sm'}
-          radius={'sm'}
-          variant={'flat'}
-        >
+        <Chip radius={"sm"} size={"sm"} variant={"flat"}>
           {t<string>(`PropertyPool.${PropertyPool[property.pool]}`)}
         </Chip>
       )}
-      <PropertyTypeIcon type={property.type} textVariant={'none'} />
+      <PropertyTypeIcon textVariant={"none"} type={property.type} />
       <span>{property.name}</span>
     </div>
   );

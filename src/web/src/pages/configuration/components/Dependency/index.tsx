@@ -1,12 +1,15 @@
-'use client';
+"use client";
 
-import React, { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { QuestionCircleOutlined } from '@ant-design/icons';
-import type { InputProps, SnippetProps } from '@heroui/react';
-import Component from './components/Component';
-import { useDependentComponentContextsStore } from '@/models/dependentComponentContexts';
-import { useThirdPartyOptionsStore, useAiOptionsStore } from '@/models/options';
+import type { InputProps, SnippetProps } from "@heroui/react";
+
+import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+
+import Component from "./components/Component";
+
+import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
+import { useThirdPartyOptionsStore, useAiOptionsStore } from "@/models/options";
 import {
   Input,
   Popover,
@@ -17,65 +20,66 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-} from '@/components/bakaui';
-import BApi from '@/sdk/BApi';
-import { EditableValue } from '@/components/EditableValue';
+} from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { EditableValue } from "@/components/EditableValue";
 
 export default () => {
   const { t } = useTranslation();
-  const componentContexts = useDependentComponentContextsStore((state) => state.contexts);
+  const componentContexts = useDependentComponentContextsStore(
+    (state) => state.contexts,
+  );
   const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
   const aiOptions = useAiOptionsStore((state) => state.data);
 
-  useEffect(() => {
-  }, []);
-
+  useEffect(() => {}, []);
 
   return (
     <div className="group">
       {/* <Title title={t<string>('Dependent components')} /> */}
       <div className="settings">
-        <Table
-          removeWrapper
-        >
+        <Table removeWrapper>
           <TableHeader>
-            <TableColumn width={200}>{t<string>('Dependent components')}</TableColumn>
+            <TableColumn width={200}>
+              {t<string>("Dependent components")}
+            </TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>
             <>
               {componentContexts.map((c, i) => {
                 return (
-                  <TableRow key={i} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+                  <TableRow
+                    key={i}
+                    className={"hover:bg-[var(--bakaui-overlap-background)]"}
+                  >
                     <TableCell>
-                      <div className={'flex gap-1 items-center'}>
+                      <div className={"flex gap-1 items-center"}>
                         {c.name}
                         <Popover
                           // color={'primary'}
                           showArrow
-                          trigger={(
-                            <QuestionCircleOutlined className={'text-base'} />
-                          )}
-                          placement={'right'}
+                          placement={"right"}
+                          trigger={
+                            <QuestionCircleOutlined className={"text-base"} />
+                          }
                         >
-                          <div style={{ userSelect: 'text' }} className={'px-2 py-4 flex flex-col gap-2'}>
-                            {c.description && (
-                              <pre>
-                                {c.description}
-                              </pre>
-                            )}
-                            <div className={'flex items-center gap-2'}>
-                              {t<string>('Default location')}
+                          <div
+                            className={"px-2 py-4 flex flex-col gap-2"}
+                            style={{ userSelect: "text" }}
+                          >
+                            {c.description && <pre>{c.description}</pre>}
+                            <div className={"flex items-center gap-2"}>
+                              {t<string>("Default location")}
                               <Snippet
-                                size={'sm'}
-                                variant="bordered"
                                 hideSymbol
+                                size={"sm"}
+                                variant="bordered"
                               >
                                 {c.defaultLocation}
                               </Snippet>
                             </div>
                           </div>
-
                         </Popover>
                       </div>
                     </TableCell>
@@ -86,47 +90,67 @@ export default () => {
                 );
               })}
             </>
-            <TableRow key={componentContexts.length} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+            <TableRow
+              key={componentContexts.length}
+              className={"hover:bg-[var(--bakaui-overlap-background)]"}
+            >
+              <TableCell>{t<string>("curl")}</TableCell>
               <TableCell>
-                {t<string>('curl')}
-              </TableCell>
-              <TableCell>
-                <EditableValue<string, InputProps, SnippetProps & { value: string }>
-                  Viewer={({
-                             value,
-                             ...props
-                           }) => (value ? (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>) : null)}
+                <EditableValue<
+                  string,
+                  InputProps,
+                  SnippetProps & { value: string }
+                >
                   Editor={Input}
+                  Viewer={({ value, ...props }) =>
+                    value ? (
+                      <Snippet symbol={<>&nbsp;</>} {...props}>
+                        {value}
+                      </Snippet>
+                    ) : null
+                  }
                   editorProps={{
-                    placeholder: t<string>('path/to/curl.exe'),
+                    placeholder: t<string>("path/to/curl.exe"),
                   }}
-                  onSubmit={async v => await BApi.options.putThirdPartyOptions({
-                    ...thirdPartyOptions,
-                    curlExecutable: v,
-                  })}
                   value={thirdPartyOptions.curlExecutable}
+                  onSubmit={async (v) =>
+                    await BApi.options.putThirdPartyOptions({
+                      ...thirdPartyOptions,
+                      curlExecutable: v,
+                    })
+                  }
                 />
               </TableCell>
             </TableRow>
-            <TableRow key={componentContexts.length + 1} className={'hover:bg-[var(--bakaui-overlap-background)]'}>
+            <TableRow
+              key={componentContexts.length + 1}
+              className={"hover:bg-[var(--bakaui-overlap-background)]"}
+            >
+              <TableCell>{t<string>("Ollama endpoint")}</TableCell>
               <TableCell>
-                {t<string>('Ollama endpoint')}
-              </TableCell>
-              <TableCell>
-                <EditableValue<string, InputProps, SnippetProps & { value: string }>
-                  Viewer={({
-                             value,
-                             ...props
-                           }) => (value ? (<Snippet symbol={<>&nbsp;</>} {...props}>{value}</Snippet>) : null)}
+                <EditableValue<
+                  string,
+                  InputProps,
+                  SnippetProps & { value: string }
+                >
                   Editor={Input}
+                  Viewer={({ value, ...props }) =>
+                    value ? (
+                      <Snippet symbol={<>&nbsp;</>} {...props}>
+                        {value}
+                      </Snippet>
+                    ) : null
+                  }
                   editorProps={{
-                    placeholder: t<string>('http://localhost:11434'),
+                    placeholder: t<string>("http://localhost:11434"),
                   }}
-                  onSubmit={async v => await BApi.options.putAiOptions({
-                    ...aiOptions,
-                    ollamaEndpoint: v,
-                  })}
                   value={aiOptions.ollamaEndpoint}
+                  onSubmit={async (v) =>
+                    await BApi.options.putAiOptions({
+                      ...aiOptions,
+                      ollamaEndpoint: v,
+                    })
+                  }
                 />
               </TableCell>
             </TableRow>

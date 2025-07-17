@@ -1,31 +1,43 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { PlusCircleOutlined } from '@ant-design/icons';
-import BApi from '@/sdk/BApi';
-import { ComponentDescriptorAdditionalItem, ComponentDescriptorType, ComponentType, componentTypes } from '@/sdk/constants';
-import './index.scss';
-import CustomIcon from '@/components/CustomIcon';
-import type { CustomComponentDetailDialogProps } from '@/pages/custom-component/Detail';
-import Detail from '@/pages/custom-component/Detail';
-import ComponentDescriptorCard from '@/pages/custom-component/components/ComponentCard';
-import FeatureStatusTip from '@/components/FeatureStatusTip';
-import { Button } from '@/components/bakaui';
+import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { PlusCircleOutlined } from "@ant-design/icons";
+
+import BApi from "@/sdk/BApi";
+import {
+  ComponentDescriptorAdditionalItem,
+  ComponentDescriptorType,
+  ComponentType,
+  componentTypes,
+} from "@/sdk/constants";
+import "./index.scss";
+import CustomIcon from "@/components/CustomIcon";
+
+import type { CustomComponentDetailDialogProps } from "@/pages/custom-component/Detail";
+
+import Detail from "@/pages/custom-component/Detail";
+import ComponentDescriptorCard from "@/pages/custom-component/components/ComponentCard";
+import { Button } from "@/components/bakaui";
 
 const ComponentTypeIcons = {
-  [ComponentType.Enhancer]: 'flashlight',
-  [ComponentType.Player]: 'play-circle',
-  [ComponentType.PlayableFileSelector]: 'filesearch',
+  [ComponentType.Enhancer]: "flashlight",
+  [ComponentType.Player]: "play-circle",
+  [ComponentType.PlayableFileSelector]: "filesearch",
 };
+
 export default () => {
   const { t } = useTranslation();
   const [allComponents, setAllComponents] = useState([]);
 
-  const [selectedComponent, setSelectedComponent] = useState<CustomComponentDetailDialogProps>();
+  const [selectedComponent, setSelectedComponent] =
+    useState<CustomComponentDetailDialogProps>();
 
   const loadAllComponents = async () => {
-    const rsp = await BApi.component.getComponentDescriptors({ additionalItems: ComponentDescriptorAdditionalItem.AssociatedCategories });
+    const rsp = await BApi.component.getComponentDescriptors({
+      additionalItems: ComponentDescriptorAdditionalItem.AssociatedCategories,
+    });
+
     setAllComponents(rsp.data);
   };
 
@@ -44,11 +56,11 @@ export default () => {
   };
 
   return (
-    <div className={'custom-component-page'}>
+    <div className={"custom-component-page"}>
       {selectedComponent && (
         <Detail
           {...selectedComponent}
-          onClosed={hasChanges => {
+          onClosed={(hasChanges) => {
             setSelectedComponent(undefined);
             if (hasChanges) {
               loadAllComponents();
@@ -56,46 +68,58 @@ export default () => {
           }}
         />
       )}
-      {componentTypes.filter(x => x.value != ComponentType.Enhancer).map(ct => {
-        const components = allComponents.filter(c => c.componentType == ct.value && c.type == ComponentDescriptorType.Instance);
-        return (
-          <div className={'component-type'} key={ct.value}>
-            <div className="type-name">
-              <div className="name flex items-center gap-1">
-                <CustomIcon type={ComponentTypeIcons[ct.value]} size={'large'} />
-                {t<string>(ct.label)}
-              </div>
-              <Button
-                color={'primary'}
-                variant={'light'}
-                onClick={() => {
+      {componentTypes
+        .filter((x) => x.value != ComponentType.Enhancer)
+        .map((ct) => {
+          const components = allComponents.filter(
+            (c) =>
+              c.componentType == ct.value &&
+              c.type == ComponentDescriptorType.Instance,
+          );
+
+          return (
+            <div key={ct.value} className={"component-type"}>
+              <div className="type-name">
+                <div className="name flex items-center gap-1">
+                  <CustomIcon
+                    size={"large"}
+                    type={ComponentTypeIcons[ct.value]}
+                  />
+                  {t<string>(ct.label)}
+                </div>
+                <Button
+                  color={"primary"}
+                  variant={"light"}
+                  onClick={() => {
                     showDetail(ct.value);
                   }}
-              >
-                <PlusCircleOutlined className={'text-base'} />
-                {t<string>('Add')}
-              </Button>
-            </div>
-            {(components.length > 0 ? (<div className="components">
-              {components.map(c => {
-                return (
-                  <ComponentDescriptorCard
-                    key={c.id}
-                    descriptor={c}
-                    onDeleted={() => {
-                      loadAllComponents();
-                    }}
-                  />
-                );
-              })}
-            </div>) : (
-              <div className={'no-components'}>
-                {t<string>('Nothing here yet')}
+                >
+                  <PlusCircleOutlined className={"text-base"} />
+                  {t<string>("Add")}
+                </Button>
               </div>
-            ))}
-          </div>
-        );
-      })}
+              {components.length > 0 ? (
+                <div className="components">
+                  {components.map((c) => {
+                    return (
+                      <ComponentDescriptorCard
+                        key={c.id}
+                        descriptor={c}
+                        onDeleted={() => {
+                          loadAllComponents();
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className={"no-components"}>
+                  {t<string>("Nothing here yet")}
+                </div>
+              )}
+            </div>
+          );
+        })}
     </div>
   );
 };

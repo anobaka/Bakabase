@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useUpdateEffect } from 'react-use';
-import { Chip, Textarea } from '@/components/bakaui';
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
+
+import { Chip, Textarea } from "@/components/bakaui";
 
 type ExtensionsInputProps = {
   defaultValue?: string[];
@@ -16,18 +16,21 @@ function extractExtensions(text: string): string[] {
   return Array.from(
     new Set(
       text
-        .replace(/\n/g, ' ')
-        .split(' ')
+        .replace(/\n/g, " ")
+        .split(" ")
         .map((x) => {
           let trimmed = x.trim();
+
           while (true) {
-            const n = trimmed.replace(/^\.+|\.+$/g, '');
+            const n = trimmed.replace(/^\.+|\.+$/g, "");
+
             if (n.length == trimmed.length) {
               break;
             } else {
               trimmed = n;
             }
           }
+
           return trimmed;
         })
         .filter((x) => x.length > 0)
@@ -37,36 +40,39 @@ function extractExtensions(text: string): string[] {
 }
 
 const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
-                                                           label,
-                                                           placeholder,
-                                                           defaultValue,
-                                                           onValueChange,
-                                                         }) => {
+  label,
+  placeholder,
+  defaultValue,
+  onValueChange,
+}) => {
   const { t } = useTranslation();
-  const [text, setText] = useState(defaultValue?.join(' '));
-  const [extensions, setExtensions] = useState<string[] | undefined>(defaultValue);
+  const [text, setText] = useState(defaultValue?.join(" "));
+  const [extensions, setExtensions] = useState<string[] | undefined>(
+    defaultValue,
+  );
 
   return (
     <div>
       <Textarea
+        fullWidth
         isClearable
-        label={label ?? t<string>('Extensions')}
-        placeholder={placeholder ?? t<string>('Separate by space or newline')}
+        isMultiline
+        label={label ?? t<string>("Extensions")}
+        minRows={4}
+        placeholder={placeholder ?? t<string>("Separate by space or newline")}
         value={text}
         onValueChange={(v) => {
           setText(v);
           const newExtensions = extractExtensions(v);
+
           setExtensions(newExtensions);
           onValueChange?.(newExtensions);
         }}
-        isMultiline
-        fullWidth
-        minRows={4}
       />
       {extensions && extensions.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {extensions.map((ext, i) => (
-            <Chip key={i} size="sm" variant="flat" radius="sm">
+            <Chip key={i} radius="sm" size="sm" variant="flat">
               {ext}
             </Chip>
           ))}

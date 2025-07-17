@@ -1,29 +1,31 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import dayjs from 'dayjs';
-import { ButtonGroup, Textarea } from '@heroui/react';
-import _ from 'lodash';
-import ExHentai from './ExHentai';
+import type { components } from "@/sdk/BApi2";
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { LabelValue } from "@/components/types";
+
+import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import dayjs from "dayjs";
+import { ButtonGroup, Textarea } from "@heroui/react";
+import _ from "lodash";
+
+import ExHentai from "./ExHentai";
+
 import {
   bilibiliDownloadTaskTypes,
   exHentaiDownloadTaskTypes,
   pixivDownloadTaskTypes,
   ThirdPartyId,
   thirdPartyIds,
-} from '@/sdk/constants';
-
-import { Button, Checkbox, Modal } from '@/components/bakaui';
-import type { components } from '@/sdk/BApi2';
-import type { DestroyableProps } from '@/components/bakaui/types';
-import ThirdPartyIcon from '@/components/ThirdPartyIcon';
-import Pixiv from '@/pages/downloader/components/TaskDetailModal/Pixiv';
-import Bilibili from '@/pages/downloader/components/TaskDetailModal/Bilibili';
-import DurationInput from '@/components/DurationInput';
-import type { LabelValue } from '@/components/types';
-import BApi from '@/sdk/BApi';
-import { useBakabaseContext } from '@/components/ContextProvider/BakabaseContextProvider';
+} from "@/sdk/constants";
+import { Button, Checkbox, Modal } from "@/components/bakaui";
+import ThirdPartyIcon from "@/components/ThirdPartyIcon";
+import Pixiv from "@/pages/downloader/components/TaskDetailModal/Pixiv";
+import Bilibili from "@/pages/downloader/components/TaskDetailModal/Bilibili";
+import DurationInput from "@/components/DurationInput";
+import BApi from "@/sdk/BApi";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 const ThirdPartyIdTaskTypesMap: { [key in ThirdPartyId]?: LabelValue[] } = {
   [ThirdPartyId.Bilibili]: bilibiliDownloadTaskTypes,
@@ -31,18 +33,19 @@ const ThirdPartyIdTaskTypesMap: { [key in ThirdPartyId]?: LabelValue[] } = {
   [ThirdPartyId.Pixiv]: pixivDownloadTaskTypes,
 };
 
-type Form = components['schemas']['Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel'];
+type Form =
+  components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.DownloadTaskAddInputModel"];
 
 type Props = {
   id?: number;
 } & DestroyableProps;
 
 export default ({
-                  // onCreatedOrUpdated,
-                  // onClose,
-                  onDestroyed,
-                  id,
-                }: Props) => {
+  // onCreatedOrUpdated,
+  // onClose,
+  onDestroyed,
+  id,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -58,6 +61,7 @@ export default ({
         ...task,
         keyAndNames: { [task!.key]: task!.name },
       };
+
       setForm(form);
     }
   };
@@ -67,12 +71,17 @@ export default ({
   }, []);
 
   const validateForm = (form: Partial<Form>): boolean => {
-    if (form.thirdPartyId && form.downloadPath && _.keys(form.keyAndNames).length > 0 && form.type) {
+    if (
+      form.thirdPartyId &&
+      form.downloadPath &&
+      _.keys(form.keyAndNames).length > 0 &&
+      form.type
+    ) {
       return true;
     }
+
     return false;
   };
-
 
   const renderFormItems = () => {
     if (!form.thirdPartyId || !form.type) {
@@ -80,16 +89,17 @@ export default ({
     }
 
     const items: any[] = [];
+
     switch (form.thirdPartyId) {
       case ThirdPartyId.ExHentai:
         items.push(
           <ExHentai
-            type={form.type}
+            form={form}
             isReadOnly={!isAdding}
-            onChange={v => {
+            type={form.type}
+            onChange={(v) => {
               setForm({ ...v });
             }}
-            form={form}
           />,
         );
         break;
@@ -97,9 +107,9 @@ export default ({
         items.push(
           <Pixiv
             form={form}
-            type={form.type}
             isReadOnly={!isAdding}
-            onChange={v => {
+            type={form.type}
+            onChange={(v) => {
               setForm({ ...v });
             }}
           />,
@@ -109,10 +119,10 @@ export default ({
       case ThirdPartyId.Bilibili: {
         items.push(
           <Bilibili
-            type={form.type}
             form={form}
             isReadOnly={!isAdding}
-            onChange={v => {
+            type={form.type}
+            onChange={(v) => {
               setForm({ ...v });
             }}
           />,
@@ -122,12 +132,16 @@ export default ({
 
     items.push(
       <>
-        <div>{t<string>('Duration')}</div>
-        <div className={'w-[200px]'}>
+        <div>{t<string>("Duration")}</div>
+        <div className={"w-[200px]"}>
           <DurationInput
             // className={'col-span-2'}
-            duration={form.interval == undefined ? undefined : dayjs.duration({ seconds: form.interval })}
-            onDurationChange={d => {
+            duration={
+              form.interval == undefined
+                ? undefined
+                : dayjs.duration({ seconds: form.interval })
+            }
+            onDurationChange={(d) => {
               setForm({
                 ...form,
                 interval: d.asSeconds(),
@@ -140,9 +154,9 @@ export default ({
 
     items.push(
       <>
-        <div>{t<string>('Checkpoint')}</div>
+        <div>{t<string>("Checkpoint")}</div>
         <Textarea
-          size={'sm'}
+          size={"sm"}
           // className={'col-span-2'}
           // label={t<string>('Checkpoint')}
           description={(
@@ -180,7 +194,7 @@ export default ({
 
     items.push(
       <>
-        <div>{t<string>('Auto retry')}</div>
+        <div>{t<string>("Auto retry")}</div>
         <div>
           <div>
             <Checkbox
@@ -194,7 +208,11 @@ export default ({
               }}
             />
             &nbsp;
-            <span className={'opacity-60 text-xs'}>{t<string>('Retry automatically when the downloading task failed.')}</span>
+            <span className={"opacity-60 text-xs"}>
+              {t<string>(
+                "Retry automatically when the downloading task failed.",
+              )}
+            </span>
           </div>
         </div>
       </>,
@@ -203,7 +221,7 @@ export default ({
     if (isAdding) {
       items.push(
         <>
-          <div>{t<string>('Allow duplicate submission')}</div>
+          <div>{t<string>("Allow duplicate submission")}</div>
           <div>
             <div>
               <Checkbox
@@ -216,7 +234,11 @@ export default ({
                 }}
               />
               &nbsp;
-              <span className={'opacity-60 text-xs'}>{t<string>('In general, it\'s not necessary to create identical tasks.')}</span>
+              <span className={"opacity-60 text-xs"}>
+                {t<string>(
+                  "In general, it's not necessary to create identical tasks.",
+                )}
+              </span>
             </div>
           </div>
         </>,
@@ -225,11 +247,7 @@ export default ({
 
     // console.log(form);
 
-    return (
-      <>
-        {items}
-      </>
-    );
+    return <>{items}</>;
   };
 
   console.log(form);
@@ -237,70 +255,83 @@ export default ({
   return (
     <>
       <Modal
-        onDestroyed={onDestroyed}
-        size={'xl'}
         defaultVisible
-        title={isAdding ? t<string>('Creating download task') : t<string>('Download task')}
-        className={'download-task-detail'}
+        className={"download-task-detail"}
+        footer={{
+          actions: ["ok", "cancel"],
+          okProps: {
+            isDisabled: !validateForm(form),
+          },
+        }}
+        size={"xl"}
+        title={
+          isAdding
+            ? t<string>("Creating download task")
+            : t<string>("Download task")
+        }
+        onDestroyed={onDestroyed}
         onOk={async () => {
           const validForm = form as Form;
+
           if (isAdding) {
             const r = await BApi.downloadTask.addDownloadTask(validForm);
+
             if (r.code) {
               throw new Error(r.message);
             }
           } else {
             const r = await BApi.downloadTask.putDownloadTask(id, validForm);
+
             if (r.code) {
               throw new Error(r.message);
             }
           }
         }}
-        footer={{
-          actions: ['ok', 'cancel'],
-          okProps: {
-            isDisabled: !validateForm(form),
-          },
-        }}
       >
-        <div className={'grid gap-2 items-center'} style={{ gridTemplateColumns: 'auto 1fr' }}>
-          <div>{t<string>('Site')}</div>
+        <div
+          className={"grid gap-2 items-center"}
+          style={{ gridTemplateColumns: "auto 1fr" }}
+        >
+          <div>{t<string>("Site")}</div>
           <div>
-            <ButtonGroup size={'sm'}>
-              {thirdPartyIds.filter(x => x.value in ThirdPartyIdTaskTypesMap).map((tpId) => {
-                const isSelected = form.thirdPartyId == tpId.value;
+            <ButtonGroup size={"sm"}>
+              {thirdPartyIds
+                .filter((x) => x.value in ThirdPartyIdTaskTypesMap)
+                .map((tpId) => {
+                  const isSelected = form.thirdPartyId == tpId.value;
 
-                return (
-                  <Button
-                    onPress={() => {
-                      if (form.thirdPartyId != tpId.value) {
-                        setForm({
-                          thirdPartyId: tpId.value,
-                        });
-                      }
-                    }}
-                    color={isSelected ? 'primary' : undefined}
-                    isDisabled={!isAdding}
-                  >
-                    <ThirdPartyIcon thirdPartyId={tpId.value} />
-                    {t<string>(tpId.label)}
-                  </Button>
-                );
-              })}
+                  return (
+                    <Button
+                      color={isSelected ? "primary" : undefined}
+                      isDisabled={!isAdding}
+                      onPress={() => {
+                        if (form.thirdPartyId != tpId.value) {
+                          setForm({
+                            thirdPartyId: tpId.value,
+                          });
+                        }
+                      }}
+                    >
+                      <ThirdPartyIcon thirdPartyId={tpId.value} />
+                      {t<string>(tpId.label)}
+                    </Button>
+                  );
+                })}
             </ButtonGroup>
           </div>
           {form.thirdPartyId && (
             <>
+              <div>{t<string>("Task type")}</div>
               <div>
-                {t<string>('Task type')}
-              </div>
-              <div>
-                <ButtonGroup size={'sm'}>
+                <ButtonGroup size={"sm"}>
                   {ThirdPartyIdTaskTypesMap[form.thirdPartyId]?.map((type) => {
                     const isSelected = form.type == type.value;
+
                     return (
                       <Button
                         key={type.value}
+                        color={isSelected ? "primary" : undefined}
+                        isDisabled={!isAdding}
                         onPress={() => {
                           if (!isSelected) {
                             setForm({
@@ -309,8 +340,6 @@ export default ({
                             });
                           }
                         }}
-                        color={isSelected ? 'primary' : undefined}
-                        isDisabled={!isAdding}
                       >
                         {type.label}
                       </Button>
