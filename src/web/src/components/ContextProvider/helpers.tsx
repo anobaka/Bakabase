@@ -2,12 +2,11 @@
 
 import type { ComponentType } from "react";
 import type { DestroyableProps } from "@/components/bakaui/types";
-
-import React from "react";
 import ReactDOM from "react-dom/client";
 
 import { uuidv4 } from "@/components/utils";
 import BakabaseContextProvider from "@/components/ContextProvider/BakabaseContextProvider";
+import { HashRouter } from "react-router-dom";
 
 export function createPortal<P extends DestroyableProps>(
   C: ComponentType<P>,
@@ -20,11 +19,10 @@ export function createPortal<P extends DestroyableProps>(
 
   const root = ReactDOM.createRoot(node);
 
-  // console.log(19282, node, props, Component);
+  console.log("Mounting", key);
 
   const unmount = () => {
     console.log("Unmounting", key);
-    // console.trace(19282);
     // Warning: Attempted to synchronously unmount a root while React was already rendering.
     // React cannot finish unmounting the root until the current render has completed, which may lead to a race condition.
     setTimeout(() => {
@@ -33,20 +31,20 @@ export function createPortal<P extends DestroyableProps>(
     }, 1);
   };
 
-  console.log("Mounting", key);
-
   root.render(
-    <BakabaseContextProvider>
-      <C
-        {...props}
-        onDestroyed={() => {
-          if (props.onDestroyed) {
-            props.onDestroyed();
-          }
-          unmount();
-        }}
-      />
-    </BakabaseContextProvider>,
+    <HashRouter>
+      <BakabaseContextProvider>
+        <C
+          {...props}
+          onDestroyed={() => {
+            if (props.onDestroyed) {
+              props.onDestroyed();
+            }
+            unmount();
+          }}
+        />
+      </BakabaseContextProvider>
+    </HashRouter>
   );
 
   return {

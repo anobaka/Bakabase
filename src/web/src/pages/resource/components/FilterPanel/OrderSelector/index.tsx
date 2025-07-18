@@ -6,7 +6,7 @@ import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdSort, MdSortByAlpha } from 'react-icons/md';
 import {
   resourceSearchSortableProperties,
   type ResourceSearchSortableProperty,
@@ -53,10 +53,7 @@ export default ({ value: propsValue, onChange, ...otherProps }: IProps) => {
               }}
               title={t<string>(y.label)}
             >
-              <CustomIcon
-                className={"text-lg"}
-                type={y.asc ? "sort-ascending" : "sort-descending"}
-              />
+              {y.asc ? <MdSortByAlpha className={'text-lg'} /> : <MdSort className={'text-lg'} />}
               {t<string>(x.label)}
             </div>
           ),

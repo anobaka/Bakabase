@@ -6814,6 +6814,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
+     * @name SearchFileSystemEntries
+     * @request GET:/file/search-fs-entries
+     */
+    searchFileSystemEntries: (
+      query?: {
+        prefix?: string;
+        /** @default true */
+        isDirectory?: boolean;
+        /**
+         * @format int32
+         * @default 20
+         */
+        maxResults?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileSystemEntryNameViewModel,
+        any
+      >({
+        path: `/file/search-fs-entries`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags File
      * @name GetIwFsInfo
      * @request GET:/file/iwfs-info
      */

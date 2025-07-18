@@ -6,7 +6,8 @@ import { useUpdate, useUpdateEffect } from "react-use";
 import { EyeInvisibleOutlined, LoadingOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdAccessTime } from "react-icons/md";
+import { MdImageNotSupported } from 'react-icons/md';
 import "./index.scss";
 import BApi from "@/sdk/BApi";
 import { MediaType } from "@/sdk/constants";
@@ -334,7 +335,7 @@ const MediaPreviewer = (props: IProps) => {
                   setStatus(PreviewerStatus.Playing);
                 }}
               >
-                <CustomIcon className={"text-3xl"} type={"timeout"} />
+                <MdAccessTime className={"text-3xl"} />
               </div>
             )}
             <div

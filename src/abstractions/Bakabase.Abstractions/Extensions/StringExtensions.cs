@@ -112,6 +112,11 @@ public static class StringExtensions
             sp = InternalOptions.UncPathPrefix + sp;
         }
 
+        if (path.StartsWith('/'))
+        {
+            sp = $"/{sp}";
+        }
+
         return sp;
     }
 

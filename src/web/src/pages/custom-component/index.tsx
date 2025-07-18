@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusCircleOutlined } from "@ant-design/icons";
+import { MdFlashlightOn, MdPlayCircle, MdSearch } from 'react-icons/md';
 
 import BApi from "@/sdk/BApi";
 import {
@@ -12,7 +13,6 @@ import {
   componentTypes,
 } from "@/sdk/constants";
 import "./index.scss";
-import CustomIcon from "@/components/CustomIcon";
 
 import type { CustomComponentDetailDialogProps } from "@/pages/custom-component/Detail";
 
@@ -21,9 +21,9 @@ import ComponentDescriptorCard from "@/pages/custom-component/components/Compone
 import { Button } from "@/components/bakaui";
 
 const ComponentTypeIcons = {
-  [ComponentType.Enhancer]: "flashlight",
-  [ComponentType.Player]: "play-circle",
-  [ComponentType.PlayableFileSelector]: "filesearch",
+  [ComponentType.Enhancer]: MdFlashlightOn,
+  [ComponentType.Player]: MdPlayCircle,
+  [ComponentType.PlayableFileSelector]: MdSearch,
 };
 
 export default () => {
@@ -81,10 +81,7 @@ export default () => {
             <div key={ct.value} className={"component-type"}>
               <div className="type-name">
                 <div className="name flex items-center gap-1">
-                  <CustomIcon
-                    size={"large"}
-                    type={ComponentTypeIcons[ct.value]}
-                  />
+                  {React.createElement(ComponentTypeIcons[ct.value], { className: 'text-xl' })}
                   {t<string>(ct.label)}
                 </div>
                 <Button

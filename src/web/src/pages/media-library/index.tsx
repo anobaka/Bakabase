@@ -1,11 +1,11 @@
 "use client";
 
 import type { Key } from "@react-types/shared";
-import type { MediaLibraryTemplate } from "../MediaLibraryTemplate/models";
+import type { MediaLibraryTemplate } from "../media-library-template/models";
 import type { components } from "@/sdk/BApi2";
 
 import { useTranslation } from "react-i18next";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { FaRegSave, FaSort } from "react-icons/fa";
 import toast from "react-hot-toast";
@@ -35,6 +35,7 @@ import {
   ColorPicker,
   Divider,
 } from "@/components/bakaui";
+import PathAutocomplete from "@/components/PathAutocomplete";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
 import { isNotEmpty } from "@/components/utils";
@@ -45,7 +46,6 @@ import {
   PropertyPool,
   SearchOperation,
 } from "@/sdk/constants";
-import colors from "@/components/bakaui/colors";
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
 
 type MediaLibrary =
@@ -71,7 +71,7 @@ const validate = (mls: Partial<MediaLibrary>[]): boolean => {
 
 export default () => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
+  const { createPortal, color } = useBakabaseContext();
   const navigate = useNavigate();
 
   const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
@@ -143,8 +143,6 @@ export default () => {
       </div>
     );
   };
-
-  // console.log(mediaLibraries);
 
   return (
     <div className={"h-full flex flex-col"}>
@@ -245,7 +243,19 @@ export default () => {
                           gap: 4,
                         }}
                       >
-                        <Input
+                        <PathAutocomplete
+                          value={p}
+                          onChange={(v) => {
+                            paths[idx] = v;
+                            // 保证无空字符串
+                            e.paths = paths.filter(Boolean);
+                            forceUpdate();
+                          }}
+                          onSelectionChange={(selectedPath) => {
+                            paths[idx] = selectedPath;
+                            e.paths = paths.filter(Boolean);
+                            forceUpdate();
+                          }}
                           endContent={
                             <div className="flex items-center gap-1">
                               <Button
@@ -289,14 +299,8 @@ export default () => {
                             "MediaLibrary.PathPlaceholder",
                           )}
                           size="sm"
-                          value={p}
                           variant="underlined"
-                          onValueChange={(v) => {
-                            paths[idx] = v;
-                            // 保证无空字符串
-                            e.paths = paths.filter(Boolean);
-                            forceUpdate();
-                          }}
+                          pathType="folder"
                         />
                       </div>
                     ))}
@@ -461,14 +465,13 @@ export default () => {
           >
             {mediaLibraries.map((ml, i) => {
               const template = templates.find((t) => t.id == ml.templateId);
-              const currentColor = ml.color ?? colors.color;
 
               return (
                 <>
                   <div className="flex items-center gap-1">
-                    <div style={{ color: currentColor }}>{ml.name}</div>
+                    <div style={{ color: ml.color }}>{ml.name}</div>
                     <ColorPicker
-                      color={currentColor}
+                      color={ml.color}
                       onChange={async (color) => {
                         const strColor = buildColorValueString(color);
 

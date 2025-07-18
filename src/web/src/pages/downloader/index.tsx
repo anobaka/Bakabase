@@ -39,7 +39,7 @@ import {
   Modal,
   Progress,
 } from "@/components/bakaui";
-import CustomIcon from "@/components/CustomIcon";
+import { MdPlayCircle, MdAccessTime, MdDelete } from "react-icons/md";
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
 import {
@@ -222,7 +222,7 @@ export default () => {
           }}
         >
           <div>
-            <CustomIcon type={"play-circle"} />
+            <MdPlayCircle />
             {moreThanOne && (
               <>
                 {t<string>("Bulk")}
@@ -238,7 +238,7 @@ export default () => {
           }
         >
           <div>
-            <CustomIcon type={"timeout"} />
+            <MdAccessTime />
             {moreThanOne && (
               <>
                 {t<string>("Bulk")}
@@ -264,7 +264,7 @@ export default () => {
           }}
         >
           <div className={"danger"}>
-            <CustomIcon type={"delete"} />
+            <MdDelete />
             {moreThanOne && (
               <>
                 {t<string>("Bulk")}

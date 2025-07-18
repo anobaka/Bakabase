@@ -13,7 +13,7 @@ import React from "react";
 
 import envConfig from "@/config/env";
 import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
-import CustomIcon from "@/components/CustomIcon";
+import { MdAttachFile } from 'react-icons/md';
 import { Button } from "@/components/bakaui";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -62,7 +62,7 @@ export default ({
                   }}
                   title={v}
                   unloader={
-                    <CustomIcon className={"text-2xl"} type={"image-slash"} />
+                    <MdAttachFile className={"text-2xl"} />
                   }
                 />
                 <Button

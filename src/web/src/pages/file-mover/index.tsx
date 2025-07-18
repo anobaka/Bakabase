@@ -21,7 +21,7 @@ import {
 import { toast } from "@/components/bakaui";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import "./index.scss";
-import CustomIcon from "@/components/CustomIcon";
+import { MdFolder } from 'react-icons/md';
 import AnimatedArrow from "@/components/AnimatedArrow";
 import BApi from "@/sdk/BApi";
 import { useFileMovingProgressesStore } from "@/models/fileMovingProgresses";
@@ -539,9 +539,8 @@ export default () => {
                           progress.percentage < 100 &&
                           `${progress.percentage}%`}
                         {progress.percentage == 100 && (
-                          <CustomIcon
+                          <MdFolder
                             style={{ color: "var(--theme-color-success)" }}
-                            type={"check-circle"}
                           />
                         )}
                       </div>

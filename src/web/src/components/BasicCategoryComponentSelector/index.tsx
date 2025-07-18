@@ -14,7 +14,7 @@ import {
   ComponentDescriptorAdditionalItem,
   ComponentDescriptorType,
 } from "@/sdk/constants";
-import CustomIcon from "@/components/CustomIcon";
+import { MdAddCircle } from "react-icons/md";
 import ComponentDetail from "@/pages/custom-component/Detail";
 
 export default ({
@@ -117,7 +117,7 @@ export default ({
           });
         }}
       >
-        <CustomIcon type={"plus-circle"} />
+        <MdAddCircle />
         {t<string>("Add")}
       </div>
     </div>

@@ -18,7 +18,8 @@ import AddMediaLibraryInBulkDialog from "./AddMediaLibraryInBulkDialog";
 import DisplayNameTemplateEditorDialog from "./DisplayNameTemplateEditorDialog";
 
 import { toast } from "@/components/bakaui";
-import CustomIcon from "@/components/CustomIcon";
+import { MdWarning } from "react-icons/md";
+import { MdDragIndicator } from 'react-icons/md';
 import {
   ComponentType,
   componentTypes,
@@ -759,7 +760,7 @@ export default ({
                   'you can click "sync button" at top-right of current page to load your resources immediately.',
               )}
             >
-              <CustomIcon type="warning-circle" />
+              <MdWarning />
             </Tooltip>
             <Dropdown placement={"bottom-start"}>
               <DropdownTrigger>

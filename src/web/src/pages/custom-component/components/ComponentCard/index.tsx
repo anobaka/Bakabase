@@ -8,13 +8,13 @@ import { Dialog } from "@alifd/next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import CustomIcon from "@/components/CustomIcon";
 import { ComponentDescriptorType, ComponentType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import ComponentDetail from "@/pages/custom-component/Detail";
 import { extractEnhancerTargetDescription } from "@/components/utils";
 import ClickableIcon from "@/components/ClickableIcon";
 import SimpleLabel from "@/components/SimpleLabel";
+import { MdCheckCircle } from 'react-icons/md';
 
 interface DescriptorCardProps extends DOMAttributes<unknown> {
   descriptor: BakabaseInsideWorldModelsModelsDtosComponentDescriptor;
@@ -110,11 +110,7 @@ export default (props: DescriptorCardProps) => {
       ref={domRef}
     >
       {selected && (
-        <CustomIcon
-          className={"selected-icon"}
-          size={"large"}
-          type={"check-circle"}
-        />
+        <MdCheckCircle className={'selected-icon text-xl'} />
       )}
       {descriptor.type == ComponentDescriptorType.Instance && (
         <div className={"top-right-operations"}>

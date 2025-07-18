@@ -15,7 +15,7 @@ import i18n from "i18next";
 import "./index.scss";
 
 import { uuidv4 } from "@/components/utils";
-import CustomIcon from "@/components/CustomIcon";
+import { MdHelp } from "react-icons/md";
 import { Tooltip } from "@/components/bakaui";
 
 function TitleFieldTemplate(props: TitleFieldProps) {
@@ -102,7 +102,7 @@ const buildField = (
         {i18n.t<string>(fieldProps.name)}
         {bRjsfProps.tip && (
           <Tooltip content={bRjsfProps.tip} style={{ maxWidth: "unset" }}>
-            <CustomIcon type={"question-circle"} />
+            <MdHelp />
           </Tooltip>
         )}
       </div>

@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { UpdaterStatus } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import { bytesToSize } from "@/components/utils";
-import CustomIcon from "@/components/CustomIcon";
+import { MdInfo } from 'react-icons/md';
 import { useAppUpdaterStateStore } from "@/models/appUpdaterState";
 import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
 import DependentComponentIds from "@/core/models/Constants/DependentComponentIds";
@@ -292,10 +292,7 @@ export default ({ appInfo }) => {
                             content={t<string>(c.tip)}
                             placement={"right"}
                           >
-                            <CustomIcon
-                              className={"text-base"}
-                              type={"question-circle"}
-                            />
+                            <MdInfo className={"text-base"} />
                           </Tooltip>
                         </>
                       )}

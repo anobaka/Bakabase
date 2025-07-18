@@ -7,7 +7,7 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { toast } from "@/components/bakaui";
-import CustomIcon from "@/components/CustomIcon";
+import { MdSettings } from 'react-icons/md';
 import {
   CloseBehavior,
   CookieValidatorTarget,
@@ -251,10 +251,7 @@ export default ({
                             content={t<string>(c.tip)}
                             placement={"right"}
                           >
-                            <CustomIcon
-                              className={"text-base"}
-                              type={"question-circle"}
-                            />
+                            <MdSettings className={"text-base"} />
                           </Tooltip>
                         </>
                       )}

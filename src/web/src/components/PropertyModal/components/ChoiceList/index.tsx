@@ -23,7 +23,7 @@ import { AutoSizer, List } from "react-virtualized";
 
 import { SortableChoice } from "./components/SortableChoice";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdSort, MdAddCircle, MdDelete } from "react-icons/md";
 import { uuidv4 } from "@/components/utils";
 import { Button, Chip, Popover, Textarea } from "@/components/bakaui";
 
@@ -142,7 +142,7 @@ export default function ChoiceList({
             setChoices([...choices]);
           }}
         >
-          <CustomIcon className={"text-medium"} type={"sorting"} />
+          <MdSort className={"text-medium"} />
           {t<string>("Sort by alphabet")}
         </Button>
       </div>
@@ -221,7 +221,7 @@ export default function ChoiceList({
             addChoice();
           }}
         >
-          <CustomIcon className={"text-medium"} type={"plus-circle"} />
+          <MdAddCircle className={"text-medium"} />
           {t<string>("Add a choice")}
         </Button>
         <Popover

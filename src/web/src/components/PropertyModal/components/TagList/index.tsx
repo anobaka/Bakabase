@@ -22,7 +22,7 @@ import { AutoSizer, List } from "react-virtualized";
 
 import { SortableTag } from "./components/SortableTag";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdSort, MdAddCircle, MdDelete } from "react-icons/md";
 import { uuidv4 } from "@/components/utils";
 import { Button, Chip, Popover, Textarea } from "@/components/bakaui";
 
@@ -137,7 +137,7 @@ export default function TagList({
             setTags([...tags]);
           }}
         >
-          <CustomIcon className={"text-medium"} type={"sorting"} />
+          <MdSort className={"text-medium"} />
           {t<string>("Sort by alphabet")}
         </Button>
       </div>
@@ -221,7 +221,7 @@ export default function TagList({
             }, 100);
           }}
         >
-          <CustomIcon className={"text-medium"} type={"plus-circle"} />
+          <MdAddCircle className={"text-medium"} />
           {t<string>("Add a choice")}
         </Button>
         <Popover

@@ -19,7 +19,7 @@ import { AutoTextSize } from "auto-text-size";
 import { TbPackageExport } from "react-icons/tb";
 
 import { toast } from "@/components/bakaui";
-import CustomIcon from "@/components/CustomIcon";
+import { MdDelete, MdAddCircle, MdSearch, MdPlaylistAdd, MdDragIndicator } from "react-icons/md";
 import DragHandle from "@/components/DragHandle";
 import { ResourceMatcherValueType, ResourceProperty } from "@/sdk/constants";
 import { buildLogger } from "@/components/utils";
@@ -281,7 +281,7 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                     renderAddRootPathInBulkModal();
                   }}
                 >
-                  <CustomIcon className={"text-base"} type="playlist_add" />
+                  <MdPlaylistAdd className={"text-base"} />
                   {t<string>("Add root paths in bulk")}
                 </Menu.Item>
               </Menu>
@@ -317,7 +317,7 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                     });
                   }}
                 >
-                  <CustomIcon className={"text-base"} type="flashlight" />
+                  <MdSearch className={"text-base"} />
                   {t<string>("Delete all enhancement records")}
                 </Menu.Item>
                 <Menu.Item
@@ -340,7 +340,7 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                     });
                   }}
                 >
-                  <CustomIcon className={"text-base"} type="delete" />
+                  <MdDelete className={"text-base"} />
                   {t<string>("Remove")}
                 </Menu.Item>
               </Menu>

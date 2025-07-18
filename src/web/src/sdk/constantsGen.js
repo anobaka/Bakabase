@@ -1,7 +1,12 @@
-const path = require('path');
-const http = require('http');
-const https = require('https');
-const fs = require('fs');
+import path from 'path';
+import http from 'http';
+import https from 'https';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // This method will be refactoring.
 function generateSdk(swaggerJsonUrl, outputDir) {
@@ -20,5 +25,5 @@ function generateSdk(swaggerJsonUrl, outputDir) {
   });
 }
 
-let host = 'http://127.0.0.1:5000';
+let host = 'http://127.0.0.1:8080';
 generateSdk(`${host}/internal-doc/swagger/v1/swagger.json`, __dirname);

@@ -6,10 +6,10 @@ import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ResourceProperty } from "@/sdk/constants";
-import CustomIcon from "@/components/CustomIcon";
 import { Button, Chip, Modal } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { convertToPathConfigurationDtoFromPscValue } from "@/components/PathSegmentsConfiguration/helpers";
+import { MdCheckCircle } from 'react-icons/md';
 
 type PropertyKey = {
   id: number;
@@ -200,10 +200,7 @@ export default ({ isDisabled, value }: Props) => {
                       </div>
                       <div className="grow flex flex-col gap-1">
                         <div className="flex items-center gap-1">
-                          <CustomIcon
-                            className={"text-base"}
-                            type={isDirectory ? "folder" : "file"}
-                          />
+                          <MdCheckCircle className={'text-base'} />
                           {segments}
                         </div>
                         {globalMatchesElements.length > 0 && (

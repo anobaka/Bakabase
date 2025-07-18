@@ -145,7 +145,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Media library (old)",
+        name: "Media library",
         path: "/category",
         isDeprecated: true,
         component: Category, 

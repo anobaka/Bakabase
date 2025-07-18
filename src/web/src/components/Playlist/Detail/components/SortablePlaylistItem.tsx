@@ -4,17 +4,17 @@ import { SortableElement } from "react-sortable-hoc";
 import { Button } from "@alifd/next";
 import React from "react";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdVideoLibrary, MdVideoFile, MdImage, MdAudiotrack, MdDragIndicator } from "react-icons/md";
 import { PlaylistItemType } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
 import ClickableIcon from "@/components/ClickableIcon";
 import BApi from "@/sdk/BApi";
 
 const ItemTypeIcon = {
-  [PlaylistItemType.Resource]: "detail",
-  [PlaylistItemType.Video]: "video",
-  [PlaylistItemType.Image]: "image",
-  [PlaylistItemType.Audio]: "audio",
+  [PlaylistItemType.Resource]: MdVideoLibrary,
+  [PlaylistItemType.Video]: MdVideoFile,
+  [PlaylistItemType.Image]: MdImage,
+  [PlaylistItemType.Audio]: MdAudiotrack,
 };
 
 const renderDuration = (item) => {
@@ -55,7 +55,7 @@ export default SortableElement(({ item, resource, onRemove }) => {
       <div className="resource-name">
         <DragHandle />
         <div className="type">
-          <CustomIcon size={"small"} type={ItemTypeIcon[item.type]} />
+          {React.createElement(ItemTypeIcon[item.type], { size: "small" })}
         </div>
         <div className="name">
           <Button

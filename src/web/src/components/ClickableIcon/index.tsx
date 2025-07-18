@@ -3,7 +3,7 @@ import { Icon } from "@alifd/next";
 
 import styles from "./index.module.scss";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdEdit, MdDelete, MdHelp, MdCancel, MdDragIndicator, MdTimer, MdImageNotSupported } from 'react-icons/md';
 
 interface IProps
   extends Omit<React.HTMLProps<HTMLSpanElement>, "ref" | "size"> {
@@ -27,8 +27,20 @@ const ClickableIcon = forwardRef<any, IProps>(
       );
     }
 
+    const iconMap = {
+      'edit-square': MdEdit,
+      'delete': MdDelete,
+      'question-circle': MdHelp,
+      'close-circle': MdCancel,
+      'drag': MdDragIndicator,
+      'timeout': MdTimer,
+      'image-slash': MdImageNotSupported,
+    };
+
+    const IconComponent = iconMap[otherProps.type] || MdHelp;
+
     return (
-      <CustomIcon
+      <IconComponent
         ref={ref}
         className={`${styles.clickableIcon} ${styles[colorType]} ${className}`}
         {...otherProps}

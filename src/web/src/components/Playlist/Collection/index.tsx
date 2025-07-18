@@ -10,7 +10,8 @@ import styles from "./index.module.scss";
 
 import { toast } from "@/components/bakaui";
 import PlaylistDetail from "@/components/Playlist/Detail/index";
-import CustomIcon from "@/components/CustomIcon";
+import { MdPlaylistPlay } from 'react-icons/md';
+import { MdAddCircle, MdPlayCircle, MdDelete } from "react-icons/md";
 import { PlaylistItemType } from "@/sdk/constants";
 import TimeRanger from "@/components/TimeRanger";
 import BApi from "@/sdk/BApi";
@@ -206,7 +207,7 @@ export default ({ defaultNewItem, className }: IProps) => {
               addNewItem(newItem, playlist);
             }}
           >
-            <CustomIcon size={"small"} type={"plus-circle"} />
+            <MdAddCircle size={"small"} />
             {t<string>(added ? "Added" : "Add it here")}
           </Button>
         );
@@ -279,7 +280,7 @@ export default ({ defaultNewItem, className }: IProps) => {
                         });
                     }}
                   >
-                    <CustomIcon type={'play-circle'} size={'small'} />
+                    <MdPlayCircle size={'small'} />
                     {t<string>('Play')}
                   </Button>
                 )}
@@ -300,7 +301,7 @@ export default ({ defaultNewItem, className }: IProps) => {
                     });
                   }}
                 >
-                  <CustomIcon type={'delete'} size={'small'} />
+                  <MdDelete size={'small'} />
                   {t<string>('Delete')}
                 </Button>
               </div>

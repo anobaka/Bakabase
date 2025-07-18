@@ -16,8 +16,8 @@ import { useUpdateEffect } from "react-use";
 
 import BRjsf from "@/components/BRjsf";
 import { reservedProperties, ReservedProperty } from "@/sdk/constants";
-import CustomIcon from "@/components/CustomIcon";
 import { findCapturingGroupsInRegex } from "@/components/utils";
+import { MdHelp } from 'react-icons/md';
 
 import "./index.scss";
 
@@ -243,8 +243,8 @@ export default React.forwardRef((bRjsfProps: BRjsfProps, ref) => {
               <Table.Column
                 cell={(_, i, r) => {
                   return (
-                    <CustomIcon
-                      type={"delete"}
+                    <MdDelete
+                      className={'text-base cursor-pointer'}
                       onClick={() => {
                         value.splice(i, 1);
                         setValue([...value]);

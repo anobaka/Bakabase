@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import i18n from "i18next";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdFolder, MdInsertDriveFile } from 'react-icons/md';
 import "./index.scss";
 import { IconType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
@@ -112,13 +112,12 @@ export default ({ path, type, size = 14, disableCache }: Props) => {
       {iconImgData ? (
         <img alt={""} src={iconImgData} />
       ) : (
-        <CustomIcon
+        <MdInsertDriveFile
           style={{
             color: "#ccc",
             fontSize: size,
           }}
           title={i18n.t<string>("Unknown file type")}
-          type={"question-circle"}
         />
       )}
     </div>

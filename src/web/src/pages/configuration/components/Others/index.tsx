@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { AiOutlineNumber } from "react-icons/ai";
 
-import CustomIcon from "@/components/CustomIcon";
+import { MdHelp } from "react-icons/md";
 import BApi from "@/sdk/BApi";
 import {
   Button,
@@ -328,10 +328,7 @@ export default ({
                             content={t<string>(c.tip)}
                             placement={"right"}
                           >
-                            <CustomIcon
-                              className={"text-base"}
-                              type={"question-circle"}
-                            />
+                            <MdHelp className={"text-base"} />
                           </Tooltip>
                         </>
                       )}

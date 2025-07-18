@@ -7,7 +7,7 @@ import type { BakabaseInfrastructuresComponentsConfigurationsAppAppOptions } fro
 import { HeroUIProvider, Spinner, ToastProvider } from "@heroui/react";
 import Clarity from "@microsoft/clarity";
 import { ConfigProvider, theme } from "antd";
-import { useContext, createContext, useEffect, useRef, useState } from "react";
+import { useContext, createContext, useEffect, useRef, useState, useMemo } from "react";
 import { useHref, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 
@@ -80,6 +80,9 @@ const setStoredTheme = (theme: UiTheme): void => {
 };
 
 const changeTheme = (theme: UiTheme) => {
+
+  console.log(theme, document)
+
   // Check if we're in browser environment
   if (typeof document === "undefined") {
     return;
@@ -98,21 +101,20 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [appOptions, setAppOptions] =
     useState<BakabaseInfrastructuresComponentsConfigurationsAppAppOptions>();
 
-  const currentTheme = getUiTheme(
+  const currentTheme = useRef(getUiTheme(
     appOptions ? appOptions.uiTheme : getStoredTheme(),
-  );
+  ));
+  const isDarkMode = useMemo(() => currentTheme.current === UiTheme.Dark, [currentTheme]);
 
   const appOptionsStore = useAppOptionsStore();
-  const isDarkMode = currentTheme === UiTheme.Dark;
   const isDebugging = false;
   const firstTimeGotAppOptionsRef = useRef(false);
 
-  // HeroUI routing hooks
   const navigate = useNavigate();
   const href = useHref;
 
   useEffect(() => {
-    changeTheme(currentTheme);
+    changeTheme(currentTheme.current);
 
     BApi.options.getAppOptions().then((r) => {
       setAppOptions(r.data);
@@ -134,6 +136,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     if (appOptions) {
+      console.log("appOptions", appOptions, firstTimeGotAppOptionsRef.current)
       if (!firstTimeGotAppOptionsRef.current) {
         firstTimeGotAppOptionsRef.current = true;
         Clarity.setTag("appVersion", appOptions.version);
@@ -143,8 +146,11 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       // 如果有保存的主题，使用保存的主题；否则使用appOptions中的主题
       const uiTheme = getUiTheme(appOptions.uiTheme);
 
-      if (currentTheme != uiTheme) {
-        changeTheme(currentTheme);
+      console.log(uiTheme, currentTheme.current)
+
+      if (currentTheme.current != uiTheme) {
+        currentTheme.current = uiTheme;
+        changeTheme(uiTheme);
         // 保存主题到localStorage
         setStoredTheme(uiTheme);
         console.log("theme changed to:", uiTheme);
@@ -154,7 +160,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   console.log(
     "current theme",
-    UiTheme[currentTheme],
+    UiTheme[currentTheme.current],
     "is dark mode",
     isDarkMode,
   );
@@ -197,3 +203,4 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 };
 
 export default BakabaseContextProvider;
+

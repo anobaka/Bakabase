@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
+import { HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
 
 import { toast } from "../bakaui";
 
-import { buildLogger, uuidv4 } from "@/components/utils";
+import { buildLogger } from "@/components/utils";
+import delay from "delay";
 import envConfig from "@/config/env";
+import { v4 as uuidv4 } from "uuid";
 
 // 导入所有需要的 zustand store
 import { useBackgroundTasksStore } from "@/models/backgroundTasks";
@@ -23,20 +25,17 @@ import { optionsStores } from "@/models/options";
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
 export const UIHubConnection = () => {
-  const log = buildLogger(`UIHubConnection:${uuidv4()}`);
-
   // 只初始化一次
   const connRef = useRef<any>(null);
+  const logRef = useRef(buildLogger(`UIHubConnection:${uuidv4()}`));
+  const log = logRef.current;
+  const isRunningRef = useRef(true);
 
   useEffect(() => {
     const conn = new HubConnectionBuilder()
       .withUrl(hubEndpoint)
-      .configureLogging(LogLevel.Debug)
+      .configureLogging(LogLevel.Information)
       .build();
-
-    conn.onclose(async () => {
-      await start();
-    });
 
     // 事件绑定
     conn.on("GetData", (key, data) => {
@@ -69,9 +68,28 @@ export const UIHubConnection = () => {
       }
     });
 
-    conn.on("GetIncrementalData", (key, data) => {
+    conn.on('GetIncrementalData', (key, data) => {
       log("GetIncrementalData", key, data);
-      // 你可以根据需要补充增量更新逻辑
+      switch (key) {
+        case 'BackgroundTask':
+          useBackgroundTasksStore.getState().updateTask(data);
+          break;
+        case 'DownloadTask':
+          useDownloadTasksStore.getState().updateTask(data);
+          break;
+        case 'DependentComponentContext':
+          useDependentComponentContextsStore.getState().updateContext(data);
+          break;
+        case 'FileMovingProgress':
+          useFileMovingProgressesStore.getState().updateProgress(data);
+          break;
+        case 'BTask':
+          useBTasksStore.getState().updateTask(data);
+          break;
+        case 'PostParserTask':
+          usePostParserTasksStore.getState().updateTask(data);
+          break;
+      }
     });
 
     conn.on("DeleteData", (key, id) => {
@@ -112,27 +130,44 @@ export const UIHubConnection = () => {
     });
 
     async function onConnected() {
+      log('connected');
       await conn.send("GetInitialData");
     }
+    
+    // 监听连接关闭事件
+    conn.onclose(async () => {
+      log('connection closed, attempting to reconnect...');
+    });
 
-    async function start() {
-      try {
-        await conn.start();
-        await onConnected();
-      } catch (err) {
-        log(err);
-        setTimeout(() => start(), 5000);
+    // 后台守护循环 - 每5秒检查一次连接状态
+    const guardLoop = async () => {
+      while (isRunningRef.current) {
+        try {
+          if (conn.state === HubConnectionState.Disconnected) {
+            log('connection disconnected, attempting to connect...');
+            try {
+              await conn.start();
+              await onConnected();
+            } catch (err) {
+              log('start failed:', err);
+            }
+          }
+        } catch (err) {
+          log('guard loop error:', err);
+        } finally {
+          await delay(5000);
+        }
       }
-    }
+    };
+    guardLoop();
 
-    start();
     connRef.current = conn;
 
     return () => {
+      isRunningRef.current = false;
       conn.stop();
     };
-    // eslint-disable-next-line
   }, []);
 
-  return null; // 这是一个无 UI 的连接管理组件
+  return null;
 };

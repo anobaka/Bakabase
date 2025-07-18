@@ -18,7 +18,8 @@ import MediaPreviewer from "@/components/MediaPreviewer";
 import "./index.scss";
 import { useAppContextStore } from "@/models/appContext";
 import { CoverFit, ResourceCacheType } from "@/sdk/constants";
-import CustomIcon from "@/components/CustomIcon";
+import { MdBrokenImage } from "react-icons/md";
+import { MdImageNotSupported } from 'react-icons/md';
 import { Carousel, Tooltip } from "@/components/bakaui";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
@@ -223,7 +224,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     loader={<LoadingOutlined className={"text-2xl"} />}
                     src={url}
                     unloader={
-                      <CustomIcon className={"text-2xl"} type={"image-slash"} />
+                      <MdBrokenImage className={"text-2xl"} />
                     }
                     onError={(e) => {
                       log(e);
@@ -360,7 +361,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                       maxHeight: tooltipHeight,
                     }}
                     unloader={(
-                      <CustomIcon type={'image-slash'} className={'text-2xl'} />
+                      <MdBrokenImage className={'text-2xl'} />
                     )}
                   />
                 </div>

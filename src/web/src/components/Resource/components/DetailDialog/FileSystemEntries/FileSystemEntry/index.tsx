@@ -8,7 +8,7 @@ import React from "react";
 import { toast } from "@/components/bakaui";
 import { IwFsType } from "@/sdk/constants";
 import envConfig from "@/config/env";
-import CustomIcon from "@/components/CustomIcon";
+import { MdFolder, MdInsertDriveFile } from 'react-icons/md';
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 
 type Props = {
@@ -35,7 +35,7 @@ export default ({ entry, onEnterDirectory }: Props) => {
       comp = <img src={buildImageUrl(entry.path)} />;
       break;
     case IwFsType.Invalid:
-      comp = <CustomIcon type={"close-circle"} />;
+      comp = <MdInsertDriveFile />;
       break;
     case IwFsType.CompressedFileEntry:
     case IwFsType.CompressedFilePart:

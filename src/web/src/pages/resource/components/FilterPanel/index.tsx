@@ -20,6 +20,7 @@ import { AiOutlineSearch } from "react-icons/ai";
 import styles from "./index.module.scss";
 import FilterGroupsPanel from "./FilterGroupsPanel";
 import OrderSelector from "./OrderSelector";
+import FilterPortal from "./FilterPortal";
 
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/models/options";
@@ -36,7 +37,7 @@ import {
   Spinner,
   Tooltip,
 } from "@/components/bakaui";
-import CustomIcon from "@/components/CustomIcon";
+import { MdPlaylistPlay } from "react-icons/md";
 import SavedSearches from "@/pages/resource/components/FilterPanel/SavedSearches";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
@@ -106,11 +107,6 @@ export default ({
   );
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const [filterGroupPortal, setFilterGroupPortal] =
-    useState<React.ReactNode>(null);
-
-  console.log("filterGroupPortal", filterGroupPortal);
-
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || defaultSearchForm());
   }, [propsSearchForm]);
@@ -148,7 +144,7 @@ export default ({
   console.log("resource page filter panel rerender");
 
   return (
-    <div className={`${styles.filterPanel}`}>
+    <div className={`${styles.filterPanel} flex flex-col gap-1`}>
       <div className={"flex items-center gap-4"}>
         <Autocomplete
           isClearable
@@ -211,7 +207,14 @@ export default ({
             </AutocompleteItem>
           )}
         </Autocomplete>
-        {filterGroupPortal}
+        <FilterPortal
+          searchForm={searchForm}
+          onChange={() => {
+            setSearchForm({
+              ...searchForm,
+            });
+          }}
+        />{" "}
         <SavedSearches
           ref={savedSearchesRef}
           onSelect={(nf) => {
@@ -219,23 +222,17 @@ export default ({
           }}
         />
       </div>
-      <FilterGroupsPanel
-        group={searchForm.group}
-        renderToParent={setFilterGroupPortal}
-        tags={searchForm.tags}
-        onChange={(v) => {
-          setSearchForm({
-            ...searchForm,
-            group: v,
-          });
-        }}
-        onTagsChange={(tags) => {
-          setSearchForm({
-            ...searchForm,
-            tags,
-          });
-        }}
-      />
+      {searchForm.group && (
+        <FilterGroupsPanel
+          group={searchForm.group}
+          onChange={(v) => {
+            setSearchForm({
+              ...searchForm,
+              group: v,
+            });
+          }}
+        />
+      )}
       {searchForm.tags && searchForm.tags.length > 0 && (
         <div className={"flex flex-wrap gap-1 mb-2"}>
           {searchForm.tags.map((tag, i) => {
@@ -427,7 +424,7 @@ export default ({
                 color={"default"}
                 size={"sm"}
                 startContent={
-                  <CustomIcon className={"text-xl"} type={"playlistplay"} />
+                  <MdPlaylistPlay className={"text-xl"} />
                 }
               >
                 {t<string>("Playlist")}

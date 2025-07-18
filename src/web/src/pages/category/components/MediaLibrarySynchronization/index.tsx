@@ -10,7 +10,7 @@ import SynchronizationConfirmModal from "../SynchronizationConfirmModal";
 
 import { BackgroundTaskStatus, BTaskStatus } from "@/sdk/constants";
 import "./index.scss";
-import CustomIcon from "@/components/CustomIcon";
+import { MdSync } from 'react-icons/md';
 import { useBTasksStore } from "@/models/bTasks";
 import { Button, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -92,16 +92,13 @@ export default ({ onComplete }: Props) => {
                   <div className={"failed"}>
                     {t<string>("Failed")}
                     &nbsp;
-                    <CustomIcon
-                      className={"text-base"}
-                      type={"question-circle"}
-                    />
+                    <MdSync className={"text-base"} />
                   </div>
                 </Tooltip>
               )}
               {isComplete && (
                 <div className={"complete"}>
-                  <CustomIcon className={"text-base"} type={"check-circle"} />
+                  <MdSync className={"text-base"} />
                   &nbsp;
                   {t<string>("Complete")}
                 </div>

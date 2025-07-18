@@ -11,8 +11,8 @@ export interface IconProps extends React.ComponentPropsWithRef<any> {
 const Icon = forwardRef(({ type, ...otherProps }: IconProps, ref) => {
   const iconRef = useRef(
     lazy(() =>
-      import(`@ant-design/icons/es/icons/${type}.js`).catch(
-        (err) => import("@ant-design/icons/es/icons/WarningOutlined.js"),
+      import(/* @vite-ignore */ `@ant-design/icons/es/icons/${type}.js`).catch(
+        (err) => import(/* @vite-ignore */ "@ant-design/icons/es/icons/WarningOutlined.js"),
       ),
     ),
   );

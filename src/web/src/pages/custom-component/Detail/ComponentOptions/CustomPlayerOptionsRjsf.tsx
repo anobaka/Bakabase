@@ -9,7 +9,7 @@ import { useUpdateEffect } from "react-use";
 
 import BRjsf from "@/components/BRjsf";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
-import CustomIcon from "@/components/CustomIcon";
+import { MdPlayCircle } from 'react-icons/md';
 
 const CommandTemplatePlaceholder = i18n.t<string>(
   "Default is `{0}`. {0} will be replaced by filename",
@@ -129,7 +129,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                           triggerType={'hover'}
                           align={'t'}
                           style={{ maxWidth: 'unset' }}
-                          trigger={<CustomIcon type={'question-circle'} />}
+                          trigger={<MdPlayCircle />}
                         >
                           {commandTemplateTip}
                         </Balloon.Tooltip>
@@ -167,7 +167,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                             setValue([...value]);
                           }}
                         >
-                          <CustomIcon type={'delete'} />
+                          <MdPlayCircle />
                         </Button>
                       );
                     }}

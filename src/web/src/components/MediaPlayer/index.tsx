@@ -11,7 +11,7 @@ import Queue from "queue";
 
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import { IconType, IwFsType, MediaType } from "@/sdk/constants";
-import CustomIcon from "@/components/CustomIcon";
+import { MdInventory, MdPlayCircle, MdPause, MdStop } from "react-icons/md";
 import {
   buildLogger,
   createPortalOfComponent,
@@ -527,7 +527,7 @@ const MediaPlayer = (props: IProps) => {
           {mainPath}
           {subPath && (
             <>
-              <CustomIcon size={"small"} type={"package"} />
+              <MdInventory size={"small"} />
               {subPath}
             </>
           )}
