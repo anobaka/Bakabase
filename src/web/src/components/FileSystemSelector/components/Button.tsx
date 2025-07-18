@@ -46,6 +46,9 @@ export default ({
 
   return (
     <Button
+      color='primary'
+      variant="light"
+      size='sm'
       {...buttonProps}
       onPress={() => {
         createPortal(FileSystemSelectorModal, {

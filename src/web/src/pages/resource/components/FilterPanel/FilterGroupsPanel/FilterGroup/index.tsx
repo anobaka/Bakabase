@@ -46,7 +46,7 @@ const FilterGroup = ({
     React.useState<ResourceSearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
 
-  useEffect(() => {}, []);
+  useEffect(() => { }, []);
 
   const changeGroup = useCallback(
     (newGroup: ResourceSearchFilterGroup) => {
@@ -179,52 +179,54 @@ const FilterGroup = ({
           </div>
         )}
         {allElements}
-        <Popover
-          showArrow
-          placement={"bottom"}
-          style={{ zIndex: 10 }}
-          trigger={
-            <Button isIconOnly size={"sm"}>
-              <TbFilterPlus className={"text-lg"} />
-            </Button>
-          }
-        >
-          <div className={"flex items-center gap-2"}>
-            <Button
-              size={"sm"}
-              onPress={() => {
-                changeGroup({
-                  ...groupRef.current,
-                  filters: [
-                    ...(groupRef.current.filters || []),
-                    { disabled: false },
-                  ],
-                });
-              }}
-            >
-              <FilterOutlined className={"text-base"} />
-              {t<string>("Filter")}
-            </Button>
-            <Button
-              size={"sm"}
-              onPress={() => {
-                changeGroup({
-                  ...groupRef.current,
-                  groups: [
-                    ...(groupRef.current.groups || []),
-                    {
-                      combinator: GroupCombinator.And,
-                      disabled: false,
-                    },
-                  ],
-                });
-              }}
-            >
-              <AppstoreOutlined className={"text-base"} />
-              {t<string>("Filter group")}
-            </Button>
-          </div>
-        </Popover>
+        {!isRoot && (
+          <Popover
+            showArrow
+            placement={"bottom"}
+            style={{ zIndex: 10 }}
+            trigger={
+              <Button isIconOnly size={"sm"}>
+                <TbFilterPlus className={"text-lg"} />
+              </Button>
+            }
+          >
+            <div className={"flex items-center gap-2"}>
+              <Button
+                size={"sm"}
+                onPress={() => {
+                  changeGroup({
+                    ...groupRef.current,
+                    filters: [
+                      ...(groupRef.current.filters || []),
+                      { disabled: false },
+                    ],
+                  });
+                }}
+              >
+                <FilterOutlined className={"text-base"} />
+                {t<string>("Filter")}
+              </Button>
+              <Button
+                size={"sm"}
+                onPress={() => {
+                  changeGroup({
+                    ...groupRef.current,
+                    groups: [
+                      ...(groupRef.current.groups || []),
+                      {
+                        combinator: GroupCombinator.And,
+                        disabled: false,
+                      },
+                    ],
+                  });
+                }}
+              >
+                <AppstoreOutlined className={"text-base"} />
+                {t<string>("Filter group")}
+              </Button>
+            </div>
+          </Popover>
+        )}
       </div>
     );
   };

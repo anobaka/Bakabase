@@ -8,6 +8,8 @@
 /* ===== reactour 覆盖 ===== */
 @import './global.reactour.overrides.css';
 
+@import '@alifd/theme-design-pro/dist/next.var.css';
+
 @import "tailwindcss";
 
 @config "../../tailwind.config.js";

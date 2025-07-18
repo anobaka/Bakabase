@@ -141,7 +141,7 @@ export default ({
     }
   };
 
-  console.log("resource page filter panel rerender");
+  console.log("resource page filter panel rerender", searchForm);
 
   return (
     <div className={`${styles.filterPanel} flex flex-col gap-1`}>
@@ -386,8 +386,8 @@ export default ({
             >
               {selectedAll
                 ? t<string>("{{count}} items selected", {
-                    count: selectedResourceIds?.length,
-                  })
+                  count: selectedResourceIds?.length,
+                })
                 : t<string>("Select all")}
             </Checkbox>
           </Tooltip>
@@ -395,13 +395,13 @@ export default ({
           {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
             <div className={"flex items-center gap-1"}>
               <Tooltip content={t<string>("Loaded resources")}>
-                <span className={"text-success"}>{resourceCount}</span>
+                <Chip size='sm' variant="light" color={"success"}>{resourceCount}</Chip>
               </Tooltip>
               /
               <Tooltip content={t<string>("All filtered resources")}>
-                <span className={"text-secondary"}>
+                <Chip size='sm' variant="light" color={"secondary"}>
                   {totalFilteredResourceCount}
-                </span>
+                </Chip>
               </Tooltip>
             </div>
           ) : null}

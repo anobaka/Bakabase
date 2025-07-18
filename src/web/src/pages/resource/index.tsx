@@ -145,7 +145,7 @@ export default () => {
   }, [multiSelection]);
 
   useEffect(() => {
-    if (uiOptions.initialized) {
+    if (uiOptions) {
       const c = uiOptions?.resource?.colCount
         ? uiOptions.resource.colCount
         : BusinessConstants.DefaultResourceColumnCount;
