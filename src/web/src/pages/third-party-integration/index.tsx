@@ -29,7 +29,7 @@ export default () => {
                 });
               }}
             >
-              <GrInstallOption className={"text-medium"} />
+              <GrInstallOption className={"text-base"} />
               {t<string>("One-click installation")}
             </Button>
           </div>
@@ -59,7 +59,7 @@ export default () => {
                 });
               }}
             >
-              <GrInstallOption className={"text-medium"} />
+              <GrInstallOption className={"text-base"} />
               {t<string>("One-click installation")}
             </Button>
           </div>

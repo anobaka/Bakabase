@@ -288,11 +288,11 @@ export default ({ onImported }: Props) => {
                             >
                               {isSet ? (
                                 <AiOutlineCheckCircle
-                                  className={"text-medium"}
+                                  className={"text-base"}
                                 />
                               ) : (
                                 <AiOutlineCloseCircle
-                                  className={"text-medium"}
+                                  className={"text-base"}
                                 />
                               )}
                             </Chip>
@@ -303,7 +303,7 @@ export default ({ onImported }: Props) => {
                               property={p}
                             />
                           </div>
-                          <TiChevronRightOutline className={"text-medium"} />
+                          <TiChevronRightOutline className={"text-base"} />
                           <PropertyMatcher
                             matchedProperty={
                               propertyConversionsMap?.[pIdx]?.toProperty
@@ -372,11 +372,11 @@ export default ({ onImported }: Props) => {
                             >
                               {isSet ? (
                                 <AiOutlineCheckCircle
-                                  className={"text-medium"}
+                                  className={"text-base"}
                                 />
                               ) : (
                                 <AiOutlineCloseCircle
-                                  className={"text-medium"}
+                                  className={"text-base"}
                                 />
                               )}
                             </Chip>
@@ -395,7 +395,7 @@ export default ({ onImported }: Props) => {
                               );
                             })}
                           </div>
-                          <TiChevronRightOutline className={"text-medium"} />
+                          <TiChevronRightOutline className={"text-base"} />
                           <Tooltip content={t<string>("Automatically process")}>
                             <Button
                               isIconOnly
@@ -453,7 +453,7 @@ export default ({ onImported }: Props) => {
                                 }
                               }}
                             >
-                              <MdAutoFixHigh className={"text-medium"} />
+                              <MdAutoFixHigh className={"text-base"} />
                             </Button>
                           </Tooltip>
                           <div className={"min-w-[240px]"}>

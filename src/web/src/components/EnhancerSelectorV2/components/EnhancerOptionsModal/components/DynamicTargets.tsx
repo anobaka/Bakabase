@@ -108,7 +108,7 @@ export default (props: Props) => {
                   {descriptor.name}
                   &nbsp;
                   <Popover
-                    trigger={<ApartmentOutlined className={"text-medium"} />}
+                    trigger={<ApartmentOutlined className={"text-base"} />}
                   >
                     {t<string>(
                       "This is not a fixed enhancement target, which will be replaced with other content when data is collected",

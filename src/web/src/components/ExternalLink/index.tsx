@@ -24,7 +24,7 @@ export default ({ href, children, ...otherProps }: Props) => {
       }}
     >
       {children}
-      <TbExternalLink className={"text-medium"} />
+      <TbExternalLink className={"text-base"} />
     </Button>
   );
 };

@@ -298,7 +298,7 @@ const PropertySelector = (props: IProps) => {
       <div className={"flex flex-col gap-2"}>
         <div className={"flex items-start gap-2"}>
           <div
-            className={"w-[100px] min-w-[100px] text-medium"}
+            className={"w-[100px] min-w-[100px] text-base"}
           >{`${t<string>("Selected")}(${selectedProperties.length})`}</div>
           <div className={"flex flex-wrap gap-2 items-start"}>
             {selectedProperties.map((p) => renderProperty(p))}
@@ -307,7 +307,7 @@ const PropertySelector = (props: IProps) => {
         <Divider />
         <div className={"flex items-start gap-2"}>
           <div
-            className={"w-[100px] min-w-[100px] text-medium"}
+            className={"w-[100px] min-w-[100px] text-base"}
           >{`${t<string>("Not selected")}(${unselectedProperties.length})`}</div>
           <div className={"flex flex-wrap gap-2 items-start"}>
             {unselectedProperties.map((p) => renderProperty(p))}

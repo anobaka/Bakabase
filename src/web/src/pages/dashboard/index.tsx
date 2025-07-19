@@ -16,6 +16,7 @@ import {
   Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { Bar } from "react-chartjs-2";
 
 import BApi from "@/sdk/BApi";
 
@@ -177,53 +178,92 @@ export default () => {
   };
 
   const renderResourceCounts = () => {
-    const list = data.categoryMediaLibraryCounts ?? [];
-    const total = list.reduce(
-      (s, t) => s + t.mediaLibraryCounts.reduce((s1, t1) => s1 + t1.count, 0),
+    const list = data.mediaLibraryResourceCounts ?? [];
+
+    if (list.length == 0) {
+      return (
+        <Button
+          color="primary"
+          variant="flat"
+          onPress={() => navigate("/media-library")}
+        >
+          <AiOutlinePlusCircle className="text-base" />
+          {t<string>("Add your resources")}
+        </Button>
+      );
+    }
+
+    // 统一主题色获取
+    const getCssVariable = (variableName: string) => {
+      if (typeof document === "undefined") return "";
+
+      return getComputedStyle(document.documentElement).getPropertyValue(
+        variableName,
+      );
+    };
+    const primaryColor =
+      getCssVariable("--theme-text-primary") || "rgba(59,130,246,1)";
+    const textColor = getCssVariable("--theme-text") || "#222";
+    const subtleColor = getCssVariable("--theme-text-subtle") || "#888";
+    const borderColor = getCssVariable("--theme-border-color") || "#eee";
+    const blockBg = getCssVariable("--theme-block-background") || "#fff";
+
+    // 统一 options
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: blockBg,
+          titleColor: textColor,
+          bodyColor: textColor,
+          borderColor: primaryColor,
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: borderColor },
+          ticks: { color: subtleColor },
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: subtleColor },
+        },
+      },
+    };
+
+    const chartData = {
+      labels: list.map((item) => item.name),
+      datasets: [
+        {
+          label: t<string>("Resource count"),
+          data: list.map((item) => item.count),
+          backgroundColor: `${primaryColor}33`,
+          borderColor: primaryColor,
+          borderWidth: 2,
+          borderRadius: 8, // 圆角
+          maxBarThickness: 32, // 柱子最大宽度
+        },
+      ],
+    };
+
+    const total = (data.mediaLibraryResourceCounts ?? []).reduce(
+      (s, t) => s + t.count,
       0,
     );
-    const categoryCounts: any[] = list.map((l) => {
-      return (
-        <>
-          <div className={"flex flex-col"}>
-            <div className={"text-xl opacity-80"}>{l.categoryName}</div>
-            <div className={"flex flex-wrap gap-1"}>
-              {l.mediaLibraryCounts.map((c) => {
-                return (
-                  <div>
-                    <div className={"opacity-60 text-sm"}>{c.name}</div>
-                    <div className={""}>{c.count}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
-      );
-    });
 
     return (
-      <div className={"flex gap-2 max-h-full"}>
-        <div className={"w-[160px]"}>
-          <div className={"text-lg"}>{t<string>("Resource count")}</div>
+      <div className="w-full h-44 flex gap-2 items-start">
+        <div>
+          <div className={"text-lg"}>{t<string>("Count of resources")}</div>
           <div className={"text-3xl"}>{total}</div>
         </div>
-        {categoryCounts.length > 0 ? (
-          <div className={"flex flex-wrap gap-1 overflow-auto gap-x-4"}>
-            {categoryCounts}
-          </div>
-        ) : (
-          <Button
-            color={"primary"}
-            variant={"flat"}
-            onPress={() => {
-              navigate("/category");
-            }}
-          >
-            <AiOutlinePlusCircle className={"text-medium"} />
-            {t<string>("Add your resources")}
-          </Button>
-        )}
+        <div className={"grow"}>
+          <Bar data={chartData} options={options} />
+        </div>
       </div>
     );
   };

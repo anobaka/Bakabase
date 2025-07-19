@@ -379,7 +379,7 @@ export default ({
           <Dropdown placement={"bottom-start"}>
             <DropdownTrigger>
               <Button isIconOnly size={"sm"}>
-                <UnorderedListOutlined className={"text-medium"} />
+                <UnorderedListOutlined className={"text-base"} />
               </Button>
             </DropdownTrigger>
             <DropdownMenu
@@ -761,7 +761,7 @@ export default ({
             <Dropdown placement={"bottom-start"}>
               <DropdownTrigger>
                 <Button isIconOnly size={"sm"}>
-                  <UnorderedListOutlined className={"text-medium"} />
+                  <UnorderedListOutlined className={"text-base"} />
                 </Button>
               </DropdownTrigger>
               <DropdownMenu

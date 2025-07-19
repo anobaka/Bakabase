@@ -160,14 +160,14 @@ export default ({ categoryId, onSaved, ...props }: IProps) => {
       <div>
         <div>
           <div className={"flex flex-wrap"}>
-            <InfoCircleOutlined className={"text-medium"} />
+            <InfoCircleOutlined className={"text-base"} />
             &nbsp;
             {t<string>(
               "You can use any combination of text and following properties in template, and you can add more properties in category configuration.",
             )}
           </div>
           <div className={"flex flex-wrap items-center"}>
-            <InfoCircleOutlined className={"text-medium"} />
+            <InfoCircleOutlined className={"text-base"} />
             &nbsp;
             <Trans
               i18nKey={"category.displayNameTemplate.propertyExample"}
@@ -183,7 +183,7 @@ export default ({ categoryId, onSaved, ...props }: IProps) => {
             </Trans>
           </div>
           <div className={"flex flex-wrap"}>
-            <InfoCircleOutlined className={"text-medium"} />
+            <InfoCircleOutlined className={"text-base"} />
             &nbsp;
             {t<string>(
               "Be careful if you have multiple properties with same name, only a random one will be replaced.",
@@ -207,7 +207,7 @@ export default ({ categoryId, onSaved, ...props }: IProps) => {
       </div>
       <div>
         <div className={"flex flex-wrap"}>
-          <InfoCircleOutlined className={"text-medium"} />
+          <InfoCircleOutlined className={"text-base"} />
           &nbsp;
           {t<string>(
             "You can safely use any of following text wrappers to wrap the properties, and wrappers surrounding the property with empty value will be removed automatically.",
@@ -227,7 +227,7 @@ export default ({ categoryId, onSaved, ...props }: IProps) => {
         </div>
       </div>
       <div className={"flex flex-wrap"}>
-        <InfoCircleOutlined className={"text-medium"} />
+        <InfoCircleOutlined className={"text-base"} />
         &nbsp;
         {t<string>(
           "If you leave the template with empty value, the file name will be the display name.",

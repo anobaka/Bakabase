@@ -254,7 +254,7 @@ export default () => {
               navigate("/synchronizationoptions");
             }}
           >
-            <SettingOutlined className={"text-medium"} />
+            <SettingOutlined className={"text-base"} />
             {t<string>("Synchronization options")}
           </Button>
           <Button

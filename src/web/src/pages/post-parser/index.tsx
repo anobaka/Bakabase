@@ -92,7 +92,7 @@ https://xxxxxxx
             // variant={'flat'}
             color={'primary'}
           >
-            <AiOutlinePlusCircle className={"text-medium"} />
+            <AiOutlinePlusCircle className={"text-base"} />
             {t<string>("Add tasks")}
           </Button>
           <Button
@@ -101,7 +101,7 @@ https://xxxxxxx
               createPortal(ConfigurationModal, {});
             }}
           >
-            <AiOutlineSetting className={"text-medium"} />
+            <AiOutlineSetting className={"text-base"} />
             {t<string>("Configuration")}
           </Button>
         </div>
@@ -192,7 +192,7 @@ https://xxxxxxx
               });
             }}
           >
-            <AiOutlineQuestionCircle className={"text-medium"} />
+            <AiOutlineQuestionCircle className={"text-base"} />
             {t<string>("Instructions for use")}
           </Button>
         </div>
@@ -345,7 +345,7 @@ https://xxxxxxx
                           });
                         }}
                       >
-                        <AiOutlineWarning className={"text-medium"} />
+                        <AiOutlineWarning className={"text-base"} />
                       </Button>
                     ) : null}
                   </TableCell>
@@ -360,7 +360,7 @@ https://xxxxxxx
                           await BApi.postParser.deletePostParserTask(task.id);
                         }}
                       >
-                        <AiOutlineDelete className={"text-medium"} />
+                        <AiOutlineDelete className={"text-base"} />
                       </Button>
                     </div>
                   </TableCell>

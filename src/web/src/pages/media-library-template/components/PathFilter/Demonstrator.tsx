@@ -23,14 +23,14 @@ export default ({ filter }: Props) => {
       case PathPositioner.Layer:
         return (
           <>
-            <IoLayersOutline className={"text-medium"} />
+            <IoLayersOutline className={"text-base"} />
             {t<string>("Layer")}
           </>
         );
       case PathPositioner.Regex:
         return (
           <>
-            <BsRegex className={"text-medium"} />
+            <BsRegex className={"text-base"} />
             {t<string>("Regex")}
           </>
         );

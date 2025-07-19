@@ -28,7 +28,7 @@ export default ({
       <div className={"flex flex-col gap-1"}>
         <div className={"flex items-center gap-1"}>
           {leftIcon ?? <AiOutlineBlock className={"text-lg"} />}
-          <div className={"text-medium"}>{title}</div>
+          <div className={"text-base"}>{title}</div>
           {rightIcon && onRightIconPress ? (
             <Button
               isIconOnly

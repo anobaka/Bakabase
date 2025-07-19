@@ -154,7 +154,7 @@ export default ({ locators: propsLocators, onSubmit, onDestroyed }: Props) => {
                         forceUpdate();
                       }}
                     >
-                      <AiOutlineDelete className={"text-medium"} />
+                      <AiOutlineDelete className={"text-base"} />
                     </Button>
                   </div>
                 }

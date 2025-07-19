@@ -1559,21 +1559,12 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardPropertyStatisticsP
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
-  categoryMediaLibraryCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsCategoryMediaLibraryCount[];
-  todayAddedCategoryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
-  thisWeekAddedCategoryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
-  thisMonthAddedCategoryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
+  mediaLibraryResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
   resourceTrending: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount[];
-  tagResourceCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
   downloaderDataCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount[];
   thirdPartyRequestCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount[];
   fileMover: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsFileMoverInfo;
   otherCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[][];
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsCategoryMediaLibraryCount {
-  categoryName: string;
-  mediaLibraryCounts: BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCount[];
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {

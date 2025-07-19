@@ -151,13 +151,18 @@ namespace Bakabase.Service.Controllers
             {
                 var drives = DriveInfo.GetDrives()
                     .Where(d => d.IsReady)
-                    .Select(d => new FileSystemEntryNameViewModel(d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
-                results.AddRange(drives.Where(d => prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix)).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase));
+                    .Select(d =>
+                        new FileSystemEntryNameViewModel(d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
+                results.AddRange(drives
+                    .Where(d => prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase));
             }
             else
             {
-                var dirs = Directory.GetDirectories(parent).Select(p => p.StandardizePath()!).Where(d => d.StartsWith(prefix!)).ToList();
-                var files = Directory.GetFiles(parent).Select(p => p.StandardizePath()!).Where(d => d.StartsWith(prefix!)).ToList();
+                var dirs = Directory.GetDirectories(parent).Select(p => p.StandardizePath()!)
+                    .Where(d => d.StartsWith(prefix!, StringComparison.OrdinalIgnoreCase)).ToList();
+                var files = Directory.GetFiles(parent).Select(p => p.StandardizePath()!)
+                    .Where(d => d.StartsWith(prefix!, StringComparison.OrdinalIgnoreCase)).ToList();
 
                 results.AddRange(dirs.Select(d => new FileSystemEntryNameViewModel(d, Path.GetFileName(d), true))
                     .Concat(files.Select(f => new FileSystemEntryNameViewModel(f, Path.GetFileName(f), false))));

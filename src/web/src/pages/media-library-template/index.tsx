@@ -252,7 +252,7 @@ export default () => {
                             content={tpl.description}
                             placement={"bottom"}
                           >
-                            <QuestionCircleOutlined className={"text-medium"} />
+                            <QuestionCircleOutlined className={"text-base"} />
                           </Tooltip>
                         )}
                         <Button
@@ -307,7 +307,7 @@ export default () => {
                             });
                           }}
                         >
-                          <AiOutlineEdit className={"text-medium"} />
+                          <AiOutlineEdit className={"text-base"} />
                         </Button>
                       </div>
                       <div className={"flex items-center gap-1"}>
@@ -373,7 +373,7 @@ export default () => {
                             });
                           }}
                         >
-                          <IoDuplicateOutline className={"text-medium"} />
+                          <IoDuplicateOutline className={"text-base"} />
                         </Button>
                         <Button
                           isIconOnly

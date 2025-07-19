@@ -264,7 +264,7 @@ export default ({
               });
             }}
           >
-            <AiOutlineSearch className={"text-medium"} />
+            <AiOutlineSearch className={"text-base"} />
             {t<string>("Search")}
           </Button>
           <Tooltip

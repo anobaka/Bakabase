@@ -137,7 +137,7 @@ export default function TagList({
             setTags([...tags]);
           }}
         >
-          <MdSort className={"text-medium"} />
+          <MdSort className={"text-base"} />
           {t<string>("Sort by alphabet")}
         </Button>
       </div>
@@ -221,7 +221,7 @@ export default function TagList({
             }, 100);
           }}
         >
-          <MdAddCircle className={"text-medium"} />
+          <MdAddCircle className={"text-base"} />
           {t<string>("Add a choice")}
         </Button>
         <Popover
@@ -255,7 +255,7 @@ export default function TagList({
           }}
         >
           <div className={"flex flex-col gap-2 m-2 "}>
-            <div className="text-medium">
+            <div className="text-base">
               {t<string>("Add or delete tags in bulk")}
             </div>
             <div className={"text-sm opacity-70"}>

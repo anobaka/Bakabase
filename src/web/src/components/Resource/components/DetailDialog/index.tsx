@@ -367,7 +367,7 @@ export default ({ id, onRemoved, ...props }: Props) => {
                           }}
                         >
                           <CloseCircleOutlined
-                            className={"text-medium opacity-60"}
+                            className={"text-base opacity-60"}
                           />
                         </Button>
                       </Tooltip>

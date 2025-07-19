@@ -213,7 +213,7 @@ export default () => {
                         setEditingGroup(JSON.parse(JSON.stringify(eg)));
                       }}
                     >
-                      <EditOutlined className={"text-medium"} />
+                      <EditOutlined className={"text-base"} />
                     </Button>
                     <Button
                       isIconOnly
@@ -237,7 +237,7 @@ export default () => {
                         });
                       }}
                     >
-                      <DeleteOutlined className={"text-medium"} />
+                      <DeleteOutlined className={"text-base"} />
                     </Button>
                   </div>
                 </TableCell>

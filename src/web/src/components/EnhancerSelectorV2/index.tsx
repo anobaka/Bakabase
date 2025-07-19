@@ -143,7 +143,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
               }
               style={{ borderColor: "rgba(255, 255, 255, 0.3)" }}
             >
-              <div className={"text-medium font-bold flex items-center gap-2"}>
+              <div className={"text-base font-bold flex items-center gap-2"}>
                 <EnhancerIcon id={e.id} />
                 {e.name}
                 {e.id == EnhancerId.Kodi && <BetaChip />}

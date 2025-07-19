@@ -496,7 +496,7 @@ export default () => {
             className={"w-[320px]"}
             fullWidth={false}
             size={"sm"}
-            startContent={<AiOutlineSearch className={"text-medium"} />}
+            startContent={<AiOutlineSearch className={"text-base"} />}
             onValueChange={(keyword) =>
               setForm({
                 ...form,
@@ -516,7 +516,7 @@ export default () => {
             }}
           >
             <>
-              <AiOutlinePlusCircle className={"text-medium"} />
+              <AiOutlinePlusCircle className={"text-base"} />
               {t<string>("Create task")}
             </>
           </Button>
@@ -531,7 +531,7 @@ export default () => {
               );
             }}
           >
-            <AiOutlinePlayCircle className={"text-medium"} />
+            <AiOutlinePlayCircle className={"text-base"} />
             {t<string>("Start all")}
           </Button>
           <Button
@@ -542,7 +542,7 @@ export default () => {
               BApi.downloadTask.stopDownloadTasks([]);
             }}
           >
-            <AiOutlineStop className={"text-medium"} />
+            <AiOutlineStop className={"text-base"} />
             {t<string>("Stop all")}
           </Button>
         </div>
@@ -555,7 +555,7 @@ export default () => {
               BApi.downloadTask.exportAllDownloadTasks();
             }}
           >
-            <AiOutlineExport className={"text-medium"} />
+            <AiOutlineExport className={"text-base"} />
             {t<string>("Export all tasks")}
           </Button>
           <Button
@@ -566,7 +566,7 @@ export default () => {
               createPortal(Configurations, {});
             }}
           >
-            <AiOutlineSetting className={"text-medium"} />
+            <AiOutlineSetting className={"text-base"} />
             {t<string>("Configurations")}
           </Button>
         </div>
@@ -660,7 +660,7 @@ export default () => {
                                 }
                               }}
                             >
-                              <AiOutlineWarning className={"text-medium"} />
+                              <AiOutlineWarning className={"text-base"} />
                               {task.failureTimes}
                             </Button>
                           )}

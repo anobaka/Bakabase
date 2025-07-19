@@ -86,7 +86,7 @@ function EditableValue<
               }
             }}
           >
-            <AiOutlineCheck className={"text-medium"} />
+            <AiOutlineCheck className={"text-base"} />
           </Button>
           <Button
             isIconOnly
@@ -97,7 +97,7 @@ function EditableValue<
               setEditing(false);
             }}
           >
-            <AiOutlineClose className={"text-medium"} />
+            <AiOutlineClose className={"text-base"} />
           </Button>
         </>
       ) : (
@@ -116,7 +116,7 @@ function EditableValue<
               setEditing(true);
             }}
           >
-            <AiOutlineEdit className={"text-medium"} />
+            <AiOutlineEdit className={"text-base"} />
           </Button>
         </>
       )}

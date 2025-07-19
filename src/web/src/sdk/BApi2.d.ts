@@ -4610,20 +4610,12 @@ export interface components {
             expectedCount: number;
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics": {
-            categoryMediaLibraryCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+CategoryMediaLibraryCount"][];
-            todayAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
-            thisWeekAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
-            thisMonthAddedCategoryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
+            mediaLibraryResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             resourceTrending: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+WeekCount"][];
-            tagResourceCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
             downloaderDataCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+DownloaderTaskCount"][];
             thirdPartyRequestCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+ThirdPartyRequestCount"][];
             fileMover: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+FileMoverInfo"];
             otherCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][][];
-        };
-        "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+CategoryMediaLibraryCount": {
-            categoryName: string;
-            mediaLibraryCounts: components["schemas"]["Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+TextAndCount"][];
         };
         "Bakabase.InsideWorld.Models.Models.Dtos.DashboardStatistics+DownloaderTaskCount": {
             id: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];

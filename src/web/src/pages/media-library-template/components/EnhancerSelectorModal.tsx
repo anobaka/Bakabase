@@ -53,7 +53,7 @@ export default ({ selectedIds: propSelectedIds, onSubmit }: Props) => {
               }}
             >
               <CardBody>
-                <div className={"text-medium flex items-center gap-1"}>
+                <div className={"text-base flex items-center gap-1"}>
                   <BriefEnhancer enhancer={e} />
                   {isSelected && (
                     <Chip
@@ -84,7 +84,7 @@ export default ({ selectedIds: propSelectedIds, onSubmit }: Props) => {
                             <div className={"flex items-center"}>
                               {target.name}
                               <AiOutlineQuestionCircle
-                                className={"text-medium"}
+                                className={"text-base"}
                               />
                             </div>
                           </Chip>

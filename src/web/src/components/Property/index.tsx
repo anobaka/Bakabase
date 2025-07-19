@@ -9,13 +9,13 @@ import {
   DisconnectOutlined,
   LinkOutlined,
 } from "@ant-design/icons";
+import { MdEdit, MdDelete } from "react-icons/md";
 
 import { useBakabaseContext } from "../ContextProvider/BakabaseContextProvider";
 
 import styles from "./index.module.scss";
 import Label from "./components/Label";
 
-import { MdEdit, MdDelete } from "react-icons/md";
 import PropertyModal from "@/components/PropertyModal";
 import { Button, Chip, Modal, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -187,10 +187,10 @@ export default ({
             {editable && editablePortal == "edit-icon" && (
               <Button
                 isIconOnly
+                className={"text-base"}
                 color={"default"}
                 size={"sm"}
                 variant={"light"}
-                className={"text-medium"}
                 onPress={() => {
                   showDetail();
                 }}
@@ -201,10 +201,10 @@ export default ({
             {removable && (
               <Button
                 isIconOnly
+                className={"text-base"}
                 color={"danger"}
                 size={"sm"}
                 variant={"light"}
-                className={"text-medium"}
                 onPress={async () => {
                   setRemoveConfirmingDialogVisible(true);
                 }}

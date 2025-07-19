@@ -114,7 +114,7 @@ const Target = ({ target, isLeaf, onMigrated }: IProps) => {
           </Tabs>
         </Modal>
       )}
-      <div className={"flex items-center gap-2 text-medium"}>
+      <div className={"flex items-center gap-2 text-base"}>
         {label}
         {isLeaf && (
           <Button

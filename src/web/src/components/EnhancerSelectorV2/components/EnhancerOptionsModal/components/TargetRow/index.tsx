@@ -201,7 +201,7 @@ export default (props: Props) => {
                 )}
                 {descriptor.description && (
                   <Tooltip content={descriptor.description} placement={"right"}>
-                    <QuestionCircleOutlined className={"text-medium"} />
+                    <QuestionCircleOutlined className={"text-base"} />
                   </Tooltip>
                 )}
               </>

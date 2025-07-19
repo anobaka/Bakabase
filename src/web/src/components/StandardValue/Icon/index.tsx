@@ -31,5 +31,5 @@ const StandardValueTypeIconMap: Record<StandardValueType, IconType> = {
 export default ({ valueType, ...props }: Props) => {
   const Icon = StandardValueTypeIconMap[valueType];
 
-  return <Icon className={"text-medium"} {...props} />;
+  return <Icon className={"text-base"} {...props} />;
 };

@@ -586,7 +586,7 @@ export default ({ validValueTypes, value, onChange }: Props) => {
                                               : undefined,
                                           children: (
                                             <div>
-                                              <div className={"text-medium"}>
+                                              <div className={"text-base"}>
                                                 {changes.length > 0
                                                   ? t<string>(
                                                       "Found {{count}} data, and {{changedDataCount}} data will be modified or deleted",

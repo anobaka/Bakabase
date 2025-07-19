@@ -9,10 +9,10 @@ export default () => {
   const { t } = useTranslation();
 
   return (
-    <Popover trigger={<QuestionCircleOutlined className={"text-medium"} />}>
+    <Popover trigger={<QuestionCircleOutlined className={"text-base"} />}>
       <div className={"flex flex-col gap-1"}>
         <div>
-          <div className={"font-bold text-medium"}>
+          <div className={"font-bold text-base"}>
             {t<string>("Auto bind property")}
           </div>
           <div>
@@ -34,7 +34,7 @@ export default () => {
           </div>
         </div>
         <div>
-          <div className={"font-bold text-medium"}>
+          <div className={"font-bold text-base"}>
             {t<string>("Auto match on empty values")}
           </div>
           <div>

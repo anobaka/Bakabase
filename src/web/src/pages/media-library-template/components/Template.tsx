@@ -219,7 +219,7 @@ export default ({
           {template.resourceFilters?.map((f, i) => {
             return (
               <div className={"flex items-center gap-1"}>
-                <CiFilter className={"text-medium"} />
+                <CiFilter className={"text-base"} />
                 <PathFilterDemonstrator filter={f} />
                 <Button
                   isIconOnly
@@ -237,7 +237,7 @@ export default ({
                     });
                   }}
                 >
-                  <AiOutlineEdit className={"text-medium"} />
+                  <AiOutlineEdit className={"text-base"} />
                 </Button>
                 <Button
                   isIconOnly
@@ -257,7 +257,7 @@ export default ({
                     });
                   }}
                 >
-                  <AiOutlineDelete className={"text-medium"} />
+                  <AiOutlineDelete className={"text-base"} />
                 </Button>
               </div>
             );
@@ -269,7 +269,7 @@ export default ({
           "Determine which files be considered as playable files",
         )}
         leftIcon={<IoPlayCircleOutline className={"text-large"} />}
-        rightIcon={<AiOutlineEdit className={"text-medium"} />}
+        rightIcon={<AiOutlineEdit className={"text-base"} />}
         title={t<string>("Playable(Runnable) files")}
         onRightIconPress={() => {
           createPortal(PlayableFileSelectorModal, {
@@ -366,7 +366,7 @@ export default ({
                       });
                     }}
                   >
-                    <IoLocate className={"text-medium"} />
+                    <IoLocate className={"text-base"} />
                   </Button>
                   <Button
                     isIconOnly
@@ -386,7 +386,7 @@ export default ({
                       });
                     }}
                   >
-                    <AiOutlineDelete className={"text-medium"} />
+                    <AiOutlineDelete className={"text-base"} />
                   </Button>
                 </div>
               </div>
@@ -443,7 +443,7 @@ export default ({
                       });
                     }}
                   >
-                    <AiOutlineEdit className={"text-medium"} />
+                    <AiOutlineEdit className={"text-base"} />
                   </Button>
                   <Button
                     isIconOnly
@@ -463,7 +463,7 @@ export default ({
                       });
                     }}
                   >
-                    <AiOutlineDelete className={"text-medium"} />
+                    <AiOutlineDelete className={"text-base"} />
                   </Button>
                 </div>
                 {e.expressions && e.expressions.length > 0 && (
@@ -508,7 +508,7 @@ export default ({
                                 {target.description && (
                                   <Tooltip content={target.description}>
                                     <QuestionCircleOutlined
-                                      className={"text-medium"}
+                                      className={"text-base"}
                                     />
                                   </Tooltip>
                                 )}
@@ -529,7 +529,7 @@ export default ({
                                 return (
                                   <div className={"flex items-center gap-1"}>
                                     <AiOutlineSisternode
-                                      className={"text-medium"}
+                                      className={"text-base"}
                                     />
                                     <Chip
                                       radius={"sm"}
@@ -539,7 +539,7 @@ export default ({
                                       {to.dynamicTarget}
                                     </Chip>
                                     <TiChevronRightOutline
-                                      className={"text-medium"}
+                                      className={"text-base"}
                                     />
                                     {to.autoBindProperty ? (
                                       t<string>("Auto bind property")
@@ -585,7 +585,7 @@ export default ({
                                 </Chip>
                               )}
                               <TiChevronRightOutline
-                                className={"text-medium"}
+                                className={"text-base"}
                               />
                               {to.autoBindProperty ? (
                                 t<string>("Auto bind property")
@@ -655,7 +655,7 @@ export default ({
       </Block>
       {/* <Block */}
       {/*   title={t<string>('Preview')} */}
-      {/*   icon={<AiOutlineEdit className={'text-medium'} />} */}
+      {/*   icon={<AiOutlineEdit className={'text-base'} />} */}
       {/*   onIconPress={() => { */}
       {/*     let { samplePaths } = tpl; */}
       {/*     createPortal( */}
@@ -698,7 +698,7 @@ export default ({
       {/*         variant={'light'} */}
       {/*         color={'secondary'} */}
       {/*       > */}
-      {/*         <AiOutlineSync className={'text-medium'} /> */}
+      {/*         <AiOutlineSync className={'text-base'} /> */}
       {/*       </Button> */}
       {/*     </div> */}
       {/*   )} */}

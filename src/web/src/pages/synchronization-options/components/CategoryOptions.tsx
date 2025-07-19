@@ -4,14 +4,13 @@ import type { IdName } from "@/pages/synchronization-options/models";
 import type { BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions } from "@/sdk/Api";
 
 import { useTranslation } from "react-i18next";
-import { AiOutlineWarning } from "react-icons/ai";
 
 import OptionsCard from "./OptionsCard";
 
 import { SubjectLabels } from "@/pages/synchronization-options/models";
 import BooleanOptions from "@/pages/synchronization-options/components/BooleanOptions";
 import EnhancerOptions from "@/pages/synchronization-options/components/EnhancerOptions";
-import { Tooltip } from "@/components/bakaui";
+import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 
 type Options =
   BakabaseInsideWorldBusinessConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions;
@@ -49,18 +48,9 @@ const CategoryOptions = ({ category, onChange, options }: Props) => {
   return (
     <OptionsCard
       header={
-        <div className={"flex items-center gap-1 line-through opacity-60"}>
+        <div className={"flex items-center gap-1 opacity-60"}>
           {category.name}
-          <Tooltip
-            content={t<string>(
-              "Category is deprecated and will be removed in a future version.",
-            )}
-          >
-            <div className={"flex items-center gap-1"}>
-              <AiOutlineWarning className={"text-lg"} />
-              {t<string>("Deprecated")}
-            </div>
-          </Tooltip>
+          <DeprecatedChip />
         </div>
       }
     >

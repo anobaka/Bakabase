@@ -163,7 +163,7 @@ export default () => {
                   )
                 }
               >
-                <AiOutlineEdit className={"text-medium"} />
+                <AiOutlineEdit className={"text-base"} />
                 {t<string>("MediaLibrary.AddOrEdit")}
               </Button>
               <Button
@@ -190,7 +190,7 @@ export default () => {
                 setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)
               }
             >
-              <FaSort className={"text-medium"} />
+              <FaSort className={"text-base"} />
               {t<string>("MediaLibrary.SortBy", {
                 sortBy: t<string>(`MediaLibrary.SortBy.${SortBy[sortBy]}`),
               })}
@@ -414,7 +414,7 @@ export default () => {
                   )
                 }
               >
-                <AiOutlinePlusCircle className={"text-medium"} />
+                <AiOutlinePlusCircle className={"text-base"} />
                 {t<string>("MediaLibrary.Add")}
               </Button>
             </div>
@@ -442,7 +442,7 @@ export default () => {
                   });
                 }}
               >
-                <FaRegSave className={"text-medium"} />
+                <FaRegSave className={"text-base"} />
                 {t<string>("MediaLibrary.Save")}
               </Button>
               <Button
@@ -451,7 +451,7 @@ export default () => {
                 variant={"flat"}
                 onPress={() => setEditingMediaLibraries(undefined)}
               >
-                <IoMdExit className={"text-medium"} />
+                <IoMdExit className={"text-base"} />
                 {t<string>("MediaLibrary.ExitEditingMode")}
               </Button>
             </div>
@@ -490,7 +490,7 @@ export default () => {
                     isDisabled={!template}
                     radius={"sm"}
                     size={"sm"}
-                    startContent={<TbTemplate className={"text-medium"} />}
+                    startContent={<TbTemplate className={"text-base"} />}
                     variant={"light"}
                     onPress={() => {
                       if (ml.templateId) {

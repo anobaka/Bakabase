@@ -4,7 +4,6 @@ import type { IProperty } from "./models";
 import type { PropertyType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
-import { useState } from "react";
 import {
   DatabaseOutlined,
   DisconnectOutlined,
@@ -18,10 +17,18 @@ import styles from "./index.module.scss";
 import Label from "./components/Label";
 
 import PropertyModal from "@/components/PropertyModal";
-import { Button, Card, CardBody, Chip, Tooltip } from "@/components/bakaui";
+import {
+  Button,
+  Card,
+  CardBody,
+  Chip,
+  Tooltip,
+  Modal,
+} from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
 import PropertyPoolIcon from "@/components/Property/components/PropertyPoolIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
+import BApi from "@/sdk/BApi.tsx";
 
 type Props = {
   property: IProperty;
@@ -54,8 +61,6 @@ export default ({
 }: Props) => {
   const { t } = useTranslation();
 
-  const [removeConfirmingDialogVisible, setRemoveConfirmingDialogVisible] =
-    useState(false);
   const { createPortal } = useBakabaseContext();
 
   const editable = property.pool == PropertyPool.Custom && props.editable;
@@ -152,7 +157,7 @@ export default ({
           showDetail();
         }}
       >
-        <AiOutlineEdit className={"text-medium"} />
+        <AiOutlineEdit className={"text-base"} />
       </Button>,
     );
   }
@@ -163,11 +168,21 @@ export default ({
         color={"danger"}
         size={"sm"}
         variant={"light"}
-        onPress={(e) => {
-          setRemoveConfirmingDialogVisible(true);
+        onPress={() => {
+          createPortal(Modal, {
+            defaultVisible: true,
+            title: t<string>("Delete a property"),
+            children: t<string>(
+              "This operation can not be undone, are you sure?",
+            ),
+            onOk: async () => {
+              await BApi.customProperty.removeCustomProperty(property.id);
+              onRemoved?.();
+            },
+          });
         }}
       >
-        <AiOutlineDelete className={"text-medium"} />
+        <AiOutlineDelete className={"text-base"} />
       </Button>,
     );
   }
@@ -181,7 +196,7 @@ export default ({
             {!hidePool && <PropertyPoolIcon pool={property.pool} />}
           </div>
         )}
-        <div className={"text-medium text-left"}>{property.name}</div>
+        <div className={"text-base text-left"}>{property.name}</div>
       </CardBody>
     </Card>
   );

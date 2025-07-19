@@ -161,7 +161,7 @@ export default () => {
                   <div className={"flex items-center gap-1"}>
                     {t<string>(SpecialTextType[type])}
                     <Tooltip content={t<string>(typeDescriptions[type])}>
-                      <QuestionCircleOutlined className={"text-medium"} />
+                      <QuestionCircleOutlined className={"text-base"} />
                     </Tooltip>
                   </div>
                 </TableCell>

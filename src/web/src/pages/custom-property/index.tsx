@@ -103,7 +103,7 @@ export default () => {
               });
             }}
           >
-            <SortAscendingOutlined className={"text-medium"} />
+            <SortAscendingOutlined className={"text-base"} />
             {t<string>("Adjust display orders")}
           </Button>
         </div>

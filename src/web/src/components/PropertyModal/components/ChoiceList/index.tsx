@@ -139,7 +139,7 @@ export default function ChoiceList({
             setChoices([...choices]);
           }}
         >
-          <MdSort className={"text-medium"} />
+          <MdSort className={"text-base"} />
           {t<string>("Sort by alphabet")}
         </Button>
       </div>
@@ -218,7 +218,7 @@ export default function ChoiceList({
             addChoice();
           }}
         >
-          <MdAddCircle className={"text-medium"} />
+          <MdAddCircle className={"text-base"} />
           {t<string>("Add a choice")}
         </Button>
         <Popover
@@ -241,7 +241,7 @@ export default function ChoiceList({
           }}
         >
           <div className={"flex flex-col gap-2 m-2 "}>
-            <div className="text-medium">
+            <div className="text-base">
               {t<string>("Add or delete choices in bulk")}
             </div>
             <div className={"text-sm opacity-70"}>

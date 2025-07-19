@@ -57,18 +57,18 @@ export default ({ type, textVariant = "default", ...props }: Props) => {
 
   switch (textVariant!) {
     case "none":
-      return <Icon className={"text-medium"} {...props} />;
+      return <Icon className={"text-base"} {...props} />;
     case "default":
       return (
         <div className={"flex items-center gap-1"}>
-          <Icon className={"text-medium"} {...props} />
+          <Icon className={"text-base"} {...props} />
           <div className={"text-xs"}>{typeName}</div>
         </div>
       );
     case "tooltip":
       return (
         <Tooltip color={"foreground"} content={typeName}>
-          <Icon className={"text-medium"} {...props} />
+          <Icon className={"text-base"} {...props} />
         </Tooltip>
       );
   }

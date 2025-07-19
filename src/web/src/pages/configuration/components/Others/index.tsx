@@ -276,7 +276,7 @@ export default ({
               value ? (
                 <Chip
                   radius={"sm"}
-                  startContent={<AiOutlineNumber className={"text-medium"} />}
+                  startContent={<AiOutlineNumber className={"text-base"} />}
                   variant={"flat"}
                   {...props}
                 >
