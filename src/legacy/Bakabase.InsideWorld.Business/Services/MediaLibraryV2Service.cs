@@ -270,7 +270,7 @@ public class MediaLibraryV2Service<TDbContext>(
                 }
 
                 var resourcesToBeDeleted =
-                    unknownDbResources.Where(x => x.ShouldBeDeletedSinceFileNotFound(syncOptions) || x.ShouldBeDeletedSinceUnknownMediaLibrary(syncOptions)).ToList();
+                    unknownDbResources.Where(x => x.ShouldBeDeletedSinceFileNotFound(syncOptions)).ToList();
                 if (resourcesToBeDeleted.Any())
                 {
                     await resourceService.DeleteByKeys(resourcesToBeDeleted.Select(r => r.Id).ToArray(), false);

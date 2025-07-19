@@ -71,8 +71,8 @@ const ColorPicker = ({ trigger, ...props }: ColorPickerProps) => {
           </div>
         )
       }
-      visible={panelVisible}
-      onVisibleChange={setPanelVisible}
+      // visible={panelVisible}
+      // onVisibleChange={setPanelVisible}
     >
       <SketchPicker
         color={color}

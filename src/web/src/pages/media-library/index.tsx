@@ -202,7 +202,7 @@ export default () => {
         <>
           <div
             className={"grid gap-1 mt-2 items-center"}
-            style={{ gridTemplateColumns: "auto 1fr 2fr 1fr" }}
+            style={{ gridTemplateColumns: "auto 1fr 2fr 1fr auto" }}
           >
             {editingMediaLibraries.map((e, i) => {
               const paths = Array.isArray(e.paths) ? e.paths : (e.paths = []);
@@ -381,19 +381,19 @@ export default () => {
                       }}
                     />
                   </div> */}
-                  {/*<div className={"flex items-center gap-1"}>*/}
-                  {/*  <Button*/}
-                  {/*    isIconOnly*/}
-                  {/*    color={"danger"}*/}
-                  {/*    variant={"light"}*/}
-                  {/*    onPress={() => {*/}
-                  {/*      editingMediaLibraries!.splice(i, 1);*/}
-                  {/*      forceUpdate();*/}
-                  {/*    }}*/}
-                  {/*  >*/}
-                  {/*    <MdOutlineDelete className={"text-lg"} />*/}
-                  {/*  </Button>*/}
-                  {/*</div>*/}
+                  <div className={"flex items-center gap-1"}>
+                    <Button
+                      isIconOnly
+                      color={"danger"}
+                      variant={"light"}
+                      onPress={() => {
+                        editingMediaLibraries!.splice(i, 1);
+                        forceUpdate();
+                      }}
+                    >
+                      <MdOutlineDelete className={"text-lg"} />
+                    </Button>
+                  </div>
                   {editingMediaLibraries.length > i + 1 && (
                     <Divider className="col-span-full" />
                   )}
@@ -465,14 +465,24 @@ export default () => {
           >
             {mediaLibraries.map((ml, i) => {
               const template = templates.find((t) => t.id == ml.templateId);
+              const getCssVariable = (variableName: string) => {
+                if (typeof document === "undefined") return "";
+
+                return getComputedStyle(
+                  document.documentElement,
+                ).getPropertyValue(variableName);
+              };
+              const textColor = getCssVariable("--theme-text") || "#222";
 
               return (
                 <>
                   {renderPath(ml)}
                   <div className="flex items-center gap-1">
-                    <div style={{ color: ml.color }}>{ml.name}</div>
+                    <div style={{ color: ml.color ?? textColor }}>
+                      {ml.name}
+                    </div>
                     <ColorPicker
-                      color={ml.color}
+                      color={ml.color ?? textColor}
                       onChange={async (color) => {
                         const strColor = buildColorValueString(color);
 

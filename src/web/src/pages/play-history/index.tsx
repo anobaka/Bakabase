@@ -89,15 +89,15 @@ export default () => {
             topContent={renderPagination()}
           >
             <TableHeader>
+              <TableColumn width="240">{t<string>("Played at")}</TableColumn>
               <TableColumn>{t<string>("Item")}</TableColumn>
-              <TableColumn>{t<string>("Played at")}</TableColumn>
             </TableHeader>
             <TableBody>
               {playHistories.map((a) => {
                 return (
                   <TableRow key={a.id}>
-                    <TableCell>{a.item}</TableCell>
                     <TableCell>{a.playedAt}</TableCell>
+                    <TableCell>{a.item}</TableCell>
                   </TableRow>
                 );
               })}
