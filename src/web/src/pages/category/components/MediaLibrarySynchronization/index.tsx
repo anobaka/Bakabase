@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { Progress } from "@alifd/next";
+import { Progress } from "@/components/bakaui";
 import { usePrevious } from "react-use";
 import { SyncOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";

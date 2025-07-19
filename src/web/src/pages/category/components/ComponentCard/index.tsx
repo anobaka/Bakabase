@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Balloon } from "@alifd/next";
+import { Popover } from "@/components/bakaui";
 import "./index.scss";
 import i18n from "i18next";
 
@@ -53,9 +53,9 @@ export default ({
   );
 
   return tip ? (
-    <Balloon.Tooltip trigger={coreComponent}>
-      {i18n.t<string>(tip)}
-    </Balloon.Tooltip>
+    <Popover content={i18n.t<string>(tip)}>
+      {coreComponent}
+    </Popover>
   ) : (
     coreComponent
   );

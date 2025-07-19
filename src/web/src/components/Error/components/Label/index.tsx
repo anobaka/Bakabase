@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
 import ErrorModal from "../Modal";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
   error?: string;
@@ -11,6 +12,7 @@ interface IProps {
 
 export default ({ error }: IProps) => {
   const { t } = useTranslation();
+  const {createPortal} = useBakabaseContext();
 
   useEffect(() => {}, []);
 
@@ -20,7 +22,7 @@ export default ({ error }: IProps) => {
       <span
         className={"cursor-pointer"}
         style={{ color: "var(--bakaui-primary)" }}
-        onClick={() => ErrorModal.show({})}
+        onClick={() => createPortal(ErrorModal, {})}
       >
         {t<string>("how should I handle this problem?")}
       </span>

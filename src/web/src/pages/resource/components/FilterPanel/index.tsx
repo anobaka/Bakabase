@@ -3,7 +3,6 @@
 import type { SearchForm } from "@/pages/resource/models";
 import type { SavedSearchRef } from "@/pages/resource/components/FilterPanel/SavedSearches";
 
-import { Overlay } from "@alifd/next";
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
@@ -43,8 +42,6 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import { ResourceTag } from "@/sdk/constants";
 import HandleUnknownResources from "@/components/HandleUnknownResources";
-
-const { Popup } = Overlay;
 
 interface IProps {
   selectedResourceIds?: number[];

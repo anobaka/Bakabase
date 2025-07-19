@@ -5,7 +5,7 @@ import type { DialogProps } from "@alifd/next/types/dialog";
 import type { BakabaseInsideWorldBusinessComponentsResourceComponentsComponentDescriptor } from "@/sdk/Api";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Dialog, Input } from "@alifd/next";
+import { Modal, Input } from "@/components/bakaui";
 import i18n from "i18next";
 import ReactDOM from "react-dom/client";
 
@@ -105,7 +105,7 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
   };
 
   return (
-    <Dialog
+    <Modal
       centered
       v2
       afterClose={() => {
@@ -241,7 +241,7 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
           </div>
         </>
       )}
-    </Dialog>
+    </Modal>
   );
 }
 

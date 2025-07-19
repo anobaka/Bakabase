@@ -337,7 +337,10 @@ export default ({
           {template.properties?.map((p, i) => {
             return (
               <div className={"flex items-center gap-2"}>
-                <BriefProperty property={p.property} />
+                <BriefProperty
+                  fields={["name", "pool", "type"]}
+                  property={p.property}
+                />
                 <div className={"flex items-center gap-1"}>
                   {p.valueLocators?.map((v) => {
                     return (

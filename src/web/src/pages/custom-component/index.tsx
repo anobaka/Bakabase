@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PlusCircleOutlined } from "@ant-design/icons";
-import { MdFlashlightOn, MdPlayCircle, MdSearch } from 'react-icons/md';
+import { MdFlashlightOn, MdPlayCircle, MdSearch } from "react-icons/md";
 
 import BApi from "@/sdk/BApi";
 import {
@@ -14,7 +14,7 @@ import {
 } from "@/sdk/constants";
 import "./index.scss";
 
-import type { CustomComponentDetailDialogProps } from "@/pages/custom-component/Detail";
+import type { CustomComponentDetailDialogProps } from "./Detail";
 
 import Detail from "@/pages/custom-component/Detail";
 import ComponentDescriptorCard from "@/pages/custom-component/components/ComponentCard";
@@ -81,7 +81,9 @@ export default () => {
             <div key={ct.value} className={"component-type"}>
               <div className="type-name">
                 <div className="name flex items-center gap-1">
-                  {React.createElement(ComponentTypeIcons[ct.value], { className: 'text-xl' })}
+                  {React.createElement(ComponentTypeIcons[ct.value], {
+                    className: "text-xl",
+                  })}
                   {t<string>(ct.label)}
                 </div>
                 <Button

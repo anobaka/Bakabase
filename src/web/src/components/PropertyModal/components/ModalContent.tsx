@@ -46,6 +46,7 @@ import { optimizeOptions } from "@/components/PropertyModal/helpers";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 const UnderDevelopmentGroupKey = "UnderDevelopment";
 
@@ -93,6 +94,7 @@ const log = buildLogger("ModalContent");
 
 export default ({ validValueTypes, value, onChange }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
   const [typeGroupsVisible, setTypeGroupsVisible] = useState(false);
@@ -507,7 +509,8 @@ export default ({ validValueTypes, value, onChange }: Props) => {
                                   const rules =
                                     r.data?.[property.type!]?.[type] ?? [];
                                   // change property type
-                                  const model = Modal.show({
+                                  const model = createPortal(Modal, {
+                                    defaultVisible: true,
                                     title: t<string>(
                                       "You are changing property type",
                                     ),
@@ -574,7 +577,8 @@ export default ({ validValueTypes, value, onChange }: Props) => {
                                         const { dataCount, toType, fromType } =
                                           rsp.data;
 
-                                        Modal.show({
+                                        createPortal(Modal, {
+                                          defaultVisible: true,
                                           title: t<string>("Final check"),
                                           size:
                                             changes.length! > 0

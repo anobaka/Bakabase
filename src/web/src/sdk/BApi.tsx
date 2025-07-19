@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import { Api } from "@/sdk/Api";
 import envConfig from "@/config/env";
 import { buildLogger } from "@/components/utils";
-import { ErrorToast } from "@/components/Error";
 
 interface BFullRequestParams extends FullRequestParams {
   ignoreError: (rsp) => boolean;
@@ -50,6 +49,8 @@ export class BApi extends Api<any> {
               ) {
                 const title = `[${typedRsp.code}]${params.path}`;
 
+                const { ErrorToast } = require("@/components/Error");
+
                 toast(
                   (tst) => (
                     <ErrorToast
@@ -72,7 +73,7 @@ export class BApi extends Api<any> {
         //   }
         // }
 
-        // console.log(error);
+        log(error);
 
         if (!params.signal?.aborted) {
           const title = `${params.path}: 请求异常，请稍后再试。`;
@@ -87,6 +88,8 @@ export class BApi extends Api<any> {
           } else {
             description = "Unknown error";
           }
+          const { ErrorToast } = require("@/components/Error");
+
           toast(
             (tst) => (
               <ErrorToast description={description} title={title} toast={tst} />

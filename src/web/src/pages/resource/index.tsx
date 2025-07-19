@@ -43,7 +43,8 @@ export default () => {
   const [resources, setResources] = useState<any[]>([]);
   const resourcesRef = useRef(resources);
 
-  const uiOptions = useUiOptionsStore((state) => state.data);
+  const uiOptionsStore = useUiOptionsStore();
+  const uiOptions = uiOptionsStore.data;
 
   const [columnCount, setColumnCount] = useState<number>(0);
   const [searchForm, setSearchForm] = useState<SearchForm>();
@@ -145,7 +146,7 @@ export default () => {
   }, [multiSelection]);
 
   useEffect(() => {
-    if (uiOptions) {
+    if (uiOptionsStore.initialized) {
       const c = uiOptions?.resource?.colCount
         ? uiOptions.resource.colCount
         : BusinessConstants.DefaultResourceColumnCount;

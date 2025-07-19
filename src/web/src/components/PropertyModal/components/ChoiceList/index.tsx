@@ -17,7 +17,6 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Overlay } from "@alifd/next";
 import { useTranslation } from "react-i18next";
 import { AutoSizer, List } from "react-virtualized";
 
@@ -26,8 +25,6 @@ import { SortableChoice } from "./components/SortableChoice";
 import { MdSort, MdAddCircle, MdDelete } from "react-icons/md";
 import { uuidv4 } from "@/components/utils";
 import { Button, Chip, Popover, Textarea } from "@/components/bakaui";
-
-const { Popup } = Overlay;
 
 interface IProps {
   choices?: IChoice[];

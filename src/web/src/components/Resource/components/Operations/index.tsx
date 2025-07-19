@@ -3,7 +3,6 @@
 import type { IResourceCoverRef } from "@/components/Resource/components/ResourceCover";
 import type { Resource } from "@/core/models/Resource";
 
-import { Dialog } from "@alifd/next";
 import { useTranslation } from "react-i18next";
 import React from "react";
 import {
@@ -21,7 +20,7 @@ import ShowResourceMediaPlayer from "@/components/Resource/components/ShowResour
 import { EnhancementAdditionalItem, PlaylistItemType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Popover } from "@/components/bakaui";
+import { Button, Popover, Modal } from "@/components/bakaui";
 
 interface IProps {
   resource: Resource;
@@ -126,9 +125,10 @@ export default ({ resource, coverRef, reload }: IProps) => {
           size={"sm"}
           title={t<string>("Add to playlist")}
           onClick={() => {
-            Dialog.show({
+            createPortal(Modal, {
+              defaultVisible: true,
               title: t<string>("Add to playlist"),
-              content: (
+              children: (
                 <PlaylistCollection
                   defaultNewItem={{
                     resourceId: resource.id,
@@ -137,7 +137,6 @@ export default ({ resource, coverRef, reload }: IProps) => {
                 />
               ),
               style: { minWidth: 600 },
-              v2: true,
               closeMode: ["close", "mask", "esc"],
             });
           }}

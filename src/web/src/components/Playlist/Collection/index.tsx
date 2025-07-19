@@ -1,21 +1,22 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Balloon, Button, Dialog, Input, List } from "@alifd/next";
 import * as dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
+import { MdAddCircle, MdPlayCircle, MdDelete } from "react-icons/md";
+import { Card, CardBody, CardHeader } from "@heroui/react";
 
 import styles from "./index.module.scss";
 
 import { toast } from "@/components/bakaui";
 import PlaylistDetail from "@/components/Playlist/Detail/index";
-import { MdPlaylistPlay } from 'react-icons/md';
-import { MdAddCircle, MdPlayCircle, MdDelete } from "react-icons/md";
+import { Popover, Button, Modal, Input } from "@/components/bakaui";
 import { PlaylistItemType } from "@/sdk/constants";
 import TimeRanger from "@/components/TimeRanger";
 import BApi from "@/sdk/BApi";
 import MediaPlayer from "@/components/MediaPlayer";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IPlaylistItem {
   type: PlaylistItemType;
@@ -85,6 +86,7 @@ export default ({ defaultNewItem, className }: IProps) => {
   const forceUpdate = useUpdate();
 
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   useEffect(() => {
     loadPlaylists();
@@ -157,10 +159,10 @@ export default ({ defaultNewItem, className }: IProps) => {
       }
       const duration = [0, totalSeconds];
 
-      Dialog.show({
+      createPortal(Modal, {
+        defaultVisible: true,
         title: t<string>("Select duration"),
-        id: "playlist-item-duration-selector",
-        content: (
+        children: (
           <div className={"playlist-item-duration-selector"}>
             <TimeRanger
               duration={dayjs.duration(totalSeconds * 1000)}
@@ -171,7 +173,6 @@ export default ({ defaultNewItem, className }: IProps) => {
             />
           </div>
         ),
-        closeMode: ["close", "esc", "mask"],
         onOk: () => saveItemToPlaylist(item, playlist),
       });
     },
@@ -214,11 +215,13 @@ export default ({ defaultNewItem, className }: IProps) => {
 
         if (added) {
           return (
-            <Balloon.Tooltip v2 trigger={btn} triggerType={"hover"}>
-              {t<string>(
+            <Popover
+              content={t<string>(
                 "You can add it more than once, and if you want to remove it from playlist, you should click the corresponding playlist first.",
               )}
-            </Balloon.Tooltip>
+              trigger={btn}
+              triggerType={"hover"}
+            />
           );
         }
 
@@ -232,28 +235,67 @@ export default ({ defaultNewItem, className }: IProps) => {
 
   return (
     <div className={`${styles.playlistCollection} ${className}`}>
-      <List
-        renderItem={(pl, i) => (
-          <List.Item
-            key={i}
-            className={styles.item}
-            extra={(
-              <div className={styles.extra}>
-                {renderAddButton(newItemRef.current, pl)}
-                {pl.items?.length > 0 && (
-                  <Button
-                    size={'small'}
-                    onClick={() => {
-                      BApi.playlist.getPlaylistFiles(pl.id)
-                        .then((a) => {
+      <div>
+        {playlists.map((pl, i) => {
+          return (
+            <Card key={i} className={styles.item}>
+              <CardHeader>
+                <Button
+                  text
+                  type={"primary"}
+                  onPress={() => {
+                    const dialog = createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t<string>("Details of {{name}}", {
+                        name: pl.name,
+                      }),
+                      size: "lg",
+                      children: (
+                        <PlaylistDetail
+                          id={pl.id}
+                          onChange={(p) => {
+                            Object.assign(pl, p);
+                            console.log(playlists, pl, p);
+                            setPlaylists([...playlists]);
+                          }}
+                        />
+                      ),
+                      onOk: () =>
+                        BApi.playlist.putPlaylist(pl).then((a) => {
+                          if (!a.code) {
+                            dialog.destroy();
+
+                            return a;
+                          }
+                          throw new Error(a.message!);
+                        }),
+                    });
+                  }}
+                >
+                  {pl.name}({(pl.items || []).length})
+                </Button>
+              </CardHeader>
+              <CardBody>
+                <div className={styles.extra}>
+                  {renderAddButton(newItemRef.current, pl)}
+                  {pl.items?.length > 0 && (
+                    <Button
+                      size={"small"}
+                      onPress={() => {
+                        BApi.playlist.getPlaylistFiles(pl.id).then((a) => {
                           if (a.data) {
                             if (a.data.length > 0) {
-                              const files: {path: string; startTime?: string; endTime?: string}[] = [];
+                              const files: {
+                                path: string;
+                                startTime?: string;
+                                endTime?: string;
+                              }[] = [];
                               // console.log(a.data, pl, pl.items, pl.items.length);
 
                               for (let x = 0; x < pl.items.length; x++) {
                                 const item = pl.items[x];
                                 const currentItemFiles = a.data[x];
+
                                 if (currentItemFiles) {
                                   for (const file of a.data[x]) {
                                     files.push({
@@ -272,117 +314,80 @@ export default ({ defaultNewItem, className }: IProps) => {
                                   zIndex: 1001,
                                 },
                               };
+
                               MediaPlayer.show(mpProps);
                             } else {
-                              toast.error(t<string>('No playable contents'));
+                              toast.danger(t<string>("No playable contents"));
                             }
                           }
                         });
+                      }}
+                    >
+                      <MdPlayCircle size={"small"} />
+                      {t<string>("Play")}
+                    </Button>
+                  )}
+                  <Button
+                    warning
+                    size={"small"}
+                    onClick={() => {
+                      createPortal(Modal, {
+                        defaultVisible: true,
+                        title: t<string>("Sure to delete?"),
+                        children: t<string>(
+                          "Are you sure you want to delete this playlist?",
+                        ),
+                        onOk: () =>
+                          BApi.playlist.deletePlaylist(pl.id).then((a) => {
+                            if (!a.code) {
+                              loadPlaylists();
+
+                              return a;
+                            }
+                            throw new Error(a.message!);
+                          }),
+                      });
                     }}
                   >
-                    <MdPlayCircle size={'small'} />
-                    {t<string>('Play')}
+                    <MdDelete size={"small"} />
+                    {t<string>("Delete")}
                   </Button>
-                )}
-                <Button
-                  warning
-                  size={'small'}
-                  onClick={() => {
-                    Dialog.confirm({
-                      title: t<string>('Sure to delete?'),
-                      onOk: () => BApi.playlist.deletePlaylist(pl.id)
-                        .then(a => {
-                          if (!a.code) {
-                            loadPlaylists();
-                            return a;
-                          }
-                          throw new Error(a.message!);
-                        }),
-                    });
-                  }}
-                >
-                  <MdDelete size={'small'} />
-                  {t<string>('Delete')}
-                </Button>
-              </div>
-            )}
-            title={
-              <Button
-                onClick={() => {
-                  const dialog = Dialog.show({
-                    title: t<string>('Details of {{name}}', { name: pl.name }),
-                    closeMode: ['esc', 'mask', 'close'],
-                    v2: true,
-                    width: 800,
-                    content: (
-                      <PlaylistDetail
-                        id={pl.id}
-                        onChange={(p) => {
-                          Object.assign(pl, p);
-                          console.log(playlists, pl, p);
-                          setPlaylists([...playlists]);
-                        }}
-                      />
-                    ),
-                    onOk: () => BApi.playlist.putPlaylist(pl)
-                      .then(a => {
-                        if (!a.code) {
-                          dialog.hide();
-                          return a;
-                        }
-                        throw new Error(a.message!);
-                      }),
-                  });
-                }}
-                type={'primary'}
-                text
-              >{pl.name}({(pl.items || []).length})
-              </Button>
-            }
-          />
-        )}
-        size="small"
-        // header={<div>Notifications</div>}
-        dataSource={playlists}
-      />
+                </div>
+              </CardBody>
+            </Card>
+          );
+        })}
+      </div>
       <div className={styles.opt}>
         <Button
-          size={"small"}
-          type={"normal"}
-          onClick={() => {
-            let name;
+          color={"default"}
+          size={"sm"}
+          onPress={() => {
+            let name: string | undefined;
 
-            Dialog.show({
+            createPortal(Modal, {
+              defaultVisible: true,
               title: t<string>("Creating playlist"),
-              closeable: true,
-              content: (
+              children: (
                 <Input
-                  onChange={(v) => {
+                  onValueChange={(v) => {
                     name = v;
                   }}
                 />
               ),
-              onOk: () =>
-                new Promise((resolve, reject) => {
-                  if (!name) {
-                    toast.error(t<string>("Name can not be empty"));
-                    reject();
+              onOk: async () => {
+                if (!name) {
+                  toast.danger(t<string>("Name can not be empty"));
+                  throw new Error("Name can not be empty");
+                }
+                const a = await BApi.playlist.addPlaylist({
+                  name,
+                });
 
-                    return;
-                  }
-                  BApi.playlist
-                    .addPlaylist({
-                      name,
-                    })
-                    .then((a) => {
-                      if (!a.code) {
-                        loadPlaylists();
-                        resolve(a);
-                      } else {
-                        reject();
-                      }
-                    });
-                }),
+                if (!a.code) {
+                  loadPlaylists();
+                }
+              },
             });
           }}
         >

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useReducer, useRef, useState } from "react";
-import { Loading } from "@alifd/next";
 import "./index.scss";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
@@ -31,6 +30,7 @@ import {
   DropdownTrigger,
   Input,
   Modal,
+  Spinner,
 } from "@/components/bakaui";
 import HandleUnknownResources from "@/components/HandleUnknownResources";
 
@@ -294,7 +294,7 @@ export default () => {
           />
         </div>
       </div>
-      <Loading fullScreen visible={loading} />
+      <Spinner fullScreen visible={loading} />
       {categories.length > 0 ? (
         <SortableCategoryList
           allComponents={allComponents}

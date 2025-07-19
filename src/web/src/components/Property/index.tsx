@@ -15,9 +15,9 @@ import { useBakabaseContext } from "../ContextProvider/BakabaseContextProvider";
 import styles from "./index.module.scss";
 import Label from "./components/Label";
 
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdEdit, MdDelete } from "react-icons/md";
 import PropertyModal from "@/components/PropertyModal";
-import { Chip, Modal, Tooltip } from "@/components/bakaui";
+import { Button, Chip, Modal, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { PropertyPool, PropertyType } from "@/sdk/constants";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
@@ -185,28 +185,32 @@ export default ({
             }
           >
             {editable && editablePortal == "edit-icon" && (
-              <ClickableIcon
+              <Button
+                isIconOnly
+                color={"default"}
+                size={"sm"}
+                variant={"light"}
                 className={"text-medium"}
-                colorType={"normal"}
-                type={"edit-square"}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                onPress={() => {
                   showDetail();
                 }}
-              />
+              >
+                <MdEdit className={"text-base"} />
+              </Button>
             )}
             {removable && (
-              <ClickableIcon
+              <Button
+                isIconOnly
+                color={"danger"}
+                size={"sm"}
+                variant={"light"}
                 className={"text-medium"}
-                colorType={"danger"}
-                type={"delete"}
-                onClick={async (e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
+                onPress={async () => {
                   setRemoveConfirmingDialogVisible(true);
                 }}
-              />
+              >
+                <MdDelete className={"text-base"} />
+              </Button>
             )}
           </div>
         )}

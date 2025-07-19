@@ -4,7 +4,7 @@ import type { DialogProps } from "@alifd/next/types/dialog";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialog } from "@alifd/next";
+import { Modal } from "@/components/bakaui";
 import { useUpdateEffect } from "react-use";
 
 import {
@@ -104,7 +104,7 @@ const SimpleOneStepDialog = (props: ISimpleOneStepDialogProps) => {
   }, [propsOnOk]);
 
   return (
-    <Dialog
+    <Modal
       autoFocus
       centered
       v2
@@ -124,7 +124,7 @@ const SimpleOneStepDialog = (props: ISimpleOneStepDialogProps) => {
       {...otherProps}
     >
       {children}
-    </Dialog>
+    </Modal>
   );
 };
 

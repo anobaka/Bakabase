@@ -4,17 +4,19 @@ import "./index.scss";
 import type { DOMAttributes } from "react";
 import type { BakabaseInsideWorldModelsModelsDtosComponentDescriptor } from "@/sdk/Api";
 
-import { Dialog } from "@alifd/next";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MdEdit, MdDelete } from "react-icons/md";
+import { MdCheckCircle } from "react-icons/md";
+import { Button } from "@heroui/react";
 
 import { ComponentDescriptorType, ComponentType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import ComponentDetail from "@/pages/custom-component/Detail";
 import { extractEnhancerTargetDescription } from "@/components/utils";
-import ClickableIcon from "@/components/ClickableIcon";
 import SimpleLabel from "@/components/SimpleLabel";
-import { MdCheckCircle } from 'react-icons/md';
+import { Modal } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface DescriptorCardProps extends DOMAttributes<unknown> {
   descriptor: BakabaseInsideWorldModelsModelsDtosComponentDescriptor;
@@ -35,6 +37,7 @@ const TypeLabelProps = {
 
 export default (props: DescriptorCardProps) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const {
     descriptor: propsDescriptor,
     selected,
@@ -109,16 +112,17 @@ export default (props: DescriptorCardProps) => {
       {...otherProps}
       ref={domRef}
     >
-      {selected && (
-        <MdCheckCircle className={'selected-icon text-xl'} />
-      )}
+      {selected && <MdCheckCircle className={"selected-icon text-xl"} />}
       {descriptor.type == ComponentDescriptorType.Instance && (
         <div className={"top-right-operations"}>
-          <div
-            className={"edit"}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
+          <Button
+            isIconOnly
+            color={"default"}
+            size={"sm"}
+            variant={"light"}
+            onPress={(e) => {
+              // e.preventDefault();
+              // e.stopPropagation();
               ComponentDetail.show({
                 componentType: descriptor.componentType,
                 componentKey: descriptor.id,
@@ -136,18 +140,22 @@ export default (props: DescriptorCardProps) => {
               });
             }}
           >
-            <ClickableIcon colorType={"normal"} type={"edit-square"} />
-          </div>
-          <div
-            className={"delete"}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              Dialog.confirm({
+            <MdEdit className={"text-base"} />
+          </Button>
+          <Button
+            isIconOnly
+            color={"danger"}
+            size={"sm"}
+            variant={"light"}
+            onPress={(e) => {
+              // e.preventDefault();
+              // e.stopPropagation();
+              createPortal(Modal, {
+                defaultVisible: true,
                 title: t<string>("Sure to delete?"),
-                content: t<string>(""),
-                v2: true,
-                closeMode: ["mask", "esc", "close"],
+                children: t<string>(
+                  "Are you sure you want to delete this component?",
+                ),
                 onOk: () =>
                   BApi.componentOptions
                     .removeComponentOptions(descriptor.optionsId)
@@ -161,8 +169,8 @@ export default (props: DescriptorCardProps) => {
               });
             }}
           >
-            <ClickableIcon colorType={"danger"} type={"delete"} />
-          </div>
+            <MdDelete className={"text-base"} />
+          </Button>
         </div>
       )}
       <div className="top">

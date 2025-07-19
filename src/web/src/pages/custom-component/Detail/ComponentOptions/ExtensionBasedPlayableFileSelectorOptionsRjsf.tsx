@@ -2,7 +2,7 @@
 
 import type { BRjsfProps } from "@/components/BRjsf";
 
-import { NumberPicker, Select } from "@alifd/next";
+import { NumberInput, Select } from "@/components/bakaui";
 import React, { useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
 
@@ -54,7 +54,7 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
     },
     maxFileCount: {
       convertValue: (v) => parseInt(v),
-      Component: NumberPicker,
+      Component: NumberInput,
       componentProps: {
         size: "small",
       },

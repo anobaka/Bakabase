@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useCallback, useEffect } from "react";
-import { Dialog, Dropdown, Menu } from "@alifd/next";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useTranslation } from "react-i18next";
@@ -34,6 +33,9 @@ import {
   Input,
   Modal,
   Tooltip,
+  Dropdown,
+  DropdownMenu,
+  DropdownItem,
 } from "@/components/bakaui";
 import SynchronizationConfirmModal from "@/pages/category/components/SynchronizationConfirmModal";
 import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
@@ -138,19 +140,29 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
   };
 
   const renderAddRootPathModal = () => {
-    createPortal(FileSystemSelectorModal, {
-      targetType: "folder",
-      onSelected: (e) => {
-        BApi.mediaLibrary
-          .addMediaLibraryPathConfiguration(library.id, {
-            path: e.path,
-          })
-          .then((b) => {
-            if (!b.code) {
-              loadAllMediaLibraries();
+    createPortal(Modal, {
+      defaultVisible: true,
+      size: "lg",
+      title: t<string>("Add root path"),
+      children: (
+        <Input
+          isRequired
+          label={t<string>("Path")}
+          onValueChange={(v) => {
+            if (v) {
+              BApi.mediaLibrary
+                .addMediaLibraryPathConfiguration(library.id, {
+                  path: v,
+                })
+                .then((b) => {
+                  if (!b.code) {
+                    loadAllMediaLibraries();
+                  }
+                });
             }
-          });
-      },
+          }}
+        />
+      ),
     });
   };
 
@@ -168,9 +180,11 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
             onClick={() => {
               let n = library.name;
 
-              Dialog.show({
+              createPortal(Modal, {
+                defaultVisible: true,
+                size: "lg",
                 title: t<string>("Change name"),
-                content: (
+                children: (
                   <Input
                     defaultValue={n}
                     style={{ width: "100%" }}
@@ -179,7 +193,6 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                     }}
                   />
                 ),
-                style: { width: 800 },
                 onOk: () => {
                   return new Promise((resolve, reject) => {
                     if (n?.length > 0) {
@@ -201,7 +214,6 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                     }
                   });
                 },
-                closeable: true,
               });
             }}
           >
@@ -275,16 +287,16 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
               }
               triggerType={["hover"]}
             >
-              <Menu>
-                <Menu.Item
+              <DropdownMenu>
+                <DropdownItem
                   onClick={() => {
                     renderAddRootPathInBulkModal();
                   }}
                 >
                   <MdPlaylistAdd className={"text-base"} />
                   {t<string>("Add root paths in bulk")}
-                </Menu.Item>
-              </Menu>
+                </DropdownItem>
+              </DropdownMenu>
             </Dropdown>
             <Dropdown
               className={"category-page-media-library-more-operations-popup"}
@@ -300,8 +312,8 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
               }
               triggerType={["click"]}
             >
-              <Menu>
-                <Menu.Item
+              <DropdownMenu>
+                <DropdownItem
                   className={"warning"}
                   onClick={() => {
                     createPortal(DeleteEnhancementsModal, {
@@ -319,13 +331,14 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                 >
                   <MdSearch className={"text-base"} />
                   {t<string>("Delete all enhancement records")}
-                </Menu.Item>
-                <Menu.Item
+                </DropdownItem>
+                <DropdownItem
                   className={"warning"}
                   onClick={() => {
-                    Dialog.confirm({
+                    createPortal(Modal, {
+                      defaultVisible: true,
                       title: `${t<string>("Deleting")} ${library.name}`,
-                      closeable: true,
+                      children: t<string>("Are you sure you want to delete this media library?"),
                       onOk: () =>
                         new Promise((resolve, reject) => {
                           BApi.mediaLibrary
@@ -342,8 +355,8 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
                 >
                   <MdDelete className={"text-base"} />
                   {t<string>("Remove")}
-                </Menu.Item>
-              </Menu>
+                </DropdownItem>
+              </DropdownMenu>
             </Dropdown>
           </div>
         </div>

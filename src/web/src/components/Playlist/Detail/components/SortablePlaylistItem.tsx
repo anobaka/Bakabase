@@ -1,13 +1,13 @@
 "use client";
 
 import { SortableElement } from "react-sortable-hoc";
-import { Button } from "@alifd/next";
+import { Button } from "@/components/bakaui";
 import React from "react";
 
 import { MdVideoLibrary, MdVideoFile, MdImage, MdAudiotrack, MdDragIndicator } from "react-icons/md";
 import { PlaylistItemType } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdDelete } from "react-icons/md";
 import BApi from "@/sdk/BApi";
 
 const ItemTypeIcon = {
@@ -78,13 +78,17 @@ export default SortableElement(({ item, resource, onRemove }) => {
 
       <div className="duration">{renderDuration(item)}</div>
       <div className="opt">
-        <ClickableIcon
-          colorType={"danger"}
-          type={"delete"}
-          onClick={() => {
+        <Button
+          isIconOnly
+          color={"danger"}
+          size={"sm"}
+          variant={"light"}
+          onPress={() => {
             onRemove(item);
           }}
-        />
+        >
+          <MdDelete className={"text-base"} />
+        </Button>
       </div>
     </div>
   );

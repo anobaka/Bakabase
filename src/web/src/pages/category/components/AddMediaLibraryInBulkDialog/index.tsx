@@ -3,10 +3,10 @@
 import type { DialogProps } from "@alifd/next/types/dialog";
 
 import { useState } from "react";
-import { Button, Dialog, Input, Table } from "@alifd/next";
+import { Button, Modal, Input, Table } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdDelete } from "react-icons/md";
 import { createPortalOfComponent } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 
@@ -31,7 +31,7 @@ const AddMediaLibraryInBulkDialog = ({
   };
 
   return (
-    <Dialog
+    <Modal
       v2
       style={{ minWidth: 600 }}
       title={t<string>("Add media libraries in bulk")}
@@ -87,16 +87,20 @@ const AddMediaLibraryInBulkDialog = ({
                   key={j}
                   hasClear
                   trim
-                  addonAfter={
-                    <ClickableIcon
-                      colorType={"danger"}
+                  endContent={
+                    <Button
+                      isIconOnly
+                      color={"danger"}
+                      size={"sm"}
+                      variant={"light"}
                       style={{ marginLeft: 5 }}
-                      type={"delete"}
-                      onClick={() => {
+                      onPress={() => {
                         paths.splice(j, 1);
                         setNameAndPaths([...nameAndPaths]);
                       }}
-                    />
+                    >
+                      <MdDelete className={"text-base"} />
+                    </Button>
                   }
                   placeholder={t<string>("Root path")}
                   style={{ width: 800 }}
@@ -146,7 +150,7 @@ const AddMediaLibraryInBulkDialog = ({
       >
         {t<string>("Add a media library")}
       </Button>
-    </Dialog>
+    </Modal>
   );
 };
 

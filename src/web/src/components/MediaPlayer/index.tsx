@@ -1,6 +1,6 @@
 "use client";
 
-import { Drawer, Icon, Progress, Tree } from "@alifd/next";
+import { Icon, Progress } from "@/components/bakaui";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";

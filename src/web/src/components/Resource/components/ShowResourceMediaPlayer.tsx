@@ -2,7 +2,6 @@
 
 import type ReactPlayer from "react-player";
 
-import { Overlay } from "@alifd/next";
 import React from "react";
 import * as dayjs from "dayjs";
 import * as duration from "dayjs/plugin/duration";
@@ -13,10 +12,9 @@ import { MediaType } from "@/sdk/constants";
 import { captureVideoFrame } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import CoverSaveButton from "@/components/Resource/components/CoverSaveButton";
+import { Popover } from "@/components/bakaui";
 
 dayjs.extend(duration);
-
-const { Popup } = Overlay;
 
 export default (
   resourceId: number,

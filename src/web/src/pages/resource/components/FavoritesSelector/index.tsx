@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Checkbox, Dialog } from "@alifd/next";
+import { Checkbox, Modal } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 
 import { createPortalOfComponent } from "@/components/utils";
@@ -46,7 +46,7 @@ const FavoritesSelector = React.memo(({ resourceIds = [] }: Props) => {
   }, []);
 
   return (
-    <Dialog
+    <Modal
       className={"resource-page-favorites-selector"}
       closeMode={["esc", "mask", "close"]}
       style={{ minWidth: 600 }}
@@ -105,7 +105,7 @@ const FavoritesSelector = React.memo(({ resourceIds = [] }: Props) => {
           </Checkbox>
         );
       })}
-    </Dialog>
+    </Modal>
   );
 });
 

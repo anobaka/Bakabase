@@ -14,6 +14,7 @@ import {
   Divider,
 } from "@/components/bakaui";
 import { ResourceCacheType } from "@/sdk/constants";
+import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 
 type CategoryCacheOverview = {
   categoryId: number;
@@ -124,9 +125,7 @@ export default () => {
                     <div>
                       <div className="text-md">
                         {item.categoryName}
-                        <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                          {t<string>("Deprecated")}
-                        </Chip>
+                        <DeprecatedChip />
                       </div>
                       <div className="text-small text-default-500">
                         {t<string>("Resource count")}: {item.resourceCount}

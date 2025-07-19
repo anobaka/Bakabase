@@ -5,8 +5,8 @@ import type { SearchFormOrderModel } from "@/pages/resource/models";
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
+import { FaSortAmountDownAlt, FaSortAmountUpAlt } from "react-icons/fa";
 
-import { MdSort, MdSortByAlpha } from 'react-icons/md';
 import {
   resourceSearchSortableProperties,
   type ResourceSearchSortableProperty,
@@ -53,12 +53,16 @@ export default ({ value: propsValue, onChange, ...otherProps }: IProps) => {
               }}
               title={t<string>(y.label)}
             >
-              {y.asc ? <MdSortByAlpha className={'text-lg'} /> : <MdSort className={'text-lg'} />}
+              {y.asc ? (
+                <FaSortAmountUpAlt className={"text-lg"} />
+              ) : (
+                <FaSortAmountDownAlt className={"text-lg"} />
+              )}
               {t<string>(x.label)}
             </div>
           ),
           value: `${x.value}-${y.asc}`,
-          textValue: `${x.label}${t<string>(y.asc ? "Asc" : "Desc")}`,
+          textValue: `${t<string>(x.label)}${t<string>(y.asc ? "Asc" : "Desc")}`,
         });
       });
 
@@ -71,7 +75,7 @@ export default ({ value: propsValue, onChange, ...otherProps }: IProps) => {
       <Select
         aria-label={t<string>('Orders')}
         selectedKeys={(value || []).map((a) => `${a.property}-${a.asc}`)}
-        selectionMode={'multiple'}
+        selectionMode={'single'}
         size={'sm'}
         style={{
           maxWidth: 500,

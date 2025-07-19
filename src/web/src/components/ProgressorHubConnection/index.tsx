@@ -3,7 +3,7 @@
 import type { HubConnection } from "@microsoft/signalr";
 
 import React, { useEffect, useRef } from "react";
-import { Dialog } from "@alifd/next";
+import { Modal } from "@/components/bakaui";
 import i18n from "i18next";
 import {
   HubConnectionBuilder,
@@ -14,6 +14,8 @@ import {
 import envConfig from "@/config/env";
 import { toast } from "@/components/bakaui";
 import { sleep } from "@/components/utils";
+import type { ComponentType } from "react";
+import type { DestroyableProps } from "@/components/bakaui/types";
 
 const progressorHubUri = "/hub/progressor";
 
@@ -200,6 +202,10 @@ class ProgressorHubConnection<TProgress extends IProgressorProgress> {
 
 function useProgressorHubConnection(
   id: string,
+  createPortal: <P extends DestroyableProps>(
+    C: ComponentType<P>,
+    props: P,
+  ) => { destroy: () => void; key: string },
   onProgressChange = (progress) => {},
   onStateChange = (state) => {},
   onConnected = (connection) => {},
@@ -217,17 +223,17 @@ function useProgressorHubConnection(
       onConnectionStateChange: (state: HubConnectionState) => {
         dialogRef.current?.hide();
         if (state != HubConnectionState.Connected) {
-          dialogRef.current = Dialog.show({
-            content: (
+          dialogRef.current = createPortal(Modal, {
+            defaultVisible: true,
+            children: (
               <div style={{ textAlign: "center" }}>
                 Hub{i18n.t<string>("Connecting...")}
               </div>
             ),
-            width: "auto",
+            size: "auto",
             footer: false,
             className: "hub-connection-dialog",
             centered: true,
-            v2: true,
             hasMask: false,
           });
         } else {
@@ -237,11 +243,11 @@ function useProgressorHubConnection(
         }
       },
       onFatalError: (code: number, msg: string) =>
-        Dialog.error({
-          v2: true,
-          width: "auto",
+        createPortal(Modal, {
+          defaultVisible: true,
+          size: "auto",
           title: i18n.t<string>("Error"),
-          content: (
+          children: (
             <pre>
               Code: {code}, message: {msg}
             </pre>

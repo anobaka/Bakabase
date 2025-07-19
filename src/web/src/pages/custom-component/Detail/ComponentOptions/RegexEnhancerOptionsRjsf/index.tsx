@@ -3,7 +3,7 @@
 import type { FormValidation } from "@rjsf/utils";
 import type { BRjsfProps } from "@/components/BRjsf";
 
-import { Button, Input, Select, Table } from "@alifd/next";
+import { Button, Input, Select, Table } from "@/components/bakaui";
 import React, {
   useEffect,
   useImperativeHandle,

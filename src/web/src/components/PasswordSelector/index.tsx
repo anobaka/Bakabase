@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Dialog, Radio } from "@alifd/next";
+import { Badge, Button, Modal, Radio } from "@/components/bakaui";
 import { useCallback, useEffect, useState } from "react";
 
 import { createPortalOfComponent } from "@/components/utils";
@@ -10,7 +10,8 @@ import { PasswordSearchOrder } from "@/sdk/constants";
 import "./index.scss";
 import { useTranslation } from "react-i18next";
 
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdDelete } from "react-icons/md";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
   onSelect: (password: string) => any;
@@ -20,6 +21,7 @@ interface IProps {
 function PasswordSelector(props: IProps) {
   const { onSelect, afterClose } = props;
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const [passwords, setPasswords] = useState<
     { text: string; usedTimes: number; lastUsedAt: string }[]
@@ -60,19 +62,22 @@ function PasswordSelector(props: IProps) {
         >
           <div className="top">
             <div className="text">{p.text}</div>
-            <ClickableIcon
-              colorType={"danger"}
-              type={"delete"}
-              onClick={(e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                Dialog.confirm({
+            <Button
+              isIconOnly
+              color={"danger"}
+              size={"sm"}
+              variant={"light"}
+              onPress={() => {
+                createPortal(Modal, {
+                  defaultVisible: true,
                   title: t<string>("Delete password from history?"),
-                  closeable: true,
+                  children: t<string>("Are you sure you want to delete this password from history?"),
                   onOk: () => BApi.password.deletePassword(p.text),
                 });
               }}
-            />
+            >
+              <MdDelete className={"text-base"} />
+            </Button>
           </div>
           <div className="info">
             <div className="last-used-at">{p.lastUsedAt}</div>
@@ -85,7 +90,7 @@ function PasswordSelector(props: IProps) {
   }, [passwords, order]);
 
   return (
-    <Dialog
+    <Modal
       v2
       afterClose={afterClose}
       className={"password-selector-dialog"}
@@ -123,7 +128,7 @@ function PasswordSelector(props: IProps) {
         <div className="title">{t<string>("Passwords")}</div>
         <div className="content">{renderPasswords()}</div>
       </div>
-    </Dialog>
+    </Modal>
   );
 }
 

@@ -17,7 +17,7 @@ import {
   Popover,
   Tooltip,
 } from "@/components/bakaui";
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdSelectAll } from "react-icons/md";
 
 const contentStyle: React.CSSProperties = {
   margin: 0,
@@ -76,7 +76,14 @@ export default () => {
         }}
       />
       <Tooltip content={t<string>("Bulk operations")}>
-        <ClickableIcon colorType={"normal"} type={"Multiselect"} />
+        <Button
+          isIconOnly
+          color={"default"}
+          size={"sm"}
+          variant={"light"}
+        >
+          <MdSelectAll className={"text-base"} />
+        </Button>
       </Tooltip>
 
       <Button color={"primary"} onClick={() => setVisible(true)}>

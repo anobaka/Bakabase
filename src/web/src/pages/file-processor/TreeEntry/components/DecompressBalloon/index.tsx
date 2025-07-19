@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Dialog, Input, Tag } from "@alifd/next";
+import { Button, Modal, Input } from "@/components/bakaui";
 
 import { toast } from "@/components/bakaui";
 
@@ -13,6 +13,7 @@ import BApi from "@/sdk/BApi";
 import { PasswordSearchOrder } from "@/sdk/constants";
 import PasswordSelector from "@/components/PasswordSelector";
 import { Tooltip } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 const QuickPasswordCount = 5;
 
@@ -46,6 +47,7 @@ const loadTopNPasswords = async (
 export default (props: Props) => {
   const { trigger, entry, passwords = [] } = props;
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const customPasswordRef = useRef<string>();
 
   const [recentPasswords, setRecentPasswords] = useState<IPassword[]>([]);
@@ -130,9 +132,10 @@ export default (props: Props) => {
                       decompress(entry.path, p.text);
                     }}
                     onClose={(from) => {
-                      Dialog.confirm({
+                      createPortal(Modal, {
+                        defaultVisible: true,
                         title: t<string>("Delete password from history?"),
-                        closeable: true,
+                        children: t<string>("Are you sure you want to delete this password from history?"),
                         onOk: () => BApi.password.deletePassword(p.text),
                       });
 

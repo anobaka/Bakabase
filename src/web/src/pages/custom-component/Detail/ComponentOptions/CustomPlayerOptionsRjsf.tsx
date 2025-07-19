@@ -2,7 +2,7 @@
 
 import type { BRjsfProps } from "@/components/BRjsf";
 
-import { Balloon, Button, Input, Select, Table } from "@alifd/next";
+import { Popover, Button, Input, Select, Table } from "@/components/bakaui";
 import React, { useState } from "react";
 import i18n from "i18next";
 import { useUpdateEffect } from "react-use";
@@ -125,14 +125,14 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
                       }}
                       >
                         {i18n.t<string>('CommandTemplate')}
-                        <Balloon.Tooltip
+                        <Popover
                           triggerType={'hover'}
                           align={'t'}
                           style={{ maxWidth: 'unset' }}
                           trigger={<MdPlayCircle />}
                         >
                           {commandTemplateTip}
-                        </Balloon.Tooltip>
+                        </Popover>
                       </div>
                     )}
                     dataIndex={'commandTemplate'}

@@ -5,7 +5,7 @@ import type { MediaLibraryTemplate } from "../media-library-template/models";
 import type { components } from "@/sdk/BApi2";
 
 import { useTranslation } from "react-i18next";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { FaRegSave, FaSort } from "react-icons/fa";
 import toast from "react-hot-toast";
@@ -202,7 +202,7 @@ export default () => {
         <>
           <div
             className={"grid gap-1 mt-2 items-center"}
-            style={{ gridTemplateColumns: "auto 1fr 2fr 1fr auto" }}
+            style={{ gridTemplateColumns: "auto 1fr 2fr 1fr" }}
           >
             {editingMediaLibraries.map((e, i) => {
               const paths = Array.isArray(e.paths) ? e.paths : (e.paths = []);
@@ -244,18 +244,6 @@ export default () => {
                         }}
                       >
                         <PathAutocomplete
-                          value={p}
-                          onChange={(v) => {
-                            paths[idx] = v;
-                            // 保证无空字符串
-                            e.paths = paths.filter(Boolean);
-                            forceUpdate();
-                          }}
-                          onSelectionChange={(selectedPath) => {
-                            paths[idx] = selectedPath;
-                            e.paths = paths.filter(Boolean);
-                            forceUpdate();
-                          }}
                           endContent={
                             <div className="flex items-center gap-1">
                               <Button
@@ -295,12 +283,24 @@ export default () => {
                               ? `${t<string>("MediaLibrary.Path")}${idx + 1}`
                               : t<string>("MediaLibrary.Path")
                           }
+                          pathType="folder"
                           placeholder={t<string>(
                             "MediaLibrary.PathPlaceholder",
                           )}
                           size="sm"
+                          value={p}
                           variant="underlined"
-                          pathType="folder"
+                          onChange={(v) => {
+                            paths[idx] = v;
+                            // 保证无空字符串
+                            e.paths = paths.filter(Boolean);
+                            forceUpdate();
+                          }}
+                          onSelectionChange={(selectedPath) => {
+                            paths[idx] = selectedPath;
+                            e.paths = paths.filter(Boolean);
+                            forceUpdate();
+                          }}
                         />
                       </div>
                     ))}
@@ -381,19 +381,19 @@ export default () => {
                       }}
                     />
                   </div> */}
-                  <div className={"flex items-center gap-1"}>
-                    <Button
-                      isIconOnly
-                      color={"danger"}
-                      variant={"light"}
-                      onPress={() => {
-                        editingMediaLibraries!.splice(i, 1);
-                        forceUpdate();
-                      }}
-                    >
-                      <MdOutlineDelete className={"text-lg"} />
-                    </Button>
-                  </div>
+                  {/*<div className={"flex items-center gap-1"}>*/}
+                  {/*  <Button*/}
+                  {/*    isIconOnly*/}
+                  {/*    color={"danger"}*/}
+                  {/*    variant={"light"}*/}
+                  {/*    onPress={() => {*/}
+                  {/*      editingMediaLibraries!.splice(i, 1);*/}
+                  {/*      forceUpdate();*/}
+                  {/*    }}*/}
+                  {/*  >*/}
+                  {/*    <MdOutlineDelete className={"text-lg"} />*/}
+                  {/*  </Button>*/}
+                  {/*</div>*/}
                   {editingMediaLibraries.length > i + 1 && (
                     <Divider className="col-span-full" />
                   )}
@@ -468,6 +468,7 @@ export default () => {
 
               return (
                 <>
+                  {renderPath(ml)}
                   <div className="flex items-center gap-1">
                     <div style={{ color: ml.color }}>{ml.name}</div>
                     <ColorPicker
@@ -484,7 +485,6 @@ export default () => {
                       }}
                     />
                   </div>
-                  {renderPath(ml)}
                   <Button
                     className={"text-left"}
                     isDisabled={!template}

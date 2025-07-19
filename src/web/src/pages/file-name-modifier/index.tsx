@@ -6,7 +6,7 @@ const FileNameModifierPage: React.FC = () => {
   return (
     <div className="p-4 h-full">
       <div className="h-full">
-        <FileNameModifier initialFilePaths={[]} isModal={false} />
+        <FileNameModifier initialFilePaths={[]} />
       </div>
     </div>
   );

@@ -1,36 +1,53 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Dialog,
-  Dropdown,
-  Icon,
-  Input,
-  Menu,
-  Table,
-  TimePicker2,
-} from "@alifd/next";
 import { useTranslation } from "react-i18next";
 import {
   DeleteOutlined,
   FolderOpenOutlined,
   PlusCircleOutlined,
-  QuestionCircleOutlined,
 } from "@ant-design/icons";
+import { MdWarning } from "react-icons/md";
+import moment from "moment";
+import { MdFolder } from "react-icons/md";
+import dayjs from "dayjs";
 
+import {
+  Button,
+  Checkbox,
+  Switch,
+  Tooltip,
+  Modal,
+  Dropdown,
+  Icon,
+  Input,
+  Table,
+  TimeInput,
+  DropdownMenu,
+  DropdownItem,
+  DropdownTrigger,
+  TableHeader,
+  TableBody,
+  TableColumn,
+  TableCell,
+  TableRow,
+  Textarea,
+} from "@/components/bakaui";
 import { toast } from "@/components/bakaui";
-import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
+import {
+  FileSystemSelectorButton,
+  FileSystemSelectorModal,
+} from "@/components/FileSystemSelector";
+
 import "./index.scss";
-import { MdFolder } from 'react-icons/md';
+
 import AnimatedArrow from "@/components/AnimatedArrow";
 import BApi from "@/sdk/BApi";
 import { useFileMovingProgressesStore } from "@/models/fileMovingProgresses";
-import ClickableIcon from "@/components/ClickableIcon";
-import { Button, Checkbox, Switch, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
-
-import type { BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions } from "@/sdk/Api";
+import { useFileSystemOptionsStore } from "@/models/options";
+import { AiOutlineProduct } from "react-icons/ai";
 
 interface IValue {
   targets: {
@@ -56,10 +73,12 @@ export default () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const [preferredTarget, setPreferredTarget] = useState();
-  const [preferredSource, setPreferredSource] = useState();
+  const fsOptionsStore = useFileSystemOptionsStore();
 
-  const [value, setValue] = useState<IValue>(new Value());
+  const [preferredTarget, setPreferredTarget] = useState<string | undefined>();
+  const [preferredSource, setPreferredSource] = useState<string | undefined>();
+
+  const value = fsOptionsStore.data.fileMover ?? new Value();
 
   const [quickEditModeData, setQuickEditModeData] = useState<
     {
@@ -70,33 +89,7 @@ export default () => {
 
   const progresses = useFileMovingProgressesStore((state) => state.progresses);
 
-  console.log(progresses);
-
-  const loadOptions = () => {
-    BApi.options.getFileSystemOptions().then((a) => {
-      const fm: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions =
-        a.data?.fileMover || {};
-      const value = {
-        delay: fm.delay as string,
-        enabled: fm.enabled ?? false,
-        targets:
-          fm.targets?.map((t) => {
-            return {
-              path: t.path!,
-              sources: t.sources || [],
-              overwrite: t.overwrite,
-            };
-          }) || [],
-      };
-
-      // console.log('0-1 options loaded');
-      setValue(value);
-    });
-  };
-
-  useEffect(() => {
-    loadOptions();
-  }, []);
+  useEffect(() => {}, []);
 
   const save = (patches = {}, cb?: () => any) => {
     const options = {
@@ -104,21 +97,18 @@ export default () => {
       ...(patches || {}),
     };
 
-    BApi.options
-      .patchFileSystemOptions({
+    fsOptionsStore
+      .patch({
         // @ts-ignore
         fileMover: options,
       })
-      .then((a) => {
-        if (!a.code) {
-          toast.success(t<string>("Saved"));
-          loadOptions();
-          cb && cb();
-        }
+      .then(() => {
+        toast.success(t<string>("Saved"));
+        cb && cb();
       });
   };
 
-  const addTarget = (targetPath, cb = () => {}) => {
+  const addTarget = (targetPath: string, cb: () => void = () => {}) => {
     if (!targets.some((t) => t.path == targetPath)) {
       targets.push({
         path: targetPath,
@@ -137,7 +127,11 @@ export default () => {
     }
   };
 
-  const updateTarget = (targetPath, newTargetPath, cb = () => {}) => {
+  const updateTarget = (
+    targetPath: string,
+    newTargetPath: string,
+    cb: () => void = () => {},
+  ) => {
     const targetIndex = targets.findIndex((a) => a.path == targetPath);
     const target = targets[targetIndex]!;
 
@@ -154,16 +148,18 @@ export default () => {
     );
   };
 
-  const addSource = (targetPath, sourcePath) => {
+  const addSource = (targetPath: string, sourcePath: string) => {
     const target = targets.find((a) => a.path == targetPath)!;
+
+    console.log("Adding source:", { targetPath, sourcePath, target });
 
     if (!target.sources) {
       target.sources = [];
     }
-    const { sources = [] } = target;
 
-    if (sources.indexOf(sourcePath) == -1) {
-      sources.push(sourcePath);
+    if (target.sources.indexOf(sourcePath) == -1) {
+      target.sources.push(sourcePath);
+      console.log("Source added, new sources:", target.sources);
       save(
         {
           targets,
@@ -173,17 +169,25 @@ export default () => {
         },
       );
     } else {
+      console.log("Source already exists");
       setPreferredTarget(targetPath);
     }
   };
 
-  const updateSource = (targetPath, sourcePath, newSourcePath) => {
-    const sources = targets.find((a) => a.path == targetPath)?.sources || [];
-    const idx = sources.indexOf(sourcePath);
+  const updateSource = (
+    targetPath: string,
+    sourcePath: string,
+    newSourcePath: string,
+  ) => {
+    const target = targets.find((a) => a.path == targetPath);
+
+    if (!target || !target.sources) return;
+
+    const idx = target.sources.indexOf(sourcePath);
 
     if (idx > -1) {
-      if (sources.indexOf(newSourcePath) == -1) {
-        sources[idx] = sourcePath;
+      if (target.sources.indexOf(newSourcePath) == -1) {
+        target.sources[idx] = newSourcePath;
         save({
           targets,
         });
@@ -202,7 +206,7 @@ export default () => {
     overwrite: boolean;
   };
 
-  const ds =
+  const ds: Item[] =
     targets.reduce<Item[]>((s, t) => {
       const sources = (t.sources || []).slice();
       // sources.push(null);
@@ -217,14 +221,15 @@ export default () => {
         newArr.push({
           target: t.path,
           rowSpan: undefined,
-          source: undefined,
-          overwrite: undefined,
+          source: "",
+          overwrite: false,
         });
       }
 
       newArr.sort((a, b) => {
         return (
-          (a == preferredSource ? -1 : 0) - (b == preferredSource ? -1 : 0)
+          (a.source == preferredSource ? -1 : 0) -
+          (b.source == preferredSource ? -1 : 0)
         );
       });
       if (t.path == preferredTarget) {
@@ -235,23 +240,28 @@ export default () => {
     }, []) || [];
 
   ds.splice(0, 0, {
+    target: "",
     rowSpan: 1,
+    source: "",
+    overwrite: false,
   });
 
   // console.log(value, ds);
 
-  const renderCommonOperations = (path) => {
+  const renderCommonOperations = (path: string) => {
     return (
       <>
-        <Button isIconOnly size={"sm"} variant={"light"}>
-          <FolderOpenOutlined
-            className={"text-base"}
-            onClick={() => {
-              BApi.tool.openFileOrDirectory({
-                path,
-              });
-            }}
-          />
+        <Button
+          isIconOnly
+          size={"sm"}
+          variant={"light"}
+          onPress={() => {
+            BApi.tool.openFileOrDirectory({
+              path,
+            });
+          }}
+        >
+          <FolderOpenOutlined className={"text-base"} />
         </Button>
       </>
     );
@@ -270,331 +280,326 @@ export default () => {
 
   const renderQuickEditMode = () => {
     return (
-      <Table
-        className={"quick-edit-mode-table"}
-        dataSource={quickEditModeData}
-        size={"small"}
-      >
-        <Table.Column
-          cell={(path, i, r) => {
-            if (i == quickEditModeData!.length - 1) {
-              return (
-                <Button
-                  color={"primary"}
-                  size={"sm"}
-                  onClick={() => {
-                    quickEditModeData?.splice(i, 0, {});
-                    setQuickEditModeData([...quickEditModeData!]);
-                  }}
-                >
-                  {t<string>("Add")}
-                </Button>
-              );
-            }
-            const target = targets[path];
-
-            return (
-              <div className={"target"}>
-                <Input
-                  placeholder={t<string>("Target path")}
-                  value={path}
-                  onChange={(v) => {
-                    quickEditModeData![i].path = v;
-                    setQuickEditModeData([...quickEditModeData!]);
-                  }}
-                />
-                <Button
-                  isIconOnly
-                  color={"danger"}
-                  size={"sm"}
-                  variant={"light"}
-                >
-                  <DeleteOutlined
-                    className={"text-base"}
-                    onClick={() => {
-                      quickEditModeData!.splice(i, 1);
+      <Table isCompact removeWrapper className={"quick-edit-mode-table"}>
+        <TableHeader>
+          <TableColumn>{t<string>("Target")}</TableColumn>
+          <TableColumn align="center" width={90}>
+            {t<string>("Moving direction")}
+          </TableColumn>
+          <TableColumn>{t<string>("Source")}</TableColumn>
+        </TableHeader>
+        <TableBody>
+          {quickEditModeData?.map((row, i) => (
+            <TableRow key={i}>
+              <TableCell>
+                {i === quickEditModeData.length - 1 ? (
+                  <Button
+                    color={"primary"}
+                    size={"sm"}
+                    onPress={() => {
+                      quickEditModeData?.splice(i, 0, {});
+                      setQuickEditModeData([...quickEditModeData!]);
+                    }}
+                  >
+                    {t<string>("Add")}
+                  </Button>
+                ) : (
+                  <div className={"target"}>
+                    <Input
+                      placeholder={t<string>("Target path")}
+                      value={row.path}
+                      onValueChange={(v: string) => {
+                        quickEditModeData![i].path = v;
+                        setQuickEditModeData([...quickEditModeData!]);
+                      }}
+                    />
+                    <Button
+                      isIconOnly
+                      color={"danger"}
+                      size={"sm"}
+                      variant={"light"}
+                      onPress={() => {
+                        quickEditModeData!.splice(i, 1);
+                        setQuickEditModeData([...quickEditModeData!]);
+                      }}
+                    >
+                      <DeleteOutlined className={"text-base"} />
+                    </Button>
+                  </div>
+                )}
+              </TableCell>
+              <TableCell align="center">
+                <AnimatedArrow direction={"left"} />
+              </TableCell>
+              <TableCell>
+                {i === quickEditModeData.length - 1 ? null : (
+                  <Textarea
+                    maxRows={100}
+                    minRows={2}
+                    placeholder={t<string>("One path per line")}
+                    size={"sm"}
+                    style={{ width: "100%" }}
+                    value={row.sources?.join("\n")}
+                    onValueChange={(v: string) => {
+                      quickEditModeData![i].sources = v.split("\n");
                       setQuickEditModeData([...quickEditModeData!]);
                     }}
                   />
-                </Button>
-              </div>
-            );
-          }}
-          dataIndex={"path"}
-          title={t<string>("Target")}
-        />
-        <Table.Column
-          align={"center"}
-          cell={() => {
-            return <AnimatedArrow direction={"left"} />;
-          }}
-          title={t<string>("Moving direction")}
-          width={90}
-        />
-        <Table.Column
-          cell={(s, i, r) => {
-            if (i == quickEditModeData!.length - 1) {
-              return;
-            }
-
-            return (
-              <Input.TextArea
-                autoHeight={{
-                  minRows: 2,
-                  maxRows: 100,
-                }}
-                placeholder={t<string>("One path per line")}
-                size={"small"}
-                value={s?.join("\n")}
-                width={"100%"}
-                onChange={(v) => {
-                  quickEditModeData![i].sources = v.split("\n");
-                  setQuickEditModeData([...quickEditModeData!]);
-                }}
-              />
-            );
-          }}
-          dataIndex={"sources"}
-          title={t<string>("Source")}
-        />
+                )}
+              </TableCell>
+            </TableRow>
+          )) || []}
+        </TableBody>
       </Table>
     );
   };
 
   const renderNormalEditMode = () => {
     return (
-      <Table
-        cellProps={(rowIndex, colIndex, dataIndex, record) => {
-          if (record.rowSpan && (colIndex == 0 || colIndex == 1)) {
-            return {
-              rowSpan: record.rowSpan,
-            };
-          }
+      <Table isCompact removeWrapper>
+        <TableHeader>
+          <TableColumn>{t<string>("Target")}</TableColumn>
+          <TableColumn align="center" width={90}>
+            {t<string>("Moving direction")}
+          </TableColumn>
+          <TableColumn>{t<string>("Source")}</TableColumn>
+        </TableHeader>
+        <TableBody>
+          {ds.map((record, i) => (
+            <TableRow key={i}>
+              <TableCell rowSpan={record.rowSpan}>
+                {/* Target cell content */}
+                {(() => {
+                  const target = record.target;
 
-          return;
-        }}
-        dataSource={ds}
-        size={"small"}
-      >
-        <Table.Column
-          cell={(target, i, r) => {
-            // console.log(`rendering table col ${i}-1`, target, i);
-            return (
-              <div className={"target"}>
-                <div className="left">
-                  <Dropdown
-                    trigger={
-                      <div>
-                        <FileSystemSelectorButton
-                          fileSystemSelectorProps={{
-                            targetType: "folder",
-                            onSelected: (e) => {
-                              if (!target) {
-                                addTarget(e.path);
-                              } else {
-                                updateTarget(target, e.path);
-                              }
-                            },
-                            defaultSelectedPath: target ?? null,
-                          }}
-                        >
-                          {t<string>("Add target path")}
-                        </FileSystemSelectorButton>
+                  return (
+                    <div className={"target"}>
+                      <div className="left">
+                        <Dropdown>
+                          <DropdownTrigger>
+                            <Button color="primary" size="sm" variant="light">
+                              {target || t<string>("Add target path")}
+                            </Button>
+                          </DropdownTrigger>
+                          <DropdownMenu>
+                            <DropdownItem
+                              key="select-from-file-system"
+                              startContent={<MdFolder className="text-base" />}
+                              onPress={() => {
+                                createPortal(FileSystemSelectorModal, {
+                                  targetType: "folder",
+                                  onSelected: (e: any) => {
+                                    if (!target) {
+                                      addTarget(e.path);
+                                    } else {
+                                      updateTarget(target, e.path);
+                                    }
+                                  },
+                                  defaultSelectedPath: target ?? null,
+                                });
+                              }}
+                            >
+                              {t<string>("Select from file system")}
+                            </DropdownItem>
+                            <DropdownItem
+                              key="select-from-media-library"
+                              startContent={<AiOutlineProduct className="text-base" />}
+                              onPress={() => {
+                                createPortal(MediaLibraryPathSelectorV2, {
+                                  onSelect: (
+                                    id,
+                                    path,
+                                    isLegacyMediaLibrary,
+                                  ) => {
+                                    if (!target) {
+                                      addTarget(path);
+                                    } else {
+                                      updateTarget(target, path);
+                                    }
+                                  },
+                                });
+                              }}
+                            >
+                              {t<string>("Select from media library")}
+                            </DropdownItem>
+                          </DropdownMenu>
+                        </Dropdown>
                       </div>
-                    }
-                    triggerType={["hover"]}
-                  >
-                    <Menu>
-                      <Menu.Item
-                        onClick={() => {
-                          createPortal(MediaLibraryPathSelectorV2, {
-                            onSelect: (id, path, isLegacyMediaLibrary) => {
-                              if (!target) {
-                                addTarget(path);
-                              } else {
-                                updateTarget(target, path);
-                              }
-                            },
-                          });
-                        }}
-                      >
-                        {t<string>("Select from media library")}
-                      </Menu.Item>
-                    </Menu>
-                  </Dropdown>
-                </div>
-                {target && (
-                  <div className={"flex items-center gap-1"}>
-                    <Tooltip
-                      content={t<string>("Overwrite files in target path")}
-                    >
-                      <Checkbox
-                        isSelected={r.overwrite}
-                        size={"sm"}
-                        onValueChange={(v) => setOverwrite(target, v)}
-                      >
-                        {t<string>("Overwrite")}
-                      </Checkbox>
-                    </Tooltip>
-                    <Tooltip content={t<string>("Add source path")}>
-                      <Button isIconOnly size={"sm"} variant={"light"}>
-                        <PlusCircleOutlined
-                          className={"text-base"}
-                          onClick={() => {
-                            BApi.gui.openFolderSelector().then((a) => {
-                              if (a.data) {
-                                addSource(target, a.data);
-                              }
-                            });
-                          }}
-                        />
-                      </Button>
-                    </Tooltip>
-                    {renderCommonOperations(target)}
-                    <Button
-                      isIconOnly
-                      color={"danger"}
-                      size={"sm"}
-                      variant={"light"}
-                    >
-                      <DeleteOutlined
-                        className={"text-base"}
-                        onClick={() => {
-                          Dialog.confirm({
-                            title: t<string>("Sure to remove?"),
-                            v2: true,
-                            onOk: () =>
-                              new Promise((resolve, reject) => {
-                                save(
-                                  {
-                                    targets: targets.filter(
-                                      (a) => a.path != target,
-                                    ),
-                                  },
-                                  () => {
-                                    resolve(undefined);
-                                  },
-                                );
-                              }),
-                          });
-                        }}
-                      />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            );
-          }}
-          dataIndex={"target"}
-          title={t<string>("Target")}
-        />
-        <Table.Column
-          align={"center"}
-          cell={() => {
-            return <AnimatedArrow direction={"left"} />;
-          }}
-          title={t<string>("Moving direction")}
-          width={90}
-        />
-        <Table.Column
-          cell={(s, i, r) => {
-            if (i > 0) {
-              // console.log(`rendering table col ${i}-2`, s, i);
-              const progress = progresses[s];
-
-              return (
-                <div className={"source"}>
-                  <div className="left">
-                    <FileSystemSelectorButton
-                      fileSystemSelectorProps={{
-                        targetType: "folder",
-                        onSelected: (e) => {
-                          if (!s) {
-                            addSource(r.target, e.path);
-                          } else {
-                            updateSource(r.target, s, e.path);
-                          }
-                        },
-                      }}
-                    />
-                    {progress && (
-                      <div className={"status"}>
-                        {progress.error && (
-                          <ClickableIcon
-                            colorType={"danger"}
-                            type={"warning-circle"}
-                            onClick={() => {
-                              Dialog.alert({
-                                title: t<string>("Error"),
-                                v2: true,
-                                width: "auto",
-                                closeMode: ["esc", "close", "mask"],
-                                content: <pre>{progress.error}</pre>,
+                      {target && (
+                        <div className={"flex items-center gap-1"}>
+                          <Tooltip
+                            content={t<string>(
+                              "Overwrite files in target path",
+                            )}
+                          >
+                            <Checkbox
+                              isSelected={record.overwrite}
+                              size={"sm"}
+                              onValueChange={(v) => setOverwrite(target, v)}
+                            >
+                              {t<string>("Overwrite")}
+                            </Checkbox>
+                          </Tooltip>
+                          <FileSystemSelectorButton
+                            isIconOnly
+                            fileSystemSelectorProps={{
+                              onSelected: (e) => {
+                                addSource(target, e.path);
+                              },
+                            }}
+                          >
+                            <PlusCircleOutlined className={"text-base"} />
+                          </FileSystemSelectorButton>
+                          {renderCommonOperations(target)}
+                          <Button
+                            isIconOnly
+                            color={"danger"}
+                            size={"sm"}
+                            variant={"light"}
+                            onPress={() => {
+                              createPortal(Modal, {
+                                defaultVisible: true,
+                                title: t<string>("Sure to remove?"),
+                                footer: {
+                                  actions: ["cancel", "ok"],
+                                },
+                                onOk: () =>
+                                  new Promise((resolve, reject) => {
+                                    save(
+                                      {
+                                        targets: targets.filter(
+                                          (a) => a.path != target,
+                                        ),
+                                      },
+                                      () => {
+                                        resolve(undefined);
+                                      },
+                                    );
+                                  }),
                               });
                             }}
+                          >
+                            <DeleteOutlined className={"text-base"} />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </TableCell>
+              <TableCell align="center">
+                <AnimatedArrow direction={"left"} />
+              </TableCell>
+              <TableCell>
+                {/* Source cell content */}
+                {i > 0 &&
+                  (() => {
+                    const s = record.source;
+                    const progress = progresses[s];
+
+                    return (
+                      <div className={"source"}>
+                        <div className="left">
+                          <FileSystemSelectorButton
+                            fileSystemSelectorProps={{
+                              targetType: "folder",
+                              onSelected: (e) => {
+                                if (!s) {
+                                  addSource(record.target, e.path);
+                                } else {
+                                  updateSource(record.target, s, e.path);
+                                }
+                              },
+                              defaultSelectedPath: record.source,
+                            }}
                           />
-                        )}
-                        {progress.moving && <Icon type={"loading"} />}
-                        {progress.percentage > 0 &&
-                          progress.percentage < 100 &&
-                          `${progress.percentage}%`}
-                        {progress.percentage == 100 && (
-                          <MdFolder
-                            style={{ color: "var(--theme-color-success)" }}
-                          />
+                          {progress && (
+                            <div className={"status"}>
+                              {progress.error && (
+                                <Button
+                                  isIconOnly
+                                  color={"danger"}
+                                  size={"sm"}
+                                  variant={"light"}
+                                  onPress={() => {
+                                    createPortal(Modal, {
+                                      defaultVisible: true,
+                                      title: t<string>("Error"),
+                                      size: "lg",
+                                      children: <pre>{progress.error}</pre>,
+                                      footer: {
+                                        actions: ["ok"],
+                                      },
+                                    });
+                                  }}
+                                >
+                                  <MdWarning className={"text-base"} />
+                                </Button>
+                              )}
+                              {progress.moving && <Icon type={"loading"} />}
+                              {progress.percentage > 0 &&
+                                progress.percentage < 100 &&
+                                `${progress.percentage}%`}
+                              {progress.percentage == 100 && (
+                                <MdFolder
+                                  style={{
+                                    color: "var(--theme-color-success)",
+                                  }}
+                                />
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {s && (
+                          <div className={"flex items-center gap-1"}>
+                            {renderCommonOperations(s)}
+                            <Button
+                              isIconOnly
+                              color={"danger"}
+                              size={"sm"}
+                              variant={"light"}
+                              onPress={() => {
+                                createPortal(Modal, {
+                                  defaultVisible: true,
+                                  title: t<string>("Sure to remove?"),
+                                  footer: {
+                                    actions: ["cancel", "ok"],
+                                  },
+                                  onOk: () =>
+                                    new Promise((resolve, reject) => {
+                                      const { target: targetPath } = record;
+                                      const target = targets.find(
+                                        (t) => t.path == targetPath,
+                                      );
+
+                                      if (target) {
+                                        target.sources = target.sources?.filter(
+                                          (a) => a != s,
+                                        );
+                                      }
+                                      save(
+                                        {
+                                          targets,
+                                        },
+                                        () => {
+                                          resolve(undefined);
+                                        },
+                                      );
+                                    }),
+                                });
+                              }}
+                            >
+                              <DeleteOutlined className={"text-base"} />
+                            </Button>
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                  {s && (
-                    <div className={"flex items-center gap-1"}>
-                      {renderCommonOperations(s)}
-                      <Button
-                        isIconOnly
-                        color={"danger"}
-                        size={"sm"}
-                        variant={"light"}
-                      >
-                        <DeleteOutlined
-                          className={"text-base"}
-                          onClick={() => {
-                            Dialog.confirm({
-                              title: t<string>("Sure to remove?"),
-                              v2: true,
-                              onOk: () =>
-                                new Promise((resolve, reject) => {
-                                  const { target: targetPath } = r;
-                                  const target = targets.find(
-                                    (t) => t.path == targetPath,
-                                  )!;
-
-                                  target.sources = target.sources?.filter(
-                                    (a) => a != s,
-                                  );
-                                  save(
-                                    {
-                                      targets,
-                                    },
-                                    () => {
-                                      resolve(undefined);
-                                    },
-                                  );
-                                }),
-                            });
-                          }}
-                        />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            return;
-          }}
-          dataIndex={"source"}
-          title={t<string>("Source")}
-        />
+                    );
+                  })()}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
       </Table>
     );
   };
@@ -617,23 +622,25 @@ export default () => {
               }}
             />
           </div>
-          <div className="delay">
-            <Tooltip
-              content={t<string>(
+          <div>
+            <TimeInput
+              description={t<string>(
                 "Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.",
               )}
-              placement={"bottom"}
-            >
-              <div className={"flex items-center gap-1"}>
-                {t<string>("Delay")}
-                <QuestionCircleOutlined className={"text-base"} />
-              </div>
-            </Tooltip>
-            <TimePicker2
-              value={value?.delay}
+              label={t<string>("Delay (minutes)")}
+              value={
+                value?.delay
+                  ? dayjs.duration(
+                      moment.duration(value.delay).asMilliseconds(),
+                    )
+                  : undefined
+              }
               onChange={(c) => {
                 save({
-                  delay: c?.format("HH:mm:ss") ?? "00:05:00",
+                  delay:
+                    c?.format && typeof c.format === "function"
+                      ? c.format("HH:mm:ss")
+                      : (c ?? "00:05:00"),
                 });
               }}
             />
@@ -644,7 +651,7 @@ export default () => {
             <Button
               color={"primary"}
               size={"sm"}
-              onClick={() => {
+              onPress={() => {
                 const newTargets = quickEditModeData?.filter((d) => !!d.path);
 
                 for (const nt of newTargets) {
@@ -658,7 +665,6 @@ export default () => {
                   },
                   () => {
                     setQuickEditModeData(undefined);
-                    loadOptions();
                   },
                 );
               }}
@@ -668,7 +674,7 @@ export default () => {
           )}
           <Button
             size={"sm"}
-            onClick={() => {
+            onPress={() => {
               if (quickEditModeData) {
                 setQuickEditModeData(undefined);
               } else {

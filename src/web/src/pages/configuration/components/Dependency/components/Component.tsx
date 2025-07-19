@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Icon } from "@alifd/next";
+import { Button, Icon } from "@/components/bakaui";
 import { usePrevious } from "react-use";
 import { CheckCircleOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
 import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
 import { DependentComponentStatus } from "@/sdk/constants";
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdError } from "react-icons/md";
 import { Chip, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -90,11 +90,12 @@ export default ({ id }: { id: string }) => {
     if (latestVersion) {
       if (latestVersion.error) {
         elements.push(
-          <ClickableIcon
-            useInBuildIcon
-            colorType={"danger"}
-            type={"error"}
-            onClick={() => {
+          <Button
+            isIconOnly
+            color={"danger"}
+            size={"sm"}
+            variant={"light"}
+            onPress={() => {
               createPortal(Modal, {
                 defaultVisible: true,
                 title: t<string>("Failed to get information of new version"),
@@ -102,7 +103,9 @@ export default ({ id }: { id: string }) => {
                 size: "lg",
               });
             }}
-          />,
+          >
+            <MdError className={"text-base"} />
+          </Button>,
         );
       } else {
         if (latestVersion.canUpdate) {
@@ -150,11 +153,12 @@ export default ({ id }: { id: string }) => {
     }
     if (context?.error) {
       elements.push(
-        <ClickableIcon
-          useInBuildIcon
-          colorType={"danger"}
-          type={"error"}
-          onClick={() => {
+        <Button
+          isIconOnly
+          color={"danger"}
+          size={"sm"}
+          variant={"light"}
+          onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
               title: t<string>("Error"),
@@ -162,7 +166,9 @@ export default ({ id }: { id: string }) => {
               size: "lg",
             });
           }}
-        />,
+        >
+          <MdError className={"text-base"} />
+        </Button>,
       );
     }
 

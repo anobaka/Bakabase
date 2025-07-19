@@ -3,7 +3,6 @@
 import type { IPscPropertyMatcherValue } from "../models/PscPropertyMatcherValue";
 import type { PathSegmentConfigurationPropsMatcherOptions } from "..";
 
-import { Badge, Balloon, Tag } from "@alifd/next";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
@@ -13,7 +12,7 @@ import { PscMatcherValue } from "../models/PscMatcherValue";
 
 import PscMatcher from "@/components/PathSegmentsConfiguration/models/PscMatcher";
 import { ResourceProperty } from "@/sdk/constants";
-import { Button, Modal } from "@/components/bakaui";
+import { Button, Modal, Badge, Popover } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
 import { buildLayerBasedPathRegexString } from "@/components/utils";
@@ -193,13 +192,13 @@ export default ({
           {rootPathIsSelected ? (
             loaderBtn
           ) : (
-            <Balloon.Tooltip
+            <Popover
               align={"t"}
               trigger={loaderBtn}
               triggerType={"hover"}
             >
               {t<string>("Please select root path first.")}
-            </Balloon.Tooltip>
+            </Popover>
           )}
         </>
       ) : fileResourceExtensions.length > 0 ? (

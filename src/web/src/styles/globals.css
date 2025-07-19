@@ -8,7 +8,7 @@
 /* ===== reactour 覆盖 ===== */
 @import './global.reactour.overrides.css';
 
-@import '@alifd/theme-design-pro/dist/next.var.css';
+/* @import '@alifd/theme-design-pro/dist/next.var.css'; */
 
 @import "tailwindcss";
 
@@ -31,7 +31,7 @@ body {
   user-select: none;
   --scrollbar-size: 7px;
   --path-separator-color: #ff8400;
-  font-family: Microsoft Yahei, sans-serif;
+  font-family: Microsoft YaHei UI,  Arial, sans-serif;
 }
 
 *,

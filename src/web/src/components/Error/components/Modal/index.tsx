@@ -145,6 +145,4 @@ const ErrorModal = ({}: IProps) => {
   );
 };
 
-ErrorModal.show = (props: IProps) => createPortalOfComponent(ErrorModal, props);
-
 export default ErrorModal;

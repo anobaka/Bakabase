@@ -1,276 +1,248 @@
 "use client";
 
+import type { DateValue, RangeValue } from "@heroui/react";
+
 import React, { useEffect, useState } from "react";
-import "./index.scss";
-import {
-  Button,
-  DatePicker2,
-  Input,
-  Pagination,
-  Select,
-  Table,
-} from "@alifd/next";
-// TODO: 迁移 IceLabel 相关用法，Next.js 无内置替代。
-// import IceLabel from '@icedesign/label';
-import moment from "moment";
-import { useUpdateEffect } from "react-use";
 import { useTranslation } from "react-i18next";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableColumn,
+  TableRow,
+  Pagination,
+  Input,
+  Button,
+  Select,
+  SelectItem,
+  DateRangePicker,
+  TableCell,
+} from "@heroui/react";
 
 import BApi from "@/sdk/BApi";
-import { LogLevel, logLevels } from "@/sdk/constants";
+import { LogLevel } from "@/sdk/constants";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { Modal } from "@/components/bakaui";
 
-const testLogs = [
-  {
-    dateTime: "2021-02-02 12:12:12",
-    logger: "SyncService",
-    level: LogLevel.Error,
-    event: "Complete",
-    message:
-      "Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad",
-    read: false,
-  },
-  {
-    dateTime: "2021-02-02 12:12:13",
-    logger: "SyncService",
-    level: LogLevel.Error,
-    event: "Complete",
-    message:
-      "Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad Message mafsasdassad",
-    read: true,
-  },
-];
-
-export default () => {
+export default function LogPage() {
   const { t } = useTranslation();
   const [logs, setLogs] = useState<any[]>([]);
   const [form, setForm] = useState({
     pageIndex: 1,
     pageSize: 100,
+    startDt: undefined as string | undefined,
+    endDt: undefined as string | undefined,
+    level: undefined as LogLevel | undefined,
+    logger: undefined as string | undefined,
+    event: undefined as string | undefined,
+    message: undefined as string | undefined,
   });
-
   const [pageable, setPageable] = useState({
     pageIndex: 1,
     totalCount: 0,
   });
-
-  useUpdateEffect(() => {
-    // console.log(form);
-    search();
-  }, [form]);
+  const [dateRange, setDateRange] = useState<RangeValue<DateValue> | null>(
+    null,
+  );
+  const [expandedMsg, setExpandedMsg] = useState<string | null>(null);
+  const { createPortal } = useBakabaseContext();
 
   useEffect(() => {
     search();
-  }, []);
+    // eslint-disable-next-line
+  }, [form.pageIndex, form.pageSize, form.startDt, form.endDt, form.level, form.logger, form.event, form.message]);
 
   const search = async () => {
     const d = await BApi.log.searchLogs(form);
 
-    setLogs(d.data);
+    setLogs(d.data || []);
     setPageable({
       pageIndex: d.pageIndex,
       totalCount: d.totalCount,
     });
   };
 
-  const renderPagination = () => {
-    if (pageable.totalCount > 0) {
-      return (
-        <div className={"pagination"}>
-          <Pagination
-            current={pageable.pageIndex}
-            pageSize={form.pageSize}
-            size={"small"}
-            total={pageable.totalCount}
-            onChange={(p) => {
-              const newPageable = {
-                ...pageable,
-                pageIndex: p,
-              };
-
-              setPageable(newPageable);
-              setForm({
-                ...form,
-                ...newPageable,
-              });
-            }}
-          />
-        </div>
-      );
-    }
-
-    return undefined;
+  const patchForm = (patches: Partial<typeof form>) => {
+    setPageable((prev) => ({ ...prev, pageIndex: 1 }));
+    setForm((prev) => ({ ...prev, ...patches, pageIndex: 1 }));
   };
 
-  const patchForm = (patches = {}) => {
-    setPageable({
-      ...pageable,
-      pageIndex: 1,
-    });
-    setForm({
-      ...form,
-      ...patches,
-      pageIndex: 1,
+  const handleDateRangeChange = (range: RangeValue<DateValue> | null) => {
+    setDateRange(range);
+    patchForm({
+      startDt: range?.start
+        ? range.start.toDate().toISOString().slice(0, 19).replace("T", " ")
+        : undefined,
+      endDt: range?.end
+        ? range.end.toDate().toISOString().slice(0, 19).replace("T", " ")
+        : undefined,
     });
   };
 
   return (
-    <div className={"log-page"}>
-      <div className="opt">
-        <div className="left">
-          <div className="item">
-            <div className="label">{t<string>("Time")}</div>
-            <div className="value">
-              <DatePicker2.RangePicker
-                showTime
-                format="YYYY/MM/DD HH:mm:ss"
-                size={"small"}
-                onChange={(dayjsArr) => {
-                  if (dayjsArr) {
-                    const d1 = dayjsArr[0];
-
-                    if (d1) {
-                      patchForm({ startDt: d1.format("YYYY MM DD HH:mm:ss") });
-                    }
-                    const d2 = dayjsArr[1];
-
-                    if (d2) {
-                      patchForm({ endDt: d2.format("YYYY MM DD HH:mm:ss") });
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
-          <div className="item">
-            <div className="label">{t<string>("Level")}</div>
-            <div className="value">
-              <Select
-                dataSource={logLevels}
-                size={"small"}
-                onChange={(level) => {
-                  patchForm({
-                    level,
-                  });
-                }}
-              />
-            </div>
-          </div>
-          <div className="item">
-            <div className="label">{t<string>("Logger")}</div>
-            <div className="value">
-              <Input
-                size={"small"}
-                onChange={(logger) => {
-                  patchForm({
-                    logger,
-                  });
-                }}
-              />
-            </div>
-          </div>
-          <div className="item">
-            <div className="label">{t<string>("Event")}</div>
-            <div className="value">
-              <Input
-                size={"small"}
-                onChange={(event) => {
-                  patchForm({
-                    event,
-                  });
-                }}
-              />
-            </div>
-          </div>
-          <div className="item">
-            <div className="label">{t<string>("Message")}</div>
-            <div className="value">
-              <Input
-                size={"small"}
-                onChange={(message) => {
-                  patchForm({
-                    message,
-                  });
-                }}
-              />
-            </div>
-          </div>
+    <div className="p-4">
+      <div className="flex flex-wrap gap-4 items-center mb-4">
+        <div className="flex items-center gap-1 min-w-[260px]">
+          <span className="font-medium mr-2 min-w-[60px]">
+            {t<string>("Time")}
+          </span>
+          <DateRangePicker
+            className="flex-1"
+            value={dateRange}
+            onChange={handleDateRangeChange}
+          />
         </div>
-        <div className="right">
+        <div className="flex items-center gap-1 min-w-[100px]">
+          <span className="font-medium mr-2 min-w-[60px]">
+            {t<string>("Level")}
+          </span>
+          <Select
+            className="min-w-[100px]"
+            placeholder={t<string>("All")}
+            selectedKeys={
+              form.level !== undefined
+                ? new Set([String(form.level)])
+                : new Set()
+            }
+            onSelectionChange={(keys) => {
+              const key = Array.from(keys)[0];
+
+              patchForm({ level: key ? Number(key) : undefined });
+            }}
+          >
+            {Object.keys(LogLevel)
+              .filter((k) => !isNaN(Number(k)))
+              .map((k) => (
+                <SelectItem key={k}>{LogLevel[Number(k)]}</SelectItem>
+              ))}
+          </Select>
+        </div>
+        <div className="flex items-center gap-1 min-w-[120px]">
+          <span className="font-medium mr-2 min-w-[60px]">
+            {t<string>("Logger")}
+          </span>
+          <Input
+            className="min-w-[120px]"
+            placeholder={t<string>("Logger")}
+            size="sm"
+            value={form.logger}
+            onChange={(e) => patchForm({ logger: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-1 min-w-[120px]">
+          <span className="font-medium mr-2 min-w-[60px]">
+            {t<string>("Event")}
+          </span>
+          <Input
+            className="min-w-[120px]"
+            placeholder={t<string>("Event")}
+            size="sm"
+            value={form.event}
+            onChange={(e) => patchForm({ event: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-1 min-w-[120px]">
+          <span className="font-medium mr-2 min-w-[60px]">
+            {t<string>("Message")}
+          </span>
+          <Input
+            className="min-w-[120px]"
+            placeholder={t<string>("Message")}
+            size="sm"
+            value={form.message}
+            onChange={(e) => patchForm({ message: e.target.value })}
+          />
+        </div>
+        <div className="flex items-center gap-1 ml-auto">
           <Button
-            size={"small"}
-            type={"normal"}
-            onClick={() => BApi.log.clearAllLog().then((a) => setLogs([]))}
+            size="sm"
+            type="button"
+            onClick={() => BApi.log.clearAllLog().then(() => setLogs([]))}
           >
             {t<string>("Clear all")}
           </Button>
         </div>
       </div>
-      {renderPagination()}
-      <Table className={"logs"} dataSource={logs} size={"small"}>
-        <Table.Column
-          cell={(d) => moment(d)
-            .format('MM-DD HH:mm:ss')}
-          dataIndex={'dateTime'}
-          title={t<string>('Time')}
-          align={'center'}
-          // sortable
-          width={'8%'}
-        />
-        <Table.Column
-          // sortable
-          align={"center"}
-          cell={(l) => (
-            <span
-              className={`ice-label ice-label-${
-                l == LogLevel.Error ||
-                l == LogLevel.Critical ||
-                l == LogLevel.Warning
-                  ? "danger"
-                  : "info"
-              }`}
-            >
-              {l == LogLevel.Information ? "Info" : LogLevel[l]}
-            </span>
+      <Table
+        removeWrapper
+        aria-label="logs"
+        className="mb-4"
+        selectionMode="none"
+        size='sm'
+      >
+        <TableHeader>
+          <TableColumn>{t<string>("Time")}</TableColumn>
+          <TableColumn>{t<string>("Level")}</TableColumn>
+          <TableColumn>{t<string>("Logger")}</TableColumn>
+          <TableColumn>{t<string>("Event")}</TableColumn>
+          <TableColumn>{t<string>("Message")}</TableColumn>
+        </TableHeader>
+        <TableBody items={logs}>
+          {(item) => (
+            <TableRow key={item.id || item.dateTime + item.logger + item.event}>
+              <TableCell>
+                {item.dateTime ? item.dateTime.slice(5, 16) : "-"}
+              </TableCell>
+              <TableCell>
+                <span
+                  className={
+                    item.level === LogLevel.Error ||
+                      item.level === LogLevel.Critical ||
+                      item.level === LogLevel.Warning
+                      ? "text-red-600"
+                      : "text-blue-600"
+                  }
+                >
+                  {item.level === LogLevel.Information
+                    ? "Info"
+                    : LogLevel[item.level]}
+                </span>
+              </TableCell>
+              <TableCell>{item.logger}</TableCell>
+              <TableCell>{item.event}</TableCell>
+              <TableCell className="max-w-[300px] truncate">
+                {item.message && item.message.length > 60 ? (
+                  <pre className="inline">
+                    {item.message.slice(0, 60)}...
+                    <Button
+                      size='sm'
+                      variant="light"
+                      color="primary"
+                      onPress={() =>
+                        createPortal(Modal, {
+                          size: 'xl',
+                          title: t('Log'),
+                          defaultVisible: true,
+                          children: <pre className="whitespace-pre-wrap break-all">{item.message}</pre>
+                        })
+                      }
+                    >
+                      {t<string>("Expand")}
+                    </Button>
+                  </pre>
+                ) : (
+                  <pre className="inline">{item.message}</pre>
+                )}
+              </TableCell>
+            </TableRow>
           )}
-          dataIndex={"level"}
-          title={t<string>("Level")}
-          width={"5%"}
-        />
-        <Table.Column
-          // sortable
-          align={'center'}
-          className={'logger'}
-          title={t<string>('Logger')}
-          width={'25%'}
-          // alignHeader={'center'}
-          dataIndex={'logger'}
-        />
-        <Table.Column
-          // sortable
-          align={"center"}
-          dataIndex={"event"}
-          title={t<string>("Event")}
-          width={"8%"}
-        />
-        <Table.Column
-          // sortable
-          alignHeader={"center"}
-          cell={(c) => <pre>{c}</pre>}
-          dataIndex={"message"}
-          title={t<string>("Message")}
-          width={"50%"}
-        />
-        {/* <Table.Column */}
-        {/*  // sortable */}
-        {/*  filters={[{ label: 'Unread', value: false }, { label: 'Read', value: true }]} */}
-        {/*  filterMode={'single'} */}
-        {/*  width={'10%'} */}
-        {/*  dataIndex={'read'} */}
-        {/*  title={'Read'} */}
-        {/*  cell={(c, i, r) => (!c && <Button type={'primary'} text onClick={() => ReadLog({ id: r.id }).invoke((a) => loadAllLogs())}>Read</Button>)} */}
-        {/* /> */}
+        </TableBody>
       </Table>
-      {renderPagination()}
+      <div className="flex justify-center">
+        <Pagination
+          page={pageable.pageIndex}
+          total={pageable.totalCount}
+          onChange={(page) => setForm((prev) => ({ ...prev, pageIndex: page }))}
+        />
+      </div>
+      {expandedMsg && (
+        <Modal
+          onClose={() => setExpandedMsg(null)}
+          title={t<string>("Full Message")}
+        >
+          <pre className="whitespace-pre-wrap break-all">{expandedMsg}</pre>
+        </Modal>
+      )}
     </div>
   );
-};
+}

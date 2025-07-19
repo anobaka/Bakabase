@@ -2,7 +2,7 @@
 
 import type { components } from "@/sdk/BApi2";
 
-import { Balloon, Box, Divider, Icon, Progress } from "@alifd/next";
+import { Popover, Divider, Icon, Progress } from "@/components/bakaui";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -72,67 +72,72 @@ export default ({ appInfo }) => {
         if (newVersion) {
           if (newVersion.version) {
             return (
-              <Box direction={"row"} style={{ alignItems: "center" }}>
-                <Chip radius={"sm"} variant={"light"}>
-                  {newVersion.version}
-                </Chip>
-                {newVersion.changelog && (
-                  <>
-                    <Divider direction={"ver"} />
-                    <Button
-                      color={"secondary"}
-                      size={"small"}
-                      variant={"light"}
-                      onPress={() => {
-                        createPortal(Modal, {
-                          size: "xl",
-                          title: newVersion.version,
-                          defaultVisible: true,
-                          children: <pre>{newVersion.changelog}</pre>,
-                          footer: { actions: ["cancel"] },
-                        });
-                      }}
-                    >
-                      {t<string>("Change log")}
-                    </Button>
-                  </>
-                )}
-                <Divider direction={"ver"} />
-                <Button
-                  color={"success"}
-                  size={"small"}
-                  variant={"light"}
-                  onClick={() => {
-                    BApi.updater.startUpdatingApp();
-                  }}
-                >
-                  {t<string>("Click to auto-update")}
-                </Button>
-                {newVersion.installers?.length > 0 ? (
-                  <>
-                    <Divider direction={"ver"} />
-                    <Balloon
-                      align={"t"}
-                      trigger={
-                        <Button color={"primary"} size={"sm"} variant={"light"}>
-                          {t<string>(
-                            "Auto-Update Fails? Click to download complete installers",
-                          )}
-                        </Button>
-                      }
-                      triggerType={"click"}
-                    >
-                      {newVersion.installers.map((i) => (
-                        <div key={i.url}>
-                          <ExternalLink href={i.url}>
-                            {i.name}({bytesToSize(i.size)})
-                          </ExternalLink>
-                        </div>
-                      ))}
-                    </Balloon>
-                  </>
-                ) : undefined}
-              </Box>
+              <Popover
+                trigger={
+                  <Button color={"primary"} size={"sm"} variant={"light"}>
+                    {newVersion.version}
+                  </Button>
+                }
+                triggerType={"click"}
+              >
+                <div>
+                  {newVersion.changelog && (
+                    <>
+                      <Divider direction={"ver"} />
+                      <Button
+                        color={"secondary"}
+                        size={"small"}
+                        variant={"light"}
+                        onPress={() => {
+                          createPortal(Modal, {
+                            size: "xl",
+                            title: newVersion.version,
+                            defaultVisible: true,
+                            children: <pre>{newVersion.changelog}</pre>,
+                            footer: { actions: ["cancel"] },
+                          });
+                        }}
+                      >
+                        {t<string>("Change log")}
+                      </Button>
+                    </>
+                  )}
+                  <Divider direction={"ver"} />
+                  <Button
+                    color={"success"}
+                    size={"small"}
+                    variant={"light"}
+                    onClick={() => {
+                      BApi.updater.startUpdatingApp();
+                    }}
+                  >
+                    {t<string>("Click to auto-update")}
+                  </Button>
+                  {newVersion.installers?.length > 0 ? (
+                    <>
+                      <Divider direction={"ver"} />
+                      <Popover
+                        trigger={
+                          <Button color={"primary"} size={"sm"} variant={"light"}>
+                            {t<string>(
+                              "Auto-Update Fails? Click to download complete installers",
+                            )}
+                          </Button>
+                        }
+                        triggerType={"click"}
+                      >
+                        {newVersion.installers.map((i) => (
+                          <div key={i.url}>
+                            <ExternalLink href={i.url}>
+                              {i.name}({bytesToSize(i.size)})
+                            </ExternalLink>
+                          </div>
+                        ))}
+                      </Popover>
+                    </>
+                  ) : undefined}
+                </div>
+              </Popover>
             );
           } else {
             return t<string>("Up-to-date");

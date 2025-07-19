@@ -2,6 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Chip } from "@heroui/react";
 
 import { Card, CardBody } from "@/components/bakaui";
 
@@ -24,7 +25,10 @@ export default ({ id, name, idx }: Props) => {
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <Card>
         <CardBody>
-          [{idx + 1}]{name}
+          <div className={"flex items-center gap-1"}>
+            <Chip size={"sm"}>{idx + 1}</Chip>
+            {name}
+          </div>
         </CardBody>
       </Card>
     </div>

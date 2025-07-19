@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import "./index.scss";
-import { Input, NumberPicker } from "@alifd/next";
+import { Input, NumberInput } from "@/components/bakaui";
 import i18n from "i18next";
 
 import SortablePlaylistItemList from "@/components/Playlist/Detail/components/SortablePlaylistItemList";
@@ -93,7 +93,7 @@ export default ({ id, onChange }) => {
         <div className="interval">
           <div className="label">{i18n.t<string>("Interval")}</div>
           <div className="value">
-            <NumberPicker
+            <NumberInput
               innerAfter={i18n.t<string>("ms")}
               min={0}
               value={playlist.interval}

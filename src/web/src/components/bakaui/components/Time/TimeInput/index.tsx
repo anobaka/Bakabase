@@ -27,8 +27,6 @@ export default ({
   const dv = defaultValue ? convertDurationToTime(defaultValue) : undefined;
   const v = value ? convertDurationToTime(value) : undefined;
 
-  new Time();
-
   return (
     <TimeInput
       defaultValue={dv}

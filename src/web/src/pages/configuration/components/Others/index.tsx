@@ -4,7 +4,6 @@ import type { Key } from "@react-types/shared";
 import type { ChipProps, NumberInputProps } from "@/components/bakaui";
 import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from "@/sdk/Api";
 
-import { Switch } from "@alifd/next";
 import React, { useEffect, useState } from "react";
 import Cookies from "universal-cookie";
 import { useTranslation } from "react-i18next";
@@ -27,6 +26,7 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
+  Switch,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { EditableValue } from "@/components/EditableValue";

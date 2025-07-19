@@ -11,7 +11,7 @@ import {
   AiOutlinePlusCircle,
 } from "react-icons/ai";
 
-import { Button, Textarea, Modal } from "../bakaui";
+import { Button, Textarea, Modal, Card } from "../bakaui";
 
 import OperationCard from "./OperationCard";
 import PreviewList from "./PreviewList";
@@ -260,9 +260,9 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       });
       const result = rsp.data ?? [];
 
-      Modal.show({
+      createPortal(Modal, {
+        defaultVisible: true,
         title: t<string>("FileNameModifier.ModificationResult"),
-        onClose: () => {},
         size: "xl",
         footer: {
           actions: ["cancel"],
@@ -315,7 +315,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
   return (
     <div className="flex flex-col min-h-0 grow md:flex-row gap-4">
       {/* 左侧：操作配置区域 */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <Card className="flex-1 flex flex-col min-w-0 p-2">
         <h5 className="font-semibold mb-2">
           {t<string>("FileNameModifier.OperationsList")}
         </h5>
@@ -369,11 +369,9 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
           </div>
           {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
         </div>
-      </div>
-      {/* 分隔线 */}
-      <div className="w-px bg-border self-stretch" />
+      </Card>
       {/* 右侧：文件路径输入/预览区域 */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <Card className="flex-1 flex flex-col min-w-0 p-2">
         <div className="mb-2 flex justify-between items-center">
           <h5 className="font-semibold mb-0 flex items-center gap-1">
             {showTextarea
@@ -462,7 +460,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
             />
           )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

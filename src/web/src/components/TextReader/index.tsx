@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import "./index.scss";
 import i18n from "i18next";
-import { NumberPicker } from "@alifd/next";
+import { NumberInput } from "@/components/bakaui";
 import axios from "axios";
 
 import ColorPicker from "@/components/ColorPicker";
@@ -70,9 +70,7 @@ export default (props: ITextReaderProps) => {
       <div className="configurations">
         <div className="label">{i18n.t<string>("Font size")}</div>
         <div className="value">
-          <NumberPicker
-            max={20}
-            min={10}
+          <NumberInput
             value={fontSize}
             onChange={(v) => setFontSize(v)}
           />

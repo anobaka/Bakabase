@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dialog } from "@alifd/next";
 import { SketchPicker } from "react-color";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -30,7 +29,7 @@ import SortableMediaLibraryList from "@/pages/category/components/SortableMediaL
 import DragHandle from "@/components/DragHandle";
 import BasicCategoryComponentSelector from "@/components/BasicCategoryComponentSelector";
 import BApi from "@/sdk/BApi";
-import ClickableIcon from "@/components/ClickableIcon";
+import { MdCheck, MdClose } from "react-icons/md";
 import CustomPropertyBinderModal from "@/pages/category/components/CustomPropertyBinderModal";
 import {
   Button,
@@ -126,14 +125,10 @@ export default ({
       componentType == ComponentType.Player
     ) {
       let newKey;
-      const dialog = Dialog.show({
-        height: "auto",
-        width: "auto",
-        v2: true,
-        style: { minWidth: 1000 },
-        closeMode: ["esc", "close", "mask"],
+      createPortal(Modal, {
+        defaultVisible: true,
         title: t<string>(ComponentType[componentType]),
-        content: (
+        children: (
           <BasicCategoryComponentSelector
             componentType={componentType}
             value={[componentKey]}
@@ -142,7 +137,6 @@ export default ({
             }}
           />
         ),
-        closeable: true,
         onOk: () =>
           new Promise((resolve, reject) => {
             if (newKey) {
@@ -323,13 +317,13 @@ export default ({
                     </div>
                   ) : null}
                 </div>
-                <ClickableIcon
-                  useInBuildIcon
+                <Button
+                  isIconOnly
+                  color={"default"}
+                  size={"lg"}
+                  variant={"light"}
                   className={"submit"}
-                  colorType={"normal"}
-                  size={"large"}
-                  type="select"
-                  onClick={() => {
+                  onPress={() => {
                     BApi.category
                       .patchCategory(category.id, {
                         name,
@@ -343,15 +337,19 @@ export default ({
                         }
                       });
                   }}
-                />
-                <ClickableIcon
-                  useInBuildIcon
+                >
+                  <MdCheck className={"text-lg"} />
+                </Button>
+                <Button
+                  isIconOnly
+                  color={"default"}
+                  size={"lg"}
+                  variant={"light"}
                   className={"cancel"}
-                  colorType={"normal"}
-                  size={"large"}
-                  type="close"
-                  onClick={clearEditMode}
-                />
+                  onPress={clearEditMode}
+                >
+                  <MdClose className={"text-lg"} />
+                </Button>
               </div>
             ) : (
               <span className="editable">
@@ -503,9 +501,10 @@ export default ({
             onClick={() => {
               let name;
 
-              Dialog.show({
+              createPortal(Modal, {
+                defaultVisible: true,
                 title: t<string>("Duplicating a category"),
-                content: (
+                children: (
                   <Input
                     placeholder={t<string>(
                       "Please input a new name for the duplicated category",
@@ -514,9 +513,6 @@ export default ({
                     onValueChange={(v) => (name = v)}
                   />
                 ),
-                v2: true,
-                width: "auto",
-                closeMode: ["close", "mask", "esc"],
                 onOk: async () => {
                   const rsp = await BApi.category.duplicateCategory(
                     category.id,

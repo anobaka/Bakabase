@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { Button, Icon, Input, Tree } from "@alifd/next";
+import { Button, Icon, Input } from "@/components/bakaui";
 import "./index.scss";
 import i18n from "i18next";
 

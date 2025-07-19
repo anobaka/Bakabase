@@ -200,10 +200,4 @@ const Modal = (props: ModalProps) => {
   );
 };
 
-Modal.show = (props: ModalProps) =>
-  createPortalOfComponent(Modal, {
-    ...props,
-    defaultVisible: true,
-  });
-
 export default Modal;
