@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import * as dayjs from "dayjs";
+import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 import { MdAddCircle, MdPlayCircle, MdDelete } from "react-icons/md";
