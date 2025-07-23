@@ -548,7 +548,7 @@ export default () => {
                   )}
                   <Link
                     isBlock
-                    href={"#/medialibrary"}
+                    href={"#/media-library"}
                     size={"sm"}
                     underline={"none"}
                   >

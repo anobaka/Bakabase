@@ -3,8 +3,8 @@
 import type ReactPlayer from "react-player";
 
 import React from "react";
-import * as dayjs from "dayjs";
-import * as duration from "dayjs/plugin/duration";
+import dayjs from "dayjs";
+import duration from "dayjs/plugin/duration";
 
 import { toast } from "@/components/bakaui";
 import MediaPlayer from "@/components/MediaPlayer";

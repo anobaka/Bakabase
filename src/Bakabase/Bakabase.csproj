@@ -8,7 +8,6 @@
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <ImplicitUsings>enable</ImplicitUsings>
-        <SpaRoot>ClientApp\</SpaRoot>
         <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
         <AssemblyName>Bakabase</AssemblyName>
         <UseWindowsForms>True</UseWindowsForms>

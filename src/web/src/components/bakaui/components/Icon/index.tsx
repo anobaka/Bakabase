@@ -2,7 +2,7 @@
 
 import { forwardRef, lazy, Suspense, useRef } from "react";
 import { WarningOutlined } from "@ant-design/icons";
-import * as React from "react";
+import React from "react";
 
 export interface IconProps extends React.ComponentPropsWithRef<any> {
   type: string;

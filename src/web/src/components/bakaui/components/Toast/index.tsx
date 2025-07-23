@@ -1,9 +1,11 @@
 import { addToast, type ToastProps } from "@heroui/react";
 
+type SimpleProps = { title: string; description?: string };
+
 // 通用toast方法
 function showToast(
   color: ToastProps["color"],
-  titleOrProps: string | ToastProps,
+  titleOrProps: string | SimpleProps,
 ) {
   if (typeof titleOrProps === "string") {
     addToast({ color, title: titleOrProps });
@@ -13,19 +15,19 @@ function showToast(
 }
 
 const toast = {
-  default: (titleOrProps: string | ToastProps) =>
+  default: (titleOrProps: string | SimpleProps) =>
     showToast("default", titleOrProps),
-  primary: (titleOrProps: string | ToastProps) =>
+  primary: (titleOrProps: string | SimpleProps) =>
     showToast("primary", titleOrProps),
-  secondary: (titleOrProps: string | ToastProps) =>
+  secondary: (titleOrProps: string | SimpleProps) =>
     showToast("secondary", titleOrProps),
-  success: (titleOrProps: string | ToastProps) =>
+  success: (titleOrProps: string | SimpleProps) =>
     showToast("success", titleOrProps),
-  warning: (titleOrProps: string | ToastProps) =>
+  warning: (titleOrProps: string | SimpleProps) =>
     showToast("warning", titleOrProps),
-  danger: (titleOrProps: string | ToastProps) =>
+  danger: (titleOrProps: string | SimpleProps) =>
     showToast("danger", titleOrProps),
-  foreground: (titleOrProps: string | ToastProps) =>
+  foreground: (titleOrProps: string | SimpleProps) =>
     showToast("foreground", titleOrProps),
 };
 

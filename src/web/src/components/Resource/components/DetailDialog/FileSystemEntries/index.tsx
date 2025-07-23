@@ -2,7 +2,7 @@
 
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 
-import * as PathLibrary from "path";
+import PathLibrary from "path";
 
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";

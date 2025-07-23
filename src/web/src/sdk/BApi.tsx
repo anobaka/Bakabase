@@ -1,10 +1,9 @@
 import type { FullRequestParams } from "@/sdk/Api";
 
-import toast from "react-hot-toast";
-
 import { Api } from "@/sdk/Api";
 import envConfig from "@/config/env";
-import { buildLogger } from "@/components/utils";
+import { buildLogger, extractErrorMessage } from "@/components/utils";
+import { toast } from "@/components/bakaui";
 
 interface BFullRequestParams extends FullRequestParams {
   ignoreError: (rsp) => boolean;
@@ -49,53 +48,26 @@ export class BApi extends Api<any> {
               ) {
                 const title = `[${typedRsp.code}]${params.path}`;
 
-                const { ErrorToast } = require("@/components/Error");
-
-                toast(
-                  (tst) => (
-                    <ErrorToast
-                      description={typedRsp.message}
-                      title={title}
-                      toast={tst}
-                    />
-                  ),
-                  { duration: 5000 },
-                );
+                toast.danger({
+                  title,
+                  description: typedRsp.message,
+                });
               }
             }
         }
 
         return rsp;
       } catch (error) {
-        // switch (error.code) {
-        //   case 'ERR_CANCELED': {
-        //     return;
-        //   }
-        // }
-
         log(error);
 
         if (!params.signal?.aborted) {
           const title = `${params.path}: 请求异常，请稍后再试。`;
-          let description: string;
+          const description = extractErrorMessage(error);
 
-          if (typeof error === "string") {
-            description = error;
-          } else if (error && typeof error.message === "string") {
-            description = error.message;
-          } else if (error && typeof error.toString === "function") {
-            description = error.toString();
-          } else {
-            description = "Unknown error";
-          }
-          const { ErrorToast } = require("@/components/Error");
-
-          toast(
-            (tst) => (
-              <ErrorToast description={description} title={title} toast={tst} />
-            ),
-            { duration: 5000 },
-          );
+          toast.danger({
+            title,
+            description,
+          });
         }
 
         throw error;

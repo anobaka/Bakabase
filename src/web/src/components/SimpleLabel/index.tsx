@@ -1,5 +1,5 @@
 import "./index.scss";
-import * as React from "react";
+import React from "react";
 interface IProps extends React.HTMLAttributes<HTMLElement> {
   children: any;
   status?: "default" | "primary" | "success" | "warning" | "info" | "danger";

@@ -3,7 +3,7 @@ interface EnvConfig {
 }
 
 export const envConfig: EnvConfig = {
-  apiEndpoint: import.meta.env.VITE_API_ENDPOINT || 'http://localhost:8080',
+  apiEndpoint: import.meta.env.VITE_API_ENDPOINT ?? '',
 };
 
 export default envConfig; 
