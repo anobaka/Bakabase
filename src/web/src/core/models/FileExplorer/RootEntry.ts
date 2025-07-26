@@ -287,7 +287,7 @@ class RootEntry extends Entry {
         log("Start watching", this.path, this);
         await BApi.file.startWatchingChangesInFileProcessorWorkspace(
           { path: this.path },
-          { ignoreError: () => true },
+          { showErrorToast: () => false },
         );
         const renderingQueue = new RenderingQueue();
         const self = this;

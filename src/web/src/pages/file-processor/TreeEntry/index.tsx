@@ -391,7 +391,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         // @ts-ignore
         const rsp = await BApi.file.getChildrenIwFsInfo(
           { root: entryRef.current.path },
-          { ignoreError: () => true },
+          { showErrorToast: () => false },
         );
 
         log(`Loaded ${rsp.data?.entries?.length} children`);

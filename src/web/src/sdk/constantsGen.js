@@ -14,7 +14,7 @@ function generateSdk(swaggerJsonUrl, outputDir) {
   const requestInvoker = swaggerJsonUrl.startsWith('http://') ? http : https;
   const constantUrl = `${new URL(swaggerJsonUrl).origin}/api/constant`;
   requestInvoker.get(constantUrl, (response) => {
-    if (response.statusCode == 200) {
+    if (response.statusCode === 200) {
       const jsonFilename = path.join(outputDir, './constants.ts');
       const file = fs.createWriteStream(jsonFilename);
       const stream = response.pipe(file);

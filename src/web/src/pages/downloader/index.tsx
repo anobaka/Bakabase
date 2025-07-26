@@ -158,8 +158,8 @@ export default () => {
         actionOnConflict,
       },
       {
-        // @ts-ignore
-        ignoreError: (rsp) => rsp.code == ResponseCode.Conflict,
+        showErrorToast: (r) =>
+          (r.code >= 404 || r.code < 200) && r.code != ResponseCode.Conflict,
       },
     );
 

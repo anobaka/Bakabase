@@ -229,7 +229,7 @@ export class Entry {
               // @ts-ignore
               const info = await BApi.file.getIwFsInfo(
                 { path: this.path, type: this.type },
-                { ignoreError: () => true },
+                { showErrorToast: () => false },
               );
 
               if (info.code) {

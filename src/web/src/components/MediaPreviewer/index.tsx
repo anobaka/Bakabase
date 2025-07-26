@@ -5,9 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { EyeInvisibleOutlined, LoadingOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
-
 import { MdAccessTime } from "react-icons/md";
-import { MdImageNotSupported } from 'react-icons/md';
+
 import "./index.scss";
 import BApi from "@/sdk/BApi";
 import { MediaType } from "@/sdk/constants";
@@ -100,7 +99,7 @@ const MediaPreviewer = (props: IProps) => {
   useEffect(() => {
     BApi.resource
       .getResourceDataForPreviewer(resourceId, {
-        ignoreError: (r) => r.code == 404,
+        showErrorToast: (r) => (r.code >= 404 || r.code < 200) && r.code != 404,
       })
       .then((rsp) => {
         if (rsp.data && rsp.data?.length > 0) {
@@ -147,7 +146,7 @@ const MediaPreviewer = (props: IProps) => {
         if (item == currentItemRef.current) {
           // console.log(reactPlayerRef.current, currentFrame - item.startFrame);
           if (reactPlayerRef.current) {
-            console.log('seeking video', reactPlayerRef.current);
+            console.log("seeking video", reactPlayerRef.current);
             reactPlayerRef.current.seekTo(
               currentFrame - item.startFrame,
               "seconds",
