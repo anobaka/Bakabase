@@ -10,7 +10,6 @@ import { useTranslation } from "react-i18next";
 import FileSystemEntry from "./FileSystemEntry";
 
 import BApi from "@/sdk/BApi";
-import { ResponseCode } from "@/sdk/constants";
 import { Pagination, Spinner } from "@/components/bakaui";
 
 type Props = {
@@ -33,9 +32,11 @@ export default ({ path, isFile }: Props) => {
       .getChildrenIwFsInfo(
         {
           root: path,
-          // @ts-ignore
         },
-        { ignoreError: (r) => r.code == ResponseCode.NotFound },
+        {
+          showErrorToast: (r) =>
+            (r.code >= 404 || r.code < 200) && r.code != 404,
+        },
       )
       .then((a) => {
         // @ts-ignore

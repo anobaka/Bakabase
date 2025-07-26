@@ -184,7 +184,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
               : theme.defaultAlgorithm,
           }}
         >
-          <ToastProvider />
+          <ToastProvider placement={"top-center"} />
           <BakabaseContext.Provider
             value={{
               isDarkMode,

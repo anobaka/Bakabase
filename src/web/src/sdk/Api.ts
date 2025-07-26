@@ -1,3 +1,7 @@
+import { buildLogger, extractErrorMessage } from "@/components/utils.tsx";
+import { toast } from "@/components/bakaui";
+
+const log = buildLogger("BApi");
 /* eslint-disable */
 /* tslint:disable */
 /*
@@ -3807,6 +3811,12 @@ export interface SystemType {
 export type QueryParamsType = Record<string | number, any>;
 export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;
 
+type BaseResponse = {
+  code: number;
+  message: string;
+};
+
+
 export interface FullRequestParams extends Omit<RequestInit, "body"> {
   /** set parameter to `true` for call `securityWorker` for this request */
   secure?: boolean;
@@ -3824,6 +3834,8 @@ export interface FullRequestParams extends Omit<RequestInit, "body"> {
   baseUrl?: string;
   /** request cancellation token */
   cancelToken?: CancelToken;
+
+  showErrorToast?: (response: BaseResponse) => boolean;
 }
 
 export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" | "path">;
@@ -3954,7 +3966,8 @@ export class HttpClient<SecurityDataType = unknown> {
     }
   };
 
-  public request = async <T = any, E = any>({
+  public request = async <T = any, E = any>(fullRequestParams: FullRequestParams): Promise<T> => {
+    const {
     body,
     secure,
     path,
@@ -3964,7 +3977,7 @@ export class HttpClient<SecurityDataType = unknown> {
     baseUrl,
     cancelToken,
     ...params
-  }: FullRequestParams): Promise<T> => {
+    } = fullRequestParams;
     const secureParams =
       ((typeof secure === "boolean" ? secure : this.baseApiParams.secure) &&
         this.securityWorker &&
@@ -4008,10 +4021,52 @@ export class HttpClient<SecurityDataType = unknown> {
         this.abortControllers.delete(cancelToken);
       }
 
-      if (!response.ok) throw data;
-      return data.data;
+      
+      if (!response.ok) {
+        this.processResponseError(data, fullRequestParams);
+        throw data;
+      }
+      return this.processResponseData(data.data as BaseResponse, fullRequestParams);
+    }).catch((error) => {
+      this.processResponseError(error, fullRequestParams);
+      throw error;
     });
   };
+
+  protected processResponseError = (error: any, params: FullRequestParams) => {
+    const title = `${params.method} ${params.path} failed`;
+    const description = extractErrorMessage(error);
+
+    toast.danger({
+      title,
+      description,
+    });
+  };
+
+  protected processResponseData = <T = any>(response: BaseResponse, params: FullRequestParams): T => {
+    // Check if the response has a code property (API response structure)
+    if (response && typeof response === "object" && "code" in response) {
+      log(response)
+      switch (response.code) {
+        case 0:
+          break;
+        default:
+          const showErrorToast = params.showErrorToast || ((error: BaseResponse) => error.code >= 400 || error.code < 200);
+          if (showErrorToast(response)) {
+            const title = `[${response.code}]${params.method} ${params.path}`;
+
+            toast.danger({
+              title,
+              description: response.message,
+            });
+          }
+      }
+    }
+
+    return response as T;
+  };
+
+        
 }
 
 /**

@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint --fix",
     "preview": "vite preview",
-    "gen-sdk": "swagger-typescript-api --union-enums -p http://127.0.0.1:8080/internal-doc/swagger/v1/swagger.json -o ./src/sdk --unwrap-response-data && node ./src/sdk/constantsGen.js && npx openapi-typescript http://127.0.0.1:8080/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
+    "gen-sdk": "node ./src/sdk/genSdk.js && node ./src/sdk/constantsGen.js && npx openapi-typescript http://127.0.0.1:8080/internal-doc/swagger/v1/swagger.json -o ./src/sdk/BApi2.d.ts",
     "postinstall": "patch-package"
   },
   "dependencies": {
