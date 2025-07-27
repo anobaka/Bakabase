@@ -28,3 +28,4 @@ yarn.lock
 package-lock.json
 bun.lockb
 .yarn
+.vite
