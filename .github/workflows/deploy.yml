@@ -50,9 +50,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            src/ClientApp/.yarn/cache
-            src/ClientApp/node_modules
-          key: yarn-${{ runner.os }}-${{ hashFiles('src/ClientApp/yarn.lock') }}
+            src/web/.yarn/cache
+            src/web/node_modules
+          key: yarn-${{ runner.os }}-${{ hashFiles('src/web/yarn.lock') }}
           restore-keys: |
             yarn-${{ runner.os }}-
 
@@ -65,18 +65,18 @@ jobs:
         run: corepack enable yarn
 
       - name: Install yarn dependencies
-        working-directory: src/ClientApp
+        working-directory: src/web
         run: yarn install
 
       - name: Build frontend
-        working-directory: src/ClientApp
+        working-directory: src/web
         run: yarn build
 
       - name: Upload frontend artifact
         uses: actions/upload-artifact@v4
         with:
           name: fe
-          path: src/ClientApp/build/*
+          path: src/web/dist/*
         
   build:
     runs-on: ${{ matrix.os }}
@@ -121,7 +121,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: fe
-          path: ./publish/ClientApp/build
+          path: ./publish/web/dist
       - name: Ensure config directory exists
         run: mkdir -p ./publish/AppData/configs
       - name: create-json
