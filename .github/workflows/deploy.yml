@@ -121,7 +121,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: fe
-          path: ./publish/web/dist
+          path: ./publish/web
       - name: Ensure config directory exists
         run: mkdir -p ./publish/AppData/configs
       - name: create-json
