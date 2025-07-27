@@ -53,7 +53,7 @@ export default ({ appInfo }) => {
   useEffect(() => {
     checkNewAppVersion();
 
-    return () => {};
+    return () => { };
   }, []);
 
   const renderNewVersion = () => {
@@ -72,76 +72,68 @@ export default ({ appInfo }) => {
         if (newVersion) {
           if (newVersion.version) {
             return (
-              <Popover
-                trigger={
-                  <Button color={"primary"} size={"sm"} variant={"light"}>
-                    {newVersion.version}
-                  </Button>
-                }
-                triggerType={"click"}
-              >
-                <div>
-                  {newVersion.changelog && (
-                    <>
-                      <Divider direction={"ver"} />
-                      <Button
-                        color={"secondary"}
-                        size={"small"}
-                        variant={"light"}
-                        onPress={() => {
-                          createPortal(Modal, {
-                            size: "xl",
-                            title: newVersion.version,
-                            defaultVisible: true,
-                            children: <pre>{newVersion.changelog}</pre>,
-                            footer: { actions: ["cancel"] },
-                          });
-                        }}
-                      >
-                        {t<string>("Change log")}
-                      </Button>
-                    </>
-                  )}
-                  <Divider direction={"ver"} />
-                  <Button
-                    color={"success"}
-                    size={"small"}
-                    variant={"light"}
-                    onClick={() => {
-                      BApi.updater.startUpdatingApp();
-                    }}
-                  >
-                    {t<string>("Click to auto-update")}
-                  </Button>
-                  {newVersion.installers?.length > 0 ? (
-                    <>
-                      <Divider direction={"ver"} />
-                      <Popover
-                        trigger={
-                          <Button
-                            color={"primary"}
-                            size={"sm"}
-                            variant={"light"}
-                          >
-                            {t<string>(
-                              "Auto-Update Fails? Click to download complete installers",
-                            )}
-                          </Button>
-                        }
-                        triggerType={"click"}
-                      >
-                        {newVersion.installers.map((i) => (
-                          <div key={i.url}>
-                            <ExternalLink href={i.url}>
-                              {i.name}({bytesToSize(i.size)})
-                            </ExternalLink>
-                          </div>
-                        ))}
-                      </Popover>
-                    </>
-                  ) : undefined}
-                </div>
-              </Popover>
+              <div className="flex items-center gap-2">
+                <Chip variant="light" radius="sm">{newVersion.version}</Chip>
+                {newVersion.changelog && (
+                  <>
+                    <Divider orientation={"vertical"} />
+                    <Button
+                      color={"secondary"}
+                      size={"small"}
+                      variant={"light"}
+                      onPress={() => {
+                        createPortal(Modal, {
+                          size: "xl",
+                          title: newVersion.version,
+                          defaultVisible: true,
+                          children: <pre>{newVersion.changelog}</pre>,
+                          footer: { actions: ["cancel"] },
+                        });
+                      }}
+                    >
+                      {t<string>("Change log")}
+                    </Button>
+                  </>
+                )}
+                <Divider orientation={"vertical"} />
+                <Button
+                  color={"success"}
+                  size={"small"}
+                  variant={"light"}
+                  onClick={() => {
+                    BApi.updater.startUpdatingApp();
+                  }}
+                >
+                  {t<string>("Click to auto-update")}
+                </Button>
+                {newVersion.installers?.length > 0 ? (
+                  <>
+                    <Divider orientation={"ver"} />
+                    <Popover
+                      trigger={
+                        <Button
+                          color={"primary"}
+                          size={"sm"}
+                          variant={"light"}
+                        >
+                          {t<string>(
+                            "Auto-Update Fails? Click to download complete installers",
+                          )}
+                        </Button>
+                      }
+                      triggerType={"click"}
+                    >
+                      {newVersion.installers.map((i) => (
+                        <div key={i.url}>
+                          <ExternalLink href={i.url}>
+                            {i.name}({bytesToSize(i.size)})
+                          </ExternalLink>
+                        </div>
+                      ))}
+                    </Popover>
+                  </>
+                ) : undefined}
+              </div>
             );
           } else {
             return t<string>("Up-to-date");

@@ -187,9 +187,9 @@ export default ({
       renderValue: () => {
         return (
           <Switch
-            checked={appOptions.enablePreReleaseChannel}
+            isSelected={appOptions.enablePreReleaseChannel}
             size={"sm"}
-            onChange={(checked) => {
+            onValueChange={(checked) => {
               applyPatches(
                 BApi.options.patchAppOptions,
                 {
@@ -208,9 +208,9 @@ export default ({
       renderValue: () => {
         return (
           <Switch
-            checked={appOptions.enableAnonymousDataTracking}
+            isSelected={appOptions.enableAnonymousDataTracking}
             size={"sm"}
-            onChange={(checked) => {
+            onValueChange={(checked) => {
               applyPatches(
                 BApi.options.patchAppOptions,
                 {
