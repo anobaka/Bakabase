@@ -315,7 +315,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
   return (
     <div className="flex flex-col min-h-0 grow md:flex-row gap-4">
       {/* 左侧：操作配置区域 */}
-      <Card className="flex-1 flex flex-col min-w-0 p-2">
+      <Card className="flex-1 flex flex-col min-w-0 p-4">
         <h5 className="font-semibold mb-2">
           {t<string>("FileNameModifier.OperationsList")}
         </h5>
@@ -371,7 +371,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
         </div>
       </Card>
       {/* 右侧：文件路径输入/预览区域 */}
-      <Card className="flex-1 flex flex-col min-w-0 p-2">
+      <Card className="flex-1 flex flex-col min-w-0 p-4">
         <div className="mb-2 flex justify-between items-center">
           <h5 className="font-semibold mb-0 flex items-center gap-1">
             {showTextarea

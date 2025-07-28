@@ -22,8 +22,11 @@ interface IProps {
   optionsItems?: EnhancerTargetOptionsItem[];
   onChange?: (options: Partial<EnhancerTargetFullOptions>) => void;
 }
-
-export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
+const TargetOptions = ({
+  options: propsOptions,
+  optionsItems,
+  onChange,
+}: IProps) => {
   const [options, setOptions] = useState<Options>(propsOptions ?? {});
 
   useEffect(() => {
@@ -77,3 +80,7 @@ export default ({ options: propsOptions, optionsItems, onChange }: IProps) => {
     </>
   );
 };
+
+TargetOptions.displayName = "TargetOptions";
+
+export default TargetOptions;

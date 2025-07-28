@@ -19,33 +19,7 @@ type Props = {
   tooltipContent?: string;
   showTooltip?: boolean;
 };
-
-/**
- * DeprecatedChip component for indicating deprecated features
- *
- * @example
- * // Basic usage
- * <DeprecatedChip />
- *
- * @example
- * // Custom styling
- * <DeprecatedChip size="md" color="danger" variant="solid" />
- *
- * @example
- * // Custom tooltip
- * <DeprecatedChip tooltipContent="This feature will be removed in the next version" />
- *
- * @example
- * // Without tooltip
- * <DeprecatedChip showTooltip={false} />
- *
- * @example
- * // Different colors for different deprecation types
- * <DeprecatedChip color="danger" /> // Critical deprecation
- * <DeprecatedChip color="warning" /> // Warning deprecation
- * <DeprecatedChip color="secondary" /> // Soft deprecation
- */
-export default ({
+const DeprecatedChip = ({
   className,
   size = "sm",
   variant = "flat",
@@ -79,3 +53,7 @@ export default ({
     </Tooltip>
   );
 };
+
+DeprecatedChip.displayName = "DeprecatedChip";
+
+export default DeprecatedChip;

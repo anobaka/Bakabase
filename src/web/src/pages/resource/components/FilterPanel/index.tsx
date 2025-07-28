@@ -15,6 +15,7 @@ import {
 } from "@ant-design/icons";
 import toast from "react-hot-toast";
 import { AiOutlineSearch } from "react-icons/ai";
+import { MdPlaylistPlay } from "react-icons/md";
 
 import styles from "./index.module.scss";
 import FilterGroupsPanel from "./FilterGroupsPanel";
@@ -22,11 +23,9 @@ import OrderSelector from "./OrderSelector";
 import FilterPortal from "./FilterPortal";
 
 import BApi from "@/sdk/BApi";
-import { useUiOptionsStore } from "@/models/options";
+import { useUiOptionsStore } from "@/stores/options";
 import { PlaylistCollection } from "@/components/Playlist";
 import {
-  Autocomplete,
-  AutocompleteItem,
   Button,
   Checkbox,
   Chip,
@@ -36,12 +35,12 @@ import {
   Spinner,
   Tooltip,
 } from "@/components/bakaui";
-import { MdPlaylistPlay } from "react-icons/md";
 import SavedSearches from "@/pages/resource/components/FilterPanel/SavedSearches";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import { ResourceTag } from "@/sdk/constants";
 import HandleUnknownResources from "@/components/HandleUnknownResources";
+import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
 
 interface IProps {
   selectedResourceIds?: number[];
@@ -64,8 +63,7 @@ const defaultSearchForm = (): SearchForm => ({
   page: 1,
   pageSize: 0,
 });
-
-export default ({
+const FilterPanel = ({
   maxResourceColCount = DefaultMaxResourceColCount,
   selectedResourceIds,
   onSearch,
@@ -97,12 +95,6 @@ export default ({
     useState(false);
 
   const savedSearchesRef = useRef<SavedSearchRef>(null);
-
-  const [isLoadingKeywords, setIsLoadingKeywords] = React.useState(false);
-  const [keywordCandidates, setKeywordCandidates] = React.useState<string[]>(
-    [],
-  );
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || defaultSearchForm());
@@ -141,37 +133,14 @@ export default ({
   console.log("resource page filter panel rerender", searchForm);
 
   return (
-    <div className={`${styles.filterPanel} flex flex-col gap-1`}>
+    <div className={`${styles.filterPanel} flex flex-col gap-2`}>
       <div className={"flex items-center gap-4"}>
-        <Autocomplete
+        <ResourceKeywordAutocomplete
           isClearable
           className={"w-1/4 min-w-[200px]"}
-          inputValue={searchForm.keyword}
-          isLoading={isLoadingKeywords}
-          items={keywordCandidates.map((k) => ({ label: k, value: k }))}
           placeholder={t<string>("Search everything")}
-          selectedKey={null}
           startContent={<SearchOutlined className={"text-xl"} />}
-          onInputChange={(v) => {
-            if (debounceTimer.current) {
-              clearTimeout(debounceTimer.current);
-            }
-            if (v != undefined && v.length > 0) {
-              setIsLoadingKeywords(true);
-              debounceTimer.current = setTimeout(() => {
-                BApi.resource
-                  .getResourceSearchKeywordRecommendation({
-                    keyword: v,
-                  })
-                  .then((ret) => {
-                    setKeywordCandidates(ret.data ?? []);
-                  })
-                  .finally(() => {
-                    setIsLoadingKeywords(false);
-                  });
-              }, 300);
-            }
-          }}
+          value={searchForm.keyword}
           onKeyDown={(e) => {
             if (e.key == "Enter") {
               search({
@@ -180,30 +149,13 @@ export default ({
               });
             }
           }}
-          onSelectionChange={(k) => {
-            console.log("onSelectionChange", k);
-            if (k) {
-              const nf = {
-                keyword: k as string,
-                page: 1,
-              };
-
-              search(nf);
-            }
-          }}
           onValueChange={(v) => {
             setSearchForm({
               ...searchForm,
               keyword: v,
             });
           }}
-        >
-          {(item) => (
-            <AutocompleteItem key={item.value} title={item.label}>
-              {item.label}
-            </AutocompleteItem>
-          )}
-        </Autocomplete>
+        />
         <FilterPortal
           searchForm={searchForm}
           onChange={() => {
@@ -267,50 +219,45 @@ export default ({
             <AiOutlineSearch className={"text-base"} />
             {t<string>("Search")}
           </Button>
-          <Tooltip
-            content={t<string>("Save current search to quick search")}
-            placement={"right"}
-          >
-            <Button
-              isIconOnly
-              size={"sm"}
-              onPress={() => {
-                let name = `${t<string>("Untitled search")}1`;
+          <Button
+            isIconOnly
+            size={"sm"}
+            onPress={() => {
+              let name = `${t<string>("Untitled search")}1`;
 
-                createPortal(Modal, {
-                  defaultVisible: true,
-                  size: "lg",
-                  title: t<string>("Save current search"),
-                  children: (
-                    <Input
-                      isRequired
-                      defaultValue={name}
-                      label={t<string>("Name")}
-                      placeholder={t<string>(
-                        "Please set a name for current search",
-                      )}
-                      onValueChange={(v) => (name = v?.trim())}
-                    />
-                  ),
-                  onOk: async () => {
-                    if (name != undefined && name.length > 0) {
-                      // @ts-ignore
-                      await BApi.resource.saveNewResourceSearch({
-                        search: searchForm,
-                        name,
-                      });
-                      savedSearchesRef.current?.reload();
-                    } else {
-                      toast.error(t<string>("Name is required"));
-                      throw new Error("Name is required");
-                    }
-                  },
-                });
-              }}
-            >
-              <SaveOutlined className={"text-base"} />
-            </Button>
-          </Tooltip>
+              createPortal(Modal, {
+                defaultVisible: true,
+                size: "lg",
+                title: t<string>("Save current search"),
+                children: (
+                  <Input
+                    isRequired
+                    defaultValue={name}
+                    label={t<string>("Name")}
+                    placeholder={t<string>(
+                      "Please set a name for current search",
+                    )}
+                    onValueChange={(v) => (name = v?.trim())}
+                  />
+                ),
+                onOk: async () => {
+                  if (name != undefined && name.length > 0) {
+                    // @ts-ignore
+                    await BApi.resource.saveNewResourceSearch({
+                      search: searchForm,
+                      name,
+                    });
+                    savedSearchesRef.current?.reload();
+                  } else {
+                    toast.error(t<string>("Name is required"));
+                    throw new Error("Name is required");
+                  }
+                },
+              });
+            }}
+          >
+            <SaveOutlined className={"text-base"} />
+          </Button>
         </div>
         <div className={"flex items-center gap-2"}>
           {multiSelection && (
@@ -383,8 +330,8 @@ export default ({
             >
               {selectedAll
                 ? t<string>("{{count}} items selected", {
-                  count: selectedResourceIds?.length,
-                })
+                    count: selectedResourceIds?.length,
+                  })
                 : t<string>("Select all")}
             </Checkbox>
           </Tooltip>
@@ -392,11 +339,13 @@ export default ({
           {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
             <div className={"flex items-center gap-1"}>
               <Tooltip content={t<string>("Loaded resources")}>
-                <Chip size='sm' variant="light" color={"success"}>{resourceCount}</Chip>
+                <Chip color={"success"} size="sm" variant="light">
+                  {resourceCount}
+                </Chip>
               </Tooltip>
               /
               <Tooltip content={t<string>("All filtered resources")}>
-                <Chip size='sm' variant="light" color={"secondary"}>
+                <Chip color={"secondary"} size="sm" variant="light">
                   {totalFilteredResourceCount}
                 </Chip>
               </Tooltip>
@@ -416,19 +365,18 @@ export default ({
             }}
           />
           <Popover
+            className="min-w-[160px]"
             trigger={
               <Button
                 color={"default"}
                 size={"sm"}
-                startContent={
-                  <MdPlaylistPlay className={"text-xl"} />
-                }
+                startContent={<MdPlaylistPlay className={"text-xl"} />}
               >
                 {t<string>("Playlist")}
               </Button>
             }
           >
-            <PlaylistCollection className={"resource-page"} />
+            <PlaylistCollection />
           </Popover>
           <Popover
             placement={"bottom-end"}
@@ -475,3 +423,7 @@ export default ({
     </div>
   );
 };
+
+FilterPanel.displayName = "FilterPanel";
+
+export default FilterPanel;

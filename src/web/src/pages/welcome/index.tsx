@@ -6,8 +6,7 @@ import { useTranslation } from "react-i18next";
 
 import { Button, Chip, Popover } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-
-export default () => {
+const WelcomePage = () => {
   const [version, setVersion] = useState<string>();
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -70,3 +69,7 @@ export default () => {
     </div>
   );
 };
+
+WelcomePage.displayName = "WelcomePage";
+
+export default WelcomePage;

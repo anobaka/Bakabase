@@ -42,8 +42,7 @@ const PageSize = 20;
 type Props = {
   bmId: number;
 } & DestroyableProps;
-
-export default ({ bmId, onDestroyed }: Props) => {
+const DiffsModal = ({ bmId, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   const [keyword, setKeyword] = useState<string>();
@@ -197,3 +196,7 @@ export default ({ bmId, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+DiffsModal.displayName = "DiffsModal";
+
+export default DiffsModal;

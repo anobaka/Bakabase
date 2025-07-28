@@ -3,8 +3,7 @@
 import { Button } from "@/components/bakaui";
 import PresetTemplateBuilder from "@/pages/media-library-template/components/PresetTemplateBuilder";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-export default () => {
+const PresetMediaLibraryTemplateBuilderTestPage = () => {
   const { createPortal } = useBakabaseContext();
 
   return (
@@ -17,3 +16,8 @@ export default () => {
     </Button>
   );
 };
+
+PresetMediaLibraryTemplateBuilderTestPage.displayName =
+  "PresetMediaLibraryTemplateBuilderTest";
+
+export default PresetMediaLibraryTemplateBuilderTestPage;

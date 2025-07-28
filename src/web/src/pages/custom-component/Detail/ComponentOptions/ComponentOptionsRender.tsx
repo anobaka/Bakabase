@@ -5,7 +5,7 @@ import type { BRjsfProps } from "@/components/BRjsf";
 import { useEffect, useState } from "react";
 import React from "react";
 
-const ComponentOptionsRender = React.forwardRef((props: BRjsfProps, ref) => {
+const ComponentOptionsRenderPage = React.forwardRef((props: BRjsfProps, ref) => {
   const [Component, setComponent] = useState<any>();
   const init = async () => {
     const a = await import(/* @vite-ignore */ `./${props.schema.title}Rjsf`);
@@ -21,4 +21,4 @@ const ComponentOptionsRender = React.forwardRef((props: BRjsfProps, ref) => {
   return Component && <Component {...props} ref={ref} />;
 });
 
-export default ComponentOptionsRender;
+export default ComponentOptionsRenderPage;

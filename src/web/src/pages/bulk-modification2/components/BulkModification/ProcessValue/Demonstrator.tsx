@@ -20,8 +20,7 @@ type Props = {
 };
 
 const log = buildLogger("BulkModificationProcessValueDemonstrator");
-
-export default ({ variables, value }: Props) => {
+const Demonstrator = ({ variables, value }: Props) => {
   const { t } = useTranslation();
 
   log(value, variables);
@@ -72,3 +71,7 @@ export default ({ variables, value }: Props) => {
       );
   }
 };
+
+Demonstrator.displayName = "Demonstrator";
+
+export default Demonstrator;

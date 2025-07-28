@@ -13,8 +13,7 @@ type Props = {
   value: IPscPropertyMatcherValue[];
   hasError: boolean;
 };
-
-export default ({ value, hasError }: Props) => {
+const BottomOperations = ({ value, hasError }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -24,3 +23,7 @@ export default ({ value, hasError }: Props) => {
     </div>
   );
 };
+
+BottomOperations.displayName = "BottomOperations";
+
+export default BottomOperations;

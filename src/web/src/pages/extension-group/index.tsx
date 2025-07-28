@@ -30,45 +30,7 @@ export type ExtensionGroup = {
 };
 
 // const testGroups: Group[] = [
-//   {
-//     id: 1,
-//     name: 'Group 1',
-//     extensions: ['.jpg', '.png'],
-//   },
-//   {
-//     id: 2,
-//     name: 'Group 2',
-//     extensions: ['.mp4', '.avi'],
-//   },
-//   {
-//     id: 3,
-//     name: 'Group 3',
-//     extensions: ['.docx', '.pdf'],
-//   },
-//   {
-//     id: 4,
-//     name: 'Group 4',
-//     extensions: ['.xlsx', '.csv'],
-//   },
-//   {
-//     id: 5,
-//     name: 'Group 5',
-//     extensions: ['.pptx', '.txt'],
-//   },
-// ];
-
-function extractExtensions(text: string): string[] {
-  const extensions = text
-    .replace(/\n/g, " ")
-    .split(" ")
-    .map((x) => x.trim().replace(/^\.+|\.+$/g, ""))
-    .filter((x) => x.length > 0)
-    .map((x) => `.${x}`);
-
-  return Array.from(new Set(extensions));
-}
-
-export default () => {
+const ExtensionGroupPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [groups, setGroups] = useState<ExtensionGroup[]>([]);
@@ -249,3 +211,44 @@ export default () => {
     </div>
   );
 };
+
+ExtensionGroupPage.displayName = "ExtensionGroupPage";
+//   {
+//     id: 1,
+//     name: 'Group 1',
+//     extensions: ['.jpg', '.png'],
+//   },
+//   {
+//     id: 2,
+//     name: 'Group 2',
+//     extensions: ['.mp4', '.avi'],
+//   },
+//   {
+//     id: 3,
+//     name: 'Group 3',
+//     extensions: ['.docx', '.pdf'],
+//   },
+//   {
+//     id: 4,
+//     name: 'Group 4',
+//     extensions: ['.xlsx', '.csv'],
+//   },
+//   {
+//     id: 5,
+//     name: 'Group 5',
+//     extensions: ['.pptx', '.txt'],
+//   },
+// ];
+
+function extractExtensions(text: string): string[] {
+  const extensions = text
+    .replace(/\n/g, " ")
+    .split(" ")
+    .map((x) => x.trim().replace(/^\.+|\.+$/g, ""))
+    .filter((x) => x.length > 0)
+    .map((x) => `.${x}`);
+
+  return Array.from(new Set(extensions));
+}
+
+export default ExtensionGroupPage;

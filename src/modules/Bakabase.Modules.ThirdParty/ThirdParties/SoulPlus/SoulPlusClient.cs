@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
 using CliWrap;
@@ -22,7 +23,7 @@ public class SoulPlusClient(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     IBOptions<ThirdPartyOptions> thirdPartyOptions,
-    IBOptions<SoulPlusOptions> options)
+    IBOptions<ISoulPlusOptions> options)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
     public async Task<SoulPlusPost> GetPostAsync(string link, CancellationToken ct)

@@ -27,8 +27,7 @@ type Props = {
   reloadCategory: (id: number) => any;
   reloadMediaLibrary: (id: number) => any;
 };
-
-export default ({
+const SortableCategoryList = ({
   categories,
   libraries,
   loadAllMediaLibraries,
@@ -121,3 +120,7 @@ export default ({
     </div>
   );
 };
+
+SortableCategoryList.displayName = "SortableCategoryList";
+
+export default SortableCategoryList;

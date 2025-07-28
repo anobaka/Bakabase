@@ -33,7 +33,7 @@ export type PathPropertyExtractor = {
   regex?: string;
 };
 
-export type MediaLibraryTemplate = {
+export type MediaLibraryTemplatePage = {
   id: number;
   name: string;
   author?: string;
@@ -46,7 +46,7 @@ export type MediaLibraryTemplate = {
   samplePaths?: string[];
   createdAt: string;
   childTemplateId?: number;
-  child?: MediaLibraryTemplate;
+  child?: MediaLibraryTemplatePage;
 };
 
 export type MediaLibraryTemplateProperty = {

@@ -1,8 +1,8 @@
 "use client";
 
 import type { OnDeleteMatcherValue } from "../models";
-import { SimpleGlobalError } from "../models/PscContext";
 import type { IPscPropertyMatcherValue } from "../models/PscPropertyMatcherValue";
+import type { SimpleGlobalError } from "../models/PscContext";
 
 import { WarningOutlined } from "@ant-design/icons";
 import React from "react";
@@ -17,8 +17,7 @@ type Props = {
   value?: IPscPropertyMatcherValue[];
   onDeleteMatcherValue: OnDeleteMatcherValue;
 };
-
-export default ({ errors, value, onDeleteMatcherValue }: Props) => {
+const Errors = ({ errors, value, onDeleteMatcherValue }: Props) => {
   const { t } = useTranslation();
 
   if (errors && errors.length > 0) {
@@ -72,3 +71,7 @@ export default ({ errors, value, onDeleteMatcherValue }: Props) => {
 
   return null;
 };
+
+Errors.displayName = "Errors";
+
+export default Errors;

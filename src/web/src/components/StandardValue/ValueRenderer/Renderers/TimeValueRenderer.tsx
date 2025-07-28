@@ -10,8 +10,7 @@ import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/component
 type TimeValueRendererProps = ValueRendererProps<Duration, Duration> & {
   format?: string;
 };
-
-export default ({
+const TimeValueRenderer = ({
   value,
   format,
   variant,
@@ -53,3 +52,7 @@ export default ({
     return <span onClick={startEditing}>{value?.format(f)}</span>;
   }
 };
+
+TimeValueRenderer.displayName = "TimeValueRenderer";
+
+export default TimeValueRenderer;

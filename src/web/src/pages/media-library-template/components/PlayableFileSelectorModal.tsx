@@ -19,8 +19,10 @@ type Props = {
   selection?: Selection;
   onSubmit?: (selection: Selection) => any;
 } & DestroyableProps;
-
-export default ({ selection: propSelection, onSubmit }: Props) => {
+const PlayableFileSelectorModal = ({
+  selection: propSelection,
+  onSubmit,
+}: Props) => {
   const { t } = useTranslation();
 
   const [selection, setSelection] = useState<Selection>(propSelection ?? {});
@@ -67,3 +69,7 @@ export default ({ selection: propSelection, onSubmit }: Props) => {
     </Modal>
   );
 };
+
+PlayableFileSelectorModal.displayName = "PlayableFileSelectorModal";
+
+export default PlayableFileSelectorModal;

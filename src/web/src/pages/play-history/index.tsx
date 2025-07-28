@@ -21,14 +21,13 @@ type Form = {
   // resourceId?: number;
 };
 
-type PlayHistory = {
+type PlayHistoryPage = {
   // resourceId: number;
   id: number;
   item?: string;
   playedAt?: string;
 };
-
-export default () => {
+const PlayHistoryPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -36,7 +35,7 @@ export default () => {
     pageSize: 100,
     pageIndex: 0,
   });
-  const [playHistories, setPlayHistories] = useState<PlayHistory[]>([]);
+  const [playHistories, setPlayHistories] = useState<PlayHistoryPage[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
@@ -110,3 +109,7 @@ export default () => {
     </div>
   );
 };
+
+PlayHistoryPage.displayName = "PlayHistoryPage";
+
+export default PlayHistoryPage;

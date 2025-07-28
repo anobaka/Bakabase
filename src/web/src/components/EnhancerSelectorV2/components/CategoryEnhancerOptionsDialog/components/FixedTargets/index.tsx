@@ -25,8 +25,7 @@ interface Props {
   onPropertyChanged?: () => any;
   onCategoryChanged?: () => any;
 }
-
-export default (props: Props) => {
+const FixedTargets = (props: Props) => {
   const { t } = useTranslation();
 
   const {
@@ -91,3 +90,7 @@ export default (props: Props) => {
     </>
   );
 };
+
+FixedTargets.displayName = "FixedTargets";
+
+export default FixedTargets;

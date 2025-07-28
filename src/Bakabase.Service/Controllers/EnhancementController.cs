@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
@@ -13,6 +14,7 @@ using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.View;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Tasks;
+using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using Humanizer.Localisation;
 using Microsoft.AspNetCore.Mvc;
@@ -22,13 +24,13 @@ namespace Bakabase.Service.Controllers
 {
     [Route("~/enhancement")]
     public class EnhancementController(
-        ICategoryService categoryService,
         IResourceService resourceService,
         IEnhancementService enhancementService,
         IEnhancerService enhancerService,
         ICategoryEnhancerOptionsService categoryEnhancerOptionsService,
         IEnhancerDescriptors enhancerDescriptors,
-        IEnhancementRecordService enhancementRecordService)
+        IEnhancementRecordService enhancementRecordService,
+        IMediaLibraryV2Service mediaLibraryV2Service)
         : Controller
     {
         [HttpGet("~/resource/{resourceId:int}/enhancement")]
@@ -42,56 +44,104 @@ namespace Bakabase.Service.Controllers
                 return ListResponseBuilder<ResourceEnhancements>.NotFound;
             }
 
-            var category = await categoryService.Get(resource.CategoryId, CategoryAdditionalItem.None);
-            if (category == null)
-            {
-                return ListResponseBuilder<ResourceEnhancements>.NotFound;
-            }
-
             var enhancements = await enhancementService.GetAll(x => x.ResourceId == resourceId, additionalItem);
-            var categoryEnhancerOptions = await categoryEnhancerOptionsService.GetByCategory(resource.CategoryId);
+
             var enhancementRecords =
                 (await enhancementRecordService.GetAll(x => x.ResourceId == resourceId)).ToDictionary(
                     d => d.EnhancerId, d => d);
 
-            var res = categoryEnhancerOptions.Where(o => o.Active).Select(o =>
+            if (resource.IsMediaLibraryV2)
             {
-                var ed = enhancerDescriptors[o.EnhancerId];
-                var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
-                var record = enhancementRecords.GetValueOrDefault(o.EnhancerId);
-                var re = new ResourceEnhancements
+                var mediaLibraryTemplate =
+                    (await mediaLibraryV2Service.Get(resource.MediaLibraryId, MediaLibraryV2AdditionalItem.Template))
+                    .Template;
+                if (mediaLibraryTemplate == null)
                 {
-                    Enhancer = ed,
-                    ContextCreatedAt = record?.ContextCreatedAt,
-                    ContextAppliedAt = record?.ContextAppliedAt,
-                    Status = record?.Status ?? default,
-                    Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
-                    {
-                        var targetId = Convert.ToInt32(t.Id);
-                        var e = es.FirstOrDefault(e => e.Target == targetId);
-                        return new ResourceEnhancements.TargetEnhancement
-                        {
-                            Enhancement = e?.ToViewModel(),
-                            Target = targetId,
-                            TargetName = t.Name
-                        };
-                    }).ToArray(),
-                    DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
-                    {
-                        var targetId = Convert.ToInt32(t.Id);
-                        var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
-                        return new ResourceEnhancements.DynamicTargetEnhancements()
-                        {
-                            Enhancements = e,
-                            Target = targetId,
-                            TargetName = t.Name
-                        };
-                    }).ToArray()
-                };
-                return re;
-            }).ToList();
+                    return ListResponseBuilder<ResourceEnhancements>.Build(ResponseCode.NotFound,
+                        "Media library template not found");
+                }
 
-            return new ListResponse<ResourceEnhancements>(res);
+                var res = (mediaLibraryTemplate.Enhancers ?? []).Select(e =>
+                {
+                    var ed = enhancerDescriptors[e.EnhancerId];
+                    var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
+                    var record = enhancementRecords.GetValueOrDefault(e.EnhancerId);
+                    var re = new ResourceEnhancements
+                    {
+                        Enhancer = ed,
+                        ContextCreatedAt = record?.ContextCreatedAt,
+                        ContextAppliedAt = record?.ContextAppliedAt,
+                        Status = record?.Status ?? default,
+                        Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
+                        {
+                            var targetId = Convert.ToInt32(t.Id);
+                            var e = es.FirstOrDefault(e => e.Target == targetId);
+                            return new ResourceEnhancements.TargetEnhancement
+                            {
+                                Enhancement = e?.ToViewModel(),
+                                Target = targetId,
+                                TargetName = t.Name
+                            };
+                        }).ToArray(),
+                        DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
+                        {
+                            var targetId = Convert.ToInt32(t.Id);
+                            var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
+                            return new ResourceEnhancements.DynamicTargetEnhancements()
+                            {
+                                Enhancements = e,
+                                Target = targetId,
+                                TargetName = t.Name
+                            };
+                        }).ToArray()
+                    };
+                    return re;
+                }).ToList();
+
+                return new ListResponse<ResourceEnhancements>(res);
+            }
+            else
+            {
+                var categoryEnhancerOptions = await categoryEnhancerOptionsService.GetByCategory(resource.CategoryId);
+                var res = categoryEnhancerOptions.Where(o => o.Active).Select(o =>
+                {
+                    var ed = enhancerDescriptors[o.EnhancerId];
+                    var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
+                    var record = enhancementRecords.GetValueOrDefault(o.EnhancerId);
+                    var re = new ResourceEnhancements
+                    {
+                        Enhancer = ed,
+                        ContextCreatedAt = record?.ContextCreatedAt,
+                        ContextAppliedAt = record?.ContextAppliedAt,
+                        Status = record?.Status ?? default,
+                        Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
+                        {
+                            var targetId = Convert.ToInt32(t.Id);
+                            var e = es.FirstOrDefault(e => e.Target == targetId);
+                            return new ResourceEnhancements.TargetEnhancement
+                            {
+                                Enhancement = e?.ToViewModel(),
+                                Target = targetId,
+                                TargetName = t.Name
+                            };
+                        }).ToArray(),
+                        DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
+                        {
+                            var targetId = Convert.ToInt32(t.Id);
+                            var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
+                            return new ResourceEnhancements.DynamicTargetEnhancements()
+                            {
+                                Enhancements = e,
+                                Target = targetId,
+                                TargetName = t.Name
+                            };
+                        }).ToArray()
+                    };
+                    return re;
+                }).ToList();
+
+                return new ListResponse<ResourceEnhancements>(res);
+            }
         }
 
         [HttpDelete("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement")]

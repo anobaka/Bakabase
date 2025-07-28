@@ -6,28 +6,19 @@ import type { ChipProps } from "./components/Chip";
 import type { ModalProps } from "./components/Modal";
 import type { TextareaProps } from "./components/Textarea";
 import type { TableRowProps } from "./components/Table";
-
 import type { NumberInputProps } from "./components/NumberInput";
+import type { CircularProgressProps } from "./components/CircularProgress";
+
 import { Button, ButtonGroup } from "./components/Button";
 import Select from "./components/Select";
-
-
 import Icon from "./components/Icon";
-
-
 import { Input } from "./components/Input";
-
-
 import Chip from "./components/Chip";
 import Tooltip from "./components/Tooltip";
-
-
 import Modal from "./components/Modal";
 import Popover from "./components/Popover";
 import Progress from "./components/Progress";
 import Switch from "./components/Switch";
-
-
 import { Textarea } from "./components/Textarea";
 import ColorPicker from "./components/ColorPicker";
 import { Tab, Tabs } from "./components/Tabs";
@@ -39,8 +30,6 @@ import Spinner from "./components/Spinner";
 import { BreadcrumbItem, Breadcrumbs } from "./components/Breadcumbs";
 import { Accordion, AccordionItem } from "./components/Accordion";
 import { Autocomplete, AutocompleteItem } from "./components/Autocomplete";
-
-
 import {
   Table,
   TableBody,
@@ -68,14 +57,9 @@ import Rating from "./components/Rating";
 import Image from "./components/Image";
 import { Radio, RadioGroup } from "./components/Radio";
 import Kbd from "./components/Kbd";
-
-
 import { NumberInput } from "./components/NumberInput";
 import Tree from "./components/Tree";
 import Alert from "./components/Alert";
-
-import type { CircularProgressProps } from "./components/CircularProgress";
-
 import { CircularProgress } from "./components/CircularProgress";
 import toast from "./components/Toast";
 

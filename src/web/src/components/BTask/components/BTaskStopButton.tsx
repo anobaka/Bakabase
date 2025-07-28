@@ -11,8 +11,7 @@ import BApi from "@/sdk/BApi";
 type Props = {
   id: string;
 } & ButtonProps;
-
-export default (props: Props) => {
+const BTaskStopButton = (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -40,3 +39,7 @@ export default (props: Props) => {
     </Button>
   );
 };
+
+BTaskStopButton.displayName = "BTaskStopButton";
+
+export default BTaskStopButton;

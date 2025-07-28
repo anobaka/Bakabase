@@ -16,7 +16,7 @@ import styles from "./index.module.scss";
 
 import { Button } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { useAppOptionsStore } from "@/models/options";
+import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
 
 const OptIconStyle = { fontSize: 20 };
@@ -26,12 +26,13 @@ const Navigation = () => {
   const { pathname } = useLocation();
 
   const appOptions = useAppOptionsStore((state) => state.data);
+  const uiOptionsStore = useUiOptionsStore();
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
   const isEnglish = appOptions.language == "en";
 
   const [loading, setLoading] = useState(false);
   const prevPathRef = useRef<string>(pathname);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isCollapsed = uiOptionsStore.data.isMenuCollapsed;
 
   useEffect(() => {
     if (pathname != prevPathRef.current) {
@@ -112,7 +113,9 @@ const Navigation = () => {
           color={"default"}
           variant={"light"}
           onPress={() => {
-            setIsCollapsed(!isCollapsed);
+            uiOptionsStore.patch({
+              isMenuCollapsed: !isCollapsed,
+            });
           }}
         >
           {isCollapsed ? (

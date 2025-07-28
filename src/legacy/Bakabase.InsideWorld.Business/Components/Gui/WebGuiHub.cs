@@ -13,6 +13,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
 using Bakabase.InsideWorld.Business.Components.FileMover;
@@ -20,11 +21,11 @@ using Bakabase.InsideWorld.Business.Components.FileMover.Models;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.InsideWorld.Business.Models.View;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Components;
+using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Humanizer;
@@ -45,6 +46,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task GetResponse(BaseResponse rsp);
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
         Task GetAppUpdaterState(UpdaterState state);
+        Task UpdateThirdPartyRequestStatistics(ThirdPartyRequestStatistics[] statistics);
     }
 
     public class WebGuiHub : Hub<IWebGuiClient>
@@ -58,12 +60,13 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         private readonly AppContext _appContext;
         private readonly BTaskManager _bTaskManager;
         private readonly IPostParserTaskService _postParserTaskService;
+        private readonly IThirdPartyService _thirdPartyService;
 
         public WebGuiHub(
             DownloadTaskService downloadTaskService,
             BakabaseOptionsManagerPool optionsManagerPool, ILogger<WebGuiHub> logger,
             IEnumerable<IDependentComponentService> dependentComponentServices, IFileMover fileMover,
-            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager, IPostParserTaskService postParserTaskService)
+            AppUpdater appUpdater, AppContext appContext, BTaskManager bTaskManager, IPostParserTaskService postParserTaskService, IThirdPartyService thirdPartyService)
         {
             _downloadTaskService = downloadTaskService;
             _optionsManagerPool = optionsManagerPool;
@@ -74,6 +77,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             _appContext = appContext;
             _bTaskManager = bTaskManager;
             _postParserTaskService = postParserTaskService;
+            _thirdPartyService = thirdPartyService;
         }
 
         public async Task GetInitialData()
@@ -106,6 +110,8 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
             await Clients.Caller.GetData("BTask", _bTaskManager.GetTasksViewModel());
 
             await Clients.Caller.GetData(nameof(PostParserTask), await _postParserTaskService.GetAll());
+            
+            await Clients.Caller.GetData(nameof(ThirdPartyRequestStatistics), _thirdPartyService.GetAllThirdPartyRequestStatistics());
         }
     }
 }

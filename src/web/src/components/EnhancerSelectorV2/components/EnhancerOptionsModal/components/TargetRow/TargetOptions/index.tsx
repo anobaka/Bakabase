@@ -22,8 +22,7 @@ type Props = {
   onChange?: (options: Partial<EnhancerTargetFullOptions>) => void;
   isDisabled?: boolean;
 };
-
-export default ({
+const TargetOptions = ({
   options: propsOptions,
   optionsItems,
   onChange,
@@ -90,3 +89,7 @@ export default ({
     </>
   );
 };
+
+TargetOptions.displayName = "TargetOptions";
+
+export default TargetOptions;

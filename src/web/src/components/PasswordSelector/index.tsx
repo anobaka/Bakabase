@@ -1,16 +1,16 @@
 "use client";
 
-import { Badge, Button, Modal, Radio } from "@/components/bakaui";
 import { useCallback, useEffect, useState } from "react";
 
+import { Badge, Button, Modal, Radio } from "@/components/bakaui";
 import { createPortalOfComponent } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import { PasswordSearchOrder } from "@/sdk/constants";
 
 import "./index.scss";
 import { useTranslation } from "react-i18next";
-
 import { MdDelete } from "react-icons/md";
+
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
@@ -71,7 +71,9 @@ function PasswordSelector(props: IProps) {
                 createPortal(Modal, {
                   defaultVisible: true,
                   title: t<string>("Delete password from history?"),
-                  children: t<string>("Are you sure you want to delete this password from history?"),
+                  children: t<string>(
+                    "Are you sure you want to delete this password from history?",
+                  ),
                   onOk: () => BApi.password.deletePassword(p.text),
                 });
               }}

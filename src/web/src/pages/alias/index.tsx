@@ -44,7 +44,7 @@ type Form = {
   fuzzyText?: string;
 };
 
-type Alias = {
+type AliasPage = {
   originalText: string;
   text: string;
   preferred?: string;
@@ -54,8 +54,7 @@ type Alias = {
 type BulkOperationContext = {
   preferredTexts: string[];
 };
-
-export default () => {
+const AliasPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -64,7 +63,7 @@ export default () => {
     pageIndex: 0,
     additionalItems: AliasAdditionalItem.Candidates,
   });
-  const [aliases, setAliases] = useState<Alias[]>([]);
+  const [aliases, setAliases] = useState<AliasPage[]>([]);
   const [bulkOperationContext, setBulkOperationContext] =
     useState<BulkOperationContext>({ preferredTexts: [] });
   const [totalCount, setTotalCount] = useState(0);
@@ -447,3 +446,7 @@ export default () => {
     </div>
   );
 };
+
+AliasPage.displayName = "AliasPage";
+
+export default AliasPage;

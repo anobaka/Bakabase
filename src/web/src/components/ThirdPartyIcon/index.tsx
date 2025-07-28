@@ -3,15 +3,24 @@
 import { useTranslation } from "react-i18next";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
-import NameIcon from "@/pages/downloader/components/NameIcon";
+import ExHentai from "@/assets/logo/exhentai.png";
+import Pixiv from "@/assets/logo/pixiv.png";
+import Bilibili from "@/assets/logo/bilibili.png";
+import SoulPlus from "@/assets/logo/soulplus.png";
 import { ThirdPartyId } from "@/sdk/constants";
+
+const NameIcon: { [key in ThirdPartyId]?: string } = {
+  [ThirdPartyId.ExHentai]: ExHentai,
+  [ThirdPartyId.Pixiv]: Pixiv,
+  [ThirdPartyId.Bilibili]: Bilibili,
+  [ThirdPartyId.SoulPlus]: SoulPlus,
+};
 
 type Props = {
   thirdPartyId: ThirdPartyId;
   size?: "sm" | "md" | "lg";
 };
-
-export default ({ thirdPartyId, size }: Props) => {
+const ThirdPartyIcon = ({ thirdPartyId, size }: Props) => {
   const { t } = useTranslation();
 
   let sizeValue = 18;
@@ -51,3 +60,7 @@ export default ({ thirdPartyId, size }: Props) => {
     />
   );
 };
+
+ThirdPartyIcon.displayName = "ThirdPartyIcon";
+
+export default ThirdPartyIcon;

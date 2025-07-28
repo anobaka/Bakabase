@@ -1,26 +1,31 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { HubConnectionBuilder, HubConnectionState, LogLevel } from "@microsoft/signalr";
+import {
+  HubConnectionBuilder,
+  HubConnectionState,
+  LogLevel,
+} from "@microsoft/signalr";
+import delay from "delay";
+import { v4 as uuidv4 } from "uuid";
 
 import { toast } from "../bakaui";
 
 import { buildLogger } from "@/components/utils";
-import delay from "delay";
 import envConfig from "@/config/env";
-import { v4 as uuidv4 } from "uuid";
 
 // 导入所有需要的 zustand store
-import { useBackgroundTasksStore } from "@/models/backgroundTasks";
-import { useDownloadTasksStore } from "@/models/downloadTasks";
-import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
-import { useFileMovingProgressesStore } from "@/models/fileMovingProgresses";
-import { useAppContextStore } from "@/models/appContext";
-import { useBulkModificationInternalsStore } from "@/models/bulkModificationInternals";
-import { useBTasksStore } from "@/models/bTasks";
-import { usePostParserTasksStore } from "@/models/postParserTasks";
-import { useIwFsEntryChangeEventsStore } from "@/models/iwFsEntryChangeEvents";
-import { useAppUpdaterStateStore } from "@/models/appUpdaterState";
-import { optionsStores } from "@/models/options";
+import { useBackgroundTasksStore } from "@/stores/backgroundTasks";
+import { useDownloadTasksStore } from "@/stores/downloadTasks";
+import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
+import { useFileMovingProgressesStore } from "@/stores/fileMovingProgresses";
+import { useAppContextStore } from "@/stores/appContext";
+import { useBulkModificationInternalsStore } from "@/stores/bulkModificationInternals";
+import { useBTasksStore } from "@/stores/bTasks";
+import { usePostParserTasksStore } from "@/stores/postParserTasks";
+import { useIwFsEntryChangeEventsStore } from "@/stores/iwFsEntryChangeEvents";
+import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
+import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
+import { optionsStores } from "@/stores/options";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
@@ -65,28 +70,31 @@ export const UIHubConnection = () => {
         case "PostParserTask":
           usePostParserTasksStore.getState().setTasks(data);
           break;
+        case "ThirdPartyRequestStatistics":
+          useThirdPartyRequestStatisticsStore.getState().setStatistics(data);
+          break;
       }
     });
 
-    conn.on('GetIncrementalData', (key, data) => {
+    conn.on("GetIncrementalData", (key, data) => {
       log("GetIncrementalData", key, data);
       switch (key) {
-        case 'BackgroundTask':
+        case "BackgroundTask":
           useBackgroundTasksStore.getState().updateTask(data);
           break;
-        case 'DownloadTask':
+        case "DownloadTask":
           useDownloadTasksStore.getState().updateTask(data);
           break;
-        case 'DependentComponentContext':
+        case "DependentComponentContext":
           useDependentComponentContextsStore.getState().updateContext(data);
           break;
-        case 'FileMovingProgress':
+        case "FileMovingProgress":
           useFileMovingProgressesStore.getState().updateProgress(data);
           break;
-        case 'BTask':
+        case "BTask":
           useBTasksStore.getState().updateTask(data);
           break;
-        case 'PostParserTask':
+        case "PostParserTask":
           usePostParserTasksStore.getState().updateTask(data);
           break;
       }
@@ -129,14 +137,20 @@ export const UIHubConnection = () => {
       useAppUpdaterStateStore.getState().update(state);
     });
 
+    conn.on("UpdateThirdPartyRequestStatistics", (statistics) => {
+      useThirdPartyRequestStatisticsStore
+        .getState()
+        .updateStatistics(statistics);
+    });
+
     async function onConnected() {
-      log('connected');
+      log("connected");
       await conn.send("GetInitialData");
     }
-    
+
     // 监听连接关闭事件
     conn.onclose(async () => {
-      log('connection closed, attempting to reconnect...');
+      log("connection closed, attempting to reconnect...");
     });
 
     // 后台守护循环 - 每5秒检查一次连接状态
@@ -144,21 +158,22 @@ export const UIHubConnection = () => {
       while (isRunningRef.current) {
         try {
           if (conn.state === HubConnectionState.Disconnected) {
-            log('connection disconnected, attempting to connect...');
+            log("connection disconnected, attempting to connect...");
             try {
               await conn.start();
               await onConnected();
             } catch (err) {
-              log('start failed:', err);
+              log("start failed:", err);
             }
           }
         } catch (err) {
-          log('guard loop error:', err);
+          log("guard loop error:", err);
         } finally {
           await delay(5000);
         }
       }
     };
+
     guardLoop();
 
     connRef.current = conn;

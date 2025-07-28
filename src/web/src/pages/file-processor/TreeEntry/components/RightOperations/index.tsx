@@ -23,8 +23,7 @@ import BApi from "@/sdk/BApi";
 type Props = {
   entry: Entry;
 } & Pick<TreeEntryProps, "capabilities">;
-
-export default ({ entry, capabilities }: Props) => {
+const RightOperations = ({ entry, capabilities }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { actions } = entry;
@@ -90,3 +89,7 @@ export default ({ entry, capabilities }: Props) => {
     </>
   );
 };
+
+RightOperations.displayName = "RightOperations";
+
+export default RightOperations;

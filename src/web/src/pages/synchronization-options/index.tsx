@@ -15,7 +15,7 @@ import {
   MediaLibraryV2AdditionalItem,
 } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useResourceOptionsStore } from "@/models/options";
+import { useResourceOptionsStore } from "@/stores/options";
 import GlobalOptions from "@/pages/synchronization-options/components/GlobalOptions";
 import CategoryOptions from "@/pages/synchronization-options/components/CategoryOptions";
 import MediaLibraryOptions from "@/pages/synchronization-options/components/MediaLibraryOptions";
@@ -30,8 +30,7 @@ type Category = {
   mediaLibraries?: IdName[];
   enhancers?: IdName[];
 } & IdName;
-
-export default () => {
+const SynchronizationOptionsPage = () => {
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
@@ -233,3 +232,7 @@ export default () => {
     </div>
   );
 };
+
+SynchronizationOptionsPage.displayName = "SynchronizationOptionsPage";
+
+export default SynchronizationOptionsPage;

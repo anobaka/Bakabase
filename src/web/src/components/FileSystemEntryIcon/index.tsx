@@ -2,14 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import i18n from "i18next";
+import { MdInsertDriveFile } from "react-icons/md";
 
-import { MdFolder, MdInsertDriveFile } from 'react-icons/md';
 import "./index.scss";
+import _ from "lodash";
+
 import { IconType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { splitPathIntoSegments } from "@/components/utils";
-
-import _ from "lodash";
 
 type Props = {
   type: IconType;
@@ -50,8 +50,12 @@ const buildCacheKey = (type: IconType, path?: string): string => {
 
   return `${type}-${suffix}`;
 };
-
-export default ({ path, type, size = 14, disableCache }: Props) => {
+const FileSystemEntryIcon = ({
+  path,
+  type,
+  size = 14,
+  disableCache,
+}: Props) => {
   const cacheKey = buildCacheKey(type, path);
 
   const [icons, iconsDispatchers] = useState<{ [key: string]: string }>({});
@@ -123,3 +127,7 @@ export default ({ path, type, size = 14, disableCache }: Props) => {
     </div>
   );
 };
+
+FileSystemEntryIcon.displayName = "FileSystemEntryIcon";
+
+export default FileSystemEntryIcon;

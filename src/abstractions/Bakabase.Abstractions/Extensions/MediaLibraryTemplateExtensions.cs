@@ -65,6 +65,16 @@ public static class MediaLibraryTemplateExtensions
         };
     }
 
+    public static MediaLibraryPlayerDbModel ToDbModel(this MediaLibraryPlayer mediaLibraryTemplatePlayer)
+    {
+        return new MediaLibraryPlayerDbModel
+        {
+            Extensions = mediaLibraryTemplatePlayer.Extensions,
+            ExecutablePath = mediaLibraryTemplatePlayer.ExecutablePath,
+            Command = mediaLibraryTemplatePlayer.Command
+        };
+    }
+
     public static MediaLibraryTemplateDbModel ToDbModel(this Models.Domain.MediaLibraryTemplate template)
     {
         return new MediaLibraryTemplateDbModel
@@ -142,6 +152,16 @@ public static class MediaLibraryTemplateExtensions
             Target = dbModel.Target,
             DynamicTarget = dbModel.DynamicTarget,
             CoverSelectOrder = dbModel.CoverSelectOrder
+        };
+    }
+
+    public static MediaLibraryPlayer ToDomainModel(this MediaLibraryPlayerDbModel dbModel)
+    {
+        return new MediaLibraryPlayer
+        {
+            Extensions = dbModel.Extensions,
+            ExecutablePath = dbModel.ExecutablePath,
+            Command = dbModel.Command
         };
     }
 

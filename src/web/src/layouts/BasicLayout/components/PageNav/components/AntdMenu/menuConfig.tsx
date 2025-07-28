@@ -1,5 +1,7 @@
 import type { IconType } from "react-icons";
-import { routesMenuConfig, RouteMenuItem } from "@/components/routesMenuConfig";
+import type { RouteMenuItem } from "@/components/routesMenuConfig";
+
+import { routesMenuConfig } from "@/components/routesMenuConfig";
 
 export interface IMenuItem {
   name: string;
@@ -12,8 +14,8 @@ export interface IMenuItem {
 
 function extractMenu(config: RouteMenuItem[]): IMenuItem[] {
   return config
-    .filter(r => r.menu !== false) // Only include menu: true or undefined (default true)
-    .map(r => {
+    .filter((r) => r.menu !== false) // Only include menu: true or undefined (default true)
+    .map((r) => {
       const item: IMenuItem = {
         name: r.name,
         path: r.path,
@@ -21,7 +23,9 @@ function extractMenu(config: RouteMenuItem[]): IMenuItem[] {
         isBeta: r.isBeta,
         isDeprecated: r.isDeprecated,
       };
+
       if (r.children) item.children = extractMenu(r.children);
+
       return item;
     });
 }

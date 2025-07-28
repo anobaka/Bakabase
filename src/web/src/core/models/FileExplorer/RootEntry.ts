@@ -14,8 +14,8 @@ import {
   IwFsEntryChangeType,
   IwFsType,
 } from "@/sdk/constants";
-import { useBTasksStore } from "@/models/bTasks";
-import { useIwFsEntryChangeEventsStore } from "@/models/iwFsEntryChangeEvents";
+import { useBTasksStore } from "@/stores/bTasks";
+import { useIwFsEntryChangeEventsStore } from "@/stores/iwFsEntryChangeEvents";
 
 const log = buildLogger("RootEntry");
 

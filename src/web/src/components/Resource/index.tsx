@@ -50,7 +50,7 @@ import {
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
-import { useUiOptionsStore } from "@/models/options";
+import { useUiOptionsStore } from "@/stores/options";
 import PlayableFiles from "@/components/Resource/components/PlayableFiles";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
@@ -473,5 +473,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
     </div>
   );
 });
+const ResourceMemo = React.memo(Resource);
 
-export default React.memo(Resource);
+ResourceMemo.displayName = "Resource";
+
+export default ResourceMemo;

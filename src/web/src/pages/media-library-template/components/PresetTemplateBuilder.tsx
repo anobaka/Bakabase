@@ -50,8 +50,7 @@ const validate = (form: Partial<Form>): Form | undefined => {
 
   return form as Form;
 };
-
-export default ({ onDestroyed, onSubmitted }: Props) => {
+const PresetTemplateBuilder = ({ onDestroyed, onSubmitted }: Props) => {
   const { t } = useTranslation();
   const [dataPool, setDataPool] = useState<DataPool>();
 
@@ -364,3 +363,7 @@ export default ({ onDestroyed, onSubmitted }: Props) => {
     </Modal>
   );
 };
+
+PresetTemplateBuilder.displayName = "PresetTemplateBuilder";
+
+export default PresetTemplateBuilder;

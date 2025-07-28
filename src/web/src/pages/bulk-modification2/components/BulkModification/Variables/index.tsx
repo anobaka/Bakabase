@@ -14,8 +14,7 @@ type Props = {
   variables?: BulkModificationVariable[];
   onChange?: (variables: BulkModificationVariable[]) => void;
 };
-
-export default ({ variables: propsVariable, onChange }: Props) => {
+const Variables = ({ variables: propsVariable, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -89,3 +88,7 @@ export default ({ variables: propsVariable, onChange }: Props) => {
     </div>
   );
 };
+
+Variables.displayName = "Variables";
+
+export default Variables;

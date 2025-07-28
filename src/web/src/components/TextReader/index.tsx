@@ -3,9 +3,9 @@
 import React, { useEffect, useState } from "react";
 import "./index.scss";
 import i18n from "i18next";
-import { NumberInput } from "@/components/bakaui";
 import axios from "axios";
 
+import { NumberInput } from "@/components/bakaui";
 import ColorPicker from "@/components/ColorPicker";
 import envConfig from "@/config/env";
 import { getFileNameWithoutExtension } from "@/components/utils";
@@ -20,8 +20,7 @@ interface ITextReaderProps {
   onLoad?: any;
   className?: string;
 }
-
-export default (props: ITextReaderProps) => {
+const TextReader = (props: ITextReaderProps) => {
   const { file, style = {}, onLoad, className } = props;
 
   const [previewData, setPreviewData] = useState<any>();
@@ -70,10 +69,7 @@ export default (props: ITextReaderProps) => {
       <div className="configurations">
         <div className="label">{i18n.t<string>("Font size")}</div>
         <div className="value">
-          <NumberInput
-            value={fontSize}
-            onChange={(v) => setFontSize(v)}
-          />
+          <NumberInput value={fontSize} onChange={(v) => setFontSize(v)} />
         </div>
         <div className="label">{i18n.t<string>("Font color")}</div>
         <div className="value">
@@ -107,3 +103,7 @@ export default (props: ITextReaderProps) => {
     </div>
   );
 };
+
+TextReader.displayName = "TextReader";
+
+export default TextReader;

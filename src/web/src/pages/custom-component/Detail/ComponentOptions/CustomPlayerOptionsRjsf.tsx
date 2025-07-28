@@ -2,14 +2,14 @@
 
 import type { BRjsfProps } from "@/components/BRjsf";
 
-import { Popover, Button, Input, Select, Table } from "@/components/bakaui";
 import React, { useState } from "react";
 import i18n from "i18next";
 import { useUpdateEffect } from "react-use";
+import { MdPlayCircle } from "react-icons/md";
 
 import BRjsf from "@/components/BRjsf";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
-import { MdPlayCircle } from 'react-icons/md';
+import { Popover, Button, Input, Select, Table } from "@/components/bakaui";
 
 const CommandTemplatePlaceholder = i18n.t<string>(
   "Default is `{0}`. {0} will be replaced by filename",
@@ -30,15 +30,15 @@ const commandTemplateTip = (
     ball\1.mp4" --windowed'
   </>
 );
+const CustomPlayerOptionsRjsfPage = React.forwardRef(
+  function CustomPlayerOptionsRjsf(props: BRjsfProps, ref) {
+    const value = props.value || {};
+    const defaultValue = props.defaultValue || {};
 
-export default React.forwardRef((props: BRjsfProps, ref) => {
-  const value = props.value || {};
-  const defaultValue = props.defaultValue || {};
-
-  return (
-    <BRjsf
-      {...props}
-      ref={ref}
+    return (
+      <BRjsf
+        {...props}
+        ref={ref}
       properties={{
         executable: {
           Component: (defaultValue, onChange) => (
@@ -190,6 +190,11 @@ export default React.forwardRef((props: BRjsfProps, ref) => {
       }}
       // value={value}
       defaultValue={defaultValue}
-    />
-  );
-});
+      />
+    );
+  },
+);
+
+CustomPlayerOptionsRjsfPage.displayName = "CustomPlayerOptionsRjsfPage";
+
+export default CustomPlayerOptionsRjsfPage;

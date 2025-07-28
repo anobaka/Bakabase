@@ -1,8 +1,7 @@
 import React from "react";
 
 import { Tabs, Tab } from "@/components/bakaui";
-
-export default () => {
+const LongTabsPage = () => {
   // 生成很多tab来测试超长情况
   const generateTabs = () => {
     const tabs: React.ReactElement[] = [];
@@ -134,3 +133,7 @@ export default () => {
     </div>
   );
 };
+
+LongTabsPage.displayName = "LongTabsPage";
+
+export default LongTabsPage;

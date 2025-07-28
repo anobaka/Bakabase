@@ -8,8 +8,7 @@ import ResourceTransferModal from "@/components/ResourceTransferModal";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button } from "@/components/bakaui";
-
-export default () => {
+const ResourceTransferPage = () => {
   const { createPortal } = useBakabaseContext();
   const [resources, setResources] = useState<ResourceModel[]>([]);
 
@@ -36,3 +35,7 @@ export default () => {
     </Button>
   );
 };
+
+ResourceTransferPage.displayName = "ResourceTransferPage";
+
+export default ResourceTransferPage;

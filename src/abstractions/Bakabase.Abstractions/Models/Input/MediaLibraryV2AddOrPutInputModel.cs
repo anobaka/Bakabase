@@ -1,3 +1,5 @@
-﻿namespace Bakabase.Abstractions.Models.Input;
+﻿using Bakabase.Abstractions.Models.Domain;
 
-public record MediaLibraryV2AddOrPutInputModel(string Name, List<string> Paths, string? Color = null);
+namespace Bakabase.Abstractions.Models.Input;
+
+public record MediaLibraryV2AddOrPutInputModel(string Name, List<string> Paths, string? Color = null, List<MediaLibraryPlayer>? Players = null);

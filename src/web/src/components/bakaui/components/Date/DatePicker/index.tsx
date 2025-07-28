@@ -3,7 +3,7 @@
 import type { DateInputProps as NextUIDateInputProps } from "@heroui/react";
 import type { Dayjs } from "dayjs";
 
-import { DatePicker } from "@heroui/react";
+import { DatePicker as HeroDatePicker } from "@heroui/react";
 import dayjs from "dayjs";
 import { parseDateTime } from "@internationalized/date";
 
@@ -13,8 +13,7 @@ interface DatePickerProps
   defaultValue?: Dayjs;
   onChange?: (value: Dayjs) => void;
 }
-
-export default ({
+const DatePicker = ({
   value,
   onChange,
   defaultValue,
@@ -26,7 +25,7 @@ export default ({
   const v = value ? parseDateTime(value.toISOString()) : undefined;
 
   return (
-    <DatePicker
+    <HeroDatePicker
       defaultValue={dv}
       value={v}
       onChange={(v) => {
@@ -36,3 +35,7 @@ export default ({
     />
   );
 };
+
+DatePicker.displayName = "DatePicker";
+
+export default DatePicker;

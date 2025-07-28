@@ -4,8 +4,7 @@ import { useTranslation } from "react-i18next";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 
 import { Popover } from "@/components/bakaui";
-
-export default () => {
+const OtherOptionsTip = () => {
   const { t } = useTranslation();
 
   return (
@@ -69,3 +68,7 @@ export default () => {
     </Popover>
   );
 };
+
+OtherOptionsTip.displayName = "OtherOptionsTip";
+
+export default OtherOptionsTip;

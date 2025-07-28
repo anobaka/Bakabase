@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
@@ -10,13 +11,22 @@ using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Configurations.Extensions;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Input;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.RequestModels.Options;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
+using Bakabase.Service.Models.View;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -34,13 +44,19 @@ namespace Bakabase.Service.Controllers
         private readonly IBOptionsManager<AppOptions> _appOptionsManager;
         private readonly BakabaseOptionsManagerPool _bakabaseOptionsManager;
         private readonly IGuiAdapter _guiAdapter;
+        private readonly IPropertyService _propertyService;
+        private readonly IPropertyLocalizer _propertyLocalizer;
 
-        public OptionsController(IStringLocalizer<SharedResource> prevLocalizer, IBOptionsManager<AppOptions> appOptionsManager, BakabaseOptionsManagerPool bakabaseOptionsManager, IGuiAdapter guiAdapter)
+        public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
+            IBOptionsManager<AppOptions> appOptionsManager, BakabaseOptionsManagerPool bakabaseOptionsManager,
+            IGuiAdapter guiAdapter, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
             _bakabaseOptionsManager = bakabaseOptionsManager;
             _guiAdapter = guiAdapter;
+            _propertyService = propertyService;
+            _propertyLocalizer = propertyLocalizer;
         }
 
         [HttpGet("app")]
@@ -133,6 +149,30 @@ namespace Bakabase.Service.Controllers
                     options.StartupPage = model.StartupPage.Value;
                 }
 
+                if (model.IsMenuCollapsed.HasValue)
+                {
+                    options.IsMenuCollapsed = model.IsMenuCollapsed.Value;
+                }
+
+                if (model.LatestUsedProperties != null)
+                {
+                    options.LatestUsedProperties = model.LatestUsedProperties;
+                }
+
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("ui/latest-used-property")]
+        [SwaggerOperation(OperationId = "AddLatestUsedProperty")]
+        public async Task<BaseResponse> AddLatestUsedProperty([FromBody] UIOptions.PropertyKey[] models)
+        {
+            await _bakabaseOptionsManager.Get<UIOptions>().SaveAsync(options =>
+            {
+                foreach (var m in models)
+                {
+                    options.AddLatestUsedProperty(m.Pool, m.Id);
+                }
             });
             return BaseResponseBuilder.Ok;
         }
@@ -146,18 +186,48 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("bilibili")]
         [SwaggerOperation(OperationId = "PatchBilibiliOptions")]
-        public async Task<BaseResponse> PatchBilibiliOptions([FromBody] BilibiliOptions model)
+        public async Task<BaseResponse> PatchBilibiliOptions([FromBody] BilibiliOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<BilibiliOptions>().SaveAsync(options =>
             {
-                if (model.Cookie.IsNotEmpty())
+                if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
 
-                if (model.Downloader != null)
+                if (model.MaxConcurrency.HasValue)
                 {
-                    options.Downloader = model.Downloader;
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
                 }
             });
             return BaseResponseBuilder.Ok;
@@ -172,23 +242,48 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("exhentai")]
         [SwaggerOperation(OperationId = "PatchExHentaiOptions")]
-        public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptions model)
+        public async Task<BaseResponse> PatchExHentaiOptions([FromBody] ExHentaiOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<ExHentaiOptions>().SaveAsync(options =>
             {
-                if (model.Cookie.IsNotEmpty())
+                if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
 
-                if (model.Downloader != null)
+                if (model.MaxConcurrency.HasValue)
                 {
-                    options.Downloader = model.Downloader;
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
                 }
 
-                if (model.Enhancer != null)
+                if (model.RequestInterval.HasValue)
                 {
-                    options.Enhancer = model.Enhancer;
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
                 }
             });
             return BaseResponseBuilder.Ok;
@@ -203,12 +298,15 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("filesystem")]
         [SwaggerOperation(OperationId = "PatchFileSystemOptions")]
-        public async Task<BaseResponse> PatchFileSystemOptions([FromBody] FileSystemOptions model)
+        public async Task<BaseResponse> PatchFileSystemOptions([FromBody] FileSystemOptionsPatchInputModel model)
         {
-            var result = model.FileMover.StandardizeAndValidate(_prevLocalizer);
-            if (result.Code != 0)
+            if (model.FileMover != null)
             {
-                return result;
+                var result = model.FileMover.StandardizeAndValidate(_prevLocalizer);
+                if (result.Code != 0)
+                {
+                    return result;
+                }
             }
 
             await _bakabaseOptionsManager.Get<FileSystemOptions>().SaveAsync(options =>
@@ -240,11 +338,11 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("javlibrary")]
         [SwaggerOperation(OperationId = "PatchJavLibraryOptions")]
-        public async Task<BaseResponse> PatchJavLibraryOptions([FromBody] JavLibraryOptions model)
+        public async Task<BaseResponse> PatchJavLibraryOptions([FromBody] JavLibraryOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<JavLibraryOptions>().SaveAsync(options =>
             {
-                if (model.Cookie.IsNotEmpty())
+                if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -266,18 +364,48 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("pixiv")]
         [SwaggerOperation(OperationId = "PatchPixivOptions")]
-        public async Task<BaseResponse> PatchPixivOptions([FromBody] PixivOptions model)
+        public async Task<BaseResponse> PatchPixivOptions([FromBody] PixivOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<PixivOptions>().SaveAsync(options =>
             {
-                if (model.Cookie.IsNotEmpty())
+                if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
 
-                if (model.Downloader != null)
+                if (model.MaxConcurrency.HasValue)
                 {
-                    options.Downloader = model.Downloader;
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
                 }
             });
             return BaseResponseBuilder.Ok;
@@ -321,7 +449,70 @@ namespace Bakabase.Service.Controllers
                     options.SynchronizationOptions = model.SynchronizationOptions.Optimize();
                 }
 
+                if (model.RecentFilters != null)
+                {
+                    options.RecentFilters = model.RecentFilters;
+                }
+
             });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("resource/recent-filters")]
+        [SwaggerOperation(OperationId = "GetRecentResourceFilters")]
+        public async Task<ListResponse<ResourceSearchFilterViewModel>> GetRecentResourceFilters()
+        {
+            var recentFilters = _bakabaseOptionsManager.Get<ResourceOptions>().Value.RecentFilters ?? [];
+            var dbModels = recentFilters.ToList();
+            var propertyPool = (PropertyPool)dbModels.Select(x => x.PropertyPool).Cast<int>().Sum();
+            var propertyMap = (await _propertyService.GetProperties(propertyPool)).ToMap();
+            var viewModels = dbModels.Select(d =>
+            {
+                var p = propertyMap.GetValueOrDefault(d.PropertyPool)?.GetValueOrDefault(d.PropertyId);
+                if (p == null)
+                {
+                    return null;
+                }
+                
+                p = p.ConvertPropertyIfNecessary(d.Operation);
+                
+                var filter = new ResourceSearchFilter
+                {
+                    PropertyPool = d.PropertyPool,
+                    PropertyId = d.PropertyId,
+                    DbValue = d.DbValue.DeserializeDbValueAsStandardValue(p.Type),
+                    Operation = d.Operation,
+                    Property = p
+                };
+
+                return filter.ToViewModel(_propertyLocalizer);
+            }).OfType<ResourceSearchFilterViewModel>().ToList();
+            return new ListResponse<ResourceSearchFilterViewModel>(viewModels);
+        }
+
+        [HttpPost("resource/recent-filters")]
+        [SwaggerOperation(OperationId = "AddRecentResourceFilter")]
+        public async Task<BaseResponse> AddRecentResourceFilter([FromBody] ResourceOptions.ResourceFilter model)
+        {
+            var p = await _propertyService.GetProperty(model.PropertyPool, model.PropertyId);
+            p = p.ConvertPropertyIfNecessary(model.Operation);
+            var f = new ResourceSearchFilter
+            {
+                PropertyPool = model.PropertyPool,
+                PropertyId = model.PropertyId,
+                Operation = model.Operation,
+                DbValue = model.DbValue.DeserializeDbValueAsStandardValue(p.Type),
+                Property = p
+            };
+            
+            if (f.IsValid())
+            {
+                await _bakabaseOptionsManager.Get<ResourceOptions>().SaveAsync(options =>
+                {
+                    options.AddRecentFilter(model);
+                });
+            }
+            
             return BaseResponseBuilder.Ok;
         }
 
@@ -407,7 +598,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("enhancer")]
         [SwaggerOperation(OperationId = "PatchEnhancerOptions")]
-        public async Task<BaseResponse> PatchEnhancerOptions([FromBody] EnhancerOptions model)
+        public async Task<BaseResponse> PatchEnhancerOptions([FromBody] EnhancerOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<EnhancerOptions>().SaveAsync(options =>
             {
@@ -428,7 +619,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("task")]
         [SwaggerOperation(OperationId = "PatchTaskOptions")]
-        public async Task<BaseResponse> PatchTaskOptions([FromBody] TaskOptions model)
+        public async Task<BaseResponse> PatchTaskOptions([FromBody] TaskOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<TaskOptions>().SaveAsync(options =>
             {
@@ -449,11 +640,11 @@ namespace Bakabase.Service.Controllers
 
         [HttpPatch("ai")]
         [SwaggerOperation(OperationId = "PatchAIOptions")]
-        public async Task<BaseResponse> PatchAiOptions([FromBody] AiOptions model)
+        public async Task<BaseResponse> PatchAiOptions([FromBody] AiOptionsPatchInputModel model)
         {
             await _bakabaseOptionsManager.Get<AiOptions>().SaveAsync(options =>
             {
-                if (model.OllamaEndpoint.IsNotEmpty())
+                if (model.OllamaEndpoint != null)
                 {
                     options.OllamaEndpoint = model.OllamaEndpoint;
                 }
@@ -500,6 +691,398 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> PutSoulPlusOptions([FromBody] SoulPlusOptions model)
         {
             await _bakabaseOptionsManager.Get<SoulPlusOptions>().SaveAsync(model);
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("bangumi")]
+        [SwaggerOperation(OperationId = "GetBangumiOptions")]
+        public async Task<SingletonResponse<BangumiOptions>> GetBangumiOptions()
+        {
+            return new SingletonResponse<BangumiOptions>(_bakabaseOptionsManager.Get<BangumiOptions>().Value);
+        }
+
+        [HttpPatch("bangumi")]
+        [SwaggerOperation(OperationId = "PatchBangumiOptions")]
+        public async Task<BaseResponse> PatchBangumiOptions([FromBody] BangumiOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<BangumiOptions>().SaveAsync(options =>
+            {
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.UserAgent != null)
+                {
+                    options.UserAgent = model.UserAgent;
+                }
+
+                if (model.Referer != null)
+                {
+                    options.Referer = model.Referer;
+                }
+
+                if (model.Headers != null)
+                {
+                    options.Headers = model.Headers;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("cien")]
+        [SwaggerOperation(OperationId = "GetCienOptions")]
+        public async Task<SingletonResponse<CienOptions>> GetCienOptions()
+        {
+            return new SingletonResponse<CienOptions>(_bakabaseOptionsManager.Get<CienOptions>().Value);
+        }
+
+        [HttpPatch("cien")]
+        [SwaggerOperation(OperationId = "PatchCienOptions")]
+        public async Task<BaseResponse> PatchCienOptions([FromBody] CienOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<CienOptions>().SaveAsync(options =>
+            {
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("dlsite")]
+        [SwaggerOperation(OperationId = "GetDLsiteOptions")]
+        public async Task<SingletonResponse<DLsiteOptions>> GetDLsiteOptions()
+        {
+            return new SingletonResponse<DLsiteOptions>(_bakabaseOptionsManager.Get<DLsiteOptions>().Value);
+        }
+
+        [HttpPatch("dlsite")]
+        [SwaggerOperation(OperationId = "PatchDLsiteOptions")]
+        public async Task<BaseResponse> PatchDLsiteOptions([FromBody] DLsiteOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<DLsiteOptions>().SaveAsync(options =>
+            {
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.UserAgent != null)
+                {
+                    options.UserAgent = model.UserAgent;
+                }
+
+                if (model.Referer != null)
+                {
+                    options.Referer = model.Referer;
+                }
+
+                if (model.Headers != null)
+                {
+                    options.Headers = model.Headers;
+                }
+
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("fanbox")]
+        [SwaggerOperation(OperationId = "GetFanboxOptions")]
+        public async Task<SingletonResponse<FanboxOptions>> GetFanboxOptions()
+        {
+            return new SingletonResponse<FanboxOptions>(_bakabaseOptionsManager.Get<FanboxOptions>().Value);
+        }
+
+        [HttpPatch("fanbox")]
+        [SwaggerOperation(OperationId = "PatchFanboxOptions")]
+        public async Task<BaseResponse> PatchFanboxOptions([FromBody] FanboxOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<FanboxOptions>().SaveAsync(options =>
+            {
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("fantia")]
+        [SwaggerOperation(OperationId = "GetFantiaOptions")]
+        public async Task<SingletonResponse<FantiaOptions>> GetFantiaOptions()
+        {
+            return new SingletonResponse<FantiaOptions>(_bakabaseOptionsManager.Get<FantiaOptions>().Value);
+        }
+
+        [HttpPatch("fantia")]
+        [SwaggerOperation(OperationId = "PatchFantiaOptions")]
+        public async Task<BaseResponse> PatchFantiaOptions([FromBody] FantiaOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<FantiaOptions>().SaveAsync(options =>
+            {
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("patreon")]
+        [SwaggerOperation(OperationId = "GetPatreonOptions")]
+        public async Task<SingletonResponse<PatreonOptions>> GetPatreonOptions()
+        {
+            return new SingletonResponse<PatreonOptions>(_bakabaseOptionsManager.Get<PatreonOptions>().Value);
+        }
+
+        [HttpPatch("patreon")]
+        [SwaggerOperation(OperationId = "PatchPatreonOptions")]
+        public async Task<BaseResponse> PatchPatreonOptions([FromBody] PatreonOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<PatreonOptions>().SaveAsync(options =>
+            {
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.DefaultPath != null)
+                {
+                    options.DefaultPath = model.DefaultPath;
+                }
+
+                if (model.NamingConvention != null)
+                {
+                    options.NamingConvention = model.NamingConvention;
+                }
+
+                if (model.SkipExisting.HasValue)
+                {
+                    options.SkipExisting = model.SkipExisting.Value;
+                }
+
+                if (model.MaxRetries.HasValue)
+                {
+                    options.MaxRetries = model.MaxRetries.Value;
+                }
+
+                if (model.RequestTimeout.HasValue)
+                {
+                    options.RequestTimeout = model.RequestTimeout.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("tmdb")]
+        [SwaggerOperation(OperationId = "GetTmdbOptions")]
+        public async Task<SingletonResponse<TmdbOptions>> GetTmdbOptions()
+        {
+            return new SingletonResponse<TmdbOptions>(_bakabaseOptionsManager.Get<TmdbOptions>().Value);
+        }
+
+        [HttpPatch("tmdb")]
+        [SwaggerOperation(OperationId = "PatchTmdbOptions")]
+        public async Task<BaseResponse> PatchTmdbOptions([FromBody] TmdbOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<TmdbOptions>().SaveAsync(options =>
+            {
+                if (model.MaxConcurrency.HasValue)
+                {
+                    options.MaxConcurrency = model.MaxConcurrency.Value;
+                }
+
+                if (model.RequestInterval.HasValue)
+                {
+                    options.RequestInterval = model.RequestInterval.Value;
+                }
+
+                if (model.Cookie != null)
+                {
+                    options.Cookie = model.Cookie;
+                }
+
+                if (model.UserAgent != null)
+                {
+                    options.UserAgent = model.UserAgent;
+                }
+
+                if (model.Referer != null)
+                {
+                    options.Referer = model.Referer;
+                }
+
+                if (model.Headers != null)
+                {
+                    options.Headers = model.Headers;
+                }
+
+                if (model.ApiKey != null)
+                {
+                    options.ApiKey = model.ApiKey;
+                }
+            });
             return BaseResponseBuilder.Ok;
         }
     }

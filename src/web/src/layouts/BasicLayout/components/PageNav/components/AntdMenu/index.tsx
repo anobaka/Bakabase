@@ -50,11 +50,15 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
     const Icon = item.icon ?? AiOutlineQuestionCircle;
 
     return getItem(
-      <div className="flex items-center gap-x-0.5">
-        {t<string>(item.name)}
-        {item.isBeta && <BetaChip />}
-        {item.isDeprecated && <DeprecatedChip />}
-      </div>,
+      collapsed ? (
+        t<string>(item.name)
+      ) : (
+        <div className="flex items-center gap-0.5">
+          {t<string>(item.name)}
+          {item.isBeta && <BetaChip />}
+          {item.isDeprecated && <DeprecatedChip />}
+        </div>
+      ),
       item.path,
       <Icon className={"!text-lg"} />,
       item.children?.map(convertItem),

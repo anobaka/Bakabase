@@ -25,8 +25,7 @@ const PropertyTypesWithDynamicData = [
   PropertyType.SingleChoice,
   PropertyType.Tags,
 ];
-
-export default ({
+const PropertyTip = ({
   // onAllowAddingNewDataDynamicallyEnabled,
   onPropertyBoundToCategory,
   property,
@@ -123,3 +122,7 @@ export default ({
 
   return null;
 };
+
+PropertyTip.displayName = "PropertyTip";
+
+export default PropertyTip;

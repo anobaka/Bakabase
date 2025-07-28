@@ -14,8 +14,7 @@ interface IProps {
   property: SimpleProperty;
   showPool?: boolean;
 }
-
-export default ({ property, showPool }: IProps) => {
+const Label = ({ property, showPool }: IProps) => {
   const { t } = useTranslation();
 
   return (
@@ -30,3 +29,7 @@ export default ({ property, showPool }: IProps) => {
     </div>
   );
 };
+
+Label.displayName = "Label";
+
+export default Label;

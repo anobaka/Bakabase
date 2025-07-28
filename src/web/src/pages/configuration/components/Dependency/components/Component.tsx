@@ -2,18 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Icon } from "@/components/bakaui";
 import { usePrevious } from "react-use";
 import { CheckCircleOutlined } from "@ant-design/icons";
-
-import BApi from "@/sdk/BApi";
-import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
-import { DependentComponentStatus } from "@/sdk/constants";
 import { MdError } from "react-icons/md";
+
+import { Button, Icon } from "@/components/bakaui";
+import BApi from "@/sdk/BApi";
+import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
+import { DependentComponentStatus } from "@/sdk/constants";
 import { Chip, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-export default ({ id }: { id: string }) => {
+const Component = ({ id }: { id: string }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const context = useDependentComponentContextsStore(
@@ -212,3 +211,7 @@ export default ({ id }: { id: string }) => {
     </div>
   );
 };
+
+Component.displayName = "Component";
+
+export default Component;

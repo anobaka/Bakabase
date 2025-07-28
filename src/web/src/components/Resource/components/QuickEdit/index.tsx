@@ -4,9 +4,7 @@ import { EditOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import { Button, Tooltip } from "@/components/bakaui";
-
-// todo: design
-export default () => {
+const QuickEdit = () => {
   const { t } = useTranslation();
 
   return (
@@ -30,3 +28,8 @@ export default () => {
     </div>
   );
 };
+
+QuickEdit.displayName = "QuickEdit";
+
+// todo: design
+export default QuickEdit;

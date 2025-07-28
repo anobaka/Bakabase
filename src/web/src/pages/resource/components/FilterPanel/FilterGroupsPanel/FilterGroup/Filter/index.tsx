@@ -10,7 +10,7 @@ import { useUpdateEffect } from "react-use";
 import { AiOutlineClose } from "react-icons/ai";
 import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
 
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import { PropertyPool, SearchOperation } from "@/sdk/constants";
 import {
   Button,
@@ -28,14 +28,17 @@ interface IProps {
   filter: ResourceSearchFilter;
   onRemove?: () => any;
   onChange?: (filter: ResourceSearchFilter) => any;
+  isReadonly?: boolean;
 }
 
 const log = buildLogger("Filter");
-
-export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
+const Filter = ({
+  filter: propsFilter,
+  onRemove,
+  onChange,
+  isReadonly,
+}: IProps) => {
   const { t } = useTranslation();
-
-  const a = t<string>("a");
 
   const [filter, setFilter] = useState<ResourceSearchFilter>(propsFilter);
 
@@ -46,6 +49,14 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
   const changeFilter = (newFilter: ResourceSearchFilter) => {
     setFilter(newFilter);
     onChange?.(newFilter);
+    if (newFilter.propertyPool && newFilter.propertyId && newFilter.operation) {
+      BApi.options.addRecentResourceFilter({
+        propertyPool: newFilter.propertyPool,
+        propertyId: newFilter.propertyId,
+        operation: newFilter.operation,
+        dbValue: newFilter.dbValue,
+      });
+    }
   };
 
   log(propsFilter, filter);
@@ -53,7 +64,10 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
   const renderOperations = () => {
     if (filter.propertyId == undefined) {
       return (
-        <Tooltip content={t<string>("Please select a property first")}>
+        <Tooltip
+          content={t<string>("Please select a property first")}
+          isDisabled={isReadonly}
+        >
           <Button
             className={"min-w-fit pl-2 pr-2 cursor-not-allowed"}
             color={"secondary"}
@@ -63,8 +77,8 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
             {filter.operation == undefined
               ? t<string>("Condition")
               : t<string>(
-                `SearchOperation.${SearchOperation[filter.operation]}`,
-              )}
+                  `SearchOperation.${SearchOperation[filter.operation]}`,
+                )}
           </Button>
         </Tooltip>
       );
@@ -75,7 +89,10 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
     log(operations);
     if (operations.length == 0) {
       return (
-        <Tooltip content={t<string>("Can not operate on this property")}>
+        <Tooltip
+          content={t<string>("Can not operate on this property")}
+          isDisabled={isReadonly}
+        >
           <Button
             className={"min-w-fit pl-2 pr-2 cursor-not-allowed"}
             color={"secondary"}
@@ -85,14 +102,14 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
             {filter.operation == undefined
               ? t<string>("Condition")
               : t<string>(
-                `SearchOperation.${SearchOperation[filter.operation]}`,
-              )}
+                  `SearchOperation.${SearchOperation[filter.operation]}`,
+                )}
           </Button>
         </Tooltip>
       );
     } else {
       return (
-        <Dropdown placement={"bottom-start"}>
+        <Dropdown isDisabled={isReadonly} placement={"bottom-start"}>
           <DropdownTrigger>
             <Button
               className={"min-w-fit pl-2 pr-2"}
@@ -103,8 +120,8 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
               {filter.operation == undefined
                 ? t<string>("Condition")
                 : t<string>(
-                  `SearchOperation.${SearchOperation[filter.operation]}`,
-                )}
+                    `SearchOperation.${SearchOperation[filter.operation]}`,
+                  )}
             </Button>
           </DropdownTrigger>
           <DropdownMenu>
@@ -176,14 +193,18 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
         defaultEditing={filter.dbValue == undefined}
         property={filter.valueProperty}
         variant={"light"}
-        onValueChange={(dbValue, bizValue) => {
-          console.log("123", dbValue, bizValue);
-          changeFilter({
-            ...filter,
-            dbValue: dbValue,
-            bizValue: bizValue,
-          });
-        }}
+        onValueChange={
+          isReadonly
+            ? undefined
+            : (dbValue, bizValue) => {
+                // console.log("123", dbValue, bizValue);
+                changeFilter({
+                  ...filter,
+                  dbValue: dbValue,
+                  bizValue: bizValue,
+                });
+              }
+        }
       />
     );
   };
@@ -191,14 +212,14 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
   return (
     <Tooltip
       showArrow
-      placement='bottom'
+      closeDelay={0}
       content={
         <>
           <div className={"flex items-center"}>
             <Button
-              color={filter.disabled ? 'success' : 'warning'}
-              size={'sm'}
-              variant={'light'}
+              color={filter.disabled ? "success" : "warning"}
+              size={"sm"}
+              variant={"light"}
               // className={'w-auto min-w-fit px-1'}
               onPress={() => {
                 changeFilter({
@@ -220,9 +241,9 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
               )}
             </Button>
             <Button
-              color={'danger'}
-              size={'sm'}
-              variant={'light'}
+              color={"danger"}
+              size={"sm"}
+              variant={"light"}
               // className={'w-auto min-w-fit px-1'}
               onPress={onRemove}
             >
@@ -232,7 +253,9 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
           </div>
         </>
       }
+      isDisabled={isReadonly}
       offset={0}
+      placement="top"
     >
       <div
         className={`flex rounded p-1 items-center ${filter.disabled ? "" : "group/filter-operations"} relative rounded`}
@@ -254,48 +277,55 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
             <Button
               className={"min-w-fit pl-2 pr-2"}
               color={"primary"}
+              // isDisabled={isReadonly}
               size={"sm"}
               variant={"light"}
-              onPress={() => {
-                PropertySelector.show({
-                  v2: true,
-                  selection:
-                    filter.propertyId == undefined
-                      ? undefined
-                      : [
-                        {
-                          id: filter.propertyId,
-                          pool: filter.propertyPool!,
-                        },
-                      ],
-                  onSubmit: async (selectedProperties) => {
-                    const property = selectedProperties[0]!;
-                    const availableOperations =
-                      (
-                        await BApi.resource.getSearchOperationsForProperty({
-                          propertyPool: property.pool,
-                          propertyId: property.id,
-                        })
-                      ).data || [];
-                    const nf: ResourceSearchFilter = {
-                      ...filter,
-                      propertyId: property.id,
-                      propertyPool: property.pool,
-                      dbValue: undefined,
-                      bizValue: undefined,
-                      property,
-                      availableOperations,
-                      operation: availableOperations[0],
-                    };
+              onPress={
+                isReadonly
+                  ? undefined
+                  : () => {
+                      PropertySelectorPage.show({
+                        v2: true,
+                        selection:
+                          filter.propertyId == undefined
+                            ? undefined
+                            : [
+                                {
+                                  id: filter.propertyId,
+                                  pool: filter.propertyPool!,
+                                },
+                              ],
+                        onSubmit: async (selectedProperties) => {
+                          const property = selectedProperties[0]!;
+                          const availableOperations =
+                            (
+                              await BApi.resource.getSearchOperationsForProperty(
+                                {
+                                  propertyPool: property.pool,
+                                  propertyId: property.id,
+                                },
+                              )
+                            ).data || [];
+                          const nf: ResourceSearchFilter = {
+                            ...filter,
+                            propertyId: property.id,
+                            propertyPool: property.pool,
+                            dbValue: undefined,
+                            bizValue: undefined,
+                            property,
+                            availableOperations,
+                            operation: availableOperations[0],
+                          };
 
-                    refreshValue(nf);
-                  },
-                  multiple: false,
-                  pool: PropertyPool.All,
-                  addable: false,
-                  editable: false,
-                });
-              }}
+                          refreshValue(nf);
+                        },
+                        multiple: false,
+                        pool: PropertyPool.All,
+                        addable: false,
+                        editable: false,
+                      });
+                    }
+              }
             >
               {filter.property
                 ? (filter.property.name ?? t<string>("Unknown property"))
@@ -303,9 +333,13 @@ export default ({ filter: propsFilter, onRemove, onChange }: IProps) => {
             </Button>
           </div>
           <div className={""}>{renderOperations()}</div>
-          {renderValue()}
+          <div className={"pr-2"}>{renderValue()}</div>
         </div>
       </div>
     </Tooltip>
   );
 };
+
+Filter.displayName = "Filter";
+
+export default Filter;

@@ -19,10 +19,10 @@ import {
 } from "@dnd-kit/sortable";
 import { useTranslation } from "react-i18next";
 import { AutoSizer, List } from "react-virtualized";
+import { MdSort, MdAddCircle } from "react-icons/md";
 
 import { SortableTag } from "./components/SortableTag";
 
-import { MdSort, MdAddCircle, MdDelete } from "react-icons/md";
 import { uuidv4 } from "@/components/utils";
 import { Button, Chip, Popover, Textarea } from "@/components/bakaui";
 

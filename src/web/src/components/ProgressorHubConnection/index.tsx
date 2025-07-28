@@ -1,9 +1,10 @@
 "use client";
 
 import type { HubConnection } from "@microsoft/signalr";
+import type { ComponentType } from "react";
+import type { DestroyableProps } from "@/components/bakaui/types";
 
 import React, { useEffect, useRef } from "react";
-import { Modal } from "@/components/bakaui";
 import i18n from "i18next";
 import {
   HubConnectionBuilder,
@@ -11,11 +12,10 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 
+import { Modal } from "@/components/bakaui";
 import envConfig from "@/config/env";
 import { toast } from "@/components/bakaui";
 import { sleep } from "@/components/utils";
-import type { ComponentType } from "react";
-import type { DestroyableProps } from "@/components/bakaui/types";
 
 const progressorHubUri = "/hub/progressor";
 

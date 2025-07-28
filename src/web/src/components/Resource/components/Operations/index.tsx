@@ -17,7 +17,7 @@ import { AiOutlinePicture } from "react-icons/ai";
 import BApi from "@/sdk/BApi";
 import ResourceEnhancementsDialog from "@/components/Resource/components/ResourceEnhancementsDialog";
 import ShowResourceMediaPlayer from "@/components/Resource/components/ShowResourceMediaPlayer";
-import { EnhancementAdditionalItem, PlaylistItemType } from "@/sdk/constants";
+import { EnhancementAdditionalItem } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Popover, Modal } from "@/components/bakaui";
@@ -27,8 +27,7 @@ interface IProps {
   coverRef?: IResourceCoverRef;
   reload?: (ct?: AbortSignal) => Promise<any>;
 }
-
-export default ({ resource, coverRef, reload }: IProps) => {
+const Operations = ({ resource, coverRef, reload }: IProps) => {
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
@@ -114,7 +113,7 @@ export default ({ resource, coverRef, reload }: IProps) => {
                 // @ts-ignore
               },
               t,
-              resource.isSingleFile,
+              resource.isFile,
             );
           }}
         >
@@ -128,16 +127,11 @@ export default ({ resource, coverRef, reload }: IProps) => {
             createPortal(Modal, {
               defaultVisible: true,
               title: t<string>("Add to playlist"),
-              children: (
-                <PlaylistCollection
-                  defaultNewItem={{
-                    resourceId: resource.id,
-                    type: PlaylistItemType.Resource,
-                  }}
-                />
-              ),
+              children: <PlaylistCollection addingResourceId={resource.id} />,
               style: { minWidth: 600 },
-              closeMode: ["close", "mask", "esc"],
+              footer: {
+                actions: ["cancel"],
+              },
             });
           }}
         >
@@ -147,3 +141,7 @@ export default ({ resource, coverRef, reload }: IProps) => {
     </Popover>
   );
 };
+
+Operations.displayName = "Operations";
+
+export default Operations;

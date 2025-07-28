@@ -15,8 +15,10 @@ type Props = {
   selectedIds?: number[];
   onSubmit?: (ids: number[]) => any;
 } & DestroyableProps;
-
-export default ({ selectedIds: propSelectedIds, onSubmit }: Props) => {
+const EnhancerSelectorModal = ({
+  selectedIds: propSelectedIds,
+  onSubmit,
+}: Props) => {
   const { t } = useTranslation();
 
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
@@ -112,3 +114,7 @@ export default ({ selectedIds: propSelectedIds, onSubmit }: Props) => {
     </Modal>
   );
 };
+
+EnhancerSelectorModal.displayName = "EnhancerSelectorModal";
+
+export default EnhancerSelectorModal;

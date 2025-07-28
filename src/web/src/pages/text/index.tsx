@@ -23,7 +23,7 @@ import {
 import type { SpecialText } from "@/pages/text/models";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import Detail from "@/pages/text/Detail";
+import DetailPage from "@/pages/text/Detail";
 
 const tagRenders = {
   Single: (t) => t.value1,
@@ -83,8 +83,7 @@ const usedInMapping: Record<SpecialTextType, string[]> = {
     "Parsing or converting property value",
   ],
 };
-
-export default () => {
+const TextPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -126,7 +125,7 @@ export default () => {
       defaultVisible: true,
       children: (
         <div className={"flex items-center gap-2"}>
-          <Detail value={c} onChange={(t) => (text = t)} />
+          <DetailPage value={c} onChange={(t) => (text = t)} />
         </div>
       ),
       size: "lg",
@@ -253,3 +252,7 @@ export default () => {
     </div>
   );
 };
+
+TextPage.displayName = "TextPage";
+
+export default TextPage;

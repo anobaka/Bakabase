@@ -47,8 +47,7 @@ type Props = {
 };
 
 export { Label as PropertyLabel };
-
-export default ({
+const V2 = ({
   property,
   hidePool,
   hideType,
@@ -213,3 +212,7 @@ export default ({
 
   return card;
 };
+
+V2.displayName = "V2";
+
+export default V2;

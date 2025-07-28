@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./index.scss";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -45,7 +45,7 @@ import { buildLogger } from "@/components/utils";
 
 import type { BTask } from "@/core/models/BTask";
 
-import { useBTasksStore } from "@/models/bTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 
 const AssistantStatus = {
   Idle: 0,
@@ -82,8 +82,7 @@ const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
 };
 
 const log = buildLogger("FloatingAssistant");
-
-export default () => {
+const FloatingAssistant = () => {
   const [allDoneCircleDrawn, setAllDoneCircleDrawn] = useState("");
   const [status, setStatus] = useState(AssistantStatus.Working);
   const statusRef = useRef(status);
@@ -95,6 +94,114 @@ export default () => {
   const navigate = useNavigate();
 
   const bTasks = useBTasksStore((state) => state.tasks);
+
+  // Tick to trigger re-render so simulated durations update every second
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+
+  // read to satisfy linter; this state is used to trigger re-renders
+  void nowTick;
+
+  // Per-task simulation state to auto-elapse durations between backend updates
+  const simTimingRef = useRef<
+    Map<
+      string,
+      {
+        baseElapsedMs?: number;
+        baseRemainingMs?: number;
+        lastSeenAt: number;
+        lastStatus: number;
+        lastRawElapsedMs?: number;
+        lastRawRemainingMs?: number;
+      }
+    >
+  >(new Map());
+
+  // When tasks update from the store, (re)initialize or adjust simulation baselines
+  useEffect(() => {
+    const now = Date.now();
+    const map = simTimingRef.current;
+    const existingIds = new Set(map.keys());
+
+    bTasks.forEach((task) => {
+      const rawElapsedMs = task.elapsed
+        ? moment.duration(task.elapsed).asMilliseconds()
+        : undefined;
+      const rawRemainingMs = task.estimateRemainingTime
+        ? moment.duration(task.estimateRemainingTime).asMilliseconds()
+        : undefined;
+
+      const rec = map.get(task.id);
+
+      if (!rec) {
+        map.set(task.id, {
+          baseElapsedMs: rawElapsedMs,
+          baseRemainingMs: rawRemainingMs,
+          lastSeenAt: now,
+          lastStatus: task.status,
+          lastRawElapsedMs: rawElapsedMs,
+          lastRawRemainingMs: rawRemainingMs,
+        });
+      } else {
+        const incomingChanged =
+          rec.lastRawElapsedMs !== rawElapsedMs ||
+          rec.lastRawRemainingMs !== rawRemainingMs;
+
+        if (incomingChanged) {
+          // Override simulation with incoming backend updates
+          rec.baseElapsedMs = rawElapsedMs;
+          rec.baseRemainingMs = rawRemainingMs;
+          rec.lastSeenAt = now;
+          rec.lastRawElapsedMs = rawElapsedMs;
+          rec.lastRawRemainingMs = rawRemainingMs;
+          rec.lastStatus = task.status;
+        } else if (task.status !== rec.lastStatus) {
+          // Commit simulated delta on status change, then reset the baseline
+          const delta = Math.max(0, now - rec.lastSeenAt);
+
+          if (rec.lastStatus === BTaskStatus.Running) {
+            rec.baseElapsedMs = (rec.baseElapsedMs ?? 0) + delta;
+            if (rec.baseRemainingMs != null) {
+              rec.baseRemainingMs = Math.max(0, rec.baseRemainingMs - delta);
+            }
+          }
+          rec.lastSeenAt = now;
+          rec.lastStatus = task.status;
+        }
+      }
+
+      existingIds.delete(task.id);
+    });
+
+    // Cleanup records of tasks that no longer exist
+    existingIds.forEach((id) => map.delete(id));
+  }, [bTasks]);
+
+  const computeDisplayElapsedMs = (task: BTask): number | undefined => {
+    const rec = simTimingRef.current.get(task.id);
+    const baseMs = rec?.baseElapsedMs;
+
+    if (baseMs == null) return undefined;
+    if (task.status === BTaskStatus.Running) {
+      return baseMs + Math.max(0, Date.now() - (rec?.lastSeenAt ?? Date.now()));
+    }
+
+    return baseMs;
+  };
+
+  const computeDisplayRemainingMs = (task: BTask): number | undefined => {
+    const rec = simTimingRef.current.get(task.id);
+    const baseMs = rec?.baseRemainingMs;
+
+    if (baseMs == null) return undefined;
+    if (task.status === BTaskStatus.Running) {
+      const ms =
+        baseMs - Math.max(0, Date.now() - (rec?.lastSeenAt ?? Date.now()));
+
+      return Math.max(0, ms);
+    }
+
+    return baseMs;
+  };
 
   const columns = useRef<{ key: string; label: string }[]>(
     [
@@ -183,6 +290,8 @@ export default () => {
           }, 300);
         }
       }
+      // Tick every second to refresh simulated durations in UI
+      setNowTick(Date.now());
     }, 1000);
 
     return () => {
@@ -455,23 +564,23 @@ export default () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      {task.elapsed &&
-                        dayjs
-                          .duration(
-                            moment.duration(task.elapsed).asMilliseconds(),
-                          )
-                          .format("HH:mm:ss")}
+                      {(() => {
+                        const ms = computeDisplayElapsedMs(task);
+
+                        return ms != null
+                          ? dayjs.duration(ms).format("HH:mm:ss")
+                          : undefined;
+                      })()}
                     </div>
                   </TableCell>
                   <TableCell>
-                    {task.estimateRemainingTime &&
-                      dayjs
-                        .duration(
-                          moment
-                            .duration(task.estimateRemainingTime)
-                            .asMilliseconds(),
-                        )
-                        .format("HH:mm:ss")}
+                    {(() => {
+                      const ms = computeDisplayRemainingMs(task);
+
+                      return ms != null
+                        ? dayjs.duration(ms).format("HH:mm:ss")
+                        : undefined;
+                    })()}
                   </TableCell>
                   <TableCell>
                     {task.nextTimeStartAt &&
@@ -590,3 +699,7 @@ export default () => {
     </>
   );
 };
+
+FloatingAssistant.displayName = "FloatingAssistant";
+
+export default FloatingAssistant;

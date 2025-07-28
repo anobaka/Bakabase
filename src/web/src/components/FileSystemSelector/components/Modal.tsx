@@ -10,8 +10,7 @@ import { Modal } from "@/components/bakaui";
 import { FileSystemSelectorPanel } from "@/components/FileSystemSelector";
 
 interface IProps extends FileSystemSelectorProps, DestroyableProps {}
-
-export default (props: IProps) => {
+const FileSystemSelectorModal = (props: IProps) => {
   const { t } = useTranslation();
   const { ...fsProps } = props;
 
@@ -62,3 +61,7 @@ export default (props: IProps) => {
     </Modal>
   );
 };
+
+FileSystemSelectorModal.displayName = "FileSystemSelectorModal";
+
+export default FileSystemSelectorModal;

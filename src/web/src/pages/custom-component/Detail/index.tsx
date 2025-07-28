@@ -15,7 +15,7 @@ import {
 } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import ComponentDescriptorCard from "@/pages/custom-component/components/ComponentCard";
-import ComponentOptionsRender from "@/pages/custom-component/Detail/ComponentOptions/ComponentOptionsRender";
+import ComponentOptionsRenderPage from "@/pages/custom-component/Detail/ComponentOptions/ComponentOptionsRender";
 
 export interface CustomComponentDetailDialogProps {
   componentType?: ComponentType;
@@ -24,7 +24,7 @@ export interface CustomComponentDetailDialogProps {
   onDestroyed?: () => void;
 }
 
-function ComponentDetail(props: CustomComponentDetailDialogProps) {
+function ComponentDetailPage(props: CustomComponentDetailDialogProps) {
   const {
     componentKey,
     componentType,
@@ -232,7 +232,7 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
           <div>
             <div className="label">{t<string>("Configuration")}</div>
             <div className="value">
-              <ComponentOptionsRender
+              <ComponentOptionsRenderPage
                 ref={optionsFormRef}
                 defaultValue={
                   descriptor?.optionsJson
@@ -256,4 +256,4 @@ function ComponentDetail(props: CustomComponentDetailDialogProps) {
   );
 }
 
-export default ComponentDetail;
+export default ComponentDetailPage;

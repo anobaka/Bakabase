@@ -7,8 +7,7 @@ import { Button } from "@/components/bakaui";
 type Props = {
   onClick?: () => any;
 };
-
-export default (props: Props) => {
+const NotSet = (props: Props) => {
   const { t } = useTranslation();
   const { onClick } = props;
 
@@ -22,3 +21,7 @@ export default (props: Props) => {
     return <span className={"opacity-40"}>{t<string>("Not set")}</span>;
   }
 };
+
+NotSet.displayName = "NotSet";
+
+export default NotSet;

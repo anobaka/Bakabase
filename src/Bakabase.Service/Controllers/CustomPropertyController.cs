@@ -72,6 +72,16 @@ namespace Bakabase.Service.Controllers
                 (await service.Add(model)).ToViewModel(propertyLocalizer));
         }
 
+        [HttpPost("batch")]
+        [SwaggerOperation(OperationId = "AddCustomPropertyBatch")]
+        public async Task<ListResponse<CustomPropertyViewModel>> AddBatch(
+            [FromBody] CustomPropertyAddOrPutDto[] models)
+        {
+            var cps = await service.AddRange(models);
+            var vms = cps.Select(c => c.ToViewModel(propertyLocalizer)).ToList();
+            return new ListResponse<CustomPropertyViewModel>(vms);
+        }
+
         [HttpPut("{id:int}")]
         [SwaggerOperation(OperationId = "PutCustomProperty")]
         public async Task<SingletonResponse<CustomPropertyViewModel>> Put(int id,

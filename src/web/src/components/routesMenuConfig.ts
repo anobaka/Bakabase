@@ -1,26 +1,61 @@
-import { AiOutlineDashboard, AiOutlinePicture, AiOutlineProduct, AiOutlineAppstoreAdd, AiOutlineControl, AiOutlineRadarChart, AiOutlineUngroup, AiOutlineForm, AiOutlineDashboard as AiOutlineDashboard2, AiOutlineBranches, AiOutlineFieldString, AiOutlineHistory, AiOutlineSync, AiOutlineAppstore, AiOutlineInteraction, AiOutlineFileText, AiOutlineTool, AiOutlineExperiment, AiOutlineSetting, AiOutlineDatabase } from "react-icons/ai";
-import Dashboard from "@/pages/dashboard";
-import Resource from "@/pages/resource";
-import MediaLibrary from "@/pages/media-library";
-import MediaLibraryTemplate from "@/pages/media-library-template";
-import CustomComponent from "@/pages/custom-component";
-import CustomProperty from "@/pages/custom-property";
-import ExtensionGroup from "@/pages/extension-group";
-import BulkModification2 from "@/pages/bulk-modification2";
-import Cache from "@/pages/cache";
-import Alias from "@/pages/alias";
-import Text from "@/pages/text";
-import PlayHistory from "@/pages/play-history";
-import SynchronizationOptions from "@/pages/synchronization-options";
-import Configuration from "@/pages/configuration";
-import BackgroundTask from "@/pages/background-task";
-import Log from "@/pages/log";
-import Category from "@/pages/category";
-import FileProcessor from "@/pages/file-processor";
-import Downloader from "@/pages/downloader";
-import FileMover from "@/pages/file-mover";
-import FileNameModifier from "@/pages/file-name-modifier";
+import {
+  AiOutlineDashboard,
+  AiOutlinePicture,
+  AiOutlineProduct,
+  AiOutlineAppstoreAdd,
+  AiOutlineControl,
+  AiOutlineRadarChart,
+  AiOutlineUngroup,
+  AiOutlineForm,
+  AiOutlineBranches,
+  AiOutlineFieldString,
+  AiOutlineHistory,
+  AiOutlineSync,
+  AiOutlineAppstore,
+  AiOutlineInteraction,
+  AiOutlineFileText,
+  AiOutlineTool,
+  AiOutlineExperiment,
+  AiOutlineSetting,
+  AiOutlineDatabase,
+  AiOutlineHdd,
+  AiOutlineCode,
+  AiOutlineDownload,
+  AiOutlineSwap,
+  AiOutlineEdit,
+  AiOutlineBug,
+} from "react-icons/ai";
+import { lazy } from "react";
+import { MdOutlineArticle } from "react-icons/md";
+import { TbToolsKitchen } from "react-icons/tb";
 
+import DashboardPage from "@/pages/dashboard";
+import ResourcePage from "@/pages/resource";
+import MediaLibraryPage from "@/pages/media-library";
+import MediaLibraryTemplatePage from "@/pages/media-library-template";
+import CustomComponentPage from "@/pages/custom-component";
+import CustomPropertyPage from "@/pages/custom-property";
+import ExtensionGroup from "@/pages/extension-group";
+import BulkModification2Page from "@/pages/bulk-modification2";
+import CachePage from "@/pages/cache";
+import AliasPage from "@/pages/alias";
+import TextPage from "@/pages/text";
+import PlayHistoryPage from "@/pages/play-history";
+import SynchronizationOptionsPage from "@/pages/synchronization-options";
+import Configuration from "@/pages/configuration";
+import ThirdPartyConfiguration from "@/pages/third-party-configuration";
+import BackgroundTaskPage from "@/pages/background-task";
+import Log from "@/pages/log";
+import CategoryPage from "@/pages/category";
+import FileProcessorPage from "@/pages/file-processor";
+import DownloaderPage from "@/pages/downloader";
+import FileMoverPage from "@/pages/file-mover";
+import FileNameModifier from "@/pages/file-name-modifier";
+import ThirdPartyIntegrationPage from "@/pages/third-party-integration";
+import PostParserPage from "@/pages/post-parser";
+
+// Lazy load test page to avoid circular dependency
+const Test = lazy(() => import("@/pages/test"));
 
 export interface RouteMenuItem {
   name: string;
@@ -38,7 +73,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
   {
     name: "Dashboard",
     path: "/",
-    component: Dashboard,
+    component: DashboardPage,
     icon: AiOutlineDashboard,
     layout: "basic",
     menu: false, // 首页不在菜单中
@@ -46,7 +81,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
   {
     name: "Resource",
     path: "/resource",
-    component: Resource,
+    component: ResourcePage,
     icon: AiOutlinePicture,
     layout: "basic",
     menu: true,
@@ -54,7 +89,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
   {
     name: "Media library",
     path: "/media-library",
-    component: MediaLibrary,
+    component: MediaLibraryPage,
     icon: AiOutlineProduct,
     layout: "basic",
     menu: true,
@@ -62,10 +97,10 @@ export const routesMenuConfig: RouteMenuItem[] = [
   {
     name: "Media library template",
     path: "/media-library-template",
-    component: MediaLibraryTemplate,
+    component: MediaLibraryTemplatePage,
     icon: AiOutlineAppstoreAdd,
     layout: "basic",
-    menu: true, 
+    menu: true,
   },
   {
     name: "Data",
@@ -75,7 +110,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "Synchronization options",
         path: "/synchronization-options",
-        component: SynchronizationOptions,
+        component: SynchronizationOptionsPage,
         icon: AiOutlineSync,
         layout: "basic",
         menu: true,
@@ -83,7 +118,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "Custom property",
         path: "/customproperty",
-        component: CustomProperty,
+        component: CustomPropertyPage,
         icon: AiOutlineRadarChart,
         layout: "basic",
         menu: true,
@@ -99,7 +134,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "Bulk modification",
         path: "/bulk-modification2",
-        component: BulkModification2,
+        component: BulkModification2Page,
         icon: AiOutlineForm,
         layout: "basic",
         menu: true,
@@ -107,15 +142,15 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "Cache",
         path: "/cache",
-        component: Cache,
-        icon: AiOutlineDashboard2,
+        component: CachePage,
+        icon: AiOutlineHdd,
         layout: "basic",
         menu: true,
       },
       {
         name: "Alias",
         path: "/alias",
-        component: Alias,
+        component: AliasPage,
         icon: AiOutlineBranches,
         layout: "basic",
         menu: true,
@@ -123,7 +158,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "Text",
         path: "/text",
-        component: Text,
+        component: TextPage,
         icon: AiOutlineFieldString,
         layout: "basic",
         menu: true,
@@ -131,7 +166,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "Play history",
         path: "/play-history",
-        component: PlayHistory,
+        component: PlayHistoryPage,
         icon: AiOutlineHistory,
         layout: "basic",
         menu: true,
@@ -140,7 +175,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         name: "Custom component",
         path: "/customcomponent",
         isDeprecated: true,
-        component: CustomComponent,
+        component: CustomComponentPage,
         icon: AiOutlineControl,
         layout: "basic",
         menu: true,
@@ -149,7 +184,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         name: "Media library",
         path: "/category",
         isDeprecated: true,
-        component: Category, 
+        component: CategoryPage,
         icon: AiOutlineProduct,
         layout: "basic",
         menu: true,
@@ -164,24 +199,24 @@ export const routesMenuConfig: RouteMenuItem[] = [
       {
         name: "File Processor",
         path: "/file-processor",
-        component: FileProcessor,
-        icon: AiOutlineDashboard2,
+        component: FileProcessorPage,
+        icon: AiOutlineCode,
         layout: "basic",
         menu: true,
       },
       {
         name: "Downloader",
         path: "/downloader",
-        component: Downloader,
-        icon: AiOutlineDashboard2,
+        component: DownloaderPage,
+        icon: AiOutlineDownload,
         layout: "basic",
         menu: true,
       },
       {
         name: "File Mover",
         path: "/file-mover",
-        component: FileMover,
-        icon: AiOutlineDashboard2,
+        component: FileMoverPage,
+        icon: AiOutlineSwap,
         layout: "basic",
         menu: true,
       },
@@ -189,7 +224,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         name: "File name modifier",
         path: "/file-name-modifier",
         component: FileNameModifier,
-        icon: AiOutlineDashboard2,
+        icon: AiOutlineEdit,
         layout: "basic",
         isBeta: true,
         menu: true,
@@ -201,6 +236,29 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineExperiment,
         layout: "basic",
         menu: false, // 不在菜单中
+      },
+    ],
+  },
+  {
+    name: "Experimental",
+    icon: AiOutlineExperiment,
+    menu: true,
+    children: [
+      {
+        name: "Third party integration",
+        path: "/third-party-integration",
+        component: ThirdPartyIntegrationPage,
+        icon: TbToolsKitchen,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "Post parser",
+        path: "/post-parser",
+        component: PostParserPage,
+        icon: MdOutlineArticle,
+        layout: "basic",
+        menu: true,
       },
     ],
   },
@@ -218,9 +276,17 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
+        name: "Third party",
+        path: "/third-party-configuration",
+        component: ThirdPartyConfiguration,
+        icon: TbToolsKitchen,
+        layout: "basic",
+        menu: true,
+      },
+      {
         name: "Background Task",
         path: "/background-task",
-        component: BackgroundTask,
+        component: BackgroundTaskPage,
         icon: AiOutlineInteraction,
         layout: "basic",
         menu: true,
@@ -235,4 +301,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
       },
     ],
   },
-]; 
+  {
+    name: "Test",
+    path: "/test",
+    component: Test,
+    icon: AiOutlineBug,
+    layout: "basic",
+    menu: process.env.NODE_ENV === "development",
+  },
+];

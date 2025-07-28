@@ -19,33 +19,7 @@ type Props = {
   tooltipContent?: string;
   showTooltip?: boolean;
 };
-
-/**
- * BetaChip component for indicating beta features
- *
- * @example
- * // Basic usage
- * <BetaChip />
- *
- * @example
- * // Custom styling
- * <BetaChip size="md" color="primary" variant="solid" />
- *
- * @example
- * // Custom tooltip
- * <BetaChip tooltipContent="This is a custom beta message" />
- *
- * @example
- * // Without tooltip
- * <BetaChip showTooltip={false} />
- *
- * @example
- * // Different colors for different beta types
- * <BetaChip color="warning" /> // Default beta warning
- * <BetaChip color="success" /> // Beta feature that's working well
- * <BetaChip color="danger" /> // Beta feature with known issues
- */
-export default ({
+const BetaChip = ({
   className,
   size = "sm",
   variant = "flat",
@@ -85,3 +59,7 @@ export default ({
     </Tooltip>
   );
 };
+
+BetaChip.displayName = "BetaChip";
+
+export default BetaChip;

@@ -5,13 +5,12 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 import { useTranslation } from "react-i18next";
 
 import { Modal, NumberInput, Tab, Tabs, Textarea } from "@/components/bakaui";
-import { useSoulPlusOptionsStore } from "@/models/options";
+import { useSoulPlusOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import { EditableValue } from "@/components/EditableValue";
 
 type Props = DestroyableProps;
-
-export default (props: Props) => {
+const ConfigurationModal = (props: Props) => {
   const { t } = useTranslation();
   const soulPlusOptions = useSoulPlusOptionsStore((state) => state.data);
 
@@ -70,3 +69,7 @@ export default (props: Props) => {
     </Modal>
   );
 };
+
+ConfigurationModal.displayName = "ConfigurationModal";
+
+export default ConfigurationModal;

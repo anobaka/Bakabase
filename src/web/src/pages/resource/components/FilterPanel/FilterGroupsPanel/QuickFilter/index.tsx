@@ -25,8 +25,7 @@ const quickFilterMap = {
 type Props = {
   onAdded: (filter: ResourceSearchFilter) => any;
 };
-
-export default ({ onAdded }: Props) => {
+const QuickFilter = ({ onAdded }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [loading, setLoading] = useState(true);
@@ -98,3 +97,7 @@ export default ({ onAdded }: Props) => {
     </>
   );
 };
+
+QuickFilter.displayName = "QuickFilter";
+
+export default QuickFilter;

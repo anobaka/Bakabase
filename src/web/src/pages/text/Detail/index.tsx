@@ -12,8 +12,7 @@ interface Props {
   value: SpecialText;
   onChange: (value: SpecialText) => any;
 }
-
-export default ({ value: propsValue, onChange }: Props) => {
+const DetailPage = ({ value: propsValue, onChange }: Props) => {
   const { t } = useTranslation();
   const [value, setValue] = useState<SpecialText>(
     JSON.parse(JSON.stringify(propsValue)),
@@ -97,3 +96,7 @@ export default ({ value: propsValue, onChange }: Props) => {
       return null;
   }
 };
+
+DetailPage.displayName = "DetailPage";
+
+export default DetailPage;

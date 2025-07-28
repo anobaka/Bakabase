@@ -20,8 +20,7 @@ type ChoiceValueEditorProps = ValueEditorProps<string[] | undefined> &
   };
 
 const log = buildLogger("ChoiceValueEditor");
-
-export default (props: ChoiceValueEditorProps) => {
+const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { multiple, getDataSource, value: propsValue, onValueChange } = props;
@@ -114,3 +113,7 @@ export default (props: ChoiceValueEditorProps) => {
     </Modal>
   );
 };
+
+ChoiceValueEditor.displayName = "ChoiceValueEditor";
+
+export default ChoiceValueEditor;

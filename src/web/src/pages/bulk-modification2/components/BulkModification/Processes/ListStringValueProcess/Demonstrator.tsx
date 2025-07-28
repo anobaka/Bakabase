@@ -19,8 +19,7 @@ type Props = {
 };
 
 const log = buildLogger("ListStringValueProcess");
-
-export default (props: Props) => {
+const Demonstrator = (props: Props) => {
   const { operation, options, variables, property } = props;
   const { t } = useTranslation();
 
@@ -272,3 +271,7 @@ export default (props: Props) => {
       return <>{t<string>("Unsupported value")}</>;
   }
 };
+
+Demonstrator.displayName = "Demonstrator";
+
+export default Demonstrator;

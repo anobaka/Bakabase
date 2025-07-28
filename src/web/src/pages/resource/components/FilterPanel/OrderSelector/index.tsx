@@ -28,8 +28,11 @@ interface IProps extends React.ComponentPropsWithoutRef<any> {
   value?: SearchFormOrderModel[];
   onChange?: (value: SearchFormOrderModel[]) => any;
 }
-
-export default ({ value: propsValue, onChange, ...otherProps }: IProps) => {
+const OrderSelector = ({
+  value: propsValue,
+  onChange,
+  ...otherProps
+}: IProps) => {
   const { t } = useTranslation();
 
   const [value, setValue] = useState(propsValue);
@@ -108,3 +111,7 @@ export default ({ value: propsValue, onChange, ...otherProps }: IProps) => {
     </div>
   );
 };
+
+OrderSelector.displayName = "OrderSelector";
+
+export default OrderSelector;

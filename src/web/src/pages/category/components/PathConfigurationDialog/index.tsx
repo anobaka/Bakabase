@@ -41,8 +41,12 @@ interface Props extends DestroyableProps {
   pcIdx: number;
   onClosed: (pc: BakabaseAbstractionsModelsDomainPathConfiguration) => any;
 }
-
-export default ({ libraryId, pcIdx, onClosed, ...props }: Props) => {
+const PathConfigurationDialog = ({
+  libraryId,
+  pcIdx,
+  onClosed,
+  ...props
+}: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const { createPortal } = useBakabaseContext();
@@ -353,3 +357,7 @@ export default ({ libraryId, pcIdx, onClosed, ...props }: Props) => {
     </>
   );
 };
+
+PathConfigurationDialog.displayName = "PathConfigurationDialog";
+
+export default PathConfigurationDialog;

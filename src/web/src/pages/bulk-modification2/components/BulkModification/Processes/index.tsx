@@ -22,8 +22,11 @@ type Props = {
 };
 
 const log = buildLogger("Processes");
-
-export default ({ processes: propsProcesses, onChange, variables }: Props) => {
+const Processes = ({
+  processes: propsProcesses,
+  onChange,
+  variables,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -160,3 +163,7 @@ export default ({ processes: propsProcesses, onChange, variables }: Props) => {
     </div>
   );
 };
+
+Processes.displayName = "Processes";
+
+export default Processes;

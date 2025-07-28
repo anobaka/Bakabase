@@ -1,7 +1,7 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { ExtensionGroup } from "@/pages/extension-group";
+import type { ExtensionGroupPage } from "@/pages/extension-group";
 import type { PropertyType } from "@/sdk/constants";
 import type { components } from "@/sdk/BApi2";
 import type { IProperty } from "@/components/Property/models";
@@ -98,8 +98,7 @@ const validate = (
 
   return true;
 };
-
-export default ({ onImported }: Props) => {
+const ImportModal = ({ onImported }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -287,13 +286,9 @@ export default ({ onImported }: Props) => {
                               variant={"light"}
                             >
                               {isSet ? (
-                                <AiOutlineCheckCircle
-                                  className={"text-base"}
-                                />
+                                <AiOutlineCheckCircle className={"text-base"} />
                               ) : (
-                                <AiOutlineCloseCircle
-                                  className={"text-base"}
-                                />
+                                <AiOutlineCloseCircle className={"text-base"} />
                               )}
                             </Chip>
                           </div>
@@ -371,13 +366,9 @@ export default ({ onImported }: Props) => {
                               variant={"light"}
                             >
                               {isSet ? (
-                                <AiOutlineCheckCircle
-                                  className={"text-base"}
-                                />
+                                <AiOutlineCheckCircle className={"text-base"} />
                               ) : (
-                                <AiOutlineCloseCircle
-                                  className={"text-base"}
-                                />
+                                <AiOutlineCloseCircle className={"text-base"} />
                               )}
                             </Chip>
                           </div>
@@ -528,3 +519,7 @@ export default ({ onImported }: Props) => {
     </Modal>
   );
 };
+
+ImportModal.displayName = "ImportModal";
+
+export default ImportModal;

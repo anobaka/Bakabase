@@ -13,11 +13,10 @@ import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { IwFsType } from "@/sdk/constants";
 import { Button, Chip } from "@/components/bakaui";
-import RootTreeEntry from "@/pages/file-processor/RootTreeEntry";
+import RootTreeEntryPage from "@/pages/file-processor/RootTreeEntry";
 
 const log = buildLogger("FileSystemSelector");
-
-export default (props: FileSystemSelectorProps) => {
+const Panel = (props: FileSystemSelectorProps) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
@@ -94,7 +93,7 @@ export default (props: FileSystemSelectorProps) => {
 
   return (
     <div className={"flex flex-col gap-2 grow max-h-full"}>
-      <RootTreeEntry
+      <RootTreeEntryPage
         ref={(r) => {
           rootRef.current = r;
           log("ref", r);
@@ -182,3 +181,7 @@ export default (props: FileSystemSelectorProps) => {
     </div>
   );
 };
+
+Panel.displayName = "Panel";
+
+export default Panel;

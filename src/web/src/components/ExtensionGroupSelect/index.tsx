@@ -15,8 +15,7 @@ type Props = {
   value?: number[];
   onSelectionChange?: (ids: number[]) => void;
 };
-
-export default ({ value = [], onSelectionChange }: Props) => {
+const ExtensionGroupSelect = ({ value = [], onSelectionChange }: Props) => {
   const { t } = useTranslation();
   const [extensionGroups, setExtensionGroups] = useState<ExtensionGroup[]>([]);
 
@@ -46,3 +45,7 @@ export default ({ value = [], onSelectionChange }: Props) => {
     />
   );
 };
+
+ExtensionGroupSelect.displayName = "ExtensionGroupSelect";
+
+export default ExtensionGroupSelect;

@@ -44,8 +44,7 @@ const testData = {
     // },
   ],
 };
-
-export default () => {
+const PscPage = () => {
   const { t } = useTranslation();
   const [samplePath, setSamplePath] = useState(
     "D:\\test\\new-media-library-path-configuration\\a",
@@ -149,3 +148,7 @@ export default () => {
     </div>
   );
 };
+
+PscPage.displayName = "PscPage";
+
+export default PscPage;

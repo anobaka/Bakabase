@@ -27,8 +27,7 @@ type Props = {
   locators?: PathPropertyExtractor[];
   onSubmit?: (locators: PathPropertyExtractor[]) => any;
 } & DestroyableProps;
-
-export default ({ locators: propsLocators, onSubmit, onDestroyed }: Props) => {
+const PathPropertyExtractorModal = ({ locators: propsLocators, onSubmit, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
@@ -245,3 +244,7 @@ export default ({ locators: propsLocators, onSubmit, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+PathPropertyExtractorModal.displayName = "Modal";
+
+export default PathPropertyExtractorModal;

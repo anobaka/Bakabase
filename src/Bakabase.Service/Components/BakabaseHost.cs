@@ -30,7 +30,7 @@ namespace Bakabase.Service.Components
 {
     public class BakabaseHost(IGuiAdapter guiAdapter, ISystemService systemService) : AppHost(guiAdapter, systemService)
     {
-        protected override int ListeningPortCount => 3;
+        protected override int ListeningPortCount => 5;
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
             [

@@ -60,8 +60,7 @@ type Group = {
 };
 
 const log = buildLogger("DynamicTargets");
-
-export default (props: Props) => {
+const DynamicTargets = (props: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
@@ -250,3 +249,7 @@ export default (props: Props) => {
     </div>
   ) : null;
 };
+
+DynamicTargets.displayName = "DynamicTargets";
+
+export default DynamicTargets;

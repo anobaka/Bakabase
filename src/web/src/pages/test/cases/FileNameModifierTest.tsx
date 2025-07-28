@@ -6,7 +6,7 @@ import { Button } from "@/components/bakaui";
 import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
-const FileNameModifierTest: React.FC = () => {
+const FileNameModifierTestPage: React.FC = () => {
   const { createPortal } = useBakabaseContext();
 
   // 测试文件路径数据
@@ -108,4 +108,4 @@ const FileNameModifierTest: React.FC = () => {
   );
 };
 
-export default FileNameModifierTest;
+export default FileNameModifierTestPage;

@@ -15,7 +15,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { BTaskStopButton } from "@/components/BTask";
-import { useBTasksStore } from "@/models/bTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 
 interface IProps {
   resource: any;
@@ -29,8 +29,7 @@ enum Action {
   Update = 1,
   Reload = 2,
 }
-
-export default ({ resource, reload, onTasksChange }: IProps) => {
+const TaskCover = ({ resource, reload, onTasksChange }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
@@ -187,3 +186,7 @@ export default ({ resource, reload, onTasksChange }: IProps) => {
     </div>
   );
 };
+
+TaskCover.displayName = "TaskCover";
+
+export default TaskCover;

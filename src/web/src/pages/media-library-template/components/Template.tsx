@@ -1,8 +1,10 @@
 "use client";
 
-import type { MediaLibraryTemplate } from "../models";
+import type { MediaLibraryTemplatePage } from "../models";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { PropertyMap } from "@/components/types";
+import type { IProperty } from "@/components/Property/models";
+import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
 
 import {
   IoLocate,
@@ -33,7 +35,7 @@ import {
 } from "@/pages/media-library-template/components/PathFilter";
 import { Button, Chip, Modal, Select, Tooltip } from "@/components/bakaui";
 import PlayableFileSelectorModal from "@/pages/media-library-template/components/PlayableFileSelectorModal";
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import { PropertyPool } from "@/sdk/constants";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import {
@@ -49,14 +51,13 @@ import BApi from "@/sdk/BApi";
 import { willCauseCircleReference } from "@/components/utils";
 
 type Props = {
-  template: MediaLibraryTemplate;
+  template: MediaLibraryTemplatePage;
   onChange?: () => any;
   enhancersCache?: EnhancerDescriptor[];
   propertyMapCache?: PropertyMap;
-  templatesCache?: MediaLibraryTemplate[];
+  templatesCache?: MediaLibraryTemplatePage[];
 };
-
-export default ({
+const Template = ({
   template,
   onChange,
   enhancersCache,
@@ -73,7 +74,7 @@ export default ({
   const [propertyMap, setPropertyMap] = React.useState<PropertyMap>(
     propertyMapCache ?? {},
   );
-  const [templates, setTemplates] = React.useState<MediaLibraryTemplate[]>(
+  const [templates, setTemplates] = React.useState<MediaLibraryTemplatePage[]>(
     templatesCache ?? [],
   );
 
@@ -88,7 +89,7 @@ export default ({
     }
     if (!templatesCache) {
       BApi.mediaLibraryTemplate.getAllMediaLibraryTemplates().then((r) => {
-        setTemplates(r.data ?? []);
+        setTemplates((r.data ?? []) as any);
       });
     }
   }, []);
@@ -116,10 +117,10 @@ export default ({
     setPropertyMap(ps);
   };
 
-  const putTemplate = async (tpl: MediaLibraryTemplate) => {
+  const putTemplate = async (tpl: MediaLibraryTemplatePage) => {
     const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(
       tpl.id,
-      tpl,
+      tpl as any,
     );
 
     if (!r.code) {
@@ -129,7 +130,7 @@ export default ({
     }
   };
 
-  const renderChildSelector = (tpl: MediaLibraryTemplate) => {
+  const renderChildSelector = (tpl: MediaLibraryTemplatePage) => {
     const willCauseLoopKeys = new Set<string>(
       templates
         .filter((t1) => {
@@ -314,7 +315,7 @@ export default ({
         rightIcon={<AiOutlineEdit className={"text-large"} />}
         title={t<string>("Properties")}
         onRightIconPress={() => {
-          createPortal(PropertySelector, {
+          createPortal(PropertySelectorPage, {
             v2: true,
             selection: template.properties,
             pool: PropertyPool.Reserved | PropertyPool.Custom,
@@ -438,6 +439,99 @@ export default ({
                         onSubmit: async (options) => {
                           Object.assign(e, options);
                           await putTemplate(template);
+
+                          // After saving enhancer options, check for properties referenced by enhancers
+                          // that are not yet bound to the current template, or newly created properties
+                          // that aren't present in the local propertyMap. Offer to bind them and refresh map.
+                          const referencedPairs: {
+                            pool: PropertyPool;
+                            id: number;
+                          }[] = [];
+
+                          (template.enhancers ?? []).forEach((enh) => {
+                            (enh.targetOptions ?? []).forEach(
+                              (to: EnhancerTargetFullOptions) => {
+                                if (
+                                  to &&
+                                  !to.autoBindProperty &&
+                                  to.propertyPool != undefined &&
+                                  to.propertyId != undefined
+                                ) {
+                                  referencedPairs.push({
+                                    pool: to.propertyPool as PropertyPool,
+                                    id: to.propertyId as number,
+                                  });
+                                }
+                              },
+                            );
+                          });
+
+                          const uniqPairs = _.uniqBy(
+                            referencedPairs,
+                            (p) => `${p.pool}:${p.id}`,
+                          );
+                          const boundKeySet = new Set(
+                            (template.properties ?? []).map(
+                              (p) => `${p.pool}:${p.id}`,
+                            ),
+                          );
+                          const unboundPairs = uniqPairs.filter(
+                            (p) => !boundKeySet.has(`${p.pool}:${p.id}`),
+                          );
+
+                          if (unboundPairs.length > 0) {
+                            const psr =
+                              (
+                                await BApi.property.getPropertiesByPool(
+                                  PropertyPool.All,
+                                )
+                              ).data || [];
+                            const ps = _.mapValues(
+                              _.groupBy(psr, (x) => x.pool),
+                              (v) => _.keyBy(v, (x) => x.id),
+                            );
+
+                            const propsToBind: IProperty[] = unboundPairs
+                              .map((p) => ps[p.pool]![p.id]!)
+                              .filter((x): x is IProperty => !!x);
+
+                            if (propsToBind.length > 0) {
+                              createPortal(Modal, {
+                                defaultVisible: true,
+                                title: t<string>(
+                                  "Bind referenced properties to current template?",
+                                ),
+                                children: (
+                                  <div
+                                    className={"flex flex-col gap-1 flex-wrap"}
+                                  >
+                                    {propsToBind.map((p) => (
+                                      <BriefProperty
+                                        key={`${p.pool}:${p.id}`}
+                                        property={p}
+                                      />
+                                    ))}
+                                  </div>
+                                ),
+                                onOk: async () => {
+                                  template.properties ??= [];
+                                  propsToBind.forEach((pr) => {
+                                    template.properties!.push({
+                                      pool: pr.pool,
+                                      id: pr.id,
+                                      property: pr,
+                                      valueLocators: [],
+                                    });
+                                  });
+                                  await putTemplate(template);
+                                  setPropertyMap(ps);
+                                  forceUpdate();
+                                },
+                              });
+                            } else {
+                              setPropertyMap(ps);
+                            }
+                          }
                           forceUpdate();
                         },
                       });
@@ -584,9 +678,7 @@ export default ({
                                   {target.name}
                                 </Chip>
                               )}
-                              <TiChevronRightOutline
-                                className={"text-base"}
-                              />
+                              <TiChevronRightOutline className={"text-base"} />
                               {to.autoBindProperty ? (
                                 t<string>("Auto bind property")
                               ) : property ? (
@@ -706,3 +798,7 @@ export default ({
     </div>
   );
 };
+
+Template.displayName = "Template";
+
+export default Template;

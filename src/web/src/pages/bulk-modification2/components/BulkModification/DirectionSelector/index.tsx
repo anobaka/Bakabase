@@ -22,8 +22,7 @@ const I18NKeyMap: Record<Subject, { forward: string; backward: string }> = {
     forward: "Position.Beginning",
   },
 };
-
-export default ({ isReversed, onChange, subject }: Props) => {
+const DirectionSelector = ({ isReversed, onChange, subject }: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -42,3 +41,7 @@ export default ({ isReversed, onChange, subject }: Props) => {
     </Button>
   );
 };
+
+DirectionSelector.displayName = "DirectionSelector";
+
+export default DirectionSelector;

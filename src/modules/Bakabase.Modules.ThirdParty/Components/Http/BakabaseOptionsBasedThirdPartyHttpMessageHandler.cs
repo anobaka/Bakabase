@@ -7,46 +7,24 @@ using Microsoft.Extensions.Options;
 namespace Bakabase.Modules.ThirdParty.Components.Http
 {
     public abstract class
-        BakabaseOptionsBasedThirdPartyHttpMessageHandler<TBakabaseOptions, TThirdPartyHttpClientOptions> :
-        AbstractThirdPartyHttpMessageHandler<TThirdPartyHttpClientOptions>
-        where TThirdPartyHttpClientOptions : ThirdPartyHttpClientOptions where TBakabaseOptions : class, new()
+        BakabaseOptionsBasedThirdPartyHttpMessageHandler<TBakabaseOptions> :
+        AbstractThirdPartyHttpMessageHandler<TBakabaseOptions>
+        where TBakabaseOptions : class, IThirdPartyHttpClientOptions, new()
     {
-        protected readonly AspNetCoreOptionsManager<TBakabaseOptions> OptionsManager;
         private readonly IDisposable _optionsChangeHandlerDisposable;
 
         protected BakabaseOptionsBasedThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger,
             ThirdPartyId thirdPartyId, AspNetCoreOptionsManager<TBakabaseOptions> optionsManager,
-            BakabaseWebProxy webProxy) : base(logger, thirdPartyId, webProxy)
+            BakabaseWebProxy webProxy) : base(logger, thirdPartyId, webProxy, optionsManager.Value)
         {
-            OptionsManager = optionsManager;
-            _optionsChangeHandlerDisposable = OptionsManager.OnChange(OnOptionsChange);
+            _optionsChangeHandlerDisposable = optionsManager.OnChange(options => Options = options);
         }
-
-        protected abstract TThirdPartyHttpClientOptions ToThirdPartyHttpClientOptions(TBakabaseOptions options);
-
-        private void OnOptionsChange(TBakabaseOptions newOptions)
-        {
-            Options = Microsoft.Extensions.Options.Options.Create(ToThirdPartyHttpClientOptions(newOptions));
-        }
-
-        public override IOptions<TThirdPartyHttpClientOptions> Options
-        {
-            protected get
-            {
-                if (base.Options == null)
-                {
-                    OnOptionsChange(OptionsManager.Value);
-                }
-
-                return base.Options;
-            }
-        }
-
+        
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                _optionsChangeHandlerDisposable?.Dispose();
+                _optionsChangeHandlerDisposable.Dispose();
             }
 
             base.Dispose(disposing);

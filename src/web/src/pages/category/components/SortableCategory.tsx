@@ -12,13 +12,13 @@ import {
   SyncOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
+import { MdWarning } from "react-icons/md";
+import { MdCheck, MdClose } from "react-icons/md";
 
 import AddMediaLibraryInBulkDialog from "./AddMediaLibraryInBulkDialog";
 import DisplayNameTemplateEditorDialog from "./DisplayNameTemplateEditorDialog";
 
 import { toast } from "@/components/bakaui";
-import { MdWarning } from "react-icons/md";
-import { MdDragIndicator } from 'react-icons/md';
 import {
   ComponentType,
   componentTypes,
@@ -29,7 +29,6 @@ import SortableMediaLibraryList from "@/pages/category/components/SortableMediaL
 import DragHandle from "@/components/DragHandle";
 import BasicCategoryComponentSelector from "@/components/BasicCategoryComponentSelector";
 import BApi from "@/sdk/BApi";
-import { MdCheck, MdClose } from "react-icons/md";
 import CustomPropertyBinderModal from "@/pages/category/components/CustomPropertyBinderModal";
 import {
   Button,
@@ -77,8 +76,7 @@ type Props = {
   enhancers: any[];
   forceUpdate: () => void;
 };
-
-export default ({
+const SortableCategory = ({
   category,
   loadAllCategories,
   loadAllMediaLibraries,
@@ -125,6 +123,7 @@ export default ({
       componentType == ComponentType.Player
     ) {
       let newKey;
+
       createPortal(Modal, {
         defaultVisible: true,
         title: t<string>(ComponentType[componentType]),
@@ -319,10 +318,10 @@ export default ({
                 </div>
                 <Button
                   isIconOnly
+                  className={"submit"}
                   color={"default"}
                   size={"lg"}
                   variant={"light"}
-                  className={"submit"}
                   onPress={() => {
                     BApi.category
                       .patchCategory(category.id, {
@@ -342,10 +341,10 @@ export default ({
                 </Button>
                 <Button
                   isIconOnly
+                  className={"cancel"}
                   color={"default"}
                   size={"lg"}
                   variant={"light"}
-                  className={"cancel"}
                   onPress={clearEditMode}
                 >
                   <MdClose className={"text-lg"} />
@@ -845,3 +844,7 @@ export default ({
     </div>
   );
 };
+
+SortableCategory.displayName = "SortableCategory";
+
+export default SortableCategory;

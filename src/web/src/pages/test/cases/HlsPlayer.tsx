@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from "react";
 import Hls from "hls.js";
 
-export default function HlsPlayer({ src }) {
+export default function HlsPlayerPage({ src }) {
   const videoRef = useRef(null);
 
   useEffect(() => {

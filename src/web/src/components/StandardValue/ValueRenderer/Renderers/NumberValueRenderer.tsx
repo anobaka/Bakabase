@@ -16,8 +16,7 @@ type NumberValueRendererProps = ValueRendererProps<number, number> & {
 };
 
 const log = buildLogger("NumberValueRenderer");
-
-export default (props: NumberValueRendererProps) => {
+const NumberValueRenderer = (props: NumberValueRendererProps) => {
   const { value, precision, editor, variant, suffix, as, ...otherProps } =
     props;
 
@@ -54,3 +53,7 @@ export default (props: NumberValueRendererProps) => {
     return <Progress size={"sm"} value={value} onClick={startEditing} />;
   }
 };
+
+NumberValueRenderer.displayName = "NumberValueRenderer";
+
+export default NumberValueRenderer;

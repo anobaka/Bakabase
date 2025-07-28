@@ -5,10 +5,9 @@ import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models"
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/bakaui";
-import CategoryEnhancerOptionsDialog from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
+import CategoryEnhancerOptionsDialogPage from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
 import BApi from "@/sdk/BApi";
-
-export default () => {
+const CategoryEnhancerOptionsDialogPage = () => {
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -54,7 +53,7 @@ export default () => {
               size={"sm"}
               onClick={() => {
                 if (categoryId) {
-                  CategoryEnhancerOptionsDialog.show({
+                  CategoryEnhancerOptionsDialogPage.show({
                     enhancer: e,
                     categoryId: categoryId,
                   });
@@ -69,3 +68,7 @@ export default () => {
     </div>
   );
 };
+
+CategoryEnhancerOptionsDialogPage.displayName = "CategoryEnhancerOptionsDialogPage";
+
+export default CategoryEnhancerOptionsDialogPage;

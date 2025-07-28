@@ -1,14 +1,34 @@
 "use client";
 
-import { SortableElement } from "react-sortable-hoc";
-import { Button } from "@/components/bakaui";
-import React from "react";
+import type { components } from "@/sdk/BApi2";
+import type { ReactNode } from "react";
 
-import { MdVideoLibrary, MdVideoFile, MdImage, MdAudiotrack, MdDragIndicator } from "react-icons/md";
+import { SortableElement } from "react-sortable-hoc";
+import React, { useCallback } from "react";
+import {
+  MdVideoLibrary,
+  MdVideoFile,
+  MdImage,
+  MdAudiotrack,
+} from "react-icons/md";
+import { AiOutlineDelete } from "react-icons/ai";
+import { useTranslation } from "react-i18next";
+
+import { Button } from "@/components/bakaui";
 import { PlaylistItemType } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
-import { MdDelete } from "react-icons/md";
 import BApi from "@/sdk/BApi";
+
+type PlayListItem =
+  components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayListItem"];
+type Resource =
+  components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"];
+
+interface SortablePlaylistItemProps {
+  item: PlayListItem;
+  resource?: Resource;
+  onRemove: (item: PlayListItem) => void;
+}
 
 const ItemTypeIcon = {
   [PlaylistItemType.Resource]: MdVideoLibrary,
@@ -17,79 +37,88 @@ const ItemTypeIcon = {
   [PlaylistItemType.Audio]: MdAudiotrack,
 };
 
-const renderDuration = (item) => {
+const renderDuration = (item: PlayListItem): string => {
   if (
-    item.type == PlaylistItemType.Audio ||
-    item.type == PlaylistItemType.Video
+    item.type === PlaylistItemType.Audio ||
+    item.type === PlaylistItemType.Video
   ) {
-    let sb = item.startTime ?? "";
+    let duration = item.startTime ?? "";
 
     if (item.endTime) {
-      sb += ` ~ ${item.endTime}`;
+      duration += ` ~ ${item.endTime}`;
     }
 
-    return sb;
+    return duration;
   }
+
+  return "";
 };
 
-export default SortableElement(({ item, resource, onRemove }) => {
-  let displayFilename = item.file;
+export default SortableElement<SortablePlaylistItemProps>(
+  ({ item, resource, onRemove }: SortablePlaylistItemProps) => {
+    const { t } = useTranslation();
+    const renderName = useCallback((): ReactNode => {
+      switch (item.type as PlaylistItemType) {
+        case PlaylistItemType.Resource:
+          return (
+            <Button size={"sm"} variant={"light"}>
+              {resource?.displayName ?? t("Unknown Resource")}
+            </Button>
+          );
+        case PlaylistItemType.Video:
+        case PlaylistItemType.Image:
+        case PlaylistItemType.Audio:
+          return item.file;
+      }
+    }, [item.file, resource]);
 
-  if (resource && displayFilename) {
-    if (resource.isSingleFile) {
-      displayFilename = item.file
-        ?.replace(resource?.path, "")
-        .trim("/")
-        .trim("\\");
-    } else {
-      const segments = item.file?.replaceAll("\\", "/").split("/");
+    const handleOpenFile = useCallback(() => {
+      if (resource) {
+        BApi.tool.openFileOrDirectory({
+          path: item.file ?? resource.path,
+          openInDirectory: item.file ? true : resource.isFile,
+        });
+      }
+    }, [item.file, resource]);
 
-      console.log(segments);
-      displayFilename = segments[segments.length - 1];
-    }
-  }
-  // console.log(resource, displayFilename);
+    const handleRemove = useCallback(() => {
+      onRemove(item);
+    }, [item, onRemove]);
 
-  return (
-    <div className={"sortable-playlist-item"}>
-      <div className="resource-name">
+    const displayFilename = getDisplayFilename();
+
+    return (
+      <div className="flex items-center gap-1">
         <DragHandle />
-        <div className="type">
+        <div className="flex items-center text-gray-400">
           {React.createElement(ItemTypeIcon[item.type], { size: "small" })}
         </div>
-        <div className="name">
+        <div className="flex items-center">
           <Button
-            text
-            type={"primary"}
-            onClick={() => {
-              if (resource) {
-                BApi.tool.openFileOrDirectory({
-                  path: item.file ?? resource.rawFullname,
-                  openInDirectory: item.file ? true : resource.isSingleFile,
-                });
-              }
-            }}
+            color={"primary"}
+            disabled={!resource}
+            variant={"light"}
+            onPress={handleOpenFile}
           >
-            {resource?.displayName}
+            {resource?.displayName || "Unknown Resource"}
+          </Button>
+        </div>
+        {renderName()}
+        <div className="flex items-center text-sm text-gray-500">
+          {renderDuration(item)}
+        </div>
+        <div className="flex items-center">
+          <Button
+            isIconOnly
+            color={"danger"}
+            size={"sm"}
+            variant={"light"}
+            onPress={handleRemove}
+          >
+            <AiOutlineDelete className={"text-lg"} />
           </Button>
         </div>
       </div>
-      <div className="file">{displayFilename}</div>
-
-      <div className="duration">{renderDuration(item)}</div>
-      <div className="opt">
-        <Button
-          isIconOnly
-          color={"danger"}
-          size={"sm"}
-          variant={"light"}
-          onPress={() => {
-            onRemove(item);
-          }}
-        >
-          <MdDelete className={"text-base"} />
-        </Button>
-      </div>
-    </div>
-  );
-});
+    );
+  },
+);

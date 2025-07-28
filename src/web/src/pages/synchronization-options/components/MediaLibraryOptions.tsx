@@ -21,8 +21,7 @@ type Props = {
   onChange?: (options: Options) => any;
   options?: Options;
 };
-
-export default ({ mediaLibrary, onChange, options }: Props) => {
+const MediaLibraryOptions = ({ mediaLibrary, onChange, options }: Props) => {
   const { t } = useTranslation();
 
   const patchOptions = (patches: Partial<Options>) => {
@@ -67,3 +66,7 @@ export default ({ mediaLibrary, onChange, options }: Props) => {
     </OptionsCard>
   );
 };
+
+MediaLibraryOptions.displayName = "MediaLibraryOptions";
+
+export default MediaLibraryOptions;

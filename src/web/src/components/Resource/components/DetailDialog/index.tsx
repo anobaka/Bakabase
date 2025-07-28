@@ -51,14 +51,13 @@ import PropertyValueScopePicker from "@/components/Resource/components/DetailDia
 import PlayableFiles from "@/components/Resource/components/PlayableFiles";
 import CategoryPropertySortModal from "@/components/Resource/components/DetailDialog/CategoryPropertySortModal";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
-import { useUiOptionsStore } from "@/models/options";
+import { useUiOptionsStore } from "@/stores/options";
 
 interface Props extends DestroyableProps {
   id: number;
   onRemoved?: () => void;
 }
-
-export default ({ id, onRemoved, ...props }: Props) => {
+const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [resource, setResource] = useState<ResourceModel>();
@@ -393,3 +392,7 @@ export default ({ id, onRemoved, ...props }: Props) => {
     </Modal>
   );
 };
+
+DetailDialog.displayName = "DetailDialog";
+
+export default DetailDialog;

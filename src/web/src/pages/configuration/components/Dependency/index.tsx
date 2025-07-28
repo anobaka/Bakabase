@@ -1,15 +1,16 @@
 "use client";
 
 import type { InputProps, SnippetProps } from "@heroui/react";
+import type { PathAutocompleteProps } from "@/components/PathAutocomplete";
 
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 
 import Component from "./components/Component";
 
-import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
-import { useThirdPartyOptionsStore, useAiOptionsStore } from "@/models/options";
+import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
+import { useThirdPartyOptionsStore, useAiOptionsStore } from "@/stores/options";
 import {
   Input,
   Popover,
@@ -23,8 +24,8 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { EditableValue } from "@/components/EditableValue";
-
-export default () => {
+import PathAutocomplete from "@/components/PathAutocomplete";
+const Dependency = () => {
   const { t } = useTranslation();
   const componentContexts = useDependentComponentContextsStore(
     (state) => state.contexts,
@@ -94,14 +95,21 @@ export default () => {
               key={componentContexts.length}
               className={"hover:bg-[var(--bakaui-overlap-background)]"}
             >
-              <TableCell>{t<string>("curl")}</TableCell>
+              <TableCell>{t<string>("curl executable")}</TableCell>
               <TableCell>
                 <EditableValue<
                   string,
-                  InputProps,
+                  PathAutocompleteProps,
                   SnippetProps & { value: string }
                 >
-                  Editor={Input}
+                  Editor={({ onValueChange, value, ...props }) => (
+                    <PathAutocomplete
+                      {...props}
+                      pathType={"file"}
+                      value={value as string}
+                      onChange={onValueChange}
+                    />
+                  )}
                   Viewer={({ value, ...props }) =>
                     value ? (
                       <Snippet symbol={<>&nbsp;</>} {...props} size={"sm"}>
@@ -209,3 +217,7 @@ export default () => {
     </div>
   );
 };
+
+Dependency.displayName = "Dependency";
+
+export default Dependency;

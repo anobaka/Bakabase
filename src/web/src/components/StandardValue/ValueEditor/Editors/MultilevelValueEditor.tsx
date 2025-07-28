@@ -37,8 +37,9 @@ const buildDefaultSelectable: <V>() => Selectable<V> = () => {
 };
 
 const log = buildLogger("MultilevelValueEditor");
-
-export default <V = string,>(props: MultilevelValueEditorProps<V>) => {
+const MultilevelValueEditor = <V = string,>(
+  props: MultilevelValueEditorProps<V>,
+) => {
   const { t } = useTranslation();
 
   const {
@@ -195,3 +196,7 @@ export default <V = string,>(props: MultilevelValueEditorProps<V>) => {
     </Modal>
   );
 };
+
+MultilevelValueEditor.displayName = "MultilevelValueEditor";
+
+export default MultilevelValueEditor;

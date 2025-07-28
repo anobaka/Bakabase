@@ -21,8 +21,7 @@ type Props = {
 
   fields?: Field[];
 };
-
-export default ({ property, fields }: Props) => {
+const BriefProperty = ({ property, fields }: Props) => {
   const { t } = useTranslation();
 
   fields ??= ["pool", "type", "name"];
@@ -48,3 +47,7 @@ export default ({ property, fields }: Props) => {
     </div>
   );
 };
+
+BriefProperty.displayName = "BriefProperty";
+
+export default BriefProperty;

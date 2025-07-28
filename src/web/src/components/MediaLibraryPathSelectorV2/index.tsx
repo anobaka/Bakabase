@@ -14,7 +14,7 @@ import DeprecatedChip from "../Chips/DeprecatedChip";
 
 import { buildLogger, standardizePath } from "@/components/utils";
 import BApi from "@/sdk/BApi";
-import { useFileSystemOptionsStore } from "@/models/options";
+import { useFileSystemOptionsStore } from "@/stores/options";
 import { MediaLibraryAdditionalItem } from "@/sdk/constants";
 import { Button, Chip, Divider, Input, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -41,8 +41,7 @@ type Category = {
 };
 
 const log = buildLogger("MediaLibraryPathSelectorV2");
-
-export default (props: Props) => {
+const MediaLibraryPathSelectorV2 = (props: Props) => {
   const { t } = useTranslation();
   const { onSelect, confirmation } = props;
   const { createPortal } = useBakabaseContext();
@@ -274,3 +273,7 @@ export default (props: Props) => {
     </Modal>
   );
 };
+
+MediaLibraryPathSelectorV2.displayName = "MediaLibraryPathSelectorV2";
+
+export default MediaLibraryPathSelectorV2;

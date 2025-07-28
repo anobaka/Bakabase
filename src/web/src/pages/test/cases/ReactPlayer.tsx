@@ -1,10 +1,7 @@
 "use client";
 
 // http://localhost:5000/file/play?fullname=Z%3A%5CAnime%5CAdded%20recently%5CArcane%20S01%5CS01E01%20-%20Welcome%20to%20the%20Playground.mkv
-
-import ReactPlayer from "react-player";
-
-export default () => {
+const ReactPlayerCasePage = () => {
   return (
     <ReactPlayer
       autoPlay
@@ -32,3 +29,9 @@ export default () => {
     />
   );
 };
+
+ReactPlayerCasePage.displayName = "ReactPlayerCasePage";
+
+import ReactPlayer from "react-player";
+
+export default ReactPlayerCasePage;

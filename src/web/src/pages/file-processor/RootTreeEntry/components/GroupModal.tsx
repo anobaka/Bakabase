@@ -18,8 +18,7 @@ type Props = {
 } & DestroyableProps;
 
 type Group = { directoryName: string; filenames: string[] };
-
-export default ({ entries = [], groupInternal, onDestroyed }: Props) => {
+const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   const [preview, setPreview] =
@@ -125,3 +124,7 @@ export default ({ entries = [], groupInternal, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+GroupModal.displayName = "GroupModal";
+
+export default GroupModal;

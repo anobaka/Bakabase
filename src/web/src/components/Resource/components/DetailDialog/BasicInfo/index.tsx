@@ -28,8 +28,7 @@ const dateTimes = [
     label: "Resource Update Date",
   },
 ];
-
-export default ({ resource }: Props) => {
+const BasicInfo = ({ resource }: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -53,3 +52,7 @@ export default ({ resource }: Props) => {
     </div>
   );
 };
+
+BasicInfo.displayName = "BasicInfo";
+
+export default BasicInfo;

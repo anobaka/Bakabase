@@ -518,4 +518,115 @@
   <data name="Enhancer_ExHentai_Target_Rating_Description" xml:space="preserve">
     <value>0~5</value>
   </data>
+  <data name="Enhancer_Tmdb_Name" xml:space="preserve">
+    <value>TMDB</value>
+  </data>
+  <data name="Enhancer_Tmdb_Description" xml:space="preserve">
+    <value>Fetch movie and TV show metadata from The Movie Database (TMDB). This enhancer searches for movies by filename and downloads poster/backdrop images along with detailed information.</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Title_Name" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_OriginalTitle_Name" xml:space="preserve">
+    <value>Original Title</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Overview_Name" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Rating_Name" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_VoteCount_Name" xml:space="preserve">
+    <value>Vote Count</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>Release Date</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Runtime_Name" xml:space="preserve">
+    <value>Runtime</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Genres_Name" xml:space="preserve">
+    <value>Genres</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_ProductionCountries_Name" xml:space="preserve">
+    <value>Production Countries</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_SpokenLanguages_Name" xml:space="preserve">
+    <value>Spoken Languages</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Status_Name" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Tagline_Name" xml:space="preserve">
+    <value>Tagline</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Budget_Name" xml:space="preserve">
+    <value>Budget</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Revenue_Name" xml:space="preserve">
+    <value>Revenue</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Cover_Name" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Backdrop_Name" xml:space="preserve">
+    <value>Backdrop</value>
+  </data>
+  <data name="Enhancer_Av_Name" xml:space="preserve">
+    <value>AV</value>
+  </data>
+  <data name="Enhancer_Av_Description" xml:space="preserve">
+    <value>Fetch adult video metadata from multiple sources. Searches by video number and downloads cover/poster images along with details.</value>
+  </data>
+  <data name="Enhancer_Av_Target_Number_Name" xml:space="preserve">
+    <value>Number</value>
+  </data>
+  <data name="Enhancer_Av_Target_Title_Name" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Enhancer_Av_Target_OriginalTitle_Name" xml:space="preserve">
+    <value>Original Title</value>
+  </data>
+  <data name="Enhancer_Av_Target_Actor_Name" xml:space="preserve">
+    <value>Actor(s)</value>
+  </data>
+  <data name="Enhancer_Av_Target_Tags_Name" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Enhancer_Av_Target_Release_Name" xml:space="preserve">
+    <value>Release Date</value>
+  </data>
+  <data name="Enhancer_Av_Target_Year_Name" xml:space="preserve">
+    <value>Year</value>
+  </data>
+  <data name="Enhancer_Av_Target_Studio_Name" xml:space="preserve">
+    <value>Studio</value>
+  </data>
+  <data name="Enhancer_Av_Target_Publisher_Name" xml:space="preserve">
+    <value>Publisher(s)</value>
+  </data>
+  <data name="Enhancer_Av_Target_Series_Name" xml:space="preserve">
+    <value>Series</value>
+  </data>
+  <data name="Enhancer_Av_Target_Runtime_Name" xml:space="preserve">
+    <value>Runtime</value>
+  </data>
+  <data name="Enhancer_Av_Target_Director_Name" xml:space="preserve">
+    <value>Director(s)</value>
+  </data>
+  <data name="Enhancer_Av_Target_Source_Name" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Enhancer_Av_Target_Cover_Name" xml:space="preserve">
+    <value>Cover</value>
+  </data>
+  <data name="Enhancer_Av_Target_Poster_Name" xml:space="preserve">
+    <value>Poster</value>
+  </data>
+  <data name="Enhancer_Av_Target_Website_Name" xml:space="preserve">
+    <value>Website</value>
+  </data>
+  <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
+    <value>Mosaic</value>
+  </data>
 </root>

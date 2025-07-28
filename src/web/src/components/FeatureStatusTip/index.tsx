@@ -14,8 +14,7 @@ type Props = {
   className?: string;
   url?: string;
 };
-
-export default ({ name, status, className, url }: Props) => {
+const FeatureStatusTip = ({ name, status, className, url }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -96,3 +95,7 @@ export default ({ name, status, className, url }: Props) => {
     </div>
   );
 };
+
+FeatureStatusTip.displayName = "FeatureStatusTip";
+
+export default FeatureStatusTip;

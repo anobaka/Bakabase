@@ -8,13 +8,12 @@ import { useTranslation } from "react-i18next";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 import {
-  ApiOutlined,
   AppstoreOutlined,
   DeleteOutlined,
-  DisconnectOutlined,
   FilterOutlined,
 } from "@ant-design/icons";
 import { TbFilterPlus } from "react-icons/tb";
+import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
 
 import { GroupCombinator } from "../models";
 
@@ -23,7 +22,7 @@ import Filter from "./Filter";
 
 import { Button, Popover, Tooltip } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
+import RecentFilters from "@/pages/resource/components/FilterPanel/RecentFilters";
 
 type Props = {
   group: ResourceSearchFilterGroup;
@@ -47,7 +46,7 @@ const FilterGroup = ({
     React.useState<ResourceSearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
 
-  useEffect(() => { }, []);
+  useEffect(() => {}, []);
 
   const changeGroup = useCallback(
     (newGroup: ResourceSearchFilterGroup) => {
@@ -154,7 +153,7 @@ const FilterGroup = ({
           </div>
         )}
         {allElements}
-        {!(isRoot && (!group) && (!filters || filters.length == 0)) && (
+        {!(isRoot && !group && (!filters || filters.length == 0)) && (
           <Popover
             showArrow
             placement={"bottom"}
@@ -165,40 +164,53 @@ const FilterGroup = ({
               </Button>
             }
           >
-            <div className={"flex items-center gap-2"}>
-              <Button
-                size={"sm"}
-                onPress={() => {
-                  changeGroup({
-                    ...groupRef.current,
-                    filters: [
-                      ...(groupRef.current.filters || []),
-                      { disabled: false },
-                    ],
-                  });
-                }}
-              >
-                <FilterOutlined className={"text-base"} />
-                {t<string>("Filter")}
-              </Button>
-              <Button
-                size={"sm"}
-                onPress={() => {
-                  changeGroup({
-                    ...groupRef.current,
-                    groups: [
-                      ...(groupRef.current.groups || []),
-                      {
-                        combinator: GroupCombinator.And,
-                        disabled: false,
-                      },
-                    ],
-                  });
-                }}
-              >
-                <AppstoreOutlined className={"text-base"} />
-                {t<string>("Filter group")}
-              </Button>
+            <div className={"flex flex-col gap-2"}>
+              <div className={"flex items-center gap-2"}>
+                <Button
+                  size={"sm"}
+                  onPress={() => {
+                    changeGroup({
+                      ...groupRef.current,
+                      filters: [
+                        ...(groupRef.current.filters || []),
+                        { disabled: false },
+                      ],
+                    });
+                  }}
+                >
+                  <FilterOutlined className={"text-base"} />
+                  {t<string>("Filter")}
+                </Button>
+                <Button
+                  size={"sm"}
+                  onPress={() => {
+                    changeGroup({
+                      ...groupRef.current,
+                      groups: [
+                        ...(groupRef.current.groups || []),
+                        {
+                          combinator: GroupCombinator.And,
+                          disabled: false,
+                        },
+                      ],
+                    });
+                  }}
+                >
+                  <AppstoreOutlined className={"text-base"} />
+                  {t<string>("Filter group")}
+                </Button>
+              </div>
+              <div className={"flex flex-col gap-1"}>
+                <div>{t("Recent filters")}</div>
+                <RecentFilters
+                  onSelectFilter={(filter) => {
+                    changeGroup({
+                      ...groupRef.current,
+                      filters: [...(groupRef.current.filters || []), filter],
+                    });
+                  }}
+                />
+              </div>
             </div>
           </Popover>
         )}

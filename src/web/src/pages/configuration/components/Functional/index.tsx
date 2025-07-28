@@ -1,9 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -11,26 +9,15 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
-  Input,
   Radio,
   RadioGroup,
 } from "@heroui/react";
 import { AiOutlineQuestionCircle } from "react-icons/ai";
 
-import { toast } from "@/components/bakaui";
-import {
-  CloseBehavior,
-  CookieValidatorTarget,
-  startupPages,
-} from "@/sdk/constants";
-import {
-  useAppOptionsStore,
-  useExHentaiOptionsStore,
-  useUiOptionsStore,
-} from "@/models/options";
+import { CloseBehavior, startupPages } from "@/sdk/constants";
+import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
-
-export default ({
+const Functional = ({
   applyPatches = () => {},
 }: {
   applyPatches: (API: any, patches: any) => void;
@@ -38,118 +25,9 @@ export default ({
   const { t } = useTranslation();
 
   const appOptions = useAppOptionsStore((state) => state.data);
-  const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
-  const [validatingExHentaiCookie, setValidatingExHentaiCookie] =
-    useState(false);
   const uiOptions = useUiOptionsStore((state) => state.data);
 
-  const [tmpExHentaiOptions, setTmpExHentaiOptions] = useState(
-    exhentaiOptions || {},
-  );
-
-  useEffect(() => {
-    setTmpExHentaiOptions(JSON.parse(JSON.stringify(exhentaiOptions || {})));
-  }, [exhentaiOptions]);
-
   const functionSettings = [
-    {
-      label: "ExHentai",
-      tip:
-        "Cookie is required for this feature. The format of excluded tags is something like 'language:chinese', " +
-        "and you can use * to replace namespace or tag, 'language:*' for example.",
-      renderCell: () => {
-        return (
-          <div className={"exhentai-options"}>
-            <div>
-              <Input
-                label={"Cookie"}
-                size={"sm"}
-                value={tmpExHentaiOptions.cookie}
-                onValueChange={(v) => {
-                  setTmpExHentaiOptions({
-                    ...tmpExHentaiOptions,
-                    cookie: v,
-                  });
-                }}
-              />
-            </div>
-            {/*<div>*/}
-            {/*  <Select*/}
-            {/*    dataSource={tmpExHentaiOptions?.enhancer?.excludedTags?.map(*/}
-            {/*      (e) => ({ label: e, value: e }),*/}
-            {/*    )}*/}
-            {/*    label={*/}
-            {/*      <Tooltip*/}
-            {/*        content={t<string>(*/}
-            {/*          "You can filter some namespaces and tags such as 'language:*' for ignoring all tags in language namespace",*/}
-            {/*        )}*/}
-            {/*      >*/}
-            {/*        {t<string>("Excluded tags")}*/}
-            {/*      </Tooltip>*/}
-            {/*    }*/}
-            {/*    selectionMode={"multiple"}*/}
-            {/*    size={"sm"}*/}
-            {/*    style={{ width: "100%" }}*/}
-            {/*    value={tmpExHentaiOptions?.enhancer?.excludedTags}*/}
-            {/*    onSelectionChange={(v) => {*/}
-            {/*      setTmpExHentaiOptions({*/}
-            {/*        ...tmpExHentaiOptions,*/}
-            {/*        enhancer: {*/}
-            {/*          ...(tmpExHentaiOptions?.enhancer || {}),*/}
-            {/*          excludedTags: v,*/}
-            {/*        },*/}
-            {/*      });*/}
-            {/*    }}*/}
-            {/*  />*/}
-            {/*</div>*/}
-            <div className={"operations"}>
-              <Button
-                color={"primary"}
-                size={"sm"}
-                onPress={() => {
-                  applyPatches(
-                    BApi.options.patchExHentaiOptions,
-                    tmpExHentaiOptions,
-                  );
-                }}
-              >
-                {t<string>("Save")}
-              </Button>
-              <Button
-                disabled={
-                  !(tmpExHentaiOptions?.cookie?.length > 0) ||
-                  validatingExHentaiCookie
-                }
-                isLoading={validatingExHentaiCookie}
-                size={"sm"}
-                onPress={() => {
-                  setValidatingExHentaiCookie(true);
-                  BApi.tool
-                    .validateCookie({
-                      cookie: tmpExHentaiOptions.cookie,
-                      target: CookieValidatorTarget.ExHentai,
-                    })
-                    .then((r) => {
-                      if (r.code) {
-                        toast.danger(
-                          `${t<string>("Invalid cookie")}:${r.message}`,
-                        );
-                      } else {
-                        toast.success(t<string>("Cookie is good"));
-                      }
-                    })
-                    .finally(() => {
-                      setValidatingExHentaiCookie(false);
-                    });
-                }}
-              >
-                {t<string>("Validate cookie")}
-              </Button>
-            </div>
-          </div>
-        );
-      },
-    },
     {
       label: "Startup page",
       renderCell: () => {
@@ -250,3 +128,7 @@ export default ({
     </div>
   );
 };
+
+Functional.displayName = "Functional";
+
+export default Functional;

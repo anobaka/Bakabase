@@ -10,8 +10,7 @@ import { PropertyPool } from "@/sdk/constants";
 type Props = {
   pool?: PropertyPool;
 };
-
-export default ({ pool }: Props) => {
+const PropertyPoolIcon = ({ pool }: Props) => {
   const { t } = useTranslation();
 
   let color: ChipProps["color"] = "default";
@@ -46,3 +45,7 @@ export default ({ pool }: Props) => {
     </Tooltip>
   );
 };
+
+PropertyPoolIcon.displayName = "PropertyPoolIcon";
+
+export default PropertyPoolIcon;

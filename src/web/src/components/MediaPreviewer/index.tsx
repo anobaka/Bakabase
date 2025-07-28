@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useUpdate, useUpdateEffect } from "react-use";
+import { useUpdateEffect } from "react-use";
 import { EyeInvisibleOutlined, LoadingOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { MdAccessTime } from "react-icons/md";
@@ -35,7 +35,7 @@ interface IProps {
 
 const MediaPreviewer = (props: IProps) => {
   const { t } = useTranslation();
-  const forceUpdate = useUpdate();
+
   const { resourceId } = props;
 
   const [items, setItems] = useState<IItem[]>([]);
@@ -52,13 +52,19 @@ const MediaPreviewer = (props: IProps) => {
   const autoPlayTimeoutRef = useRef<any>();
 
   const mediaRef = useRef<HTMLDivElement>(null);
-  const reactPlayerRef = useRef<ReactPlayer>(null);
+  const reactPlayerRef = useRef<HTMLVideoElement | null>(null);
   const videoInitializedRef = useRef(false);
 
   const isControlled = useCallback(
     () => mouseOffsetXRef.current != undefined,
     [],
   );
+
+  const setPlayerRef = useCallback((player: HTMLVideoElement) => {
+    if (!player) return;
+    reactPlayerRef.current = player;
+    console.log(player);
+  }, []);
 
   useUpdateEffect(() => {
     statusRef.current = status;
@@ -81,7 +87,7 @@ const MediaPreviewer = (props: IProps) => {
     // console.log('setting mouse offset', mouseOffsetX);
     mouseOffsetXRef.current = mouseOffsetX;
     if (mouseOffsetX != undefined) {
-      const percent = progressBarRef.current
+      const percent = progressBarRef.current?.clientWidth
         ? (mouseOffsetX * 100) / progressBarRef.current.clientWidth
         : 0;
       const totalFrameCount = items.reduce(
@@ -108,12 +114,11 @@ const MediaPreviewer = (props: IProps) => {
 
           for (const d of rsp.data) {
             const item: IItem = {
-              duration: d.duration!,
-              filePath: d.filePath!,
-              // @ts-ignore
-              type: d.type!,
+              duration: d.duration,
+              filePath: d.filePath,
+              type: d.type,
               startFrame: prevFrame,
-              endFrame: prevFrame + d.duration! - 1,
+              endFrame: prevFrame + d.duration - 1,
             };
 
             newItems.push(item);
@@ -147,10 +152,7 @@ const MediaPreviewer = (props: IProps) => {
           // console.log(reactPlayerRef.current, currentFrame - item.startFrame);
           if (reactPlayerRef.current) {
             console.log("seeking video", reactPlayerRef.current);
-            reactPlayerRef.current.seekTo(
-              currentFrame - item.startFrame,
-              "seconds",
-            );
+            reactPlayerRef.current.currentTime = currentFrame - item.startFrame;
           }
         } else {
           setCurrentItem(item);
@@ -189,7 +191,7 @@ const MediaPreviewer = (props: IProps) => {
           return (
             <img
               src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
-              onLoad={(e) => {
+              onLoad={() => {
                 clearTimeout(autoPlayTimeoutRef.current);
                 if (
                   currentFrame < totalFrameCount &&
@@ -208,22 +210,25 @@ const MediaPreviewer = (props: IProps) => {
 
           return (
             <ReactPlayer
-              ref={reactPlayerRef}
+              ref={setPlayerRef}
               muted
-              config={{
-                file: {
-                  attributes: {
-                    crossOrigin: "anonymous",
-                  },
-                },
-              }}
               controls={false}
               height={mediaRef.current?.clientHeight}
               playing={playing}
-              url={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
+              src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(currentItem.filePath)}`}
               width={mediaRef.current?.clientWidth}
-              onDuration={(e) => {
-                // console.log('duration', e);
+              onCanPlay={() => {
+                if (!videoInitializedRef.current && reactPlayerRef.current) {
+                  if (isControlled()) {
+                    const seekTo = currentFrame - currentItem.startFrame;
+
+                    if (seekTo > 0) {
+                      // console.log(`Auto seek video to ${currentFrame - currentItem.startFrame}s`);
+                      reactPlayerRef.current.currentTime = seekTo;
+                    }
+                  }
+                  videoInitializedRef.current = true;
+                }
               }}
               onEnded={() => {
                 // console.log('Video ended');
@@ -239,28 +244,18 @@ const MediaPreviewer = (props: IProps) => {
                   }
                 }
               }}
-              onProgress={(e) => {
-                // console.log('On progress', e);
-                if (!isControlled()) {
-                  const frame = Math.ceil(e.playedSeconds);
+              onLoadedMetadata={() => {
+                // console.log('duration loaded');
+              }}
+              onTimeUpdate={() => {
+                // console.log('On progress');
+                if (!isControlled() && reactPlayerRef.current) {
+                  const frame = Math.ceil(reactPlayerRef.current.currentTime);
                   const nextFrame = frame + currentItem.startFrame - 1;
 
                   if (nextFrame != currentFrame) {
                     setCurrentFrame(nextFrame);
                   }
-                }
-              }}
-              onReady={(e) => {
-                if (!videoInitializedRef.current) {
-                  if (isControlled()) {
-                    const seekTo = currentFrame - currentItem.startFrame;
-
-                    if (seekTo > 0) {
-                      // console.log(`Auto seek video to ${currentFrame - currentItem.startFrame}s`);
-                      e.seekTo(seekTo, "seconds");
-                    }
-                  }
-                  videoInitializedRef.current = true;
                 }
               }}
             />
@@ -349,7 +344,7 @@ const MediaPreviewer = (props: IProps) => {
             <div
               ref={progressBarRef}
               className="progress-bar"
-              onMouseLeave={(e) => {
+              onMouseLeave={() => {
                 if (mouseOffsetXRef.current != undefined) {
                   // set by effect may cause mismatched status
                   mouseOffsetXRef.current = undefined;
@@ -358,8 +353,11 @@ const MediaPreviewer = (props: IProps) => {
                 resume();
               }}
               onMouseMove={(e) => {
-                const { left, width } =
-                  progressBarRef.current!.getBoundingClientRect()!;
+                if (!progressBarRef.current) {
+                  return;
+                }
+                const { left } =
+                  progressBarRef.current.getBoundingClientRect()!;
                 const offsetX = Math.ceil(e.clientX - left);
 
                 if (offsetX != mouseOffsetX) {

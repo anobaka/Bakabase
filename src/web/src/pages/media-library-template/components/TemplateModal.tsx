@@ -1,7 +1,7 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { MediaLibraryTemplate } from "@/pages/media-library-template/models";
+import type { MediaLibraryTemplatePage } from "@/pages/media-library-template/models";
 
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
@@ -15,13 +15,12 @@ import BApi from "@/sdk/BApi";
 type Props = {
   id: number;
 } & DestroyableProps;
-
-export default ({ id, onDestroyed }: Props) => {
+const TemplateModal = ({ id, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const [template, setTemplate] = useState<MediaLibraryTemplate>();
+  const [template, setTemplate] = useState<MediaLibraryTemplatePage>();
 
   useEffect(() => {
     BApi.mediaLibraryTemplate.getMediaLibraryTemplate(id).then((r) => {
@@ -56,3 +55,7 @@ export default ({ id, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+TemplateModal.displayName = "TemplateModal";
+
+export default TemplateModal;

@@ -6,8 +6,7 @@ type Props = {
   header: React.ReactNode;
   children?: React.ReactNode;
 };
-
-export default ({ header, children }: Props) => {
+const OptionsCard = ({ header, children }: Props) => {
   return (
     <Card>
       <CardHeader>
@@ -24,3 +23,7 @@ export default ({ header, children }: Props) => {
     </Card>
   );
 };
+
+OptionsCard.displayName = "OptionsCard";
+
+export default OptionsCard;

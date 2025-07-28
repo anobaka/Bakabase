@@ -16,8 +16,7 @@ type Props = ButtonProps &
   DestroyableProps & {
     fileSystemSelectorProps: FileSystemSelectorProps;
   };
-
-export default ({
+const FileSystemSelectorButton = ({
   fileSystemSelectorProps,
   children,
   ...buttonProps
@@ -46,9 +45,9 @@ export default ({
 
   return (
     <Button
-      color='primary'
+      color="primary"
+      size="sm"
       variant="light"
-      size='sm'
       {...buttonProps}
       onPress={() => {
         createPortal(FileSystemSelectorModal, {
@@ -66,3 +65,7 @@ export default ({
     </Button>
   );
 };
+
+FileSystemSelectorButton.displayName = "FileSystemSelectorButton";
+
+export default FileSystemSelectorButton;

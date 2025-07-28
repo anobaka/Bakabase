@@ -1,0 +1,612 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  
+  <!-- DownloaderSource Names -->
+  <data name="DownloaderSource.Bilibili" xml:space="preserve">
+    <value>哔哩哔哩</value>
+    <comment>中国视频分享平台</comment>
+  </data>
+  <data name="DownloaderSource.ExHentai" xml:space="preserve">
+    <value>ExHentai</value>
+    <comment>成人内容平台</comment>
+  </data>
+  <data name="DownloaderSource.Pixiv" xml:space="preserve">
+    <value>Pixiv</value>
+    <comment>日本插画社区</comment>
+  </data>
+  <data name="DownloaderSource.Fanbox" xml:space="preserve">
+    <value>Fanbox</value>
+    <comment>Pixiv的创作者支持平台</comment>
+  </data>
+  <data name="DownloaderSource.Fantia" xml:space="preserve">
+    <value>Fantia</value>
+    <comment>日本创作者支持平台</comment>
+  </data>
+  <data name="DownloaderSource.Cien" xml:space="preserve">
+    <value>Ci-en</value>
+    <comment>DLsite旗下的日本创作者平台</comment>
+  </data>
+  <data name="DownloaderSource.Patreon" xml:space="preserve">
+    <value>Patreon</value>
+    <comment>国际创作者支持平台</comment>
+  </data>
+
+  <!-- Pixiv Task Types -->
+  <data name="PixivDownloadTaskType.Search" xml:space="preserve">
+    <value>搜索</value>
+    <comment>从搜索结果下载插画</comment>
+  </data>
+  <data name="PixivDownloadTaskType.Ranking" xml:space="preserve">
+    <value>排行榜</value>
+    <comment>从每日排行榜下载插画</comment>
+  </data>
+  <data name="PixivDownloadTaskType.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注画师的最新插画</comment>
+  </data>
+
+  <!-- Bilibili Task Types -->
+  <data name="BilibiliDownloadTaskType.Favorites" xml:space="preserve">
+    <value>收藏夹</value>
+    <comment>从用户收藏夹下载视频</comment>
+  </data>
+
+  <!-- ExHentai Task Types -->
+  <data name="ExHentaiDownloadTaskType.SingleWork" xml:space="preserve">
+    <value>单个作品</value>
+    <comment>下载单个画廊/作品</comment>
+  </data>
+  <data name="ExHentaiDownloadTaskType.Watched" xml:space="preserve">
+    <value>关注列表</value>
+    <comment>从关注列表下载画廊</comment>
+  </data>
+  <data name="ExHentaiDownloadTaskType.List" xml:space="preserve">
+    <value>列表</value>
+    <comment>从搜索结果或列表下载画廊</comment>
+  </data>
+  <data name="ExHentaiDownloadTaskType.Torrent" xml:space="preserve">
+    <value>种子</value>
+    <comment>通过种子文件下载</comment>
+  </data>
+
+  <!-- Fanbox Task Types -->
+  <data name="FanboxDownloadTaskType.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="FanboxDownloadTaskType.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="FanboxDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+
+  <!-- Fantia Task Types -->
+  <data name="FantiaDownloadTaskType.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="FantiaDownloadTaskType.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="FantiaDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+
+  <!-- Cien Task Types -->
+  <data name="CienDownloadTaskType.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="CienDownloadTaskType.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="CienDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+
+  <!-- Patreon Task Types -->
+  <data name="PatreonDownloadTaskType.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="PatreonDownloadTaskType.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="PatreonDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+
+  <!-- Pixiv Naming Fields -->
+  <data name="PixivNamingFields.IllustrationId" xml:space="preserve">
+    <value>插画ID</value>
+    <comment>插画的ID</comment>
+  </data>
+  <data name="PixivNamingFields.IllustrationTitle" xml:space="preserve">
+    <value>插画标题</value>
+    <comment>插画的标题</comment>
+  </data>
+  <data name="PixivNamingFields.UploadDate" xml:space="preserve">
+    <value>上传日期</value>
+    <comment>插画的上传日期</comment>
+  </data>
+  <data name="PixivNamingFields.Tags" xml:space="preserve">
+    <value>标签</value>
+    <comment>插画的标签</comment>
+  </data>
+  <data name="PixivNamingFields.UserId" xml:space="preserve">
+    <value>用户ID</value>
+    <comment>用户(上传者)的ID</comment>
+  </data>
+  <data name="PixivNamingFields.UserName" xml:space="preserve">
+    <value>用户名</value>
+    <comment>用户(上传者)的名称</comment>
+  </data>
+  <data name="PixivNamingFields.PageNo" xml:space="preserve">
+    <value>页码</value>
+    <comment>页面编号，从0开始</comment>
+  </data>
+  <data name="PixivNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>文件扩展名，带前导点</comment>
+  </data>
+
+  <!-- Bilibili Naming Fields -->
+  <data name="BilibiliNamingFields.UploaderId" xml:space="preserve">
+    <value>UP主ID</value>
+    <comment>上传者的ID</comment>
+  </data>
+  <data name="BilibiliNamingFields.UploaderName" xml:space="preserve">
+    <value>UP主名称</value>
+    <comment>上传者的名称</comment>
+  </data>
+  <data name="BilibiliNamingFields.AId" xml:space="preserve">
+    <value>AV号</value>
+    <comment>投稿的数字ID</comment>
+  </data>
+  <data name="BilibiliNamingFields.BvId" xml:space="preserve">
+    <value>BV号</value>
+    <comment>投稿的字符串ID</comment>
+  </data>
+  <data name="BilibiliNamingFields.PostTitle" xml:space="preserve">
+    <value>投稿标题</value>
+    <comment>投稿的标题</comment>
+  </data>
+  <data name="BilibiliNamingFields.CId" xml:space="preserve">
+    <value>分P ID</value>
+    <comment>投稿分P的ID</comment>
+  </data>
+  <data name="BilibiliNamingFields.PartNo" xml:space="preserve">
+    <value>分P编号</value>
+    <comment>投稿分P编号，从1开始</comment>
+  </data>
+  <data name="BilibiliNamingFields.PartName" xml:space="preserve">
+    <value>分P名称</value>
+    <comment>投稿分P的名称</comment>
+  </data>
+  <data name="BilibiliNamingFields.QualityName" xml:space="preserve">
+    <value>画质名称</value>
+    <comment>视频的画质名称</comment>
+  </data>
+  <data name="BilibiliNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>视频扩展名，带前导点</comment>
+  </data>
+
+  <!-- ExHentai Naming Fields -->
+  <data name="ExHentaiNamingFields.GalleryId" xml:space="preserve">
+    <value>画廊ID</value>
+    <comment>画廊的ID</comment>
+  </data>
+  <data name="ExHentaiNamingFields.GalleryToken" xml:space="preserve">
+    <value>画廊令牌</value>
+    <comment>画廊的令牌</comment>
+  </data>
+  <data name="ExHentaiNamingFields.RawName" xml:space="preserve">
+    <value>原始名称</value>
+    <comment>详情页显示的名称</comment>
+  </data>
+  <data name="ExHentaiNamingFields.Name" xml:space="preserve">
+    <value>名称</value>
+    <comment>直接显示的名称</comment>
+  </data>
+  <data name="ExHentaiNamingFields.Category" xml:space="preserve">
+    <value>分类</value>
+    <comment>画廊的分类</comment>
+  </data>
+  <data name="ExHentaiNamingFields.PageTitle" xml:space="preserve">
+    <value>页面标题</value>
+    <comment>当前页面标题，不含文件扩展名</comment>
+  </data>
+  <data name="ExHentaiNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>文件扩展名，带前导点</comment>
+  </data>
+
+  <!-- Fanbox Naming Fields -->
+  <data name="FanboxNamingFields.PostId" xml:space="preserve">
+    <value>投稿ID</value>
+    <comment>投稿的ID</comment>
+  </data>
+  <data name="FanboxNamingFields.PostTitle" xml:space="preserve">
+    <value>投稿标题</value>
+    <comment>投稿的标题</comment>
+  </data>
+  <data name="FanboxNamingFields.PublishDate" xml:space="preserve">
+    <value>发布日期</value>
+    <comment>投稿的发布日期</comment>
+  </data>
+  <data name="FanboxNamingFields.CreatorId" xml:space="preserve">
+    <value>创作者ID</value>
+    <comment>创作者的ID</comment>
+  </data>
+  <data name="FanboxNamingFields.CreatorName" xml:space="preserve">
+    <value>创作者名称</value>
+    <comment>创作者的名称</comment>
+  </data>
+  <data name="FanboxNamingFields.FileNo" xml:space="preserve">
+    <value>文件编号</value>
+    <comment>文件编号，从0开始</comment>
+  </data>
+  <data name="FanboxNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>文件扩展名，带前导点</comment>
+  </data>
+
+  <!-- Fantia Naming Fields -->
+  <data name="FantiaNamingFields.PostId" xml:space="preserve">
+    <value>投稿ID</value>
+    <comment>投稿的ID</comment>
+  </data>
+  <data name="FantiaNamingFields.PostTitle" xml:space="preserve">
+    <value>投稿标题</value>
+    <comment>投稿的标题</comment>
+  </data>
+  <data name="FantiaNamingFields.PublishDate" xml:space="preserve">
+    <value>发布日期</value>
+    <comment>投稿的发布日期</comment>
+  </data>
+  <data name="FantiaNamingFields.FanclubId" xml:space="preserve">
+    <value>粉丝俱乐部ID</value>
+    <comment>粉丝俱乐部的ID</comment>
+  </data>
+  <data name="FantiaNamingFields.FanclubName" xml:space="preserve">
+    <value>粉丝俱乐部名称</value>
+    <comment>粉丝俱乐部的名称</comment>
+  </data>
+  <data name="FantiaNamingFields.FileNo" xml:space="preserve">
+    <value>文件编号</value>
+    <comment>文件编号，从0开始</comment>
+  </data>
+  <data name="FantiaNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>文件扩展名，带前导点</comment>
+  </data>
+
+  <!-- Cien Naming Fields -->
+  <data name="CienNamingFields.ArticleId" xml:space="preserve">
+    <value>文章ID</value>
+    <comment>文章的ID</comment>
+  </data>
+  <data name="CienNamingFields.ArticleTitle" xml:space="preserve">
+    <value>文章标题</value>
+    <comment>文章的标题</comment>
+  </data>
+  <data name="CienNamingFields.PublishDate" xml:space="preserve">
+    <value>发布日期</value>
+    <comment>文章的发布日期</comment>
+  </data>
+  <data name="CienNamingFields.AuthorId" xml:space="preserve">
+    <value>作者ID</value>
+    <comment>作者的ID</comment>
+  </data>
+  <data name="CienNamingFields.AuthorName" xml:space="preserve">
+    <value>作者名称</value>
+    <comment>作者的名称</comment>
+  </data>
+  <data name="CienNamingFields.FileNo" xml:space="preserve">
+    <value>文件编号</value>
+    <comment>文件编号，从0开始</comment>
+  </data>
+  <data name="CienNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>文件扩展名，带前导点</comment>
+  </data>
+
+  <!-- Patreon Naming Fields -->
+  <data name="PatreonNamingFields.PostId" xml:space="preserve">
+    <value>投稿ID</value>
+    <comment>投稿的ID</comment>
+  </data>
+  <data name="PatreonNamingFields.PostTitle" xml:space="preserve">
+    <value>投稿标题</value>
+    <comment>投稿的标题</comment>
+  </data>
+  <data name="PatreonNamingFields.PublishDate" xml:space="preserve">
+    <value>发布日期</value>
+    <comment>投稿的发布日期</comment>
+  </data>
+  <data name="PatreonNamingFields.CreatorId" xml:space="preserve">
+    <value>创作者ID</value>
+    <comment>创作者的ID</comment>
+  </data>
+  <data name="PatreonNamingFields.CreatorName" xml:space="preserve">
+    <value>创作者名称</value>
+    <comment>创作者的名称</comment>
+  </data>
+  <data name="PatreonNamingFields.TierLevel" xml:space="preserve">
+    <value>赞助等级</value>
+    <comment>投稿的赞助等级</comment>
+  </data>
+  <data name="PatreonNamingFields.FileNo" xml:space="preserve">
+    <value>文件编号</value>
+    <comment>文件编号，从0开始</comment>
+  </data>
+  <data name="PatreonNamingFields.Extension" xml:space="preserve">
+    <value>扩展名</value>
+    <comment>文件扩展名，带前导点</comment>
+  </data>
+
+  <!-- Task Type Names by ThirdPartyId.TaskTypeName -->
+  <!-- Pixiv Task Types -->
+  <data name="Pixiv.Search" xml:space="preserve">
+    <value>搜索</value>
+    <comment>从搜索结果下载插画</comment>
+  </data>
+  <data name="Pixiv.Search.Description" xml:space="preserve">
+    <value>从Pixiv搜索结果下载插画</value>
+    <comment>Pixiv搜索任务类型的描述</comment>
+  </data>
+  <data name="Pixiv.Ranking" xml:space="preserve">
+    <value>排行榜</value>
+    <comment>从每日排行榜下载插画</comment>
+  </data>
+  <data name="Pixiv.Ranking.Description" xml:space="preserve">
+    <value>从Pixiv每日排行榜下载插画</value>
+    <comment>Pixiv排行榜任务类型的描述</comment>
+  </data>
+  <data name="Pixiv.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注画师的最新插画</comment>
+  </data>
+  <data name="Pixiv.Following.Description" xml:space="preserve">
+    <value>下载关注画师的最新插画</value>
+    <comment>Pixiv关注任务类型的描述</comment>
+  </data>
+
+  <!-- Bilibili Task Types -->
+  <data name="Bilibili.Favorites" xml:space="preserve">
+    <value>收藏夹</value>
+    <comment>从用户收藏夹下载视频</comment>
+  </data>
+  <data name="Bilibili.Favorites.Description" xml:space="preserve">
+    <value>从你的哔哩哔哩收藏夹下载视频</value>
+    <comment>哔哩哔哩收藏夹任务类型的描述</comment>
+  </data>
+
+  <!-- ExHentai Task Types -->
+  <data name="ExHentai.SingleWork" xml:space="preserve">
+    <value>单个作品</value>
+    <comment>下载单个画廊/作品</comment>
+  </data>
+  <data name="ExHentai.SingleWork.Description" xml:space="preserve">
+    <value>从ExHentai下载单个画廊或作品</value>
+    <comment>ExHentai单个作品任务类型的描述</comment>
+  </data>
+  <data name="ExHentai.Watched" xml:space="preserve">
+    <value>关注列表</value>
+    <comment>从关注列表下载画廊</comment>
+  </data>
+  <data name="ExHentai.Watched.Description" xml:space="preserve">
+    <value>从你的ExHentai关注列表下载画廊</value>
+    <comment>ExHentai关注列表任务类型的描述</comment>
+  </data>
+  <data name="ExHentai.List" xml:space="preserve">
+    <value>列表</value>
+    <comment>从搜索结果或列表下载画廊</comment>
+  </data>
+  <data name="ExHentai.List.Description" xml:space="preserve">
+    <value>从ExHentai搜索结果或列表下载画廊</value>
+    <comment>ExHentai列表任务类型的描述</comment>
+  </data>
+  <data name="ExHentai.Torrent" xml:space="preserve">
+    <value>种子</value>
+    <comment>通过种子文件下载</comment>
+  </data>
+  <data name="ExHentai.Torrent.Description" xml:space="preserve">
+    <value>通过种子文件下载ExHentai内容</value>
+    <comment>ExHentai种子任务类型的描述</comment>
+  </data>
+
+  <!-- Fanbox Task Types -->
+  <data name="Fanbox.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="Fanbox.Creator.Description" xml:space="preserve">
+    <value>下载指定Fanbox创作者的所有投稿</value>
+    <comment>Fanbox创作者任务类型的描述</comment>
+  </data>
+  <data name="Fanbox.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="Fanbox.Following.Description" xml:space="preserve">
+    <value>下载关注的Fanbox创作者的投稿</value>
+    <comment>Fanbox关注任务类型的描述</comment>
+  </data>
+  <data name="Fanbox.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+  <data name="Fanbox.SinglePost.Description" xml:space="preserve">
+    <value>通过ID下载指定的Fanbox投稿</value>
+    <comment>Fanbox单个投稿任务类型的描述</comment>
+  </data>
+
+  <!-- Fantia Task Types -->
+  <data name="Fantia.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="Fantia.Creator.Description" xml:space="preserve">
+    <value>下载指定Fantia创作者的所有投稿</value>
+    <comment>Fantia创作者任务类型的描述</comment>
+  </data>
+  <data name="Fantia.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="Fantia.Following.Description" xml:space="preserve">
+    <value>下载关注的Fantia创作者的投稿</value>
+    <comment>Fantia关注任务类型的描述</comment>
+  </data>
+  <data name="Fantia.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+  <data name="Fantia.SinglePost.Description" xml:space="preserve">
+    <value>通过ID下载指定的Fantia投稿</value>
+    <comment>Fantia单个投稿任务类型的描述</comment>
+  </data>
+
+  <!-- Cien Task Types -->
+  <data name="Cien.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="Cien.Creator.Description" xml:space="preserve">
+    <value>下载指定Ci-en创作者的所有投稿</value>
+    <comment>Cien创作者任务类型的描述</comment>
+  </data>
+  <data name="Cien.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="Cien.Following.Description" xml:space="preserve">
+    <value>下载关注的Ci-en创作者的投稿</value>
+    <comment>Cien关注任务类型的描述</comment>
+  </data>
+  <data name="Cien.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+  <data name="Cien.SinglePost.Description" xml:space="preserve">
+    <value>通过ID下载指定的Ci-en投稿</value>
+    <comment>Cien单个投稿任务类型的描述</comment>
+  </data>
+
+  <!-- Patreon Task Types -->
+  <data name="Patreon.Creator" xml:space="preserve">
+    <value>创作者</value>
+    <comment>下载指定创作者的所有投稿</comment>
+  </data>
+  <data name="Patreon.Creator.Description" xml:space="preserve">
+    <value>下载指定Patreon创作者的所有投稿</value>
+    <comment>Patreon创作者任务类型的描述</comment>
+  </data>
+  <data name="Patreon.Following" xml:space="preserve">
+    <value>关注</value>
+    <comment>下载关注创作者的投稿</comment>
+  </data>
+  <data name="Patreon.Following.Description" xml:space="preserve">
+    <value>下载关注的Patreon创作者的投稿</value>
+    <comment>Patreon关注任务类型的描述</comment>
+  </data>
+  <data name="Patreon.SinglePost" xml:space="preserve">
+    <value>单个投稿</value>
+    <comment>通过ID下载指定投稿</comment>
+  </data>
+  <data name="Patreon.SinglePost.Description" xml:space="preserve">
+    <value>通过ID下载指定的Patreon投稿</value>
+    <comment>Patreon单个投稿任务类型的描述</comment>
+  </data>
+
+  <!-- Error Messages -->
+  <data name="InvalidFavorites" xml:space="preserve">
+    <value>收藏夹无效</value>
+    <comment>收藏夹无效的错误信息</comment>
+  </data>
+  <data name="FfMpegIsNotReady" xml:space="preserve">
+    <value>FFmpeg未就绪</value>
+    <comment>FFmpeg不可用时的错误信息</comment>
+  </data>
+  <data name="LuxIsNotReady" xml:space="preserve">
+    <value>Lux未就绪</value>
+    <comment>Lux下载器不可用时的错误信息</comment>
+  </data>
+  <data name="InvalidCookie" xml:space="preserve">
+    <value>Cookie无效</value>
+    <comment>认证Cookie无效的错误信息</comment>
+  </data>
+  <data name="DownloadPathNotSet" xml:space="preserve">
+    <value>下载路径未设置</value>
+    <comment>下载路径未配置时的错误信息</comment>
+  </data>
+</root>

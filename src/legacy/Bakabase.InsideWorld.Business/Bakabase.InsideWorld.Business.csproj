@@ -35,6 +35,11 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<Compile Update="Resources\DownloaderResource.Designer.cs">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>DownloaderResource.resx</DependentUpon>
+		</Compile>
 		<Compile Update="Resources\SharedResource.zh-cn.Designer.cs">
 			<DependentUpon>SharedResource.zh-cn.resx</DependentUpon>
 			<DesignTime>True</DesignTime>
@@ -44,6 +49,11 @@
 			<DesignTime>True</DesignTime>
 			<AutoGen>True</AutoGen>
 			<DependentUpon>SharedResource.resx</DependentUpon>
+		</Compile>
+		<Compile Update="Components\Downloader\Resources\DownloaderResource.zh-Hans.Designer.cs">
+			<DependentUpon>DownloaderResource.zh-Hans.resx</DependentUpon>
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
 		</Compile>
 	</ItemGroup>
 
@@ -57,11 +67,22 @@
 			<LastGenOutput>SharedResource.Designer.cs</LastGenOutput>
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</EmbeddedResource>
+		<EmbeddedResource Update="Resources\DownloaderResource.resx">
+		  <Generator>ResXFileCodeGenerator</Generator>
+		  <LastGenOutput>DownloaderResource.Designer.cs</LastGenOutput>
+		  <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</EmbeddedResource>
+		<EmbeddedResource Update="Resources\DownloaderResource.zh-Hans.resx">
+		  <LastGenOutput>DownloaderResource.zh-Hans.Designer.cs</LastGenOutput>
+		  <Generator>ResXFileCodeGenerator</Generator>
+		</EmbeddedResource>
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Folder Include="Components\Downloader\Resources\" />
 	  <Folder Include="Components\PostParser\Models\Domain\Constants\" />
 	  <Folder Include="Components\Tampermonkey\Models\Constants\" />
+	  <Folder Include="Components\ThirdParty\" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -4,8 +4,7 @@ import React from "react";
 import { useTranslation } from "react-i18next";
 
 import { Chip, Tooltip } from "@/components/bakaui";
-
-export default () => {
+const AliasAppliedChip = () => {
   const { t } = useTranslation();
 
   return (
@@ -17,3 +16,7 @@ export default () => {
     </Tooltip>
   );
 };
+
+AliasAppliedChip.displayName = "AliasAppliedChip";
+
+export default AliasAppliedChip;

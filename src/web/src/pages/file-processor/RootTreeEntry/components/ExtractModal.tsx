@@ -13,8 +13,7 @@ import FileSystemEntryChangeExampleItem from "@/pages/file-processor/RootTreeEnt
 import FileSystemEntryChangeExampleMiscellaneousItem from "@/pages/file-processor/RootTreeEntry/components/FileSystemEntryChangeExampleMiscellaneousItem";
 
 type Props = { entries: Entry[] } & DestroyableProps;
-
-export default ({ entries = [], onDestroyed }: Props) => {
+const ExtractModal = ({ entries = [], onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   const [targetEntries, setTargetEntries] = useState<Entry[]>([]);
@@ -129,3 +128,7 @@ export default ({ entries = [], onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+ExtractModal.displayName = "ExtractModal";
+
+export default ExtractModal;

@@ -14,8 +14,35 @@ namespace Bakabase.InsideWorld.Models.Configs
     {
         public UIResourceOptions Resource { get; set; }
         public StartupPage StartupPage { get; set; }
+        
+        public bool IsMenuCollapsed { get; set; }
+        
+        public List<PropertyKey> LatestUsedProperties { get; set; } = new List<PropertyKey>();
 
-        public class UIResourceOptions
+        public void AddLatestUsedProperty(int pool, int id)
+        {
+            var key = new PropertyKey { Pool = pool, Id = id };
+            
+            // Remove if already exists
+            LatestUsedProperties.RemoveAll(p => p.Pool == pool && p.Id == id);
+            
+            // Add to beginning
+            LatestUsedProperties.Insert(0, key);
+            
+            // Keep only latest 5
+            if (LatestUsedProperties.Count > 5)
+            {
+                LatestUsedProperties = LatestUsedProperties.Take(5).ToList();
+            }
+        }
+
+        public record PropertyKey
+        {
+            public int Pool { get; set; }
+            public int Id { get; set; }
+        }
+
+        public record UIResourceOptions
         {
             public int ColCount { get; set; }
             public bool ShowBiggerCoverWhileHover { get; set; }

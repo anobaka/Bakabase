@@ -27,8 +27,10 @@ type Props = {
   selectedResourceIds: number[];
   onSelectedResourcesChanged?: (ids: number[]) => any;
 };
-
-export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
+const ContextMenuItems = ({
+  selectedResourceIds,
+  onSelectedResourcesChanged,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -215,3 +217,7 @@ export default ({ selectedResourceIds, onSelectedResourcesChanged }: Props) => {
     </>
   );
 };
+
+ContextMenuItems.displayName = "ContextMenuItems";
+
+export default ContextMenuItems;

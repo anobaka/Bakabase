@@ -3,7 +3,7 @@
 import type { DateInputProps as NextUIDateInputProps } from "@heroui/react";
 import type { Dayjs } from "dayjs";
 
-import { DateInput } from "@heroui/react";
+import { DateInput as HeroDateInput } from "@heroui/react";
 import dayjs from "dayjs";
 import { CalendarDateTime } from "@internationalized/date";
 import { useEffect, useState } from "react";
@@ -37,8 +37,7 @@ const convertToCalendarDateTime = (
     date.getMilliseconds(),
   );
 };
-
-export default ({
+const DateInput = ({
   value: propsValue,
   onChange,
   defaultValue,
@@ -56,7 +55,7 @@ export default ({
   const dv = convertToCalendarDateTime(defaultValue);
 
   return (
-    <DateInput
+    <HeroDateInput
       aria-label={"Date Input"}
       defaultValue={dv}
       hourCycle={24}
@@ -68,3 +67,7 @@ export default ({
     />
   );
 };
+
+DateInput.displayName = "DateInput";
+
+export default DateInput;

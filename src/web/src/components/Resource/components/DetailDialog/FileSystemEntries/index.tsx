@@ -18,8 +18,7 @@ type Props = {
 };
 
 const PageSize = 36;
-
-export default ({ path, isFile }: Props) => {
+const FileSystemEntries = ({ path, isFile }: Props) => {
   const { t } = useTranslation();
   const [currentPath, setCurrentPath] = useState(path);
   const [fsEntries, setFsEntries] = useState<Entry[]>([]);
@@ -145,3 +144,7 @@ export default ({ path, isFile }: Props) => {
     </div>
   );
 };
+
+FileSystemEntries.displayName = "FileSystemEntries";
+
+export default FileSystemEntries;

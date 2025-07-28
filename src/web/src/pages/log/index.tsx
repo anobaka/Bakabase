@@ -168,7 +168,7 @@ export default function LogPage() {
         aria-label="logs"
         className="mb-4"
         selectionMode="none"
-        size='sm'
+        size="sm"
       >
         <TableHeader>
           <TableColumn>{t<string>("Time")}</TableColumn>
@@ -187,8 +187,8 @@ export default function LogPage() {
                 <span
                   className={
                     item.level === LogLevel.Error ||
-                      item.level === LogLevel.Critical ||
-                      item.level === LogLevel.Warning
+                    item.level === LogLevel.Critical ||
+                    item.level === LogLevel.Warning
                       ? "text-red-600"
                       : "text-blue-600"
                   }
@@ -205,15 +205,19 @@ export default function LogPage() {
                   <pre className="inline">
                     {item.message.slice(0, 60)}...
                     <Button
-                      size='sm'
-                      variant="light"
                       color="primary"
+                      size="sm"
+                      variant="light"
                       onPress={() =>
                         createPortal(Modal, {
-                          size: 'xl',
-                          title: t('Log'),
+                          size: "xl",
+                          title: t("Log"),
                           defaultVisible: true,
-                          children: <pre className="whitespace-pre-wrap break-all">{item.message}</pre>
+                          children: (
+                            <pre className="whitespace-pre-wrap break-all">
+                              {item.message}
+                            </pre>
+                          ),
                         })
                       }
                     >
@@ -237,8 +241,8 @@ export default function LogPage() {
       </div>
       {expandedMsg && (
         <Modal
-          onClose={() => setExpandedMsg(null)}
           title={t<string>("Full Message")}
+          onClose={() => setExpandedMsg(null)}
         >
           <pre className="whitespace-pre-wrap break-all">{expandedMsg}</pre>
         </Modal>

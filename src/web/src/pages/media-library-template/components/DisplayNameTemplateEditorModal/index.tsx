@@ -48,8 +48,12 @@ const renderDisplayNameSegment = (p: ResourceDisplayNameTemplateSegment) => {
       return <span style={{ color: "var(--bakaui-primary)" }}>{p.text}</span>;
   }
 };
-
-export default ({ template, properties, onSubmit, ...props }: Props) => {
+const DisplayNameTemplateEditorModal = ({
+  template,
+  properties,
+  onSubmit,
+  ...props
+}: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const { createPortal } = useBakabaseContext();
@@ -211,3 +215,7 @@ export default ({ template, properties, onSubmit, ...props }: Props) => {
     </Modal>
   );
 };
+
+DisplayNameTemplateEditorModal.displayName = "DisplayNameTemplateEditorModal";
+
+export default DisplayNameTemplateEditorModal;

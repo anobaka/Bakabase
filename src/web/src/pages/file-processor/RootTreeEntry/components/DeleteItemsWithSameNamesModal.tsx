@@ -18,8 +18,7 @@ type Props = {
 } & DestroyableProps;
 
 type Item = { name: string; isDirectory: boolean; path: string };
-
-export default ({
+const DeleteItemsWithSameNamesModal = ({
   entries,
   workingDirectory,
   onDestroyed,
@@ -113,3 +112,7 @@ export default ({
     </Modal>
   );
 };
+
+DeleteItemsWithSameNamesModal.displayName = "DeleteItemsWithSameNamesModal";
+
+export default DeleteItemsWithSameNamesModal;

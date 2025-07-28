@@ -98,6 +98,7 @@ export default defineConfig([globalIgnores([
         "no-unused-vars": "off",
         "unused-imports/no-unused-vars": "off",
         "unused-imports/no-unused-imports": "warn",
+        "react/display-name": "off",
 
         "@typescript-eslint/no-unused-vars": ["warn", {
             args: "after-used",

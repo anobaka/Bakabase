@@ -518,4 +518,115 @@
   <data name="Enhancer_ExHentai_Target_Rating_Description" xml:space="preserve">
     <value>0~5</value>
   </data>
+  <data name="Enhancer_Tmdb_Name" xml:space="preserve">
+    <value>TMDB</value>
+  </data>
+  <data name="Enhancer_Tmdb_Description" xml:space="preserve">
+    <value>从电影数据库(TMDB)获取电影和电视剧元数据。此增强器通过文件名搜索电影，并下载海报/背景图片以及详细信息。</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Title_Name" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_OriginalTitle_Name" xml:space="preserve">
+    <value>原始标题</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Overview_Name" xml:space="preserve">
+    <value>概述</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Rating_Name" xml:space="preserve">
+    <value>评分</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_VoteCount_Name" xml:space="preserve">
+    <value>投票数</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>发行日期</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Runtime_Name" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Genres_Name" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_ProductionCountries_Name" xml:space="preserve">
+    <value>制片国家</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_SpokenLanguages_Name" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Status_Name" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Tagline_Name" xml:space="preserve">
+    <value>标语</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Budget_Name" xml:space="preserve">
+    <value>预算</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Revenue_Name" xml:space="preserve">
+    <value>票房</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Cover_Name" xml:space="preserve">
+    <value>封面</value>
+  </data>
+  <data name="Enhancer_Tmdb_Target_Backdrop_Name" xml:space="preserve">
+    <value>背景图</value>
+  </data>
+  <data name="Enhancer_Av_Name" xml:space="preserve">
+    <value>AV</value>
+  </data>
+  <data name="Enhancer_Av_Description" xml:space="preserve">
+    <value>从多个来源获取成人视频元数据。通过番号搜索并下载封面/海报以及详细信息。</value>
+  </data>
+  <data name="Enhancer_Av_Target_Number_Name" xml:space="preserve">
+    <value>番号</value>
+  </data>
+  <data name="Enhancer_Av_Target_Title_Name" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="Enhancer_Av_Target_OriginalTitle_Name" xml:space="preserve">
+    <value>原始标题</value>
+  </data>
+  <data name="Enhancer_Av_Target_Actor_Name" xml:space="preserve">
+    <value>演员</value>
+  </data>
+  <data name="Enhancer_Av_Target_Tags_Name" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Enhancer_Av_Target_Release_Name" xml:space="preserve">
+    <value>发行日期</value>
+  </data>
+  <data name="Enhancer_Av_Target_Year_Name" xml:space="preserve">
+    <value>年份</value>
+  </data>
+  <data name="Enhancer_Av_Target_Studio_Name" xml:space="preserve">
+    <value>工作室</value>
+  </data>
+  <data name="Enhancer_Av_Target_Publisher_Name" xml:space="preserve">
+    <value>发行方</value>
+  </data>
+  <data name="Enhancer_Av_Target_Series_Name" xml:space="preserve">
+    <value>系列</value>
+  </data>
+  <data name="Enhancer_Av_Target_Runtime_Name" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Enhancer_Av_Target_Director_Name" xml:space="preserve">
+    <value>导演</value>
+  </data>
+  <data name="Enhancer_Av_Target_Source_Name" xml:space="preserve">
+    <value>来源</value>
+  </data>
+  <data name="Enhancer_Av_Target_Cover_Name" xml:space="preserve">
+    <value>封面</value>
+  </data>
+  <data name="Enhancer_Av_Target_Poster_Name" xml:space="preserve">
+    <value>海报</value>
+  </data>
+  <data name="Enhancer_Av_Target_Website_Name" xml:space="preserve">
+    <value>网站</value>
+  </data>
+  <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
+    <value>马赛克</value>
+  </data>
 </root>

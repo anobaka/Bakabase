@@ -115,8 +115,7 @@ const validateInputModel = (
 
   return undefined;
 };
-
-export default ({ fromResources, onDestroyed }: Props) => {
+const ResourceTransferModal = ({ fromResources, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [page, setPage] = useState(1);
 
@@ -494,3 +493,7 @@ export default ({ fromResources, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+ResourceTransferModal.displayName = "ResourceTransferModal";
+
+export default ResourceTransferModal;

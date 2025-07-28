@@ -13,7 +13,7 @@ import {
   PropertyValueScope,
   propertyValueScopes,
 } from "@/sdk/constants";
-import { useResourceOptionsStore } from "@/models/options";
+import { useResourceOptionsStore } from "@/stores/options";
 import PropertyContainer from "@/components/Resource/components/DetailDialog/Properties/PropertyContainer";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
@@ -44,8 +44,7 @@ type PropertyRenderContext = {
 export type RenderContext = PropertyRenderContext[];
 
 const log = buildLogger("Properties");
-
-export default (props: Props) => {
+const Properties = (props: Props) => {
   const {
     resource,
     className,
@@ -75,10 +74,20 @@ export default (props: Props) => {
 
   useEffect(() => {
     const c = resourceOptions.propertyValueScopePriority;
+    const vsp =
+      c && c.length > 0 ? c.slice() : propertyValueScopes.map((s) => s.value);
 
-    setValueScopePriority(
-      c && c.length > 0 ? c : propertyValueScopes.map((s) => s.value),
-    );
+    for (const scope of propertyValueScopes) {
+      if (!vsp.includes(scope.value)) {
+        if (scope.value == PropertyValueScope.Manual) {
+          vsp.splice(0, 0, scope.value);
+        } else {
+          vsp.push(scope.value);
+        }
+      }
+    }
+    // console.log(vsp);
+    setValueScopePriority(vsp);
   }, [resourceOptions.propertyValueScopePriority]);
 
   useEffect(() => {
@@ -318,3 +327,7 @@ export default (props: Props) => {
     </div>
   );
 };
+
+Properties.displayName = "Properties";
+
+export default Properties;

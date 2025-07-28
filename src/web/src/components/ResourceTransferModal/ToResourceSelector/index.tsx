@@ -25,8 +25,7 @@ type Item = {
 };
 
 const log = buildLogger("ToResourceSelector");
-
-export default ({ onSelect, fromResourcePath }: Props) => {
+const ToResourceSelector = ({ onSelect, fromResourcePath }: Props) => {
   const { t } = useTranslation();
 
   const targetResourceCandidates = useAsyncList<Item>({
@@ -133,3 +132,7 @@ export default ({ onSelect, fromResourcePath }: Props) => {
     </div>
   );
 };
+
+ToResourceSelector.displayName = "ToResourceSelector";
+
+export default ToResourceSelector;

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bootstrap.Extensions;
 using static Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions;

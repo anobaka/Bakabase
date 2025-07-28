@@ -20,8 +20,7 @@ type Props = {
   hideIcon?: boolean;
   className?: string;
 };
-
-export default (props: Props) => {
+const FileSystemEntryChangeExampleItem = (props: Props) => {
   const {
     type,
     editable = false,
@@ -175,3 +174,8 @@ export default (props: Props) => {
     </div>
   );
 };
+
+FileSystemEntryChangeExampleItem.displayName =
+  "FileSystemEntryChangeExampleItem";
+
+export default FileSystemEntryChangeExampleItem;

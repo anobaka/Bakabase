@@ -31,7 +31,7 @@ import {
   resourceDisplayContents,
 } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
-import { useUiOptionsStore } from "@/models/options";
+import { useUiOptionsStore } from "@/stores/options";
 import { buildLogger } from "@/components/utils";
 
 type Props = {
@@ -54,8 +54,7 @@ type ListBoxItemKey =
   | "UseCache"
   | "CoverCarousel"
   | "DisplayResourceId";
-
-export default ({ rearrangeResources }: Props) => {
+const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
   const uiOptions = useUiOptionsStore((state) => state.data);
   const options = uiOptions.resource;
@@ -233,3 +232,7 @@ export default ({ rearrangeResources }: Props) => {
     </Dropdown>
   );
 };
+
+MiscellaneousOptions.displayName = "MiscellaneousOptions";
+
+export default MiscellaneousOptions;

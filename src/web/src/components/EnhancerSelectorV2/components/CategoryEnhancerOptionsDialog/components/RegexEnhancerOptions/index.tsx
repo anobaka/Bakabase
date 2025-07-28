@@ -11,7 +11,7 @@ import { useUpdate, useUpdateEffect } from "react-use";
 
 import { buildLogger, findCapturingGroupsInRegex } from "@/components/utils";
 import { Chip, Textarea } from "@/components/bakaui";
-import { useEnhancerOptionsStore } from "@/models/options";
+import { useEnhancerOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import { type PropertyPool, RegexEnhancerTarget } from "@/sdk/constants";
 import DynamicTargets from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/components/DynamicTargets";
@@ -33,8 +33,7 @@ const extractCaptureGroups = (expressions: string[]) =>
 
     return s;
   }, []);
-
-export default ({
+const RegexEnhancerOptions = ({
   options: propsOptions,
   enhancer,
   propertyMap,
@@ -192,3 +191,7 @@ export default ({
     </>
   );
 };
+
+RegexEnhancerOptions.displayName = "RegexEnhancerOptions";
+
+export default RegexEnhancerOptions;

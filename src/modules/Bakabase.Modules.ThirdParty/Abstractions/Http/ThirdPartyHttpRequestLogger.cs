@@ -4,6 +4,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.Abstractions.Logging;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
@@ -11,6 +12,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
     {
         private readonly ConcurrentDictionary<ThirdPartyId, ConcurrentBag<ThirdPartyRequestLog>> _logs = new();
         private ILogger<ThirdPartyHttpRequestLogger> _logger;
+        
+        public event EventHandler<ThirdPartyRequestCompletedEventArgs>? OnRequestCompleted;
 
         public ThirdPartyHttpRequestLogger(ILogger<ThirdPartyHttpRequestLogger> logger)
         {
@@ -33,9 +36,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         }
 
         public async Task<HttpResponseMessage> CaptureAsync(ThirdPartyId tp, Func<Task<HttpResponseMessage>> request,
-            string key = null,
-            Func<HttpResponseMessage, Exception, ThirdPartyRequestResultType> getResultType = null,
-            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string> buildCustomMessage = null)
+            string? key = null,
+            Func<HttpResponseMessage, Exception, ThirdPartyRequestResultType>? getResultType = null,
+            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string>? buildCustomMessage = null)
         {
             var id = Guid.NewGuid().ToString("N")[..6];
             _logger.LogInformation($"[{(int) tp}:{tp}][{id}]Sending request to {key}.");
@@ -72,15 +75,17 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                     Message = message,
                     Key = key
                 });
+                
+                _onRequestCompleted(tp, resultType);
             }
 
             return rsp;
         }
 
         public HttpResponseMessage Capture(ThirdPartyId tp, Func<HttpResponseMessage> request,
-            string key = null,
-            Func<HttpResponseMessage, Exception, ThirdPartyRequestResultType> getResultType = null,
-            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string> buildCustomMessage = null)
+            string? key = null,
+            Func<HttpResponseMessage, Exception, ThirdPartyRequestResultType>? getResultType = null,
+            CancellationToken? ct = null, Func<HttpResponseMessage, Exception, string>? buildCustomMessage = null)
         {
             var id = Guid.NewGuid().ToString("N")[..6];
             _logger.LogInformation($"[{(int) tp}:{tp}][{id}]Sending request to {key}.");
@@ -118,6 +123,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                     Message = message,
                     Key = key
                 });
+                
+                _onRequestCompleted(tp, resultType);
             }
 
             return rsp;
@@ -130,6 +137,11 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         public void Reset()
         {
             _logs.Clear();
+        }
+        
+        private void _onRequestCompleted(ThirdPartyId thirdPartyId, ThirdPartyRequestResultType resultType)
+        {
+            OnRequestCompleted?.Invoke(this, new ThirdPartyRequestCompletedEventArgs(thirdPartyId, resultType));
         }
     }
 }

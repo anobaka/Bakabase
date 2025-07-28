@@ -27,9 +27,12 @@ const StandardValueTypeIconMap: Record<StandardValueType, IconType> = {
   [StandardValueType.ListListString]: PiTreeView,
   [StandardValueType.ListTag]: LuTags,
 };
-
-export default ({ valueType, ...props }: Props) => {
+const Icon = ({ valueType, ...props }: Props) => {
   const Icon = StandardValueTypeIconMap[valueType];
 
   return <Icon className={"text-base"} {...props} />;
 };
+
+Icon.displayName = "Icon";
+
+export default Icon;

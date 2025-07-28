@@ -31,8 +31,7 @@ type Props = {
   textToBeMatched?: string;
   isResourceProperty: boolean;
 };
-
-export default ({
+const ByRegex = ({
   onRegexChange,
   modeIsSelected,
   onSelectMode,
@@ -253,3 +252,7 @@ export default ({
     </Card>
   );
 };
+
+ByRegex.displayName = "ByRegex";
+
+export default ByRegex;

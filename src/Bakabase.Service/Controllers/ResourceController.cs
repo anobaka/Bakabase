@@ -361,13 +361,19 @@ namespace Bakabase.Service.Controllers
                                 args.CancellationToken);
                         }
 
+                        await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                        var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
+
                         if (resource.MediaLibraryId != model.MediaLibraryId)
                         {
-                            await using var scope = args.RootServiceProvider.CreateAsyncScope();
-                            var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
                             await resourceService.ChangeMediaLibrary([resource.Id], model.MediaLibraryId,
                                 model.IsLegacyMediaLibrary,
-                                new Dictionary<int, string> {{resource.Id, targetPath}});
+                                new Dictionary<int, string> { { resource.Id, targetPath } });
+                        }
+                        else
+                        {
+                            await resourceService.ChangePath([resource.Id],
+                                new Dictionary<int, string> { { resource.Id, targetPath } });
                         }
                     }
                 });

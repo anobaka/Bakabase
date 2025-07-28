@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+
 import { Popover } from "@/components/bakaui";
+
 import "./index.scss";
 import i18n from "i18next";
-
-export default ({
+const ComponentCard = ({
   name,
   description,
   extra,
@@ -53,10 +54,12 @@ export default ({
   );
 
   return tip ? (
-    <Popover content={i18n.t<string>(tip)}>
-      {coreComponent}
-    </Popover>
+    <Popover content={i18n.t<string>(tip)}>{coreComponent}</Popover>
   ) : (
     coreComponent
   );
 };
+
+ComponentCard.displayName = "ComponentCard";
+
+export default ComponentCard;

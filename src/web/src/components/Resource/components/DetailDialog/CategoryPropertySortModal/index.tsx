@@ -20,8 +20,12 @@ type Props = {
   categoryId: number;
   properties: PropertyLike[];
 } & DestroyableProps;
-
-export default ({ properties, onDestroyed, categoryId, onClose }: Props) => {
+const CategoryPropertySortModal = ({
+  properties,
+  onDestroyed,
+  categoryId,
+  onClose,
+}: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -55,3 +59,7 @@ export default ({ properties, onDestroyed, categoryId, onClose }: Props) => {
     </Modal>
   );
 };
+
+CategoryPropertySortModal.displayName = "CategoryPropertySortModal";
+
+export default CategoryPropertySortModal;

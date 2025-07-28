@@ -22,7 +22,7 @@ import duration from "dayjs/plugin/duration";
 import { createPortal } from "@/components/ContextProvider/helpers";
 import { UIHubConnection } from "@/components/SignalR/UIHubConnection";
 import { getUiTheme } from "@/components/utils";
-import { useAppOptionsStore } from "@/models/options";
+import { useAppOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
 import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";

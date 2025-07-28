@@ -5,11 +5,10 @@ import type { ResourceSearchFilter } from "@/pages/resource/components/FilterPan
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import { Button } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
-
-export default () => {
+const PropertySelectorPage = () => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<ResourceSearchFilter>({});
 
@@ -19,7 +18,7 @@ export default () => {
       size={"small"}
       type={"primary"}
       onClick={() => {
-        PropertySelector.show({
+        PropertySelectorPage.show({
           selection: {
             [filter.propertyPool == PropertyPool.Custom
               ? "reservedPropertyIds"
@@ -47,3 +46,7 @@ export default () => {
     </Button>
   );
 };
+
+PropertySelectorPage.displayName = "PropertySelectorPage";
+
+export default PropertySelectorPage;

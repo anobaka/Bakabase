@@ -23,7 +23,7 @@ type ViewerProps<TValue> = ComponentCommonProps<TValue> & {
 };
 
 type EditorProps<TValue> = ComponentCommonProps<TValue> & {
-  onValueChange?: (value?: TValue) => void;
+  onValueChange?: (value: TValue) => void;
 };
 
 type Props<

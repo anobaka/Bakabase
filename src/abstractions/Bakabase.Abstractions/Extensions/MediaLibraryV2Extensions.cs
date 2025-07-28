@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
+using Newtonsoft.Json;
 
 namespace Bakabase.Abstractions.Extensions;
 
@@ -18,12 +19,13 @@ public static class MediaLibraryV2Extensions
             TemplateId = model.TemplateId,
             ResourceCount = model.ResourceCount,
             Color = model.Color,
+            Players = JsonConvert.SerializeObject(model.Players?.Select(p => p.ToDbModel()))
         };
     }
 
     public static MediaLibraryV2 ToDomainModel(this MediaLibraryV2DbModel dbModel)
     {
-        return new MediaLibraryV2
+        var domain = new MediaLibraryV2
         {
             Id = dbModel.Id,
             Name = dbModel.Name,
@@ -35,6 +37,19 @@ public static class MediaLibraryV2Extensions
             ResourceCount = dbModel.ResourceCount,
             Color = dbModel.Color,
         };
+        if (!string.IsNullOrEmpty(dbModel.Players))
+        {
+            try
+            {
+                domain.Players = JsonConvert.DeserializeObject<List<MediaLibraryPlayer>>(dbModel.Players);
+            }
+            catch (Exception e)
+            {
+                // ignored
+            }
+        }
+
+        return domain;
     }
 
     public static void SetPaths(this MediaLibraryV2DbModel model, IEnumerable<string> paths)

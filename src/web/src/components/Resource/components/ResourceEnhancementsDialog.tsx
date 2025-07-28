@@ -37,7 +37,7 @@ import {
   PropertyPool,
   ReservedProperty,
 } from "@/sdk/constants";
-import CategoryEnhancerOptionsDialog from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
+import CategoryEnhancerOptionsDialogPage from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
 import {
   convertFromApiValue,
@@ -349,7 +349,7 @@ function ResourceEnhancementsDialog({ resourceId, ...props }: Props) {
                     size={"sm"}
                     variant={"light"}
                     onClick={() => {
-                      CategoryEnhancerOptionsDialog.show({
+                      CategoryEnhancerOptionsDialogPage.show({
                         categoryId: resource.categoryId,
                         enhancer: e.enhancer,
                       });

@@ -139,6 +139,7 @@ namespace Bakabase.Abstractions.Components.Configuration
             public const string DLsite = nameof(DLsite);
             public const string Default = nameof(Default);
             public const string SoulPlus = nameof(SoulPlus);
+            public const string Tmdb = nameof(Tmdb);
         }
 
         public static string DefaultHttpUserAgent =

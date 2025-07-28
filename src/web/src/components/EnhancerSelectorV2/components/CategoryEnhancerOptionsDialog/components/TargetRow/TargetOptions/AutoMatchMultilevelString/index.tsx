@@ -8,8 +8,7 @@ interface IProps {
   autoMatch?: boolean;
   onChange?: (autoMatch: boolean) => void;
 }
-
-export default ({ autoMatch, onChange }: IProps) => {
+const AutoMatchMultilevelString = ({ autoMatch, onChange }: IProps) => {
   const { t } = useTranslation();
 
   return (
@@ -59,3 +58,7 @@ export default ({ autoMatch, onChange }: IProps) => {
     </>
   );
 };
+
+AutoMatchMultilevelString.displayName = "AutoMatchMultilevelString";
+
+export default AutoMatchMultilevelString;

@@ -22,8 +22,7 @@ import ExtractModal from "@/pages/file-processor/RootTreeEntry/components/Extrac
 type Props = {
   entry: Entry;
 } & Pick<TreeEntryProps, "capabilities">;
-
-export default (props: Props) => {
+const TailingOperations = (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { entry, capabilities } = props;
@@ -83,3 +82,7 @@ export default (props: Props) => {
     </>
   );
 };
+
+TailingOperations.displayName = "TailingOperations";
+
+export default TailingOperations;

@@ -171,7 +171,7 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
   | 16;
 
 /**
- * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer]
+ * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
@@ -182,7 +182,9 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
   | 1002
   | 1003
   | 1004
-  | 1005;
+  | 1005
+  | 1006
+  | 1007;
 
 /**
  * [12: Introduction, 13: Rating, 22: Cover]
@@ -299,6 +301,13 @@ export interface BakabaseAbstractionsModelsDomainMediaLibrary {
   pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[];
 }
 
+export interface BakabaseAbstractionsModelsDomainMediaLibraryPlayer {
+  /** @uniqueItems true */
+  extensions?: string[];
+  executablePath: string;
+  command: string;
+}
+
 export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   /** @format int32 */
   id: number;
@@ -369,6 +378,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   /** @format int32 */
   resourceCount: number;
   color?: string;
+  players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
   template?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
 }
 
@@ -533,6 +543,7 @@ export interface BakabaseAbstractionsModelsDomainResourcePropertyPropertyValue {
   value?: any;
   bizValue?: any;
   aliasAppliedBizValue?: any;
+  isManuallySet: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceCache {
@@ -669,6 +680,7 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel
   name: string;
   paths: string[];
   color?: string;
+  players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
 }
 
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
@@ -849,6 +861,149 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   ollamaEndpoint?: string;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions {
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainCienOptions {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteOptions {
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions {
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFantiaOptions {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPixivOptions {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptions {
   /** @format date-time */
   lastSyncDt: string;
@@ -861,12 +1016,23 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   additionalCoverDiscoveringSources: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   savedSearches: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSavedSearch[];
   idsOfMediaLibraryRecentlyMovedTo?: number[];
+  recentFilters: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
   synchronizationOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
   /** [1: Replace, 2: Prepend] */
   saveMode?: BakabaseInsideWorldModelsConstantsCoverSaveMode;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  dbValue?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSavedSearch {
@@ -919,6 +1085,236 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   >;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions {
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  /** @format int32 */
+  autoBuyThreshold: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  apiKey?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputAiOptionsPatchInputModel {
+  ollamaEndpoint?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBangumiOptionsPatchInputModel {
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBilibiliOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputCienOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDLsiteOptionsPatchInputModel {
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputEnhancerOptionsPatchInputModel {
+  regexEnhancer?: BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputExHentaiOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFanboxOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFantiaOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFileSystemOptionsPatchInputModel {
+  fileMover?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptions;
+  recentMovingDestinations?: string[];
+  fileProcessor?: BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavLibraryOptionsPatchInputModel {
+  cookie?: string;
+  collector?: BakabaseInsideWorldModelsConfigsJavLibraryOptionsCollectorOptions;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel {
+  customProxies?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions[];
+  proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModelProxyOptions {
+  id?: string;
+  address: string;
+  credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputPatreonOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputPixivOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting?: boolean;
+  /** @format int32 */
+  maxRetries?: number;
+  /** @format int32 */
+  requestTimeout?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSoulPlusOptionsPatchInputModel {
+  cookie?: string;
+  /** @format int32 */
+  autoBuyThreshold?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTaskOptionsPatchInputModel {
+  tasks?: BakabaseAbstractionsModelsDbBTaskDbModel[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInput {
+  simpleSearchEngines?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
+  curlExecutable?: string;
+  automaticallyParsingPosts?: boolean;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput {
+  name?: string;
+  urlTemplate?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTmdbOptionsPatchInputModel {
+  /** @format int32 */
+  maxConcurrency?: number;
+  /** @format int32 */
+  requestInterval?: number;
+  cookie?: string;
+  userAgent?: string;
+  referer?: string;
+  headers?: Record<string, string>;
+  apiKey?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIOptionsPatchRequestModel {
+  resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
+  /** [0: Default, 1: Resource] */
+  startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
+  isMenuCollapsed?: boolean;
+  latestUsedProperties?: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
+}
+
 export interface BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
   version: string;
   description?: string;
@@ -931,46 +1327,21 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsF
   availableCodecs: string[];
 }
 
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
-  /** @format int32 */
-  id: number;
-  /** @minLength 1 */
-  key: string;
-  name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
-  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  /** @format int32 */
-  type: number;
-  /** @format double */
-  progress: number;
-  /** @format date-time */
-  downloadStatusUpdateDt: string;
-  /** @format int64 */
-  interval?: number;
-  /** @format int32 */
-  startPage?: number;
-  /** @format int32 */
-  endPage?: number;
-  message?: string;
-  checkpoint?: string;
-  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
-  status: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskStatus;
-  autoRetry: boolean;
-  /** @minLength 1 */
-  downloadPath: string;
-}
-
 /**
  * [1: StartManually, 2: Restart, 3: Disable, 4: StartAutomatically]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskAction = 1 | 2 | 3 | 4;
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskAction =
+  | 1
+  | 2
+  | 3
+  | 4;
 
 /**
  * [0: NotSet, 1: StopOthers, 2: Ignore]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskActionOnConflict =
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict =
   | 0
   | 1
   | 2;
@@ -979,7 +1350,7 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstants
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskDtoStatus =
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDtoStatus =
   | 100
   | 200
   | 300
@@ -993,18 +1364,18 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstants
  * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskStatus =
+export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus =
   | 100
   | 200
   | 300
   | 400;
 
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask {
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
   /** @format int32 */
   id: number;
   key: string;
   name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
@@ -1021,7 +1392,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDown
   message?: string;
   checkpoint?: string;
   /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
-  status: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskDtoStatus;
+  status: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDtoStatus;
   downloadPath: string;
   current?: string;
   /** @format int32 */
@@ -1030,17 +1401,55 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDown
   /** @format date-time */
   nextStartDt?: string;
   /** @uniqueItems true */
-  availableActions: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskAction[];
+  availableActions: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskAction[];
   displayName: string;
   canStart: boolean;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskAddInputModel {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  taskType: number;
+  enumTaskType: any;
+  name: string;
+  description?: string;
+  downloaderType: SystemType;
+  helperType: SystemType;
+  defaultConvention: string;
+  namingFields: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinitionField[];
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinitionField {
+  enumValue: any;
+  key: string;
+  name?: string;
+  description?: string;
+  example?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions {
+  cookie?: string;
+  /** @format int32 */
+  maxConcurrency: number;
+  /** @format int32 */
+  requestInterval: number;
+  defaultPath?: string;
+  namingConvention?: string;
+  skipExisting: boolean;
+  /** @format int32 */
+  maxRetries: number;
+  /** @format int32 */
+  requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel {
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
   thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   type: number;
-  keyAndNames?: Record<string, string | null>;
+  keys: string[];
+  names?: string[];
   /** @format int64 */
   interval?: number;
   /** @format int32 */
@@ -1054,13 +1463,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownl
   isDuplicateAllowed: boolean;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel {
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel {
   ids?: number[];
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
   thirdPartyId?: BakabaseInsideWorldModelsConstantsThirdPartyId;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskPutInputModel {
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskPutInputModel {
   /** @format int64 */
   interval?: number;
   /** @format int32 */
@@ -1071,10 +1480,39 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownl
   autoRetry: boolean;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskStartRequestModel {
+export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskStartRequestModel {
   ids: number[];
   /** [0: NotSet, 1: StopOthers, 2: Ignore] */
-  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainConstantsDownloadTaskActionOnConflict;
+  actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
+  /** @format int32 */
+  id: number;
+  /** @minLength 1 */
+  key: string;
+  name?: string;
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
+  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
+  /** @format int32 */
+  type: number;
+  /** @format double */
+  progress: number;
+  /** @format date-time */
+  downloadStatusUpdateDt: string;
+  /** @format int64 */
+  interval?: number;
+  /** @format int32 */
+  startPage?: number;
+  /** @format int32 */
+  endPage?: number;
+  message?: string;
+  checkpoint?: string;
+  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
+  status: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus;
+  autoRetry: boolean;
+  /** @minLength 1 */
+  downloadPath: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
@@ -1188,6 +1626,43 @@ export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameM
  */
 export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierPosition = 1 | 2 | 3 | 4 | 5;
 
+export interface BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList {
+  /** @format int32 */
+  id: number;
+  name: string;
+  items?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayListItem[];
+  /** @format int32 */
+  interval: number;
+  /** @format int32 */
+  order: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayListItem {
+  /** [1: Resource, 2: Video, 3: Image, 4: Audio] */
+  type: BakabaseInsideWorldModelsConstantsPlaylistItemType;
+  /** @format int32 */
+  resourceId?: number;
+  file?: string;
+  /** @format date-span */
+  startTime?: string;
+  /** @format date-span */
+  endTime?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayListAddInputModel {
+  /** @minLength 1 */
+  name: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayListPatchInputModel {
+  name?: string;
+  items?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayListItem[];
+  /** @format int32 */
+  interval?: number;
+  /** @format int32 */
+  order?: number;
+}
+
 /**
  * [5: SoulPlus]
  * @format int32
@@ -1221,27 +1696,12 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
  */
 export type BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript = 1 | 2;
 
-export interface BakabaseInsideWorldModelsConfigsBilibiliOptions {
-  downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
-  cookie?: string;
-}
-
 export interface BakabaseInsideWorldModelsConfigsEnhancerOptions {
   regexEnhancer?: BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel;
 }
 
 export interface BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel {
   expressions?: string[];
-}
-
-export interface BakabaseInsideWorldModelsConfigsExHentaiOptions {
-  downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
-  cookie?: string;
-  enhancer?: BakabaseInsideWorldModelsConfigsExHentaiOptionsExHentaiEnhancerOptions;
-}
-
-export interface BakabaseInsideWorldModelsConfigsExHentaiOptionsExHentaiEnhancerOptions {
-  excludedTags: string[];
 }
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptions {
@@ -1265,15 +1725,6 @@ export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptio
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions {
   workingDirectory: string;
-}
-
-export interface BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions {
-  /** @format int32 */
-  threads: number;
-  /** @format int32 */
-  interval: number;
-  defaultPath?: string;
-  namingConvention?: string;
 }
 
 export interface BakabaseInsideWorldModelsConfigsJavLibraryOptions {
@@ -1318,17 +1769,6 @@ export interface BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxy
   domain?: string;
 }
 
-export interface BakabaseInsideWorldModelsConfigsPixivOptions {
-  cookie?: string;
-  downloader?: BakabaseInsideWorldModelsConfigsInfrastructuresCommonDownloaderOptions;
-}
-
-export interface BakabaseInsideWorldModelsConfigsSoulPlusOptions {
-  cookie?: string;
-  /** @format int32 */
-  autoBuyThreshold: number;
-}
-
 export interface BakabaseInsideWorldModelsConfigsThirdPartyOptions {
   simpleSearchEngines?: BakabaseInsideWorldModelsConfigsThirdPartyOptionsSimpleSearchEngineOptions[];
   curlExecutable?: string;
@@ -1344,6 +1784,15 @@ export interface BakabaseInsideWorldModelsConfigsUIOptions {
   resource: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
   /** [0: Default, 1: Resource] */
   startupPage: BakabaseInsideWorldModelsConstantsStartupPage;
+  isMenuCollapsed: boolean;
+  latestUsedProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey {
+  /** @format int32 */
+  pool: number;
+  /** @format int32 */
+  id: number;
 }
 
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
@@ -1455,12 +1904,6 @@ export type BakabaseInsideWorldModelsConstantsCoverSaveMode = 1 | 2;
 export type BakabaseInsideWorldModelsConstantsCoverSelectOrder = 1 | 2;
 
 /**
- * [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsExHentaiDownloadTaskType = 1 | 2 | 3 | 4;
-
-/**
  * [1: InvalidVolume, 2: FreeSpaceNotEnough, 3: Occupied]
  * @format int32
  */
@@ -1497,21 +1940,10 @@ export type BakabaseInsideWorldModelsConstantsResourceMatcherValueType = 1 | 2 |
 export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
 
 /**
- * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus]
+ * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3 | 4 | 5;
-
-export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
-  fields: BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField[];
-  defaultConvention: string;
-}
-
-export interface BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitionsField {
-  key: string;
-  description: string;
-  example: string;
-}
+export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
 export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation {
   /** @format int64 */
@@ -1537,7 +1969,7 @@ export interface BakabaseInsideWorldModelsModelsAosPreviewerItem {
 }
 
 export interface BakabaseInsideWorldModelsModelsAosThirdPartyRequestStatistics {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   counts?: Record<string, number>;
 }
@@ -1572,7 +2004,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatistics {
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsDownloaderTaskCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   statusAndCounts: Record<string, number>;
 }
@@ -1592,7 +2024,7 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsTextAndCo
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsThirdPartyRequestCount {
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus] */
+  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
   id: BakabaseInsideWorldModelsConstantsThirdPartyId;
   /** @format int32 */
   resultType: number;
@@ -1605,29 +2037,6 @@ export interface BakabaseInsideWorldModelsModelsDtosDashboardStatisticsWeekCount
   offset: number;
   /** @format int32 */
   count: number;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosPlaylistDto {
-  /** @format int32 */
-  id: number;
-  name: string;
-  items?: BakabaseInsideWorldModelsModelsDtosPlaylistItemDto[];
-  /** @format int32 */
-  interval: number;
-  /** @format int32 */
-  order: number;
-}
-
-export interface BakabaseInsideWorldModelsModelsDtosPlaylistItemDto {
-  /** [1: Resource, 2: Video, 3: Image, 4: Audio] */
-  type: BakabaseInsideWorldModelsConstantsPlaylistItemType;
-  /** @format int32 */
-  resourceId?: number;
-  file?: string;
-  /** @format date-span */
-  startTime?: string;
-  /** @format date-span */
-  endTime?: string;
 }
 
 export interface BakabaseInsideWorldModelsModelsDtosResourceCategoryEnhancementOptions {
@@ -1668,13 +2077,6 @@ export interface BakabaseInsideWorldModelsRequestModelsComponentOptionsAddReques
   json: string;
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsExHentaiDownloadTaskAddInputModel {
-  /** [1: SingleWork, 2: Watched, 3: List, 4: Torrent] */
-  type: BakabaseInsideWorldModelsConstantsExHentaiDownloadTaskType;
-  /** @minLength 1 */
-  link: string;
-}
-
 export interface BakabaseInsideWorldModelsRequestModelsFileDecompressRequestModel {
   paths: string[];
   password?: string;
@@ -1696,40 +2098,6 @@ export interface BakabaseInsideWorldModelsRequestModelsFileRenameRequestModel {
 
 export interface BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel {
   ids: number[];
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel {
-  customProxies?: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions[];
-  proxy?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyModel;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModelProxyOptions {
-  id?: string;
-  address: string;
-  credentials?: BakabaseInsideWorldModelsConfigsNetworkOptionsProxyOptionsProxyCredentials;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsOptionsSoulPlusOptionsPatchInputModel {
-  cookie?: string;
-  /** @format int32 */
-  autoBuyThreshold?: number;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInput {
-  simpleSearchEngines?: BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput[];
-  curlExecutable?: string;
-  automaticallyParsingPosts?: boolean;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInputSimpleSearchEngineOptionsPatchInput {
-  name?: string;
-  urlTemplate?: string;
-}
-
-export interface BakabaseInsideWorldModelsRequestModelsOptionsUIOptionsPatchRequestModel {
-  resource?: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions;
-  /** [0: Default, 1: Resource] */
-  startupPage?: BakabaseInsideWorldModelsConstantsStartupPage;
 }
 
 export interface BakabaseInsideWorldModelsRequestModelsPathConfigurationRemoveRequestModel {
@@ -1823,10 +2191,10 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
 }
 
 /**
- * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi]
+ * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av]
  * @format int32
  */
-export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId = 1 | 2 | 3 | 4 | 5 | 6;
+export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
   options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
@@ -1953,7 +2321,7 @@ export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePre
 }
 
 export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer {
-  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi] */
+  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av] */
   id: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId;
   name: string;
   description?: string;
@@ -2120,7 +2488,7 @@ export interface BakabaseServiceModelsInputBulkModificationProcessInputModel {
 
 export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   key?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -2160,6 +2528,7 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   propertyValueScopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
   searchCriteria?: BakabaseServiceModelsInputResourceSearchInputModel;
   synchronizationOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
+  recentFilters?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
@@ -2224,7 +2593,7 @@ export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
 }
 
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -2519,6 +2888,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
   /** @format int32 */
   code: number;
@@ -2526,11 +2909,11 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel[];
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask {
+export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask[];
+  data?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
@@ -2545,13 +2928,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsAosPreviewerItem[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword {
@@ -2643,6 +3019,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourcePathInfoViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceSearchFilterViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceSearchFilterViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel {
@@ -2871,11 +3254,88 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainCienOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainCienOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFantiaOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFantiaOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPixivOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPixivOptions;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptions {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDependencyAbstractionsDependentComponentVersion {
@@ -2892,11 +3352,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsDependencyImplementationsFfMpegHardwareAccelerationInfo;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsFileExplorerInformationIwFsEntryLazyInfo {
@@ -2920,11 +3387,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsPreview;
 }
 
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions {
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList {
   /** @format int32 */
   code: number;
   message?: string;
-  data?: BakabaseInsideWorldModelsConfigsBilibiliOptions;
+  data?: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsEnhancerOptions {
@@ -2932,13 +3399,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsConfigsEnhancerOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsExHentaiOptions {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsConfigsExHentaiOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsFileSystemOptions {
@@ -2960,20 +3420,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsConfigsNetworkOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsPixivOptions {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsConfigsPixivOptions;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsSoulPlusOptions {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsConfigsSoulPlusOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsThirdPartyOptions {
@@ -3009,13 +3455,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsDtosDashboardStatistics;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldModelsModelsDtosPlaylistDto;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsEntitiesComponentOptions {
@@ -3086,13 +3525,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
   code: number;
   message?: string;
   data: boolean;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: Record<string, BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel {
@@ -5448,6 +5880,26 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags CustomProperty
+     * @name AddCustomPropertyBatch
+     * @request POST:/custom-property/batch
+     */
+    addCustomPropertyBatch: (
+      data: BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel, any>({
+        path: `/custom-property/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags CustomProperty
      * @name PutCustomProperty
      * @request PUT:/custom-property/{id}
      */
@@ -5641,15 +6093,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
-     * @name GetAllDownloaderNamingDefinitions
-     * @request GET:/download-task/downloader/naming-definitions
+     * @name GetAllDownloaderDefinitions
+     * @request GET:/download-task/downloaders/definitions
      */
-    getAllDownloaderNamingDefinitions: (params: RequestParams = {}) =>
+    getAllDownloaderDefinitions: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32BakabaseInsideWorldModelsModelsAosDownloaderNamingDefinitions,
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition,
         any
       >({
-        path: `/download-task/downloader/naming-definitions`,
+        path: `/download-task/downloaders/definitions`,
         method: "GET",
         format: "json",
         ...params,
@@ -5664,7 +6116,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllDownloadTasks: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask,
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask,
         any
       >({
         path: `/download-task`,
@@ -5681,7 +6133,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/download-task
      */
     addDownloadTask: (
-      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskAddInputModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskAddInputModel,
       params: RequestParams = {},
     ) =>
       this.request<
@@ -5704,7 +6156,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request DELETE:/download-task
      */
     deleteDownloadTasks: (
-      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskDeleteInputModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskDeleteInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5725,7 +6177,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getDownloadTask: (id: number, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDomainDownloadTask,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask,
         any
       >({
         path: `/download-task/${id}`,
@@ -5758,7 +6210,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     putDownloadTask: (
       id: number,
-      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskPutInputModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskPutInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5778,7 +6230,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/download-task/download
      */
     startDownloadTasks: (
-      data: BakabaseInsideWorldBusinessComponentsDownloaderModelsInputDownloadTaskStartRequestModel,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsInputDownloadTaskStartRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5826,16 +6278,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DownloadTask
-     * @name AddExHentaiDownloadTask
-     * @request POST:/download-task/exhentai
+     * @name GetDownloaderOptions
+     * @request GET:/download-task/downloader/options/{thirdPartyId}
      */
-    addExHentaiDownloadTask: (
-      data: BakabaseInsideWorldModelsRequestModelsExHentaiDownloadTaskAddInputModel,
+    getDownloaderOptions: (
+      thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId,
+      query?: {
+        /** @format int32 */
+        taskType?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions,
+        any
+      >({
+        path: `/download-task/downloader/options/${thirdPartyId}`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name PutDownloaderOptions
+     * @request PUT:/download-task/downloader/options/{thirdPartyId}
+     */
+    putDownloaderOptions: (
+      thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId,
+      data: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions,
+      query?: {
+        /** @format int32 */
+        taskType?: number;
+      },
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/download-task/exhentai`,
-        method: "POST",
+        path: `/download-task/downloader/options/${thirdPartyId}`,
+        method: "PUT",
+        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -8098,7 +8582,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/ui
      */
     patchUiOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsOptionsUIOptionsPatchRequestModel,
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIOptionsPatchRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -8114,18 +8598,36 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Options
+     * @name AddLatestUsedProperty
+     * @request POST:/options/ui/latest-used-property
+     */
+    addLatestUsedProperty: (data: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[], params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ui/latest-used-property`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
      * @name GetBilibiliOptions
      * @request GET:/options/bilibili
      */
     getBilibiliOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsBilibiliOptions, any>(
-        {
-          path: `/options/bilibili`,
-          method: "GET",
-          format: "json",
-          ...params,
-        },
-      ),
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions,
+        any
+      >({
+        path: `/options/bilibili`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -8134,7 +8636,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchBilibiliOptions
      * @request PATCH:/options/bilibili
      */
-    patchBilibiliOptions: (data: BakabaseInsideWorldModelsConfigsBilibiliOptions, params: RequestParams = {}) =>
+    patchBilibiliOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBilibiliOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/bilibili`,
         method: "PATCH",
@@ -8152,14 +8657,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/exhentai
      */
     getExHentaiOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsExHentaiOptions, any>(
-        {
-          path: `/options/exhentai`,
-          method: "GET",
-          format: "json",
-          ...params,
-        },
-      ),
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions,
+        any
+      >({
+        path: `/options/exhentai`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -8168,7 +8674,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchExHentaiOptions
      * @request PATCH:/options/exhentai
      */
-    patchExHentaiOptions: (data: BakabaseInsideWorldModelsConfigsExHentaiOptions, params: RequestParams = {}) =>
+    patchExHentaiOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputExHentaiOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/exhentai`,
         method: "PATCH",
@@ -8203,7 +8712,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchFileSystemOptions
      * @request PATCH:/options/filesystem
      */
-    patchFileSystemOptions: (data: BakabaseInsideWorldModelsConfigsFileSystemOptions, params: RequestParams = {}) =>
+    patchFileSystemOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFileSystemOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/filesystem`,
         method: "PATCH",
@@ -8238,7 +8750,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchJavLibraryOptions
      * @request PATCH:/options/javlibrary
      */
-    patchJavLibraryOptions: (data: BakabaseInsideWorldModelsConfigsJavLibraryOptions, params: RequestParams = {}) =>
+    patchJavLibraryOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputJavLibraryOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/javlibrary`,
         method: "PATCH",
@@ -8256,7 +8771,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/pixiv
      */
     getPixivOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsPixivOptions, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPixivOptions,
+        any
+      >({
         path: `/options/pixiv`,
         method: "GET",
         format: "json",
@@ -8270,7 +8788,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchPixivOptions
      * @request PATCH:/options/pixiv
      */
-    patchPixivOptions: (data: BakabaseInsideWorldModelsConfigsPixivOptions, params: RequestParams = {}) =>
+    patchPixivOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputPixivOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/pixiv`,
         method: "PATCH",
@@ -8322,6 +8843,44 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Options
+     * @name GetRecentResourceFilters
+     * @request GET:/options/resource/recent-filters
+     */
+    getRecentResourceFilters: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceSearchFilterViewModel,
+        any
+      >({
+        path: `/options/resource/recent-filters`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name AddRecentResourceFilter
+     * @request POST:/options/resource/recent-filters
+     */
+    addRecentResourceFilter: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/resource/recent-filters`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
      * @name GetThirdPartyOptions
      * @request GET:/options/thirdparty
      */
@@ -8344,7 +8903,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/thirdparty
      */
     patchThirdPartyOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsOptionsThirdPartyOptionsPatchInput,
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputThirdPartyOptionsPatchInput,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -8396,7 +8955,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/network
      */
     patchNetworkOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel,
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -8432,7 +8991,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchEnhancerOptions
      * @request PATCH:/options/enhancer
      */
-    patchEnhancerOptions: (data: BakabaseInsideWorldModelsConfigsEnhancerOptions, params: RequestParams = {}) =>
+    patchEnhancerOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputEnhancerOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/enhancer`,
         method: "PATCH",
@@ -8467,7 +9029,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PatchTaskOptions
      * @request PATCH:/options/task
      */
-    patchTaskOptions: (data: BakabaseAbstractionsComponentsConfigurationTaskOptions, params: RequestParams = {}) =>
+    patchTaskOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTaskOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/task`,
         method: "PATCH",
@@ -8503,7 +9068,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/ai
      */
     patchAiOptions: (
-      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions,
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputAiOptionsPatchInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -8543,14 +9108,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/soulplus
      */
     getSoulPlusOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsSoulPlusOptions, any>(
-        {
-          path: `/options/soulplus`,
-          method: "GET",
-          format: "json",
-          ...params,
-        },
-      ),
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions,
+        any
+      >({
+        path: `/options/soulplus`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -8560,7 +9126,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request PATCH:/options/soulplus
      */
     patchSoulPlusOptions: (
-      data: BakabaseInsideWorldModelsRequestModelsOptionsSoulPlusOptionsPatchInputModel,
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSoulPlusOptionsPatchInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -8579,10 +9145,279 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutSoulPlusOptions
      * @request PUT:/options/soulplus
      */
-    putSoulPlusOptions: (data: BakabaseInsideWorldModelsConfigsSoulPlusOptions, params: RequestParams = {}) =>
+    putSoulPlusOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/soulplus`,
         method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetBangumiOptions
+     * @request GET:/options/bangumi
+     */
+    getBangumiOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions,
+        any
+      >({
+        path: `/options/bangumi`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchBangumiOptions
+     * @request PATCH:/options/bangumi
+     */
+    patchBangumiOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBangumiOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/bangumi`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetCienOptions
+     * @request GET:/options/cien
+     */
+    getCienOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainCienOptions,
+        any
+      >({
+        path: `/options/cien`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchCienOptions
+     * @request PATCH:/options/cien
+     */
+    patchCienOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputCienOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/cien`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetDLsiteOptions
+     * @request GET:/options/dlsite
+     */
+    getDLsiteOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteOptions,
+        any
+      >({
+        path: `/options/dlsite`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchDLsiteOptions
+     * @request PATCH:/options/dlsite
+     */
+    patchDLsiteOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDLsiteOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/dlsite`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetFanboxOptions
+     * @request GET:/options/fanbox
+     */
+    getFanboxOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions,
+        any
+      >({
+        path: `/options/fanbox`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchFanboxOptions
+     * @request PATCH:/options/fanbox
+     */
+    patchFanboxOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFanboxOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/fanbox`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetFantiaOptions
+     * @request GET:/options/fantia
+     */
+    getFantiaOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFantiaOptions,
+        any
+      >({
+        path: `/options/fantia`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchFantiaOptions
+     * @request PATCH:/options/fantia
+     */
+    patchFantiaOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFantiaOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/fantia`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetPatreonOptions
+     * @request GET:/options/patreon
+     */
+    getPatreonOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainPatreonOptions,
+        any
+      >({
+        path: `/options/patreon`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchPatreonOptions
+     * @request PATCH:/options/patreon
+     */
+    patchPatreonOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputPatreonOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/patreon`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetTmdbOptions
+     * @request GET:/options/tmdb
+     */
+    getTmdbOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions,
+        any
+      >({
+        path: `/options/tmdb`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchTmdbOptions
+     * @request PATCH:/options/tmdb
+     */
+    patchTmdbOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTmdbOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/tmdb`,
+        method: "PATCH",
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -8692,9 +9527,33 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/playlist/{id}
      */
     getPlaylist: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList,
+        any
+      >({
         path: `/playlist/${id}`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Playlist
+     * @name PutPlaylist
+     * @request PUT:/playlist/{id}
+     */
+    putPlaylist: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/playlist/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -8718,11 +9577,35 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Playlist
+     * @name PatchPlaylist
+     * @request PATCH:/playlist/{id}
+     */
+    patchPlaylist: (
+      id: number,
+      data: BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayListPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/playlist/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Playlist
      * @name GetAllPlaylists
      * @request GET:/playlist
      */
     getAllPlaylists: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsDtosPlaylistDto, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList,
+        any
+      >({
         path: `/playlist`,
         method: "GET",
         format: "json",
@@ -8736,27 +9619,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddPlaylist
      * @request POST:/playlist
      */
-    addPlaylist: (data: BakabaseInsideWorldModelsModelsDtosPlaylistDto, params: RequestParams = {}) =>
+    addPlaylist: (
+      data: BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayListAddInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/playlist`,
         method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Playlist
-     * @name PutPlaylist
-     * @request PUT:/playlist
-     */
-    putPlaylist: (data: BakabaseInsideWorldModelsModelsDtosPlaylistDto, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/playlist`,
-        method: "PUT",
         body: data,
         type: ContentType.Json,
         format: "json",

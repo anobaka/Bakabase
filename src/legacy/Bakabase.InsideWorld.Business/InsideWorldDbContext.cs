@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Legacy.Models;
+using Bakabase.InsideWorld.Business.Components.PlayList.Models.Db;
 using Bakabase.InsideWorld.Business.Components.PostParser.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
@@ -50,7 +51,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CategoryDbModel> ResourceCategories { get; set; }
 
         public DbSet<MediaLibraryDbModel> MediaLibraries { get; set; }
-        public DbSet<Playlist> Playlists { get; set; }
+        public DbSet<PlayListDbModel> Playlists { get; set; }
         public DbSet<ComponentOptions> ComponentOptions { get; set; }
         public DbSet<CategoryComponent> CategoryComponents { get; set; }
 

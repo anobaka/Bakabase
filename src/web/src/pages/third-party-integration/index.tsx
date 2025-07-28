@@ -6,8 +6,7 @@ import { GrInstallOption } from "react-icons/gr";
 import { Accordion, AccordionItem, Alert, Button } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { TampermonkeyScript } from "@/sdk/constants";
-
-export default () => {
+const ThirdPartyIntegrationPage = () => {
   const { t } = useTranslation();
 
   return (
@@ -79,3 +78,7 @@ export default () => {
     </Accordion>
   );
 };
+
+ThirdPartyIntegrationPage.displayName = "ThirdPartyIntegrationPage";
+
+export default ThirdPartyIntegrationPage;

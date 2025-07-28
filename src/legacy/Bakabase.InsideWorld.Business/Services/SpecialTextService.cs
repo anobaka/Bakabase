@@ -40,6 +40,16 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await orm.GetAll(selector, asNoTracking)).Select(s => s.ToDomainModel()).ToList();
         }
 
+        public async Task<Dictionary<string, string>> GetAllWrappers()
+        {
+            var wrappers =
+                (await GetAll(a => a.Type == SpecialTextType.Wrapper))
+                .Where(a => a.Value1.IsNotEmpty() && a.Value2.IsNotEmpty())
+                .GroupBy(a => a.Value1)
+                .ToDictionary(a => a.Key, a => a.FirstOrDefault()!.Value2!);
+            return wrappers;
+        }
+
         public async Task<SingletonResponse<SpecialText>> Add(SpecialTextAddInputModel model)
         {
             var t = new SpecialText

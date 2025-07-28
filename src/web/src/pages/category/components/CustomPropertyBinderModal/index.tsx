@@ -4,7 +4,7 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 
 import { useTranslation } from "react-i18next";
 
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import BApi from "@/sdk/BApi";
 import { PropertyPool } from "@/sdk/constants";
 
@@ -12,12 +12,15 @@ type Props = {
   category: { id: number; name: string; customProperties: { id: number }[] };
   onSaved?: () => any;
 } & DestroyableProps;
-
-export default ({ category, onSaved, onDestroyed }: Props) => {
+const CustomPropertyBinderModal = ({
+  category,
+  onSaved,
+  onDestroyed,
+}: Props) => {
   const { t } = useTranslation();
 
   return (
-    <PropertySelector
+    <PropertySelectorPage
       addable
       multiple
       pool={PropertyPool.Custom}
@@ -45,3 +48,7 @@ export default ({ category, onSaved, onDestroyed }: Props) => {
     />
   );
 };
+
+CustomPropertyBinderModal.displayName = "CustomPropertyBinderModal";
+
+export default CustomPropertyBinderModal;

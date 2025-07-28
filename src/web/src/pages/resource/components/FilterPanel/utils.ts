@@ -1,4 +1,5 @@
 import type { SearchForm } from "@/pages/resource/models.ts";
+
 import {
   GroupCombinator,
   type ResourceSearchFilter,
@@ -33,10 +34,7 @@ export const addFilterGroup = (
   return form;
 };
 
-export const addFilter = (
-  form: SearchForm,
-  filter?: ResourceSearchFilter,
-) => {
+export const addFilter = (form: SearchForm, filter?: ResourceSearchFilter) => {
   if (!filter) {
     // Create a new default filter if none provided
     filter = {

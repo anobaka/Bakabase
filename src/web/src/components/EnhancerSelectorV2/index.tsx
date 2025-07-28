@@ -28,7 +28,7 @@ import {
   EnhancerId,
   StandardValueType,
 } from "@/sdk/constants";
-import CategoryEnhancerOptionsDialog from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
+import CategoryEnhancerOptionsDialogPage from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { EnhancerIcon, EnhancerTargetNotSetupTip } from "@/components/Enhancer";
 import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
@@ -313,7 +313,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                     size={"sm"}
                     variant={"light"}
                     onClick={() => {
-                      createPortal(CategoryEnhancerOptionsDialog, {
+                      createPortal(CategoryEnhancerOptionsDialogPage, {
                         enhancer: e,
                         categoryId,
                         onDestroyed: init,

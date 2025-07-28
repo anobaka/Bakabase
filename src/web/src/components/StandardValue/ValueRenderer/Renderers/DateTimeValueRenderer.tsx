@@ -15,8 +15,7 @@ type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
 };
 
 const log = buildLogger("DateTimeValueRenderer");
-
-export default (props: DateTimeValueRendererProps) => {
+const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
   const { value: propsValue, format, as, variant, editor } = props;
 
   log(props);
@@ -74,3 +73,7 @@ export default (props: DateTimeValueRendererProps) => {
     />
   );
 };
+
+DateTimeValueRenderer.displayName = "DateTimeValueRenderer";
+
+export default DateTimeValueRenderer;

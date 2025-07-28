@@ -16,8 +16,7 @@ export const animals = [
   { key: "otter", label: "Otter" },
   { key: "crocodile", label: "Crocodile" },
 ];
-
-export default () => {
+const NextuiPage = () => {
   return (
     <>
       <div className="flex w-full flex-wrap gap-4">
@@ -63,3 +62,7 @@ export default () => {
     </>
   );
 };
+
+NextuiPage.displayName = "NextuiPage";
+
+export default NextuiPage;

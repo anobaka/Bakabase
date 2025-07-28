@@ -16,8 +16,7 @@ import FileSystemEntryChangeItem from "@/pages/file-processor/RootTreeEntry/comp
 import FileSystemEntryChangeExampleItem from "@/pages/file-processor/RootTreeEntry/components/FileSystemEntryChangeExampleItem";
 
 type Props = { entries: Entry[] } & DestroyableProps;
-
-export default ({ entries = [], onDestroyed }: Props) => {
+const WrapModal = ({ entries = [], onDestroyed }: Props) => {
   const { t } = useTranslation();
   const groupsRef = useRef(_.groupBy(entries, (e) => e.parent?.path));
   const [newParentNames, setNewParentNames] = useState(
@@ -116,3 +115,7 @@ export default ({ entries = [], onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+WrapModal.displayName = "WrapModal";
+
+export default WrapModal;

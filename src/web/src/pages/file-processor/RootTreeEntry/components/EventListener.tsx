@@ -15,8 +15,7 @@ type Props = {
   onDelete?: () => any;
   onKeyDown?: (key: string, evt: KeyboardEvent) => any;
 };
-
-export default (props: Props) => {
+const EventListener = (props: Props) => {
   const { t } = useTranslation();
   const propsRef = useRef(props);
   const selectionModeRef = useRef<SelectionMode>(SelectionMode.Normal);
@@ -80,3 +79,7 @@ export default (props: Props) => {
 
   return null;
 };
+
+EventListener.displayName = "EventListener";
+
+export default EventListener;

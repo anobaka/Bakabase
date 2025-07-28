@@ -39,8 +39,7 @@ const isSet = (
     false
   );
 };
-
-export default ({ options, enhancer }: IProps) => {
+const TargetNotSetupTip = ({ options, enhancer }: IProps) => {
   const { t } = useTranslation();
 
   if (options?.active != true) {
@@ -113,3 +112,7 @@ export default ({ options, enhancer }: IProps) => {
       );
   }
 };
+
+TargetNotSetupTip.displayName = "TargetNotSetupTip";
+
+export default TargetNotSetupTip;
