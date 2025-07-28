@@ -103,17 +103,17 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
 
             var version = semVer.ToString();
 
-            var installersPrefix = $"{OssPrefix.TrimEnd('/')}/{version}/installer/";
-            var installers = OssClient
-                .ListObjects(new ListObjectsRequest(_options.Value.OssBucket)
-                    {Prefix = installersPrefix}).ObjectSummaries.Where(a => a.Size > 0).Select(a =>
-                    new AppVersionInfo.Installer
-                    {
-                        Name = Path.GetFileName(a.Key),
-                        Size = a.Size,
-                        Url =
-                            $"{_options.Value.OssDomain.TrimEnd('/')}/{string.Join('/', a.Key.Split('/').Select(Uri.EscapeDataString))}"
-                    }).ToArray();
+            // var installersPrefix = $"{OssPrefix.TrimEnd('/')}/{version}/installer/";
+            // var installers = OssClient
+            //     .ListObjects(new ListObjectsRequest(_options.Value.OssBucket)
+            //         {Prefix = installersPrefix}).ObjectSummaries.Where(a => a.Size > 0).Select(a =>
+            //         new AppVersionInfo.Installer
+            //         {
+            //             Name = Path.GetFileName(a.Key),
+            //             Size = a.Size,
+            //             Url =
+            //                 $"{_options.Value.OssDomain.TrimEnd('/')}/{string.Join('/', a.Key.Split('/').Select(Uri.EscapeDataString))}"
+            //         }).ToArray();
 
             return new DependentComponentVersion
             {

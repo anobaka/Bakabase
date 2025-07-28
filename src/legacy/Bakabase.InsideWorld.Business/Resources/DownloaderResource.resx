@@ -1,0 +1,612 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  
+  <!-- DownloaderSource Names -->
+  <data name="DownloaderSource.Bilibili" xml:space="preserve">
+    <value>Bilibili</value>
+    <comment>Chinese video sharing platform</comment>
+  </data>
+  <data name="DownloaderSource.ExHentai" xml:space="preserve">
+    <value>ExHentai</value>
+    <comment>Adult content platform</comment>
+  </data>
+  <data name="DownloaderSource.Pixiv" xml:space="preserve">
+    <value>Pixiv</value>
+    <comment>Japanese illustration community</comment>
+  </data>
+  <data name="DownloaderSource.Fanbox" xml:space="preserve">
+    <value>Fanbox</value>
+    <comment>Pixiv's creator support platform</comment>
+  </data>
+  <data name="DownloaderSource.Fantia" xml:space="preserve">
+    <value>Fantia</value>
+    <comment>Japanese creator support platform</comment>
+  </data>
+  <data name="DownloaderSource.Cien" xml:space="preserve">
+    <value>Ci-en</value>
+    <comment>Japanese creator platform by DLsite</comment>
+  </data>
+  <data name="DownloaderSource.Patreon" xml:space="preserve">
+    <value>Patreon</value>
+    <comment>International creator support platform</comment>
+  </data>
+
+  <!-- Pixiv Task Types -->
+  <data name="PixivDownloadTaskType.Search" xml:space="preserve">
+    <value>Search</value>
+    <comment>Download illustrations from search results</comment>
+  </data>
+  <data name="PixivDownloadTaskType.Ranking" xml:space="preserve">
+    <value>Ranking</value>
+    <comment>Download illustrations from daily rankings</comment>
+  </data>
+  <data name="PixivDownloadTaskType.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download latest illustrations from followed artists</comment>
+  </data>
+
+  <!-- Bilibili Task Types -->
+  <data name="BilibiliDownloadTaskType.Favorites" xml:space="preserve">
+    <value>Favorites</value>
+    <comment>Download videos from user's favorite collections</comment>
+  </data>
+
+  <!-- ExHentai Task Types -->
+  <data name="ExHentaiDownloadTaskType.SingleWork" xml:space="preserve">
+    <value>Single Work</value>
+    <comment>Download a single gallery/work</comment>
+  </data>
+  <data name="ExHentaiDownloadTaskType.Watched" xml:space="preserve">
+    <value>Watched</value>
+    <comment>Download galleries from watched list</comment>
+  </data>
+  <data name="ExHentaiDownloadTaskType.List" xml:space="preserve">
+    <value>List</value>
+    <comment>Download galleries from search results or lists</comment>
+  </data>
+  <data name="ExHentaiDownloadTaskType.Torrent" xml:space="preserve">
+    <value>Torrent</value>
+    <comment>Download via torrent files</comment>
+  </data>
+
+  <!-- Fanbox Task Types -->
+  <data name="FanboxDownloadTaskType.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="FanboxDownloadTaskType.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="FanboxDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+
+  <!-- Fantia Task Types -->
+  <data name="FantiaDownloadTaskType.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="FantiaDownloadTaskType.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="FantiaDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+
+  <!-- Cien Task Types -->
+  <data name="CienDownloadTaskType.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="CienDownloadTaskType.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="CienDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+
+  <!-- Patreon Task Types -->
+  <data name="PatreonDownloadTaskType.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="PatreonDownloadTaskType.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="PatreonDownloadTaskType.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+
+  <!-- Pixiv Naming Fields -->
+  <data name="PixivNamingFields.IllustrationId" xml:space="preserve">
+    <value>Illustration ID</value>
+    <comment>Id of illustration</comment>
+  </data>
+  <data name="PixivNamingFields.IllustrationTitle" xml:space="preserve">
+    <value>Illustration Title</value>
+    <comment>Title of illustration</comment>
+  </data>
+  <data name="PixivNamingFields.UploadDate" xml:space="preserve">
+    <value>Upload Date</value>
+    <comment>Upload date of illustration</comment>
+  </data>
+  <data name="PixivNamingFields.Tags" xml:space="preserve">
+    <value>Tags</value>
+    <comment>Tags of illustration</comment>
+  </data>
+  <data name="PixivNamingFields.UserId" xml:space="preserve">
+    <value>User ID</value>
+    <comment>Id of user(uploader)</comment>
+  </data>
+  <data name="PixivNamingFields.UserName" xml:space="preserve">
+    <value>User Name</value>
+    <comment>Name of user(uploader)</comment>
+  </data>
+  <data name="PixivNamingFields.PageNo" xml:space="preserve">
+    <value>Page Number</value>
+    <comment>Number of page, starts from 0</comment>
+  </data>
+  <data name="PixivNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of file with trailing dot</comment>
+  </data>
+
+  <!-- Bilibili Naming Fields -->
+  <data name="BilibiliNamingFields.UploaderId" xml:space="preserve">
+    <value>Uploader ID</value>
+    <comment>Id of a uploader</comment>
+  </data>
+  <data name="BilibiliNamingFields.UploaderName" xml:space="preserve">
+    <value>Uploader Name</value>
+    <comment>Name of uploader</comment>
+  </data>
+  <data name="BilibiliNamingFields.AId" xml:space="preserve">
+    <value>AV ID</value>
+    <comment>The number id of a post</comment>
+  </data>
+  <data name="BilibiliNamingFields.BvId" xml:space="preserve">
+    <value>BV ID</value>
+    <comment>The string id of a post</comment>
+  </data>
+  <data name="BilibiliNamingFields.PostTitle" xml:space="preserve">
+    <value>Post Title</value>
+    <comment>The title of a post</comment>
+  </data>
+  <data name="BilibiliNamingFields.CId" xml:space="preserve">
+    <value>C ID</value>
+    <comment>Part id of a post</comment>
+  </data>
+  <data name="BilibiliNamingFields.PartNo" xml:space="preserve">
+    <value>Part Number</value>
+    <comment>Part no of a post, starts from 1</comment>
+  </data>
+  <data name="BilibiliNamingFields.PartName" xml:space="preserve">
+    <value>Part Name</value>
+    <comment>Part name of a post</comment>
+  </data>
+  <data name="BilibiliNamingFields.QualityName" xml:space="preserve">
+    <value>Quality Name</value>
+    <comment>Quality name of video</comment>
+  </data>
+  <data name="BilibiliNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of video with leading dot</comment>
+  </data>
+
+  <!-- ExHentai Naming Fields -->
+  <data name="ExHentaiNamingFields.GalleryId" xml:space="preserve">
+    <value>Gallery ID</value>
+    <comment>Id of gallery</comment>
+  </data>
+  <data name="ExHentaiNamingFields.GalleryToken" xml:space="preserve">
+    <value>Gallery Token</value>
+    <comment>Token of gallery</comment>
+  </data>
+  <data name="ExHentaiNamingFields.RawName" xml:space="preserve">
+    <value>Raw Name</value>
+    <comment>Name displayed in detail page</comment>
+  </data>
+  <data name="ExHentaiNamingFields.Name" xml:space="preserve">
+    <value>Name</value>
+    <comment>Name displayed directly</comment>
+  </data>
+  <data name="ExHentaiNamingFields.Category" xml:space="preserve">
+    <value>Category</value>
+    <comment>Category of the gallery</comment>
+  </data>
+  <data name="ExHentaiNamingFields.PageTitle" xml:space="preserve">
+    <value>Page Title</value>
+    <comment>Current page title without file extension</comment>
+  </data>
+  <data name="ExHentaiNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of file with leading dot</comment>
+  </data>
+
+  <!-- Fanbox Naming Fields -->
+  <data name="FanboxNamingFields.PostId" xml:space="preserve">
+    <value>Post ID</value>
+    <comment>Id of post</comment>
+  </data>
+  <data name="FanboxNamingFields.PostTitle" xml:space="preserve">
+    <value>Post Title</value>
+    <comment>Title of post</comment>
+  </data>
+  <data name="FanboxNamingFields.PublishDate" xml:space="preserve">
+    <value>Publish Date</value>
+    <comment>Publish date of post</comment>
+  </data>
+  <data name="FanboxNamingFields.CreatorId" xml:space="preserve">
+    <value>Creator ID</value>
+    <comment>Id of creator</comment>
+  </data>
+  <data name="FanboxNamingFields.CreatorName" xml:space="preserve">
+    <value>Creator Name</value>
+    <comment>Name of creator</comment>
+  </data>
+  <data name="FanboxNamingFields.FileNo" xml:space="preserve">
+    <value>File Number</value>
+    <comment>Number of file, starts from 0</comment>
+  </data>
+  <data name="FanboxNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of file with trailing dot</comment>
+  </data>
+
+  <!-- Fantia Naming Fields -->
+  <data name="FantiaNamingFields.PostId" xml:space="preserve">
+    <value>Post ID</value>
+    <comment>Id of post</comment>
+  </data>
+  <data name="FantiaNamingFields.PostTitle" xml:space="preserve">
+    <value>Post Title</value>
+    <comment>Title of post</comment>
+  </data>
+  <data name="FantiaNamingFields.PublishDate" xml:space="preserve">
+    <value>Publish Date</value>
+    <comment>Publish date of post</comment>
+  </data>
+  <data name="FantiaNamingFields.FanclubId" xml:space="preserve">
+    <value>Fanclub ID</value>
+    <comment>Id of fanclub</comment>
+  </data>
+  <data name="FantiaNamingFields.FanclubName" xml:space="preserve">
+    <value>Fanclub Name</value>
+    <comment>Name of fanclub</comment>
+  </data>
+  <data name="FantiaNamingFields.FileNo" xml:space="preserve">
+    <value>File Number</value>
+    <comment>Number of file, starts from 0</comment>
+  </data>
+  <data name="FantiaNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of file with trailing dot</comment>
+  </data>
+
+  <!-- Cien Naming Fields -->
+  <data name="CienNamingFields.ArticleId" xml:space="preserve">
+    <value>Article ID</value>
+    <comment>Id of article</comment>
+  </data>
+  <data name="CienNamingFields.ArticleTitle" xml:space="preserve">
+    <value>Article Title</value>
+    <comment>Title of article</comment>
+  </data>
+  <data name="CienNamingFields.PublishDate" xml:space="preserve">
+    <value>Publish Date</value>
+    <comment>Publish date of article</comment>
+  </data>
+  <data name="CienNamingFields.AuthorId" xml:space="preserve">
+    <value>Author ID</value>
+    <comment>Id of author</comment>
+  </data>
+  <data name="CienNamingFields.AuthorName" xml:space="preserve">
+    <value>Author Name</value>
+    <comment>Name of author</comment>
+  </data>
+  <data name="CienNamingFields.FileNo" xml:space="preserve">
+    <value>File Number</value>
+    <comment>Number of file, starts from 0</comment>
+  </data>
+  <data name="CienNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of file with trailing dot</comment>
+  </data>
+
+  <!-- Patreon Naming Fields -->
+  <data name="PatreonNamingFields.PostId" xml:space="preserve">
+    <value>Post ID</value>
+    <comment>Id of post</comment>
+  </data>
+  <data name="PatreonNamingFields.PostTitle" xml:space="preserve">
+    <value>Post Title</value>
+    <comment>Title of post</comment>
+  </data>
+  <data name="PatreonNamingFields.PublishDate" xml:space="preserve">
+    <value>Publish Date</value>
+    <comment>Publish date of post</comment>
+  </data>
+  <data name="PatreonNamingFields.CreatorId" xml:space="preserve">
+    <value>Creator ID</value>
+    <comment>Id of creator</comment>
+  </data>
+  <data name="PatreonNamingFields.CreatorName" xml:space="preserve">
+    <value>Creator Name</value>
+    <comment>Name of creator</comment>
+  </data>
+  <data name="PatreonNamingFields.TierLevel" xml:space="preserve">
+    <value>Tier Level</value>
+    <comment>Tier level of post</comment>
+  </data>
+  <data name="PatreonNamingFields.FileNo" xml:space="preserve">
+    <value>File Number</value>
+    <comment>Number of file, starts from 0</comment>
+  </data>
+  <data name="PatreonNamingFields.Extension" xml:space="preserve">
+    <value>Extension</value>
+    <comment>Extension of file with trailing dot</comment>
+  </data>
+
+  <!-- Task Type Names by ThirdPartyId.TaskTypeName -->
+  <!-- Pixiv Task Types -->
+  <data name="Pixiv.Search" xml:space="preserve">
+    <value>Search</value>
+    <comment>Download illustrations from search results</comment>
+  </data>
+  <data name="Pixiv.Search.Description" xml:space="preserve">
+    <value>Download illustrations from Pixiv search results</value>
+    <comment>Description for Pixiv search task type</comment>
+  </data>
+  <data name="Pixiv.Ranking" xml:space="preserve">
+    <value>Ranking</value>
+    <comment>Download illustrations from daily rankings</comment>
+  </data>
+  <data name="Pixiv.Ranking.Description" xml:space="preserve">
+    <value>Download illustrations from Pixiv daily rankings</value>
+    <comment>Description for Pixiv ranking task type</comment>
+  </data>
+  <data name="Pixiv.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download latest illustrations from followed artists</comment>
+  </data>
+  <data name="Pixiv.Following.Description" xml:space="preserve">
+    <value>Download latest illustrations from artists you follow</value>
+    <comment>Description for Pixiv following task type</comment>
+  </data>
+
+  <!-- Bilibili Task Types -->
+  <data name="Bilibili.Favorites" xml:space="preserve">
+    <value>Favorites</value>
+    <comment>Download videos from user's favorite collections</comment>
+  </data>
+  <data name="Bilibili.Favorites.Description" xml:space="preserve">
+    <value>Download videos from your Bilibili favorite collections</value>
+    <comment>Description for Bilibili favorites task type</comment>
+  </data>
+
+  <!-- ExHentai Task Types -->
+  <data name="ExHentai.SingleWork" xml:space="preserve">
+    <value>Single Work</value>
+    <comment>Download a single gallery/work</comment>
+  </data>
+  <data name="ExHentai.SingleWork.Description" xml:space="preserve">
+    <value>Download a single gallery or work from ExHentai</value>
+    <comment>Description for ExHentai single work task type</comment>
+  </data>
+  <data name="ExHentai.Watched" xml:space="preserve">
+    <value>Watched</value>
+    <comment>Download galleries from watched list</comment>
+  </data>
+  <data name="ExHentai.Watched.Description" xml:space="preserve">
+    <value>Download galleries from your ExHentai watched list</value>
+    <comment>Description for ExHentai watched task type</comment>
+  </data>
+  <data name="ExHentai.List" xml:space="preserve">
+    <value>List</value>
+    <comment>Download galleries from search results or lists</comment>
+  </data>
+  <data name="ExHentai.List.Description" xml:space="preserve">
+    <value>Download galleries from ExHentai search results or lists</value>
+    <comment>Description for ExHentai list task type</comment>
+  </data>
+  <data name="ExHentai.Torrent" xml:space="preserve">
+    <value>Torrent</value>
+    <comment>Download via torrent files</comment>
+  </data>
+  <data name="ExHentai.Torrent.Description" xml:space="preserve">
+    <value>Download ExHentai content via torrent files</value>
+    <comment>Description for ExHentai torrent task type</comment>
+  </data>
+
+  <!-- Fanbox Task Types -->
+  <data name="Fanbox.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="Fanbox.Creator.Description" xml:space="preserve">
+    <value>Download all posts from a specific Fanbox creator</value>
+    <comment>Description for Fanbox creator task type</comment>
+  </data>
+  <data name="Fanbox.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="Fanbox.Following.Description" xml:space="preserve">
+    <value>Download posts from Fanbox creators you follow</value>
+    <comment>Description for Fanbox following task type</comment>
+  </data>
+  <data name="Fanbox.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+  <data name="Fanbox.SinglePost.Description" xml:space="preserve">
+    <value>Download a specific Fanbox post by ID</value>
+    <comment>Description for Fanbox single post task type</comment>
+  </data>
+
+  <!-- Fantia Task Types -->
+  <data name="Fantia.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="Fantia.Creator.Description" xml:space="preserve">
+    <value>Download all posts from a specific Fantia creator</value>
+    <comment>Description for Fantia creator task type</comment>
+  </data>
+  <data name="Fantia.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="Fantia.Following.Description" xml:space="preserve">
+    <value>Download posts from Fantia creators you follow</value>
+    <comment>Description for Fantia following task type</comment>
+  </data>
+  <data name="Fantia.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+  <data name="Fantia.SinglePost.Description" xml:space="preserve">
+    <value>Download a specific Fantia post by ID</value>
+    <comment>Description for Fantia single post task type</comment>
+  </data>
+
+  <!-- Cien Task Types -->
+  <data name="Cien.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="Cien.Creator.Description" xml:space="preserve">
+    <value>Download all posts from a specific Ci-en creator</value>
+    <comment>Description for Cien creator task type</comment>
+  </data>
+  <data name="Cien.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="Cien.Following.Description" xml:space="preserve">
+    <value>Download posts from Ci-en creators you follow</value>
+    <comment>Description for Cien following task type</comment>
+  </data>
+  <data name="Cien.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+  <data name="Cien.SinglePost.Description" xml:space="preserve">
+    <value>Download a specific Ci-en post by ID</value>
+    <comment>Description for Cien single post task type</comment>
+  </data>
+
+  <!-- Patreon Task Types -->
+  <data name="Patreon.Creator" xml:space="preserve">
+    <value>Creator</value>
+    <comment>Download all posts from a specific creator</comment>
+  </data>
+  <data name="Patreon.Creator.Description" xml:space="preserve">
+    <value>Download all posts from a specific Patreon creator</value>
+    <comment>Description for Patreon creator task type</comment>
+  </data>
+  <data name="Patreon.Following" xml:space="preserve">
+    <value>Following</value>
+    <comment>Download posts from creators you follow</comment>
+  </data>
+  <data name="Patreon.Following.Description" xml:space="preserve">
+    <value>Download posts from Patreon creators you follow</value>
+    <comment>Description for Patreon following task type</comment>
+  </data>
+  <data name="Patreon.SinglePost" xml:space="preserve">
+    <value>Single Post</value>
+    <comment>Download a specific post by ID</comment>
+  </data>
+  <data name="Patreon.SinglePost.Description" xml:space="preserve">
+    <value>Download a specific Patreon post by ID</value>
+    <comment>Description for Patreon single post task type</comment>
+  </data>
+
+  <!-- Error Messages -->
+  <data name="InvalidFavorites" xml:space="preserve">
+    <value>Invalid favorites</value>
+    <comment>Error message for invalid favorites</comment>
+  </data>
+  <data name="FfMpegIsNotReady" xml:space="preserve">
+    <value>FFmpeg is not ready</value>
+    <comment>Error message when FFmpeg is not available</comment>
+  </data>
+  <data name="LuxIsNotReady" xml:space="preserve">
+    <value>Lux is not ready</value>
+    <comment>Error message when Lux downloader is not available</comment>
+  </data>
+  <data name="InvalidCookie" xml:space="preserve">
+    <value>Invalid cookie</value>
+    <comment>Error message for invalid authentication cookie</comment>
+  </data>
+  <data name="DownloadPathNotSet" xml:space="preserve">
+    <value>Download path not set</value>
+    <comment>Error message when download path is not configured</comment>
+  </data>
+</root>

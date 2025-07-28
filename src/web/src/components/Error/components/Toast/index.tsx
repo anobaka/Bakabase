@@ -19,8 +19,7 @@ type Props = {
   title: string;
   description?: string;
 };
-
-export default (props: Props) => {
+const Toast = (props: Props) => {
   const { toast: tst, title, description } = props;
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
@@ -75,3 +74,7 @@ export default (props: Props) => {
     </div>
   );
 };
+
+Toast.displayName = "Toast";
+
+export default Toast;

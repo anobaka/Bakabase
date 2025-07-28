@@ -4,8 +4,7 @@ import { ApartmentOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import { Tooltip } from "@/components/bakaui";
-
-export default () => {
+const DynamicTargetLabel = () => {
   const { t } = useTranslation();
 
   return (
@@ -25,3 +24,7 @@ export default () => {
     </Tooltip>
   );
 };
+
+DynamicTargetLabel.displayName = "DynamicTargetLabel";
+
+export default DynamicTargetLabel;

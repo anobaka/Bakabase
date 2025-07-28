@@ -11,8 +11,7 @@ import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {} & DestroyableProps;
-
-export default ({ onDestroyed }: Props) => {
+const AddModal = ({ onDestroyed }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [name, setName] = useState<string>();
@@ -75,3 +74,7 @@ export default ({ onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+AddModal.displayName = "AddModal";
+
+export default AddModal;

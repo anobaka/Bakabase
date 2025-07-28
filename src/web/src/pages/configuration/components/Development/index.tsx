@@ -14,10 +14,9 @@ import {
   TableRow,
   Tooltip,
 } from "@/components/bakaui";
-import { useAppContextStore } from "@/models/appContext";
+import { useAppContextStore } from "@/stores/appContext";
 import ExternalLink from "@/components/ExternalLink";
-
-export default () => {
+const Development = () => {
   const { t } = useTranslation();
   const appContext = useAppContextStore((state) => state);
 
@@ -93,3 +92,7 @@ export default () => {
     </Table>
   );
 };
+
+Development.displayName = "Development";
+
+export default Development;

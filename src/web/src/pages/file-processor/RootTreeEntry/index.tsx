@@ -54,7 +54,7 @@ const log = buildLogger("RootTreeEntry");
 
 export type RootTreeEntryRef = { root?: Entry };
 
-const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
+const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
   (
     {
       rootPath,
@@ -617,4 +617,4 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
   },
 );
 
-export default RootTreeEntry;
+export default RootTreeEntryPage;

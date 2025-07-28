@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
+
 import { Button } from "@/components/bakaui";
+
 import "./index.scss";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-
-export default ({
+const Title = ({
   title,
   titleAfter = undefined,
   buttons = [],
@@ -40,3 +41,7 @@ export default ({
     </div>
   );
 };
+
+Title.displayName = "Title";
+
+export default Title;

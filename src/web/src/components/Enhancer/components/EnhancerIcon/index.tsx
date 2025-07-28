@@ -11,8 +11,7 @@ import Bakabase from "@/assets/logo/bakabase.png";
 type Props = {
   id: EnhancerId;
 };
-
-export default ({ id }: Props) => {
+const EnhancerIcon = ({ id }: Props) => {
   switch (id) {
     case EnhancerId.Bakabase:
       return (
@@ -38,3 +37,7 @@ export default ({ id }: Props) => {
 
   return <ThunderboltOutlined className={"text-base"} />;
 };
+
+EnhancerIcon.displayName = "EnhancerIcon";
+
+export default EnhancerIcon;

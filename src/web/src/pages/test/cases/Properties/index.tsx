@@ -7,8 +7,7 @@ import TestProperties from "./data.json";
 
 import { propertyTypes } from "@/sdk/constants";
 import ModalContent from "@/components/PropertyModal/components/ModalContent";
-
-export default () => {
+const PropertiesPage = () => {
   const [properties, setProperties] = useState<any[]>(TestProperties);
 
   console.log(properties);
@@ -49,3 +48,7 @@ export default () => {
     </div>
   );
 };
+
+PropertiesPage.displayName = "PropertiesPage";
+
+export default PropertiesPage;

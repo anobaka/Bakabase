@@ -10,10 +10,10 @@ import {
 } from "@ant-design/icons";
 import { Img } from "react-image";
 import React from "react";
+import { MdAttachFile } from "react-icons/md";
 
 import envConfig from "@/config/env";
 import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
-import { MdAttachFile } from 'react-icons/md';
 import { Button } from "@/components/bakaui";
 import { splitPathIntoSegments } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -25,8 +25,7 @@ type AttachmentValueRendererProps = Omit<
 > & {
   variant: ValueRendererProps<string[]>["variant"];
 };
-
-export default ({
+const AttachmentValueRenderer = ({
   value,
   variant,
   editor,
@@ -61,9 +60,7 @@ export default ({
                     maxHeight: 100,
                   }}
                   title={v}
-                  unloader={
-                    <MdAttachFile className={"text-2xl"} />
-                  }
+                  unloader={<MdAttachFile className={"text-2xl"} />}
                 />
                 <Button
                   isIconOnly
@@ -118,3 +115,7 @@ export default ({
       }
   }
 };
+
+AttachmentValueRenderer.displayName = "AttachmentValueRenderer";
+
+export default AttachmentValueRenderer;

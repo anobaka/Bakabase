@@ -4,8 +4,7 @@ import { BsFileEarmark, BsFolder } from "react-icons/bs";
 import { useTranslation } from "react-i18next";
 
 import { PathFilterFsType } from "@/pages/media-library-template/models";
-
-export default ({ type }: { type: PathFilterFsType }) => {
+const PathFilterFsTypeBlock = ({ type }: { type: PathFilterFsType }) => {
   const { t } = useTranslation();
 
   switch (type) {
@@ -25,3 +24,7 @@ export default ({ type }: { type: PathFilterFsType }) => {
       );
   }
 };
+
+PathFilterFsTypeBlock.displayName = "PathFilterFsTypeBlock";
+
+export default PathFilterFsTypeBlock;

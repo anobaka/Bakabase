@@ -23,8 +23,7 @@ import ResourceTransferModal from "@/components/ResourceTransferModal";
 type Props = {
   onHandled?: () => any;
 };
-
-export default ({ onHandled }: Props) => {
+const HandleUnknownResources = ({ onHandled }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [count, setCount] = useState(0);
@@ -164,3 +163,7 @@ export default ({ onHandled }: Props) => {
 
   return null;
 };
+
+HandleUnknownResources.displayName = "HandleUnknownResources";
+
+export default HandleUnknownResources;

@@ -12,8 +12,7 @@ type BooleanValueRendererProps = Omit<
 > & {
   variant: ValueRendererProps<boolean>["variant"] | "switch";
 };
-
-export default ({
+const BooleanValueRenderer = ({
   value,
   variant,
   editor,
@@ -45,3 +44,7 @@ export default ({
       );
   }
 };
+
+BooleanValueRenderer.displayName = "BooleanValueRenderer";
+
+export default BooleanValueRenderer;

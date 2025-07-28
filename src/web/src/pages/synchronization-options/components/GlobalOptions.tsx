@@ -19,8 +19,7 @@ type Props = {
   options?: Options;
   onChange?: (options: Options) => any;
 };
-
-export default ({ options, onChange }: Props) => {
+const GlobalOptions = ({ options, onChange }: Props) => {
   const { t } = useTranslation();
 
   const patchOptions = (patches: Partial<Options>) => {
@@ -93,3 +92,7 @@ export default ({ options, onChange }: Props) => {
     </OptionsCard>
   );
 };
+
+GlobalOptions.displayName = "GlobalOptions";
+
+export default GlobalOptions;

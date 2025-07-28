@@ -33,8 +33,7 @@ type Props = {
 };
 
 const log = buildLogger("StringProcessorEditor");
-
-export default ({
+const Editor = ({
   operation: propsOperation,
   options: propsOptions,
   onChange,
@@ -301,3 +300,7 @@ export default ({
     </div>
   );
 };
+
+Editor.displayName = "Editor";
+
+export default Editor;

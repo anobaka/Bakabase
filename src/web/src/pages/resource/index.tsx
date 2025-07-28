@@ -13,8 +13,8 @@ import styles from "./index.module.scss";
 import FilterPanel from "./components/FilterPanel";
 
 import BApi from "@/sdk/BApi";
-import Resource from "@/components/Resource";
-import { useUiOptionsStore } from "@/models/options";
+import ResourceCard from "@/components/Resource";
+import { useUiOptionsStore } from "@/stores/options";
 import BusinessConstants from "@/components/BusinessConstants";
 import { Button, Chip, Link, Pagination, Spinner } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
@@ -30,8 +30,7 @@ interface IPageable {
 }
 
 const log = buildLogger("ResourcePage");
-
-export default () => {
+const ResourcePage: React.FC = () => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
@@ -274,18 +273,24 @@ export default () => {
       });
   }, []);
 
+  type GridCellRenderArgs = {
+    columnIndex: number;
+    key: string;
+    parent: any;
+    rowIndex: number;
+    style: React.CSSProperties;
+    measure: () => void;
+  };
+
   const renderCell = useCallback(
     ({
-      columnIndex, // Horizontal (column) index of cell
-      // isScrolling, // The Grid is currently being scrolled
-      // isVisible, // This cell is visible within the grid (eg it is not an overscanned cell)
-      key, // Unique key within array of cells
-      parent, // Reference to the parent Grid (instance)
-      rowIndex, // Vertical (row) index of cell
-      style, // Style object to be applied to cell (to position it);
-      // This must be passed through to the rendered cell element.
+      columnIndex,
+      key,
+      parent,
+      rowIndex,
+      style,
       measure,
-    }) => {
+    }: GridCellRenderArgs) => {
       const index = rowIndex * columnCount + columnIndex;
 
       if (index >= resources.length) {
@@ -303,19 +308,15 @@ export default () => {
           }}
           onLoad={measure}
         >
-          <Resource
+          <ResourceCard
             // debug
             biggerCoverPlacement={
               index % columnCount < columnCount / 2 ? "right" : "left"
             }
-            disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
             mode={multiSelection ? "select" : "default"}
             resource={resource}
             selected={selected}
             selectedResourceIds={selectedIdsRef.current}
-            showBiggerCoverOnHover={
-              uiOptions?.resource?.showBiggerCoverWhileHover
-            }
             onSelected={onSelect}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
@@ -563,3 +564,7 @@ export default () => {
     </div>
   );
 };
+
+ResourcePage.displayName = "ResourcePage";
+
+export default ResourcePage;

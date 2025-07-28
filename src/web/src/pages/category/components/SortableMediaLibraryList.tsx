@@ -15,8 +15,7 @@ import {
 
 import SortableMediaLibrary from "@/pages/category/components/SortableMediaLibrary";
 import BApi from "@/sdk/BApi";
-
-export default ({
+const SortableMediaLibraryList = ({
   libraries,
   loadAllMediaLibraries,
   forceUpdate,
@@ -102,3 +101,7 @@ export default ({
     </div>
   );
 };
+
+SortableMediaLibraryList.displayName = "SortableMediaLibraryList";
+
+export default SortableMediaLibraryList;

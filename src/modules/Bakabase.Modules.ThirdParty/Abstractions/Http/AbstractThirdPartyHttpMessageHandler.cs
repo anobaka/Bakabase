@@ -6,60 +6,58 @@ using Microsoft.Extensions.Options;
 namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
     public abstract class AbstractThirdPartyHttpMessageHandler<TOptions> : HttpClientHandler
-        where TOptions : ThirdPartyHttpClientOptions
+        where TOptions : class, IThirdPartyHttpClientOptions, new()
     {
         private readonly ThirdPartyHttpRequestLogger _logger;
-        public ThirdPartyId ThirdPartyId { get; }
+        private ThirdPartyId ThirdPartyId { get; }
         private int _threadDebts;
         private DateTime _prevRequestDt;
         private readonly SemaphoreSlim _lock = new(1, 1);
-        private readonly SemaphoreSlim _threadsSemaphore = new(0, int.MaxValue);
+        private readonly SemaphoreSlim _threadsSemaphore;
 
-        private IOptions<TOptions> _options;
+        private TOptions _options;
 
-        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy)
+        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy, TOptions options)
         {
             _logger = logger;
             ThirdPartyId = thirdPartyId;
+            _options = options;
             Proxy = webProxy;
+            _threadsSemaphore = new SemaphoreSlim(options.MaxConcurrency, int.MaxValue);
         }
 
-        public virtual IOptions<TOptions> Options
+        protected TOptions Options
         {
-            protected get => _options;
+            get => _options;
             set
             {
-                if (value?.Value != null)
+                var prevMaxThreads = _options.MaxConcurrency;
+                if (value.MaxConcurrency != prevMaxThreads)
                 {
-                    var prevMaxThreads = _options?.Value?.MaxThreads ?? 0;
-                    if (value.Value.MaxThreads != prevMaxThreads)
-                    {
-                        _lock.Wait();
+                    _lock.Wait();
 
-                        try
+                    try
+                    {
+                        if (prevMaxThreads == value.MaxConcurrency)
                         {
-                            if (prevMaxThreads == value.Value.MaxThreads)
+                        }
+                        else
+                        {
+                            if (prevMaxThreads > value.MaxConcurrency)
                             {
+                                _threadDebts += prevMaxThreads - value.MaxConcurrency;
                             }
                             else
                             {
-                                if (prevMaxThreads > value.Value.MaxThreads)
-                                {
-                                    _threadDebts += prevMaxThreads - value.Value.MaxThreads;
-                                }
-                                else
-                                {
-                                    _threadsSemaphore.Release(value.Value.MaxThreads - prevMaxThreads);
-                                }
+                                _threadsSemaphore.Release(value.MaxConcurrency - prevMaxThreads);
                             }
                         }
-                        finally
-                        {
-                            _lock.Release();
-                        }
+                    }
+                    finally
+                    {
+                        _lock.Release();
                     }
                 }
-
                 _options = value;
             }
         }
@@ -77,26 +75,26 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
         private void _populateRequest(HttpRequestMessage request)
         {
-            if (Options.Value.UserAgent.IsNotEmpty())
+            if (Options.UserAgent.IsNotEmpty())
             {
                 request.Headers.UserAgent.Clear();
                 request.Headers.Add("User-Agent",
-                    Options.Value.UserAgent ?? ThirdPartyHttpClientOptions.DefaultUserAgent);
+                    Options.UserAgent ?? IThirdPartyHttpClientOptions.DefaultUserAgent);
             }
 
-            if (Options.Value.Cookie.IsNotEmpty())
+            if (Options.Cookie.IsNotEmpty())
             {
-                request.Headers.Add("Cookie", Options.Value.Cookie);
+                request.Headers.Add("Cookie", Options.Cookie);
             }
 
-            if (Options.Value.Referer.IsNotEmpty())
+            if (Options.Referer.IsNotEmpty())
             {
-                request.Headers.Add("Referer", Options.Value.Referer);
+                request.Headers.Add("Referer", Options.Referer);
             }
 
-            if (Options.Value.Headers != null)
+            if (Options.Headers != null)
             {
-                foreach (var (k, v) in Options.Value.Headers)
+                foreach (var (k, v) in Options.Headers)
                 {
                     request.Headers.Add(k, v);
                 }
@@ -105,7 +103,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
         private void WaitForInterval()
         {
-            while (DateTime.Now < _prevRequestDt.AddMilliseconds(Options.Value.Interval))
+            while (DateTime.Now < _prevRequestDt.AddMilliseconds(Options.RequestInterval))
             {
                 Thread.Sleep(1);
             }
@@ -113,7 +111,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
         private async Task WaitForIntervalAsync(CancellationToken ct)
         {
-            while (DateTime.Now < _prevRequestDt.AddMilliseconds(Options.Value.Interval))
+            while (DateTime.Now < _prevRequestDt.AddMilliseconds(Options.RequestInterval))
             {
                 await Task.Delay(1, ct);
             }

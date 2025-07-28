@@ -83,8 +83,7 @@ const PathSegmentRenderOptions: Record<
     tip: "Current segment",
   },
 };
-
-export default ({
+const SegmentMatcherConfiguration = ({
   defaultValue,
   modesData = new SegmentMatcherConfigurationModesData(),
   onSubmit,
@@ -209,3 +208,7 @@ export default ({
     </Modal>
   );
 };
+
+SegmentMatcherConfiguration.displayName = "SegmentMatcherConfiguration";
+
+export default SegmentMatcherConfiguration;

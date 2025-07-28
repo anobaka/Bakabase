@@ -113,8 +113,11 @@ const renderItem = (item: Item, layer: number) => {
     </>
   );
 };
-
-export default ({ entries = [], onDestroyed, rootPath }: Props) => {
+const DeleteConfirmationModal = ({
+  entries = [],
+  onDestroyed,
+  rootPath,
+}: Props) => {
   const { t } = useTranslation();
   const items = mergeItems(entries, rootPath);
 
@@ -150,3 +153,7 @@ export default ({ entries = [], onDestroyed, rootPath }: Props) => {
     </Modal>
   );
 };
+
+DeleteConfirmationModal.displayName = "DeleteConfirmationModal";
+
+export default DeleteConfirmationModal;

@@ -13,8 +13,7 @@ type Props = {
   onRightIconPress?: any;
   children: any;
 };
-
-export default ({
+const Block = ({
   leftIcon,
   title,
   description,
@@ -57,3 +56,7 @@ export default ({
     </div>
   );
 };
+
+Block.displayName = "Block";
+
+export default Block;

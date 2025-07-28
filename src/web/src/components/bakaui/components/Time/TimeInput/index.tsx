@@ -2,9 +2,9 @@
 
 import type { TimeInputProps as NextUITimeInputProps } from "@heroui/react";
 import type { Duration } from "dayjs/plugin/duration";
+import type { Time } from "@internationalized/date";
 
-import { TimeInput } from "@heroui/react";
-import { Time } from "@internationalized/date";
+import { TimeInput as HeroTimeInput } from "@heroui/react";
 
 import {
   convertDurationToTime,
@@ -17,8 +17,7 @@ interface TimeInputProps
   defaultValue?: Duration;
   onChange?: (value: Duration) => void;
 }
-
-export default ({
+const TimeInput = ({
   value,
   onChange,
   defaultValue,
@@ -28,7 +27,7 @@ export default ({
   const v = value ? convertDurationToTime(value) : undefined;
 
   return (
-    <TimeInput
+    <HeroTimeInput
       defaultValue={dv}
       hourCycle={24}
       value={v}
@@ -39,3 +38,7 @@ export default ({
     />
   );
 };
+
+TimeInput.displayName = "TimeInput";
+
+export default TimeInput;

@@ -14,8 +14,9 @@ import localizer from "ajv-i18n";
 import i18n from "i18next";
 import "./index.scss";
 
-import { uuidv4 } from "@/components/utils";
 import { MdHelp } from "react-icons/md";
+
+import { uuidv4 } from "@/components/utils";
 import { Tooltip } from "@/components/bakaui";
 
 function TitleFieldTemplate(props: TitleFieldProps) {
@@ -53,6 +54,9 @@ function FieldErrorTemplate(props: FieldErrorProps) {
 //   return (
 //     <div className={classNames} style={style}>
 //       <label htmlFor={id}>
+const BRjsf = React.forwardRef(BRjsf);
+
+BRjsf.displayName = "BRjsf";
 //         {label}
 //         {required ? '*' : null}
 //       </label>
@@ -187,4 +191,4 @@ const BRjsf = (props: BRjsfProps, ref) => {
   );
 };
 
-export default React.forwardRef(BRjsf);
+export default BRjsf;

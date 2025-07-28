@@ -20,8 +20,7 @@ type TagsValueRendererProps = ValueRendererProps<TagValue[], string[]> & {
 };
 
 const log = buildLogger("TagsValueRenderer");
-
-export default (props: TagsValueRendererProps) => {
+const TagsValueRenderer = (props: TagsValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
 
   // log(props);
@@ -140,3 +139,7 @@ export default (props: TagsValueRendererProps) => {
     );
   }
 };
+
+TagsValueRenderer.displayName = "TagsValueRenderer";
+
+export default TagsValueRenderer;

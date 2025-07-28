@@ -141,6 +141,8 @@ public record Resource
             public object? Value { get; set; } = Value;
             public object? BizValue { get; set; } = BizValue ?? Value;
             public object? AliasAppliedBizValue { get; set; } = AliasAppliedBizValue ?? BizValue ?? Value;
+
+            public bool IsManuallySet => Scope == (int)PropertyValueScope.Manual;
         }
     }
 

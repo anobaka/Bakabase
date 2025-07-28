@@ -8,8 +8,7 @@ interface IProps {
   autoBindProperty: boolean;
   onChange?: (autoBindProperty: boolean) => void;
 }
-
-export default ({ autoBindProperty, onChange }: IProps) => {
+const AutoBindProperty = ({ autoBindProperty, onChange }: IProps) => {
   const { t } = useTranslation();
 
   return (
@@ -47,3 +46,7 @@ export default ({ autoBindProperty, onChange }: IProps) => {
     </>
   );
 };
+
+AutoBindProperty.displayName = "AutoBindProperty";
+
+export default AutoBindProperty;

@@ -115,6 +115,7 @@ namespace Bakabase.Service.Controllers
             prefix = prefix?.StandardizePath();
             var results = new List<FileSystemEntryNameViewModel>();
             string? parent = null;
+
             if (prefix.IsNotEmpty())
             {
                 if (System.IO.File.Exists(prefix))
@@ -122,26 +123,23 @@ namespace Bakabase.Service.Controllers
                     parent = Path.GetDirectoryName(prefix);
                     results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), false));
                 }
+                else if (Directory.Exists(prefix))
+                {
+                    parent = prefix;
+                    results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), true));
+                }
                 else
                 {
-                    if (Directory.Exists(prefix))
+                    var dir = Path.GetDirectoryName(prefix);
+                    if (dir.IsNotEmpty())
                     {
-                        parent = prefix;
-                        results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), true));
-                    }
-                    else
-                    {
-                        var dir = Path.GetDirectoryName(prefix);
-                        if (dir.IsNotEmpty())
+                        if (Directory.Exists(dir))
                         {
-                            if (Directory.Exists(dir))
-                            {
-                                parent = dir;
-                            }
-                            else
-                            {
-                                return new ListResponse<FileSystemEntryNameViewModel>(results);
-                            }
+                            parent = dir;
+                        }
+                        else
+                        {
+                            return new ListResponse<FileSystemEntryNameViewModel>(results);
                         }
                     }
                 }
@@ -151,21 +149,66 @@ namespace Bakabase.Service.Controllers
             {
                 var drives = DriveInfo.GetDrives()
                     .Where(d => d.IsReady)
-                    .Select(d =>
-                        new FileSystemEntryNameViewModel(d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
+                    .Select(d => new FileSystemEntryNameViewModel(
+                        d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
+
                 results.AddRange(drives
                     .Where(d => prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase));
+                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
+                    .Take(maxResults));
             }
             else
             {
-                var dirs = Directory.GetDirectories(parent).Select(p => p.StandardizePath()!)
-                    .Where(d => d.StartsWith(prefix!, StringComparison.OrdinalIgnoreCase)).ToList();
-                var files = Directory.GetFiles(parent).Select(p => p.StandardizePath()!)
-                    .Where(d => d.StartsWith(prefix!, StringComparison.OrdinalIgnoreCase)).ToList();
+                var token = HttpContext?.RequestAborted ?? CancellationToken.None;
 
-                results.AddRange(dirs.Select(d => new FileSystemEntryNameViewModel(d, Path.GetFileName(d), true))
-                    .Concat(files.Select(f => new FileSystemEntryNameViewModel(f, Path.GetFileName(f), false))));
+                // Compute the user-typed leaf under the parent to leverage filesystem pattern matching
+                var normalizedPrefixForName = prefix!
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var leaf = Path.GetFileName(normalizedPrefixForName);
+                var pattern = string.IsNullOrEmpty(leaf) ? "*" : $"{leaf}*";
+
+                var options = new EnumerationOptions
+                {
+                    RecurseSubdirectories = false,
+                    IgnoreInaccessible = true,
+                    MatchCasing = OperatingSystem.IsWindows() ? MatchCasing.CaseInsensitive : MatchCasing.CaseSensitive,
+                };
+
+                // Enumerate directories if requested (or when both are acceptable)
+                if (isDirectory != false)
+                {
+                    try
+                    {
+                        foreach (var d in Directory.EnumerateDirectories(parent, pattern, options))
+                        {
+                            if (token.IsCancellationRequested) break;
+                            results.Add(new FileSystemEntryNameViewModel(d.StandardizePath()!, Path.GetFileName(d), true));
+                            if (results.Count >= maxResults) break;
+                        }
+                    }
+                    catch
+                    {
+                        // Skip enumeration failures for this parent; partial results are fine
+                    }
+                }
+
+                // Enumerate files if requested (or when both are acceptable)
+                if (results.Count < maxResults && isDirectory != true)
+                {
+                    try
+                    {
+                        foreach (var f in Directory.EnumerateFiles(parent, pattern, options))
+                        {
+                            if (token.IsCancellationRequested) break;
+                            results.Add(new FileSystemEntryNameViewModel(f.StandardizePath()!, Path.GetFileName(f), false));
+                            if (results.Count >= maxResults) break;
+                        }
+                    }
+                    catch
+                    {
+                        // Skip enumeration failures
+                    }
+                }
             }
 
             return new ListResponse<FileSystemEntryNameViewModel>(results.Take(maxResults));
@@ -445,7 +488,7 @@ namespace Bakabase.Service.Controllers
             await _fsOptionsManager.SaveAsync(options =>
             {
                 options.RecentMovingDestinations = new[] {model.DestDir}
-                    .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToArray();
+                    .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToList();
             });
 
             var rand = new Random();

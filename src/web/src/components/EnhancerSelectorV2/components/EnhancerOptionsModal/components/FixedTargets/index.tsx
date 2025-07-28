@@ -27,8 +27,7 @@ interface Props {
   optionsList?: EnhancerTargetFullOptions[];
   onChange?: (options: EnhancerTargetFullOptions[]) => any;
 }
-
-export default (props: Props) => {
+const FixedTargets = (props: Props) => {
   const { t } = useTranslation();
 
   const {
@@ -80,8 +79,16 @@ export default (props: Props) => {
                         }
                         to.propertyId = p.id;
                         to.propertyPool = p.pool;
+
+                        if (propertyMap) {
+                          const pMap = (propertyMap[p.pool] ??= {});
+                          if (!(p.id in pMap)) {
+                            pMap[p.id] = p;
+                          }
+                        }
                       }
                     }
+
                     setOptionsList(optionsList);
                     onChange?.(optionsList);
                   }}
@@ -148,3 +155,7 @@ export default (props: Props) => {
     </>
   );
 };
+
+FixedTargets.displayName = "FixedTargets";
+
+export default FixedTargets;

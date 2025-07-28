@@ -11,8 +11,7 @@ import ExternalLink from "@/components/ExternalLink";
 import { Button, Input, Popover } from "@/components/bakaui";
 
 type LinkValueRendererProps = ValueRendererProps<LinkValue> & {};
-
-export default ({
+const LinkValueRenderer = ({
   value,
   editor,
   variant,
@@ -107,3 +106,7 @@ export default ({
     return inner;
   }
 };
+
+LinkValueRenderer.displayName = "LinkValueRenderer";
+
+export default LinkValueRenderer;

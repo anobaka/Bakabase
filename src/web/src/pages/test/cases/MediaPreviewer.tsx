@@ -2,9 +2,8 @@
 
 import React, { useRef, useState } from "react";
 
-import MediaPreviewer from "@/components/MediaPreviewer";
-
-export default () => {
+import MediaPreviewerPage from "@/components/MediaPreviewer";
+const MediaPreviewerPage = () => {
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const hoverTimerRef = useRef<any>();
 
@@ -26,7 +25,11 @@ export default () => {
         }
       }}
     >
-      {previewerVisible && <MediaPreviewer resourceId={2501} />}
+      {previewerVisible && <MediaPreviewerPage resourceId={2501} />}
     </div>
   );
 };
+
+MediaPreviewerPage.displayName = "MediaPreviewerPage";
+
+export default MediaPreviewerPage;

@@ -14,6 +14,8 @@ public interface ISpecialTextService
     // List<SpecialText> this[SpecialTextType type] { get; }
     Task<string> Pretreatment(string name);
     Task<List<SpecialText>> GetAll(Expression<Func<Abstractions.Models.Db.SpecialText, bool>>? selector = null, bool asNoTracking = true);
+
+    Task<Dictionary<string, string>> GetAllWrappers();
     // Task<List<SpecialText>> GetAll(Expression<Func<SpecialText, bool>> selector = null, bool asNoTracking = true);
     Task<SingletonResponse<SpecialText>> Add(SpecialTextAddInputModel model);
     // Task<SingletonResponse<SpecialText>> Add(SpecialText resource);

@@ -7,8 +7,7 @@ import ReactJson from "react-json-view";
 
 import { GroupCombinator } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
 import FilterGroupsPanel from "@/pages/resource/components/FilterPanel/FilterGroupsPanel";
-
-export default () => {
+const ResourceFilterPage = () => {
   const [group, setGroup] = useState<ResourceSearchFilterGroup>({
     combinator: GroupCombinator.And,
   });
@@ -24,3 +23,7 @@ export default () => {
     </div>
   );
 };
+
+ResourceFilterPage.displayName = "ResourceFilterPage";
+
+export default ResourceFilterPage;

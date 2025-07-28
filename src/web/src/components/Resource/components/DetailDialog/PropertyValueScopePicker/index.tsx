@@ -23,7 +23,7 @@ import {
   QuestionCircleOutlined,
 } from "@ant-design/icons";
 
-import { useResourceOptionsStore } from "@/models/options";
+import { useResourceOptionsStore } from "@/stores/options";
 import { Button, Chip, Modal, Table, Tooltip } from "@/components/bakaui";
 import {
   PropertyPool,
@@ -42,8 +42,7 @@ type Props = DestroyableProps & {
 type PropertyMap = { [key in PropertyPool]?: Record<number, IProperty> };
 
 const log = buildLogger("PropertyValueScopePicker");
-
-export default (props: Props) => {
+const PropertyValueScopePicker = (props: Props) => {
   const { t } = useTranslation();
 
   const { resource } = props;
@@ -290,3 +289,7 @@ export default (props: Props) => {
     </Modal>
   );
 };
+
+PropertyValueScopePicker.displayName = "PropertyValueScopePicker";
+
+export default PropertyValueScopePicker;

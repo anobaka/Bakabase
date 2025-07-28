@@ -16,8 +16,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import TypeConversionRuleOverviewDialog from "@/pages/custom-property/components/TypeConversionRuleOverviewDialog";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
-
-export default () => {
+const CustomPropertyPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [properties, setProperties] = useState<IProperty[]>([]);
@@ -153,3 +152,7 @@ export default () => {
     </div>
   );
 };
+
+CustomPropertyPage.displayName = "CustomPropertyPage";
+
+export default CustomPropertyPage;

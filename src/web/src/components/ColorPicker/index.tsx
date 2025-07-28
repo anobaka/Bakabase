@@ -2,8 +2,7 @@
 
 import React, { useState } from "react";
 import { SketchPicker } from "react-color";
-
-export default ({
+const ColorPicker = ({
   color: propColor,
   onChange = (hex) => {},
   panelOffset = { top: 0, left: "60px" },
@@ -57,3 +56,7 @@ export default ({
     </div>
   );
 };
+
+ColorPicker.displayName = "ColorPicker";
+
+export default ColorPicker;

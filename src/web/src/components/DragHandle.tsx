@@ -5,8 +5,7 @@ import type { ChipProps } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 import { Chip } from "@heroui/react";
 import { AiOutlineDrag } from "react-icons/ai";
-
-export default (props: ChipProps) => {
+const DragHandle = (props: ChipProps) => {
   const { style = {}, className, ...otherProps } = props || {};
   const { t } = useTranslation();
 
@@ -23,3 +22,7 @@ export default (props: ChipProps) => {
     </Chip>
   );
 };
+
+DragHandle.displayName = "DragHandle";
+
+export default DragHandle;

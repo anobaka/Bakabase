@@ -12,9 +12,12 @@ export type PreviewResource = {
   cover?: string;
   children?: PreviewResource[];
 };
-
-export default () => {
+const Preview = () => {
   const [resources, setResources] = useState<PreviewResource[]>([]);
 
   return <div className={"flex flex-col gap-1"}>123</div>;
 };
+
+Preview.displayName = "Preview";
+
+export default Preview;

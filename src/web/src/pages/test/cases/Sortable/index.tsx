@@ -18,7 +18,7 @@ import {
 
 import { SortableItem } from "./SortableItem";
 
-export default function Sortable() {
+export default function SortablePage() {
   const [items, setItems] = useState([1, 2, 3]);
   const sensors = useSensors(
     useSensor(PointerSensor),

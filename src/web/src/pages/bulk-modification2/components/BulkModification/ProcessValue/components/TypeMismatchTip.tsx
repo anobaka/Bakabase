@@ -12,8 +12,7 @@ type Props = {
   toType: PropertyType;
   fromType: PropertyType;
 };
-
-export default (props: Props) => {
+const TypeMismatchTip = (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { toType, fromType } = props;
@@ -66,3 +65,7 @@ export default (props: Props) => {
     </Tooltip>
   );
 };
+
+TypeMismatchTip.displayName = "TypeMismatchTip";
+
+export default TypeMismatchTip;

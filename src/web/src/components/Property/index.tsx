@@ -37,8 +37,7 @@ type Props = {
 };
 
 export { Label as PropertyLabel };
-
-export default ({
+const Property = ({
   property,
   onClick,
   editablePortal = "edit-icon",
@@ -219,3 +218,7 @@ export default ({
     </div>
   );
 };
+
+Property.displayName = "Property";
+
+export default Property;

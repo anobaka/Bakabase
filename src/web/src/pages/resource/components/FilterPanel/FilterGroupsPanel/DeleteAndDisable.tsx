@@ -23,9 +23,17 @@ const TailwindGroupMap = {
     disableCoverGroupHoverHidden: "group-hover/group-disable-cover:hidden",
   },
 };
-
-export default ({ disabled, onDisabledChange, onDelete, type }: Props) => {
+const DeleteAndDisable = ({
+  disabled,
+  onDisabledChange,
+  onDelete,
+  type,
+}: Props) => {
   const { t } = useTranslation();
 
   return <></>;
 };
+
+DeleteAndDisable.displayName = "DeleteAndDisable";
+
+export default DeleteAndDisable;

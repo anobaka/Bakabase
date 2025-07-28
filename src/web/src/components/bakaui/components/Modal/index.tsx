@@ -16,7 +16,6 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/bakaui";
-import { createPortalOfComponent } from "@/components/utils";
 
 interface ISimpleFooter {
   actions: ("ok" | "cancel")[];
@@ -35,6 +34,7 @@ export interface ModalProps
   onClose?: () => void;
   onOk?: () => any;
   size?: "sm" | "md" | "lg" | "xl" | "full";
+  okProps?: ButtonProps;
 }
 
 const Modal = (props: ModalProps) => {
@@ -117,8 +117,10 @@ const Modal = (props: ModalProps) => {
       );
     }
     if (simpleFooter.actions.includes("ok")) {
-      const { children, ref, autoFocus, ...otherProps } =
-        simpleFooter.okProps || {};
+      const { children, ref, autoFocus, ...otherProps } = {
+        ...simpleFooter.okProps,
+        ...props.okProps,
+      };
 
       elements.push(
         <Button
@@ -146,8 +148,7 @@ const Modal = (props: ModalProps) => {
             if (r instanceof Promise) {
               setOkLoading(true);
               try {
-                const result = await r;
-
+                await r;
                 onClose();
               } catch (e) {
               } finally {

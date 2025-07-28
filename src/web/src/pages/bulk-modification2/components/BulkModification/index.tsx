@@ -49,8 +49,7 @@ const Blocks: BlockKey[] = [
 ];
 
 const log = buildLogger("BulkModification");
-
-export default ({ bm, onChange }: Props) => {
+const BulkModification = ({ bm, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -322,3 +321,7 @@ export default ({ bm, onChange }: Props) => {
     </div>
   );
 };
+
+BulkModification.displayName = "BulkModification";
+
+export default BulkModification;

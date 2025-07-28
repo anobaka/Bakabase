@@ -69,8 +69,7 @@ const buildGroups = (
     };
   });
 };
-
-export default (props: Props) => {
+const DynamicTargets = (props: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
@@ -137,6 +136,13 @@ export default (props: Props) => {
                               propertyPool: p.pool,
                               target: enhancer.targets[i]!.id,
                             };
+
+                            if (propertyMap) {
+                              const pMap = (propertyMap[p.pool] ??= {});
+                              if (!(p.id in pMap)) {
+                                pMap[p.id] = p;
+                              }
+                            }
                           }
                         }
                         updateGroups(groups);
@@ -208,3 +214,7 @@ export default (props: Props) => {
     </div>
   ) : null;
 };
+
+DynamicTargets.displayName = "DynamicTargets";
+
+export default DynamicTargets;

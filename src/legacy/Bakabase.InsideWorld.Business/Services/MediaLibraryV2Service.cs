@@ -33,6 +33,7 @@ using Bootstrap.Components.Tasks.Progressor.Abstractions;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using NPOI.SS.Formula.Functions;
 using Org.BouncyCastle.Asn1.Sec;
 
@@ -66,6 +67,14 @@ public class MediaLibraryV2Service<TDbContext>(
             data.Name = model.Name;
             data.SetPaths(model.Paths);
             data.Color = model.Color;
+            try
+            {
+                data.Players = JsonConvert.SerializeObject(model.Players);
+            }
+            catch (Exception e)
+            {
+                // ignored
+            }
         });
     }
 

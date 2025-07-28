@@ -26,8 +26,7 @@ type Props = {
 } & DestroyableProps;
 
 const log = buildLogger("ProcessStepModal");
-
-export default ({
+const ProcessStepModal = ({
   property,
   operation: propsOperation,
   options: propsOptions,
@@ -130,3 +129,7 @@ export default ({
     </Modal>
   );
 };
+
+ProcessStepModal.displayName = "ProcessStepModal";
+
+export default ProcessStepModal;

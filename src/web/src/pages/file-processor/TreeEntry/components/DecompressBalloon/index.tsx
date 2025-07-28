@@ -1,7 +1,6 @@
 "use client";
 
 import { Button, Modal, Input } from "@/components/bakaui";
-
 import { toast } from "@/components/bakaui";
 
 import React, { useCallback, useRef, useState } from "react";
@@ -43,8 +42,7 @@ const loadTopNPasswords = async (
   // @ts-ignore
   return rsp.data || [];
 };
-
-export default (props: Props) => {
+const DecompressBalloon = (props: Props) => {
   const { trigger, entry, passwords = [] } = props;
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -135,7 +133,9 @@ export default (props: Props) => {
                       createPortal(Modal, {
                         defaultVisible: true,
                         title: t<string>("Delete password from history?"),
-                        children: t<string>("Are you sure you want to delete this password from history?"),
+                        children: t<string>(
+                          "Are you sure you want to delete this password from history?",
+                        ),
                         onOk: () => BApi.password.deletePassword(p.text),
                       });
 
@@ -282,3 +282,7 @@ export default (props: Props) => {
     </Tooltip>
   );
 };
+
+DecompressBalloon.displayName = "DecompressBalloon";
+
+export default DecompressBalloon;

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import { SyncOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
+import { MdSelectAll } from "react-icons/md";
 
 import {
   Button,
@@ -17,7 +18,6 @@ import {
   Popover,
   Tooltip,
 } from "@/components/bakaui";
-import { MdSelectAll } from "react-icons/md";
 
 const contentStyle: React.CSSProperties = {
   margin: 0,
@@ -26,8 +26,7 @@ const contentStyle: React.CSSProperties = {
   textAlign: "center",
   background: "#364d79",
 };
-
-export default () => {
+const BakauiPage = () => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [date, setDate] = useState<Dayjs>(dayjs(new Date(2005, 2, 2)));
@@ -76,12 +75,7 @@ export default () => {
         }}
       />
       <Tooltip content={t<string>("Bulk operations")}>
-        <Button
-          isIconOnly
-          color={"default"}
-          size={"sm"}
-          variant={"light"}
-        >
+        <Button isIconOnly color={"default"} size={"sm"} variant={"light"}>
           <MdSelectAll className={"text-base"} />
         </Button>
       </Tooltip>
@@ -113,3 +107,7 @@ export default () => {
     </>
   );
 };
+
+BakauiPage.displayName = "BakauiPage";
+
+export default BakauiPage;

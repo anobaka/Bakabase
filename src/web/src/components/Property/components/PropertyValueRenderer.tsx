@@ -54,8 +54,7 @@ export type Props = {
 };
 
 const log = buildLogger("PropertyValueRenderer");
-
-export default (props: Props) => {
+const PropertyValueRenderer = (props: Props) => {
   const {
     property,
     variant = "default",
@@ -379,3 +378,7 @@ export default (props: Props) => {
     }
   }
 };
+
+PropertyValueRenderer.displayName = "PropertyValueRenderer";
+
+export default PropertyValueRenderer;

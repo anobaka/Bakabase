@@ -33,8 +33,7 @@ type Props = {
   editable?: boolean;
   onDelete: () => any;
 };
-
-export default ({
+const ProcessStep = ({
   no,
   step: propsStep,
   property,
@@ -151,3 +150,7 @@ export default ({
     </div>
   );
 };
+
+ProcessStep.displayName = "ProcessStep";
+
+export default ProcessStep;

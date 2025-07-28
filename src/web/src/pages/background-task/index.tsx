@@ -24,10 +24,8 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import { BTaskStatus } from "@/sdk/constants";
-import { useTaskOptionsStore } from "@/models/options";
-import { useBTasksStore } from "@/models/bTasks";
-
-export default () => {
+import { useTaskOptionsStore } from "@/stores/options";
+const BackgroundTaskPage = () => {
   const { t } = useTranslation();
   const taskOptions = useTaskOptionsStore((state) => state.data);
   const bTasks = useBTasksStore((state) => state.tasks);
@@ -287,3 +285,8 @@ export default () => {
     </Table>
   );
 };
+
+BackgroundTaskPage.displayName = "BackgroundTaskPage";
+import { useBTasksStore } from "@/stores/bTasks";
+
+export default BackgroundTaskPage;

@@ -10,8 +10,8 @@ import { Popover, Divider, Icon, Progress } from "@/components/bakaui";
 import { UpdaterStatus } from "@/sdk/constants";
 import ExternalLink from "@/components/ExternalLink";
 import { bytesToSize } from "@/components/utils";
-import { useAppUpdaterStateStore } from "@/models/appUpdaterState";
-import { useDependentComponentContextsStore } from "@/models/dependentComponentContexts";
+import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
+import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 import DependentComponentIds from "@/core/models/Constants/DependentComponentIds";
 import {
   Button,
@@ -30,8 +30,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 
 type Version =
   components["schemas"]["Bakabase.Infrastructures.Components.App.Upgrade.Abstractions.AppVersionInfo"];
-
-export default ({ appInfo }) => {
+const AppInfo = ({ appInfo }) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [newVersion, setNewVersion] = useState<Version>();
@@ -53,7 +52,7 @@ export default ({ appInfo }) => {
   useEffect(() => {
     checkNewAppVersion();
 
-    return () => { };
+    return () => {};
   }, []);
 
   const renderNewVersion = () => {
@@ -73,7 +72,9 @@ export default ({ appInfo }) => {
           if (newVersion.version) {
             return (
               <div className="flex items-center gap-2">
-                <Chip variant="light" radius="sm">{newVersion.version}</Chip>
+                <Chip radius="sm" variant="light">
+                  {newVersion.version}
+                </Chip>
                 {newVersion.changelog && (
                   <>
                     <Divider orientation={"vertical"} />
@@ -111,11 +112,7 @@ export default ({ appInfo }) => {
                     <Divider orientation={"ver"} />
                     <Popover
                       trigger={
-                        <Button
-                          color={"primary"}
-                          size={"sm"}
-                          variant={"light"}
-                        >
+                        <Button color={"primary"} size={"sm"} variant={"light"}>
                           {t<string>(
                             "Auto-Update Fails? Click to download complete installers",
                           )}
@@ -311,3 +308,7 @@ export default ({ appInfo }) => {
     </div>
   );
 };
+
+AppInfo.displayName = "AppInfo";
+
+export default AppInfo;

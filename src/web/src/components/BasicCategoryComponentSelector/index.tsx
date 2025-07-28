@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import "./index.scss";
 import { useUpdateEffect } from "react-use";
 import { useTranslation } from "react-i18next";
+import { MdAddCircle } from "react-icons/md";
 
 import BApi from "@/sdk/BApi";
 import ComponentCard from "@/pages/custom-component/components/ComponentCard";
@@ -14,11 +15,9 @@ import {
   ComponentDescriptorAdditionalItem,
   ComponentDescriptorType,
 } from "@/sdk/constants";
-import { MdAddCircle } from "react-icons/md";
-import ComponentDetail from "@/pages/custom-component/Detail";
+import ComponentDetailPage from "@/pages/custom-component/Detail";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-export default ({
+const BasicCategoryComponentSelector = ({
   componentType,
   value: propsValue = undefined,
   onChange,
@@ -109,7 +108,7 @@ export default ({
       <div
         className="add"
         onClick={() => {
-          createPortal(ComponentDetail, {
+          createPortal(ComponentDetailPage, {
             componentType: componentType,
             onClosed: (hasChanges) => {
               if (hasChanges) {
@@ -125,3 +124,7 @@ export default ({
     </div>
   );
 };
+
+BasicCategoryComponentSelector.displayName = "BasicCategoryComponentSelector";
+
+export default BasicCategoryComponentSelector;

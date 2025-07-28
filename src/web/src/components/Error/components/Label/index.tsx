@@ -4,15 +4,15 @@ import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
 import ErrorModal from "../Modal";
+
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
   error?: string;
 }
-
-export default ({ error }: IProps) => {
+const Label = ({ error }: IProps) => {
   const { t } = useTranslation();
-  const {createPortal} = useBakabaseContext();
+  const { createPortal } = useBakabaseContext();
 
   useEffect(() => {}, []);
 
@@ -29,3 +29,7 @@ export default ({ error }: IProps) => {
     </div>
   );
 };
+
+Label.displayName = "Label";
+
+export default Label;

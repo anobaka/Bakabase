@@ -14,8 +14,7 @@ import {
 type Props = {
   locator: PathPropertyExtractor;
 };
-
-export default ({ locator }: Props) => {
+const Demonstrator = ({ locator }: Props) => {
   const { t } = useTranslation();
 
   const renderPositioner = () => {
@@ -81,3 +80,7 @@ export default ({ locator }: Props) => {
     </div>
   );
 };
+
+Demonstrator.displayName = "Demonstrator";
+
+export default Demonstrator;

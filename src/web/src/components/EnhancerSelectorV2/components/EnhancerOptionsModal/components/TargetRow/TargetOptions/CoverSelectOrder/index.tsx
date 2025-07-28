@@ -3,15 +3,18 @@
 import { useTranslation } from "react-i18next";
 
 import { Radio, RadioGroup } from "@/components/bakaui";
-import { CoverSelectOrder } from "@/sdk/constants";
+import { CoverSelectOrder as CoverSelectOrderEnum } from "@/sdk/constants";
 
 type Props = {
-  coverSelectOrder?: CoverSelectOrder;
-  onChange?: (coverSelectOrder: CoverSelectOrder) => void;
+  coverSelectOrder?: CoverSelectOrderEnum;
+  onChange?: (coverSelectOrder: CoverSelectOrderEnum) => void;
   isDisabled?: boolean;
 };
-
-export default ({ coverSelectOrder, onChange, isDisabled }: Props) => {
+const CoverSelectOrder = ({
+  coverSelectOrder,
+  onChange,
+  isDisabled,
+}: Props) => {
   const { t } = useTranslation();
 
   console.log(coverSelectOrder);
@@ -26,15 +29,19 @@ export default ({ coverSelectOrder, onChange, isDisabled }: Props) => {
         onChange?.(parseInt(c, 10));
       }}
     >
-      {Object.keys(CoverSelectOrder)
+      {Object.keys(CoverSelectOrderEnum)
         .filter((x) => !Number.isNaN(parseInt(x, 10)))
         .map((x) => {
           return (
             <Radio value={x}>
-              {t<string>(`CoverSelectOrder.${CoverSelectOrder[x]}`)}
+              {t<string>(`CoverSelectOrder.${CoverSelectOrderEnum[parseInt(x, 10)]}`)}
             </Radio>
           );
         })}
     </RadioGroup>
   );
 };
+
+CoverSelectOrder.displayName = "CoverSelectOrder";
+
+export default CoverSelectOrder;

@@ -3,8 +3,7 @@
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
-
-export default () => {
+const Tips = () => {
   const { t } = useTranslation();
 
   return (
@@ -29,3 +28,7 @@ export default () => {
     </div>
   );
 };
+
+Tips.displayName = "Tips";
+
+export default Tips;

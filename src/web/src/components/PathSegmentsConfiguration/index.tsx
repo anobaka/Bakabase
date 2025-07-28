@@ -46,7 +46,7 @@ export interface IPathSegmentConfigurationRef {
   readonly context: PscContext;
 }
 
-const PathSegmentsConfiguration = React.forwardRef(
+const PathSegmentsConfigurationInner = React.forwardRef(
   (props: IPathSegmentsConfigurationProps, ref) => {
     useTraceUpdate(props, "PathSegmentsConfiguration");
 
@@ -189,5 +189,8 @@ const PathSegmentsConfiguration = React.forwardRef(
     );
   },
 );
+const PathSegmentsConfiguration = React.memo(PathSegmentsConfigurationInner);
 
-export default React.memo(PathSegmentsConfiguration);
+PathSegmentsConfiguration.displayName = "PathSegmentsConfiguration";
+
+export default PathSegmentsConfiguration;

@@ -6,8 +6,7 @@ import { generateTrees } from "../data/tree";
 
 import { Button, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-export default () => {
+const MultilevelValueEditorPage = () => {
   const { createPortal } = useBakabaseContext();
 
   return (
@@ -28,3 +27,7 @@ export default () => {
     </Button>
   );
 };
+
+MultilevelValueEditorPage.displayName = "MultilevelValueEditorPage";
+
+export default MultilevelValueEditorPage;

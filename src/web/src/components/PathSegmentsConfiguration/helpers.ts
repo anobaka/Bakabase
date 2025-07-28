@@ -3,10 +3,17 @@ import type { IPscPropertyMatcherValue } from "./models/PscPropertyMatcherValue"
 import type { BakabaseAbstractionsModelsDomainPathConfiguration } from "@/sdk/Api";
 import type { PscMatchResult } from "@/components/PathSegmentsConfiguration/models/PscMatchResult";
 
-import { PscContext, SimpleGlobalError, SimpleGlobalMatchResult, Segment, SimpleMatchResult, SelectiveMatcher } from "@/components/PathSegmentsConfiguration/models/PscContext";
 import PscProperty from "./models/PscProperty";
 import { PscMatcherValue } from "./models/PscMatcherValue";
 
+import {
+  PscContext,
+  SimpleGlobalError,
+  SimpleGlobalMatchResult,
+  Segment,
+  SimpleMatchResult,
+  SelectiveMatcher,
+} from "@/components/PathSegmentsConfiguration/models/PscContext";
 import { execAll } from "@/components/utils";
 import { MatchResultType, ResourceMatcherValueType } from "@/sdk/constants";
 import { PscPropertyType } from "@/components/PathSegmentsConfiguration/models/PscPropertyType";
@@ -439,10 +446,7 @@ export const BuildPscContext = (
             );
 
             if (!mr) {
-              mr = new SimpleMatchResult(
-                pmr.pmv.property,
-                pmr.indexByProperty,
-              );
+              mr = new SimpleMatchResult(pmr.pmv.property, pmr.indexByProperty);
               mr.readonly = readonly;
               segment.matchResults.push(mr);
             }

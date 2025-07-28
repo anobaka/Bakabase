@@ -5,7 +5,11 @@ interface Props {
   direction?: "left" | "right" | "up" | "down";
   className?: string;
 }
-export default ({ color = "#999", direction = "right", className }: Props) => {
+const AnimatedArrow = ({
+  color = "#999",
+  direction = "right",
+  className,
+}: Props) => {
   const spans: any[] = [];
 
   let rotate = -90;
@@ -36,3 +40,6 @@ export default ({ color = "#999", direction = "right", className }: Props) => {
     </div>
   );
 };
+
+AnimatedArrow.displayName = "AnimatedArrow";
+export default AnimatedArrow;

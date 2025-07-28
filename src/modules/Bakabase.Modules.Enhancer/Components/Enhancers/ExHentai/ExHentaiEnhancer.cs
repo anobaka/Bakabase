@@ -21,21 +21,17 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         ILoggerFactory loggerFactory,
         ExHentaiClient exHentaiClient,
         IServiceProvider services,
-        IOptions<ExHentaiOptions> options,
         ISpecialTextService specialTextService,
         IFileManager fileManager)
         : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;
-        private readonly IOptions<ExHentaiOptions> _options = options;
         private readonly ISpecialTextService _specialTextService = specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
         protected override async Task<ExHentaiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct)
         {
-            var exHentaiOptions = _options.Value;
-
             var name = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
             var urlKeywords = new HashSet<string>();
 
@@ -90,35 +86,6 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                     if (detail.Tags.IsNotEmpty())
                     {
                         var tagGroups = detail.Tags.ToDictionary(t => t.Key, t => t.Value.ToList());
-                        if (exHentaiOptions.Enhancer?.ExcludedTags?.Any() == true)
-                        {
-                            foreach (var t in exHentaiOptions.Enhancer.ExcludedTags.Where(t => t.IsNotEmpty()))
-                            {
-                                var segments = t.Split(':', StringSplitOptions.RemoveEmptyEntries);
-
-                                if (segments.Length > 1)
-                                {
-                                    var group = segments[0];
-                                    var tag = segments[1];
-
-                                    var groups = group == "*" ? tagGroups.Keys.ToArray() : new[] {group};
-                                    foreach (var g in groups)
-                                    {
-                                        if (tagGroups.TryGetValue(g, out var tags))
-                                        {
-                                            if (tag != "*")
-                                            {
-                                                tagGroups[g] = tags.Where(x => x != tag).ToList();
-                                            }
-                                            else
-                                            {
-                                                tagGroups.Remove(g);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
 
                         ctx.Tags = tagGroups;
                     }

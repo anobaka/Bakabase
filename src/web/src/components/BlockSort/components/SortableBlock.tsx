@@ -11,8 +11,7 @@ type Props = {
   name: any;
   idx: number;
 };
-
-export default ({ id, name, idx }: Props) => {
+const SortableBlock = ({ id, name, idx }: Props) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: id });
 
@@ -34,3 +33,7 @@ export default ({ id, name, idx }: Props) => {
     </div>
   );
 };
+
+SortableBlock.displayName = "SortableBlock";
+
+export default SortableBlock;

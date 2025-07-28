@@ -1,9 +1,9 @@
 "use client";
 
 import type { ChipProps, CircularProgressProps } from "@/components/bakaui";
-import type { ThirdPartyId } from "@/sdk/constants";
+import type { BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition } from "@/sdk/Api";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment from "moment";
 import { ControlledMenu, MenuItem, useMenuState } from "@szhsin/react-menu";
 import { useUpdate, useUpdateEffect } from "react-use";
@@ -24,11 +24,10 @@ import {
 } from "react-icons/ai";
 import { MdPlayCircle, MdAccessTime, MdDelete } from "react-icons/md";
 
-import TaskDetailModal from "./components/TaskDetailModal";
-
+import { ThirdPartyId } from "@/sdk/constants";
 import {
   Button,
-  Checkbox,
+  ButtonGroup,
   Chip,
   Dropdown,
   DropdownItem,
@@ -48,82 +47,52 @@ import {
   DownloadTaskDtoStatus,
   downloadTaskDtoStatuses,
   ResponseCode,
-  thirdPartyIds,
 } from "@/sdk/constants";
+import { isThirdPartyDeveloping } from "@/pages/downloader/models";
+import DevelopingChip from "@/components/Chips/DevelopingChip";
 import Configurations from "@/pages/downloader/components/Configurations";
 import BApi from "@/sdk/BApi";
 import { buildLogger, useTraceUpdate } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
-import { useDownloadTasksStore } from "@/models/downloadTasks";
+import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
+
+import DownloadTaskDetailModal from "./components/TaskDetailModal";
 
 // const testTasks: DownloadTask[] = [
 //   {
 //     key: '123121232312321321',
 //     thirdPartyId: ThirdPartyId.Bilibili,
 //     name: 'eeeeeeee',
-//     progress: 80,
-//     status: DownloadTaskDtoStatus.Downloading,
-//   },
-//   {
-//     key: 'cxzkocnmaqwkodn wkjodas1',
-//     name: 'pppppppppppp',
-//     progress: 30,
-//     status: DownloadTaskDtoStatus.Failed,
-//     message: 'dawsdasda',
-//   },
-// ];
-
-const DownloadTaskDtoStatusIceLabelStatusMap: Record<
-  DownloadTaskDtoStatus,
-  ChipProps["color"]
-> = {
-  [DownloadTaskDtoStatus.Idle]: "default",
-  [DownloadTaskDtoStatus.InQueue]: "default",
-  [DownloadTaskDtoStatus.Downloading]: "primary",
-  [DownloadTaskDtoStatus.Failed]: "danger",
-  [DownloadTaskDtoStatus.Complete]: "success",
-  [DownloadTaskDtoStatus.Starting]: "warning",
-  [DownloadTaskDtoStatus.Stopping]: "warning",
-  [DownloadTaskDtoStatus.Disabled]: "default",
-};
-
-const DownloadTaskDtoStatusProgressBarColorMap: Record<
-  DownloadTaskDtoStatus,
-  CircularProgressProps["color"]
-> = {
-  [DownloadTaskDtoStatus.Idle]: "default",
-  [DownloadTaskDtoStatus.InQueue]: "default",
-  [DownloadTaskDtoStatus.Downloading]: "primary",
-  [DownloadTaskDtoStatus.Failed]: "danger",
-  [DownloadTaskDtoStatus.Complete]: "success",
-  [DownloadTaskDtoStatus.Starting]: "warning",
-  [DownloadTaskDtoStatus.Stopping]: "warning",
-  [DownloadTaskDtoStatus.Disabled]: "default",
-};
-
-enum SelectionMode {
-  Default,
-  Ctrl,
-  Shift,
-}
-
-type SearchForm = {
-  statuses?: DownloadTaskDtoStatus[];
-  keyword?: string;
-  thirdPartyIds?: ThirdPartyId[];
-};
-
-const log = buildLogger("DownloadPage");
-
-export default () => {
+const DownloaderPage = () => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const [form, setForm] = useState<SearchForm>({});
+  const [downloaderDefinitions, setDownloaderDefinitions] = useState<
+    BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[]
+  >([]);
 
   const tasks = useDownloadTasksStore((state) => state.tasks);
   // const tasks = testTasks;
+
+  // Build third party filter from downloader definitions, sorted by value ASC
+  const sortedThirdPartyIds = useMemo(() => {
+    const uniqueThirdParties = new Map<ThirdPartyId, string>();
+
+    downloaderDefinitions.forEach((def) => {
+      if (!uniqueThirdParties.has(def.thirdPartyId)) {
+        // Use ThirdPartyId enum to get the name
+        const thirdPartyName = ThirdPartyId[def.thirdPartyId] || def.name;
+
+        uniqueThirdParties.set(def.thirdPartyId, thirdPartyName);
+      }
+    });
+
+    return Array.from(uniqueThirdParties.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.value - b.value); // Sort by value ASC
+  }, [downloaderDefinitions]);
 
   const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>([]);
   const selectedTaskIdsRef = useRef(selectedTaskIds);
@@ -283,53 +252,17 @@ export default () => {
   }, [tasks]);
 
   useEffect(() => {
-    // const onMouseDown = (e) => {
-    //   // console.log(e.target, clearTaskSelectionTargetsRef.current);
-    // };
-    //
-    // const onKeydown = (e: KeyboardEvent) => {
-    //   // if (equalsOrIsChildOf(e.target as HTMLElement, tasksDomRef.current)) {
-    //   switch (e.key) {
-    //     case "Control":
-    //       selectionModeRef.current = SelectionMode.Ctrl;
-    //       break;
-    //     case "Shift":
-    //       selectionModeRef.current = SelectionMode.Shift;
-    //       break;
-    //     case "Escape":
-    //       setSelectedTaskIds([]);
-    //       break;
-    //     case "a":
-    //       if (e.ctrlKey) {
-    //         e.stopPropagation();
-    //         e.preventDefault();
-    //         setSelectedTaskIds(tasksRef.current?.map((t) => t.id) || []);
-    //       }
-    //       break;
-    //   }
-    //   // }
-    // };
-    //
-    // const onKeyUp = (e) => {
-    //   switch (e.key) {
-    //     case "Control":
-    //       selectionModeRef.current = SelectionMode.Default;
-    //       break;
-    //     case "Shift":
-    //       selectionModeRef.current = SelectionMode.Default;
-    //       break;
-    //   }
-    // };
+    const loadDownloaderDefinitions = async () => {
+      try {
+        const response = await BApi.downloadTask.getAllDownloaderDefinitions();
 
-    // window.addEventListener('keydown', onKeydown);
-    // window.addEventListener('keyup', onKeyUp);
-    // window.addEventListener('mousedown', onMouseDown);
-
-    return () => {
-      // window.removeEventListener('keydown', onKeydown);
-      // window.removeEventListener('keyup', onKeyUp);
-      // window.removeEventListener('mousedown', onMouseDown);
+        setDownloaderDefinitions(response.data || []);
+      } catch (error) {
+        console.error("Failed to load downloader definitions:", error);
+      }
     };
+
+    loadDownloaderDefinitions();
   }, []);
 
   console.log(
@@ -409,98 +342,93 @@ export default () => {
         style={{ gridTemplateColumns: "auto 1fr" }}
       >
         <div>{t<string>("Source")}</div>
-        <div className="flex items-center gap-4">
-          {thirdPartyIds.map((s) => {
-            const count = tasks.filter((t) => t.thirdPartyId == s.value).length;
+        <div className="flex items-center gap-2">
+          <ButtonGroup size={"sm"}>
+            {sortedThirdPartyIds.map((s) => {
+              const count = tasks.filter(
+                (t) => t.thirdPartyId == s.value,
+              ).length;
+              const isDeveloping = isThirdPartyDeveloping(s.value);
+              const isSelected = form.thirdPartyIds?.some((a) => a == s.value);
 
-            return (
-              <Checkbox
-                // disabled={count == 0}
-                key={s.value}
-                isSelected={form.thirdPartyIds?.some((a) => a == s.value)}
-                size={"sm"}
-                onValueChange={(checked) => {
-                  let thirdPartyIds = form.thirdPartyIds || [];
+              return (
+                <Button
+                  key={s.value}
+                  color={isSelected ? "primary" : "default"}
+                  onPress={() => {
+                    let thirdPartyIds = form.thirdPartyIds || [];
 
-                  if (checked) {
-                    if (thirdPartyIds.every((a) => a != s.value)) {
+                    if (isSelected) {
+                      thirdPartyIds = thirdPartyIds.filter((a) => a != s.value);
+                    } else {
                       thirdPartyIds.push(s.value);
                     }
-                  } else {
-                    thirdPartyIds = thirdPartyIds.filter((a) => a != s.value);
-                  }
-                  setForm({
-                    ...form,
-                    thirdPartyIds,
-                  });
-                }}
-              >
-                <div className={"flex items-center gap-1"}>
-                  <ThirdPartyIcon thirdPartyId={s.value} />
-                  <Chip size={"sm"} variant={"light"}>
-                    {s.label}
-                  </Chip>
-                  {count > 0 && (
-                    <Chip size={"sm"} variant={"flat"}>
-                      {count}
-                    </Chip>
-                  )}
-                </div>
-              </Checkbox>
-            );
-          })}
+                    setForm({
+                      ...form,
+                      thirdPartyIds,
+                    });
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <ThirdPartyIcon thirdPartyId={s.value} />
+                    <span>{s.label}</span>
+                    {isDeveloping && (
+                      <DevelopingChip showTooltip={false} size="sm" />
+                    )}
+                    {count > 0 && (
+                      <Chip size={"sm"} variant={"flat"}>
+                        {count}
+                      </Chip>
+                    )}
+                  </div>
+                </Button>
+              );
+            })}
+          </ButtonGroup>
         </div>
         <div>{t<string>("Status")}</div>
-        <div className="flex items-center gap-4">
-          {downloadTaskDtoStatuses.map((s) => {
-            const count = tasks.filter((t) => t.status == s.value).length;
-            const color =
-              DownloadTaskDtoStatusIceLabelStatusMap[
-                s.value! as DownloadTaskDtoStatus
-              ];
+        <div className="flex items-center gap-2">
+          <ButtonGroup size={"sm"}>
+            {downloadTaskDtoStatuses.map((s) => {
+              const count = tasks.filter((t) => t.status == s.value).length;
+              const chipColor =
+                DownloadTaskDtoStatusIceLabelStatusMap[
+                  s.value! as DownloadTaskDtoStatus
+                ];
+              const isSelected = form.statuses?.some((a) => a == s.value);
 
-            return (
-              <Checkbox
-                key={s.value}
-                className={"flex items-center"}
-                color={color}
-                isSelected={form.statuses?.some((a) => a == s.value)}
-                size={"sm"}
-                onValueChange={(checked) => {
-                  let statuses = form.statuses || [];
+              return (
+                <Button
+                  key={s.value}
+                  color={isSelected ? "primary" : "default"}
+                  onPress={() => {
+                    let statuses = form.statuses || [];
 
-                  if (checked) {
-                    if (statuses.every((a) => a != s.value)) {
+                    if (isSelected) {
+                      statuses = statuses.filter((a) => a != s.value);
+                    } else {
                       statuses.push(s.value);
                     }
-                  } else {
-                    statuses = statuses.filter((a) => a != s.value);
-                  }
-                  setForm({
-                    ...form,
-                    statuses,
-                  });
-                }}
-              >
-                <Chip
-                  // size={'sm'}
-                  classNames={{
-                    base: "pl-0",
-                    content: "pl-0",
+                    setForm({
+                      ...form,
+                      statuses,
+                    });
                   }}
-                  color={color}
-                  variant={"light"}
                 >
-                  {t<string>(s.label)}
-                </Chip>
-                {count > 0 && (
-                  <Chip size={"sm"} variant={"flat"}>
-                    {count}
-                  </Chip>
-                )}
-              </Checkbox>
-            );
-          })}
+                  <div className="flex items-center gap-1">
+                    <Chip color={chipColor} size={"sm"} variant={"light"}>
+                      {t<string>(s.label)}
+                    </Chip>
+                    {count > 0 && (
+                      <Chip size={"sm"} variant={"flat"}>
+                        {count}
+                      </Chip>
+                    )}
+                  </div>
+                </Button>
+              );
+            })}
+          </ButtonGroup>
         </div>
         <div>{t<string>("Keyword")}</div>
         <div>
@@ -524,7 +452,7 @@ export default () => {
             color={"primary"}
             size={"small"}
             onPress={() => {
-              createPortal(TaskDetailModal, {});
+              createPortal(DownloadTaskDetailModal, {});
             }}
           >
             <>
@@ -732,7 +660,7 @@ export default () => {
                           size={"sm"}
                           variant={"light"}
                           onPress={() => {
-                            createPortal(TaskDetailModal, {
+                            createPortal(DownloadTaskDetailModal, {
                               id: task.id,
                             });
                           }}
@@ -812,240 +740,64 @@ export default () => {
           </Listbox>
         )}
       </div>
-      {/* {tasks?.length > 0 ? ( */}
-      {/*   <div */}
-      {/*     className={'tasks'} */}
-      {/*   > */}
-      {/*     <AutoSizer> */}
-      {/*       {({ */}
-      {/*         width, */}
-      {/*         height, */}
-      {/*       }) => ( */}
-      {/*         <List */}
-      {/*         // onScroll={onChildScroll} */}
-      {/*         // isScrolling={isScrolling} */}
-      {/*         // scrollTop={scrollTop} */}
-      {/*           overscanRowCount={2} */}
-      {/*         // scrollToIndex={scrollToIndex} */}
-      {/*           width={width} */}
-      {/*           height={height} */}
-      {/*         // autoHeight */}
-      {/*           rowCount={filteredTasks.length} */}
-      {/*           rowHeight={75} */}
-      {/*           rowRenderer={({ */}
-      {/*                         index, */}
-      {/*                         style, */}
-      {/*                         isVisible, */}
-      {/*                         isScrolling, */}
-      {/*                       }) => { */}
-      {/*           const task = filteredTasks[index]; */}
-      {/*           const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message; */}
-      {/*           const selected = selectedTaskIds.indexOf(task.id) > -1; */}
-      {/*           return ( */}
-      {/*             <div */}
-      {/*               key={task.id} */}
-      {/*               onContextMenu={e => { */}
-      {/*                 console.log(`Opening context menu from ${task.id}:${task.name}`); */}
-      {/*                 e.preventDefault(); */}
-      {/*                 if (!selectedTaskIdsRef.current.includes(task.id)) { */}
-      {/*                   setSelectedTaskIds([task.id]); */}
-      {/*                 } */}
-      {/*                 contextMenuAnchorPointRef.current = { */}
-      {/*                   x: e.clientX, */}
-      {/*                   y: e.clientY, */}
-      {/*                 }; */}
-      {/*                 toggleMenu(true); */}
-      {/*                 forceUpdate(); */}
-      {/*               }} */}
-      {/*               className={`download-item ${selected ? 'selected' : ''}`} */}
-      {/*               style={style} */}
-      {/*               onClick={() => onTaskClick(task.id)} */}
-      {/*             > */}
-      {/*               <div className="icon"> */}
-      {/*                 <img className={'max-w-[32px] max-h-[32px]'} src={NameIcon[task.thirdPartyId]} /> */}
-      {/*               </div> */}
-      {/*               <div className="content"> */}
-      {/*                 <div className="name"> */}
-      {/*                   <Balloon.Tooltip */}
-      {/*                     trigger={( */}
-      {/*                       <span onClick={() => { */}
-      {/*                         setTaskId(task.id); */}
-      {/*                       }} */}
-      {/*                       > */}
-      {/*                         {renderTaskName(task)} */}
-      {/*                       </span> */}
-      {/*                     )} */}
-      {/*                     triggerType={'hover'} */}
-      {/*                     align={'t'} */}
-      {/*                   > */}
-      {/*                     {task.key} */}
-      {/*                   </Balloon.Tooltip> */}
-      {/*                 </div> */}
-      {/*                 <div className="info"> */}
-      {/*                   <div className="left"> */}
-      {/*                     <SimpleLabel */}
-      {/*                       status={DownloadTaskDtoStatusIceLabelStatusMap[task.status]} */}
-      {/*                       className={hasErrorMessage ? 'has-error-message' : ''} */}
-      {/*                     > */}
-      {/*                       <span */}
-      {/*                         onClick={() => { */}
-      {/*                             if (hasErrorMessage) { */}
-      {/*                               Dialog.error({ */}
-      {/*                                 v2: true, */}
-      {/*                                 width: 1000, */}
-      {/*                                 title: t<string>('Error'), */}
-      {/*                                 content: ( */}
-      {/*                                   <pre className={'select-text'}>{task.message}</pre> */}
-      {/*                                 ), */}
-      {/*                               }); */}
-      {/*                             } */}
-      {/*                           }} */}
-      {/*                       > */}
-      {/*                         {t<string>(DownloadTaskDtoStatus[task.status])} */}
-      {/*                       </span> */}
-      {/*                     </SimpleLabel> */}
-      {/*                     {(task.status == DownloadTaskDtoStatus.Downloading || task.status == DownloadTaskDtoStatus.Starting || task.status == DownloadTaskDtoStatus.Stopping) && ( */}
-      {/*                       <Icon type={'loading'} size={'small'} /> */}
-      {/*                     )} */}
-      {/*                     <span>{task.current}</span> */}
-      {/*                   </div> */}
-      {/*                   <div className="right"> */}
-      {/*                     {task.failureTimes > 0 && ( */}
-      {/*                       <SimpleLabel */}
-      {/*                         status={'danger'} */}
-      {/*                         className={'failure-times'} */}
-      {/*                       > */}
-      {/*                         {t<string>('Failure times')}: */}
-      {/*                         <span>{task.failureTimes}</span> */}
-      {/*                       </SimpleLabel> */}
-      {/*                     )} */}
-      {/*                     {task.nextStartDt && ( */}
-      {/*                       <SimpleLabel */}
-      {/*                         status={'info'} */}
-      {/*                         className={'next-start-dt'} */}
-      {/*                       > */}
-      {/*                         {t<string>('Next start time')}: */}
-      {/*                         <span> */}
-      {/*                           {moment(task.nextStartDt) */}
-      {/*                               .format('YYYY-MM-DD HH:mm:ss')} */}
-      {/*                         </span> */}
-      {/*                       </SimpleLabel> */}
-      {/*                     )} */}
-      {/*                   </div> */}
-      {/*                 </div> */}
-      {/*                 <div className="progress"> */}
-      {/*                   <Progress */}
-      {/*                     // state={t.status == DownloadTaskStatus.Failed ? 'error' : 'normal'} */}
-      {/*                     className={'bar'} */}
-      {/*                     percent={task.progress} */}
-      {/*                     color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
-      {/*                     size={'small'} */}
-      {/*                     textRender={() => `${task.progress.toFixed(2)}%`} */}
-      {/*                     // progressive={t.status != DownloadTaskStatus.Failed} */}
-      {/*                   /> */}
-      {/*                 </div> */}
-      {/*               </div> */}
-      {/*               <div className="opt"> */}
-      {/*                 {task.availableActions?.map((a, i) => { */}
-      {/*                   const action = parseInt(a); */}
-      {/*                   switch (action) { */}
-      {/*                     case DownloadTaskAction.StartManually: */}
-      {/*                     case DownloadTaskAction.Restart: */}
-      {/*                       return ( */}
-      {/*                         <CustomIcon */}
-      {/*                           key={i} */}
-      {/*                           type={a == DownloadTaskAction.Restart ? 'redo' : 'play_fill'} */}
-      {/*                           title={t<string>('Start now')} */}
-      {/*                           onClick={() => { */}
-      {/*                             startTasksManually([task.id]); */}
-      {/*                           }} */}
-      {/*                         /> */}
-      {/*                       ); */}
-      {/*                     case DownloadTaskAction.Disable: */}
-      {/*                       return ( */}
-      {/*                         <CustomIcon */}
-      {/*                           key={i} */}
-      {/*                           type={'stop'} */}
-      {/*                           title={t<string>('Disable')} */}
-      {/*                           onClick={() => { */}
-      {/*                             BApi.downloadTask.stopDownloadTasks([task.id]); */}
-      {/*                           }} */}
-      {/*                         /> */}
-      {/*                       ); */}
-      {/*                   } */}
-      {/*                   return; */}
-      {/*                 })} */}
-      {/*                 <CustomIcon */}
-      {/*                   type={'folder-open'} */}
-      {/*                   title={t<string>('Open folder')} */}
-      {/*                   onClick={() => { */}
-      {/*                     OpenFileOrDirectory({ */}
-      {/*                       path: task.downloadPath, */}
-      {/*                     }) */}
-      {/*                       .invoke(); */}
-      {/*                   }} */}
-      {/*                 /> */}
-      {/*                 <Dropdown */}
-      {/*                   className={'task-operations-dropdown'} */}
-      {/*                   trigger={ */}
-      {/*                     <CustomIcon */}
-      {/*                       type={'ellipsis'} */}
-      {/*                     /> */}
-      {/*                   } */}
-      {/*                   triggerType={['click']} */}
-      {/*                 > */}
-      {/*                   <Menu> */}
-      {/*                     /!* <Menu.Item title={t<string>(t.status == DownloadTaskStatus.Paused ? 'Click to enable' : 'Click to disable')}> *!/ */}
-      {/*                     /!*   <div className={t.status == DownloadTaskStatus.Paused ? 'disabled' : 'enabled'}> *!/ */}
-      {/*                     /!*     <CustomIcon *!/ */}
-      {/*                     /!*       type={t.status == DownloadTaskStatus.Paused ? 'close-circle' : 'check-circle'} *!/ */}
-      {/*                     /!*       onClick={() => { *!/ */}
-
-      {/*                     /!*       }} *!/ */}
-      {/*                     /!*     /> *!/ */}
-      {/*                     /!*     {t<string>(t.status == DownloadTaskStatus.Paused ? 'Disabled' : 'Enabled')} *!/ */}
-      {/*                     /!*   </div> *!/ */}
-      {/*                     /!* </Menu.Item> *!/ */}
-      {/*                     <Menu.Item> */}
-      {/*                       <div */}
-      {/*                         className={'remove'} */}
-      {/*                         onClick={() => { */}
-      {/*                           Dialog.confirm({ */}
-      {/*                             title: t<string>('Are you sure to delete it?'), */}
-      {/*                             onOk: () => BApi.downloadTask.deleteDownloadTasks({ ids: [task.id] }), */}
-      {/*                           }); */}
-      {/*                         }} */}
-      {/*                       > */}
-      {/*                         <CustomIcon type={'delete'} /> */}
-      {/*                         {t<string>('Remove')} */}
-      {/*                       </div> */}
-      {/*                     </Menu.Item> */}
-      {/*                   </Menu> */}
-      {/*                 </Dropdown> */}
-      {/*               </div> */}
-      {/*             </div> */}
-      {/*           ); */}
-      {/*         }} */}
-      {/*         /> */}
-      {/*     )} */}
-      {/*     </AutoSizer> */}
-      {/*     /!* )} *!/ */}
-      {/*     /!* </WindowScroller> *!/ */}
-      {/*   </div> */}
-
-      {/* ) : ( */}
-      {/*   <div className={'no-task-yet'}> */}
-      {/*     <Button */}
-      {/*       color={'primary'} */}
-      {/*       size={'large'} */}
-      {/*       onPress={() => { */}
-      {/*         setTaskId(0); */}
-      {/*       }} */}
-      {/*     > */}
-      {/*       {t<string>('Create download task')} */}
-      {/*     </Button> */}
-      {/*   </div> */}
-      {/* )} */}
+      ß
     </div>
   );
 };
+
+DownloaderPage.displayName = "DownloaderPage";
+//     progress: 80,
+//     status: DownloadTaskDtoStatus.Downloading,
+//   },
+//   {
+//     key: 'cxzkocnmaqwkodn wkjodas1',
+//     name: 'pppppppppppp',
+//     progress: 30,
+//     status: DownloadTaskDtoStatus.Failed,
+//     message: 'dawsdasda',
+//   },
+// ];
+
+const DownloadTaskDtoStatusIceLabelStatusMap: Record<
+  DownloadTaskDtoStatus,
+  ChipProps["color"]
+> = {
+  [DownloadTaskDtoStatus.Idle]: "default",
+  [DownloadTaskDtoStatus.InQueue]: "default",
+  [DownloadTaskDtoStatus.Downloading]: "primary",
+  [DownloadTaskDtoStatus.Failed]: "danger",
+  [DownloadTaskDtoStatus.Complete]: "success",
+  [DownloadTaskDtoStatus.Starting]: "warning",
+  [DownloadTaskDtoStatus.Stopping]: "warning",
+  [DownloadTaskDtoStatus.Disabled]: "default",
+};
+
+const DownloadTaskDtoStatusProgressBarColorMap: Record<
+  DownloadTaskDtoStatus,
+  CircularProgressProps["color"]
+> = {
+  [DownloadTaskDtoStatus.Idle]: "default",
+  [DownloadTaskDtoStatus.InQueue]: "default",
+  [DownloadTaskDtoStatus.Downloading]: "primary",
+  [DownloadTaskDtoStatus.Failed]: "danger",
+  [DownloadTaskDtoStatus.Complete]: "success",
+  [DownloadTaskDtoStatus.Starting]: "warning",
+  [DownloadTaskDtoStatus.Stopping]: "warning",
+  [DownloadTaskDtoStatus.Disabled]: "default",
+};
+
+enum SelectionMode {
+  Default,
+  Ctrl,
+  Shift,
+}
+
+type SearchForm = {
+  statuses?: DownloadTaskDtoStatus[];
+  keyword?: string;
+  thirdPartyIds?: ThirdPartyId[];
+};
+
+const log = buildLogger("DownloadPage");
+
+export default DownloaderPage;

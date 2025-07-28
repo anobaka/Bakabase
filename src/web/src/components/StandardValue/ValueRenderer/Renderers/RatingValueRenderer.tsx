@@ -16,8 +16,7 @@ type RatingValueRendererProps = ValueRendererProps<number, number> & {
 };
 
 const log = buildLogger("RatingValueRenderer");
-
-export default (props: RatingValueRendererProps) => {
+const RatingValueRenderer = (props: RatingValueRendererProps) => {
   const { value: propsValue, editor, variant, allowHalf = true } = props;
   const [value, setValue] = useState(propsValue);
   const { t } = useTranslation();
@@ -71,3 +70,7 @@ export default (props: RatingValueRendererProps) => {
     }
   }
 };
+
+RatingValueRenderer.displayName = "RatingValueRenderer";
+
+export default RatingValueRenderer;

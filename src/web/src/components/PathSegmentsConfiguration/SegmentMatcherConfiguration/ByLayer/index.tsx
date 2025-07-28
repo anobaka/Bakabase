@@ -19,8 +19,7 @@ type Props = {
   selectedLayer?: number;
   layers?: number[];
 };
-
-export default ({
+const ByLayer = ({
   modeIsSelected,
   onSelectMode,
   onSelectLayer,
@@ -81,3 +80,7 @@ export default ({
     </Card>
   );
 };
+
+ByLayer.displayName = "ByLayer";
+
+export default ByLayer;

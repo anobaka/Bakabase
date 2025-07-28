@@ -285,6 +285,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Players")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("ResourceCount")
                         .HasColumnType("INTEGER");
 
@@ -557,6 +560,30 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("UpdateDt");
 
                     b.ToTable("Resources");
+                });
+
+            modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.PlayList.Models.Db.PlayListDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Interval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ItemsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Playlists");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Business.Components.PostParser.Models.Db.PostParserTaskDbModel", b =>
@@ -875,30 +902,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("UsedTimes");
 
                     b.ToTable("Passwords");
-                });
-
-            modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Playlist", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Interval")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("ItemsJson")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Order")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Playlists");
                 });
 
             modelBuilder.Entity("Bakabase.InsideWorld.Models.Models.Entities.Publisher", b =>

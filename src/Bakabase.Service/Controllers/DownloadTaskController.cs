@@ -5,12 +5,15 @@ using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Business;
-using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
+using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
-using Bakabase.InsideWorld.Business.Components.Downloader.Models.Input;
-using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
@@ -23,7 +26,7 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Swashbuckle.AspNetCore.Annotations;
-using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask;
+using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask;
 
 namespace Bakabase.Service.Controllers;
 
@@ -34,48 +37,25 @@ public class DownloadTaskController : Controller
     private readonly IGuiAdapter _guiAdapter;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly DownloadTaskService _service;
+    private readonly IDownloaderFactory _downloaderFactory;
 
     public DownloadTaskController(DownloadTaskService service, IStringLocalizer<SharedResource> localizer,
-        IGuiAdapter guiAdapter, IBOptions<ExHentaiOptions> exhentaiOptions)
+        IGuiAdapter guiAdapter, IBOptions<ExHentaiOptions> exhentaiOptions,
+        IDownloaderFactory downloaderFactory)
     {
         _service = service;
         _localizer = localizer;
         _guiAdapter = guiAdapter;
         _exhentaiOptions = exhentaiOptions;
+        _downloaderFactory = downloaderFactory;
     }
 
-    [SwaggerOperation(OperationId = "GetAllDownloaderNamingDefinitions")]
-    [HttpGet("downloader/naming-definitions")]
-    public async Task<SingletonResponse<Dictionary<int, DownloaderNamingDefinitions>>>
-        GetAllDownloaderNamingDefinitions()
+    [SwaggerOperation(OperationId = "GetAllDownloaderDefinitions")]
+    [HttpGet("downloaders/definitions")]
+    public async Task<ListResponse<DownloaderDefinition>>
+        GetAllDownloaderDefinitions()
     {
-        var dict = new Dictionary<ThirdPartyId, DownloaderNamingDefinitions>
-        {
-            {
-                ThirdPartyId.Bilibili, new DownloaderNamingDefinitions
-                {
-                    Fields = DownloaderNamingFieldsExtractor<BilibiliNamingFields>.AllFields,
-                    DefaultConvention = BilibiliDownloader.DefaultNamingConvention
-                }
-            },
-            {
-                ThirdPartyId.ExHentai, new DownloaderNamingDefinitions
-                {
-                    Fields = DownloaderNamingFieldsExtractor<ExHentaiNamingFields>.AllFields,
-                    DefaultConvention = AbstractExHentaiDownloader.DefaultNamingConvention
-                }
-            },
-            {
-                ThirdPartyId.Pixiv, new DownloaderNamingDefinitions
-                {
-                    Fields = DownloaderNamingFieldsExtractor<PixivNamingFields>.AllFields,
-                    DefaultConvention = AbstractPixivDownloader.DefaultNamingConvention
-                }
-            }
-        };
-
-        return new SingletonResponse<Dictionary<int, DownloaderNamingDefinitions>>(
-            dict.ToDictionary(a => (int) a.Key, a => a.Value));
+        return new ListResponse<DownloaderDefinition>(_downloaderFactory.GetDefinitions());
     }
 
     [SwaggerOperation(OperationId = "GetAllDownloadTasks")]
@@ -177,28 +157,20 @@ public class DownloadTaskController : Controller
         return BaseResponseBuilder.Ok;
     }
 
-    [HttpPost("exhentai")]
-    [SwaggerOperation(OperationId = "AddExHentaiDownloadTask")]
-    public async Task<BaseResponse> AddExHentaiTask([FromBody] ExHentaiDownloadTaskAddInputModel model)
+    [SwaggerOperation(OperationId = "GetDownloaderOptions")]
+    [HttpGet("downloader/options/{thirdPartyId}")]
+    public async Task<SingletonResponse<DownloaderOptions>> GetDownloaderOptions(ThirdPartyId thirdPartyId, int taskType)
     {
-        var downloadPath = _exhentaiOptions.Value.Downloader?.DefaultPath;
-        if (downloadPath.IsNullOrEmpty()) throw new Exception("Download path for exhentai is not set");
+        return new SingletonResponse<DownloaderOptions>(await _downloaderFactory.GetHelper(thirdPartyId, taskType)
+            .GetOptionsAsync());
+    }
 
-        var baseModel = new DownloadTaskAddInputModel
-        {
-            Type = (int) model.Type,
-            ThirdPartyId = ThirdPartyId.ExHentai,
-            KeyAndNames = new Dictionary<string, string> {{model.Link, null}},
-            DownloadPath = downloadPath,
-            AutoRetry = false
-        };
-
-
-        var rsp = await Add(baseModel);
-        if (rsp.Code != 0) return rsp;
-
-        var task = rsp.Data!.First();
-        await _service.Start(x => x.Id == task.Id);
+    [SwaggerOperation(OperationId = "PutDownloaderOptions")]
+    [HttpPut("downloader/options/{thirdPartyId}")]
+    public async Task<BaseResponse> PutDownloaderOptions(ThirdPartyId thirdPartyId, int taskType, [FromBody] DownloaderOptions options)
+    {
+        var helper = _downloaderFactory.GetHelper(thirdPartyId, taskType);
+        await helper.PutOptionsAsync(options);
         return BaseResponseBuilder.Ok;
     }
 }

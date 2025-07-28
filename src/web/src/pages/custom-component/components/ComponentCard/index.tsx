@@ -12,7 +12,7 @@ import { Button } from "@heroui/react";
 
 import { ComponentDescriptorType, ComponentType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
-import ComponentDetail from "@/pages/custom-component/Detail";
+import ComponentDetailPage from "@/pages/custom-component/Detail";
 import { extractEnhancerTargetDescription } from "@/components/utils";
 import SimpleLabel from "@/components/SimpleLabel";
 import { Modal } from "@/components/bakaui";
@@ -34,8 +34,7 @@ const TypeLabelProps = {
     label: "Custom",
   },
 };
-
-export default (props: DescriptorCardProps) => {
+const ComponentCard = (props: DescriptorCardProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const {
@@ -123,7 +122,7 @@ export default (props: DescriptorCardProps) => {
             onPress={(e) => {
               // e.preventDefault();
               // e.stopPropagation();
-              createPortal(ComponentDetail, {
+              createPortal(ComponentDetailPage, {
                 componentType: descriptor.componentType,
                 componentKey: descriptor.id,
                 onClosed: (hasChanges) => {
@@ -219,3 +218,7 @@ export default (props: DescriptorCardProps) => {
     </div>
   );
 };
+
+ComponentCard.displayName = "ComponentCard";
+
+export default ComponentCard;

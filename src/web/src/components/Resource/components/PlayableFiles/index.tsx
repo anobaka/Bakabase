@@ -17,7 +17,7 @@ import { Button, Chip, Modal } from "@/components/bakaui";
 import { splitPathIntoSegments, standardizePath } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
-import { useUiOptionsStore } from "@/models/options";
+import { useUiOptionsStore } from "@/stores/options";
 
 type Props = {
   resource: ResourceModel;
@@ -91,9 +91,11 @@ const DefaultVisibleFileCount = 5;
 export type PlayableFilesRef = {
   initialize: () => Promise<void>;
 };
-
-export default forwardRef<PlayableFilesRef, Props>(
-  ({ autoInitialize, resource, PortalComponent, afterPlaying }, ref) => {
+const PlayableFiles = forwardRef<PlayableFilesRef, Props>(
+  function PlayableFiles(
+    { autoInitialize, resource, PortalComponent, afterPlaying },
+    ref,
+  ) {
     const { t } = useTranslation();
     const useCache = !useUiOptionsStore((state) => state.data).resource
       ?.disableCache;
@@ -255,3 +257,7 @@ export default forwardRef<PlayableFilesRef, Props>(
     return null;
   },
 );
+
+PlayableFiles.displayName = "PlayableFiles";
+
+export default PlayableFiles;

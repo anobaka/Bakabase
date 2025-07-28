@@ -55,8 +55,7 @@ type PropertyTypeForManuallySettingValue = {
 };
 
 const log = buildLogger("BulkModificationProcessValueEditor");
-
-export default (props: Props) => {
+const Editor = (props: Props) => {
   const {
     onChange,
     variables,
@@ -490,3 +489,7 @@ export default (props: Props) => {
     </div>
   );
 };
+
+Editor.displayName = "Editor";
+
+export default Editor;

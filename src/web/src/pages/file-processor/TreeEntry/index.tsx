@@ -303,7 +303,7 @@ const TreeEntry = (props: TreeEntryProps) => {
       const s = childrenStylesRef.current[e.path];
 
       return (
-        <MemoTreeEntry
+        <MemoTreeEntryPage
           key={e.id}
           capabilities={capabilities}
           entry={e}
@@ -672,6 +672,6 @@ const TreeEntry = (props: TreeEntryProps) => {
     </div>
   );
 };
-const MemoTreeEntry = React.memo(TreeEntry);
+const MemoTreeEntryPage = React.memo(TreeEntry);
 
-export default MemoTreeEntry;
+export default MemoTreeEntryPage;

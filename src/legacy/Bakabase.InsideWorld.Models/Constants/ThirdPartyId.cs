@@ -12,6 +12,12 @@ namespace Bakabase.InsideWorld.Models.Constants
         ExHentai = 2,
         Pixiv = 3,
         Bangumi = 4,
-        SoulPlus = 5
+        SoulPlus = 5,
+        DLsite = 6,
+        Fanbox = 7,
+        Fantia = 8,
+        Cien = 9,
+        Patreon = 10,
+        Tmdb = 11
     }
 }

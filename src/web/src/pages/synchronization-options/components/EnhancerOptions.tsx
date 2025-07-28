@@ -19,8 +19,7 @@ type Props = {
   subject?: any;
   isSecondary?: boolean;
 };
-
-export default ({
+const EnhancerOptions = ({
   enhancer,
   options,
   onChange,
@@ -82,3 +81,7 @@ export default ({
     </>
   );
 };
+
+EnhancerOptions.displayName = "EnhancerOptions";
+
+export default EnhancerOptions;

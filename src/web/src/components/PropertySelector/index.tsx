@@ -15,6 +15,7 @@ import { PropertyPool, PropertyType, StandardValueType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Divider, Modal, Spacer } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { useUiOptionsStore } from "@/stores/options.ts";
 
 type Key = {
   id: number;
@@ -61,6 +62,7 @@ const PropertySelector = (props: IProps) => {
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [selection, setSelection] = useState<Key[]>(propsSelection || []);
   const [visible, setVisible] = useState(true);
+  const uiOptionsStore = useUiOptionsStore();
 
   // console.log('props selection', propsSelection, properties, addable, editable, removable);
 
@@ -172,6 +174,10 @@ const PropertySelector = (props: IProps) => {
   };
 
   const onSubmit = async (selection: Key[]) => {
+    if (selection.length > 0) {
+      await BApi.options.addLatestUsedProperty(selection);
+    }
+
     // console.log(customProperties, selection);
     if (propsOnSubmit) {
       await propsOnSubmit(
@@ -256,13 +262,43 @@ const PropertySelector = (props: IProps) => {
 
     return true;
   });
+
+  // Sort properties with latest used properties having higher priority
+  const sortedFilteredProperties = filteredProperties.sort((a, b) => {
+    const latestUsedProperties =
+      uiOptionsStore.data?.latestUsedProperties ?? [];
+    let aIndex = latestUsedProperties.findIndex(
+      (l) => l.id === a.id && l.pool === a.pool,
+    );
+
+    if (aIndex == -1) {
+      aIndex = Number.MAX_SAFE_INTEGER;
+    }
+
+    let bIndex = latestUsedProperties.findIndex(
+      (l) => l.id === b.id && l.pool === b.pool,
+    );
+
+    if (bIndex == -1) {
+      bIndex = Number.MAX_SAFE_INTEGER;
+    }
+
+    return aIndex - bIndex;
+  });
+
+  console.log(
+    filteredProperties,
+    uiOptionsStore.data?.latestUsedProperties,
+    sortedFilteredProperties,
+  );
+
   const selectedProperties = selection
     .map((s) =>
-      filteredProperties.find((p) => p.id == s.id && p.pool == s.pool),
+      sortedFilteredProperties.find((p) => p.id == s.id && p.pool == s.pool),
     )
     .filter((x) => x)
     .map((x) => x!);
-  const unselectedProperties = filteredProperties.filter(
+  const unselectedProperties = sortedFilteredProperties.filter(
     (p) => !selection.some((s) => s.id == p.id && s.pool == p.pool),
   );
   const propertyCount = selectedProperties.length + unselectedProperties.length;

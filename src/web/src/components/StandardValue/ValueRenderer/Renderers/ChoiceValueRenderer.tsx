@@ -3,7 +3,7 @@
 "use strict";
 import type { ValueRendererProps } from "../models";
 
-import { type CSSProperties } from "react";
+import { type CSSProperties, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import ChoiceValueEditor from "../../ValueEditor/Editors/ChoiceValueEditor";
@@ -23,8 +23,7 @@ type ChoiceValueRendererProps = ValueRendererProps<string[]> & {
 };
 
 const log = buildLogger("ChoiceValueRenderer");
-
-export default (props: ChoiceValueRendererProps) => {
+const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const { value, editor, variant, getDataSource, multiple, valueAttributes } =
     props;
   const { t } = useTranslation();
@@ -43,6 +42,12 @@ export default (props: ChoiceValueRendererProps) => {
         });
       }
     : undefined;
+
+  useEffect(() => {
+    if (props.defaultEditing) {
+      onClickValues?.();
+    }
+  }, []);
 
   const validValues = value?.map((v) => v != undefined) || [];
 
@@ -96,3 +101,7 @@ export default (props: ChoiceValueRendererProps) => {
     );
   }
 };
+
+ChoiceValueRenderer.displayName = "ChoiceValueRenderer";
+
+export default ChoiceValueRenderer;

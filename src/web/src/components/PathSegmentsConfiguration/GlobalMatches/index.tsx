@@ -2,7 +2,7 @@
 
 import type { OnDeleteMatcherValue } from "../models";
 import type { IPscPropertyMatcherValue } from "../models/PscPropertyMatcherValue";
-import { SimpleGlobalMatchResult } from "../models/PscContext";
+import type { SimpleGlobalMatchResult } from "../models/PscContext";
 
 import React from "react";
 import { useTranslation } from "react-i18next";
@@ -17,8 +17,7 @@ type Props = {
   value: IPscPropertyMatcherValue[];
   onDeleteMatcherValue: OnDeleteMatcherValue;
 };
-
-export default ({ matches, value, onDeleteMatcherValue }: Props) => {
+const GlobalMatches = ({ matches, value, onDeleteMatcherValue }: Props) => {
   const { t } = useTranslation();
 
   if (matches.length > 0) {
@@ -64,3 +63,7 @@ export default ({ matches, value, onDeleteMatcherValue }: Props) => {
 
   return null;
 };
+
+GlobalMatches.displayName = "GlobalMatches";
+
+export default GlobalMatches;

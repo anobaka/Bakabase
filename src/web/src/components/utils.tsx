@@ -977,18 +977,18 @@ export function extractErrorMessage(error: unknown): string {
   if (typeof error === "string") {
     return error;
   }
-  
+
   if (error && typeof error === "object") {
     // 检查是否有message属性
     if ("message" in error && typeof error.message === "string") {
       return error.message;
     }
-    
+
     // 检查是否有toString方法
     if (typeof error.toString === "function") {
       return error.toString();
     }
   }
-  
+
   return "Unknown error";
 }

@@ -18,15 +18,14 @@ import type { CustomComponentDetailDialogProps } from "./Detail";
 
 import Detail from "@/pages/custom-component/Detail";
 import ComponentDescriptorCard from "@/pages/custom-component/components/ComponentCard";
-import { Button } from "@/components/bakaui";
+import { Alert, Button, Modal } from "@/components/bakaui";
 
 const ComponentTypeIcons = {
   [ComponentType.Enhancer]: MdFlashlightOn,
   [ComponentType.Player]: MdPlayCircle,
   [ComponentType.PlayableFileSelector]: MdSearch,
 };
-
-export default () => {
+const CustomComponentPage = () => {
   const { t } = useTranslation();
   const [allComponents, setAllComponents] = useState([]);
 
@@ -57,6 +56,19 @@ export default () => {
 
   return (
     <div className={"custom-component-page"}>
+      <Modal
+        defaultVisible
+        footer={{ actions: ["cancel"] }}
+        size={"lg"}
+        title={t<string>("Custom components will be removed soon")}
+      >
+        <Alert
+          color={"danger"}
+          title={t<string>(
+            "Please note that the custom components will be removed soon. Please use the new media library template.",
+          )}
+        />
+      </Modal>
       {selectedComponent && (
         <Detail
           {...selectedComponent}
@@ -122,3 +134,7 @@ export default () => {
     </div>
   );
 };
+
+CustomComponentPage.displayName = "CustomComponentPage";
+
+export default CustomComponentPage;

@@ -1,6 +1,6 @@
 "use client";
 
-import  { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { useTranslation } from "react-i18next";
 

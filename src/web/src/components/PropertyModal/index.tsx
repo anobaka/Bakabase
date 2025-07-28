@@ -28,8 +28,12 @@ type CustomPropertyForm = {
 };
 
 const log = buildLogger("PropertyModal");
-
-export default ({ value, onSaved, validValueTypes, ...props }: Props) => {
+const PropertyModal = ({
+  value,
+  onSaved,
+  validValueTypes,
+  ...props
+}: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   const [property, setProperty] = useState<CustomPropertyForm>();
@@ -84,3 +88,7 @@ export default ({ value, onSaved, validValueTypes, ...props }: Props) => {
     </Modal>
   );
 };
+
+PropertyModal.displayName = "PropertyModal";
+
+export default PropertyModal;

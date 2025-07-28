@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Models.Configs
     [Options]
     public class FileSystemOptions
     {
-        public string[]? RecentMovingDestinations { get; set; }
+        public List<string>? RecentMovingDestinations { get; set; }
         public FileMoverOptions? FileMover { get; set; }
         public FileProcessorOptions? FileProcessor { get; set; }
 
@@ -23,7 +23,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             RecentMovingDestinations ??= [];
             var paths = RecentMovingDestinations.Where(x => x != destination).ToList();
             paths.Insert(0, destination);
-            RecentMovingDestinations = paths.Take(capacity).ToArray();
+            RecentMovingDestinations = paths.Take(capacity).ToList();
         }
 
         public class FileMoverOptions

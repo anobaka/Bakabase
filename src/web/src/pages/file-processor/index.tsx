@@ -5,19 +5,17 @@ import "./index.scss";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import RootTreeEntry from "./RootTreeEntry";
+import RootTreeEntryPage from "./RootTreeEntry";
 
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type RootEntry from "@/core/models/FileExplorer/RootEntry";
 
 import { buildLogger } from "@/components/utils";
-import { useFileSystemOptionsStore } from "@/models/options";
+import { useFileSystemOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 
 const log = buildLogger("FileProcessor");
-
-// todo: optimize
-export default () => {
+const FileProcessorPage = () => {
   const { t } = useTranslation();
 
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
@@ -102,7 +100,7 @@ export default () => {
         <div className="root relative overflow-hidden" tabIndex={0}>
           <div className={"absolute top-0 left-0 w-full h-full flex flex-col"}>
             {rootPathInitialized && (
-              <RootTreeEntry
+              <RootTreeEntryPage
                 expandable
                 capabilities={[
                   "decompress",
@@ -144,3 +142,8 @@ export default () => {
     </div>
   );
 };
+
+FileProcessorPage.displayName = "FileProcessorPage";
+
+// todo: optimize
+export default FileProcessorPage;

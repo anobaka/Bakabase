@@ -3,7 +3,7 @@
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-import { useResourceOptionsStore } from "@/models/options";
+import { useResourceOptionsStore } from "@/stores/options";
 import { CoverSaveMode, coverSaveModes } from "@/sdk/constants";
 import { Button, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -18,8 +18,7 @@ const modeTips: Record<CoverSaveMode, string> = {
   [CoverSaveMode.Prepend]: "As the first cover",
   [CoverSaveMode.Replace]: "Current covers will be discard",
 };
-
-export default (props: Props) => {
+const CoverSaveButton = (props: Props) => {
   const { t } = useTranslation();
   const { disabledReason, getDataURL, resourceId } = props;
   const resourceOptions = useResourceOptionsStore((state) => state.data);
@@ -84,3 +83,7 @@ export default (props: Props) => {
     </Tooltip>
   );
 };
+
+CoverSaveButton.displayName = "CoverSaveButton";
+
+export default CoverSaveButton;

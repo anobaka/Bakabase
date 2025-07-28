@@ -49,8 +49,11 @@ const PropertyTypeIconMap: Record<PropertyType, IconType> = {
   [PropertyType.DateTime]: LuCalendarClock,
   [PropertyType.Tags]: LuTags,
 };
-
-export default ({ type, textVariant = "default", ...props }: Props) => {
+const PropertyTypeIcon = ({
+  type,
+  textVariant = "default",
+  ...props
+}: Props) => {
   const { t } = useTranslation();
   const Icon = type ? PropertyTypeIconMap[type] : AiOutlineQuestionCircle;
   const typeName = type ? t<string>(PropertyType[type]) : t<string>("Unknown");
@@ -73,3 +76,7 @@ export default ({ type, textVariant = "default", ...props }: Props) => {
       );
   }
 };
+
+PropertyTypeIcon.displayName = "PropertyTypeIcon";
+
+export default PropertyTypeIcon;

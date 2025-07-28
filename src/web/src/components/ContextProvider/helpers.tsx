@@ -2,11 +2,12 @@
 
 import type { ComponentType } from "react";
 import type { DestroyableProps } from "@/components/bakaui/types";
+
 import ReactDOM from "react-dom/client";
+import { HashRouter } from "react-router-dom";
 
 import { uuidv4 } from "@/components/utils";
 import BakabaseContextProvider from "@/components/ContextProvider/BakabaseContextProvider";
-import { HashRouter } from "react-router-dom";
 
 export function createPortal<P extends DestroyableProps>(
   C: ComponentType<P>,
@@ -44,7 +45,7 @@ export function createPortal<P extends DestroyableProps>(
           }}
         />
       </BakabaseContextProvider>
-    </HashRouter>
+    </HashRouter>,
   );
 
   return {

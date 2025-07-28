@@ -9,15 +9,16 @@ import { CheckCircleOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
 import { Button, Textarea } from "@/components/bakaui";
-
-export default ({
+const CookieValidator = ({
   cookie,
   target,
   onChange = (v) => {},
+  description,
 }: {
   cookie: string | undefined;
   target: CookieValidatorTarget;
   onChange: any;
+  description?: any;
 }) => {
   const { t } = useTranslation();
   const [status, setStatus] = useState<"loading" | "failed" | "succeed">();
@@ -40,7 +41,8 @@ export default ({
     <div className={"cookie-validator"}>
       <div>
         <Textarea
-          label={"Cookie"}
+          description={description}
+          label={t("Cookie validator")}
           size={"sm"}
           value={cookie}
           onValueChange={(v) => {
@@ -83,3 +85,7 @@ export default ({
     </div>
   );
 };
+
+CookieValidator.displayName = "CookieValidator";
+
+export default CookieValidator;

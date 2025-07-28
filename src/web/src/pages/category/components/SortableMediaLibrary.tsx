@@ -39,8 +39,11 @@ import {
 } from "@/components/bakaui";
 import SynchronizationConfirmModal from "@/pages/category/components/SynchronizationConfirmModal";
 import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
-
-export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
+const SortableMediaLibrary = ({
+  library,
+  loadAllMediaLibraries,
+  reloadMediaLibrary,
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: library.id });
 
@@ -570,3 +573,7 @@ export default ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
     </div>
   );
 };
+
+SortableMediaLibrary.displayName = "SortableMediaLibrary";
+
+export default SortableMediaLibrary;

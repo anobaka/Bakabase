@@ -6,10 +6,6 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:wpf="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
     Title="MainWindow"
-    Width="1366"
-    Height="768"
-    MinWidth="1366"
-    MinHeight="768"
     Background="{StaticResource WindowBackgroundBrush}"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">

@@ -11,15 +11,14 @@ import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { Img } from "react-image";
 import { LoadingOutlined } from "@ant-design/icons";
+import { MdBrokenImage } from "react-icons/md";
 
 import envConfig from "@/config/env";
 import { buildLogger, uuidv4 } from "@/components/utils";
-import MediaPreviewer from "@/components/MediaPreviewer";
+import MediaPreviewerPage from "@/components/MediaPreviewer";
 import "./index.scss";
-import { useAppContextStore } from "@/models/appContext";
+import { useAppContextStore } from "@/stores/appContext";
 import { CoverFit, ResourceCacheType } from "@/sdk/constants";
-import { MdBrokenImage } from "react-icons/md";
-import { MdImageNotSupported } from 'react-icons/md';
 import { Carousel, Tooltip } from "@/components/bakaui";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
@@ -105,7 +104,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       const serverAddresses = appContext.apiEndpoints ?? [
         envConfig.apiEndpoint,
       ];
-      const serverAddress = serverAddresses[serverAddresses.length - 1];
+
       const urls: string[] = [];
 
       const cps = resource.coverPaths ?? [];
@@ -127,6 +126,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           }
         }
       }
+      
+      const resourceServerAddresses = serverAddresses.length == 1 ? serverAddresses : serverAddresses.slice(1);
+      const serverAddress = resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
       if (cps.length > 0) {
         urls.push(
@@ -221,11 +223,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                   <Img
                     key={url}
                     className={`${dynamicClassName} max-w-full max-h-full`}
+                    fetchPriority={"low"}
                     loader={<LoadingOutlined className={"text-2xl"} />}
                     src={url}
-                    unloader={
-                      <MdBrokenImage className={"text-2xl"} />
-                    }
+                    unloader={<MdBrokenImage className={"text-2xl"} />}
                     onError={(e) => {
                       log(e);
                     }}
@@ -292,7 +293,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           }
         }}
       >
-        {previewerVisible && <MediaPreviewer resourceId={resource.id} />}
+        {previewerVisible && <MediaPreviewerPage resourceId={resource.id} />}
         {renderCover()}
       </div>
     );
@@ -348,14 +349,15 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                   <Img
                     // key={url}
                     alt={''}
+                    fetchPriority={"low"}
                     loader={(
                       <LoadingOutlined className={'text-2xl'} />
                     )}
-                    src={url}
                     onLoad={e => {
                       log('loaded bigger', e);
                     }}
                     // src={url}
+                    src={url}
                     style={{
                       maxWidth: tooltipWidth,
                       maxHeight: tooltipHeight,
@@ -377,5 +379,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     </Tooltip>
   );
 });
+const ResourceCoverMemo = React.memo(ResourceCover);
 
-export default React.memo(ResourceCover);
+ResourceCoverMemo.displayName = "ResourceCover";
+
+export default ResourceCoverMemo;

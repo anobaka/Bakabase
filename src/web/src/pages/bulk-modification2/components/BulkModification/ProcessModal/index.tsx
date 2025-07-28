@@ -12,7 +12,7 @@ import { CardHeader } from "@heroui/react";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 
 import { Button, Card, CardBody, Modal, Tooltip } from "@/components/bakaui";
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import {
   BulkModificationProcessorValueType,
   PropertyPool,
@@ -20,7 +20,7 @@ import {
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ProcessStep from "@/pages/bulk-modification2/components/BulkModification/ProcessStep";
 import ProcessStepModal from "@/pages/bulk-modification2/components/BulkModification/ProcessStepModal";
-import { useBulkModificationInternalsStore } from "@/models/bulkModificationInternals";
+import { useBulkModificationInternalsStore } from "@/stores/bulkModificationInternals";
 import { PropertyLabel } from "@/components/Property";
 
 type Props = {
@@ -36,8 +36,7 @@ const AllBulkModificationValueTypes = [
   BulkModificationProcessorValueType.ManuallyInput,
   BulkModificationProcessorValueType.Variable,
 ];
-
-export default ({
+const ProcessModal = ({
   onDestroyed,
   process: propsProcess,
   onSubmit,
@@ -84,7 +83,7 @@ export default ({
                 size="sm"
                 variant={"light"}
                 onClick={() => {
-                  createPortal(PropertySelector, {
+                  createPortal(PropertySelectorPage, {
                     pool: PropertyPool.All,
                     isDisabled: (p) =>
                       bmInternals.disabledPropertyKeys?.[p.pool]?.includes(
@@ -199,3 +198,7 @@ export default ({
     </Modal>
   );
 };
+
+ProcessModal.displayName = "ProcessModal";
+
+export default ProcessModal;

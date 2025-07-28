@@ -1,43 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
 {
-    public class SingleFileHttpDownloader : ISingleFileHttpDownloader
+    public class SingleFileHttpDownloader(HttpClient httpClient, ILogger<SingleFileHttpDownloader> logger)
     {
-        public SingleFileHttpDownloader(IHttpClientFactory httpClientFactory,
-            ILogger<SingleFileHttpDownloader> logger) : this(
-            httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default), logger)
-        {
-
-        }
-
-        public SingleFileHttpDownloader(HttpClient httpClient, ILogger<SingleFileHttpDownloader> logger)
-        {
-            _client = httpClient;
-            _logger = logger;
-        }
-
-        private readonly ILogger<SingleFileHttpDownloader> _logger;
-        private readonly HttpClient _client;
         private const int DownloadBlockSize = 5_000_000;
 
         public event Func<int, Task>? OnProgress;
 
         public async Task Download(string url, string filePath, CancellationToken ct)
         {
-            var rsp = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Head, url), ct);
+            var rsp = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, url), ct);
             var remoteMd5Bytes = rsp.Content.Headers.ContentMD5;
             // if (remoteMd5Bytes == null)
             // {
@@ -55,7 +36,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 {
                     await fs.DisposeAsync();
                     File.Delete(filePath);
-                    _logger.LogError(
+                    logger.LogError(
                         $"Current file size: {fs.Length} is larger than expected: {fileSize} and will be deleted.");
                     fs = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
                 }
@@ -74,7 +55,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                         var downloadReq = new HttpRequestMessage(HttpMethod.Get, downloadUrl);
                         downloadReq.Headers.Range = new RangeHeaderValue(blockStart,
                             Math.Min(fileSize, blockStart + DownloadBlockSize) - 1);
-                        var blockRsp = await _client.SendAsync(downloadReq, ct);
+                        var blockRsp = await httpClient.SendAsync(downloadReq, ct);
                         blockRsp.EnsureSuccessStatusCode();
                         await blockRsp.Content.CopyToAsync(fs, ct);
 

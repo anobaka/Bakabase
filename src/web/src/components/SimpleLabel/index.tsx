@@ -4,8 +4,7 @@ interface IProps extends React.HTMLAttributes<HTMLElement> {
   children: any;
   status?: "default" | "primary" | "success" | "warning" | "info" | "danger";
 }
-
-export default (props: IProps) => {
+const SimpleLabel = (props: IProps) => {
   const { children, status = "default", className, ...otherProps } = props;
 
   return (
@@ -17,3 +16,7 @@ export default (props: IProps) => {
     </span>
   );
 };
+
+SimpleLabel.displayName = "SimpleLabel";
+
+export default SimpleLabel;

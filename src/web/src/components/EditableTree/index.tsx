@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+
 import { Button, Icon, Input } from "@/components/bakaui";
+
 import "./index.scss";
 import i18n from "i18next";
-
-export default ({ defaultValue = [], onChange = (tree) => {} }) => {
+const EditableTree = ({ defaultValue = [], onChange = (tree) => {} }) => {
   const [value, setValue] = useState(JSON.parse(JSON.stringify(defaultValue)));
   const [editingKey, setEditingKey] = useState();
   const [editingValue, setEditingValue] = useState();
@@ -137,3 +138,7 @@ export default ({ defaultValue = [], onChange = (tree) => {} }) => {
     </Tree>
   );
 };
+
+EditableTree.displayName = "EditableTree";
+
+export default EditableTree;

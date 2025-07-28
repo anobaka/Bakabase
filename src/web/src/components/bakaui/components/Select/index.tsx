@@ -7,7 +7,7 @@ import type {
 import type { Key } from "@react-types/shared";
 import type { ReactNode } from "react";
 
-import { Select, SelectItem } from "@heroui/react";
+import { Select as HeroSelect, SelectItem as HeroSelectItem } from "@heroui/react";
 import { useTranslation } from "react-i18next";
 
 import { Chip } from "@/components/bakaui";
@@ -23,14 +23,13 @@ export interface SelectProps extends Omit<NextUISelectProps, "children"> {
   dataSource?: Data[];
   children?: any;
 }
-
-export default ({ dataSource = [], ...props }: SelectProps) => {
+const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
   const { t } = useTranslation();
 
   const isMultiline = props.selectionMode === "multiple";
 
   // console.log(props.selectedKeys, dataSource);
-  const renderValue =
+  const baseRenderValue =
     props.renderValue ??
     (isMultiline
       ? (v: SelectedItems<Data>) => {
@@ -56,8 +55,12 @@ export default ({ dataSource = [], ...props }: SelectProps) => {
         }
       : undefined);
 
+  const renderValue = baseRenderValue as unknown as
+    | ((items: SelectedItems<object>) => ReactNode)
+    | undefined;
+
   return (
-    <Select
+    <HeroSelect
       // aria-label={'Select'}
       isMultiline={isMultiline}
       items={dataSource ?? []}
@@ -67,15 +70,19 @@ export default ({ dataSource = [], ...props }: SelectProps) => {
       {props.children ??
         ((data: Data) => {
           return (
-            <SelectItem
+            <HeroSelectItem
               key={data.value}
               aria-label={data.label?.toString()}
               textValue={data.textValue ?? data.label?.toString()}
             >
               {data.label}
-            </SelectItem>
+            </HeroSelectItem>
           );
         })}
-    </Select>
+    </HeroSelect>
   );
 };
+
+Select.displayName = "Select";
+
+export default Select;

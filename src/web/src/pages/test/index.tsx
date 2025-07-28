@@ -6,26 +6,27 @@ import { useTranslation } from "react-i18next";
 import { ListboxItem } from "@heroui/react";
 import { useCookie } from "react-use";
 
-import Psc from "./cases/Psc";
-import Tour from "./cases/Tour";
-import Sortable from "./cases/Sortable";
-import MediaPreviewer from "./cases/MediaPreviewer";
-import CategoryEnhancerOptionsDialog from "./cases/CategoryEnhancerOptionsDialog";
-import ResourceFilter from "./cases/ResourceFilter";
-import Properties from "./cases/Properties";
-import PresetMediaLibraryTemplateBuilderTest from "./cases/PresetMediaLibraryTemplateBuilderTest";
-import LongTabs from "./cases/LongTabs";
+import PscPage from "./cases/Psc";
+import TourPage from "./cases/Tour";
+import SortablePage from "./cases/Sortable";
+import MediaPreviewerPage from "./cases/MediaPreviewer";
+import CategoryEnhancerOptionsDialogPage from "./cases/CategoryEnhancerOptionsDialog";
+import ResourceFilterPage from "./cases/ResourceFilter";
+import PropertiesPage from "./cases/Properties";
+import PresetMediaLibraryTemplateBuilderTestPage from "./cases/PresetMediaLibraryTemplateBuilderTest";
+import LongTabsPage from "./cases/LongTabs";
 import ReactPlayer from "./cases/ReactPlayer";
-import HlsPlayer from "./cases/HlsPlayer";
-import FileNameModifierTest from "./cases/FileNameModifierTest";
+import HlsPlayerPage from "./cases/HlsPlayer";
+import FileNameModifierTestPage from "./cases/FileNameModifierTest";
 
+import ErrorBoundaryTestPage from "@/pages/test/cases/ErrorBoundaryTest";
 import { Listbox } from "@/components/bakaui";
 import SimpleLabel from "@/components/SimpleLabel";
 import AntdMenu from "@/layouts/BasicLayout/components/PageNav/components/AntdMenu";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import OrderSelector from "@/pages/resource/components/FilterPanel/OrderSelector";
-import VirtualList from "@/pages/test/cases/VirtualList";
-import ResourceTransfer from "@/pages/test/cases/ResourceTransfer";
+import VirtualListPage from "@/pages/test/cases/VirtualList";
+import ResourceTransferPage from "@/pages/test/cases/ResourceTransfer";
 import { ProcessValueEditor } from "@/pages/bulk-modification2/components/BulkModification/ProcessValue";
 import { PropertyType, StandardValueType } from "@/sdk/constants";
 import PropertyMatcher from "@/components/PropertyMatcher";
@@ -34,7 +35,8 @@ import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 
 const components = {
-  FileNameModifierTest: <FileNameModifierTest />,
+  ErrorBoundaryTest: <ErrorBoundaryTestPage />,
+  FileNameModifierTest: <FileNameModifierTestPage />,
   PropertyMatcher: (
     <PropertyMatcher
       name={"封面3"}
@@ -68,21 +70,21 @@ const components = {
       <DeprecatedChip showTooltip={false} />
     </div>
   ),
-  PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
-  Properties: <Properties />,
+  PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTestPage />,
+  Properties: <PropertiesPage />,
   BulkModification: (
     <ProcessValueEditor valueType={StandardValueType.Boolean} />
   ),
-  ResourceTransfer: <ResourceTransfer />,
-  Filter: <ResourceFilter />,
-  VirtualList: <VirtualList />,
-  CategoryEnhancerOptions: <CategoryEnhancerOptionsDialog />,
-  Psc: <Psc />,
-  Tour: <Tour />,
+  ResourceTransfer: <ResourceTransferPage />,
+  Filter: <ResourceFilterPage />,
+  VirtualList: <VirtualListPage />,
+  CategoryEnhancerOptions: <CategoryEnhancerOptionsDialogPage />,
+  Psc: <PscPage />,
+  Tour: <TourPage />,
   ResourceOrderSelector: <OrderSelector />,
   Menu: <AntdMenu />,
-  Sortable: <Sortable />,
-  LongTabs: <LongTabs />,
+  Sortable: <SortablePage />,
+  LongTabs: <LongTabsPage />,
   FileSelector: (
     <FileSystemSelectorButton
       defaultLabel={"File Selector"}
@@ -115,19 +117,16 @@ const components = {
     );
   }),
   HlsPlayer: (
-    <HlsPlayer
+    <HlsPlayerPage
       src={
         "http://localhost:5000/file/play?fullname=Z%3A%5CAnime%5CAdded%20recently%5CArcane%20S01%5CS01E01%20-%20Welcome%20to%20the%20Playground.mkv"
       }
     />
   ),
   ReactPlayer: <ReactPlayer />,
-  MediaPreviewer: <MediaPreviewer />,
+  MediaPreviewer: <MediaPreviewerPage />,
 };
-
-// Render the form with all the properties we just defined passed
-// as props
-export default () => {
+const TestPage = () => {
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
@@ -181,3 +180,9 @@ export default () => {
     </div>
   );
 };
+
+TestPage.displayName = "TestPage";
+
+// Render the form with all the properties we just defined passed
+// as props
+export default TestPage;

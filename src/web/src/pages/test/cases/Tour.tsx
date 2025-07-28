@@ -3,7 +3,7 @@
 import { useTour } from "@reactour/tour";
 import React from "react";
 
-export default function Tour() {
+export default function TourPage() {
   const { isOpen, currentStep, steps, setIsOpen, setCurrentStep, setSteps } =
     useTour();
 

@@ -10,8 +10,7 @@ type NumberValueEditorProps = ValueEditorProps<number | undefined> & {
   label?: string;
   placeholder?: string;
 };
-
-export default ({
+const NumberValueEditor = ({
   value,
   onValueChange,
   label,
@@ -44,3 +43,7 @@ export default ({
     />
   );
 };
+
+NumberValueEditor.displayName = "NumberValueEditor";
+
+export default NumberValueEditor;

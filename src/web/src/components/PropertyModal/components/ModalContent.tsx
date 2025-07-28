@@ -91,13 +91,12 @@ const RatingMaxValueDataSource = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((x) => ({
 }));
 
 const log = buildLogger("ModalContent");
-
-export default ({ validValueTypes, value, onChange }: Props) => {
+const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const [typeGroupsVisible, setTypeGroupsVisible] = useState(false);
+  const [typeGroupsVisible, settypeGroupsVisible] = useState(false);
   const typePopoverDomRef = useRef<HTMLDivElement>(null);
 
   const [property, setProperty] = useState<CustomPropertyForm>(
@@ -400,7 +399,7 @@ export default ({ validValueTypes, value, onChange }: Props) => {
         size={"lg"}
         onClick={() => {
           // console.log(13456577, true);
-          setTypeGroupsVisible(true);
+          settypeGroupsVisible(true);
         }}
       >
         {property.type == undefined ? (
@@ -449,14 +448,17 @@ export default ({ validValueTypes, value, onChange }: Props) => {
     <div className={"flex flex-col gap-2"}>
       <div className={"flex gap-2 items-center"}>
         <Popover
+          isDismissable
           showArrow
           closeMode={["mask", "esc"]}
           placement={"right"}
           trigger={renderPropertyTypeButton()}
           visible={typeGroupsVisible}
+          onOpenChange={(isOpen) => {
+            settypeGroupsVisible(isOpen);
+          }}
           onVisibleChange={(visible) => {
-            // console.log(visible, 'event');
-            setTypeGroupsVisible(visible);
+            settypeGroupsVisible(visible);
           }}
         >
           <div ref={typePopoverDomRef} className={"p-2 flex flex-col gap-2"}>
@@ -684,7 +686,7 @@ export default ({ validValueTypes, value, onChange }: Props) => {
                                 type,
                               });
                             }
-                            setTypeGroupsVisible(false);
+                            settypeGroupsVisible(false);
                           }}
                         >
                           <PropertyTypeIcon
@@ -717,3 +719,7 @@ export default ({ validValueTypes, value, onChange }: Props) => {
     </div>
   );
 };
+
+ModalContent.displayName = "ModalContent";
+
+export default ModalContent;

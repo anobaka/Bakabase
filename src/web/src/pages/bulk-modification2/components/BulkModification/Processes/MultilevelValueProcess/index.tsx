@@ -25,8 +25,7 @@ type MultilevelProcessorOptions = {
 };
 
 type Props = {};
-
-export default ({}: Props) => {
+const MultilevelValueProcess = ({}: Props) => {
   const { t } = useTranslation();
   const [options, setOptions] = useState<MultilevelProcessorOptions>({});
 
@@ -81,3 +80,7 @@ export default ({}: Props) => {
     </div>
   );
 };
+
+MultilevelValueProcess.displayName = "MultilevelValueProcess";
+
+export default MultilevelValueProcess;

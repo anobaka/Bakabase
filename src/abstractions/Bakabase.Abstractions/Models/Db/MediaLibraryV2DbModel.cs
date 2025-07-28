@@ -8,4 +8,5 @@ public record MediaLibraryV2DbModel
     public int? TemplateId { get; set; }
     public int ResourceCount { get; set; }
     public string? Color { get; set; }
+    public string? Players { get; set; }
 }

@@ -9,8 +9,7 @@ import { Modal } from "@/components/bakaui";
 type Props = {
   onOk: () => any;
 } & DestroyableProps;
-
-export default ({ onOk, onDestroyed }: Props) => {
+const SynchronizationConfirmModal = ({ onOk, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -34,3 +33,7 @@ export default ({ onOk, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+SynchronizationConfirmModal.displayName = "SynchronizationConfirmModal";
+
+export default SynchronizationConfirmModal;

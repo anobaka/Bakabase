@@ -12,11 +12,9 @@ import { MediaType } from "@/sdk/constants";
 import { captureVideoFrame } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import CoverSaveButton from "@/components/Resource/components/CoverSaveButton";
-import { Popover } from "@/components/bakaui";
 
 dayjs.extend(duration);
-
-export default (
+const ShowResourceMediaPlayer = (
   resourceId: number,
   resourcePath: string,
   onSaveAsNewCover: (base64String: string) => any,
@@ -171,3 +169,7 @@ export default (
       }
     });
 };
+
+ShowResourceMediaPlayer.displayName = "ShowResourceMediaPlayer";
+
+export default ShowResourceMediaPlayer;

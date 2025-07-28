@@ -40,100 +40,7 @@ ChartJS.register(
   Tooltip,
   Legend,
 );
-
-// Chart component using Chart.js
-const ChartComponent = ({ chartData }: { chartData: any }) => {
-  const { isDarkMode } = useBakabaseContext();
-
-  // Get CSS variables for theme colors
-  const getCssVariable = (variableName: string) => {
-    // Check if we're in browser environment
-    if (typeof document === "undefined") {
-      return "";
-    }
-
-    return getComputedStyle(document.documentElement).getPropertyValue(
-      variableName,
-    );
-  };
-
-  // Ensure chartData is an array and has data
-  if (!Array.isArray(chartData) || chartData.length === 0) {
-    return (
-      <div className="flex justify-center py-4 text-gray-500">
-        No data available
-      </div>
-    );
-  }
-
-  const primaryColor = getCssVariable("--theme-text-primary");
-  const textColor = getCssVariable("--theme-text");
-  const subtleColor = getCssVariable("--theme-text-subtle");
-  const borderColor = getCssVariable("--theme-border-color");
-  const blockBg = getCssVariable("--theme-block-background");
-
-  const data = {
-    labels: chartData.map((item) => item.week),
-    datasets: [
-      {
-        label: "Count",
-        data: chartData.map((item) => item.count),
-        borderColor: primaryColor,
-        backgroundColor: `${primaryColor}33`, // 20ity
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: primaryColor,
-        pointBorderColor: textColor,
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: blockBg,
-        titleColor: textColor,
-        bodyColor: textColor,
-        borderColor: primaryColor,
-        borderWidth: 1,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: borderColor,
-        },
-        ticks: {
-          color: subtleColor,
-        },
-      },
-      x: {
-        display: false, // 隐藏X轴标签
-        grid: {
-          display: false,
-        },
-      },
-    },
-  };
-
-  return (
-    <div className="w-full h-44">
-      <Line data={data} options={options} />
-    </div>
-  );
-};
-
-export default () => {
+const DashboardPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [data, setData] =
@@ -442,3 +349,99 @@ export default () => {
     </div>
   );
 };
+
+DashboardPage.displayName = "DashboardPage";
+
+// Chart component using Chart.js
+const ChartComponent = ({ chartData }: { chartData: any }) => {
+  const { isDarkMode } = useBakabaseContext();
+
+  // Get CSS variables for theme colors
+  const getCssVariable = (variableName: string) => {
+    // Check if we're in browser environment
+    if (typeof document === "undefined") {
+      return "";
+    }
+
+    return getComputedStyle(document.documentElement).getPropertyValue(
+      variableName,
+    );
+  };
+
+  // Ensure chartData is an array and has data
+  if (!Array.isArray(chartData) || chartData.length === 0) {
+    return (
+      <div className="flex justify-center py-4 text-gray-500">
+        No data available
+      </div>
+    );
+  }
+
+  const primaryColor = getCssVariable("--theme-text-primary");
+  const textColor = getCssVariable("--theme-text");
+  const subtleColor = getCssVariable("--theme-text-subtle");
+  const borderColor = getCssVariable("--theme-border-color");
+  const blockBg = getCssVariable("--theme-block-background");
+
+  const data = {
+    labels: chartData.map((item) => item.week),
+    datasets: [
+      {
+        label: "Count",
+        data: chartData.map((item) => item.count),
+        borderColor: primaryColor,
+        backgroundColor: `${primaryColor}33`, // 20ity
+        borderWidth: 2,
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: primaryColor,
+        pointBorderColor: textColor,
+        pointBorderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      },
+    ],
+  };
+
+  const options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: false,
+      },
+      tooltip: {
+        backgroundColor: blockBg,
+        titleColor: textColor,
+        bodyColor: textColor,
+        borderColor: primaryColor,
+        borderWidth: 1,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: borderColor,
+        },
+        ticks: {
+          color: subtleColor,
+        },
+      },
+      x: {
+        display: false, // 隐藏X轴标签
+        grid: {
+          display: false,
+        },
+      },
+    },
+  };
+
+  return (
+    <div className="w-full h-44">
+      <Line data={data} options={options} />
+    </div>
+  );
+};
+
+export default DashboardPage;

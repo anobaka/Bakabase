@@ -23,7 +23,7 @@ import PropertyTip from "./PropertyTip";
 import TargetOptions from "./TargetOptions";
 
 import { Button, Chip, Input, Tooltip } from "@/components/bakaui";
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import BApi from "@/sdk/BApi";
 import { PropertyLabel } from "@/components/Property";
 import {
@@ -56,8 +56,7 @@ const StdValueSpecialTextIntegrationMap: {
 };
 
 const log = buildLogger("TargetRow");
-
-export default (props: Props) => {
+const TargetRow = (props: Props) => {
   const { t } = useTranslation();
   const {
     target,
@@ -260,7 +259,7 @@ export default (props: Props) => {
               isDisabled={options?.autoBindProperty}
               variant={"light"}
               onClick={() => {
-                PropertySelector.show({
+                PropertySelectorPage.show({
                   addable: true,
                   editable: true,
                   pool: PropertyPool.Custom | PropertyPool.Reserved,
@@ -344,3 +343,7 @@ export default (props: Props) => {
     </div>
   );
 };
+
+TargetRow.displayName = "TargetRow";
+
+export default TargetRow;

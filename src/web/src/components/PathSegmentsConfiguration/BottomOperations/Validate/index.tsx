@@ -4,12 +4,12 @@ import type { IPscPropertyMatcherValue } from "@/components/PathSegmentsConfigur
 
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { MdCheckCircle } from "react-icons/md";
 
 import { ResourceProperty } from "@/sdk/constants";
 import { Button, Chip, Modal } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { convertToPathConfigurationDtoFromPscValue } from "@/components/PathSegmentsConfiguration/helpers";
-import { MdCheckCircle } from 'react-icons/md';
 
 type PropertyKey = {
   id: number;
@@ -39,8 +39,7 @@ type Props = {
   isDisabled: boolean;
   value: IPscPropertyMatcherValue[];
 };
-
-export default ({ isDisabled, value }: Props) => {
+const Validate = ({ isDisabled, value }: Props) => {
   const { t } = useTranslation();
 
   const [loading, setLoading] = useState(false);
@@ -200,7 +199,7 @@ export default ({ isDisabled, value }: Props) => {
                       </div>
                       <div className="grow flex flex-col gap-1">
                         <div className="flex items-center gap-1">
-                          <MdCheckCircle className={'text-base'} />
+                          <MdCheckCircle className={"text-base"} />
                           {segments}
                         </div>
                         {globalMatchesElements.length > 0 && (
@@ -220,3 +219,7 @@ export default ({ isDisabled, value }: Props) => {
     </>
   );
 };
+
+Validate.displayName = "Validate";
+
+export default Validate;

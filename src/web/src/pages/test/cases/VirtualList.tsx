@@ -2,8 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { List } from "react-virtualized";
-
-export default () => {
+const VirtualListPage = () => {
   const [items, setItems] = useState([1, 2, 3, 4, 5]);
   const listRef = useRef();
 
@@ -28,3 +27,7 @@ export default () => {
     />
   );
 };
+
+VirtualListPage.displayName = "VirtualListPage";
+
+export default VirtualListPage;

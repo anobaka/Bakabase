@@ -30,8 +30,7 @@ type Props = {
   filter?: PathFilter;
   onSubmit?: (filter: PathFilter) => Promise<any>;
 } & DestroyableProps;
-
-export default ({ filter: propsFilter, onSubmit, onDestroyed }: Props) => {
+const PathFilterModal = ({ filter: propsFilter, onSubmit, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<Partial<PathFilter>>(
     propsFilter ?? { positioner: PathPositioner.Layer },
@@ -235,3 +234,7 @@ export default ({ filter: propsFilter, onSubmit, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+PathFilterModal.displayName = "PathFilterModal";
+
+export default PathFilterModal;

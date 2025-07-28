@@ -14,8 +14,7 @@ type Form =
 type Props = {
   form?: Form;
 };
-
-export default ({ form }: Props) => {
+const ResourcesModal = ({ form }: Props) => {
   const [resources, setResources] = useState<Resource[]>([]);
   const [pageable, setPageable] = useState<Pageable>({
     page: 1,
@@ -40,3 +39,7 @@ export default ({ form }: Props) => {
 
   return <div>123</div>;
 };
+
+ResourcesModal.displayName = "ResourcesModal";
+
+export default ResourcesModal;

@@ -4,11 +4,11 @@ import type { Entry } from "@/core/models/FileExplorer/Entry";
 
 import i18n from "i18next";
 import React from "react";
+import { MdInsertDriveFile } from "react-icons/md";
 
 import { toast } from "@/components/bakaui";
 import { IwFsType } from "@/sdk/constants";
 import envConfig from "@/config/env";
-import { MdFolder, MdInsertDriveFile } from 'react-icons/md';
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 
 type Props = {
@@ -17,10 +17,7 @@ type Props = {
 };
 
 // todo: hardcode url
-const buildImageUrl = (path: string) =>
-        `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
-
-export default ({ entry, onEnterDirectory }: Props) => {
+const FileSystemEntry = ({ entry, onEnterDirectory }: Props) => {
   let comp;
 
   switch (entry.type) {
@@ -72,3 +69,9 @@ export default ({ entry, onEnterDirectory }: Props) => {
     </div>
   );
 };
+
+FileSystemEntry.displayName = "FileSystemEntry";
+const buildImageUrl = (path: string) =>
+  `${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(path)}`;
+
+export default FileSystemEntry;

@@ -5,8 +5,7 @@ import type PscMatcher from "../models/PscMatcher";
 import type { IPscPropertyMatcherValue } from "../models/PscPropertyMatcherValue";
 import type { SegmentMatcherConfigurationProps } from "../SegmentMatcherConfiguration";
 import type { ChipProps } from "@/components/bakaui";
-
-import { SelectiveMatcher, Segment } from "../models/PscContext";
+import type { SelectiveMatcher, Segment } from "../models/PscContext";
 
 import {
   FieldBinaryOutlined,
@@ -17,7 +16,6 @@ import {
 import React, { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import { PscContext } from "../models/PscContext";
 import PscProperty from "../models/PscProperty";
 import { PscMatcherValue } from "../models/PscMatcherValue";
 import SegmentMatcherConfiguration from "../SegmentMatcherConfiguration";
@@ -38,7 +36,7 @@ import {
 import BusinessConstants from "@/components/BusinessConstants";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import { PscPropertyType } from "@/components/PathSegmentsConfiguration/models/PscPropertyType";
 
 type Props = {
@@ -49,8 +47,7 @@ type Props = {
   onDeleteMatcherValue: OnDeleteMatcherValue;
   visibleMatchers: PscMatcher[];
 };
-
-export default ({
+const Segments = ({
   segments,
   isDirectory,
   value,
@@ -365,7 +362,7 @@ export default ({
                                   break;
                                 }
                                 case PscPropertyType.CustomProperty: {
-                                  createPortal(PropertySelector, {
+                                  createPortal(PropertySelectorPage, {
                                     pool: PropertyPool.Custom,
                                     multiple: false,
                                     addable: true,
@@ -478,3 +475,7 @@ export default ({
     </div>
   );
 };
+
+Segments.displayName = "Segments";
+
+export default Segments;

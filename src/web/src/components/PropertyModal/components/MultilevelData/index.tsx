@@ -32,8 +32,7 @@ type TreeData = {
   checkable?: boolean;
   disableCheckbox?: boolean;
 };
-
-export default ({ options: propOptions, onChange }: Props) => {
+const MultilevelData = ({ options: propOptions, onChange }: Props) => {
   const { t } = useTranslation();
 
   const [options, setOptions] = useState(propOptions ?? {});
@@ -192,3 +191,7 @@ export default ({ options: propOptions, onChange }: Props) => {
     </div>
   );
 };
+
+MultilevelData.displayName = "MultilevelData";
+
+export default MultilevelData;

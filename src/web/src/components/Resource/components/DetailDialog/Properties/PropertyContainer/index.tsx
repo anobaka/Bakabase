@@ -30,8 +30,7 @@ export type PropertyContainerProps = {
 };
 
 const log = buildLogger("PropertyContainer");
-
-export default (props: PropertyContainerProps) => {
+const PropertyContainer = (props: PropertyContainerProps) => {
   const forceUpdate = useUpdate();
 
   log(props);
@@ -147,3 +146,7 @@ export default (props: PropertyContainerProps) => {
     </>
   );
 };
+
+PropertyContainer.displayName = "PropertyContainer";
+
+export default PropertyContainer;

@@ -19,8 +19,7 @@ type Props = {
   entry: Entry;
   expandable?: boolean;
 };
-
-export default ({ loading, entry, expandable }: Props) => {
+const LeftIcon = ({ loading, entry, expandable }: Props) => {
   const renderInner = useCallback(() => {
     if (loading) {
       return <LoadingOutlined className={"text-base"} />;
@@ -79,3 +78,7 @@ export default ({ loading, entry, expandable }: Props) => {
 
   return <div className={"item"}>{renderInner()}</div>;
 };
+
+LeftIcon.displayName = "LeftIcon";
+
+export default LeftIcon;

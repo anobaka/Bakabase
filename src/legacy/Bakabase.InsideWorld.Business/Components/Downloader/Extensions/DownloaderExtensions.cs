@@ -1,19 +1,22 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
+﻿using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
+using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.InsideWorld.Models.Models.Entities;
+using Bootstrap.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
-using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.Constants;
-using Bakabase.InsideWorld.Business.Components.Downloader.Naming;
-using Bootstrap.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
-using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Models.Domain.DownloadTask;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bootstrap.Components.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 {
@@ -23,7 +26,26 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             downloader.Status is DownloaderStatus.Downloading or DownloaderStatus.Starting
                 or DownloaderStatus.Stopping;
 
-        public static DownloadTask? ToDto(this DownloadTaskDbModel? task, DownloaderManager downloaderManager)
+        public static IServiceCollection AddDownloaders(this IServiceCollection services)
+        {
+            foreach (var downloaderDefinition in DownloaderInternals.Definitions)
+            {
+                services.AddScoped(downloaderDefinition.DownloaderType);
+                services.AddSingleton(downloaderDefinition.HelperType);
+            }
+            
+            services.RegisterAllRegisteredTypeAs<IDownloader>();
+            services.RegisterAllRegisteredTypeAs<IDownloaderHelper>();
+
+            services.AddScoped<DownloadTaskService>();
+            services.AddSingleton<DownloaderManager>();
+            services.AddTransient<IDownloaderLocalizer, DownloaderLocalizer>();
+            services.AddSingleton<IDownloaderFactory, DownloaderFactory>();
+
+            return services;
+        }
+
+        public static DownloadTask? ToDomainModel(this DownloadTaskDbModel? task, DownloaderManager downloaderManager)
         {
             if (task == null)
             {
@@ -73,7 +95,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                         _ => throw new ArgumentOutOfRangeException()
                     };
                     // Same as JustCreated
-                    if (downloader is {Status: DownloaderStatus.Stopped, StoppedBy: DownloaderStopBy.AppendToTheQueue})
+                    if (downloader is
+                        { Status: DownloaderStatus.Stopped, StoppedBy: DownloaderStopBy.AppendToTheQueue })
                     {
                         status = allDownloaders.Any(a =>
                             a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&
@@ -155,7 +178,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 FailureTimes = downloader?.FailureTimes ?? 0,
                 NextStartDt = nextStartDt,
                 AvailableActions = actions,
-                AutoRetry = task.AutoRetry
+                AutoRetry = task.AutoRetry,
             };
 
             return dto;

@@ -5,8 +5,7 @@ import type { PreviewResource } from "@/pages/media-library-template/components/
 type Props = {
   resource: PreviewResource;
 };
-
-export default ({ resource }: Props) => {
+const Resource = ({ resource }: Props) => {
   return (
     <div className={"flex gap-1 items-center"}>
       <div>
@@ -19,3 +18,7 @@ export default ({ resource }: Props) => {
     </div>
   );
 };
+
+Resource.displayName = "Resource";
+
+export default Resource;

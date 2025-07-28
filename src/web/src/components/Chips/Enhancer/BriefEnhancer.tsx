@@ -6,13 +6,17 @@ import { EnhancerId } from "@/sdk/constants";
 type Props = {
   enhancer: { id: number; name: string };
 };
-
-export default ({ enhancer }: Props) => {
+const BriefEnhancer = ({ enhancer }: Props) => {
   return (
     <div className={"flex items-center gap-1"}>
       <EnhancerIcon id={enhancer.id} />
       {enhancer.name}
       {enhancer.id == EnhancerId.Kodi && <BetaChip />}
+      {enhancer.id == EnhancerId.Tmdb && <BetaChip />}
     </div>
   );
 };
+
+BriefEnhancer.displayName = "BriefEnhancer";
+
+export default BriefEnhancer;

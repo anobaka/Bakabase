@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon, Progress } from "@/components/bakaui";
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
@@ -8,10 +9,10 @@ import "./index.scss";
 import ReactPlayer from "react-player";
 import moment from "moment";
 import Queue from "queue";
+import { MdInventory } from "react-icons/md";
 
-import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import { IconType, IwFsType, MediaType } from "@/sdk/constants";
-import { MdInventory, MdPlayCircle, MdPause, MdStop } from "react-icons/md";
+import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import {
   buildLogger,
   createPortalOfComponent,

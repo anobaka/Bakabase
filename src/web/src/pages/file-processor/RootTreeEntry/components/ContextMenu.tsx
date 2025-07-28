@@ -42,8 +42,7 @@ type Item = {
   label: string;
   onClick: () => any;
 };
-
-export default ({ selectedEntries, capabilities, root }: Props) => {
+const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -281,3 +280,7 @@ export default ({ selectedEntries, capabilities, root }: Props) => {
     </>
   );
 };
+
+ContextMenu.displayName = "ContextMenu";
+
+export default ContextMenu;

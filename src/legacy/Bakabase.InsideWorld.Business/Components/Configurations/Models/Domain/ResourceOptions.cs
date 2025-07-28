@@ -26,7 +26,19 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public AdditionalCoverDiscoveringSource[] AdditionalCoverDiscoveringSources { get; set; } = [];
         public List<SavedSearch> SavedSearches { get; set; } = [];
         public int[]? IdsOfMediaLibraryRecentlyMovedTo { get; set; }
+        public List<ResourceFilter> RecentFilters { get; set; } = [];
         public SynchronizationOptionsModel? SynchronizationOptions { get; set; }
+
+        public record ResourceFilter
+        {
+            public PropertyPool PropertyPool { get; set; }
+            public int PropertyId { get; set; }
+            public SearchOperation Operation { get; set; }
+            /// <summary>
+            /// Serialized
+            /// </summary>
+            public string? DbValue { get; set; }
+        }
 
         public void AddIdOfMediaLibraryRecentlyMovedTo(int id)
         {
@@ -36,6 +48,34 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
             var ids = IdsOfMediaLibraryRecentlyMovedTo.Where(x => x != id).ToList();
             ids.Insert(0, id);
             IdsOfMediaLibraryRecentlyMovedTo = ids.Take(capacity).ToArray();
+        }
+
+        public void AddRecentFilter(ResourceFilter filter)
+        {
+            const int capacity = 20;
+
+            RecentFilters ??= [];
+            
+            // Remove any existing identical filter (based on PropertyPool, PropertyId, Operation, and Value)
+            var existingFilters = RecentFilters.Where(f => 
+                f.PropertyPool == filter.PropertyPool &&
+                f.PropertyId == filter.PropertyId &&
+                f.Operation == filter.Operation &&
+                f.DbValue == filter.DbValue).ToList();
+            
+            foreach (var existing in existingFilters)
+            {
+                RecentFilters.Remove(existing);
+            }
+            
+            // Add the new filter at the beginning
+            RecentFilters.Insert(0, filter);
+            
+            // Keep only the most recent 20 filters
+            if (RecentFilters.Count > capacity)
+            {
+                RecentFilters = RecentFilters.Take(capacity).ToList();
+            }
         }
 
         public record CoverOptionsModel

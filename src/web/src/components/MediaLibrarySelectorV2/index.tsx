@@ -12,7 +12,7 @@ import {
 
 import { buildLogger } from "@/components/utils";
 import BApi from "@/sdk/BApi";
-import { useResourceOptionsStore } from "@/models/options";
+import { useResourceOptionsStore } from "@/stores/options";
 import { MediaLibraryAdditionalItem } from "@/sdk/constants";
 import { Button, Chip, Divider, Input, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -34,8 +34,7 @@ type Category = {
 };
 
 const log = buildLogger("MediaLibrarySelectorV2");
-
-export default (props: Props) => {
+const MediaLibrarySelectorV2 = (props: Props) => {
   const { t } = useTranslation();
   const { onSelect, confirmation } = props;
   const { createPortal } = useBakabaseContext();
@@ -217,3 +216,7 @@ export default (props: Props) => {
     </Modal>
   );
 };
+
+MediaLibrarySelectorV2.displayName = "MediaLibrarySelectorV2";
+
+export default MediaLibrarySelectorV2;

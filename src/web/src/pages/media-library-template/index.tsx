@@ -1,6 +1,6 @@
 "use client";
 
-import type { MediaLibraryTemplate } from "./models";
+import type { MediaLibraryTemplatePage } from "./models";
 import type { PropertyMap } from "@/components/types";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 
@@ -44,13 +44,12 @@ import AddModal from "@/pages/media-library-template/components/AddModal";
 type SearchForm = {
   keyword?: string;
 };
-
-export default () => {
+const MediaLibraryTemplatePage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
 
-  const [templates, setTemplates] = useState<MediaLibraryTemplate[]>([]);
+  const [templates, setTemplates] = useState<MediaLibraryTemplatePage[]>([]);
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
   const [searchForm, setSearchForm] = useState<SearchForm>({});
@@ -104,7 +103,7 @@ export default () => {
     );
   }, []);
 
-  const putTemplate = async (tpl: MediaLibraryTemplate) => {
+  const putTemplate = async (tpl: MediaLibraryTemplatePage) => {
     const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(
       tpl.id,
       tpl,
@@ -429,3 +428,7 @@ export default () => {
     </div>
   );
 };
+
+MediaLibraryTemplatePage.displayName = "MediaLibraryTemplatePage";
+
+export default MediaLibraryTemplatePage;

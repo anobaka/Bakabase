@@ -1,11 +1,13 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
+using Bakabase.Modules.Enhancer.Components.Enhancers.Av;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 using Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Kodi;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
+using Bakabase.Modules.Enhancer.Components.Enhancers.Tmdb;
 
 namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
 {
@@ -27,6 +29,12 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         Regex = 5,
 
         [Enhancer(typeof(KodiEnhancer), PropertyValueScope.KodiEnhancer, typeof(KodiEnhancerTarget))]
-        Kodi = 6
+        Kodi = 6,
+
+        [Enhancer(typeof(TmdbEnhancer), PropertyValueScope.TmdbEnhancer, typeof(TmdbEnhancerTarget))]
+        Tmdb = 7,
+
+        [Enhancer(typeof(AvEnhancer), PropertyValueScope.AvEnhancer, typeof(AvEnhancerTarget))]
+        Av = 8
     }
 }

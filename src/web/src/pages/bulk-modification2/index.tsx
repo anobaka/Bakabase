@@ -22,10 +22,9 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useBulkModificationInternalsStore } from "@/models/bulkModificationInternals";
+import { useBulkModificationInternalsStore } from "@/stores/bulkModificationInternals";
 import { StandardValueType } from "@/sdk/constants";
-
-export default () => {
+const BulkModification2Page = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
@@ -266,3 +265,7 @@ export default () => {
     </div>
   );
 };
+
+BulkModification2Page.displayName = "BulkModification2Page";
+
+export default BulkModification2Page;

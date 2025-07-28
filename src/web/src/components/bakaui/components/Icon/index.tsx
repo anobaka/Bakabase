@@ -12,7 +12,10 @@ const Icon = forwardRef(({ type, ...otherProps }: IconProps, ref) => {
   const iconRef = useRef(
     lazy(() =>
       import(/* @vite-ignore */ `@ant-design/icons/es/icons/${type}.js`).catch(
-        (err) => import(/* @vite-ignore */ "@ant-design/icons/es/icons/WarningOutlined.js"),
+        (err) =>
+          import(
+            /* @vite-ignore */ "@ant-design/icons/es/icons/WarningOutlined.js"
+          ),
       ),
     ),
   );

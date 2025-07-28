@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect } from "react";
+
 import { Progress } from "@/components/bakaui";
+
 import { usePrevious } from "react-use";
 import { SyncOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -9,9 +11,11 @@ import { useTranslation } from "react-i18next";
 import SynchronizationConfirmModal from "../SynchronizationConfirmModal";
 
 import { BackgroundTaskStatus, BTaskStatus } from "@/sdk/constants";
+
 import "./index.scss";
-import { MdSync } from 'react-icons/md';
-import { useBTasksStore } from "@/models/bTasks";
+import { MdSync } from "react-icons/md";
+
+import { useBTasksStore } from "@/stores/bTasks";
 import { Button, Tooltip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -33,8 +37,7 @@ type TaskInfo = {
 type Props = {
   onComplete?: () => void;
 };
-
-export default ({ onComplete }: Props) => {
+const MediaLibrarySynchronization = ({ onComplete }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const backgroundTasks = useBTasksStore((state) => state.tasks);
@@ -126,3 +129,7 @@ export default ({ onComplete }: Props) => {
     </div>
   );
 };
+
+MediaLibrarySynchronization.displayName = "MediaLibrarySynchronization";
+
+export default MediaLibrarySynchronization;

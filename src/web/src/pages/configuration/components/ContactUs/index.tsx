@@ -44,8 +44,7 @@ const contacts = [
   //   value: <ExternalLink to={Urls.WeChatQrCode}>Github</ExternalLink>,
   // },
 ];
-
-export default () => {
+const ContactUs = () => {
   const { t } = useTranslation();
 
   return (
@@ -74,3 +73,7 @@ export default () => {
     </div>
   );
 };
+
+ContactUs.displayName = "ContactUs";
+
+export default ContactUs;

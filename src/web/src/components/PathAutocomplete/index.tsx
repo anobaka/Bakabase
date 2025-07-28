@@ -1,24 +1,24 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
-import { useDebounce } from "react-use";
-import { Autocomplete, AutocompleteItem } from "@/components/bakaui";
 import type { AutocompleteProps } from "@heroui/react";
+
+import React, { useCallback, useRef, useState } from "react";
+import { useDebounce, useUpdateEffect } from "react-use";
+import { FolderOutlined, FileOutlined } from "@ant-design/icons";
+
+import { Autocomplete, AutocompleteItem } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import {
-  FolderOutlined,
-  FileOutlined,
-  DesktopOutlined,
-  HddOutlined,
-  UsbOutlined
-} from "@ant-design/icons";
 
 export type PathType = "file" | "folder" | "both";
 
-export interface PathAutocompleteProps extends Omit<AutocompleteProps<{ path: string, name: string, isDirectory: boolean }>, 'items' | 'onInputChange' | 'onSelectionChange' | 'onChange' | 'children'> {
+export interface PathAutocompleteProps
+  extends Omit<
+    AutocompleteProps<{ path: string; name: string; isDirectory: boolean }>,
+    "items" | "onInputChange" | "onSelectionChange" | "onChange" | "children"
+  > {
   value: string;
-  onChange: (value: string) => void;
-  onSelectionChange?: (value: string) => void;
+  onChange?: (value: string, type?: "file" | "folder") => void;
+  onSelectionChange?: (value: string, type: "file" | "folder") => void;
   pathType?: PathType;
   maxResults?: number;
   debounceDelay?: number;
@@ -50,102 +50,147 @@ export default function PathAutocomplete({
 }: PathAutocompleteProps) {
   const [autocompleteItems, setAutocompleteItems] = useState<PathItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const valueRef = useRef(value);
 
-  const searchPaths = useCallback((prefix: string) => {
-    setIsLoading(true);
+  const searchPaths = useCallback(
+    (prefix: string) => {
+      setIsLoading(true);
 
-    if (prefix && prefix.length >= 1) {
-      // Search for paths with the prefix
-      BApi.file.searchFileSystemEntries({
-        prefix: prefix,
-        maxResults: maxResults,
-      }).then((response) => {
-        if (response.data) {
-          // Filter based on pathType
-          let filteredItems = response.data;
-          if (pathType === "folder") {
-            filteredItems = response.data.filter(item => item.isDirectory);
-          }
-          setAutocompleteItems(filteredItems);
-        }
-      }).finally(() => {
+      if (prefix && prefix.length >= 1) {
+        // Search for paths with the prefix
+        BApi.file
+          .searchFileSystemEntries({
+            prefix: prefix,
+            maxResults: maxResults,
+          })
+          .then((response) => {
+            if (response.data) {
+              // Filter based on pathType
+              let filteredItems = response.data;
+
+              if (pathType === "folder") {
+                filteredItems = response.data.filter(
+                  (item) => item.isDirectory,
+                );
+              }
+              setAutocompleteItems(filteredItems);
+            }
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else if (prefix.length === 0) {
+        // Show drives when input is empty
+        BApi.file
+          .searchFileSystemEntries({
+            maxResults: maxResults,
+          })
+          .then((response) => {
+            if (response.data) {
+              // Filter based on pathType
+              let filteredItems = response.data;
+
+              if (pathType === "folder") {
+                filteredItems = response.data.filter(
+                  (item) => item.isDirectory,
+                );
+              }
+              setAutocompleteItems(filteredItems);
+            }
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else {
+        setAutocompleteItems([]);
         setIsLoading(false);
-      });
-    } else if (prefix.length === 0) {
-      // Show drives when input is empty
-      BApi.file.searchFileSystemEntries({
-        maxResults: maxResults,
-      }).then((response) => {
-        if (response.data) {
-          // Filter based on pathType
-          let filteredItems = response.data;
-          if (pathType === "folder") {
-            filteredItems = response.data.filter(item => item.isDirectory);
-          }
-          setAutocompleteItems(filteredItems);
-        }
-      }).finally(() => {
-        setIsLoading(false);
-      });
-    } else {
-      setAutocompleteItems([]);
-      setIsLoading(false);
-    }
-  }, [pathType, maxResults]);
-
-  // Use react-use's useDebounce
-  const [, cancel] = useDebounce(
-    () => {
-      searchPaths(value);
+      }
     },
-    debounceDelay,
-    [value]
+    [pathType, maxResults],
   );
 
-  // Load drives when component mounts
-  useEffect(() => {
-    BApi.file.searchFileSystemEntries({
-      maxResults: maxResults,
-    }).then((response) => {
-      if (response.data) {
-        // Filter based on pathType
-        let filteredItems = response.data;
-        if (pathType === "file") {
-          filteredItems = response.data.filter(item => !item.isDirectory);
-        } else if (pathType === "folder") {
-          filteredItems = response.data.filter(item => item.isDirectory);
-        }
-        setAutocompleteItems(filteredItems);
+  // Use react-use's useDebounce
+  const [,] = useDebounce(
+    () => {
+      if (valueRef.current != value) {
+        console.log("123");
+        searchPaths(value);
       }
-    });
+    },
+    debounceDelay,
+    [value],
+  );
+
+  useUpdateEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  // Load drives when component mounts
+  useUpdateEffect(() => {
+    BApi.file
+      .searchFileSystemEntries({
+        maxResults: maxResults,
+      })
+      .then((response) => {
+        if (response.data) {
+          // Filter based on pathType
+          let filteredItems = response.data;
+
+          if (pathType === "file") {
+            filteredItems = response.data.filter((item) => !item.isDirectory);
+          } else if (pathType === "folder") {
+            filteredItems = response.data.filter((item) => item.isDirectory);
+          }
+          setAutocompleteItems(filteredItems);
+        }
+      });
   }, [pathType, maxResults]);
 
   const handleInputChange = (inputValue: string) => {
-    onChange(inputValue);
+    const item = autocompleteItems.find((it) => it.path === inputValue);
+
+    // console.log(autocompleteItems, item, inputValue);
+
+    onChange?.(
+      inputValue,
+      item ? (item.isDirectory ? "folder" : "file") : undefined,
+    );
   };
 
   const handleSelectionChange = (key: React.Key | null) => {
     if (key) {
       const selectedPath = key as string;
-      onChange(selectedPath);
-      onSelectionChange?.(selectedPath);
+
+      const item = autocompleteItems.find((it) => it.path === selectedPath)!;
+      const type = item.isDirectory ? "folder" : "file";
+
+      onChange?.(selectedPath, type);
+      onSelectionChange?.(selectedPath, type);
     }
   };
 
   return (
     <Autocomplete
       {...autocompleteProps}
+      allowsCustomValue={true}
       inputValue={value}
       isLoading={isLoading}
-      onInputChange={handleInputChange}
-      onSelectionChange={handleSelectionChange}
       items={autocompleteItems}
-      allowsCustomValue={true}
+      onInputChange={handleInputChange}
+      onOpenChange={(isOpen) => {
+        if (isOpen && autocompleteItems.length == 0) {
+          searchPaths(value);
+        }
+      }}
+      onSelectionChange={handleSelectionChange}
     >
       {(item) => (
-        <AutocompleteItem key={item.path} title={item.path} startContent={getFileIcon(item)}>
-        </AutocompleteItem>
+        <AutocompleteItem
+          key={item.path}
+          startContent={getFileIcon(item)}
+          title={item.path}
+        />
       )}
     </Autocomplete>
   );
-} 
+}

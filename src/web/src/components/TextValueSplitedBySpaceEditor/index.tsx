@@ -12,8 +12,7 @@ type Props = {
   onValueChange?: (value: string[]) => any;
   inputProps?: Omit<InputProps, "value" | "onValueChange">;
 };
-
-export default (props: Props) => {
+const TextValueSplitedBySpaceEditor = (props: Props) => {
   const { value: propsValue, onValueChange, inputProps } = props;
 
   const [value, setValue] = useState(propsValue ?? []);
@@ -51,3 +50,7 @@ export default (props: Props) => {
     </div>
   );
 };
+
+TextValueSplitedBySpaceEditor.displayName = "TextValueSplitedBySpaceEditor";
+
+export default TextValueSplitedBySpaceEditor;

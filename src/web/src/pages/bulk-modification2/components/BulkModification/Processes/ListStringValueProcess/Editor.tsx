@@ -43,8 +43,7 @@ type Props = {
 };
 
 const log = buildLogger("ListProcessorEditor");
-
-export default ({
+const Editor = ({
   property,
   operation: propsOperation,
   options: propsOptions,
@@ -260,3 +259,7 @@ export default ({
     </div>
   );
 };
+
+Editor.displayName = "Editor";
+
+export default Editor;

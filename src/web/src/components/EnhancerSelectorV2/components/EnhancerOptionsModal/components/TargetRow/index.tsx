@@ -45,8 +45,7 @@ const StdValueSpecialTextIntegrationMap: {
 };
 
 const log = buildLogger("TargetRow");
-
-export default (props: Props) => {
+const TargetRow = (props: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const {
@@ -272,3 +271,7 @@ export default (props: Props) => {
     </div>
   );
 };
+
+TargetRow.displayName = "TargetRow";
+
+export default TargetRow;

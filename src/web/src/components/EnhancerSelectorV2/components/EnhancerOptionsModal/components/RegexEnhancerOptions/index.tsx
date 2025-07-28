@@ -30,8 +30,7 @@ const extractCaptureGroups = (expressions: string[]) =>
 
     return s;
   }, []);
-
-export default ({
+const RegexEnhancerOptions = ({
   options: propsOptions,
   enhancer,
   propertyMap,
@@ -132,3 +131,7 @@ export default ({
     </>
   );
 };
+
+RegexEnhancerOptions.displayName = "RegexEnhancerOptions";
+
+export default RegexEnhancerOptions;

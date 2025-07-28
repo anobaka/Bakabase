@@ -1,18 +1,21 @@
 import type { TooltipProps as NextUITooltipProps } from "@heroui/react";
 import type { ReactNode } from "react";
 
-import { Tooltip } from "@heroui/react";
+import { Tooltip as HeroTooltip } from "@heroui/react";
 import React from "react";
 
 interface IProps extends NextUITooltipProps {
   content: ReactNode;
   children: React.ReactNode;
 }
-
-export default (props: IProps) => {
+const Tooltip = (props: IProps) => {
   return (
-    <Tooltip showArrow {...props}>
+    <HeroTooltip showArrow {...props}>
       {props.children}
-    </Tooltip>
+    </HeroTooltip>
   );
 };
+
+Tooltip.displayName = "Tooltip";
+
+export default Tooltip;

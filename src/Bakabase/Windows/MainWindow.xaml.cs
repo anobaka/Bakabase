@@ -9,6 +9,7 @@ namespace Bakabase.Windows
     {
         private static readonly IEnumerable<(int MinScreenWidth, int MinWindowWidth)> MinWidths = new[]
         {
+            (2560, 1920),
             (1920, 1600),
             (1600, 1440),
             (0, 1280)
@@ -16,6 +17,7 @@ namespace Bakabase.Windows
 
         private static readonly IEnumerable<(int MinScreenHeight, int MinWindowHeight)> MinHeights = new[]
         {
+            (1440, 1080),
             (1080, 900),
             (900, 810),
             (0, 720)

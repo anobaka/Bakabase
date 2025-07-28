@@ -25,8 +25,7 @@ import {
 import { PropertyType, propertyTypes } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-export default () => {
+const TypeConversionRuleOverviewDialog = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -153,3 +152,8 @@ export default () => {
     </Modal>
   );
 };
+
+TypeConversionRuleOverviewDialog.displayName =
+  "TypeConversionRuleOverviewDialog";
+
+export default TypeConversionRuleOverviewDialog;

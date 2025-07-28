@@ -16,8 +16,7 @@ type StringValueRendererProps = ValueRendererProps<string> & {
 };
 
 const log = buildLogger("StringValueRenderer");
-
-export default (props: StringValueRendererProps) => {
+const StringValueRenderer = (props: StringValueRendererProps) => {
   const { value: propsValue, multiline, variant, editor } = props;
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -85,3 +84,7 @@ export default (props: StringValueRendererProps) => {
     }
   }
 };
+
+StringValueRenderer.displayName = "StringValueRenderer";
+
+export default StringValueRenderer;

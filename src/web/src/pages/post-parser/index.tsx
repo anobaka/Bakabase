@@ -34,16 +34,15 @@ import {
   postParserSources,
   ThirdPartyId,
 } from "@/sdk/constants";
-import { useThirdPartyOptionsStore } from "@/models/options";
-import { usePostParserTasksStore } from "@/models/postParserTasks";
+import { useThirdPartyOptionsStore } from "@/stores/options";
+import { usePostParserTasksStore } from "@/stores/postParserTasks";
 import ConfigurationModal from "@/pages/post-parser/components/ConfigurationModal";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
 
 const ThirdPartyMap: Record<PostParserSource, ThirdPartyId> = {
   [PostParserSource.SoulPlus]: ThirdPartyId.SoulPlus,
 };
-
-export default () => {
+const PostParserPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
@@ -373,3 +372,7 @@ https://xxxxxxx
     </div>
   );
 };
+
+PostParserPage.displayName = "PostParserPage";
+
+export default PostParserPage;

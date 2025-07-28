@@ -23,8 +23,7 @@ type Props = {
   title?: string;
   options?: Options;
 };
-
-export default ({ options: propsOptions, title }: Props) => {
+const ItemFilterByText = ({ options: propsOptions, title }: Props) => {
   const { t } = useTranslation();
 
   const [options, setOptions] = useState(propsOptions || {});
@@ -109,3 +108,7 @@ export default ({ options: propsOptions, title }: Props) => {
     </>
   );
 };
+
+ItemFilterByText.displayName = "ItemFilterByText";
+
+export default ItemFilterByText;

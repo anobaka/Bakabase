@@ -26,8 +26,7 @@ type Props = {
   matchers: PathSegmentConfigurationPropsMatcherOptions[];
   onChange: (value: IPscPropertyMatcherValue[]) => void;
 };
-
-export default ({
+const FileExtensionLoader = ({
   segments,
   value,
   isDirectory,
@@ -192,11 +191,7 @@ export default ({
           {rootPathIsSelected ? (
             loaderBtn
           ) : (
-            <Popover
-              align={"t"}
-              trigger={loaderBtn}
-              triggerType={"hover"}
-            >
+            <Popover align={"t"} trigger={loaderBtn} triggerType={"hover"}>
               {t<string>("Please select root path first.")}
             </Popover>
           )}
@@ -284,3 +279,7 @@ export default ({
     </div>
   );
 };
+
+FileExtensionLoader.displayName = "FileExtensionLoader";
+
+export default FileExtensionLoader;

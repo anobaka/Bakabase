@@ -9,8 +9,7 @@ import { Divider, Spacer, Spinner } from "@/components/bakaui";
 import Target from "@/pages/migration/components/Target";
 import BApi from "@/sdk/BApi";
 import { ErrorLabel } from "@/components/Error";
-
-export default () => {
+const MigrationPage = () => {
   const { t } = useTranslation();
 
   const [allMigrationsAreDone, setAllMigrationsAreDone] = useState(false);
@@ -103,3 +102,7 @@ export default () => {
     </div>
   );
 };
+
+MigrationPage.displayName = "MigrationPage";
+
+export default MigrationPage;

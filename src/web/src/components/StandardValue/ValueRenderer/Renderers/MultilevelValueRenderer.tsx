@@ -20,8 +20,7 @@ type MultilevelValueRendererProps = ValueRendererProps<string[][], string[]> & {
   getDataSource?: () => Promise<MultilevelData<string>[]>;
   valueAttributes?: { color?: string }[][];
 };
-
-export default ({
+const MultilevelValueRenderer = ({
   value,
   editor,
   variant,
@@ -127,3 +126,7 @@ export default ({
     );
   }
 };
+
+MultilevelValueRenderer.displayName = "MultilevelValueRenderer";
+
+export default MultilevelValueRenderer;

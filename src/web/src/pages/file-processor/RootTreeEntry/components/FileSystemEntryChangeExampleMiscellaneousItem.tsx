@@ -9,8 +9,10 @@ type Props = {
   indent?: 0 | 1 | 2;
   parent?: string;
 };
-
-export default ({ indent, parent }: Props) => {
+const FileSystemEntryChangeExampleMiscellaneousItem = ({
+  indent,
+  parent,
+}: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -26,3 +28,8 @@ export default ({ indent, parent }: Props) => {
     />
   );
 };
+
+FileSystemEntryChangeExampleMiscellaneousItem.displayName =
+  "FileSystemEntryChangeExampleMiscellaneousItem";
+
+export default FileSystemEntryChangeExampleMiscellaneousItem;

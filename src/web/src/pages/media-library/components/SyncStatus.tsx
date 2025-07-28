@@ -25,7 +25,7 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { useBTasksStore } from "@/models/bTasks";
+import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -46,8 +46,7 @@ type ElementType =
   | "error"
   | "completed"
   | "result";
-
-export default ({ id, onSyncCompleted }: Props) => {
+const SyncStatus = ({ id, onSyncCompleted }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -257,3 +256,7 @@ export default ({ id, onSyncCompleted }: Props) => {
 
   return <div className="flex items-center">{components}</div>;
 };
+
+SyncStatus.displayName = "SyncStatus";
+
+export default SyncStatus;

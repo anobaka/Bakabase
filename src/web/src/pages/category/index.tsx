@@ -11,7 +11,7 @@ import { TbPackageExport } from "react-icons/tb";
 import FeatureStatusTip from "@/components/FeatureStatusTip";
 import SortableCategoryList from "@/pages/category/components/SortableCategoryList";
 import MediaLibrarySynchronization from "@/pages/category/components/MediaLibrarySynchronization";
-import { useResourceOptionsStore } from "@/models/options";
+import { useResourceOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import {
   CategoryAdditionalItem,
@@ -33,8 +33,7 @@ import {
   Spinner,
 } from "@/components/bakaui";
 import HandleUnknownResources from "@/components/HandleUnknownResources";
-
-export default () => {
+const CategoryPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -318,3 +317,7 @@ export default () => {
     </div>
   );
 };
+
+CategoryPage.displayName = "CategoryPage";
+
+export default CategoryPage;

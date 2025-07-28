@@ -5,7 +5,6 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
-using Bakabase.Infrastructures.Components.Jobs;
 using Bakabase.Infrastructures.Components.Orm;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
@@ -15,21 +14,17 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
-using Bakabase.InsideWorld.Business.Components.Downloader;
-using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Downloader.DownloaderOptionsValidator;
-using Bakabase.InsideWorld.Business.Components.Downloader.Implementations;
-using Bakabase.InsideWorld.Business.Components.FileExplorer;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.Implementations;
-using Bakabase.InsideWorld.Business.Components.ThirdParty.JavLibrary;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
+using Bakabase.Modules.ThirdParty.Extensions;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
@@ -38,11 +33,11 @@ using Bakabase.Service.Extensions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
-using Bootstrap.Components.Tasks.Progressor;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -73,27 +68,10 @@ namespace Bakabase.Service.Components
             //     .JavLibrary);
             // services.AddSimpleProgressor<JavLibraryDownloader>();
 
-            services.AddSingleton<DownloaderManager>();
 
-            services.AddTransient<BilibiliDownloader>();
-            services.TryAddSingleton<BilibiliDownloaderOptionsValidator>();
             services.TryAddSingleton<BilibiliCookieValidator>();
-
-            services.AddTransient<ExHentaiSingleWorkDownloader>();
-            services.AddTransient<ExHentaiTorrentDownloader>();
-            services.AddTransient<ExHentaiListDownloader>();
-            services.AddTransient<ExHentaiWatchedDownloader>();
-            services.TryAddSingleton<ExHentaiDownloaderOptionsValidator>();
             services.TryAddSingleton<ExHentaiCookieValidator>();
-
-            services.AddTransient<PixivSearchDownloader>();
-            services.AddTransient<PixivRankingDownloader>();
-            services.AddTransient<PixivFollowingDownloader>();
-            services.TryAddSingleton<PixivDownloaderOptionsValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
-
-            services.RegisterAllRegisteredTypeAs<IDownloader>();
-            services.RegisterAllRegisteredTypeAs<IDownloaderOptionsValidator>();
 
             services.AddSingleton<BakabaseOptionsManagerPool>();
 
@@ -145,7 +123,7 @@ namespace Bakabase.Service.Components
             var logger = app.ApplicationServices.GetRequiredService<ILogger<BakabaseStartup>>();
             logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
 
-            app.ConfigurePostParser();
+            _ = app.ConfigurePostParser();
 
             // todo: merge gui configuration
             app.ApplicationServices.GetRequiredService<WebGuiHubConfigurationAdapter>().Initialize();

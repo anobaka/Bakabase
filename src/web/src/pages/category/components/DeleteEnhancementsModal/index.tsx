@@ -12,8 +12,7 @@ type Props = {
   title: string;
   onOk: (deleteEmptyOnly: boolean) => Promise<any>;
 } & DestroyableProps;
-
-export default ({ title, onOk, onDestroyed }: Props) => {
+const DeleteEnhancementsModal = ({ title, onOk, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [deleteEmptyOnly, setDeleteEmptyOnly] = React.useState(false);
 
@@ -59,3 +58,7 @@ export default ({ title, onOk, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+DeleteEnhancementsModal.displayName = "DeleteEnhancementsModal";
+
+export default DeleteEnhancementsModal;

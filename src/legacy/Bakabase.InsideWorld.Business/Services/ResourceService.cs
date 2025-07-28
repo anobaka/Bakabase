@@ -1,22 +1,4 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bootstrap.Components.Miscellaneous.ResponseBuilders;
-using Bootstrap.Components.Orm;
-using Bootstrap.Extensions;
-using Bootstrap.Models.ResponseModels;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
-using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bootstrap.Components.Configuration.Abstractions;
+﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Property;
@@ -30,37 +12,56 @@ using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
+using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
+using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Extensions;
-using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.Modules.Alias.Abstractions.Services;
-using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
+using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Constants.Aos;
-using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.Modules.Alias.Abstractions.Services;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
+using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using Bakabase.Modules.StandardValue.Extensions;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
+using Bootstrap.Components.Logging.LogService.Services;
+using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
+using Bootstrap.Extensions;
+using Bootstrap.Models.ResponseModels;
+using CliWrap;
+using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
-using Bakabase.Modules.Property.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
-using Bootstrap.Components.Logging.LogService.Services;
-using DotNext.Collections.Generic;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
-using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
@@ -465,7 +466,8 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             SortPropertyValuesByScope(doList);
 
-                            var categoryIds = resources.Where(x => x.CategoryId > 0).Select(r => r.CategoryId).ToHashSet();
+                            var categoryIds = resources.Where(x => x.CategoryId > 0).Select(r => r.CategoryId)
+                                .ToHashSet();
                             // ResourceId - PropertyId - Values
                             var customPropertiesValuesMap = (await _customPropertyValueService.GetAll(
                                 x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
@@ -486,22 +488,13 @@ namespace Bakabase.InsideWorld.Business.Services
                                     d => d.Template!.Properties?.Where(f => f.Pool == PropertyPool.Custom)
                                         .Select(p => p.Id).Distinct().ToArray() ?? []);
 
-                            var propertyIdsOfNotEmptyProperties =
-                                customPropertiesValuesMap.Values.SelectMany(x => x.Keys).ToHashSet();
-                            var loadedPropertyIds = categoryMap.Values
-                                .SelectMany(x => x.CustomProperties?.Select(y => y.Id) ?? []).ToHashSet();
-
-                            var unknownPropertyIds =
-                                propertyIdsOfNotEmptyProperties.Except(loadedPropertyIds).ToHashSet();
-
-                            var propertyMap =
-                                (await _customPropertyService.GetByKeys(unknownPropertyIds,
-                                    CustomPropertyAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+                            var customPropertyMap =
+                                (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
                             var loadedProperties = categoryMap.Values.SelectMany(x => x.CustomProperties ?? [])
                                 .GroupBy(d => d.Id).Select(d => d.First());
                             foreach (var p in loadedProperties)
                             {
-                                propertyMap[p.Id] = (p as CustomProperty)!;
+                                customPropertyMap[p.Id] = (p as CustomProperty)!;
                             }
 
                             foreach (var r in doList)
@@ -513,7 +506,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 var propertyIds = new List<int>();
                                 if (r.CategoryId > 0)
                                 {
-                                    if (categoryIdCustomPropertiesMap.TryGetValue(r.CategoryId, out var boundProperties) && boundProperties != null)
+                                    if (categoryIdCustomPropertiesMap.TryGetValue(r.CategoryId,
+                                            out var boundProperties) && boundProperties != null)
                                     {
                                         var bPIds = boundProperties.Select(p => p.Id).ToArray();
                                         propertyIds.AddRange(bPIds);
@@ -535,7 +529,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                 if (customPropertiesValuesMap.TryGetValue(r.Id, out var pValues))
                                 {
                                     propertyIds.AddRange(pValues.Keys.Except(propertyIds).OrderBy(x =>
-                                        propertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue));
+                                        customPropertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue));
                                 }
 
                                 var propertyOrderMap = new Dictionary<int, int>();
@@ -546,7 +540,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                 foreach (var pId in propertyIds)
                                 {
-                                    var property = propertyMap.GetValueOrDefault(pId);
+                                    var property = customPropertyMap.GetValueOrDefault(pId);
                                     if (property == null)
                                     {
                                         continue;
@@ -679,42 +673,34 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            // Set cover
+            // Set cover: reserved(manually) > reserved(other scope) > custom(manually) > custom(other scope)
             foreach (var @do in doList)
             {
-                var candidatePropertyValues =
-                    (@do.Properties?.GetValueOrDefault((int) PropertyPool.Custom)?.ToList() ?? []);
-                var coverPropertyValues = @do.Properties?.GetValueOrDefault((int) PropertyPool.Reserved)
-                    ?.Where(x => x.Key == (int) ReservedProperty.Cover);
-                if (coverPropertyValues != null)
+                var coverPropertyValue = @do.Properties?.GetValueOrDefault((int)PropertyPool.Reserved)
+                    ?.GetValueOrDefault((int)ReservedProperty.Cover)?.Values?.OrderBy(x => x.Scope)
+                    .Select(x => x.Value as List<string>)
+                    .OfType<List<string>>()
+                    .Where(x => x.Any())
+                    .ToList();
+                if (coverPropertyValue != null && coverPropertyValue.Any())
                 {
-                    candidatePropertyValues.InsertRange(0, coverPropertyValues);
+                    @do.CoverPaths = coverPropertyValue.First();
+                    continue;
                 }
 
-                var found = false;
-                foreach (var (pId, pvs) in candidatePropertyValues)
-                {
-                    if (found)
-                    {
-                        break;
-                    }
-
-                    if (pvs.Type == PropertyType.Attachment && pvs.Values?.Any() == true)
-                    {
-                        foreach (var listString in pvs.Values.Select(v =>
-                                     v.Value as List<string>))
-                        {
-                            var images = listString?.Where(x =>
-                                x.InferMediaType() == MediaType.Image).ToArray();
-                            if (images?.Any() == true)
-                            {
-                                @do.CoverPaths = images.ToList();
-                                found = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+                var candidateCustomAttachmentPropertyValues =
+                    (@do.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.ToList() ?? []).Select(x => x.Value)
+                    .Where(x =>
+                        x.Type == PropertyType.Attachment && x.Values?.Any() == true).ToList();
+                var coverPathsCandidates = candidateCustomAttachmentPropertyValues
+                    .Select(x => x.Values!.FirstOrDefault(a => a.IsManuallySet))
+                    .Concat(candidateCustomAttachmentPropertyValues.SelectMany(x =>
+                        x.Values!.Where(a => !a.IsManuallySet)))
+                    .Select(x => x?.Value)
+                    .OfType<List<string>>()
+                    .Where(a => a.Any())
+                    .ToList();
+                @do.CoverPaths = coverPathsCandidates.FirstOrDefault();
             }
 
             if (additionalItems.HasFlag(ResourceAdditionalItem.Alias))
@@ -1515,16 +1501,41 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Play(int resourceId, string file)
         {
-            var categoryId = (await _orm.GetByKey(resourceId))?.CategoryId;
+            var resource = await _orm.GetByKey(resourceId);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            var categoryId = resource.CategoryId;
 
             var playedByCustomPlayer = false;
-            if (categoryId.HasValue)
+            if (categoryId > 0)
             {
-                var playerRsp = await _categoryService.GetFirstComponent<IPlayer>(categoryId.Value, ComponentType.Player);
+                var playerRsp =
+                    await _categoryService.GetFirstComponent<IPlayer>(categoryId, ComponentType.Player);
                 if (playerRsp.Data != null)
                 {
                     await playerRsp.Data.Play(file);
                     playedByCustomPlayer = true;
+                }
+            }
+            else
+            {
+                var ml = await MediaLibraryV2Service.Get(resource.MediaLibraryId);
+                if (ml.Players != null)
+                {
+                    var player =
+                        ml.Players.FirstOrDefault(p => p.Extensions?.Contains(Path.GetExtension(file)) == true) ??
+                        ml.Players.FirstOrDefault(x => x.Extensions?.Any() != true);
+                    if (player != null)
+                    {
+                        var cmd = player.Command;
+                        var args = cmd.Replace("{0}", file);
+                        _ = Task.Run(async () =>
+                            await Cli.Wrap(player.ExecutablePath).WithArguments(args).ExecuteAsync());
+                        playedByCustomPlayer = true;
+                    }
                 }
             }
 
@@ -1624,6 +1635,46 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await _orm.UpdateRange(resources);
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths)
+        {
+            var resources = await _orm.GetByKeys(ids);
+            if (resources == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            var resourcesToBeChanged = new List<ResourceDbModel>();
+            
+            foreach (var resource in resources)
+            {
+                if (newPaths.TryGetValue(resource.Id, out var newPath) && newPath.IsNotEmpty())
+                {
+                    var standardizedPath = newPath.StandardizePath()!;
+                    if (resource.Path != standardizedPath)
+                    {
+                        resourcesToBeChanged.Add(resource);
+                    }
+                }
+            }
+
+            if (!resourcesToBeChanged.Any())
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            foreach (var resource in resourcesToBeChanged)
+            {
+                if (newPaths.TryGetValue(resource.Id, out var newPath) && newPath.IsNotEmpty())
+                {
+                    resource.Path = newPath.StandardizePath()!;
+                }
+            }
+
+            await _orm.UpdateRange(resourcesToBeChanged);
 
             return BaseResponseBuilder.Ok;
         }

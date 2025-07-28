@@ -14,8 +14,7 @@ import { Chip } from "@/components/bakaui";
 type Props = {
   filter: PathFilter;
 };
-
-export default ({ filter }: Props) => {
+const Demonstrator = ({ filter }: Props) => {
   const { t } = useTranslation();
 
   const renderPositioner = () => {
@@ -94,3 +93,7 @@ export default ({ filter }: Props) => {
     </div>
   );
 };
+
+Demonstrator.displayName = "Demonstrator";
+
+export default Demonstrator;

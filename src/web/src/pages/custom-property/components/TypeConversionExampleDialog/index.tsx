@@ -32,8 +32,7 @@ type Result = {
     bizValueType: StandardValueType;
   }[];
 };
-
-export default () => {
+const TypeConversionExampleDialog = () => {
   const { t } = useTranslation();
 
   const [results, setResults] = useState<Result[]>([]);
@@ -138,3 +137,7 @@ export default () => {
     </Modal>
   );
 };
+
+TypeConversionExampleDialog.displayName = "TypeConversionExampleDialog";
+
+export default TypeConversionExampleDialog;

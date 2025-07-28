@@ -2,80 +2,152 @@
 
 import type { components } from "@/sdk/BApi2";
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { LabelValue } from "@/components/types";
+import type {
+  BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition,
+  BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions,
+} from "@/sdk/Api";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import dayjs from "dayjs";
-import { ButtonGroup, Textarea } from "@heroui/react";
-import _ from "lodash";
+import { ButtonGroup, Input, Textarea } from "@heroui/react";
 
-import ExHentai from "./ExHentai";
-
-import {
-  bilibiliDownloadTaskTypes,
-  exHentaiDownloadTaskTypes,
-  pixivDownloadTaskTypes,
-  ThirdPartyId,
-  thirdPartyIds,
-} from "@/sdk/constants";
-import { Button, Checkbox, Modal } from "@/components/bakaui";
+import { ThirdPartyId } from "@/sdk/constants";
+import { Button, Modal } from "@/components/bakaui";
+import { isThirdPartyDeveloping } from "@/pages/downloader/models";
+import DevelopingChip from "@/components/Chips/DevelopingChip";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
-import Pixiv from "@/pages/downloader/components/TaskDetailModal/Pixiv";
-import Bilibili from "@/pages/downloader/components/TaskDetailModal/Bilibili";
-import DurationInput from "@/components/DurationInput";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-const ThirdPartyIdTaskTypesMap: { [key in ThirdPartyId]?: LabelValue[] } = {
-  [ThirdPartyId.Bilibili]: bilibiliDownloadTaskTypes,
-  [ThirdPartyId.ExHentai]: exHentaiDownloadTaskTypes,
-  [ThirdPartyId.Pixiv]: pixivDownloadTaskTypes,
-};
+import {
+  DownloadTaskFieldMap,
+  DownloadTaskFieldType,
+} from "@/pages/downloader/components/TaskDetailModal/models.ts";
+import LuxRequired from "@/pages/downloader/components/TaskDetailModal/components/LuxRequired.tsx";
+import FfMpegRequired from "@/pages/downloader/components/TaskDetailModal/components/FfMpegRequired.tsx";
+import PageRange from "@/pages/downloader/components/TaskDetailModal/components/PageRange.tsx";
+import BilibiliFavoritesSelector from "@/pages/downloader/components/TaskDetailModal/components/BilibiliFavoritesSelector.tsx";
+import DownloadPathSelectorField from "@/pages/downloader/components/TaskDetailModal/components/DownloadPathSelectorField.tsx";
+import IntervalField from "@/pages/downloader/components/TaskDetailModal/components/IntervalField.tsx";
+import CheckpointField from "@/pages/downloader/components/TaskDetailModal/components/CheckpointField.tsx";
+import AutoRetryField from "@/pages/downloader/components/TaskDetailModal/components/AutoRetryField.tsx";
+import AllowDuplicateField from "@/pages/downloader/components/TaskDetailModal/components/AllowDuplicateField.tsx";
 
 type Form =
-  components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Input.DownloadTaskAddInputModel"];
+  components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
 
 type Props = {
   id?: number;
 } & DestroyableProps;
 
-export default ({
-  // onCreatedOrUpdated,
-  // onClose,
-  onDestroyed,
-  id,
-}: Props) => {
+const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const isAdding = !(id && id > 0);
   const [form, setForm] = useState<Partial<Form>>({ autoRetry: true });
-
-  console.log(id);
+  const [taskDefinitions, setTaskDefinitions] = useState<
+    BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[]
+  >([]);
+  const [downloaderOptions, setDownloaderOptions] =
+    useState<BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderOptions | null>(
+      null,
+    );
 
   const init = async () => {
     if (!isAdding) {
-      const task = (await BApi.downloadTask.getDownloadTask(id)).data;
+      const task = (await BApi.downloadTask.getDownloadTask(id)).data!;
       const form: Partial<Form> = {
         ...task,
-        keyAndNames: { [task!.key]: task!.name || null },
+        keys: [task.key],
+        names: task.name === undefined ? [] : [task.name],
       };
 
       setForm(form);
     }
+
+    const taskDefinitionsResponse =
+      await BApi.downloadTask.getAllDownloaderDefinitions();
+
+    setTaskDefinitions(taskDefinitionsResponse.data || []);
   };
 
   useEffect(() => {
     init();
   }, []);
 
+  // Load downloader options when thirdPartyId and type change
+  useEffect(() => {
+    const loadDownloaderOptions = async () => {
+      if (form.thirdPartyId && form.type) {
+        try {
+          const optionsRes = await BApi.downloadTask.getDownloaderOptions(
+            form.thirdPartyId,
+            { taskType: form.type },
+          );
+
+          const options = optionsRes.data;
+
+          setDownloaderOptions(options || null);
+
+          // If options has defaultPath and form doesn't have downloadPath, set it
+          if (options?.defaultPath && !form.downloadPath) {
+            setForm((prev) => ({
+              ...prev,
+              downloadPath: options.defaultPath,
+            }));
+          }
+        } catch (error) {
+          console.error("Failed to load downloader options:", error);
+          setDownloaderOptions(null);
+        }
+      } else {
+        setDownloaderOptions(null);
+      }
+    };
+
+    loadDownloaderOptions();
+  }, [form.thirdPartyId, form.type]);
+
+  // Get unique third party IDs from task definitions
+  const availableThirdParties = React.useMemo(() => {
+    const uniqueThirdParties = new Map<ThirdPartyId, string>();
+
+    taskDefinitions.forEach((def) => {
+      if (!uniqueThirdParties.has(def.thirdPartyId)) {
+        // Use ThirdPartyId enum to get the name, or fallback to the definition name
+        const thirdPartyName = ThirdPartyId[def.thirdPartyId] || def.name;
+
+        uniqueThirdParties.set(def.thirdPartyId, thirdPartyName);
+      }
+    });
+
+    return Array.from(uniqueThirdParties.entries())
+      .map(([id, name]) => ({
+        id,
+        name,
+      }))
+      .sort((a, b) => a.id - b.id);
+  }, [taskDefinitions]);
+
+  // Get task types for the selected third party
+  const availableTaskTypes = React.useMemo(() => {
+    if (!form.thirdPartyId) return [];
+
+    return taskDefinitions
+      .filter((def) => def.thirdPartyId === form.thirdPartyId)
+      .map((def) => ({
+        value: def.taskType,
+        label: def.name,
+        description: def.description,
+      }));
+  }, [taskDefinitions, form.thirdPartyId]);
+
   const validateForm = (form: Partial<Form>): boolean => {
-    console.log(form);
     if (
       form.thirdPartyId &&
       form.downloadPath &&
-      _.keys(form.keyAndNames).length > 0 &&
+      form.keys &&
+      form.keys.length > 0 &&
       form.type
     ) {
       return true;
@@ -84,180 +156,155 @@ export default ({
     return false;
   };
 
-  const renderFormItems = () => {
-    if (!form.thirdPartyId || !form.type) {
-      return;
-    }
+  const renderFields = () => {
+    if (form.thirdPartyId && form.type) {
+      const fields = DownloadTaskFieldMap[form.thirdPartyId]?.[form.type] ?? [];
 
-    const items: any[] = [];
-
-    switch (form.thirdPartyId) {
-      case ThirdPartyId.ExHentai:
-        items.push(
-          <ExHentai
-            form={form}
-            isReadOnly={!isAdding}
-            type={form.type}
-            onChange={(v) => {
-              setForm({ ...form, ...v });
-            }}
-          />,
-        );
-        break;
-      case ThirdPartyId.Pixiv: {
-        items.push(
-          <Pixiv
-            form={form}
-            isReadOnly={!isAdding}
-            type={form.type}
-            onChange={(v) => {
-              setForm({ ...form, ...v });
-            }}
-          />,
-        );
-        break;
-      }
-      case ThirdPartyId.Bilibili: {
-        items.push(
-          <Bilibili
-            form={form}
-            isReadOnly={!isAdding}
-            type={form.type}
-            onChange={(v) => {
-              setForm({ ...form, ...v });
-            }}
-          />,
-        );
-      }
-    }
-
-    items.push(
-      <>
-        <div>{t<string>("Duration")}</div>
-        <div className={"w-[200px]"}>
-          <DurationInput
-            // className={'col-span-2'}
-            duration={
-              form.interval == undefined
-                ? undefined
-                : dayjs.duration({ seconds: form.interval })
+      return fields.map((f) => {
+        switch (f.type) {
+          case DownloadTaskFieldType.Key:
+            if (!form.keys || !form.keys.length) {
+              if (f.defaultValue) {
+                form.keys = [f.defaultValue];
+              }
             }
-            onDurationChange={(duration) => {
-              setForm({
-                ...form,
-                interval: duration.asSeconds(),
-              });
-            }}
-          />
-        </div>
-      </>,
-    );
 
-    items.push(
-      <>
-        <div>{t<string>("Checkpoint")}</div>
-        <Textarea
-          size={"sm"}
-          // className={'col-span-2'}
-          // label={t<string>('Checkpoint')}
-          description={(
-            <div>
-              <div>{t<string>('You can set the previous downloading checkpoint manually to make the downloader start the downloading task from it.')}</div>
-              <div>{t<string>('In most cases, you should let this field set by downloader automatically.')}</div>
-              <div>{t<string>('Each downloader has its own checkpoint format, and invalid checkpoint data will be ignored. You can find samples on our online document.')}</div>
-            </div>
-          )}
-          value={form.checkpoint}
-          onValueChange={(v) => {
-            setForm({
-              ...form,
-              checkpoint: v,
-            });
-          }}
-        />
-      </>,
-    );
-
-    // items.push({
-    //   label: 'Global configurations',
-    //   component: (
-    //     <Button
-    //       type={'primary'}
-    //       text
-    //       onClick={() => {
-    //         setConfigurationsVisible(true);
-    //       }}
-    //     >
-    //       {t<string>('Check')}
-    //     </Button>
-    //   ),
-    // });
-
-    items.push(
-      <>
-        <div>{t<string>("Auto retry")}</div>
-        <div>
-          <div>
-            <Checkbox
-              defaultSelected
-              isSelected={form.autoRetry}
-              onValueChange={(v) => {
-                setForm({
-                  ...form,
-                  autoRetry: v,
-                });
-              }}
-            />
-            &nbsp;
-            <span className={"opacity-60 text-xs"}>
-              {t<string>(
-                "Retry automatically when the downloading task failed.",
-              )}
-            </span>
-          </div>
-        </div>
-      </>,
-    );
-
-    if (isAdding) {
-      items.push(
-        <>
-          <div>{t<string>("Allow duplicate submission")}</div>
-          <div>
-            <div>
-              <Checkbox
-                isSelected={form.isDuplicateAllowed}
+            return (
+              <Input
+                defaultValue={f.defaultValue}
+                label={f.label && t(f.label)}
+                placeholder={f.placeholder && t(f.placeholder)}
+                size={"sm"}
+                value={form.keys?.[0]}
                 onValueChange={(v) => {
                   setForm({
                     ...form,
-                    isDuplicateAllowed: v,
+                    keys: [v],
                   });
                 }}
               />
-              &nbsp;
-              <span className={"opacity-60 text-xs"}>
-                {t<string>(
-                  "In general, it's not necessary to create identical tasks.",
-                )}
-              </span>
-            </div>
-          </div>
-        </>,
-      );
+            );
+          case DownloadTaskFieldType.Keys:
+            return (
+              <Textarea
+                label={f.label && t(f.label)}
+                placeholder={f.placeholder && t(f.placeholder)}
+                size={"sm"}
+                value={form.keys?.join("\n")}
+                onValueChange={(v) => {
+                  setForm({
+                    ...form,
+                    keys: v
+                      .split("\n")
+                      .map((k) => k.trim())
+                      .filter((k) => k),
+                  });
+                }}
+              />
+            );
+          case DownloadTaskFieldType.BilibiliFavorites:
+            const key = form.keys?.[0];
+            const numberKey = key ? parseInt(key, 10) : undefined;
+
+            return (
+              <BilibiliFavoritesSelector
+                isDisabled={!isAdding}
+                value={numberKey}
+                onChange={(v) =>
+                  setForm({
+                    ...form,
+                    keys: [v.toString()],
+                  })
+                }
+              />
+            );
+          case DownloadTaskFieldType.PageRange:
+            return (
+              <PageRange
+                end={form.endPage}
+                start={form.startPage}
+                onChange={(start, end) =>
+                  setForm({
+                    ...form,
+                    startPage: start,
+                    endPage: end,
+                  })
+                }
+              />
+            );
+          case DownloadTaskFieldType.FfMpegRequired:
+            return <FfMpegRequired />;
+          case DownloadTaskFieldType.LuxRequired:
+            return <LuxRequired />;
+          case DownloadTaskFieldType.DownloadPath:
+            return (
+              <DownloadPathSelectorField
+                downloadPath={form.downloadPath}
+                onChange={(downloadPath) => {
+                  setForm({
+                    ...form,
+                    downloadPath,
+                  });
+                }}
+              />
+            );
+          case DownloadTaskFieldType.CheckInterval:
+            return (
+              <IntervalField
+                interval={form.interval}
+                onChange={(interval) => {
+                  setForm({
+                    ...form,
+                    interval,
+                  });
+                }}
+              />
+            );
+          case DownloadTaskFieldType.Checkpoint:
+            return (
+              <CheckpointField
+                checkpoint={form.checkpoint}
+                onChange={(checkpoint) => {
+                  setForm({
+                    ...form,
+                    checkpoint,
+                  });
+                }}
+              />
+            );
+          case DownloadTaskFieldType.AutoRetry:
+            return (
+              <AutoRetryField
+                autoRetry={form.autoRetry}
+                onChange={(autoRetry) => {
+                  setForm({
+                    ...form,
+                    autoRetry,
+                  });
+                }}
+              />
+            );
+          case DownloadTaskFieldType.AllowDuplicate:
+            return isAdding ? (
+              <AllowDuplicateField
+                isDuplicateAllowed={form.isDuplicateAllowed}
+                onChange={(isDuplicateAllowed) => {
+                  setForm({
+                    ...form,
+                    isDuplicateAllowed,
+                  });
+                }}
+              />
+            ) : null;
+        }
+      });
     }
-
-    // console.log(form);
-
-    return <>{items}</>;
   };
-
-  console.log(form);
 
   return (
     <>
       <Modal
         defaultVisible
-        className={"download-task-detail"}
         footer={{
           actions: ["ok", "cancel"],
           okProps: {
@@ -273,6 +320,7 @@ export default ({
         onDestroyed={onDestroyed}
         onOk={async () => {
           const validForm = form as Form;
+
           console.log(form, validForm);
 
           if (isAdding) {
@@ -297,63 +345,72 @@ export default ({
           <div>{t<string>("Site")}</div>
           <div>
             <ButtonGroup size={"sm"}>
-              {thirdPartyIds
-                .filter((x) => x.value in ThirdPartyIdTaskTypesMap)
-                .map((tpId) => {
-                  const isSelected = form.thirdPartyId == tpId.value;
+              {availableThirdParties.map((thirdParty) => {
+                const isSelected = form.thirdPartyId === thirdParty.id;
+                const isDeveloping = isThirdPartyDeveloping(thirdParty.id);
 
-                  return (
-                    <Button
-                      color={isSelected ? "primary" : undefined}
-                      isDisabled={!isAdding}
-                      onPress={() => {
-                        if (form.thirdPartyId != tpId.value) {
-                          setForm({
-                            thirdPartyId: tpId.value,
-                          });
-                        }
-                      }}
-                    >
-                      <ThirdPartyIcon thirdPartyId={tpId.value} />
-                      {t<string>(tpId.label)}
-                    </Button>
-                  );
-                })}
+                return (
+                  <Button
+                    color={isSelected ? "primary" : undefined}
+                    isDisabled={!isAdding}
+                    onPress={() => {
+                      if (form.thirdPartyId !== thirdParty.id) {
+                        setForm({
+                          thirdPartyId: thirdParty.id,
+                          type: undefined, // Reset task type when changing third party
+                        });
+                      }
+                    }}
+                  >
+                    <ThirdPartyIcon thirdPartyId={thirdParty.id} />
+                    {t<string>(thirdParty.name)}
+                    {isDeveloping && <DevelopingChip size="sm" />}
+                  </Button>
+                );
+              })}
             </ButtonGroup>
           </div>
-          {form.thirdPartyId && (
-            <>
-              <div>{t<string>("Task type")}</div>
-              <div>
-                <ButtonGroup size={"sm"}>
-                  {ThirdPartyIdTaskTypesMap[form.thirdPartyId]?.map((type) => {
-                    const isSelected = form.type == type.value;
+          {form.thirdPartyId &&
+            (availableTaskTypes.length > 0 ? (
+              <>
+                <div>{t<string>("Task type")}</div>
+                <div>
+                  <ButtonGroup size={"sm"}>
+                    {availableTaskTypes.map((taskType) => {
+                      const isSelected = form.type === taskType.value;
 
-                    return (
-                      <Button
-                        key={type.value}
-                        color={isSelected ? "primary" : undefined}
-                        isDisabled={!isAdding}
-                        onPress={() => {
-                          if (!isSelected) {
-                            setForm({
-                              thirdPartyId: form.thirdPartyId,
-                              type: type.value,
-                            });
-                          }
-                        }}
-                      >
-                        {t(type.label)}
-                      </Button>
-                    );
-                  })}
-                </ButtonGroup>
-              </div>
-            </>
-          )}
-          {renderFormItems()}
+                      return (
+                        <Button
+                          key={taskType.value}
+                          color={isSelected ? "primary" : undefined}
+                          isDisabled={!isAdding}
+                          title={taskType.description}
+                          onPress={() => {
+                            if (!isSelected) {
+                              setForm({
+                                ...form,
+                                type: taskType.value,
+                              });
+                            }
+                          }}
+                        >
+                          {t(taskType.label)}
+                        </Button>
+                      );
+                    })}
+                  </ButtonGroup>
+                </div>
+              </>
+            ) : (
+              t<string>("Not available")
+            ))}
         </div>
+        {form.thirdPartyId && form.type && (
+          <div className={"flex flex-col gap-2"}>{renderFields()}</div>
+        )}
       </Modal>
     </>
   );
 };
+
+export default DownloadTaskDetailModal;

@@ -11,8 +11,7 @@ import BApi from "@/sdk/BApi";
 type Props = {
   href: string;
 } & ButtonProps;
-
-export default ({ href, children, ...otherProps }: Props) => {
+const ExternalLink = ({ href, children, ...otherProps }: Props) => {
   return (
     <Button
       color={"primary"}
@@ -28,3 +27,7 @@ export default ({ href, children, ...otherProps }: Props) => {
     </Button>
   );
 };
+
+ExternalLink.displayName = "ExternalLink";
+
+export default ExternalLink;

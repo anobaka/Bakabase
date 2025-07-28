@@ -14,8 +14,12 @@ type Props = {
 };
 
 const Options: boolean[] = [true, false];
-
-export default ({ subject, isSelected, onSelect, isSecondary }: Props) => {
+const BooleanOptions = ({
+  subject,
+  isSelected,
+  onSelect,
+  isSecondary,
+}: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -49,3 +53,7 @@ export default ({ subject, isSelected, onSelect, isSecondary }: Props) => {
     </div>
   );
 };
+
+BooleanOptions.displayName = "BooleanOptions";
+
+export default BooleanOptions;

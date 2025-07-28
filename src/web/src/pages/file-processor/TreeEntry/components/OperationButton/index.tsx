@@ -5,8 +5,7 @@ import type { ButtonProps } from "@/components/bakaui";
 import { Button } from "@/components/bakaui";
 
 type Props = {} & Omit<ButtonProps, "ref">;
-
-export default ({
+const OperationButton = ({
   onClick,
   children,
   size = "sm",
@@ -29,3 +28,7 @@ export default ({
     </Button>
   );
 };
+
+OperationButton.displayName = "OperationButton";
+
+export default OperationButton;

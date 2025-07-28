@@ -7,8 +7,8 @@ import AppRouter from "./router";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   // <React.StrictMode>
-    <HashRouter>
-      <AppRouter />
-    </HashRouter>
+  <HashRouter>
+    <AppRouter />
+  </HashRouter>,
   // </React.StrictMode>,
 );

@@ -19,8 +19,7 @@ type PropertyLike = {
 type Props = {
   properties: PropertyLike[];
 } & DestroyableProps;
-
-export default ({ properties, onDestroyed }: Props) => {
+const CustomPropertySortModal = ({ properties, onDestroyed }: Props) => {
   const { t } = useTranslation();
 
   return (
@@ -51,3 +50,7 @@ export default ({ properties, onDestroyed }: Props) => {
     </Modal>
   );
 };
+
+CustomPropertySortModal.displayName = "CustomPropertySortModal";
+
+export default CustomPropertySortModal;

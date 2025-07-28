@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Checkbox, Modal } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 
+import { Checkbox, Modal } from "@/components/bakaui";
 import { createPortalOfComponent } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 

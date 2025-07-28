@@ -9,8 +9,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 interface IProps {
   type: SpecialTextType;
 }
-
-export default ({ type }: IProps) => {
+const IntegrateWithSpecialTextLabel = ({ type }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -68,3 +67,7 @@ export default ({ type }: IProps) => {
     </Tooltip>
   );
 };
+
+IntegrateWithSpecialTextLabel.displayName = "IntegrateWithSpecialTextLabel";
+
+export default IntegrateWithSpecialTextLabel;

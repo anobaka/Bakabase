@@ -33,8 +33,8 @@ import {
   useThirdPartyOptionsStore,
   useNetworkOptionsStore,
   useAppOptionsStore,
-} from "@/models/options";
-import { useAppContextStore } from "@/models/appContext";
+} from "@/stores/options";
+import { useAppContextStore } from "@/stores/appContext";
 
 const cookies = new Cookies();
 
@@ -43,8 +43,7 @@ enum ProxyMode {
   UseSystem = 1,
   UseCustom = 2,
 }
-
-export default ({
+const Others = ({
   applyPatches = () => {},
 }: {
   applyPatches: (API: any, patches: any, success: (rsp: any) => void) => void;
@@ -388,3 +387,7 @@ export default ({
     </div>
   );
 };
+
+Others.displayName = "Others";
+
+export default Others;

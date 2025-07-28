@@ -186,7 +186,7 @@ public static class ResourceSearchExtensions
         return domainModel;
     }
 
-    private static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilterDbModel model, Property? property,
+    public static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilterDbModel model, Property? property,
         IPropertyLocalizer propertyLocalizer)
     {
         var filter = new ResourceSearchFilterViewModel
@@ -297,41 +297,36 @@ public static class ResourceSearchExtensions
     public static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilter domainModel,
         IPropertyLocalizer propertyLocalizer)
     {
+        var valueProperty = domainModel.Property.ConvertPropertyIfNecessary(domainModel.Operation);
+
         var filter = new ResourceSearchFilterViewModel
         {
             PropertyId = domainModel.PropertyId,
             PropertyPool = domainModel.PropertyPool,
             Operation = domainModel.Operation,
             Disabled = domainModel.Disabled,
-            DbValue = domainModel.DbValue?.SerializeAsStandardValue(domainModel.Property.Type.GetDbValueType())
+            DbValue = domainModel.DbValue?.SerializeAsStandardValue(valueProperty.Type.GetDbValueType()),
+            ValueProperty = valueProperty.ToViewModel(propertyLocalizer),
+            Property = domainModel.Property.ToViewModel(propertyLocalizer),
+            BizValue = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type)?.GetBizValue(valueProperty, domainModel.DbValue)
+                ?.SerializeAsStandardValue(valueProperty.Type.GetBizValueType()),
+            AvailableOperations = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(domainModel.Property.Type)?.SearchOperations.Keys.ToList()
         };
-
-        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(domainModel.Property.Type);
-        if (psh != null)
-        {
-            filter.AvailableOperations = psh.SearchOperations.Keys.ToList();
-            filter.Property = domainModel.Property.ToViewModel(propertyLocalizer);
-            if (filter.Operation.HasValue)
+        
+        return filter;
+    }
+    
+    public static Property ConvertPropertyIfNecessary(this Property property, SearchOperation operation)
+    {
+        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(property.Type);
+        if (psh != null && psh.SearchOperations.TryGetValue(operation, out var conversion) && conversion is
             {
-                var convertProperty =
-                    psh.SearchOperations.GetValueOrDefault(filter.Operation.Value)?.ConvertProperty;
-                var valueProperty = domainModel.Property;
-                if (convertProperty != null)
-                {
-                    valueProperty = convertProperty(valueProperty);
-                }
-
-                filter.ValueProperty = valueProperty.ToViewModel(propertyLocalizer);
-                var asType = psh.SearchOperations.GetValueOrDefault(filter.Operation.Value)?.AsType;
-                if (asType.HasValue)
-                {
-                    var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type);
-                    filter.BizValue = pd?.GetBizValue(valueProperty, domainModel.DbValue)
-                        ?.SerializeAsStandardValue(asType.Value.GetBizValueType());
-                }
-            }
+                ConvertProperty: not null
+            })
+        {
+            return conversion.ConvertProperty(property);
         }
 
-        return filter;
+        return property;
     }
 }

@@ -13,11 +13,13 @@ import {
   Spacer,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { createPortalOfComponent } from "@/components/utils";
 
-interface IProps {}
+interface IProps {
+  error?: Error;
+  errorInfo?: React.ErrorInfo;
+}
 
-const ErrorModal = ({}: IProps) => {
+const ErrorModal = ({ error, errorInfo }: IProps) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -39,12 +41,89 @@ const ErrorModal = ({}: IProps) => {
       footer={{
         actions: ["cancel"],
       }}
-      size={"lg"}
+      size={"xl"}
       title={t<string>(
         "We have encountered some problems. You could try the following steps:",
       )}
     >
-      <Accordion isCompact selectedKeys={"all"} selectionMode={"multiple"}>
+      <Accordion
+        isCompact
+        defaultSelectedKeys={["1", "2", "3", "4"]}
+        selectionMode={"multiple"}
+      >
+        {(error && (
+          <AccordionItem
+            key="error-details"
+            title={
+              <span className={"font-bold text-red-600"}>
+                {t<string>("Error Details")}
+              </span>
+            }
+          >
+            <div className={"flex flex-col gap-3"}>
+              <div>
+                <div className={"font-semibold text-sm mb-1"}>
+                  {t<string>("Error Message:")}
+                </div>
+                <Snippet
+                  hideSymbol
+                  className={"bg-red-50 border border-red-200"}
+                  radius="none"
+                  size={"sm"}
+                >
+                  <span
+                    className={"text-red-700 break-all whitespace-break-spaces"}
+                  >
+                    {error.message || t<string>("Unknown error")}
+                  </span>
+                </Snippet>
+              </div>
+              {error.stack && (
+                <div>
+                  <div className={"font-semibold text-sm mb-1"}>
+                    {t<string>("Stack Trace:")}
+                  </div>
+                  <Snippet
+                    hideSymbol
+                    className={"bg-gray-50 border border-gray-200"}
+                    radius="none"
+                    size={"sm"}
+                  >
+                    <pre
+                      className={
+                        "text-xs text-gray-700 whitespace-pre-wrap break-all font-mono"
+                      }
+                    >
+                      {error.stack}
+                    </pre>
+                  </Snippet>
+                </div>
+              )}
+              {errorInfo?.componentStack && (
+                <div>
+                  <div className={"font-semibold text-sm mb-1"}>
+                    {t<string>("Component Stack:")}
+                  </div>
+                  <Snippet
+                    hideSymbol
+                    className={"bg-blue-50 border border-blue-200"}
+                    radius="none"
+                    size={"sm"}
+                  >
+                    <pre
+                      className={
+                        "text-xs text-blue-700 whitespace-pre-wrap break-all font-mono"
+                      }
+                    >
+                      {errorInfo.componentStack}
+                    </pre>
+                  </Snippet>
+                </div>
+              )}
+            </div>
+          </AccordionItem>
+        )) ||
+          null}
         <AccordionItem
           key="1"
           title={

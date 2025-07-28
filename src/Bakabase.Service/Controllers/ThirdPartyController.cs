@@ -1,5 +1,5 @@
-﻿using Bakabase.InsideWorld.Business.Components.ThirdParty.Services;
-using Bakabase.InsideWorld.Models.Models.Aos;
+﻿using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;

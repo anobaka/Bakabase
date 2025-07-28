@@ -19,13 +19,13 @@ import {
   Select,
   Tooltip,
 } from "@/components/bakaui";
-import PropertySelector from "@/components/PropertySelector";
+import PropertySelectorPage from "@/components/PropertySelector";
 import { PropertyPool, propertyValueScopes } from "@/sdk/constants";
 import ProcessStep from "@/pages/bulk-modification2/components/BulkModification/ProcessStep";
 import ProcessStepModal from "@/pages/bulk-modification2/components/BulkModification/ProcessStepModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { buildLogger } from "@/components/utils";
-import { useBulkModificationInternalsStore } from "@/models/bulkModificationInternals";
+import { useBulkModificationInternalsStore } from "@/stores/bulkModificationInternals";
 import { PropertyValueScopeSelectorLabel } from "@/components/Labels";
 import { PropertyLabel } from "@/components/Property";
 
@@ -38,8 +38,11 @@ const validate = (v?: Partial<BulkModificationVariable>) =>
   !(!v || !v.name || !v.propertyId || !v.propertyPool || v.scope == undefined);
 
 const log = buildLogger("VariableModal");
-
-export default ({ variable: propsVariable, onDestroyed, onChange }: Props) => {
+const VariableModal = ({
+  variable: propsVariable,
+  onDestroyed,
+  onChange,
+}: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -87,7 +90,7 @@ export default ({ variable: propsVariable, onDestroyed, onChange }: Props) => {
                 size="sm"
                 variant={"flat"}
                 onClick={() => {
-                  createPortal(PropertySelector, {
+                  createPortal(PropertySelectorPage, {
                     pool: PropertyPool.All,
                     multiple: false,
                     selection: variable?.property
@@ -261,3 +264,7 @@ export default ({ variable: propsVariable, onDestroyed, onChange }: Props) => {
     </Modal>
   );
 };
+
+VariableModal.displayName = "VariableModal";
+
+export default VariableModal;

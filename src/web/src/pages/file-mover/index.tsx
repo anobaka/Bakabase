@@ -11,6 +11,7 @@ import { MdWarning } from "react-icons/md";
 import moment from "moment";
 import { MdFolder } from "react-icons/md";
 import dayjs from "dayjs";
+import { AiOutlineProduct } from "react-icons/ai";
 
 import {
   Button,
@@ -43,11 +44,10 @@ import "./index.scss";
 
 import AnimatedArrow from "@/components/AnimatedArrow";
 import BApi from "@/sdk/BApi";
-import { useFileMovingProgressesStore } from "@/models/fileMovingProgresses";
+import { useFileMovingProgressesStore } from "@/stores/fileMovingProgresses";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
-import { useFileSystemOptionsStore } from "@/models/options";
-import { AiOutlineProduct } from "react-icons/ai";
+import { useFileSystemOptionsStore } from "@/stores/options";
 
 interface IValue {
   targets: {
@@ -68,8 +68,7 @@ class Value implements IValue {
     overwrite: boolean;
   }[] = [];
 }
-
-export default () => {
+const FileMoverPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -403,7 +402,9 @@ export default () => {
                             </DropdownItem>
                             <DropdownItem
                               key="select-from-media-library"
-                              startContent={<AiOutlineProduct className="text-base" />}
+                              startContent={
+                                <AiOutlineProduct className="text-base" />
+                              }
                               onPress={() => {
                                 createPortal(MediaLibraryPathSelectorV2, {
                                   onSelect: (
@@ -695,3 +696,7 @@ export default () => {
     </div>
   );
 };
+
+FileMoverPage.displayName = "FileMoverPage";
+
+export default FileMoverPage;

@@ -55,8 +55,11 @@ const renderDisplayNameSegment = (p: ResourceDisplayNameTemplateSegment) => {
       return <span style={{ color: "var(--bakaui-primary)" }}>{p.text}</span>;
   }
 };
-
-export default ({ categoryId, onSaved, ...props }: IProps) => {
+const DisplayNameTemplateEditorDialog = ({
+  categoryId,
+  onSaved,
+  ...props
+}: IProps) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
   const { createPortal } = useBakabaseContext();
@@ -333,3 +336,7 @@ export default ({ categoryId, onSaved, ...props }: IProps) => {
     </Modal>
   );
 };
+
+DisplayNameTemplateEditorDialog.displayName = "DisplayNameTemplateEditorDialog";
+
+export default DisplayNameTemplateEditorDialog;

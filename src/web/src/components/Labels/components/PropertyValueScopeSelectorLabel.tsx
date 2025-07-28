@@ -4,8 +4,7 @@ import { QuestionCircleOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 
 import { Tooltip } from "@/components/bakaui";
-
-export default () => {
+const PropertyValueScopeSelectorLabel = () => {
   const { t } = useTranslation();
 
   return (
@@ -27,3 +26,7 @@ export default () => {
     </div>
   );
 };
+
+PropertyValueScopeSelectorLabel.displayName = "PropertyValueScopeSelectorLabel";
+
+export default PropertyValueScopeSelectorLabel;

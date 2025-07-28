@@ -26,8 +26,7 @@ type Props = {
   blocks: Block[];
   onSorted: (ids: any[]) => any;
 };
-
-export default ({ blocks, onSorted }: Props) => {
+const BlockSort = ({ blocks, onSorted }: Props) => {
   const [items, setItems] = useState(blocks.map((block) => block.id));
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -78,3 +77,7 @@ export default ({ blocks, onSorted }: Props) => {
     }
   }
 };
+
+BlockSort.displayName = "BlockSort";
+
+export default BlockSort;

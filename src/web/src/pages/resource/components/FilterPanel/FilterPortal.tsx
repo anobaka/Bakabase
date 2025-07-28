@@ -18,6 +18,7 @@ import {
   Popover,
 } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
+import RecentFilters from "@/pages/resource/components/FilterPanel/RecentFilters";
 
 interface FilterPortalProps {
   searchForm: SearchForm;
@@ -96,6 +97,17 @@ export default function FilterPortal({
               );
             })}
           </CheckboxGroup>
+        </div>
+        <div />
+        <Divider />
+        <div>{t<string>("Recent filters")}</div>
+        <div>
+          <RecentFilters
+            onSelectFilter={(newFilter) => {
+              addFilter(searchForm, newFilter);
+              onChange();
+            }}
+          />
         </div>
       </div>
     </Popover>
