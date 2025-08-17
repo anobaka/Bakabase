@@ -132,14 +132,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Bulk modification",
-        path: "/bulk-modification2",
-        component: BulkModification2Page,
-        icon: AiOutlineForm,
-        layout: "basic",
-        menu: true,
-      },
-      {
         name: "Cache",
         path: "/cache",
         component: CachePage,
@@ -170,6 +162,15 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineHistory,
         layout: "basic",
         menu: true,
+      },
+      {
+        name: "Bulk modification",
+        path: "/bulk-modification2",
+        component: BulkModification2Page,
+        icon: AiOutlineForm,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
       },
       {
         name: "Custom component",
