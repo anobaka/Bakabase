@@ -50,9 +50,9 @@ namespace Bakabase.Windows
             }
 
             this.Width = width;
-            this.MinWidth = width;
+            this.MinWidth = 1280;
             this.Height = height;
-            this.MinHeight = height;
+            this.MinHeight = 720;
 
             InitializeComponent();
         }

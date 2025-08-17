@@ -146,7 +146,9 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
               <div className={"text-base font-bold flex items-center gap-2"}>
                 <EnhancerIcon id={e.id} />
                 {e.name}
-                {e.id == EnhancerId.Kodi && <BetaChip />}
+                {(e.id == EnhancerId.Kodi ||
+                  e.id == EnhancerId.Av ||
+                  e.id == EnhancerId.Tmdb) && <BetaChip />}
               </div>
               {e.description && (
                 <div className={"opacity-60 grow break-all"}>

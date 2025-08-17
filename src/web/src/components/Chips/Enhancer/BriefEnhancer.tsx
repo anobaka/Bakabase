@@ -13,6 +13,7 @@ const BriefEnhancer = ({ enhancer }: Props) => {
       {enhancer.name}
       {enhancer.id == EnhancerId.Kodi && <BetaChip />}
       {enhancer.id == EnhancerId.Tmdb && <BetaChip />}
+      {enhancer.id == EnhancerId.Av && <BetaChip />}
     </div>
   );
 };
