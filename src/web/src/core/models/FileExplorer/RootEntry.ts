@@ -155,7 +155,7 @@ class RootEntry extends Entry {
 
   async _consumeFsEvents(renderingQueue: RenderingQueue) {
     const self = this;
-    const data = useIwFsEntryChangeEventsStore.getState().contexts;
+    const data = useIwFsEntryChangeEventsStore.getState();
     const dispatchers = {
       addRange: useIwFsEntryChangeEventsStore.getState().addRange,
       clear: useIwFsEntryChangeEventsStore.getState().clear,
@@ -300,7 +300,6 @@ class RootEntry extends Entry {
 
           await self._consumeFsEvents(renderingQueue);
           await self._compareBTasks(renderingQueue);
-
           const originalRenderingTimes = renderingQueue.length;
 
           renderingQueue.shrink();

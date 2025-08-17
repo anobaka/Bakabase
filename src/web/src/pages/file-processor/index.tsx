@@ -25,7 +25,7 @@ const FileProcessorPage = () => {
   const selectedEntriesRef = useRef<Entry[]>([]);
   const [allSelected, setAllSelected] = useState(false);
 
-  const options = useFileSystemOptionsStore((state) => state.data);
+  const optionsStore = useFileSystemOptionsStore((state) => state);
   const [rootPath, setRootPath] = useState<string>();
   const [rootPathInitialized, setRootPathInitialized] = useState(false);
 
@@ -38,15 +38,17 @@ const FileProcessorPage = () => {
   }, [root]);
 
   useEffect(() => {
-    if (!rootPathInitialized && options.initialized) {
-      const p = options.fileProcessor?.workingDirectory;
+    if (!rootPathInitialized && optionsStore.initialized) {
+      const p = optionsStore.data.fileProcessor?.workingDirectory;
+
+      // console.log(123, p, optionsStore);
 
       if (p) {
         setRootPath(p);
       }
+      setRootPathInitialized(true);
     }
-    setRootPathInitialized(true);
-  }, [options.initialized, rootPathInitialized]);
+  }, [rootPathInitialized, optionsStore.initialized]);
 
   useEffect(() => {
     return () => {
@@ -126,9 +128,9 @@ const FileProcessorPage = () => {
                 onInitialized={(v) => {
                   if (v != undefined) {
                     BApi.options.patchFileSystemOptions({
-                      ...options,
+                      ...optionsStore,
                       fileProcessor: {
-                        ...(options.fileProcessor || {}),
+                        ...(optionsStore.fileProcessor || {}),
                         workingDirectory: v,
                       },
                     });

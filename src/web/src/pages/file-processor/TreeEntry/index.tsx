@@ -474,7 +474,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         .then((x) => {
           if (!x.code) {
             if (!x.data || x.data.length == 0) {
-              return toast.info(t<string>("No files to preview"));
+              return toast.default(t<string>("No files to preview"));
             }
             MediaPlayer.show({
               files: x.data!.map((a) => ({
