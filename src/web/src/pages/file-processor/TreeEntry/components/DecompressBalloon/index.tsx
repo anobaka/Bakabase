@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Modal, Input } from "@/components/bakaui";
+import { Button, Modal, Input, Chip } from "@/components/bakaui";
 import { toast } from "@/components/bakaui";
 
 import React, { useCallback, useRef, useState } from "react";
@@ -53,9 +53,7 @@ const DecompressBalloon = (props: Props) => {
     IPassword[]
   >([]);
 
-  const [visible, setVisible] = useState(false);
-
-  const decompress = useCallback((path, password?: string) => {
+  const decompress = useCallback((path: string, password?: string) => {
     // Notification.open({
     //   title: t<string>('Start decompressing'),
     //   type: 'success',
@@ -63,7 +61,7 @@ const DecompressBalloon = (props: Props) => {
     //   //   "This is the content of the notification. This is the content of the notification. This is the content of the notification.",
     //   // type
     // });
-    toast.info(t<string>("Start decompressing"));
+    toast.default(t<string>("Start decompressing"));
 
     return BApi.file.decompressFiles({
       paths: [path],
@@ -108,12 +106,12 @@ const DecompressBalloon = (props: Props) => {
               {t<string>(
                 `Alternatively, you can choose a password from ${label} passwords:`,
               )}
-              {passwords.length == 5 && (
+              {passwords.length === 5 && (
                 <Button
-                  text
                   className={"show-more"}
-                  size={"small"}
-                  type={"primary"}
+                  size={"sm"}
+                  variant={"light"}
+                  color={"primary"}
                   onClick={openPasswordSelector}
                 >
                   {t<string>("Show more")}
@@ -123,13 +121,13 @@ const DecompressBalloon = (props: Props) => {
             <div className="passwords">
               {passwords.map((p) => {
                 return (
-                  <Tag.Closeable
+                  <Chip
                     key={p.text}
-                    size={"small"}
+                    size={"sm"}
                     onClick={() => {
                       decompress(entry.path, p.text);
                     }}
-                    onClose={(from) => {
+                    onClose={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
                         title: t<string>("Delete password from history?"),
@@ -138,13 +136,11 @@ const DecompressBalloon = (props: Props) => {
                         ),
                         onOk: () => BApi.password.deletePassword(p.text),
                       });
-
-                      return false;
                     }}
                   >
                     {p.text}
                     {/* | {p.lastUsedAt} */}
-                  </Tag.Closeable>
+                  </Chip>
                 );
               })}
             </div>
@@ -178,7 +174,7 @@ const DecompressBalloon = (props: Props) => {
                   }}
                 >
                   By default, we will use{" "}
-                  <Button text type={"primary"}>
+                  <Button variant={"light"} color={"primary"} size={"sm"}>
                     password
                   </Button>{" "}
                   as password.
@@ -196,8 +192,8 @@ const DecompressBalloon = (props: Props) => {
                   {passwords.slice(1).map((password: string) => (
                     <Button
                       key={password}
-                      size={"small"}
-                      type={"normal"}
+                      size={"sm"}
+                      variant={"flat"}
                       onClick={() => {
                         decompress(entry.path, password);
                       }}
@@ -216,16 +212,26 @@ const DecompressBalloon = (props: Props) => {
               <div className="tip">
                 {t<string>("Or you can use a custom password:")}
               </div>
-              <Input.Group
-                addonAfter={
+              <Input
+                isClearable
+                placeholder={i18n.t<string>("Password")}
+                size={"sm"}
+                style={{ width: "100%" }}
+                onValueChange={(v) => {
+                  customPasswordRef.current = v;
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                }}
+                endContent={
                   <Button
-                    size={"small"}
-                    type={"normal"}
+                    size={"sm"}
+                    variant={"flat"}
                     onClick={() => {
                       if (customPasswordRef.current) {
                         decompress(entry.path, customPasswordRef.current);
                       } else {
-                        toast.error(
+                        toast.danger(
                           i18n.t<string>("Password can not be empty"),
                         );
                       }
@@ -234,29 +240,14 @@ const DecompressBalloon = (props: Props) => {
                     {t<string>("Use custom password to decompress")}
                   </Button>
                 }
-              >
-                <Input
-                  hasClear
-                  placeholder={i18n.t<string>("Password")}
-                  size={"small"}
-                  style={{ width: "100%" }}
-                  onChange={(v) => {
-                    customPasswordRef.current = v;
-                  }}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                />
-              </Input.Group>
+              />
             </div>
           </div>
         </div>
       }
       delay={500}
       placement={"left"}
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
+      onClick={() => {}}
       onOpenChange={(v) => {
         if (v) {
           onBalloonVisible();
@@ -264,12 +255,12 @@ const DecompressBalloon = (props: Props) => {
       }}
     >
       {React.cloneElement(trigger, {
-        onContextMenu: (e) => {
+        onContextMenu: () => {
           // e.stopPropagation();
           // e.preventDefault();
           // setVisible(true);
         },
-        onClick: (e) => {
+        onClick: () => {
           // console.log(e);
           // e.stopPropagation();
           // e.preventDefault();
