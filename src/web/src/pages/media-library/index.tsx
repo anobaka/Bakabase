@@ -98,14 +98,13 @@ const MediaLibraryPage = () => {
 
     // @ts-ignore
     setTemplates(tpls);
-    templatesRef.current = tpls.reduce<Record<number, MediaLibraryTemplatePage>>(
-      (s, t) => {
-        s[t.id] = t as unknown as MediaLibraryTemplatePage;
+    templatesRef.current = tpls.reduce<
+      Record<number, MediaLibraryTemplatePage>
+    >((s, t) => {
+      s[t.id] = t as unknown as MediaLibraryTemplatePage;
 
-        return s;
-      },
-      {},
-    );
+      return s;
+    }, {});
   };
 
   useEffect(() => {
@@ -153,7 +152,9 @@ const MediaLibraryPage = () => {
 
   const renderTable = () => {
     const isEditing = !!editingMediaLibraries;
-    const rows = isEditing ? (editingMediaLibraries as Partial<MediaLibrary>[]) : mediaLibraries;
+    const rows = isEditing
+      ? (editingMediaLibraries as Partial<MediaLibrary>[])
+      : mediaLibraries;
 
     if (!isEditing && rows.length === 0) {
       return (
@@ -166,6 +167,7 @@ const MediaLibraryPage = () => {
 
     return (
       <Table
+        removeWrapper
         className="mt-2"
         topContent={
           isEditing ? (
@@ -175,7 +177,9 @@ const MediaLibraryPage = () => {
                   color="primary"
                   size="sm"
                   onPress={() =>
-                    setEditingMediaLibraries([{}].concat(rows as Partial<MediaLibrary>[]))
+                    setEditingMediaLibraries(
+                      [{}].concat(rows as Partial<MediaLibrary>[]),
+                    )
                   }
                 >
                   <AiOutlinePlusCircle className="text-base" />
@@ -185,7 +189,9 @@ const MediaLibraryPage = () => {
               <div className="flex items-center gap-2">
                 <Button
                   color={"primary"}
-                  isDisabled={!validate(editingMediaLibraries as Partial<MediaLibrary>[])}
+                  isDisabled={
+                    !validate(editingMediaLibraries as Partial<MediaLibrary>[])
+                  }
                   size={"sm"}
                   onPress={async () => {
                     createPortal(Modal, {
@@ -194,7 +200,10 @@ const MediaLibraryPage = () => {
                       children: t<string>("MediaLibrary.SaveAllConfirm"),
                       onOk: async () => {
                         const data = editingMediaLibraries as MediaLibrary[];
-                        const r = await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(data);
+                        const r =
+                          await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(
+                            data,
+                          );
 
                         if (!r.code) {
                           setEditingMediaLibraries(undefined);
@@ -234,6 +243,7 @@ const MediaLibraryPage = () => {
             if (isEditing) {
               const e = row as Partial<MediaLibrary>;
               const paths = Array.isArray(e.paths) ? e.paths : (e.paths = []);
+
               if (paths.length === 0) paths.push("");
 
               return (
@@ -259,7 +269,11 @@ const MediaLibraryPage = () => {
                       {paths.map((p, idx) => (
                         <div
                           key={idx}
-                          style={{ display: "flex", alignItems: "center", gap: 4 }}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
                         >
                           <PathAutocomplete
                             endContent={
@@ -302,7 +316,9 @@ const MediaLibraryPage = () => {
                                 : t<string>("MediaLibrary.Path")
                             }
                             pathType="folder"
-                            placeholder={t<string>("MediaLibrary.PathPlaceholder")}
+                            placeholder={t<string>(
+                              "MediaLibrary.PathPlaceholder",
+                            )}
                             size="sm"
                             value={p}
                             onChange={(v) => {
@@ -331,7 +347,12 @@ const MediaLibraryPage = () => {
                               textValue: `#${t.id} ${t.name}`,
                               label: `#${t.id} ${t.name}`,
                               value: t.id,
-                            }) as { label?: any; value: Key; textValue?: string; isDisabled?: boolean },
+                            }) as {
+                              label?: any;
+                              value: Key;
+                              textValue?: string;
+                              isDisabled?: boolean;
+                            },
                         )
                         .concat([
                           {
@@ -342,19 +363,27 @@ const MediaLibraryPage = () => {
                               </div>
                             ),
                             value: -1,
-                            textValue: t<string>("MediaLibrary.CreateNewTemplate"),
+                            textValue: t<string>(
+                              "MediaLibrary.CreateNewTemplate",
+                            ),
                           },
                         ])}
                       isInvalid={e.templateId == undefined || e.templateId <= 0}
                       label={t<string>("MediaLibrary.Template")}
-                      placeholder={t<string>("MediaLibrary.TemplatePlaceholder")}
-                      selectedKeys={e.templateId ? [e.templateId.toString()] : undefined}
+                      placeholder={t<string>(
+                        "MediaLibrary.TemplatePlaceholder",
+                      )}
+                      selectedKeys={
+                        e.templateId ? [e.templateId.toString()] : undefined
+                      }
                       size={"sm"}
                       onSelectionChange={(keys) => {
                         const arr = Array.from(keys);
+
                         if (arr.length > 0) {
                           const idStr = arr[0] as string;
                           const value = parseInt(idStr, 10);
+
                           if (value == -1) {
                             createPortal(PresetTemplateBuilder, {
                               onSubmitted: async (id) => {
@@ -394,7 +423,10 @@ const MediaLibraryPage = () => {
             const template = templates.find((t) => t.id == ml.templateId);
             const getCssVariable = (variableName: string) => {
               if (typeof document === "undefined") return "";
-              return getComputedStyle(document.documentElement).getPropertyValue(variableName);
+
+              return getComputedStyle(
+                document.documentElement,
+              ).getPropertyValue(variableName);
             };
             const textColor = getCssVariable("--theme-text") || "#222";
 
@@ -403,12 +435,18 @@ const MediaLibraryPage = () => {
                 {/* Name */}
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <div style={{ color: ml.color ?? textColor }}>{ml.name}</div>
+                    <div style={{ color: ml.color ?? textColor }}>
+                      {ml.name}
+                    </div>
                     <ColorPicker
                       color={ml.color ?? textColor}
                       onChange={async (color) => {
                         const strColor = buildColorValueString(color);
-                        await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, { ...ml, color: strColor });
+
+                        await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, {
+                          ...ml,
+                          color: strColor,
+                        });
                         ml.color = strColor;
                         forceUpdate();
                       }}
@@ -428,7 +466,10 @@ const MediaLibraryPage = () => {
                     variant={"light"}
                     onPress={() => {
                       if (ml.templateId) {
-                        createPortal(TemplateModal, { id: ml.templateId, onDestroyed: loadTemplates });
+                        createPortal(TemplateModal, {
+                          id: ml.templateId,
+                          onDestroyed: loadTemplates,
+                        });
                       }
                     }}
                   >
@@ -448,7 +489,10 @@ const MediaLibraryPage = () => {
                           createPortal(PlayerSelectorModal, {
                             players: ml.players,
                             onSubmit: async (players: MediaLibraryPlayer[]) => {
-                              await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, { ...ml, players });
+                              await BApi.mediaLibraryV2.putMediaLibraryV2(
+                                ml.id,
+                                { ...ml, players },
+                              );
                               await loadMediaLibraries();
                             },
                           });
@@ -460,12 +504,22 @@ const MediaLibraryPage = () => {
                     {ml.players && ml.players.length > 0 && (
                       <div className="flex flex-col gap-1">
                         {ml.players.map((player, index) => {
-                          const executablePathSegments = splitPathIntoSegments(player.executablePath);
+                          const executablePathSegments = splitPathIntoSegments(
+                            player.executablePath,
+                          );
+
                           return (
-                            <div key={index} className={"flex items-center gap-2 text-xs"}>
+                            <div
+                              key={index}
+                              className={"flex items-center gap-2 text-xs"}
+                            >
                               <div className={"flex flex-col gap-1"}>
                                 <div className={"font-medium truncate"}>
-                                  {executablePathSegments[executablePathSegments.length - 1]}
+                                  {
+                                    executablePathSegments[
+                                      executablePathSegments.length - 1
+                                    ]
+                                  }
                                 </div>
                                 <div className={"text-gray-500"}>
                                   {t<string>("Command")}: {player.command}
@@ -477,11 +531,16 @@ const MediaLibraryPage = () => {
                                     {ext}
                                   </Chip>
                                 ))}
-                                {player.extensions && player.extensions.length > 3 && (
-                                  <Chip color={"secondary"} size={"sm"} variant={"flat"}>
-                                    +{player.extensions.length - 3}
-                                  </Chip>
-                                )}
+                                {player.extensions &&
+                                  player.extensions.length > 3 && (
+                                    <Chip
+                                      color={"secondary"}
+                                      size={"sm"}
+                                      variant={"flat"}
+                                    >
+                                      +{player.extensions.length - 3}
+                                    </Chip>
+                                  )}
                               </div>
                             </div>
                           );
@@ -501,7 +560,10 @@ const MediaLibraryPage = () => {
                     >
                       {ml.resourceCount}
                     </Chip>
-                    <Tooltip content={t<string>("MediaLibrary.SearchResources")} placement="top">
+                    <Tooltip
+                      content={t<string>("MediaLibrary.SearchResources")}
+                      placement="top"
+                    >
                       <Button
                         isIconOnly
                         className={""}
@@ -511,14 +573,17 @@ const MediaLibraryPage = () => {
                         onPress={() => {
                           createPortal(Modal, {
                             title: t<string>("MediaLibrary.Confirm"),
-                            children: t<string>("MediaLibrary.LeavePageConfirm"),
+                            children: t<string>(
+                              "MediaLibrary.LeavePageConfirm",
+                            ),
                             defaultVisible: true,
                             onOk: async () => {
-                              const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
-                                propertyPool: PropertyPool.Internal,
-                                propertyId: InternalProperty.MediaLibraryV2,
-                                operation: SearchOperation.Equals,
-                              });
+                              const valuePropertyResponse =
+                                await BApi.resource.getFilterValueProperty({
+                                  propertyPool: PropertyPool.Internal,
+                                  propertyId: InternalProperty.MediaLibraryV2,
+                                  operation: SearchOperation.Equals,
+                                });
                               const searchForm = {
                                 group: {
                                   combinator: 1,
@@ -526,7 +591,8 @@ const MediaLibraryPage = () => {
                                   filters: [
                                     {
                                       propertyPool: PropertyPool.Internal,
-                                      propertyId: InternalProperty.MediaLibraryV2,
+                                      propertyId:
+                                        InternalProperty.MediaLibraryV2,
                                       operation: SearchOperation.Equals,
                                       dbValue: ml.id.toString(),
                                       bizValue: ml.name,
@@ -538,13 +604,20 @@ const MediaLibraryPage = () => {
                                 page: 1,
                                 pageSize: 100,
                               };
-                              const query = encodeURIComponent(JSON.stringify(searchForm));
+                              const query = encodeURIComponent(
+                                JSON.stringify(searchForm),
+                              );
+
                               navigate(`/resource?query=${query}`);
                             },
                             footer: {
                               actions: ["ok", "cancel"],
-                              okProps: { children: t<string>("MediaLibrary.Continue") },
-                              cancelProps: { children: t<string>("MediaLibrary.Cancel") },
+                              okProps: {
+                                children: t<string>("MediaLibrary.Continue"),
+                              },
+                              cancelProps: {
+                                children: t<string>("MediaLibrary.Cancel"),
+                              },
                             },
                           });
                         }}
@@ -555,11 +628,16 @@ const MediaLibraryPage = () => {
                     <SyncStatus
                       id={ml.id}
                       onSyncCompleted={() => {
-                        BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then((r) => {
-                          if (!r.data) return;
-                          const updatedMediaLibraries = mediaLibraries.map((m) => (m.id === ml.id ? r.data! : m));
-                          setMediaLibraries(updatedMediaLibraries);
-                        });
+                        BApi.mediaLibraryV2
+                          .getMediaLibraryV2(ml.id)
+                          .then((r) => {
+                            if (!r.data) return;
+                            const updatedMediaLibraries = mediaLibraries.map(
+                              (m) => (m.id === ml.id ? r.data! : m),
+                            );
+
+                            setMediaLibraries(updatedMediaLibraries);
+                          });
                       }}
                     />
                     <Button
@@ -572,21 +650,32 @@ const MediaLibraryPage = () => {
                           title: t<string>("MediaLibrary.Confirm"),
                           children: (
                             <div>
-                              {t<string>("MediaLibrary.DeleteConfirm")}<br />
+                              {t<string>("MediaLibrary.DeleteConfirm")}
+                              <br />
                               <span className="text-danger">
-                                {t<string>("Be careful, this operation can not be undone")}
+                                {t<string>(
+                                  "Be careful, this operation can not be undone",
+                                )}
                               </span>
                             </div>
                           ),
                           onOk: async () => {
-                            await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
+                            await BApi.mediaLibraryV2.deleteMediaLibraryV2(
+                              ml.id,
+                            );
                             await loadMediaLibraries();
                             forceUpdate();
                           },
                           footer: {
                             actions: ["ok", "cancel"],
-                            okProps: { children: t<string>("Delete"), color: "danger", autoFocus: true },
-                            cancelProps: { children: t<string>("MediaLibrary.Cancel") },
+                            okProps: {
+                              children: t<string>("Delete"),
+                              color: "danger",
+                              autoFocus: true,
+                            },
+                            cancelProps: {
+                              children: t<string>("MediaLibrary.Cancel"),
+                            },
                           },
                         });
                       }}

@@ -14,6 +14,7 @@ import {
 } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import _ from "lodash";
 
 import { Button } from "@/components/bakaui";
 
@@ -22,6 +23,8 @@ interface ISimpleFooter {
   okProps?: ButtonProps & { ref?: LegacyRef<HTMLButtonElement> };
   cancelProps?: ButtonProps & { ref?: LegacyRef<HTMLButtonElement> };
 }
+
+type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
 
 export interface ModalProps
   extends DestroyableProps,
@@ -33,7 +36,7 @@ export interface ModalProps
   footer?: any | boolean | ISimpleFooter;
   onClose?: () => void;
   onOk?: () => any;
-  size?: "sm" | "md" | "lg" | "xl" | "full";
+  size?: Size;
   okProps?: ButtonProps;
 }
 
@@ -169,6 +172,16 @@ const Modal = (props: ModalProps) => {
     return <ModalFooter>{elements}</ModalFooter>;
   };
 
+  const classNames: ModalProps["classNames"] = _.merge({}, props.classNames);
+
+  if (props.size == "2xl") {
+    const propsBaseClassName = props.classNames?.["base"] ?? "";
+
+    classNames["base"] = propsBaseClassName
+      ? `max-w-[80vw] ${propsBaseClassName}`
+      : "max-w-[80vw]";
+  }
+
   return (
     <NextUiModal
       ref={r => {
@@ -182,7 +195,7 @@ const Modal = (props: ModalProps) => {
         domRef.current = r;
       }}
       className={props.className}
-      classNames={props.classNames}
+      classNames={classNames}
       size={size}
       style={props.style}
       isOpen={isOpen}

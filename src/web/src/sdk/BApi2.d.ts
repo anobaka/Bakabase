@@ -52,16 +52,16 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/alias/export": {
+    "/alias/xlsx": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["ExportAliases"];
         put?: never;
-        post: operations["ExportAliases"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1699,54 +1699,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ModifyFileNames"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/gui/files-selector": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["OpenFilesSelector"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/gui/file-selector": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["OpenFileSelector"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/gui/folder-selector": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["OpenFolderSelector"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4118,7 +4070,8 @@ export interface components {
             closeBehavior?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme?: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
             /** Format: int32 */
-            listeningPort?: number;
+            autoListeningPortCount?: number;
+            listeningPorts?: number[];
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel": {
             dataPath: string;
@@ -4156,7 +4109,8 @@ export interface components {
             closeBehavior: components["schemas"]["Bakabase.Infrastructures.Components.Gui.CloseBehavior"];
             uiTheme: components["schemas"]["Bakabase.Infrastructures.Components.Gui.UiTheme"];
             /** Format: int32 */
-            listeningPort?: number;
+            autoListeningPortCount?: number;
+            listeningPorts?: number[];
         };
         /**
          * Format: int32
@@ -7179,11 +7133,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
+                content?: never;
             };
         };
     };
@@ -9231,11 +9181,7 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
+                content?: never;
             };
         };
     };
@@ -10421,78 +10367,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.FileRenameResult]"];
-                };
-            };
-        };
-    };
-    OpenFilesSelector: {
-        parameters: {
-            query?: {
-                initialDirectory?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                };
-            };
-        };
-    };
-    OpenFileSelector: {
-        parameters: {
-            query?: {
-                initialDirectory?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                };
-            };
-        };
-    };
-    OpenFolderSelector: {
-        parameters: {
-            query?: {
-                initialDirectory?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
                 };
             };
         };

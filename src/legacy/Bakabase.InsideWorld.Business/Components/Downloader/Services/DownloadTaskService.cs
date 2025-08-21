@@ -357,7 +357,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task Export()
+        public async Task<byte[]> Export()
         {
             var tasks = await GetAllDto();
             var lines = new List<SimpleColumn[]>
@@ -372,9 +372,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             }
 
             var bytes = ExcelUtils.CreateExcel(new ExcelData(lines));
-            var path = Path.Combine(_guiAdapter.GetDownloadsDirectory(),
-                $"{nameof(DownloadTaskDbModel)}-{DateTime.Now:yyyyMMddHHmmss}.xlsx");
-            await File.WriteAllBytesAsync(path, bytes);
+            return bytes;
         }
     }
 }

@@ -10,6 +10,7 @@ using Bakabase.Modules.Alias.Abstractions.Models.Domain;
 using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.Alias.Models.Input;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Components.Office.Excel;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
@@ -63,30 +64,23 @@ namespace Bakabase.Service.Controllers
             return await aliasService.MergeGroups(preferredTexts);
         }
 
-        [HttpPost("export")]
+        [HttpGet("xlsx")]
         [SwaggerOperation(OperationId = "ExportAliases")]
-        public async Task<BaseResponse> Export()
+        public async Task<IActionResult> Export()
         {
-            var downloadsDirectory = guiAdapter.GetDownloadsDirectory();
-            if (!Directory.Exists(downloadsDirectory))
-            {
-                return BaseResponseBuilder.Build(ResponseCode.SystemError, "Can not find downloads directory");
-            }
-
             var aliases = await aliasService.GetAll();
             var preferredCandidatesMap = aliases.GroupBy(x => x.Preferred ?? x.Text)
                 .ToDictionary(d => d.Key, d => d.Where(a => a.Text != d.Key).ToList());
 
-            var lines = preferredCandidatesMap.Select(a => string.Join(',',
-                new[] {a.Key}.Concat(a.Value.Select(b => b.Text)).Distinct().Where(t => t.IsNotEmpty())
-                    .Select(CsvUtils.Escape)));
+            var lines = new List<SimpleColumn[]>();
+            foreach (var a in preferredCandidatesMap)
+            {
+                lines.Add(new[] {a.Key}.Concat(a.Value.Select(b => b.Text)).Distinct().Where(t => t.IsNotEmpty()).Select(b => new SimpleColumn(b)).ToArray());
+            }
+            var bytes = ExcelUtils.CreateExcel(new ExcelData(lines));
 
-            var csvText = string.Join(Environment.NewLine, lines);
-
-            var fileName = Path.Combine(downloadsDirectory, $"alias-{DateTime.Now:yyyyMMddHHmmss}.csv");
-            await System.IO.File.WriteAllTextAsync(fileName, csvText, Encoding.UTF8);
-            await FileService.Open(fileName, true);
-            return BaseResponseBuilder.Ok;
+            var filename = $"alias-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
         }
 
         [HttpPost("import")]

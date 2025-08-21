@@ -89,6 +89,7 @@ const PropertySelector = (props: IProps) => {
           disabled={isDisabled?.(property)}
           editable={editable}
           property={property}
+          isSelected={selected}
           removable={removable}
           onClick={async () => {
             if (multiple) {
@@ -240,7 +241,7 @@ const PropertySelector = (props: IProps) => {
 
     if (filters.length > 0) {
       return (
-        <div className={"flex gap-1 items-center mb-2 flex-wrap"}>
+        <div className={"flex gap-1 items-center flex-wrap"}>
           {t<string>("Filtering")}
           <Spacer />
           {filters}
@@ -332,18 +333,18 @@ const PropertySelector = (props: IProps) => {
 
     return (
       <div className={"flex flex-col gap-2"}>
-        <div className={"flex items-start gap-2"}>
+        <div className={"flex flex-col gap-2"}>
           <div
-            className={"w-[100px] min-w-[100px] text-base"}
+            className={"text-base"}
           >{`${t<string>("Selected")}(${selectedProperties.length})`}</div>
           <div className={"flex flex-wrap gap-2 items-start"}>
             {selectedProperties.map((p) => renderProperty(p))}
           </div>
         </div>
         <Divider />
-        <div className={"flex items-start gap-2"}>
+        <div className={"flex flex-col gap-2"}>
           <div
-            className={"w-[100px] min-w-[100px] text-base"}
+            className={"text-base"}
           >{`${t<string>("Not selected")}(${unselectedProperties.length})`}</div>
           <div className={"flex flex-wrap gap-2 items-start"}>
             {unselectedProperties.map((p) => renderProperty(p))}
@@ -356,7 +357,7 @@ const PropertySelector = (props: IProps) => {
   return (
     <Modal
       footer={multiple && propertyCount > 0 ? true : <Spacer />}
-      size={"xl"}
+      size={"2xl"}
       title={
         title ?? t<string>(multiple ? "Select properties" : "Select a property")
       }
@@ -369,8 +370,9 @@ const PropertySelector = (props: IProps) => {
         await onSubmit(selection);
       }}
     >
-      <div>
+      <div className="flex flex-col gap-2">
         {renderFilter()}
+        <Divider />
         {renderProperties()}
         <div>
           {addable && (

@@ -9,7 +9,7 @@ import {
   DisconnectOutlined,
   LinkOutlined,
 } from "@ant-design/icons";
-import { AiOutlineDelete, AiOutlineEdit } from "react-icons/ai";
+import { AiOutlineDelete, AiOutlineEdit, AiOutlineCheck } from "react-icons/ai";
 
 import { useBakabaseContext } from "../ContextProvider/BakabaseContextProvider";
 
@@ -35,6 +35,8 @@ type Props = {
   onClick?: () => any;
   disabled?: boolean;
 
+  isSelected?: boolean;
+
   hidePool?: boolean;
   hideType?: boolean;
 
@@ -55,6 +57,7 @@ const V2 = ({
   onSaved,
   onRemoved,
   onDialogDestroyed,
+  isSelected,
   disabled,
   ...props
 }: Props) => {
@@ -65,67 +68,30 @@ const V2 = ({
   const editable = property.pool == PropertyPool.Custom && props.editable;
   const removable = property.pool == PropertyPool.Custom && props.removable;
 
-  const renderBottom = () => {
+  const selected = isSelected === true;
+
+  const renderExtra = () => {
     if (property.pool != PropertyPool.Custom) {
       return null;
     }
-    const categories = property.categories || [];
+
+    if (!property.valueCount) {
+      return null;
+    }
 
     return (
-      <div className={`${styles.bottom} mt-1 pt-1 flex flex-wrap gap-2`}>
-        {categories.length > 0 ? (
-          <Tooltip
-            content={
-              <div className={"flex flex-wrap gap-1 max-w-[600px]"}>
-                {categories.map((c) => {
-                  return (
-                    <Chip key={c.id} radius={"sm"} size={"sm"}>
-                      {c.name}
-                    </Chip>
-                  );
-                })}
-              </div>
-            }
-            placement={"bottom"}
-          >
-            <div className={"flex gap-0.5 items-center"}>
-              <LinkOutlined className={"text-sm"} />
-              {categories.length}
-            </div>
-            {/* <Chip */}
-            {/*   radius={'sm'} */}
-            {/*   size={'sm'} */}
-            {/*   classNames={{}} */}
-            {/* >{t<string>('{{count}} categories', { count: categories.length })}</Chip> */}
-          </Tooltip>
-        ) : (
-          <Tooltip
-            content={
-              <div>
-                <div>{t<string>("No category bound")}</div>
-                <div>
-                  {t<string>("You can bind properties in category page")}
-                </div>
-              </div>
-            }
-            placement={"bottom"}
-          >
-            <DisconnectOutlined className={"text-sm"} />
-          </Tooltip>
-        )}
-        {property.valueCount != undefined && (
-          <Tooltip
-            content={t<string>("{{count}} values", {
-              count: property.valueCount,
-            })}
-            placement={"bottom"}
-          >
-            <div className={"flex gap-0.5 items-center"}>
-              <DatabaseOutlined className={"text-sm"} />
-              {property.valueCount}
-            </div>
-          </Tooltip>
-        )}
+      <div className={`text-xs flex items-center gap-1`}>
+        <Tooltip
+          content={t<string>("{{count}} values", {
+            count: property.valueCount,
+          })}
+          placement={"bottom"}
+        >
+          <div className={"flex gap-0.5 items-center"}>
+            <DatabaseOutlined className={"text-sm"}/>
+            {property.valueCount}
+          </div>
+        </Tooltip>
       </div>
     );
   };
@@ -152,7 +118,7 @@ const V2 = ({
         isIconOnly
         size={"sm"}
         variant={"light"}
-        onPress={(e) => {
+        onPress={() => {
           showDetail();
         }}
       >
@@ -195,9 +161,25 @@ const V2 = ({
             {!hidePool && <PropertyPoolIcon pool={property.pool} />}
           </div>
         )}
-        <div className={"text-base text-left"}>{property.name}</div>
+        <div className={"flex items-center gap-1"}>
+          <div className={"text-base text-left"}>
+            {property.name}
+          </div>
+          {renderExtra()}
+        </div>
       </CardBody>
     </Card>
+  );
+
+  const cardWithSelection = (
+    <div className={`relative ${selected ? "ring-2 ring-green-500 rounded-lg" : ""}`} aria-selected={selected}>
+      {selected && (
+        <div className="pointer-events-none absolute -top-1.5 -right-1.5 bg-green-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow z-1">
+          <AiOutlineCheck />
+        </div>
+      )}
+      {card}
+    </div>
   );
 
   if (actions.length > 0) {
@@ -205,12 +187,12 @@ const V2 = ({
       <Tooltip
         content={<div className={"flex items-center gap-1"}>{actions}</div>}
       >
-        {card}
+        {cardWithSelection}
       </Tooltip>
     );
   }
 
-  return card;
+  return cardWithSelection;
 };
 
 V2.displayName = "V2";

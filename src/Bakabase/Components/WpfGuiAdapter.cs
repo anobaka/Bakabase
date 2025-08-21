@@ -41,69 +41,6 @@ namespace Bakabase.Components
         public override T InvokeInGuiContext<T>(Func<T> func) => _app.Dispatcher.Invoke(func);
 
         [GuiContextInterceptor]
-        public override string[]? OpenFilesSelector(string? initialDirectory = null)
-        {
-            if (initialDirectory.IsNotEmpty())
-            {
-                initialDirectory = new DirectoryInfo(initialDirectory!).FullName;
-            }
-
-            var dialog = new OpenFileDialog
-            {
-                Multiselect = true,
-                InitialDirectory = initialDirectory
-            };
-            var result = dialog.ShowDialog();
-            return result == true ? dialog.FileNames.Select(f => f.StandardizePath()).ToArray() : null;
-        }
-
-        [GuiContextInterceptor]
-        public override string? OpenFileSelector(string? initialDirectory = null)
-        {
-            if (initialDirectory.IsNotEmpty())
-            {
-                initialDirectory = new DirectoryInfo(initialDirectory!).FullName;
-            }
-
-            var dialog = new OpenFileDialog()
-            {
-                InitialDirectory = initialDirectory
-            };
-            var result = dialog.ShowDialog();
-            return result == true ? dialog.FileName.StandardizePath() : null;
-        }
-
-        [GuiContextInterceptor]
-        public override string? OpenFolderSelector(string? initialDirectory = null)
-        {
-            if (initialDirectory.IsNotEmpty())
-            {
-                initialDirectory = new DirectoryInfo(initialDirectory!).FullName;
-            }
-
-            string? folder = null;
-            using var dialog = new FolderBrowserDialog
-            {
-                InitialDirectory = initialDirectory,
-            };
-            var result = dialog.ShowDialog();
-            if (result == DialogResult.OK)
-            {
-                folder = dialog.SelectedPath;
-            }
-
-            return folder.StandardizePath();
-        }
-
-        public override string GetDownloadsDirectory()
-        {
-            var v = Registry.GetValue(
-                @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders"
-                , "{374DE290-123F-4565-9164-39C4925E467B}", null)!;
-            return v.ToString();
-        }
-
-        [GuiContextInterceptor]
         public override void ShowTray(Func<Task> onExiting)
         {
             _tray = new NotifyIcon()

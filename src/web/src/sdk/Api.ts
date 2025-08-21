@@ -781,7 +781,8 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   /** [0: FollowSystem, 1: Light, 2: Dark] */
   uiTheme?: BakabaseInfrastructuresComponentsGuiUiTheme;
   /** @format int32 */
-  listeningPort?: number;
+  autoListeningPortCount?: number;
+  listeningPorts?: number[];
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -828,7 +829,8 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   /** [0: FollowSystem, 1: Light, 2: Dark] */
   uiTheme: BakabaseInfrastructuresComponentsGuiUiTheme;
   /** @format int32 */
-  listeningPort?: number;
+  autoListeningPortCount?: number;
+  listeningPorts?: number[];
 }
 
 /**
@@ -4650,13 +4652,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      *
      * @tags Alias
      * @name ExportAliases
-     * @request POST:/alias/export
+     * @request GET:/alias/xlsx
      */
     exportAliases: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/alias/export`,
-        method: "POST",
-        format: "json",
+      this.request<void, any>({
+        path: `/alias/xlsx`,
+        method: "GET",
         ...params,
       }),
 
@@ -6267,10 +6268,9 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/download-task/xlsx
      */
     exportAllDownloadTasks: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<void, any>({
         path: `/download-task/xlsx`,
         method: "GET",
-        format: "json",
         ...params,
       }),
 
@@ -7922,69 +7922,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
   };
   gui = {
-    /**
-     * No description
-     *
-     * @tags Gui
-     * @name OpenFilesSelector
-     * @request GET:/gui/files-selector
-     */
-    openFilesSelector: (
-      query?: {
-        initialDirectory?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/gui/files-selector`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Gui
-     * @name OpenFileSelector
-     * @request GET:/gui/file-selector
-     */
-    openFileSelector: (
-      query?: {
-        initialDirectory?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
-        path: `/gui/file-selector`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Gui
-     * @name OpenFolderSelector
-     * @request GET:/gui/folder-selector
-     */
-    openFolderSelector: (
-      query?: {
-        initialDirectory?: string;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
-        path: `/gui/folder-selector`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
     /**
      * No description
      *

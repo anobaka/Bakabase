@@ -66,7 +66,11 @@ const AppInfo = ({ appInfo }) => {
 
     switch (appUpdaterState.status) {
       case UpdaterStatus.UpToDate:
-        return t<string>("Up-to-date");
+        return (
+          <Chip radius="sm" variant="light" color="default">
+            {t<string>("Up-to-date")}
+          </Chip>
+        );
       case UpdaterStatus.Idle:
         if (newVersion) {
           if (newVersion.version) {
@@ -133,7 +137,11 @@ const AppInfo = ({ appInfo }) => {
               </div>
             );
           } else {
-            return t<string>("Up-to-date");
+            return (
+              <Chip radius="sm" variant="light" color="default">
+                {t<string>("Up-to-date")}
+              </Chip>
+            );
           }
         } else {
           return t<string>("Failed to get latest version");

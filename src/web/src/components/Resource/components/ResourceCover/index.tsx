@@ -100,7 +100,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   }, [useCache]);
 
   const loadCover = useCallback(
-    (disableBrowserCache: boolean) => {
+    (disableBrowserCache?: boolean) => {
       const serverAddresses = appContext.apiEndpoints ?? [
         envConfig.apiEndpoint,
       ];
@@ -126,7 +126,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           }
         }
       }
-      
+
       const resourceServerAddresses = serverAddresses.length == 1 ? serverAddresses : serverAddresses.slice(1);
       const serverAddress = resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 

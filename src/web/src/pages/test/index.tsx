@@ -9,11 +9,11 @@ import { useCookie } from "react-use";
 import PscPage from "./cases/Psc";
 import TourPage from "./cases/Tour";
 import SortablePage from "./cases/Sortable";
-import MediaPreviewerPage from "./cases/MediaPreviewer";
-import CategoryEnhancerOptionsDialogPage from "./cases/CategoryEnhancerOptionsDialog";
+import MediaPreviewerTest from "./cases/MediaPreviewer";
+import CategoryEnhancerOptionsDialogTest from "./cases/CategoryEnhancerOptionsDialog";
 import ResourceFilterPage from "./cases/ResourceFilter";
 import PropertiesPage from "./cases/Properties";
-import PresetMediaLibraryTemplateBuilderTestPage from "./cases/PresetMediaLibraryTemplateBuilderTest";
+import PresetMediaLibraryTemplateBuilderTest from "./cases/PresetMediaLibraryTemplateBuilderTest";
 import LongTabsPage from "./cases/LongTabs";
 import ReactPlayer from "./cases/ReactPlayer";
 import HlsPlayerPage from "./cases/HlsPlayer";
@@ -70,7 +70,7 @@ const components = {
       <DeprecatedChip showTooltip={false} />
     </div>
   ),
-  PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTestPage />,
+  PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <PropertiesPage />,
   BulkModification: (
     <ProcessValueEditor valueType={StandardValueType.Boolean} />
@@ -78,7 +78,7 @@ const components = {
   ResourceTransfer: <ResourceTransferPage />,
   Filter: <ResourceFilterPage />,
   VirtualList: <VirtualListPage />,
-  CategoryEnhancerOptions: <CategoryEnhancerOptionsDialogPage />,
+  CategoryEnhancerOptions: <CategoryEnhancerOptionsDialogTest />,
   Psc: <PscPage />,
   Tour: <TourPage />,
   ResourceOrderSelector: <OrderSelector />,
@@ -124,7 +124,7 @@ const components = {
     />
   ),
   ReactPlayer: <ReactPlayer />,
-  MediaPreviewer: <MediaPreviewerPage />,
+  MediaPreviewer: <MediaPreviewerTest />,
 };
 const TestPage = () => {
   const { t } = useTranslation();

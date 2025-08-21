@@ -7,26 +7,6 @@ namespace Bakabase.Tests.Implementations;
 
 public class TestGuiAdapter : IGuiAdapter
 {
-    public string[] OpenFilesSelector(string? initialDirectory = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string? OpenFileSelector(string? initialDirectory = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string? OpenFolderSelector(string? initialDirectory = null)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string GetDownloadsDirectory()
-    {
-        throw new NotImplementedException();
-    }
-
     public void ShowTray(Func<Task> onExiting)
     {
         throw new NotImplementedException();

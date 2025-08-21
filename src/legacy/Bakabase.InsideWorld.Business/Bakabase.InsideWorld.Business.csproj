@@ -7,11 +7,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <None Remove="Components\Tampermonkey\Scripts\exhentai.tpl.js" />
-	  <None Remove="Components\Tampermonkey\Scripts\soulplus.tpl.js" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<ProjectReference Include="..\..\miscellaneous\Bakabase.Prefabs\Bakabase.Prefabs.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Alias\Bakabase.Modules.Alias.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Presets\Bakabase.Modules.Presets.csproj" />
@@ -86,12 +81,8 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Resource Include="Components\Tampermonkey\Scripts\exhentai.tpl.js">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Resource>
-	  <Resource Include="Components\Tampermonkey\Scripts\soulplus.tpl.js">
-	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-	  </Resource>
+		<Content Include="Components/Tampermonkey/Scripts/exhentai.tpl.js" CopyToOutputDirectory="PreserveNewest" />
+		<Content Include="Components/Tampermonkey/Scripts/soulplus.tpl.js" CopyToOutputDirectory="PreserveNewest" />
 	</ItemGroup>
 
 </Project>

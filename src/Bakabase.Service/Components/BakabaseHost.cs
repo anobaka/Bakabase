@@ -22,6 +22,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Service.Components.Tasks;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
+using DotNetEnv;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -30,7 +31,7 @@ namespace Bakabase.Service.Components
 {
     public class BakabaseHost(IGuiAdapter guiAdapter, ISystemService systemService) : AppHost(guiAdapter, systemService)
     {
-        protected override int ListeningPortCount => 5;
+        protected override int DefaultAutoListeningPortCount => 3;
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>
             [
@@ -75,6 +76,7 @@ namespace Bakabase.Service.Components
 
         protected override void Initialize()
         {
+            Env.Load();
             base.Initialize();
         }
 

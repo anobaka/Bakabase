@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.Configuration;
+﻿using System.Diagnostics.CodeAnalysis;
+using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
 
@@ -89,7 +90,7 @@ public static class StringExtensions
         return string.Join(separator, data.Select(d => d?.Replace(separator.ToString(), $"{escapeChar}{separator}")));
     }
 
-    public static string? StandardizePath(this string? path)
+    public static string? StandardizePath([NotNullIfNotNull(nameof(path))] this string? path)
     {
         if (path.IsNullOrEmpty())
         {

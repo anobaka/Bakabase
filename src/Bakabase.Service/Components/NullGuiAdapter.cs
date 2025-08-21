@@ -7,26 +7,6 @@ namespace Bakabase.Service.Components;
 
 public class NullGuiAdapter : IGuiAdapter
 {
-    public string[] OpenFilesSelector(string? initialDirectory = null)
-    {
-        return null;
-    }
-
-    public string? OpenFileSelector(string? initialDirectory = null)
-    {
-        return null;
-    }
-
-    public string? OpenFolderSelector(string? initialDirectory = null)
-    {
-        return null;
-    }
-
-    public string GetDownloadsDirectory()
-    {
-        return null;
-    }
-
     public void ShowTray(Func<Task> onExiting)
     {
 

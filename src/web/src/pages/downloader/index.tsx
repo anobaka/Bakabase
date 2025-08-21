@@ -60,6 +60,8 @@ import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
 
+import envConfig from "@/config/env.ts";
+
 // const testTasks: DownloadTask[] = [
 //   {
 //     key: '123121232312321321',
@@ -489,7 +491,9 @@ const DownloaderPage = () => {
             size={"sm"}
             variant={"flat"}
             onPress={() => {
-              BApi.downloadTask.exportAllDownloadTasks();
+              BApi.gui.openUrlInDefaultBrowser({
+                url: `${envConfig.apiEndpoint}/download-task/xlsx`,
+              });
             }}
           >
             <AiOutlineExport className={"text-base"} />
@@ -519,15 +523,14 @@ const DownloaderPage = () => {
         {taskListHeight > 0 && (
           <Listbox
             isVirtualized
-            selectionMode={'multiple'}
-            variant={'flat'}
+            className={"p-0"}
+            label={"Select from 1000 items"}
+            selectionMode={"multiple"}
+            variant={"flat"}
             virtualization={{
               maxListboxHeight: taskListHeight,
               itemHeight: 75,
             }}
-            className={'p-0'}
-            // className="max-w-xs"
-            label={'Select from 1000 items'}
           >
             {filteredTasks.map((task, index) => {
               const hasErrorMessage =
@@ -612,10 +615,8 @@ const DownloaderPage = () => {
                         </div>
                       </div>
                       <div className={"flex items-center"}>
-                        {task.availableActions?.map((a, i) => {
-                          const action = parseInt(a, 10);
-
-                          switch (action) {
+                        {task.availableActions?.map((a) => {
+                          switch (a) {
                             case DownloadTaskAction.StartManually:
                             case DownloadTaskAction.Restart:
                               return (
