@@ -37,6 +37,7 @@ namespace Bakabase.Service.Components
             [
                 Assembly.GetAssembly(SpecificTypeUtils<ResourceOptions>.Type)!,
                 Assembly.GetAssembly(SpecificTypeUtils<UIOptions>.Type)!,
+                Assembly.GetAssembly(SpecificTypeUtils<TaskOptions>.Type)!,
             ];
 
         protected override string OverrideFeAddress(string feAddress)
