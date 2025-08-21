@@ -103,9 +103,14 @@ namespace Bakabase.Service.Controllers
                     newUiTheme = model.UiTheme;
                 }
 
-                if (model.ListeningPort.HasValue)
+                if (model.ListeningPorts != null)
                 {
-                    options.ListeningPort = model.ListeningPort.Value;
+                    options.ListeningPorts = model.ListeningPorts;
+                }
+
+                if (model.AutoListeningPortCount.HasValue)
+                {
+                    options.AutoListeningPortCount = model.AutoListeningPortCount.Value;
                 }
 
             });

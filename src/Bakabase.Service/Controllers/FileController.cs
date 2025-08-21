@@ -110,7 +110,7 @@ namespace Bakabase.Service.Controllers
         [HttpGet("search-fs-entries")]
         [SwaggerOperation(OperationId = "SearchFileSystemEntries")]
         public async Task<ListResponse<FileSystemEntryNameViewModel>> SearchFileSystemEntries(
-            string? prefix = null, bool? isDirectory = true, int maxResults = 20)
+            bool? isDirectory, string? prefix = null, int maxResults = 20)
         {
             prefix = prefix?.StandardizePath();
             var results = new List<FileSystemEntryNameViewModel>();
@@ -127,6 +127,7 @@ namespace Bakabase.Service.Controllers
                 {
                     parent = prefix;
                     results.Add(new FileSystemEntryNameViewModel(prefix, Path.GetFileName(prefix), true));
+                    prefix = null;
                 }
                 else
                 {
@@ -145,6 +146,8 @@ namespace Bakabase.Service.Controllers
                 }
             }
 
+            var pathSet = results.Select(r => r.Path).ToHashSet();
+
             if (parent == null)
             {
                 var drives = DriveInfo.GetDrives()
@@ -153,7 +156,9 @@ namespace Bakabase.Service.Controllers
                         d.Name.StandardizePath()!, d.Name.StandardizePath()!, true));
 
                 results.AddRange(drives
-                    .Where(d => prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    .Where(d =>
+                        (prefix.IsNullOrEmpty() || d.Path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) &&
+                        pathSet.Add(d.Path))
                     .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
                     .Take(maxResults));
             }
@@ -162,7 +167,7 @@ namespace Bakabase.Service.Controllers
                 var token = HttpContext?.RequestAborted ?? CancellationToken.None;
 
                 // Compute the user-typed leaf under the parent to leverage filesystem pattern matching
-                var normalizedPrefixForName = prefix!
+                var normalizedPrefixForName = prefix?
                     .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 var leaf = Path.GetFileName(normalizedPrefixForName);
                 var pattern = string.IsNullOrEmpty(leaf) ? "*" : $"{leaf}*";
@@ -182,7 +187,12 @@ namespace Bakabase.Service.Controllers
                         foreach (var d in Directory.EnumerateDirectories(parent, pattern, options))
                         {
                             if (token.IsCancellationRequested) break;
-                            results.Add(new FileSystemEntryNameViewModel(d.StandardizePath()!, Path.GetFileName(d), true));
+                            var stdPath = d.StandardizePath()!;
+                            if (pathSet.Add(stdPath))
+                            {
+                                results.Add(new FileSystemEntryNameViewModel(stdPath, Path.GetFileName(stdPath), true));
+                            }
+
                             if (results.Count >= maxResults) break;
                         }
                     }
@@ -200,7 +210,13 @@ namespace Bakabase.Service.Controllers
                         foreach (var f in Directory.EnumerateFiles(parent, pattern, options))
                         {
                             if (token.IsCancellationRequested) break;
-                            results.Add(new FileSystemEntryNameViewModel(f.StandardizePath()!, Path.GetFileName(f), false));
+                            var stdPath = f.StandardizePath()!;
+                            if (pathSet.Add(stdPath))
+                            {
+                                results.Add(new FileSystemEntryNameViewModel(f.StandardizePath()!, Path.GetFileName(f),
+                                    false));
+                            }
+
                             if (results.Count >= maxResults) break;
                         }
                     }

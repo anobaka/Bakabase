@@ -1,0 +1,11 @@
+node_modules/
+dist/
+coverage/
+build/
+.next/
+
+src/sdk/BApi2.d.ts
+
+*.log
+.eslintcache
+.idea/

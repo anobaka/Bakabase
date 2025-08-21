@@ -26,6 +26,8 @@ const EnhancerSelectorModal = ({
     propSelectedIds ?? [],
   );
 
+  const MAX_VISIBLE_TARGETS = 5;
+
   useEffect(() => {
     // createPortal(
     //   PathFilterModal, {
@@ -38,13 +40,21 @@ const EnhancerSelectorModal = ({
   }, []);
 
   return (
-    <Modal defaultVisible size={"xl"} onOk={() => onSubmit?.(selectedIds)}>
-      <div className={"flex flex-col gap-2"}>
+    <Modal
+      defaultVisible
+      classNames={{ base: "max-w-[80vw]" }}
+      size={"2xl"}
+      onOk={() => onSubmit?.(selectedIds)}
+    >
+      <div className={"grid grid-cols-4 gap-2"}>
         {enhancers.map((e) => {
           const isSelected = selectedIds.includes(e.id);
+          const visibleTargets = e.targets.slice(0, MAX_VISIBLE_TARGETS);
+          const hiddenTargets = e.targets.slice(MAX_VISIBLE_TARGETS);
 
           return (
             <Card
+              key={e.id}
               isPressable
               onPress={() => {
                 if (isSelected) {
@@ -53,6 +63,9 @@ const EnhancerSelectorModal = ({
                   setSelectedIds([...selectedIds, e.id]);
                 }
               }}
+              className={`relative ${
+                isSelected ? "border-2 border-success bg-success/10" : ""
+              }`}
             >
               <CardBody>
                 <div className={"text-base flex items-center gap-1"}>
@@ -73,10 +86,10 @@ const EnhancerSelectorModal = ({
                   <div className={"font-bold"}>
                     {t<string>("Enhance properties")}:&nbsp;
                   </div>
-                  {e.targets.map((target) => {
+                  {visibleTargets.map((target) => {
                     if (target.description) {
                       return (
-                        <Tooltip content={target.description}>
+                        <Tooltip key={`${e.id}-${target.name}`} content={target.description}>
                           <Chip
                             color={"default"}
                             radius={"sm"}
@@ -85,9 +98,7 @@ const EnhancerSelectorModal = ({
                           >
                             <div className={"flex items-center"}>
                               {target.name}
-                              <AiOutlineQuestionCircle
-                                className={"text-base"}
-                              />
+                              <AiOutlineQuestionCircle className={"text-base"} />
                             </div>
                           </Chip>
                         </Tooltip>
@@ -96,6 +107,7 @@ const EnhancerSelectorModal = ({
 
                     return (
                       <Chip
+                        key={`${e.id}-${target.name}`}
                         color={"default"}
                         radius={"sm"}
                         size={"sm"}
@@ -105,8 +117,39 @@ const EnhancerSelectorModal = ({
                       </Chip>
                     );
                   })}
+
+                  {hiddenTargets.length > 0 && (
+                    <Tooltip
+                      content={
+                        <div className={"max-w-[360px] flex flex-wrap gap-1"}>
+                          {hiddenTargets.map((target) => (
+                            <Chip
+                              key={`${e.id}-hidden-${target.name}`}
+                              color={"default"}
+                              radius={"sm"}
+                              size={"sm"}
+                              variant={"flat"}
+                            >
+                              {target.name}
+                            </Chip>
+                          ))}
+                        </div>
+                      }
+                    >
+                      <Chip color={"primary"} radius={"sm"} size={"sm"} variant={"flat"}>
+                        +{hiddenTargets.length} {t<string>("more")}
+                      </Chip>
+                    </Tooltip>
+                  )}
                 </div>
               </CardBody>
+              {isSelected && (
+                <div className={"absolute top-2 right-2"}>
+                  <Chip color={"success"} radius={"sm"} size={"sm"} variant={"solid"}>
+                    {t<string>("Selected")}
+                  </Chip>
+                </div>
+              )}
             </Card>
           );
         })}

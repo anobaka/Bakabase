@@ -34,7 +34,8 @@ import {
   Tooltip,
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { FileSystemSelectorPanel } from "@/components/FileSystemSelector";
+import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+import envConfig from "@/config/env.ts";
 
 type Form = {
   pageSize: 20;
@@ -168,7 +169,7 @@ const AliasPage = () => {
             color={"secondary"}
             size={"sm"}
             onClick={() => {
-              createPortal(FileSystemSelectorPanel, {
+              createPortal(FileSystemSelectorModal, {
                 onSelected: (e) => {
                   const modal = createPortal(Modal, {
                     visible: true,
@@ -182,7 +183,7 @@ const AliasPage = () => {
                   });
                 },
                 targetType: "file",
-                filter: (e) => e.isDirectory || e.path.endsWith(".csv"),
+                filter: (e) => e.isDirectoryOrDrive || e.path.endsWith(".csv"),
               });
             }}
           >
@@ -191,8 +192,10 @@ const AliasPage = () => {
           </Button>
           <Button
             size={"sm"}
-            onClick={() => {
-              BApi.alias.exportAliases();
+            onPress={() => {
+              BApi.gui.openUrlInDefaultBrowser({
+                url: `${envConfig.apiEndpoint}/alias/xlsx`,
+              });
             }}
           >
             <DownloadOutlined className={"text-base"} />

@@ -2,6 +2,7 @@
 using Bakabase.InsideWorld.Business.Components.Tampermonkey;
 using Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
+using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
@@ -25,6 +26,11 @@ public class TampermonkeyController(TampermonkeyService service) : ControllerBas
     public async Task<IActionResult> GetScript(TampermonkeyScript script)
     {
         var js = await service.GetScript(script);
+        if (js.IsNullOrEmpty())
+        {
+            return NotFound();
+        }
+
         return Content(js, "application/javascript");
     }
 }

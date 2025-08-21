@@ -2866,6 +2866,24 @@ export const ResponseCodeLabel: Record<ResponseCode, string> = {
   [ResponseCode.InvalidCaptcha]: 'InvalidCaptcha'
 };
 
+export enum RuntimeMode {
+  Dev = 0,
+  WinForms = 1,
+  Docker = 2
+}
+
+export const runtimeModes = [
+  { label: 'Dev', value: RuntimeMode.Dev },
+  { label: 'WinForms', value: RuntimeMode.WinForms },
+  { label: 'Docker', value: RuntimeMode.Docker }
+] as const;
+
+export const RuntimeModeLabel: Record<RuntimeMode, string> = {
+  [RuntimeMode.Dev]: 'Dev',
+  [RuntimeMode.WinForms]: 'WinForms',
+  [RuntimeMode.Docker]: 'Docker'
+};
+
 export enum Operation {
   DELETE = 0,
   INSERT = 1,

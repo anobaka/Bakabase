@@ -1,4 +1,4 @@
-import type { IconType } from "react-icons";
+import type { IconBaseProps, IconType } from "react-icons";
 
 import {
   MdOutlineAccessTime,
@@ -12,7 +12,7 @@ import { PiTreeView } from "react-icons/pi";
 
 import { StandardValueType } from "@/sdk/constants";
 
-type Props = IconType & {
+type Props = IconBaseProps & {
   valueType: StandardValueType;
 };
 
@@ -28,9 +28,9 @@ const StandardValueTypeIconMap: Record<StandardValueType, IconType> = {
   [StandardValueType.ListTag]: LuTags,
 };
 const Icon = ({ valueType, ...props }: Props) => {
-  const Icon = StandardValueTypeIconMap[valueType];
+  const ValueIcon = StandardValueTypeIconMap[valueType];
 
-  return <Icon className={"text-base"} {...props} />;
+  return <ValueIcon className={"text-base"} {...props} />;
 };
 
 Icon.displayName = "Icon";

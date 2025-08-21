@@ -1,11 +1,13 @@
 "use client";
 
 import type { Key } from "@react-types/shared";
-import type { ChipProps, NumberInputProps } from "@/components/bakaui";
-import type { BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel } from "@/sdk/Api";
+import type {
+  ChipProps,
+  NumberInputProps,
+  InputProps,
+} from "@/components/bakaui";
+import type { BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel } from "@/sdk/Api";
 
-import React, { useEffect, useState } from "react";
-import Cookies from "universal-cookie";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { AiOutlineNumber, AiOutlineQuestionCircle } from "react-icons/ai";
@@ -29,14 +31,9 @@ import {
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { EditableValue } from "@/components/EditableValue";
-import {
-  useThirdPartyOptionsStore,
-  useNetworkOptionsStore,
-  useAppOptionsStore,
-} from "@/stores/options";
-import { useAppContextStore } from "@/stores/appContext";
-
-const cookies = new Cookies();
+import { useNetworkOptionsStore, useAppOptionsStore } from "@/stores/options";
+import { useAppContextStore } from "@/stores/appContext.ts";
+import { RuntimeMode } from "@/sdk/constants.ts";
 
 enum ProxyMode {
   DoNotUse = 0,
@@ -52,15 +49,8 @@ const Others = ({
   const { createPortal } = useBakabaseContext();
 
   const appOptions = useAppOptionsStore((state) => state.data);
-  const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
   const networkOptions = useNetworkOptionsStore((state) => state.data);
-  const appContext = useAppContextStore((state) => state);
-
-  const [proxy, setProxy] = useState(networkOptions.proxy);
-
-  useEffect(() => {
-    setProxy(networkOptions.proxy);
-  }, [networkOptions]);
+  const appContext = useAppContextStore();
 
   const proxies = [
     {
@@ -110,7 +100,7 @@ const Others = ({
                 size={"sm"}
                 onSelectionChange={(keys) => {
                   const key = Array.from(keys)[0] as string;
-                  const patches: BakabaseInsideWorldModelsRequestModelsOptionsNetworkOptionsPatchInputModel =
+                  const patches: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputNetworkOptionsPatchInputModel =
                     {};
 
                   if (key == ProxyMode.DoNotUse.toString()) {
@@ -161,7 +151,7 @@ const Others = ({
                   ),
                   onOk: async () => {
                     if (p == undefined || p.length == 0) {
-                      Notification.error(t<string>("Invalid Data"));
+                      toast.error(t<string>("Invalid Data"));
                       throw new Error("Invalid data");
                     }
                     await BApi.options.patchNetworkOptions({
@@ -222,170 +212,262 @@ const Others = ({
         );
       },
     },
-    {
-      label: "Listening port",
-      tip: "You can set a fixed port for Bakabase to listen on.",
-      renderValue: () => {
-        const minPort = 5000;
-        const maxPort = 65000;
-
-        return (
-          <EditableValue<
-            number,
-            NumberInputProps,
-            ChipProps & { value: number }
-          >
-            Editor={(props) => (
-              <NumberInput
-                className={"max-w-[320px]"}
-                description={
-                  <div>
-                    <div>
-                      {t<string>("Current listening port is {{port}}", {
-                        port: appContext?.listeningAddresses?.[0]
-                          ?.split(":")
-                          .slice(-1)[0],
-                      })}
-                    </div>
-                    <div>
-                      {t<string>(
-                        "The configurable port range is {{min}}-{{max}}",
-                        {
-                          min: minPort,
-                          max: maxPort,
-                        },
-                      )}
-                    </div>
-                    <div>
-                      {t<string>(
-                        "Changes will take effect after restarting the application",
-                      )}
-                    </div>
-                  </div>
-                }
-                formatOptions={{ useGrouping: false }}
-                max={maxPort}
-                min={minPort}
-                placeholder={t<string>("Port number")}
-                {...props}
-              />
-            )}
-            Viewer={({ value, ...props }) =>
-              value ? (
-                <Chip
-                  radius={"sm"}
-                  startContent={<AiOutlineNumber className={"text-base"} />}
-                  variant={"flat"}
-                  {...props}
-                >
-                  {value}
-                </Chip>
-              ) : null
-            }
-            value={appOptions.listeningPort}
-            onSubmit={async (v) => {
-              await BApi.options.putAppOptions({
-                ...appOptions,
-                listeningPort: v,
-              });
-            }}
-          />
-        );
-      },
-    },
   ];
 
-  return (
-    <div className="group">
-      {/* <Title title={i18n.t<string>('Other settings')} /> */}
-      <div className="settings">
-        <Table removeWrapper>
-          <TableHeader>
-            <TableColumn width={200}>{t<string>("Other settings")}</TableColumn>
-            <TableColumn>&nbsp;</TableColumn>
-          </TableHeader>
-          <TableBody>
-            {otherSettings.map((c, i) => {
+  switch (appContext.runtimeMode) {
+    case RuntimeMode.Dev:
+    case RuntimeMode.WinForms:
+      otherSettings.push(
+        ...[
+          {
+            label: "Listening port count",
+            tip: "You can configure the number of listening ports. The more listening ports you set, the more it helps with parallel processing of interface‑related operations. It’s recommended not to exceed the number of CPU cores. In most cases, you can just ignore this setting. If you leave it as empty and listening ports are not specified, we'll use a default value.",
+            renderValue: () => {
+              const min = 0;
+              const max = 3;
+
               return (
-                <TableRow
-                  key={i}
-                  className={"hover:bg-[var(--bakaui-overlap-background)]"}
+                <EditableValue<
+                  number,
+                  NumberInputProps,
+                  ChipProps & { value: number }
                 >
-                  <TableCell>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      {c.tip ? (
-                        <Tooltip
-                          color={"secondary"}
-                          content={t<string>(c.tip)}
-                          placement={"top"}
-                        >
-                          <div className={"flex items-center gap-1"}>
-                            {t<string>(c.label)}
-                            <AiOutlineQuestionCircle className={"text-base"} />
+                  Editor={(props) => (
+                    <NumberInput
+                      isClearable
+                      className={"max-w-[320px]"}
+                      description={
+                        <div>
+                          <div>
+                            {t<string>(
+                              "Current listening port count is {{port}}",
+                              {
+                                port:
+                                  appOptions.autoListeningPortCount == 0
+                                    ? t<string>("Auto")
+                                    : appOptions.autoListeningPortCount,
+                              },
+                            )}
                           </div>
-                        </Tooltip>
-                      ) : (
-                        t<string>(c.label)
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{c.renderValue()}</TableCell>
-                </TableRow>
+                          <div>
+                            {t<string>(
+                              "The configurable port range is {{min}}-{{max}}. And you can set it to 0 for auto count.",
+                              {
+                                min,
+                                max,
+                              },
+                            )}
+                          </div>
+                          <div>
+                            {t<string>(
+                              "Changes will take effect after restarting the application",
+                            )}
+                          </div>
+                          <div>
+                            {t<string>(
+                              "Please be careful when setting this value, if you set it to a value that is already in use by another application, our application will not be able to start.",
+                            )}
+                          </div>
+                        </div>
+                      }
+                      formatOptions={{ useGrouping: false }}
+                      max={max}
+                      min={min}
+                      placeholder={t<string>("Count")}
+                      {...props}
+                    />
+                  )}
+                  Viewer={({ value, ...props }) =>
+                    value ? (
+                      <Chip
+                        radius={"sm"}
+                        startContent={
+                          <AiOutlineNumber className={"text-base"} />
+                        }
+                        variant={"flat"}
+                        {...props}
+                      >
+                        {value}
+                      </Chip>
+                    ) : null
+                  }
+                  value={appOptions.autoListeningPortCount}
+                  onSubmit={async (v) => {
+                    await BApi.options.patchAppOptions({
+                      autoListeningPortCount: v,
+                    });
+                    toast.success(t<string>("Saved"));
+                  }}
+                />
               );
-            })}
-          </TableBody>
-        </Table>
-        {/* <Table */}
-        {/*   dataSource={otherSettings} */}
-        {/*   size={'small'} */}
-        {/*   hasHeader={false} */}
-        {/*   cellProps={(r, c) => { */}
-        {/*     return { */}
-        {/*       className: c == 0 ? 'key' : c == 1 ? 'value' : '', */}
-        {/*     }; */}
-        {/*   }} */}
-        {/* > */}
-        {/*   <Table.Column */}
-        {/*     dataIndex={'label'} */}
-        {/*     width={300} */}
-        {/*     title={i18n.t<string>('Other setting')} */}
-        {/*     cell={(l, i, r) => { */}
-        {/*       return ( */}
-        {/*         <div style={{ */}
-        {/*           display: 'flex', */}
-        {/*           alignItems: 'center', */}
-        {/*         }} */}
-        {/*         > */}
-        {/*           {i18n.t<string>(l)} */}
-        {/*           {r.tip && ( */}
-        {/*             <> */}
-        {/*               &nbsp; */}
-        {/*               <Balloon.Tooltip */}
-        {/*                 align={'r'} */}
-        {/*                 trigger={<CustomIcon type={'question-circle'} />} */}
-        {/*               > */}
-        {/*                 {i18n.t<string>(r.tip)} */}
-        {/*               </Balloon.Tooltip> */}
-        {/*             </> */}
-        {/*           )} */}
-        {/*         </div> */}
-        {/*       ); */}
-        {/*     }} */}
-        {/*   /> */}
-        {/*   <Table.Column */}
-        {/*     dataIndex={'renderValue'} */}
-        {/*     title={i18n.t<string>('Value')} */}
-        {/*     cell={(render, i, r) => (render ? render() : r.value)} */}
-        {/*   /> */}
-        {/* </Table> */}
+            },
+          },
+          {
+            label: "Listening ports",
+            tip: "You can set fixed listening ports.",
+            renderValue: () => {
+              const toText = (ports?: number[]) =>
+                ports?.length ? ports.join(", ") : "";
+              const parsePorts = (text?: string) => {
+                const raw = (text ?? "")
+                  .split(/[，,\s]+/)
+                  .map((s) => s.trim())
+                  .filter((s) => s.length > 0);
+                const nums = raw
+                  .map((s) => Number.parseInt(s, 10))
+                  .filter((n) => Number.isFinite(n) && n > 0 && n <= 65535);
+                // de-duplicate, keep order
+                const seen = new Set<number>();
+                const unique: number[] = [];
+
+                for (const n of nums) {
+                  if (!seen.has(n)) {
+                    seen.add(n);
+                    unique.push(n);
+                  }
+                }
+
+                return unique;
+              };
+
+              const max = 6;
+
+              return (
+                <EditableValue<string, InputProps>
+                  Editor={(props) => (
+                    <Input
+                      isClearable
+                      className={"max-w-[420px]"}
+                      description={
+                        <div>
+                          <div>
+                            {t<string>(
+                              "Enter ports separated by commas, e.g. 34567, 34568",
+                            )}
+                          </div>
+                          <div>
+                            {t<string>(
+                              "Changes will take effect after restarting the application",
+                            )}
+                          </div>
+                          <div>
+                            {t<string>(
+                              "Please be careful when setting this value, if you set it to a value that is already in use by another application, our application will not be able to start.",
+                            )}
+                          </div>
+                        </div>
+                      }
+                      placeholder={t<string>("e.g. 34567, 34568")}
+                      {...props}
+                    />
+                  )}
+                  Viewer={({ value }) => {
+                    const ports = (parsePorts(value) as number[]);
+                    if (ports && ports.length > 0) {
+                      return (
+                        <div className={"flex flex-wrap gap-2"}>
+                        {(parsePorts(value) as number[]).map((p) => (
+                          <Chip
+                            key={p}
+                            radius={"sm"}
+                            startContent={
+                              <AiOutlineNumber className={"text-base"} />
+                            }
+                            variant={"flat"}
+                          >
+                            {p}
+                          </Chip>
+                        ))}
+                      </div>
+                      )
+                    }
+                    return null;
+                  }}
+                  value={toText(appOptions.listeningPorts)}
+                  onSubmit={async (text) => {
+                    const ports = parsePorts(text);
+
+                    if (ports.length > max) {
+                      toast.error(
+                        t<string>(
+                          "Too many ports. Up to {{max}} ports are supported.",
+                          {
+                            max,
+                          },
+                        ),
+                      );
+                      throw new Error("invalid");
+                    }
+                    await BApi.options.patchAppOptions({
+                      listeningPorts: ports,
+                    });
+                    toast.success(t<string>("Saved"));
+                  }}
+                />
+              );
+            },
+          },
+        ],
+      );
+      break;
+    case RuntimeMode.Docker:
+      break;
+  }
+
+  if (appContext.apiEndpoints)
+    return (
+      <div className="group">
+        {/* <Title title={i18n.t<string>('Other settings')} /> */}
+        <div className="settings">
+          <Table removeWrapper>
+            <TableHeader>
+              <TableColumn width={200}>
+                {t<string>("Other settings")}
+              </TableColumn>
+              <TableColumn>&nbsp;</TableColumn>
+            </TableHeader>
+            <TableBody>
+              {otherSettings.map((c, i) => {
+                return (
+                  <TableRow
+                    key={i}
+                    className={"hover:bg-[var(--bakaui-overlap-background)]"}
+                  >
+                    <TableCell>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        {c.tip ? (
+                          <Tooltip
+                            className="max-w-[300px]"
+                            color={"secondary"}
+                            content={t<string>(c.tip)}
+                            placement={"top"}
+                          >
+                            <div className={"flex items-center gap-1"}>
+                              {t<string>(c.label)}
+                              <AiOutlineQuestionCircle
+                                className={"text-base"}
+                              />
+                            </div>
+                          </Tooltip>
+                        ) : (
+                          t<string>(c.label)
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{c.renderValue()}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
-  );
+    );
 };
 
 Others.displayName = "Others";

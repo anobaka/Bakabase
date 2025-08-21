@@ -51,7 +51,7 @@ const Block = ({
       </div>
       <div className={"flex gap-1"}>
         <Divider className={"h-auto"} orientation={"vertical"} />
-        <div className={"grow"}>{children}</div>
+        <div className={"grow pl-4"}>{children}</div>
       </div>
     </div>
   );

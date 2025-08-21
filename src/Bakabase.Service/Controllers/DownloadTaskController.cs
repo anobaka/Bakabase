@@ -150,13 +150,13 @@ public class DownloadTaskController : Controller
 
     [HttpGet("xlsx")]
     [SwaggerOperation(OperationId = "ExportAllDownloadTasks")]
-    public async Task<BaseResponse> Export()
+    public async Task<ActionResult> Export()
     {
-        await _service.Export();
-        FileService.Open(_guiAdapter.GetDownloadsDirectory(), false);
-        return BaseResponseBuilder.Ok;
+        var xlsxBytes = await _service.Export();
+        var filename = $"download-tasks-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+        return File(xlsxBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
     }
-
+    
     [SwaggerOperation(OperationId = "GetDownloaderOptions")]
     [HttpGet("downloader/options/{thirdPartyId}")]
     public async Task<SingletonResponse<DownloaderOptions>> GetDownloaderOptions(ThirdPartyId thirdPartyId, int taskType)

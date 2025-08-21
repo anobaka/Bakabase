@@ -205,7 +205,7 @@ const Template = ({
         )}
         leftIcon={<IoLocate className={"text-large"} />}
         rightIcon={<AiOutlinePlusCircle className={"text-large"} />}
-        title={t<string>("Resource filter")}
+        title={`1. ${t<string>("Resource filter")}`}
         onRightIconPress={() => {
           createPortal(PathFilterModal, {
             onSubmit: async (f) => {
@@ -271,7 +271,7 @@ const Template = ({
         )}
         leftIcon={<IoPlayCircleOutline className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-base"} />}
-        title={t<string>("Playable(Runnable) files")}
+        title={`2. ${t<string>("Playable(Runnable) files")}`}
         onRightIconPress={() => {
           createPortal(PlayableFileSelectorModal, {
             selection: template.playableFileLocator,
@@ -313,7 +313,7 @@ const Template = ({
         )}
         leftIcon={<TbDatabase className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-large"} />}
-        title={t<string>("Properties")}
+        title={`3. ${t<string>("Properties")}`}
         onRightIconPress={() => {
           createPortal(PropertySelectorPage, {
             v2: true,
@@ -334,63 +334,71 @@ const Template = ({
           });
         }}
       >
-        <div className={"flex flex-col gap-1"}>
+        <div className={"flex flex-wrap items-center gap-1"}>
           {template.properties?.map((p, i) => {
             return (
-              <div className={"flex items-center gap-2"}>
-                <BriefProperty
-                  fields={["name", "pool", "type"]}
-                  property={p.property}
-                />
-                <div className={"flex items-center gap-1"}>
-                  {p.valueLocators?.map((v) => {
-                    return (
-                      <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
-                        <PathPropertyExtractorDemonstrator locator={v} />
-                      </Chip>
-                    );
-                  })}
+              <>
+                <div
+                  key={`${p.pool}-${p.id}`}
+                  className={"flex items-center gap-2"}
+                >
+                  <BriefProperty
+                    fields={["name", "pool", "type"]}
+                    property={p.property}
+                  />
+                  <div className={"flex items-center gap-1"}>
+                    {p.valueLocators?.map((v) => {
+                      return (
+                        <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                          <PathPropertyExtractorDemonstrator locator={v} />
+                        </Chip>
+                      );
+                    })}
+                  </div>
+                  <div className={"flex items-center gap-1"}>
+                    <Button
+                      isIconOnly
+                      size={"sm"}
+                      variant={"light"}
+                      onPress={() => {
+                        createPortal(PathPropertyExtractorModal, {
+                          locators: p.valueLocators,
+                          onSubmit: async (vls) => {
+                            p.valueLocators = vls;
+                            await putTemplate(template);
+                            forceUpdate();
+                          },
+                        });
+                      }}
+                    >
+                      <IoLocate className={"text-base"} />
+                    </Button>
+                    <Button
+                      isIconOnly
+                      color={"danger"}
+                      size={"sm"}
+                      variant={"light"}
+                      onPress={() => {
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: t<string>("Delete resource filter"),
+                          children: t<string>("Sure to delete?"),
+                          onOk: async () => {
+                            template.properties?.splice(i, 1);
+                            await putTemplate(template);
+                            forceUpdate();
+                          },
+                        });
+                      }}
+                    >
+                      <AiOutlineDelete className={"text-base"} />
+                    </Button>
+                  </div>
                 </div>
-                <div className={"flex items-center gap-1"}>
-                  <Button
-                    isIconOnly
-                    size={"sm"}
-                    variant={"light"}
-                    onPress={() => {
-                      createPortal(PathPropertyExtractorModal, {
-                        locators: p.valueLocators,
-                        onSubmit: async (vls) => {
-                          p.valueLocators = vls;
-                          await putTemplate(template);
-                          forceUpdate();
-                        },
-                      });
-                    }}
-                  >
-                    <IoLocate className={"text-base"} />
-                  </Button>
-                  <Button
-                    isIconOnly
-                    color={"danger"}
-                    size={"sm"}
-                    variant={"light"}
-                    onPress={() => {
-                      createPortal(Modal, {
-                        defaultVisible: true,
-                        title: t<string>("Delete resource filter"),
-                        children: t<string>("Sure to delete?"),
-                        onOk: async () => {
-                          template.properties?.splice(i, 1);
-                          await putTemplate(template);
-                          forceUpdate();
-                        },
-                      });
-                    }}
-                  >
-                    <AiOutlineDelete className={"text-base"} />
-                  </Button>
-                </div>
-              </div>
+                {i < template.properties!.length - 1 && (
+                  <div className="w-[1px] h-[12px] bg-divider" />
+                )}
+              </>
             );
           })}
         </div>
@@ -401,7 +409,7 @@ const Template = ({
         )}
         leftIcon={<IoRocketOutline className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-large"} />}
-        title={t<string>("Enhancers")}
+        title={`4. ${t<string>("Enhancers")}`}
         onRightIconPress={() => {
           createPortal(EnhancerSelectorModal, {
             selectedIds: template.enhancers?.map((e) => e.enhancerId),
@@ -572,8 +580,8 @@ const Template = ({
                 )}
                 <div>
                   {e.targetOptions ? (
-                    <div className={"flex flex-col gap-1"}>
-                      {enhancer?.targets?.map((target) => {
+                    <div className={"flex flex-wrap items-center gap-1"}>
+                      {enhancer?.targets?.map((target, tIdx) => {
                         const tos = e.targetOptions!.filter(
                           (x) => x.target == target.id,
                         );
@@ -647,6 +655,9 @@ const Template = ({
                                   </div>
                                 );
                               })}
+                              {tIdx < enhancer?.targets?.length - 1 && (
+                                <div className="w-[1px] h-full bg-divider" />
+                              )}
                             </>
                           );
                         } else {
@@ -658,9 +669,19 @@ const Template = ({
                               : undefined;
 
                           return (
-                            <div className={"flex items-center gap-1"}>
-                              {target.description ? (
-                                <Tooltip content={target.description}>
+                            <>
+                              <div className={"flex items-center gap-1"}>
+                                {target.description ? (
+                                  <Tooltip content={target.description}>
+                                    <Chip
+                                      radius={"sm"}
+                                      size={"sm"}
+                                      variant={"flat"}
+                                    >
+                                      {target.name}
+                                    </Chip>
+                                  </Tooltip>
+                                ) : (
                                   <Chip
                                     radius={"sm"}
                                     size={"sm"}
@@ -668,33 +689,32 @@ const Template = ({
                                   >
                                     {target.name}
                                   </Chip>
-                                </Tooltip>
-                              ) : (
-                                <Chip
-                                  radius={"sm"}
-                                  size={"sm"}
-                                  variant={"flat"}
-                                >
-                                  {target.name}
-                                </Chip>
+                                )}
+                                <TiChevronRightOutline
+                                  className={"text-base"}
+                                />
+                                {to.autoBindProperty ? (
+                                  t<string>("Auto bind property")
+                                ) : property ? (
+                                  <BriefProperty property={property} />
+                                ) : (
+                                  t<string>("Unknown property")
+                                )}
+                                {to.autoMatchMultilevelString &&
+                                  t<string>("Auto match multilevel string")}
+                              </div>
+                              {tIdx < enhancer?.targets?.length - 1 && (
+                                <div className="w-[1px] h-[12px] bg-divider" />
                               )}
-                              <TiChevronRightOutline className={"text-base"} />
-                              {to.autoBindProperty ? (
-                                t<string>("Auto bind property")
-                              ) : property ? (
-                                <BriefProperty property={property} />
-                              ) : (
-                                t<string>("Unknown property")
-                              )}
-                              {to.autoMatchMultilevelString &&
-                                t<string>("Auto match multilevel string")}
-                            </div>
+                            </>
                           );
                         }
                       })}
                     </div>
                   ) : (
-                    t<string>("Not configured")
+                    <div className="opacity-60">
+                      {t<string>("Not configured")}
+                    </div>
                   )}
                 </div>
               </div>
@@ -708,7 +728,7 @@ const Template = ({
         )}
         leftIcon={<MdOutlineSubtitles className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-large"} />}
-        title={t<string>("Display name template")}
+        title={`5. ${t<string>("Display name template")}`}
         onRightIconPress={() => {
           createPortal(DisplayNameTemplateEditorModal, {
             properties: template.properties?.map((p) => p.property!) ?? [],
@@ -724,9 +744,11 @@ const Template = ({
         {template.displayNameTemplate}
       </Block>
       <Block
-        description={t<string>('You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.')}
-        descriptionPlacement={'bottom'}
-        title={t<string>('Subresource')}
+        description={t<string>(
+          "You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.",
+        )}
+        descriptionPlacement={"bottom"}
+        title={`6. ${t<string>("Subresource")}`}
         leftIcon={<TiFlowChildren className={"text-large"} />}
         // rightIcon={<AiOutlineEdit className={'text-large'} />}
         // onRightIconPress={() => {
