@@ -89,11 +89,13 @@ jobs:
             artifact: win-x64
             csproj: Bakabase/src/Bakabase/Bakabase.csproj
             nuget-path: ~\\.nuget\\packages
+            runtimeMode: WINFORMS
           - os: ubuntu-latest
             rid: linux-x64
             artifact: docker
             csproj: Bakabase/src/Bakabase.Service/Bakabase.Service.csproj
             nuget-path: ~/.nuget/packages
+            runtimeMode: DOCKER
     steps:
       - name: Checkout main repo
         uses: actions/checkout@v4
@@ -116,7 +118,7 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
       - name: Build Bakabase project
-        run: dotnet publish ${{matrix.csproj}} --self-contained -r ${{ matrix.rid }} -o ./publish
+        run: dotnet publish -p:RuntimeMode=${{ matrix.runtimeMode }} ${{matrix.csproj}} --self-contained -r ${{ matrix.rid }} -o ./publish
       - name: Download frontend artifact
         uses: actions/download-artifact@v4
         with:
