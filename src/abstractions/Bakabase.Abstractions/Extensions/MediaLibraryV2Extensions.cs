@@ -19,6 +19,7 @@ public static class MediaLibraryV2Extensions
             TemplateId = model.TemplateId,
             ResourceCount = model.ResourceCount,
             Color = model.Color,
+            SyncVersion = model.SyncVersion,
             Players = JsonConvert.SerializeObject(model.Players?.Select(p => p.ToDbModel()))
         };
     }
@@ -36,6 +37,7 @@ public static class MediaLibraryV2Extensions
             TemplateId = dbModel.TemplateId,
             ResourceCount = dbModel.ResourceCount,
             Color = dbModel.Color,
+            SyncVersion = dbModel.SyncVersion,
         };
         if (!string.IsNullOrEmpty(dbModel.Players))
         {

@@ -16,7 +16,7 @@ public enum PresetResourceType
     [Display(Name = "PresetResourceType_Movie", ResourceType = typeof(Resources.PresetsResource))]
     [PresetResourceType([
         P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Director, P.Actor, P.Language, P.SubtitleLanguage
-    ], [], MediaType.Video)]
+    ], [EnhancerId.Tmdb], MediaType.Video)]
     Movie,
 
     [Display(Name = "PresetResourceType_Anime", ResourceType = typeof(Resources.PresetsResource))]
@@ -42,14 +42,14 @@ public enum PresetResourceType
         P.Language,
         P.SubtitleLanguage,
         P.Tag
-    ], [], MediaType.Video)]
+    ], [EnhancerId.Tmdb], MediaType.Video)]
     TvSeries,
 
     [Display(Name = "PresetResourceType_TvShow", ResourceType = typeof(Resources.PresetsResource))]
     [PresetResourceType([
         P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.EpisodeCount, P.Director, P.Actor, P.Language,
         P.SubtitleLanguage, P.Tag
-    ], [], MediaType.Video)]
+    ], [EnhancerId.Tmdb], MediaType.Video)]
     TvShow,
 
     [Display(Name = "PresetResourceType_Documentary",
@@ -57,7 +57,7 @@ public enum PresetResourceType
     [PresetResourceType([
         P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.ReleaseDate, P.Director, P.Duration, P.Language,
         P.SubtitleLanguage, P.Tag
-    ], [], MediaType.Video)]
+    ], [EnhancerId.Tmdb], MediaType.Video)]
     Documentary,
 
     [Display(Name = "PresetResourceType_Clip", ResourceType = typeof(Resources.PresetsResource))]
@@ -81,11 +81,11 @@ public enum PresetResourceType
     [Display(Name = "PresetResourceType_Av", ResourceType = typeof(Resources.PresetsResource))]
     [PresetResourceType([
         P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.Actor, P.Publisher, P.IsCensored, P.Tag
-    ], [], MediaType.Video)]
+    ], [EnhancerId.Av], MediaType.Video)]
     Av,
 
     [Display(Name = "PresetResourceType_AvClip", ResourceType = typeof(Resources.PresetsResource))]
-    [PresetResourceType([P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.Actor, P.IsCensored, P.Tag], [],
+    [PresetResourceType([P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.Actor, P.IsCensored, P.Tag], [EnhancerId.Av],
         MediaType.Video)]
     AvClip,
 
@@ -93,7 +93,7 @@ public enum PresetResourceType
         ResourceType = typeof(Resources.PresetsResource))]
     [PresetResourceType([
         P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.Actor, P.IsCensored, P.Tag, P.SubscriptionPlatform
-    ], [], MediaType.Video)]
+    ], [EnhancerId.Av], MediaType.Video)]
     AvSubscription,
 
     [Display(Name = "PresetResourceType_Mmd", ResourceType = typeof(Resources.PresetsResource))]
@@ -114,7 +114,7 @@ public enum PresetResourceType
     Vr,
 
     [Display(Name = "PresetResourceType_VrAv", ResourceType = typeof(Resources.PresetsResource))]
-    [PresetResourceType([P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.Actor, P.IsCensored, P.Tag], [],
+    [PresetResourceType([P.Duration, P.Name, P.Tag, P.ReleaseDate, P.Type, P.Name, P.Actor, P.IsCensored, P.Tag], [EnhancerId.Av],
         MediaType.Video)]
     VrAv,
 

@@ -47,11 +47,27 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
         return BaseResponseBuilder.Ok;
     }
 
+    [HttpPatch("{id:int}")]
+    [SwaggerOperation(OperationId = "PatchMediaLibraryV2")]
+    public async Task<BaseResponse> Patch(int id, [FromBody] MediaLibraryV2PatchInputModel model)
+    {
+        await service.Patch(id, model);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPatch("mark-as-synced")]
+    [SwaggerOperation(OperationId = "MarkMediaLibraryV2AsSynced")]
+    public async Task<BaseResponse> MarkAsSynced([FromBody] int[] ids)
+    {
+        await service.MarkAsSynced(ids);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpPut]
     [SwaggerOperation(OperationId = "SaveAllMediaLibrariesV2")]
     public async Task<BaseResponse> SaveAll([FromBody] MediaLibraryV2[] model)
     {
-        await service.SaveAll(model);
+        await service.ReplaceAll(model);
         return BaseResponseBuilder.Ok;
     }
 
@@ -77,5 +93,13 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
     {
         await service.StartSyncAll();
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("outdated")]
+    [SwaggerOperation(OperationId = "GetOutdatedMediaLibrariesV2")]
+    public async Task<ListResponse<MediaLibraryV2>> GetOutdated()
+    {
+        var items = await service.GetAllSyncMayBeOutdated();
+        return new ListResponse<MediaLibraryV2>(items);
     }
 }

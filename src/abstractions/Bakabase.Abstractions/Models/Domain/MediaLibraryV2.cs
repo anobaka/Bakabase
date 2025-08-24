@@ -8,7 +8,21 @@ public record MediaLibraryV2
     public int? TemplateId { get; set; }
     public int ResourceCount { get; set; }
     public string? Color { get; set; }
+    public string? SyncVersion { get; set; }
     public List<MediaLibraryPlayer>? Players { get; set; }
 
     public MediaLibraryTemplate? Template { get; set; }
+
+    public bool SyncMayBeOutdated
+    {
+        get
+        {
+            if (Template != null)
+            {
+                return SyncVersion != Template?.GetSyncVersion();
+            }
+
+            return false;
+        }
+    }
 }

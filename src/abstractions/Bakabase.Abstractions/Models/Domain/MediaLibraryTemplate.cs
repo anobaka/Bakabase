@@ -1,6 +1,10 @@
-﻿namespace Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Components;
+using Bootstrap.Components.Cryptography;
+using Bootstrap.Extensions;
 
-public record MediaLibraryTemplate
+namespace Bakabase.Abstractions.Models.Domain;
+
+public record MediaLibraryTemplate : ISyncVersion
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
@@ -17,4 +21,36 @@ public record MediaLibraryTemplate
     public List<string>? SamplePaths { get; set; }
     public int? ChildTemplateId { get; set; }
     public MediaLibraryTemplate? Child { get; set; }
+
+    public string GetSyncVersion()
+    {
+        var versions = new List<string>();
+        if (ResourceFilters != null)
+        {
+            foreach (var rf in ResourceFilters)
+            {
+                var rfv = rf.GetSyncVersion();
+                if (rfv.IsNotEmpty())
+                {
+                    versions.Add(rfv);
+                }
+            }
+        }
+
+        if (Properties != null)
+        {
+            foreach (var p in Properties.OrderBy(d => d.Pool).ThenBy(d => d.Id))
+            {
+                var pv = p.GetSyncVersion();
+                if (pv.IsNotEmpty())
+                {
+                    versions.Add(pv);
+                }
+            }
+        }
+
+        versions.Add(Child?.GetSyncVersion() ?? "");
+
+        return CryptographyUtils.Md5(string.Join(',', versions));
+    }
 }

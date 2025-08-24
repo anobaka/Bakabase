@@ -244,7 +244,16 @@ export type BakabaseAbstractionsModelsDomainConstantsSpecialTextType = 1 | 3 | 4
  * [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsStandardValueType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+export type BakabaseAbstractionsModelsDomainConstantsStandardValueType =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9;
 
 export interface BakabaseAbstractionsModelsDomainCustomProperty {
   /** @format int32 */
@@ -296,7 +305,10 @@ export interface BakabaseAbstractionsModelsDomainMediaLibrary {
   order: number;
   /** @format int32 */
   resourceCount: number;
-  fileSystemInformation?: Record<string, BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation>;
+  fileSystemInformation?: Record<
+    string,
+    BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation
+  >;
   category?: BakabaseAbstractionsModelsDomainCategory;
   pathConfigurations?: BakabaseAbstractionsModelsDomainPathConfiguration[];
 }
@@ -378,8 +390,10 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   /** @format int32 */
   resourceCount: number;
   color?: string;
+  syncVersion?: string;
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
   template?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
+  syncMayBeOutdated: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfiguration {
@@ -683,6 +697,15 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
 }
 
+export interface BakabaseAbstractionsModelsInputMediaLibraryV2PatchInputModel {
+  name?: string;
+  paths?: string[];
+  /** @format int32 */
+  resourceCount?: number;
+  color?: string;
+  syncVersion?: string;
+}
+
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
   /** @format int32 */
   propertyId: number;
@@ -750,7 +773,11 @@ export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibrar
  * [1: StaticText, 2: Property, 3: LeftWrapper, 4: RightWrapper]
  * @format int32
  */
-export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType = 1 | 2 | 3 | 4;
+export type BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType =
+  | 1
+  | 2
+  | 3
+  | 4;
 
 export interface BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel {
   noNeedToConfigure: boolean;
@@ -1334,43 +1361,28 @@ export interface BakabaseInsideWorldBusinessComponentsDependencyImplementationsF
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskAction =
-  | 1
-  | 2
-  | 3
-  | 4;
+  1 | 2 | 3 | 4;
 
 /**
  * [0: NotSet, 1: StopOthers, 2: Ignore]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict =
-  | 0
-  | 1
-  | 2;
+  0 | 1 | 2;
 
 /**
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDtoStatus =
-  | 100
-  | 200
-  | 300
-  | 400
-  | 500
-  | 600
-  | 700
-  | 800;
+  100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
 
 /**
  * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus =
-  | 100
-  | 200
-  | 300
-  | 400;
+  100 | 200 | 300 | 400;
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
   /** @format int32 */
@@ -1577,13 +1589,19 @@ export type BakabaseInsideWorldBusinessComponentsFileExplorerIwFsType =
  * [1: TitleCase, 2: UpperCase, 3: LowerCase, 4: CamelCase, 5: PascalCase]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierCaseType = 1 | 2 | 3 | 4 | 5;
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierCaseType =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
 
 /**
  * [1: FileName, 2: FileNameWithoutExtension, 3: Extension, 4: ExtensionWithoutDot]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierFileNameTarget = 1 | 2 | 3 | 4;
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierFileNameTarget =
+  1 | 2 | 3 | 4;
 
 export interface BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation {
   /** [1: FileName, 2: FileNameWithoutExtension, 3: Extension, 4: ExtensionWithoutDot] */
@@ -1614,19 +1632,18 @@ export interface BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFile
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperationType =
-  | 1
-  | 2
-  | 3
-  | 4
-  | 5
-  | 6
-  | 7;
+  1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 /**
  * [1: Start, 2: End, 3: AtPosition, 4: AfterText, 5: BeforeText]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierPosition = 1 | 2 | 3 | 4 | 5;
+export type BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierPosition =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5;
 
 export interface BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList {
   /** @format int32 */
@@ -1669,7 +1686,8 @@ export interface BakabaseInsideWorldBusinessComponentsPlayListModelsInputPlayLis
  * [5: SoulPlus]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource = 5;
+export type BakabaseInsideWorldBusinessComponentsPostParserModelsDomainConstantsPostParserSource =
+  5;
 
 export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPostParserTask {
   /** @format int32 */
@@ -1696,7 +1714,9 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
  * [1: SoulPlus, 2: ExHentai]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript = 1 | 2;
+export type BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript =
+  | 1
+  | 2;
 
 export interface BakabaseInsideWorldModelsConfigsEnhancerOptions {
   regexEnhancer?: BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel;
@@ -1822,25 +1842,39 @@ export type BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource =
  * [0: None, 1: Components, 3: Validation, 4: CustomProperties, 8: EnhancerOptions]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsCategoryAdditionalItem = 0 | 1 | 3 | 4 | 8;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsCategoryAdditionalItem =
+  | 0
+  | 1
+  | 3
+  | 4
+  | 8;
 
 /**
  * [0: None, 1: AssociatedCategories]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem = 0 | 1;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsComponentDescriptorAdditionalItem =
+  | 0
+  | 1;
 
 /**
  * [0: None, 1: Category, 2: ValueCount]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem = 0 | 1 | 2;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsCustomPropertyAdditionalItem =
+  | 0
+  | 1
+  | 2;
 
 /**
  * [0: None, 1: Category, 2: FileSystemInfo, 4: PathConfigurationBoundProperties]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem = 0 | 1 | 2 | 4;
+export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditionalItem =
+  | 0
+  | 1
+  | 2
+  | 4;
 
 /**
  * [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
@@ -1867,7 +1901,12 @@ export type BakabaseInsideWorldModelsConstantsAosPasswordSearchOrder = 1 | 2;
  * [1: FileCreateDt, 2: FileModifyDt, 3: Filename, 6: AddDt, 11: PlayedAt]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty = 1 | 2 | 3 | 6 | 11;
+export type BakabaseInsideWorldModelsConstantsAosResourceSearchSortableProperty =
+  | 1
+  | 2
+  | 3
+  | 6
+  | 11;
 
 /**
  * [0: Invalid, 1: Fixed, 2: Configurable, 3: Instance]
@@ -1945,7 +1984,18 @@ export type BakabaseInsideWorldModelsConstantsStartupPage = 0 | 1;
  * [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsThirdPartyId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
+export type BakabaseInsideWorldModelsConstantsThirdPartyId =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11;
 
 export interface BakabaseInsideWorldModelsModelsAosMediaLibraryFileSystemInformation {
   /** @format int64 */
@@ -2171,7 +2221,9 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDes
  * [0: None, 1: GeneratedPropertyValue]
  * @format int32
  */
-export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem = 0 | 1;
+export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementAdditionalItem =
+  | 0
+  | 1;
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
   targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[];
@@ -2318,7 +2370,10 @@ export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePre
   resourceTypes: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolResourceType[];
   properties: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolProperty[];
   enhancers: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer[];
-  resourceTypePresetPropertyIds: Record<string, BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty[]>;
+  resourceTypePresetPropertyIds: Record<
+    string,
+    BakabaseModulesPresetsAbstractionsModelsConstantsPresetProperty[]
+  >;
   resourceTypeEnhancerIds: Record<string, BakabaseModulesEnhancerModelsDomainConstantsEnhancerId[]>;
 }
 
@@ -2439,23 +2494,24 @@ export interface BakabaseModulesSearchModelsDbResourceSearchFilterGroupDbModel {
  * @format int32
  */
 export type BakabaseModulesStandardValueAbstractionsModelsDomainConstantsStandardValueConversionRule =
-  | 1
-  | 2
-  | 4
-  | 8
-  | 16
-  | 64
-  | 128
-  | 256
-  | 1024
-  | 2048
-  | 8192
-  | 16384
-  | 32768
-  | 65536
-  | 131072
-  | 262144
-  | 524288;
+
+    | 1
+    | 2
+    | 4
+    | 8
+    | 16
+    | 64
+    | 128
+    | 256
+    | 1024
+    | 2048
+    | 8192
+    | 16384
+    | 32768
+    | 65536
+    | 131072
+    | 262144
+    | 524288;
 
 export interface BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel {
   /** [1: Directly, 2: Incompatible, 4: ValuesWillBeMerged, 8: DateWillBeLost, 16: StringToTag, 64: OnlyFirstValidRemains, 128: StringToDateTime, 256: StringToTime, 1024: UrlWillBeLost, 2048: StringToNumber, 8192: Trim, 16384: StringToLink, 32768: ValueWillBeSplit, 65536: BooleanToNumber, 131072: TimeToDateTime, 262144: TagGroupWillBeLost, 524288: ValueToBoolean] */
@@ -3533,7 +3589,10 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   /** @format int32 */
   code: number;
   message?: string;
-  data?: Record<string, Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>>;
+  data?: Record<
+    string,
+    Record<string, BakabaseModulesStandardValueModelsViewStandardValueConversionRuleViewModel[]>
+  >;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemCollectionsGenericList1BakabaseAbstractionsModelsDomainSpecialText {
@@ -3947,7 +4006,18 @@ export interface SystemReflectionModule {
  * [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask]
  * @format int32
  */
-export type SystemReflectionParameterAttributes = 0 | 1 | 2 | 4 | 8 | 16 | 4096 | 8192 | 16384 | 32768 | 61440;
+export type SystemReflectionParameterAttributes =
+  | 0
+  | 1
+  | 2
+  | 4
+  | 8
+  | 16
+  | 4096
+  | 8192
+  | 16384
+  | 32768
+  | 61440;
 
 export interface SystemReflectionParameterInfo {
   /** [0: None, 1: In, 2: Out, 4: Lcid, 8: Retval, 16: Optional, 4096: HasDefault, 8192: HasFieldMarshal, 16384: Reserved3, 32768: Reserved4, 61440: ReservedMask] */
@@ -3974,7 +4044,15 @@ export interface SystemReflectionParameterInfo {
  * [0: None, 512: SpecialName, 1024: RTSpecialName, 4096: HasDefault, 8192: Reserved2, 16384: Reserved3, 32768: Reserved4, 62464: ReservedMask]
  * @format int32
  */
-export type SystemReflectionPropertyAttributes = 0 | 512 | 1024 | 4096 | 8192 | 16384 | 32768 | 62464;
+export type SystemReflectionPropertyAttributes =
+  | 0
+  | 512
+  | 1024
+  | 4096
+  | 8192
+  | 16384
+  | 32768
+  | 62464;
 
 export interface SystemReflectionPropertyInfo {
   name: string;
@@ -4277,7 +4355,9 @@ export type RequestParams = Omit<FullRequestParams, "body" | "method" | "query" 
 export interface ApiConfig<SecurityDataType = unknown> {
   baseUrl?: string;
   baseApiParams?: Omit<RequestParams, "baseUrl" | "cancelToken" | "signal">;
-  securityWorker?: (securityData: SecurityDataType | null) => Promise<RequestParams | void> | RequestParams | void;
+  securityWorker?: (
+    securityData: SecurityDataType | null,
+  ) => Promise<RequestParams | void> | RequestParams | void;
   customFetch?: typeof fetch;
 }
 
@@ -4335,7 +4415,11 @@ export class HttpClient<SecurityDataType = unknown> {
     const query = rawQuery || {};
     const keys = Object.keys(query).filter((key) => "undefined" !== typeof query[key]);
     return keys
-      .map((key) => (Array.isArray(query[key]) ? this.addArrayQueryParam(query, key) : this.addQueryParam(query, key)))
+      .map((key) =>
+        Array.isArray(query[key])
+          ? this.addArrayQueryParam(query, key)
+          : this.addQueryParam(query, key),
+      )
       .join("&");
   }
 
@@ -4346,8 +4430,11 @@ export class HttpClient<SecurityDataType = unknown> {
 
   private contentFormatters: Record<ContentType, (input: any) => any> = {
     [ContentType.Json]: (input: any) =>
-      input !== null && (typeof input === "object" || typeof input === "string") ? JSON.stringify(input) : input,
-    [ContentType.Text]: (input: any) => (input !== null && typeof input !== "string" ? JSON.stringify(input) : input),
+      input !== null && (typeof input === "object" || typeof input === "string")
+        ? JSON.stringify(input)
+        : input,
+    [ContentType.Text]: (input: any) =>
+      input !== null && typeof input !== "string" ? JSON.stringify(input) : input,
     [ContentType.FormData]: (input: any) =>
       Object.keys(input || {}).reduce((formData, key) => {
         const property = input[key];
@@ -4422,15 +4509,18 @@ export class HttpClient<SecurityDataType = unknown> {
     const payloadFormatter = this.contentFormatters[type || ContentType.Json];
     const responseFormat = format || requestParams.format;
 
-    return this.customFetch(`${baseUrl || this.baseUrl || ""}${path}${queryString ? `?${queryString}` : ""}`, {
-      ...requestParams,
-      headers: {
-        ...(requestParams.headers || {}),
-        ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+    return this.customFetch(
+      `${baseUrl || this.baseUrl || ""}${path}${queryString ? `?${queryString}` : ""}`,
+      {
+        ...requestParams,
+        headers: {
+          ...(requestParams.headers || {}),
+          ...(type && type !== ContentType.FormData ? { "Content-Type": type } : {}),
+        },
+        signal: cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal,
+        body: typeof body === "undefined" || body === null ? null : payloadFormatter(body),
       },
-      signal: cancelToken ? this.createAbortSignal(cancelToken) : requestParams.signal,
-      body: typeof body === "undefined" || body === null ? null : payloadFormatter(body),
-    }).then(async (response) => {
+    ).then(async (response) => {
       const r = response as HttpResponse<T, E>;
       r.data = null as unknown as T;
       r.error = null as unknown as E;
@@ -4535,7 +4625,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAliasAbstractionsModelsDomainAlias, any>({
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseModulesAliasAbstractionsModelsDomainAlias,
+        any
+      >({
         path: `/alias`,
         method: "GET",
         query: query,
@@ -4574,7 +4667,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddAlias
      * @request POST:/alias
      */
-    addAlias: (data: BakabaseModulesAliasModelsInputAliasAddInputModel, params: RequestParams = {}) =>
+    addAlias: (
+      data: BakabaseModulesAliasModelsInputAliasAddInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/alias`,
         method: "POST",
@@ -4950,7 +5046,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/bulk-modification/all
      */
     getAllBulkModifications: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewBulkModificationViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewBulkModificationViewModel,
+        any
+      >({
         path: `/bulk-modification/all`,
         method: "GET",
         format: "json",
@@ -5140,7 +5239,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCategoryViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCategoryViewModel,
+        any
+      >({
         path: `/category/${id}`,
         method: "GET",
         query: query,
@@ -5198,7 +5300,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCategoryViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCategoryViewModel,
+        any
+      >({
         path: `/category`,
         method: "GET",
         query: query,
@@ -5213,7 +5318,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddCategory
      * @request POST:/category
      */
-    addCategory: (data: BakabaseAbstractionsModelsInputCategoryAddInputModel, params: RequestParams = {}) =>
+    addCategory: (
+      data: BakabaseAbstractionsModelsInputCategoryAddInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category`,
         method: "POST",
@@ -5251,7 +5359,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutCategoryResourceDisplayNameTemplate
      * @request PUT:/category/{id}/resource-display-name-template
      */
-    putCategoryResourceDisplayNameTemplate: (id: number, data: string, params: RequestParams = {}) =>
+    putCategoryResourceDisplayNameTemplate: (
+      id: number,
+      data: string,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${id}/resource-display-name-template`,
         method: "PUT",
@@ -5289,7 +5401,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SortCategories
      * @request PUT:/category/orders
      */
-    sortCategories: (data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel, params: RequestParams = {}) =>
+    sortCategories: (
+      data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/orders`,
         method: "PUT",
@@ -5327,7 +5442,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name BindCustomPropertyToCategory
      * @request POST:/category/{categoryId}/custom-property/{customPropertyId}
      */
-    bindCustomPropertyToCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
+    bindCustomPropertyToCategory: (
+      categoryId: number,
+      customPropertyId: number,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${categoryId}/custom-property/${customPropertyId}`,
         method: "POST",
@@ -5342,7 +5461,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name UnlinkCustomPropertyFromCategory
      * @request DELETE:/category/{categoryId}/custom-property/{customPropertyId}
      */
-    unlinkCustomPropertyFromCategory: (categoryId: number, customPropertyId: number, params: RequestParams = {}) =>
+    unlinkCustomPropertyFromCategory: (
+      categoryId: number,
+      customPropertyId: number,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${categoryId}/custom-property/${customPropertyId}`,
         method: "DELETE",
@@ -5615,7 +5738,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor,
+        any
+      >({
         path: `/component`,
         method: "GET",
         query: query,
@@ -5826,7 +5952,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel,
+        any
+      >({
         path: `/custom-property/all`,
         method: "GET",
         query: query,
@@ -5849,7 +5978,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel,
+        any
+      >({
         path: `/custom-property/ids`,
         method: "GET",
         query: query,
@@ -5864,7 +5996,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddCustomProperty
      * @request POST:/custom-property
      */
-    addCustomProperty: (data: BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto, params: RequestParams = {}) =>
+    addCustomProperty: (
+      data: BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto,
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCustomPropertyViewModel,
         any
@@ -5888,7 +6023,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseAbstractionsModelsDtoCustomPropertyAddOrPutDto[],
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel,
+        any
+      >({
         path: `/custom-property/batch`,
         method: "POST",
         body: data,
@@ -5943,7 +6081,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SortCustomProperties
      * @request PUT:/custom-property/order
      */
-    sortCustomProperties: (data: BakabaseServiceModelsInputIdBasedDataSortInputModel, params: RequestParams = {}) =>
+    sortCustomProperties: (
+      data: BakabaseServiceModelsInputIdBasedDataSortInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/custom-property/order`,
         method: "PUT",
@@ -6342,7 +6483,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceEnhancements,
+        any
+      >({
         path: `/resource/${resourceId}/enhancement`,
         method: "GET",
         query: query,
@@ -6357,7 +6501,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteResourceEnhancement
      * @request DELETE:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
      */
-    deleteResourceEnhancement: (resourceId: number, enhancerId: number, params: RequestParams = {}) =>
+    deleteResourceEnhancement: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
         method: "DELETE",
@@ -6372,7 +6520,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name EnhanceResourceByEnhancer
      * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement
      */
-    enhanceResourceByEnhancer: (resourceId: number, enhancerId: number, params: RequestParams = {}) =>
+    enhanceResourceByEnhancer: (
+      resourceId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${resourceId}/enhancer/${enhancerId}/enhancement`,
         method: "POST",
@@ -6480,7 +6632,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SaveNewResourceSearch
      * @request POST:/resource/saved-search
      */
-    saveNewResourceSearch: (data: BakabaseServiceModelsInputSavedSearchAddInputModel, params: RequestParams = {}) =>
+    saveNewResourceSearch: (
+      data: BakabaseServiceModelsInputSavedSearchAddInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/saved-search`,
         method: "POST",
@@ -6498,7 +6653,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/saved-search
      */
     getSavedSearches: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel,
+        any
+      >({
         path: `/resource/saved-search`,
         method: "GET",
         format: "json",
@@ -6551,7 +6709,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource, any>({
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
         path: `/resource/search`,
         method: "POST",
         query: query,
@@ -6568,7 +6729,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SearchAllResourceIds
      * @request POST:/resource/search/ids
      */
-    searchAllResourceIds: (data: BakabaseServiceModelsInputResourceSearchInputModel, params: RequestParams = {}) =>
+    searchAllResourceIds: (
+      data: BakabaseServiceModelsInputResourceSearchInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
         path: `/resource/search/ids`,
         method: "POST",
@@ -6593,7 +6757,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
         path: `/resource/keys`,
         method: "GET",
         query: query,
@@ -6644,7 +6811,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SaveCover
      * @request PUT:/resource/{id}/cover
      */
-    saveCover: (id: number, data: BakabaseServiceModelsInputResourceCoverSaveInputModel, params: RequestParams = {}) =>
+    saveCover: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceCoverSaveInputModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/${id}/cover`,
         method: "PUT",
@@ -6676,7 +6847,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MoveResources
      * @request PUT:/resource/move
      */
-    moveResources: (data: BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel, params: RequestParams = {}) =>
+    moveResources: (
+      data: BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/move`,
         method: "PUT",
@@ -6694,7 +6868,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/{id}/previewer
      */
     getResourceDataForPreviewer: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsAosPreviewerItem,
+        any
+      >({
         path: `/resource/${id}/previewer`,
         method: "GET",
         format: "json",
@@ -6774,7 +6951,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/unknown
      */
     getUnknownResources: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
         path: `/resource/unknown`,
         method: "GET",
         format: "json",
@@ -6866,7 +7046,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePathInfoViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourcePathInfoViewModel,
+        any
+      >({
         path: `/resource/paths`,
         method: "GET",
         query: query,
@@ -6941,6 +7124,29 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByMediaLibraryAndEnhancer
+     * @request DELETE:/media-library/{mediaLibraryId}/enhancer/{enhancerId}/enhancements
+     */
+    deleteEnhancementsByMediaLibraryAndEnhancer: (
+      mediaLibraryId: number,
+      enhancerId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library/${mediaLibraryId}/enhancer/${enhancerId}/enhancements`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags MediaLibrary
      * @name GetAllMediaLibraries
      * @request GET:/media-library
@@ -6952,7 +7158,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibrary,
+        any
+      >({
         path: `/media-library`,
         method: "GET",
         query: query,
@@ -6967,7 +7176,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddMediaLibrary
      * @request POST:/media-library
      */
-    addMediaLibrary: (data: BakabaseAbstractionsModelsDtoMediaLibraryAddDto, params: RequestParams = {}) =>
+    addMediaLibrary: (
+      data: BakabaseAbstractionsModelsDtoMediaLibraryAddDto,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library`,
         method: "POST",
@@ -6992,7 +7204,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibrary, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibrary,
+        any
+      >({
         path: `/media-library/${id}`,
         method: "GET",
         query: query,
@@ -7058,7 +7273,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name ValidatePathConfiguration
      * @request POST:/media-library/path-configuration-validation
      */
-    validatePathConfiguration: (data: BakabaseAbstractionsModelsDomainPathConfiguration, params: RequestParams = {}) =>
+    validatePathConfiguration: (
+      data: BakabaseAbstractionsModelsDomainPathConfiguration,
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathConfigurationTestResult,
         any
@@ -7240,7 +7458,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/extension-group
      */
     getAllExtensionGroups: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainExtensionGroup, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainExtensionGroup,
+        any
+      >({
         path: `/extension-group`,
         method: "GET",
         format: "json",
@@ -7254,8 +7475,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddExtensionGroup
      * @request POST:/extension-group
      */
-    addExtensionGroup: (data: BakabaseAbstractionsModelsInputExtensionGroupAddInputModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup, any>({
+    addExtensionGroup: (
+      data: BakabaseAbstractionsModelsInputExtensionGroupAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup,
+        any
+      >({
         path: `/extension-group`,
         method: "POST",
         body: data,
@@ -7272,7 +7499,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/extension-group/{id}
      */
     getExtensionGroup: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainExtensionGroup,
+        any
+      >({
         path: `/extension-group/${id}`,
         method: "GET",
         format: "json",
@@ -7349,9 +7579,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     searchFileSystemEntries: (
       query?: {
-        prefix?: string;
-        /** @default true */
         isDirectory?: boolean;
+        prefix?: string;
         /**
          * @format int32
          * @default 20
@@ -7473,7 +7702,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name RemoveFiles
      * @request DELETE:/file
      */
-    removeFiles: (data: BakabaseInsideWorldModelsRequestModelsFileRemoveRequestModel, params: RequestParams = {}) =>
+    removeFiles: (
+      data: BakabaseInsideWorldModelsRequestModelsFileRemoveRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file`,
         method: "DELETE",
@@ -7490,7 +7722,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name RenameFile
      * @request PUT:/file/name
      */
-    renameFile: (data: BakabaseInsideWorldModelsRequestModelsFileRenameRequestModel, params: RequestParams = {}) =>
+    renameFile: (
+      data: BakabaseInsideWorldModelsRequestModelsFileRenameRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/file/name`,
         method: "PUT",
@@ -7543,7 +7778,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name MoveEntries
      * @request POST:/file/move-entries
      */
-    moveEntries: (data: BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel, params: RequestParams = {}) =>
+    moveEntries: (
+      data: BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/move-entries`,
         method: "POST",
@@ -7911,8 +8149,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name ModifyFileNames
      * @request POST:/file-name-modifier/modify
      */
-    modifyFileNames: (data: BakabaseServiceModelsInputFileNameModifierProcessInputModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameResult, any>({
+    modifyFileNames: (
+      data: BakabaseServiceModelsInputFileNameModifierProcessInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewFileRenameResult,
+        any
+      >({
         path: `/file-name-modifier/modify`,
         method: "POST",
         body: data,
@@ -8079,15 +8323,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate, any>(
-        {
-          path: `/media-library-template`,
-          method: "GET",
-          query: query,
-          format: "json",
-          ...params,
-        },
-      ),
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -8314,7 +8559,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryV2, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryV2,
+        any
+      >({
         path: `/media-library-v2`,
         method: "GET",
         query: query,
@@ -8349,7 +8597,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name SaveAllMediaLibrariesV2
      * @request PUT:/media-library-v2
      */
-    saveAllMediaLibrariesV2: (data: BakabaseAbstractionsModelsDomainMediaLibraryV2[], params: RequestParams = {}) =>
+    saveAllMediaLibrariesV2: (
+      data: BakabaseAbstractionsModelsDomainMediaLibraryV2[],
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library-v2`,
         method: "PUT",
@@ -8367,7 +8618,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/media-library-v2/{id}
      */
     getMediaLibraryV2: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryV2, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryV2,
+        any
+      >({
         path: `/media-library-v2/${id}`,
         method: "GET",
         format: "json",
@@ -8399,6 +8653,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryV2
+     * @name PatchMediaLibraryV2
+     * @request PATCH:/media-library-v2/{id}
+     */
+    patchMediaLibraryV2: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputMediaLibraryV2PatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-v2/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
      * @name DeleteMediaLibraryV2
      * @request DELETE:/media-library-v2/{id}
      */
@@ -8406,6 +8681,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library-v2/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name MarkMediaLibraryV2AsSynced
+     * @request PATCH:/media-library-v2/mark-as-synced
+     */
+    markMediaLibraryV2AsSynced: (data: number[], params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-v2/mark-as-synced`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -8436,6 +8728,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library-v2/sync-all`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name GetOutdatedMediaLibrariesV2
+     * @request GET:/media-library-v2/outdated
+     */
+    getOutdatedMediaLibrariesV2: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryV2,
+        any
+      >({
+        path: `/media-library-v2/outdated`,
+        method: "GET",
         format: "json",
         ...params,
       }),
@@ -8486,7 +8796,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutAppOptions
      * @request PUT:/options/app
      */
-    putAppOptions: (data: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions, params: RequestParams = {}) =>
+    putAppOptions: (
+      data: BakabaseInfrastructuresComponentsConfigurationsAppAppOptions,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/app`,
         method: "PUT",
@@ -8504,7 +8817,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/ui
      */
     getUiOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIOptions,
+        any
+      >({
         path: `/options/ui`,
         method: "GET",
         format: "json",
@@ -8538,7 +8854,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddLatestUsedProperty
      * @request POST:/options/ui/latest-used-property
      */
-    addLatestUsedProperty: (data: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[], params: RequestParams = {}) =>
+    addLatestUsedProperty: (
+      data: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[],
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/ui/latest-used-property`,
         method: "POST",
@@ -8859,7 +9178,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name PutThirdPartyOptions
      * @request PUT:/options/thirdparty
      */
-    putThirdPartyOptions: (data: BakabaseInsideWorldModelsConfigsThirdPartyOptions, params: RequestParams = {}) =>
+    putThirdPartyOptions: (
+      data: BakabaseInsideWorldModelsConfigsThirdPartyOptions,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/thirdparty`,
         method: "PUT",
@@ -8877,7 +9199,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/network
      */
     getNetworkOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsNetworkOptions, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsNetworkOptions,
+        any
+      >({
         path: `/options/network`,
         method: "GET",
         format: "json",
@@ -8912,14 +9237,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/options/enhancer
      */
     getEnhancerOptions: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsEnhancerOptions, any>(
-        {
-          path: `/options/enhancer`,
-          method: "GET",
-          format: "json",
-          ...params,
-        },
-      ),
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsEnhancerOptions,
+        any
+      >({
+        path: `/options/enhancer`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -9386,7 +9712,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword, any>({
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseInsideWorldModelsModelsEntitiesPassword,
+        any
+      >({
         path: `/password`,
         method: "GET",
         query: query,
@@ -9402,7 +9731,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/password/all
      */
     getAllPasswords: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldModelsModelsEntitiesPassword,
+        any
+      >({
         path: `/password/all`,
         method: "GET",
         format: "json",
@@ -9447,7 +9779,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPlayHistoryDbModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPlayHistoryDbModel,
+        any
+      >({
         path: `/play-history`,
         method: "GET",
         query: query,
@@ -9577,7 +9912,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/playlist/{id}/files
      */
     getPlaylistFiles: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemCollectionsGenericList1SystemString, any>({
+      this.request<
+        BootstrapModelsResponseModelsListResponse1SystemCollectionsGenericList1SystemString,
+        any
+      >({
         path: `/playlist/${id}/files`,
         method: "GET",
         format: "json",
@@ -9673,8 +10011,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetPropertiesByPool
      * @request GET:/property/pool/{pool}
      */
-    getPropertiesByPool: (pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel, any>({
+    getPropertiesByPool: (
+      pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesPropertyModelsViewPropertyViewModel,
+        any
+      >({
         path: `/property/pool/${pool}`,
         method: "GET",
         format: "json",
@@ -9797,8 +10141,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name AddSpecialText
      * @request POST:/special-text
      */
-    addSpecialText: (data: BakabaseAbstractionsModelsInputSpecialTextAddInputModel, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText, any>({
+    addSpecialText: (
+      data: BakabaseAbstractionsModelsInputSpecialTextAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText,
+        any
+      >({
         path: `/special-text`,
         method: "POST",
         body: data,

@@ -6,4 +6,5 @@ public class MediaLibraryV2PatchInputModel
     public List<string>? Paths { get; set; }
     public int? ResourceCount { get; set; }
     public string? Color { get; set; }
+    public string? SyncVersion { get; set; }
 }

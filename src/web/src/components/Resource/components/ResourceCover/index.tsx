@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { Img } from "react-image";
@@ -19,7 +13,8 @@ import MediaPreviewerPage from "@/components/MediaPreviewer";
 import "./index.scss";
 import { useAppContextStore } from "@/stores/appContext";
 import { CoverFit, ResourceCacheType } from "@/sdk/constants";
-import { Carousel, Tooltip } from "@/components/bakaui";
+import { Button, Carousel, Modal, Tooltip } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
@@ -78,6 +73,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   const disableCacheRef = useRef(useCache);
 
   const appContext = useAppContextStore((state) => state);
+  const { createPortal } = useBakabaseContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const maxCoverRawSizeRef = useRef<{ w: number; h: number }>({
@@ -101,9 +97,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const loadCover = useCallback(
     (disableBrowserCache?: boolean) => {
-      const serverAddresses = appContext.apiEndpoints ?? [
-        envConfig.apiEndpoint,
-      ];
+      const serverAddresses = appContext.apiEndpoints ?? [envConfig.apiEndpoint];
 
       const urls: string[] = [];
 
@@ -111,14 +105,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
       if (cps.length == 0) {
         if (useCache) {
-          if (
-            resource.cache &&
-            resource.cache.cachedTypes.includes(ResourceCacheType.Covers)
-          ) {
-            if (
-              resource.cache.coverPaths &&
-              resource.cache.coverPaths.length > 0
-            ) {
+          if (resource.cache && resource.cache.cachedTypes.includes(ResourceCacheType.Covers)) {
+            if (resource.cache.coverPaths && resource.cache.coverPaths.length > 0) {
               cps.push(...resource.cache.coverPaths);
             } else {
               cps.push(resource.path);
@@ -127,14 +115,15 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         }
       }
 
-      const resourceServerAddresses = serverAddresses.length == 1 ? serverAddresses : serverAddresses.slice(1);
-      const serverAddress = resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
+      const resourceServerAddresses =
+        serverAddresses.length == 1 ? serverAddresses : serverAddresses.slice(1);
+      const serverAddress =
+        resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
       if (cps.length > 0) {
         urls.push(
           ...cps.map(
-            (coverPath) =>
-              `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`,
+            (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`,
           ),
         );
       } else {
@@ -143,9 +132,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
       if (disableBrowserCache) {
         for (let i = 0; i < urls.length; i++) {
-          urls[i] += urls[i].includes("?")
-            ? `&v=${uuidv4()}`
-            : `?v=${uuidv4()}`;
+          urls[i] += urls[i].includes("?") ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
         }
       }
       log(urls, resource);
@@ -195,9 +182,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         if (maxCoverRawSizeRef.current.h > containerRef.current.clientHeight) {
           dynamicClassNames.push("h-full");
         }
-        dynamicClassNames.push(
-          coverFit == CoverFit.Cover ? "object-cover" : "object-contain",
-        );
+        dynamicClassNames.push(coverFit == CoverFit.Cover ? "object-cover" : "object-contain");
       }
       const dynamicClassName = dynamicClassNames.join(" ");
 
@@ -226,7 +211,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     fetchPriority={"low"}
                     loader={<LoadingOutlined className={"text-2xl"} />}
                     src={url}
-                    unloader={<MdBrokenImage className={"text-2xl"} />}
+                    unloader={renderBrokenCover()}
                     onError={(e) => {
                       log(e);
                     }}
@@ -266,11 +251,63 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     return null;
   }, [urls, coverFit, disableCarousel]);
 
+  const renderBrokenCover = useCallback(() => {
+    return (
+      <Tooltip content={t<string>("ResourceCover.CoverTips.Tooltip")}>
+        <Button
+          isIconOnly
+          size={"sm"}
+          variant={"light"}
+          onPress={(e) => {
+            createPortal(Modal, {
+              defaultVisible: true,
+              size: 'lg',
+              title: t<string>('ResourceCover.CoverTips.Title'),
+              children: (
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <div className="font-medium">{t<string>('ResourceCover.CoverTips.S1.Title')}</div>
+                    <div className="text-sm mb-1">{t<string>('ResourceCover.CoverTips.S1.Happens')}</div>
+                    <ul className="list-disc pl-5 text-sm">
+                      <li>{t<string>('ResourceCover.CoverTips.S1.When.NotImage')}</li>
+                      <li>{t<string>("ResourceCover.CoverTips.S1.When.NoImageInFolder")}</li>
+                    </ul>
+                    <div className="text-sm mt-1">{t<string>('ResourceCover.CoverTips.S1.Todo')}</div>
+                    <ol className="list-decimal pl-5 text-sm">
+                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.ManualSet')}</li>
+                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.FFmpeg')}</li>
+                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.Enhancers')}</li>
+                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.Cache')}</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <div className="font-medium">{t<string>('ResourceCover.CoverTips.S2.Title')}</div>
+                    <div className="text-sm mb-1">{t<string>('ResourceCover.CoverTips.S2.Happens')}</div>
+                    <ul className="list-disc pl-5 text-sm">
+                      <li>{t<string>('ResourceCover.CoverTips.S2.When.CacheDeleted')}</li>
+                    </ul>
+                    <div className="text-sm mt-1">{t<string>('ResourceCover.CoverTips.S2.Todo')}</div>
+                    <ol className="list-decimal pl-5 text-sm">
+                      <li>{t<string>('ResourceCover.CoverTips.S2.Todo.DisableCache')}</li>
+                    </ol>
+                  </div>
+                </div>
+              ),
+              footer: { actions: ['ok'] },
+            });
+          }}
+        >
+          <MdBrokenImage className={'text-2xl'} />
+        </Button>
+      </Tooltip>
+    )
+  }, []);
+
   const renderContainer = () => {
     return (
       <div
         ref={containerRef}
-        className="resource-cover-container overflow-hidden"
+        className="resource-cover-container relative overflow-hidden"
         onClick={onClick}
         onMouseLeave={() => {
           // console.log('mouse leave');
@@ -362,9 +399,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                       maxWidth: tooltipWidth,
                       maxHeight: tooltipHeight,
                     }}
-                    unloader={(
-                      <MdBrokenImage className={'text-2xl'} />
-                    )}
+                    unloader={renderBrokenCover()}
                   />
                 </div>
               </div>
