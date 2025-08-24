@@ -26,6 +26,7 @@ import { useNavigate } from "react-router-dom";
 
 import SyncStatus from "./components/SyncStatus";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
+import OutdatedModal from "./components/OutdatedModal";
 
 import {
   Button,
@@ -48,11 +49,7 @@ import BApi from "@/sdk/BApi";
 import { isNotEmpty, splitPathIntoSegments } from "@/components/utils";
 import PresetTemplateBuilder from "@/pages/media-library-template/components/PresetTemplateBuilder";
 import TemplateModal from "@/pages/media-library-template/components/TemplateModal";
-import {
-  InternalProperty,
-  PropertyPool,
-  SearchOperation,
-} from "@/sdk/constants";
+import { InternalProperty, PropertyPool, SearchOperation } from "@/sdk/constants";
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
 
 enum SortBy {
@@ -82,14 +79,20 @@ const MediaLibraryPage = () => {
   const [templates, setTemplates] = useState<MediaLibraryTemplatePage[]>([]);
   const templatesRef = useRef<Record<number, MediaLibraryTemplatePage>>({});
   const [sortBy, setSortBy] = useState<SortBy>(SortBy.Path);
-  const [editingMediaLibraries, setEditingMediaLibraries] =
-    useState<Partial<MediaLibrary>[]>();
+  const [editingMediaLibraries, setEditingMediaLibraries] = useState<
+    Partial<MediaLibrary>[] | undefined
+  >();
   const forceUpdate = useUpdate();
+  const mediaLibrariesBeforeEditRef = useRef<MediaLibrary[] | undefined>();
+  const outdatedModalRef = useRef<{ check: () => Promise<void> } | null>(null);
 
-  const loadMediaLibraries = async () => {
+  const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
     const r = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
+    const list = r.data ?? [];
 
-    setMediaLibraries(r.data ?? []);
+    setMediaLibraries(list);
+
+    return list;
   };
 
   const loadTemplates = async () => {
@@ -98,9 +101,7 @@ const MediaLibraryPage = () => {
 
     // @ts-ignore
     setTemplates(tpls);
-    templatesRef.current = tpls.reduce<
-      Record<number, MediaLibraryTemplatePage>
-    >((s, t) => {
+    templatesRef.current = tpls.reduce<Record<number, MediaLibraryTemplatePage>>((s, t) => {
       s[t.id] = t as unknown as MediaLibraryTemplatePage;
 
       return s;
@@ -108,16 +109,18 @@ const MediaLibraryPage = () => {
   };
 
   useEffect(() => {
-    loadTemplates();
-    loadMediaLibraries();
+    Promise.all([
+      loadTemplates(),
+      loadMediaLibraries(),
+    ]).then(() => {
+      outdatedModalRef.current?.check();
+    });
   }, []);
 
   useUpdateEffect(() => {
     switch (sortBy) {
       case SortBy.Path:
-        mediaLibraries.sort((a, b) =>
-          (a.paths[0] ?? "").localeCompare(b.paths[0] ?? ""),
-        );
+        mediaLibraries.sort((a, b) => (a.paths[0] ?? "").localeCompare(b.paths[0] ?? ""));
         break;
       case SortBy.Template:
         mediaLibraries.sort((a, b) =>
@@ -152,9 +155,7 @@ const MediaLibraryPage = () => {
 
   const renderTable = () => {
     const isEditing = !!editingMediaLibraries;
-    const rows = isEditing
-      ? (editingMediaLibraries as Partial<MediaLibrary>[])
-      : mediaLibraries;
+    const rows = isEditing ? (editingMediaLibraries as Partial<MediaLibrary>[]) : mediaLibraries;
 
     if (!isEditing && rows.length === 0) {
       return (
@@ -177,9 +178,7 @@ const MediaLibraryPage = () => {
                   color="primary"
                   size="sm"
                   onPress={() =>
-                    setEditingMediaLibraries(
-                      [{}].concat(rows as Partial<MediaLibrary>[]),
-                    )
+                    setEditingMediaLibraries([{}].concat(rows as Partial<MediaLibrary>[]))
                   }
                 >
                   <AiOutlinePlusCircle className="text-base" />
@@ -189,9 +188,7 @@ const MediaLibraryPage = () => {
               <div className="flex items-center gap-2">
                 <Button
                   color={"primary"}
-                  isDisabled={
-                    !validate(editingMediaLibraries as Partial<MediaLibrary>[])
-                  }
+                  isDisabled={!validate(editingMediaLibraries as Partial<MediaLibrary>[])}
                   size={"sm"}
                   onPress={async () => {
                     createPortal(Modal, {
@@ -200,15 +197,14 @@ const MediaLibraryPage = () => {
                       children: t<string>("MediaLibrary.SaveAllConfirm"),
                       onOk: async () => {
                         const data = editingMediaLibraries as MediaLibrary[];
-                        const r =
-                          await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(
-                            data,
-                          );
+                        const r = await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(data);
 
                         if (!r.code) {
                           setEditingMediaLibraries(undefined);
                           toast.success(t<string>("MediaLibrary.Saved"));
-                          await loadMediaLibraries();
+
+                          outdatedModalRef.current?.check();
+                          mediaLibrariesBeforeEditRef.current = undefined;
                         }
                       },
                     });
@@ -221,7 +217,10 @@ const MediaLibraryPage = () => {
                   color={"default"}
                   size={"sm"}
                   variant={"flat"}
-                  onPress={() => setEditingMediaLibraries(undefined)}
+                  onPress={() => {
+                    setEditingMediaLibraries(undefined);
+                    mediaLibrariesBeforeEditRef.current = undefined;
+                  }}
                 >
                   <IoMdExit className={"text-base"} />
                   {t<string>("MediaLibrary.ExitEditingMode")}
@@ -316,9 +315,7 @@ const MediaLibraryPage = () => {
                                 : t<string>("MediaLibrary.Path")
                             }
                             pathType="folder"
-                            placeholder={t<string>(
-                              "MediaLibrary.PathPlaceholder",
-                            )}
+                            placeholder={t<string>("MediaLibrary.PathPlaceholder")}
                             size="sm"
                             value={p}
                             onChange={(v) => {
@@ -363,19 +360,13 @@ const MediaLibraryPage = () => {
                               </div>
                             ),
                             value: -1,
-                            textValue: t<string>(
-                              "MediaLibrary.CreateNewTemplate",
-                            ),
+                            textValue: t<string>("MediaLibrary.CreateNewTemplate"),
                           },
                         ])}
                       isInvalid={e.templateId == undefined || e.templateId <= 0}
                       label={t<string>("MediaLibrary.Template")}
-                      placeholder={t<string>(
-                        "MediaLibrary.TemplatePlaceholder",
-                      )}
-                      selectedKeys={
-                        e.templateId ? [e.templateId.toString()] : undefined
-                      }
+                      placeholder={t<string>("MediaLibrary.TemplatePlaceholder")}
+                      selectedKeys={e.templateId ? [e.templateId.toString()] : undefined}
                       size={"sm"}
                       onSelectionChange={(keys) => {
                         const arr = Array.from(keys);
@@ -424,9 +415,7 @@ const MediaLibraryPage = () => {
             const getCssVariable = (variableName: string) => {
               if (typeof document === "undefined") return "";
 
-              return getComputedStyle(
-                document.documentElement,
-              ).getPropertyValue(variableName);
+              return getComputedStyle(document.documentElement).getPropertyValue(variableName);
             };
             const textColor = getCssVariable("--theme-text") || "#222";
 
@@ -435,9 +424,7 @@ const MediaLibraryPage = () => {
                 {/* Name */}
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <div style={{ color: ml.color ?? textColor }}>
-                      {ml.name}
-                    </div>
+                    <div style={{ color: ml.color ?? textColor }}>{ml.name}</div>
                     <ColorPicker
                       color={ml.color ?? textColor}
                       onChange={async (color) => {
@@ -489,10 +476,10 @@ const MediaLibraryPage = () => {
                           createPortal(PlayerSelectorModal, {
                             players: ml.players,
                             onSubmit: async (players: MediaLibraryPlayer[]) => {
-                              await BApi.mediaLibraryV2.putMediaLibraryV2(
-                                ml.id,
-                                { ...ml, players },
-                              );
+                              await BApi.mediaLibraryV2.putMediaLibraryV2(ml.id, {
+                                ...ml,
+                                players,
+                              });
                               await loadMediaLibraries();
                             },
                           });
@@ -509,17 +496,10 @@ const MediaLibraryPage = () => {
                           );
 
                           return (
-                            <div
-                              key={index}
-                              className={"flex items-center gap-2 text-xs"}
-                            >
+                            <div key={index} className={"flex items-center gap-2 text-xs"}>
                               <div className={"flex flex-col gap-1"}>
                                 <div className={"font-medium truncate"}>
-                                  {
-                                    executablePathSegments[
-                                      executablePathSegments.length - 1
-                                    ]
-                                  }
+                                  {executablePathSegments[executablePathSegments.length - 1]}
                                 </div>
                                 <div className={"text-gray-500"}>
                                   {t<string>("Command")}: {player.command}
@@ -531,16 +511,11 @@ const MediaLibraryPage = () => {
                                     {ext}
                                   </Chip>
                                 ))}
-                                {player.extensions &&
-                                  player.extensions.length > 3 && (
-                                    <Chip
-                                      color={"secondary"}
-                                      size={"sm"}
-                                      variant={"flat"}
-                                    >
-                                      +{player.extensions.length - 3}
-                                    </Chip>
-                                  )}
+                                {player.extensions && player.extensions.length > 3 && (
+                                  <Chip color={"secondary"} size={"sm"} variant={"flat"}>
+                                    +{player.extensions.length - 3}
+                                  </Chip>
+                                )}
                               </div>
                             </div>
                           );
@@ -560,10 +535,7 @@ const MediaLibraryPage = () => {
                     >
                       {ml.resourceCount}
                     </Chip>
-                    <Tooltip
-                      content={t<string>("MediaLibrary.SearchResources")}
-                      placement="top"
-                    >
+                    <Tooltip content={t<string>("MediaLibrary.SearchResources")} placement="top">
                       <Button
                         isIconOnly
                         className={""}
@@ -573,9 +545,7 @@ const MediaLibraryPage = () => {
                         onPress={() => {
                           createPortal(Modal, {
                             title: t<string>("MediaLibrary.Confirm"),
-                            children: t<string>(
-                              "MediaLibrary.LeavePageConfirm",
-                            ),
+                            children: t<string>("MediaLibrary.LeavePageConfirm"),
                             defaultVisible: true,
                             onOk: async () => {
                               const valuePropertyResponse =
@@ -591,8 +561,7 @@ const MediaLibraryPage = () => {
                                   filters: [
                                     {
                                       propertyPool: PropertyPool.Internal,
-                                      propertyId:
-                                        InternalProperty.MediaLibraryV2,
+                                      propertyId: InternalProperty.MediaLibraryV2,
                                       operation: SearchOperation.Equals,
                                       dbValue: ml.id.toString(),
                                       bizValue: ml.name,
@@ -604,9 +573,7 @@ const MediaLibraryPage = () => {
                                 page: 1,
                                 pageSize: 100,
                               };
-                              const query = encodeURIComponent(
-                                JSON.stringify(searchForm),
-                              );
+                              const query = encodeURIComponent(JSON.stringify(searchForm));
 
                               navigate(`/resource?query=${query}`);
                             },
@@ -628,16 +595,14 @@ const MediaLibraryPage = () => {
                     <SyncStatus
                       id={ml.id}
                       onSyncCompleted={() => {
-                        BApi.mediaLibraryV2
-                          .getMediaLibraryV2(ml.id)
-                          .then((r) => {
-                            if (!r.data) return;
-                            const updatedMediaLibraries = mediaLibraries.map(
-                              (m) => (m.id === ml.id ? r.data! : m),
-                            );
+                        BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then((r) => {
+                          if (!r.data) return;
+                          const updatedMediaLibraries = mediaLibraries.map((m) =>
+                            m.id === ml.id ? r.data! : m,
+                          );
 
-                            setMediaLibraries(updatedMediaLibraries);
-                          });
+                          setMediaLibraries(updatedMediaLibraries);
+                        });
                       }}
                     />
                     <Button
@@ -653,17 +618,12 @@ const MediaLibraryPage = () => {
                               {t<string>("MediaLibrary.DeleteConfirm")}
                               <br />
                               <span className="text-danger">
-                                {t<string>(
-                                  "Be careful, this operation can not be undone",
-                                )}
+                                {t<string>("Be careful, this operation can not be undone")}
                               </span>
                             </div>
                           ),
                           onOk: async () => {
-                            await BApi.mediaLibraryV2.deleteMediaLibraryV2(
-                              ml.id,
-                            );
-                            await loadMediaLibraries();
+                            await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
                             forceUpdate();
                           },
                           footer: {
@@ -694,6 +654,7 @@ const MediaLibraryPage = () => {
 
   return (
     <div className={"h-full flex flex-col"}>
+      <OutdatedModal ref={(r) => (outdatedModalRef.current = r)} />
       <div className={"flex items-center justify-between"}>
         <div className={"flex items-center gap-1"}>
           {editingMediaLibraries ? null : (
@@ -701,15 +662,16 @@ const MediaLibraryPage = () => {
               <Button
                 color={"primary"}
                 size={"sm"}
-                onPress={() =>
+                onPress={() => {
+                  mediaLibrariesBeforeEditRef.current = JSON.parse(
+                    JSON.stringify(mediaLibraries),
+                  ) as MediaLibrary[];
                   setEditingMediaLibraries(
                     mediaLibraries.length == 0
                       ? [{}]
-                      : (JSON.parse(
-                          JSON.stringify(mediaLibraries),
-                        ) as Partial<MediaLibrary>[]),
-                  )
-                }
+                      : (JSON.parse(JSON.stringify(mediaLibraries)) as Partial<MediaLibrary>[]),
+                  );
+                }}
               >
                 <AiOutlineEdit className={"text-base"} />
                 {t<string>("MediaLibrary.AddOrEdit")}
@@ -733,9 +695,7 @@ const MediaLibraryPage = () => {
               color={"default"}
               size={"sm"}
               variant={"flat"}
-              onPress={() =>
-                setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)
-              }
+              onPress={() => setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)}
             >
               <FaSort className={"text-base"} />
               {t<string>("MediaLibrary.SortBy", {

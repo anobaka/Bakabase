@@ -33,11 +33,13 @@ internal class PresetsService(
                 p.GetAttribute<PresetPropertyAttribute>()!.Type,
                 null))
             .ToList();
+
         var resourceTypes = SpecificEnumUtils<PresetResourceType>.Values
             .Select(t =>
                 new MediaLibraryTemplatePresetDataPool.ResourceType(t,
                     t.GetAttribute<DisplayAttribute>()?.GetName() ?? t.ToString(), t.GetAttribute<PresetResourceTypeAttribute>()!.MediaType, presetsLocalizer.ResourceTypeDescription(t)))
             .ToList();
+        var dynamicPresetPropertyStartId = 1000;
         var enhancers = enhancerDescriptors.Descriptors.Select(d =>
             new MediaLibraryTemplatePresetDataPool.Enhancer((EnhancerId)d.Id, d.Name, d.Description,
                 d.Targets.Where(x => x.ReservedPropertyCandidate.HasValue)
@@ -45,21 +47,37 @@ internal class PresetsService(
                 {
                     if (p.ReservedPropertyCandidate.HasValue)
                     {
-                        return null;
+                        return (PresetProperty?)null;
                     }
 
                     var cp = properties.FirstOrDefault(x => x.Name == p.Name && x.Type == p.PropertyType);
-                    return cp?.Id;
+                    if (cp == null)
+                    {
+                        cp = new MediaLibraryTemplatePresetDataPool.Property(
+                            (PresetProperty)dynamicPresetPropertyStartId, p.Name, p.PropertyType, p.Name);
+                        dynamicPresetPropertyStartId++;
+                        properties.Add(cp);
+                    }
+
+                    return cp.Id;
                 }).OfType<PresetProperty>().Distinct().ToArray())).ToList();
+
+        var resourceTypeEnhancerIds = SpecificEnumUtils<PresetResourceType>.Values.ToDictionary(d => (int)d,
+            d => d.GetAttribute<PresetResourceTypeAttribute>()!.EnhancerIds.Distinct().ToList());
+        var enhancerMap = enhancers.ToDictionary(d => d.Id, d => d);
+        var resourceTypePresetPropertyIds = SpecificEnumUtils<PresetResourceType>.Values.ToDictionary(d => (int)d,
+            d => d.GetAttribute<PresetResourceTypeAttribute>()!.Properties
+                .Concat(resourceTypeEnhancerIds.GetValueOrDefault((int)d)
+                    ?.SelectMany(e => enhancerMap.GetValueOrDefault(e)?.PresetProperties ?? []) ?? []).Distinct()
+                .ToList());
+        
         var pool = new MediaLibraryTemplatePresetDataPool
         {
             ResourceTypes = resourceTypes,
             Properties = properties,
             Enhancers = enhancers,
-            ResourceTypePresetPropertyIds = SpecificEnumUtils<PresetResourceType>.Values.ToDictionary(d => (int)d,
-                d => d.GetAttribute<PresetResourceTypeAttribute>()!.Properties.Distinct().ToList()),
-            ResourceTypeEnhancerIds = SpecificEnumUtils<PresetResourceType>.Values.ToDictionary(d => (int)d,
-                d => d.GetAttribute<PresetResourceTypeAttribute>()!.EnhancerIds.Distinct().ToList())
+            ResourceTypePresetPropertyIds = resourceTypePresetPropertyIds,
+            ResourceTypeEnhancerIds = resourceTypeEnhancerIds
         };
         return pool;
     }

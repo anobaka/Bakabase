@@ -1,8 +1,10 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.Abstractions.Components;
+using Bakabase.Abstractions.Models.Domain.Constants;
+using Bootstrap.Components.Cryptography;
 
 namespace Bakabase.Abstractions.Models.Domain;
 
-public record MediaLibraryTemplateProperty
+public record MediaLibraryTemplateProperty : ISyncVersion
 {
     private PropertyPool _pool;
     private int _id;
@@ -21,4 +23,21 @@ public record MediaLibraryTemplateProperty
 
     public Property? Property { get; set; }
     public List<PathPropertyExtractor>? ValueLocators { get; set; }
+
+    public string? GetSyncVersion()
+    {
+        if (ValueLocators != null)
+        {
+            var keys = new List<string>
+            {
+                Pool.ToString(),
+                Id.ToString(),
+            };
+            keys.AddRange(ValueLocators.Select(v => v.GetSyncVersion()));
+            return CryptographyUtils.Md5(string.Join('-', keys));
+
+        }
+
+        return null;
+    }
 }

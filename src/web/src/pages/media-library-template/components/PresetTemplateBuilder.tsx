@@ -37,8 +37,7 @@ type Props = {
   onSubmitted?: (id: number) => any;
 } & DestroyableProps;
 
-type Form =
-  components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder"];
+type Form = Omit<components["schemas"]["Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplateCompactBuilder"], 'layeredProperties'> & {layeredProperties?: (PresetProperty|undefined)[]};
 
 const validate = (form: Partial<Form>): Form | undefined => {
   if (!form.name || form.name.length == 0) {
@@ -76,7 +75,7 @@ const PresetTemplateBuilder = ({ onDestroyed, onSubmitted }: Props) => {
 
   const validForm = validate(form);
 
-  console.log(form, validForm);
+  console.log(form, validForm, recommendProperties, recommendEnhancerIds);
 
   return (
     <Modal
@@ -97,6 +96,7 @@ const PresetTemplateBuilder = ({ onDestroyed, onSubmitted }: Props) => {
       onOk={async () => {
         const r =
           await BApi.mediaLibraryTemplate.addMediaLibraryTemplateFromPresetBuilder(
+            // @ts-ignore
             validForm!,
           );
 
@@ -237,11 +237,13 @@ const PresetTemplateBuilder = ({ onDestroyed, onSubmitted }: Props) => {
                         })}
                         size={"sm"}
                         value={lp}
+                        isClearable
+                        placeholder={t<string>("Not configured for now")}
                         onSelectionChange={(keys) => {
-                          form.layeredProperties![idx] = parseInt(
-                            Array.from(keys)[0] as string,
-                            10,
-                          ) as PresetProperty;
+                          const keyStr = Array.from(keys)[0] as string;
+                          form.layeredProperties![idx] = keyStr
+                            ? parseInt(keyStr, 10) as PresetProperty
+                            : undefined!;
                           setForm({
                             ...form,
                             layeredProperties: form.layeredProperties!.slice(),
@@ -277,13 +279,10 @@ const PresetTemplateBuilder = ({ onDestroyed, onSubmitted }: Props) => {
             <Button
               isIconOnly
               color={"primary"}
-              isDisabled={!form.properties || form.properties.length == 0}
               size={"sm"}
               variant={"light"}
               onPress={() => {
                 const lps = form.layeredProperties ?? [];
-
-                // @ts-ignore
                 lps.push(undefined);
                 setForm({
                   ...form,

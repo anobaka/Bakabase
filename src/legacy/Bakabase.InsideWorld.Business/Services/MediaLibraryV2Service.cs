@@ -62,52 +62,105 @@ public class MediaLibraryV2Service<TDbContext>(
 
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
     {
-        await orm.UpdateByKey(id, data =>
+        var data = await Get(id);
+        data.Name = model.Name;
+        data.Color = model.Color;
+        data.Players = model.Players;
+        if (!data.Paths.SequenceEqual(model.Paths))
         {
-            data.Name = model.Name;
-            data.SetPaths(model.Paths);
-            data.Color = model.Color;
-            try
-            {
-                data.Players = JsonConvert.SerializeObject(model.Players);
-            }
-            catch (Exception e)
-            {
-                // ignored
-            }
-        });
+            data.Paths = model.Paths;
+            data.SyncVersion = null;
+        }
+
+        await orm.Update(data.ToDbModel());
+    }
+
+    public async Task Put(IEnumerable<MediaLibraryV2> data)
+    {
+        await orm.UpdateRange(data.Select(d => d.ToDbModel()).ToList());
     }
 
     public async Task Patch(int id, MediaLibraryV2PatchInputModel model)
     {
-        await orm.UpdateByKey(id, data =>
+        var data = await Get(id);
+
+        if (model.SyncVersion.IsNotEmpty())
         {
-            if (model.Paths.IsNotEmpty())
-            {
-                data.SetPaths(model.Paths!);
-            }
+            data.SyncVersion = model.SyncVersion;
+        }
 
-            if (model.Name.IsNotEmpty())
+        if (model.Paths.IsNotEmpty())
+        {
+            if (!data.Paths.SequenceEqual(model.Paths))
             {
-                data.Name = model.Name;
+                data.SyncVersion = null;
+                data.Paths = model.Paths;
             }
+        }
+        
+        if (model.Name.IsNotEmpty())
+        {
+            data.Name = model.Name;
+        }
 
-            if (model.ResourceCount.HasValue)
-            {
-                data.ResourceCount = model.ResourceCount.Value;
-            }
-            if (model.Color != null)
-            {
-                data.Color = model.Color;
-            }
+        if (model.ResourceCount.HasValue)
+        {
+            data.ResourceCount = model.ResourceCount.Value;
+        }
+
+        if (model.Color != null)
+        {
+            data.Color = model.Color;
+        }
+
+        await orm.Update(data.ToDbModel());
+    }
+
+    public async Task MarkAsSynced(int[] ids)
+    {
+        var data = await GetByKeys(ids, MediaLibraryV2AdditionalItem.Template);
+        foreach (var ml in data)
+        {
+            ml.SyncVersion = ml.Template?.GetSyncVersion();
+        }
+
+        await Put(data);
+    }
+
+    public async Task MarkAsSynced(int id, int resourceCount, string? syncVersion)
+    {
+        await orm.UpdateByKey(id, d =>
+        {
+            d.ResourceCount = resourceCount;
+            d.SyncVersion = syncVersion;
         });
     }
 
-    public async Task SaveAll(MediaLibraryV2[] models)
+    public async Task<IEnumerable<MediaLibraryV2>> GetAllSyncMayBeOutdated()
     {
+        var data = await GetAll(null, MediaLibraryV2AdditionalItem.Template);
+        return data.Where(x => x.SyncMayBeOutdated);
+    }
+
+    /// <summary>
+    /// <inheritdoc cref="IMediaLibraryV2Service.ReplaceAll"/>
+    /// </summary>
+    /// <param name="models"></param>
+    /// <returns></returns>
+    public async Task ReplaceAll(MediaLibraryV2[] models)
+    {
+        var currentData = (await GetAll()).ToDictionary(d => d.Id, d => d);
+
         foreach (var m in models)
         {
             m.Paths = m.Paths.Select(p => p.StandardizePath()!).Distinct().ToList();
+            if (currentData.TryGetValue(m.Id, out var current))
+            {
+                if (!current.Paths.SequenceEqual(m.Paths) || current.TemplateId != m.TemplateId)
+                {
+                    m.SyncVersion = null;
+                }
+            }
         }
 
         var newData = models.Where(x => x.Id == 0).ToArray();
@@ -231,7 +284,7 @@ public class MediaLibraryV2Service<TDbContext>(
 
                 var maxThreads = Math.Max(1,
                     resourceOptions.Value.SynchronizationOptions?.MaxThreads ??
-                    (int) (Environment.ProcessorCount * 0.4));
+                    (int)(Environment.ProcessorCount * 0.4));
                 var treeTempSyncResources = new List<TempSyncResource>();
                 var totalDiscoveryProgressPerPath = ProgressPerMediaLibrary.Discovery / (float)ml.Paths.Count;
                 for (var i = 0; i < ml.Paths.Count; i++)
@@ -356,11 +409,8 @@ public class MediaLibraryV2Service<TDbContext>(
                 }
 
                 await resourceService.AddOrPutRange(changedResources.ToList());
-                await Patch(ml.Id,
-                    new MediaLibraryV2PatchInputModel
-                    {
-                        ResourceCount = mlResources.Count - resourcesToBeDeleted.Count + newTempSyncResources.Count
-                    });
+                var resourceCount = mlResources.Count - resourcesToBeDeleted.Count + newTempSyncResources.Count;
+                await MarkAsSynced(ml.Id, resourceCount, template.GetSyncVersion());
 
                 // clean cache
                 await cacheOrm.RemoveByKeys(conflictDbResources.Select(r => r.Id));
