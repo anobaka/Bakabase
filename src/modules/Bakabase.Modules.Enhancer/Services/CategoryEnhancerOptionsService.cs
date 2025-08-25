@@ -17,6 +17,7 @@ using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancer
 
 namespace Bakabase.Modules.Enhancer.Services
 {
+    [Obsolete]
     public class AbstractCategoryEnhancerOptionsService<TDbContext>(
         ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions, int> orm,
         IEnhancerDescriptors enhancerDescriptors)

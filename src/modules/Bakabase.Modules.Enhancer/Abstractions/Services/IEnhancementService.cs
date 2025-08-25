@@ -6,7 +6,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Services;
 
 public interface IEnhancementService
 {
-    Task<List<Bakabase.Abstractions.Models.Domain.Enhancement>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp, EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None);
+    Task<List<Bakabase.Abstractions.Models.Domain.Enhancement>> GetAll(Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementDbModel, bool>>? exp, EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None);
 
     // /// <summary>
     // /// 获取全部默认资源
@@ -65,7 +65,7 @@ public interface IEnhancementService
     // /// <param name="selector"></param>
     // /// <returns></returns>
     // Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector);
-    Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector, bool removeGeneratedCustomPropertyValues);
+    Task<BaseResponse> RemoveAll(Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementDbModel, bool>> selector, bool removeGeneratedCustomPropertyValues);
     //
     // /// <summary>
     // /// 创建默认资源

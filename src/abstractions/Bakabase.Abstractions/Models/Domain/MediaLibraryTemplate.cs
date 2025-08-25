@@ -51,6 +51,6 @@ public record MediaLibraryTemplate : ISyncVersion
 
         versions.Add(Child?.GetSyncVersion() ?? "");
 
-        return CryptographyUtils.Md5(string.Join(',', versions));
+        return CryptographyUtils.Md5(string.Join(',', versions)).Substring(7);
     }
 }

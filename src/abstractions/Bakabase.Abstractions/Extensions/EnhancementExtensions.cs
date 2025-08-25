@@ -7,6 +7,9 @@ namespace Bakabase.Abstractions.Extensions
 {
     public static class EnhancementExtensions
     {
-       
+        public static void FillKey(this EnhancementDbModel dbModel)
+        {
+            dbModel.Key = $"{dbModel.ResourceId}:{dbModel.EnhancerId}:{dbModel.Target}:{dbModel.DynamicTarget}";
+        }
     }
 }

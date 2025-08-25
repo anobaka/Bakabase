@@ -2245,6 +2245,11 @@
   "MediaLibrary.Cancel": "取消",
   "MediaLibrary.Unknown": "未知",
   "MediaLibrary.NoMediaLibrariesFound": "未找到媒体库。您必须添加至少一个媒体库并同步它以管理您的资源。",
+  "MediaLibrary.DeleteEnhancements": "删除增强数据",
+  "MediaLibraryTemplate.RemoveEnhancer": "移除增强器",
+  "Enhancement.DeleteAllByEnhancerForTemplate": "删除该增强器在模板 {{templateName}} 下的所有增强数据",
+  "Enhancement.DeleteAllByEnhancerForTemplate.ScopeWarning": "这将删除所有使用该模板的媒体库中资源的所有增强数据。",
+  "Enhancement.EnhancedResourceCount": "{{count}} 个资源已增强",
   "FileNameModifier.ModificationResult": "批量重命名结果",
   "FileNameModifier.ModificationSuccessCount": "成功：{{count}} 个",
   "FileNameModifier.ModificationFailCount": "失败：{{count}} 个",
@@ -2322,5 +2327,8 @@
   "Are you sure you want to mark these libraries as synced?": "确定将这些媒体库标记为已同步吗？",
   "Following media libraries may be outdated and should be synchronized:": "以下媒体库可能已过期，需要进行同步：",
   "Later": "稍后",
-  "Marked as synced": "已标记为已同步"
+  "Marked as synced": "已标记为已同步",
+  "MediaLibrary.DeleteConfirm": "确定删除媒体库吗？",
+  "Enhancement.DeleteByEnhancer.SelectEnhancerTitle": "选择一个增强器以删除增强数据",
+  "Enhancement.DeleteByEnhancer.NoEnhancerInTemplate": "模板中未配置任何增强器"
 }

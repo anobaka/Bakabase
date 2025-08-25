@@ -34,7 +34,7 @@ public record MediaLibraryTemplateProperty : ISyncVersion
                 Id.ToString(),
             };
             keys.AddRange(ValueLocators.Select(v => v.GetSyncVersion()));
-            return CryptographyUtils.Md5(string.Join('-', keys));
+            return CryptographyUtils.Md5(string.Join('-', keys)).Substring(7);
 
         }
 

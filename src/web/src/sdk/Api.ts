@@ -7147,6 +7147,47 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
+     * @tags Enhancement
+     * @name GetEnhancedResourceCountByMediaLibraryAndEnhancer
+     * @request GET:/media-library/{mediaLibraryId}/enhancer/{enhancerId}/enhanced-count
+     */
+    getEnhancedResourceCountByMediaLibraryAndEnhancer: (
+      mediaLibraryId: number,
+      enhancerId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library/${mediaLibraryId}/enhancer/${enhancerId}/enhanced-count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name GetEnhancedResourceCountsByMediaLibrary
+     * @request GET:/media-library/{mediaLibraryId}/enhancer/enhanced-counts
+     */
+    getEnhancedResourceCountsByMediaLibrary: (
+      mediaLibraryId: number,
+      query?: {
+        enhancerIds?: number[];
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<any, any>({
+        path: `/media-library/${mediaLibraryId}/enhancer/enhanced-counts`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
      * @tags MediaLibrary
      * @name GetAllMediaLibraries
      * @request GET:/media-library
@@ -7404,6 +7445,265 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/media-library/${id}/synchronization`,
         method: "PUT",
+        format: "json",
+        ...params,
+      }),
+  };
+  mediaLibraryTemplate = {
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByMediaLibraryTemplateAndEnhancer
+     * @request DELETE:/media-library-template/{mediaLibraryTemplateId}/enhancer/{enhancerId}/enhancements
+     */
+    deleteEnhancementsByMediaLibraryTemplateAndEnhancer: (
+      mediaLibraryTemplateId: number,
+      enhancerId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${mediaLibraryTemplateId}/enhancer/${enhancerId}/enhancements`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetAllMediaLibraryTemplates
+     * @request GET:/media-library-template
+     */
+    getAllMediaLibraryTemplates: (
+      query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplate
+     * @request POST:/media-library-template
+     */
+    addMediaLibraryTemplate: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplate
+     * @request GET:/media-library-template/{id}
+     */
+    getMediaLibraryTemplate: (
+      id: number,
+      query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template/${id}`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name PutMediaLibraryTemplate
+     * @request PUT:/media-library-template/{id}
+     */
+    putMediaLibraryTemplate: (
+      id: number,
+      data: BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name DeleteMediaLibraryTemplate
+     * @request DELETE:/media-library-template/{id}
+     */
+    deleteMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplateShareCode
+     * @request GET:/media-library-template/{id}/share-text
+     */
+    getMediaLibraryTemplateShareCode: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/media-library-template/${id}/share-text`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplateImportConfiguration
+     * @request POST:/media-library-template/share-code/import-configuration
+     */
+    getMediaLibraryTemplateImportConfiguration: (data: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel,
+        any
+      >({
+        path: `/media-library-template/share-code/import-configuration`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name ImportMediaLibraryTemplate
+     * @request POST:/media-library-template/share-code/import
+     */
+    importMediaLibraryTemplate: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template/share-code/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplateByMediaLibraryV1
+     * @request POST:/media-library-template/by-media-library-v1
+     */
+    addMediaLibraryTemplateByMediaLibraryV1: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLibraryV1InputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/by-media-library-v1`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name DuplicateMediaLibraryTemplate
+     * @request POST:/media-library-template/{id}/duplicate
+     */
+    duplicateMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}/duplicate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplatePresetDataPool
+     * @request GET:/media-library-template/preset-data-pool
+     */
+    getMediaLibraryTemplatePresetDataPool: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool,
+        any
+      >({
+        path: `/media-library-template/preset-data-pool`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplateFromPresetBuilder
+     * @request POST:/media-library-template/from-preset-builder
+     */
+    addMediaLibraryTemplateFromPresetBuilder: (
+      data: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplateCompactBuilder,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template/from-preset-builder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -8304,242 +8604,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/log/read`,
         method: "PATCH",
-        format: "json",
-        ...params,
-      }),
-  };
-  mediaLibraryTemplate = {
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetAllMediaLibraryTemplates
-     * @request GET:/media-library-template
-     */
-    getAllMediaLibraryTemplates: (
-      query?: {
-        /** [0: None, 1: ChildTemplate] */
-        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
-        any
-      >({
-        path: `/media-library-template`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AddMediaLibraryTemplate
-     * @request POST:/media-library-template
-     */
-    addMediaLibraryTemplate: (
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library-template`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplate
-     * @request GET:/media-library-template/{id}
-     */
-    getMediaLibraryTemplate: (
-      id: number,
-      query?: {
-        /** [0: None, 1: ChildTemplate] */
-        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
-        any
-      >({
-        path: `/media-library-template/${id}`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name PutMediaLibraryTemplate
-     * @request PUT:/media-library-template/{id}
-     */
-    putMediaLibraryTemplate: (
-      id: number,
-      data: BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name DeleteMediaLibraryTemplate
-     * @request DELETE:/media-library-template/{id}
-     */
-    deleteMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplateShareCode
-     * @request GET:/media-library-template/{id}/share-text
-     */
-    getMediaLibraryTemplateShareCode: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
-        path: `/media-library-template/${id}/share-text`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplateImportConfiguration
-     * @request POST:/media-library-template/share-code/import-configuration
-     */
-    getMediaLibraryTemplateImportConfiguration: (data: string, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel,
-        any
-      >({
-        path: `/media-library-template/share-code/import-configuration`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name ImportMediaLibraryTemplate
-     * @request POST:/media-library-template/share-code/import
-     */
-    importMediaLibraryTemplate: (
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library-template/share-code/import`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AddMediaLibraryTemplateByMediaLibraryV1
-     * @request POST:/media-library-template/by-media-library-v1
-     */
-    addMediaLibraryTemplateByMediaLibraryV1: (
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLibraryV1InputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/by-media-library-v1`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name DuplicateMediaLibraryTemplate
-     * @request POST:/media-library-template/{id}/duplicate
-     */
-    duplicateMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${id}/duplicate`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplatePresetDataPool
-     * @request GET:/media-library-template/preset-data-pool
-     */
-    getMediaLibraryTemplatePresetDataPool: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool,
-        any
-      >({
-        path: `/media-library-template/preset-data-pool`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AddMediaLibraryTemplateFromPresetBuilder
-     * @request POST:/media-library-template/from-preset-builder
-     */
-    addMediaLibraryTemplateFromPresetBuilder: (
-      data: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplateCompactBuilder,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library-template/from-preset-builder`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),

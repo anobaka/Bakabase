@@ -23,7 +23,7 @@ namespace Bakabase.Abstractions.Models.Domain
         public object? Value { get; set; }
 
         /// <summary>
-        /// <inheritdoc cref="Db.Enhancement.PropertyPool"/>
+        /// <inheritdoc cref="EnhancementDbModel.PropertyPool"/>
         /// </summary>
         public PropertyPool? PropertyPool { get; set; }
 
@@ -31,6 +31,8 @@ namespace Bakabase.Abstractions.Models.Domain
         /// <inheritdoc cref="PropertyPool"/>
         /// </summary>
         public int? PropertyId { get; set; }
+
+        public string Key { get; set; } = null!;
 
         public CustomPropertyValue? CustomPropertyValue { get; set; }
         public ReservedPropertyValue? ReservedPropertyValue { get; set; }

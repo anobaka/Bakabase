@@ -299,6 +299,31 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpGet("~/media-library/{mediaLibraryId:int}/enhancer/enhanced-counts")]
+        [SwaggerOperation(OperationId = "GetEnhancedResourceCountsByMediaLibrary")]
+        public async Task<SingletonResponse<Dictionary<int, int>>> GetEnhancedResourceCountsByMediaLibrary(
+            int mediaLibraryId)
+        {
+            var resourceIds =
+                (await resourceService.GetAll(t => t.CategoryId == 0 && t.MediaLibraryId == mediaLibraryId))
+                .Select(t => t.Id).ToArray();
+
+            var enhancementRecords = await enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId));
+            var mediaLibraryTemplate = (await mediaLibraryV2Service.Get(mediaLibraryId, MediaLibraryV2AdditionalItem.Template))?.Template;
+            var enhancerIds = enhancementRecords.Select(x => x.EnhancerId).ToHashSet();
+            if (mediaLibraryTemplate != null)
+            {
+                var configuredEnhancerIds = mediaLibraryTemplate.Enhancers?.Select(x => x.EnhancerId).ToHashSet() ?? [];
+                enhancerIds.UnionWith(configuredEnhancerIds);
+            }
+
+            var recordGroupedByEnhancerId = enhancementRecords.GroupBy(x => x.EnhancerId).ToDictionary(x => x.Key, x => x.Count());
+
+            var dict = enhancerIds.ToDictionary(x => x, x => recordGroupedByEnhancerId.GetValueOrDefault(x, 0));
+
+            return new SingletonResponse<Dictionary<int, int>>(dict);
+        }
+
         [HttpDelete("~/media-library-template/{mediaLibraryTemplateId:int}/enhancer/{enhancerId:int}/enhancements")]
         [SwaggerOperation(OperationId = "DeleteEnhancementsByMediaLibraryTemplateAndEnhancer")]
         public async Task<BaseResponse> DeleteEnhancementRecordsByMediaLibraryTemplateAndEnhancer(

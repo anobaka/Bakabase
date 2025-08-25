@@ -34,6 +34,6 @@ public record PathFilter : ISyncVersion
         }
 
         return CryptographyUtils.Md5(
-            $"{Positioner}-{Layer}-{Regex}-{FsType}-{string.Join(',', extensions.OrderBy(e => e))}");
+            $"{Positioner}-{Layer}-{Regex}-{FsType}-{string.Join(',', extensions.OrderBy(e => e))}").Substring(7);
     }
 }

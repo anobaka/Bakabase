@@ -10,9 +10,10 @@ import { Checkbox, Modal, Tooltip } from "@/components/bakaui";
 
 type Props = {
   title: string;
+  description?: React.ReactNode;
   onOk: (deleteEmptyOnly: boolean) => Promise<any>;
 } & DestroyableProps;
-const DeleteEnhancementsModal = ({ title, onOk, onDestroyed }: Props) => {
+const DeleteEnhancementsModal = ({ title, description, onOk, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [deleteEmptyOnly, setDeleteEmptyOnly] = React.useState(false);
 
@@ -24,6 +25,7 @@ const DeleteEnhancementsModal = ({ title, onOk, onDestroyed }: Props) => {
       onOk={async () => await onOk(deleteEmptyOnly)}
     >
       <div className={"flex flex-col gap-4"}>
+        {description && <div className={"text-sm text-warning"}>{description}</div>}
         <div className={"flex items-center gap-1"}>
           <Checkbox size={"sm"} onValueChange={(v) => setDeleteEmptyOnly(v)}>
             {t<string>("Delete empty records only")}
