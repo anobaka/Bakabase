@@ -16,8 +16,9 @@ import {
   AiOutlineEdit,
   AiOutlinePlusCircle,
   AiOutlineSisternode,
+  AiOutlineEllipsis,
 } from "react-icons/ai";
-import { CiFilter } from "react-icons/ci";
+import { CiCircleMore, CiFilter } from "react-icons/ci";
 import { TbDatabase } from "react-icons/tb";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { TiChevronRightOutline, TiFlowChildren } from "react-icons/ti";
@@ -33,7 +34,8 @@ import {
   PathFilterDemonstrator,
   PathFilterModal,
 } from "@/pages/media-library-template/components/PathFilter";
-import { Button, Chip, Modal, Select, Tooltip } from "@/components/bakaui";
+import { Button, Chip, Modal, Select, Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
+import { MdOutlineDelete } from "react-icons/md";
 import PlayableFileSelectorModal from "@/pages/media-library-template/components/PlayableFileSelectorModal";
 import PropertySelectorPage from "@/components/PropertySelector";
 import { PropertyPool } from "@/sdk/constants";
@@ -49,6 +51,7 @@ import DisplayNameTemplateEditorModal from "@/pages/media-library-template/compo
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
 import { willCauseCircleReference } from "@/components/utils";
+import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
 
 type Props = {
   template: MediaLibraryTemplatePage;
@@ -547,26 +550,65 @@ const Template = ({
                   >
                     <AiOutlineEdit className={"text-base"} />
                   </Button>
-                  <Button
-                    isIconOnly
-                    color={"danger"}
-                    size={"sm"}
-                    variant={"light"}
-                    onPress={() => {
-                      createPortal(Modal, {
-                        defaultVisible: true,
-                        title: t<string>("Delete resource filter"),
-                        children: t<string>("Sure to delete?"),
-                        onOk: async () => {
-                          template.enhancers?.splice(i, 1);
-                          await putTemplate(template);
-                          forceUpdate();
-                        },
-                      });
-                    }}
-                  >
-                    <AiOutlineDelete className={"text-base"} />
-                  </Button>
+                  <Dropdown>
+                    <DropdownTrigger>
+                      <Button isIconOnly size={"sm"} variant={"light"}>
+                        <CiCircleMore className={"text-base"} />
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      aria-label="Enhancer operations"
+                      selectionMode="single"
+                      onSelectionChange={(keys) => {
+                        const key = Array.from(keys ?? [])[0] as string;
+                        if (key === "deleteEnhancements") {
+                          createPortal(DeleteEnhancementsModal, {
+                            title: t<string>(
+                              "Enhancement.DeleteAllByEnhancerForTemplate",
+                              { templateName: template.name },
+                            ),
+                            description: t<string>(
+                              "Enhancement.DeleteAllByEnhancerForTemplate.ScopeWarning",
+                            ),
+                            onOk: async (deleteEmptyOnly: boolean) => {
+                              await BApi.mediaLibraryTemplate.deleteEnhancementsByMediaLibraryTemplateAndEnhancer(
+                                template.id,
+                                e.enhancerId,
+                                { deleteEmptyOnly },
+                              );
+                              toast.success(t<string>("Saved"));
+                            },
+                          });
+                        } else if (key === "removeEnhancer") {
+                          createPortal(Modal, {
+                            defaultVisible: true,
+                            title: t<string>("Delete resource filter"),
+                            children: t<string>("Sure to delete?"),
+                            onOk: async () => {
+                              template.enhancers?.splice(i, 1);
+                              await putTemplate(template);
+                              forceUpdate();
+                            },
+                          });
+                        }
+                      }}
+                    >
+                      <DropdownItem
+                        key="deleteEnhancements"
+                        className="text-warning"
+                        startContent={<MdOutlineDelete className={"text-lg"} />}
+                      >
+                        {t<string>("MediaLibrary.DeleteEnhancements")}
+                      </DropdownItem>
+                      <DropdownItem
+                        key="removeEnhancer"
+                        className="text-danger"
+                        startContent={<MdOutlineDelete className={"text-lg"} />}
+                      >
+                        {t<string>("MediaLibraryTemplate.RemoveEnhancer")}
+                      </DropdownItem>
+                    </DropdownMenu>
+                  </Dropdown>
                 </div>
                 {e.expressions && e.expressions.length > 0 && (
                   <div>

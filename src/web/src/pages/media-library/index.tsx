@@ -11,6 +11,7 @@ import { FaRegSave, FaSort } from "react-icons/fa";
 import toast from "react-hot-toast";
 import {
   AiOutlineEdit,
+  AiOutlineEllipsis,
   AiOutlineFolderOpen,
   AiOutlineImport,
   AiOutlinePlusCircle,
@@ -42,6 +43,10 @@ import {
   TableColumn,
   TableRow,
   TableCell,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@/components/bakaui";
 import PathAutocomplete from "@/components/PathAutocomplete";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -51,6 +56,8 @@ import PresetTemplateBuilder from "@/pages/media-library-template/components/Pre
 import TemplateModal from "@/pages/media-library-template/components/TemplateModal";
 import { InternalProperty, PropertyPool, SearchOperation } from "@/sdk/constants";
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
+import DeleteEnhancementsByEnhancerSelectorModal from "@/pages/media-library/components/DeleteEnhancementsByEnhancerSelectorModal";
+import { CiCircleMore } from "react-icons/ci";
 
 enum SortBy {
   Path = 1,
@@ -109,10 +116,7 @@ const MediaLibraryPage = () => {
   };
 
   useEffect(() => {
-    Promise.all([
-      loadTemplates(),
-      loadMediaLibraries(),
-    ]).then(() => {
+    Promise.all([loadTemplates(), loadMediaLibraries()]).then(() => {
       outdatedModalRef.current?.check();
     });
   }, []);
@@ -605,43 +609,76 @@ const MediaLibraryPage = () => {
                         });
                       }}
                     />
-                    <Button
-                      isIconOnly
-                      color={"danger"}
-                      variant={"light"}
-                      onPress={() => {
-                        createPortal(Modal, {
-                          defaultVisible: true,
-                          title: t<string>("MediaLibrary.Confirm"),
-                          children: (
-                            <div>
-                              {t<string>("MediaLibrary.DeleteConfirm")}
-                              <br />
-                              <span className="text-danger">
-                                {t<string>("Be careful, this operation can not be undone")}
-                              </span>
-                            </div>
-                          ),
-                          onOk: async () => {
-                            await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
-                            forceUpdate();
-                          },
-                          footer: {
-                            actions: ["ok", "cancel"],
-                            okProps: {
-                              children: t<string>("Delete"),
-                              color: "danger",
-                              autoFocus: true,
-                            },
-                            cancelProps: {
-                              children: t<string>("MediaLibrary.Cancel"),
-                            },
-                          },
-                        });
-                      }}
-                    >
-                      <MdOutlineDelete className={"text-lg"} />
-                    </Button>
+                    <Dropdown>
+                      <DropdownTrigger>
+                        <Button isIconOnly radius={"sm"} size={"sm"} variant={"light"}>
+                          <CiCircleMore className={"text-lg"} />
+                        </Button>
+                      </DropdownTrigger>
+                      <DropdownMenu
+                        aria-label="More operations"
+                        selectionMode="single"
+                        onSelectionChange={(keys) => {
+                          const key = Array.from(keys ?? [])[0] as string;
+
+                          if (key === "deleteEnhancements") {
+                            createPortal(DeleteEnhancementsByEnhancerSelectorModal, {
+                              mediaLibraryId: ml.id,
+                              mediaLibraryName: ml.name,
+                              template: template,
+                              onCompleted: async () => {
+                                toast.success(t<string>("Saved"));
+                                outdatedModalRef.current?.check();
+                              },
+                            });
+                          } else if (key === "deleteMediaLibrary") {
+                            createPortal(Modal, {
+                              defaultVisible: true,
+                              title: t<string>("MediaLibrary.Confirm"),
+                              children: (
+                                <div>
+                                  {t<string>("MediaLibrary.DeleteConfirm")}
+                                  <br />
+                                  <span className="text-danger">
+                                    {t<string>("Be careful, this operation can not be undone")}
+                                  </span>
+                                </div>
+                              ),
+                              onOk: async () => {
+                                await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
+                                forceUpdate();
+                              },
+                              footer: {
+                                actions: ["ok", "cancel"],
+                                okProps: {
+                                  children: t<string>("Delete"),
+                                  color: "danger",
+                                  autoFocus: true,
+                                },
+                                cancelProps: {
+                                  children: t<string>("MediaLibrary.Cancel"),
+                                },
+                              },
+                            });
+                          }
+                        }}
+                      >
+                        <DropdownItem
+                          key="deleteEnhancements"
+                          className="text-warning"
+                          startContent={<MdOutlineDelete className={"text-lg"} />}
+                        >
+                          {t<string>("MediaLibrary.DeleteEnhancements")}
+                        </DropdownItem>
+                        <DropdownItem
+                          key="deleteMediaLibrary"
+                          className="text-danger"
+                          startContent={<MdOutlineDelete className={"text-lg"} />}
+                        >
+                          {t<string>("Delete")}
+                        </DropdownItem>
+                      </DropdownMenu>
+                    </Dropdown>
                   </div>
                 </TableCell>
               </TableRow>

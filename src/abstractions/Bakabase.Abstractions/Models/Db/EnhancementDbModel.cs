@@ -2,7 +2,7 @@
 
 namespace Bakabase.Abstractions.Models.Db
 {
-    public record Enhancement
+    public record EnhancementDbModel
     {
         public int Id { get; set; }
         public int ResourceId { get; set; }
@@ -21,6 +21,6 @@ namespace Bakabase.Abstractions.Models.Db
         /// <inheritdoc cref="PropertyPool"/>
         /// </summary>
         public int? PropertyId { get; set; }
-
+        public string Key { get; set; }= null!;
     }
 }

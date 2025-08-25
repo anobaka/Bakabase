@@ -13,6 +13,6 @@ public record PathPropertyExtractor: ISyncVersion
     public string? Regex { get; set; }
     public string GetSyncVersion()
     {
-        return CryptographyUtils.Md5($"{BasePathType}-{Positioner}-{Layer}-{Regex}", 8);
+        return CryptographyUtils.Md5($"{BasePathType}-{Positioner}-{Layer}-{Regex}").Substring(7);
     }
 }

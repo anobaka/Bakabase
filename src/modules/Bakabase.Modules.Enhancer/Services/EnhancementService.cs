@@ -25,7 +25,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Bakabase.Modules.Enhancer.Services
 {
     public class EnhancementService<TDbContext>(IServiceProvider serviceProvider)
-        : ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.Enhancement, int>(serviceProvider),
+        : ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.EnhancementDbModel, int>(serviceProvider),
             IEnhancementService where TDbContext : DbContext
     {
         protected ICustomPropertyValueService CustomPropertyValueService =>
@@ -37,7 +37,7 @@ namespace Bakabase.Modules.Enhancer.Services
         protected IEnhancerDescriptors EnhancerDescriptors => GetRequiredService<IEnhancerDescriptors>();
 
         public async Task<List<Enhancement>> GetAll(
-            Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>>? exp,
+            Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementDbModel, bool>>? exp,
             EnhancementAdditionalItem additionalItem = EnhancementAdditionalItem.None)
         {
             var data = await base.GetAll(exp);
@@ -118,6 +118,8 @@ namespace Bakabase.Modules.Enhancer.Services
         public async Task AddRange(List<Enhancement> enhancements)
         {
             var dbValuesMap = enhancements.ToDictionary(e => e.ToDbModel(), e => e);
+            var keys = dbValuesMap.Keys.Select(d => d.Key);
+            await base.RemoveAll(x => keys.Contains(x.Key));
             await base.AddRange(dbValuesMap.Keys.ToList());
             foreach (var (k, v) in dbValuesMap)
             {
@@ -132,7 +134,7 @@ namespace Bakabase.Modules.Enhancer.Services
         }
 
         public async Task<BaseResponse> RemoveAll(
-            Expression<Func<Bakabase.Abstractions.Models.Db.Enhancement, bool>> selector,
+            Expression<Func<Bakabase.Abstractions.Models.Db.EnhancementDbModel, bool>> selector,
             bool removeGeneratedCustomPropertyValues)
         {
             var enhancements = await base.GetAll(selector);

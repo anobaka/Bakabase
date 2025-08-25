@@ -1209,6 +1209,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media-library-template/{mediaLibraryTemplateId}/enhancer/{enhancerId}/enhancements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteEnhancementsByMediaLibraryTemplateAndEnhancer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/enhancer/{enhancerId}/enhancement": {
         parameters: {
             query?: never;
@@ -9518,6 +9534,33 @@ export interface operations {
             header?: never;
             path: {
                 mediaLibraryId: number;
+                enhancerId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteEnhancementsByMediaLibraryTemplateAndEnhancer: {
+        parameters: {
+            query?: {
+                deleteEmptyOnly?: boolean;
+            };
+            header?: never;
+            path: {
+                mediaLibraryTemplateId: number;
                 enhancerId: number;
             };
             cookie?: never;

@@ -15,7 +15,6 @@ using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using CategoryDbModel = Bakabase.Abstractions.Models.Db.CategoryDbModel;
 using CategoryEnhancerOptions = Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions;
-using Enhancement = Bakabase.Abstractions.Models.Db.Enhancement;
 using EnhancementRecord = Bakabase.Abstractions.Models.Db.EnhancementRecord;
 using LegacyAlias = Bakabase.InsideWorld.Models.Models.Entities.LegacyAlias;
 using MediaLibraryDbModel = Bakabase.Abstractions.Models.Db.MediaLibraryDbModel;
@@ -66,7 +65,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<CustomPropertyValueDbModel> CustomPropertyValues { get; set; }
         public DbSet<CategoryCustomPropertyMapping> CategoryCustomPropertyMappings { get; set; }
 
-        public DbSet<Enhancement> Enhancements { get; set; }
+        public DbSet<EnhancementDbModel> Enhancements { get; set; }
         public DbSet<CategoryEnhancerOptions> CategoryEnhancerOptions { get; set; }
         public DbSet<EnhancementRecord> EnhancementRecords { get; set; }
 

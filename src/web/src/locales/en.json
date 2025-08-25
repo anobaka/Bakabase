@@ -408,6 +408,13 @@
   "FileNameModifier.Error.NoValidOperation": "No valid operation configured. Please add at least one valid operation.",
   "MediaLibrary.AddOrEdit": "Add or edit",
   "MediaLibrary.SynchronizeAll": "Synchronize all media libraries",
+  "MediaLibrary.DeleteEnhancements": "Delete enhancements",
+  "MediaLibraryTemplate.RemoveEnhancer": "Remove enhancer",
+  "Enhancement.DeleteAllByEnhancerForTemplate": "Delete all enhancements of this enhancer for template {{templateName}}",
+  "Enhancement.DeleteAllByEnhancerForTemplate.ScopeWarning": "This will delete all enhancements of resources in all media libraries using this template.",
+  "Enhancement.EnhancedResourceCount": "{{count}} resources enhanced",
+  "Enhancement.DeleteByEnhancer.SelectEnhancerTitle": "Select an enhancer to delete enhancements",
+  "Enhancement.DeleteByEnhancer.NoEnhancerInTemplate": "No enhancers configured in template",
   "MediaLibrary.SortBy": "Sort by {{sortBy}}",
   "MediaLibrary.SortBy.Path": "Path",
   "MediaLibrary.SortBy.Template": "Template",
@@ -626,5 +633,6 @@
   "ResourceCover.CoverTips.S2.Happens": "Happens when:",
   "ResourceCover.CoverTips.S2.When.CacheDeleted": "the cover was cached but deleted after",
   "ResourceCover.CoverTips.S2.Todo": "What you can do:",
-  "ResourceCover.CoverTips.S2.Todo.DisableCache": "try to disable cache from the button inside upper right area of current page, if covers display, you can manually remove caches in data-cache page"
+  "ResourceCover.CoverTips.S2.Todo.DisableCache": "try to disable cache from the button inside upper right area of current page, if covers display, you can manually remove caches in data-cache page",
+  "MediaLibrary.DeleteConfirm": "Are you sure you want to delete this media library?"
 }

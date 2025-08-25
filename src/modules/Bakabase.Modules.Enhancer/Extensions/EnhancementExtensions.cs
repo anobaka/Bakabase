@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
@@ -87,13 +88,13 @@ public static class EnhancementExtensions
             CategoryId = ce.CategoryId,
             EnhancerId = ce.EnhancerId,
             Active = ce.Active,
-            Options = JsonConvert.SerializeObject(ce.Options)
+            Options = JsonConvert.SerializeObject(ce.Options),
         };
 
         return model;
     }
 
-    public static Enhancement ToDomainModel(this Bakabase.Abstractions.Models.Db.Enhancement dbModel)
+    public static Enhancement ToDomainModel(this Bakabase.Abstractions.Models.Db.EnhancementDbModel dbModel)
     {
         return new Enhancement
         {
@@ -105,13 +106,14 @@ public static class EnhancementExtensions
             ValueType = dbModel.ValueType,
             PropertyPool = dbModel.PropertyPool,
             PropertyId = dbModel.PropertyId,
-            DynamicTarget = dbModel.DynamicTarget
+            DynamicTarget = dbModel.DynamicTarget,
+            Key = dbModel.Key
         };
     }
 
-    public static Bakabase.Abstractions.Models.Db.Enhancement ToDbModel(this Enhancement domainModel)
+    public static Bakabase.Abstractions.Models.Db.EnhancementDbModel ToDbModel(this Enhancement domainModel)
     {
-        return new Bakabase.Abstractions.Models.Db.Enhancement
+        var dbModel = new Bakabase.Abstractions.Models.Db.EnhancementDbModel
         {
             EnhancerId = domainModel.EnhancerId,
             Id = domainModel.Id,
@@ -123,5 +125,7 @@ public static class EnhancementExtensions
             PropertyId = domainModel.PropertyId,
             DynamicTarget = domainModel.DynamicTarget
         };
+        dbModel.FillKey();
+        return dbModel;
     }
 }
