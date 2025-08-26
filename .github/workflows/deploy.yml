@@ -245,11 +245,12 @@ jobs:
           echo "ref=${{ github.ref }}"
           echo "ref_name=${{ github.ref_name }}"
           echo "nbgv.version=${{ needs.prepare.outputs.version }}"
-      - name: Run release-please 
-        id: run-release-please
-        uses: google-github-actions/release-please-action@v4
+      - name: Generate changelog via release-please
+        id: rp
+        uses: googleapis/release-please-action@v4
         with:
           command: github-release
+          release-type: simple
           release-as: ${{ needs.prepare.outputs.version }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download artifact (win-x64)
