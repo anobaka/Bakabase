@@ -3,6 +3,11 @@ conventional_commits = true
 filter_unconventional = true
 topo_order = false
 protect_breaking_commits = true
+issue_patterns = [
+  "(?im)(close[sd]?|fix(e[sd])?|resolve[sd]?) #\\d+[;]?",
+  "(?m)#\\d+[;]?"
+]
+
 commit_parsers = [
   { message = "^feat", group = "Features" },
   { message = "^fix", group = "Bug Fixes" },
