@@ -1,0 +1,44 @@
+[git]
+conventional_commits = true
+filter_unconventional = true
+topo_order = false
+protect_breaking_commits = true
+commit_parsers = [
+  { message = "^feat", group = "Features" },
+  { message = "^fix", group = "Bug Fixes" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Refactoring" },
+  { message = "^docs", group = "Documentation" },
+  { message = "^style", group = "Styling", skip = true },
+  { message = "^test", group = "Testing", skip = true },
+  { message = "^build", group = "Build System", skip = true },
+  { message = "^ci", group = "CI", skip = true },
+  { message = "^chore", group = "Chores", skip = true },
+  { message = "^revert", group = "Reverts" },
+]
+
+[remote.github]
+owner = "anobaka"
+repo  = "Bakabase"
+token = "$GITHUB_TOKEN"
+
+[changelog]
+header = ""
+body = """
+{% if version %}## {{ version | trim }} - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
+
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group }}
+{% for commit in commits %}
+- {{ commit.message | upper_first }} ({{ commit.id | truncate(length=7) }})
+  {% if commit.issues is defined and commit.issues | length > 0 %}
+    {% for issue in commit.issues %}
+      - Related: [#{{ issue.id }}]({{ issue.url }}){% if issue.title %} {{ issue.title }}{% endif %}
+    {% endfor %}
+  {% endif %}
+{% endfor %}
+
+{% endfor %}
+"""
+footer = ""
+trim = true

@@ -2,7 +2,7 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main, 'dev/v*', 'debug-actions' ]
+    branches: [ main, 'dev/v*' ]
     tags:
       - 'v*'
   pull_request:
@@ -241,6 +241,8 @@ jobs:
     needs: [ prepare, build ]
     steps:
       - uses: actions/checkout@v4   # ✅ pull code into workspace
+        with:
+          fetch-depth: 0
 
       - name: Debug release context
         run: |
@@ -248,23 +250,13 @@ jobs:
           echo "ref=${{ github.ref }}"
           echo "ref_name=${{ github.ref_name }}"
           echo "nbgv.version=${{ needs.prepare.outputs.version }}"
-      - name: Get version from nbgv & update manifest
-        run: |
-          VERSION="${{ needs.prepare.outputs.version }}"
-          echo "Using version from nbgv: $VERSION"
-          jq --arg v "$VERSION" '.["."]=$v' .release-please-manifest.json > tmp && mv tmp .release-please-manifest.json
-      - name: Debug manifest
-        run: |
-          echo "Manifest:"
-          cat .release-please-manifest.json
-      - name: Run release-please (manifest)
-        id: rp
-        uses: googleapis/release-please-action@v4
+      - name: Generate changelog (git-cliff)
+        id: cliff
+        uses: orhun/git-cliff-action@v4
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
-          token: ${{ secrets.GITHUB_TOKEN }}
-          target-branch: ${{ github.ref_name }}
+          args: --unreleased --tag "${{ needs.prepare.outputs.version }}" -o CHANGELOG_${{ needs.prepare.outputs.version }}.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Download artifact (win-x64)
         uses: actions/download-artifact@v4
         with:
@@ -295,6 +287,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.version }}
+          body_path: CHANGELOG_${{ needs.prepare.outputs.version }}.md
           files: |
             bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip
         env:
