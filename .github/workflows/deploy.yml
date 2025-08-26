@@ -137,10 +137,6 @@ jobs:
         with:
           name: fe
           path: ./publish/web
-      - name: Show publish tree (top level)
-        run: |
-          echo "Published files (top level):"
-          ls -al ./publish | sed -n '1,200p'
       - name: Ensure config directory exists
         run: mkdir -p ./publish/AppData/configs
       - name: create-json
