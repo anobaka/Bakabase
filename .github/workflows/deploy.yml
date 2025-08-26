@@ -246,6 +246,15 @@ jobs:
           echo "ref=${{ github.ref }}"
           echo "ref_name=${{ github.ref_name }}"
           echo "nbgv.version=${{ needs.prepare.outputs.version }}"
+      - name: Get version from nbgv & update manifest
+        run: |
+          VERSION="${{ needs.prepare.outputs.version }}"
+          echo "Using version from nbgv: $VERSION"
+          jq --arg v "$VERSION" '.["."]=$v' .release-please-manifest.json > tmp && mv tmp .release-please-manifest.json
+      - name: Debug manifest
+        run: |
+          echo "Manifest:"
+          cat .release-please-manifest.json
       - name: Run release-please (manifest)
         id: rp
         uses: googleapis/release-please-action@v4
