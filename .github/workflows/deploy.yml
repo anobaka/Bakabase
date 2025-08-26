@@ -2,7 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main, 'dev/v*' ]
+    branches: [ main, 'dev/v*', 'debug-actions' ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main, 'dev/v*' ]
   workflow_dispatch:
@@ -11,6 +13,10 @@ on:
         description: 'Docker image tag (e.g., v1.2.3, 1.2.3, v1.2.3-alpha)'
         required: true
         type: string
+
+permissions:
+  contents: write
+  pull-requests: write
 
 jobs:
   prepare:
@@ -39,6 +45,13 @@ jobs:
           else
             echo "is_tag=false" >> $GITHUB_OUTPUT
           fi
+      - name: Debug prepare context
+        run: |
+          echo "github.event_name=${{ github.event_name }}"
+          echo "github.ref=${GITHUB_REF}"
+          echo "github.ref_name=${{ github.ref_name }}"
+          echo "resolved.version=${{ steps.set-var.outputs.version }}"
+          echo "resolved.is_tag=${{ steps.set-var.outputs.is_tag }}"
 
   build-frontend:
     runs-on: ubuntu-latest
@@ -124,6 +137,10 @@ jobs:
         with:
           name: fe
           path: ./publish/web
+      - name: Show publish tree (top level)
+        run: |
+          echo "Published files (top level):"
+          ls -al ./publish | sed -n '1,200p'
       - name: Ensure config directory exists
         run: mkdir -p ./publish/AppData/configs
       - name: create-json
@@ -137,6 +154,10 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: ./publish/*
+      - name: Uploaded artifact debug
+        run: |
+          echo "Uploaded artifact name=${{ matrix.artifact }}"
+          echo "Total files: $(find ./publish -type f | wc -l)"
 
   deploy-oss:
     runs-on: ubuntu-latest
@@ -151,6 +172,10 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: .
+      - name: Show downloaded artifact contents
+        run: |
+          echo "Downloaded artifact to $(pwd)"
+          ls -al | sed -n '1,200p'
 
       - name: Install ossutil
         run: |
@@ -169,6 +194,9 @@ jobs:
       - name: Zip all files
         run: |
           zip -r bakabase.zip .
+      - name: Show zip info
+        run: |
+          ls -lh bakabase.zip || true
 
       - name: Upload zip to OSS
         run: |
@@ -201,6 +229,9 @@ jobs:
           echo "Building Docker image 'bakabase:${DOCKER_TAG}' using Dockerfile '${DOCKERFILE}'..."
           docker build --progress=plain -f "${DOCKERFILE}" -t bakabase:${DOCKER_TAG} ./publish
           echo "Docker image 'bakabase:${DOCKER_TAG}' built successfully"
+      - name: Show local docker images (top)
+        run: |
+          docker images | sed -n '1,50p' || true
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
       - name: Tag and push Docker image
@@ -208,30 +239,54 @@ jobs:
           docker tag bakabase:${DOCKER_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
 
-  deploy-release:
+  release-please:
     runs-on: ubuntu-latest
     needs: [ prepare, build ]
-    if: startsWith(github.ref, 'refs/tags/')
-    strategy:
-      matrix:
-        include:
-          - artifact: win-x64
     steps:
-      - name: Download Bakabase build artifact
+      - name: Debug release context
+        run: |
+          echo "event=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "ref_name=${{ github.ref_name }}"
+          echo "nbgv.version=${{ needs.prepare.outputs.version }}"
+      - name: Run release-please 
+        id: run-release-please
+        uses: google-github-actions/release-please-action@v4
+        with:
+          command: github-release
+          release-as: ${{ needs.prepare.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download artifact (win-x64)
         uses: actions/download-artifact@v4
         with:
-          name: ${{matrix.artifact}}
-          path: .
-
-      - name: Zip all files
+          name: win-x64
+          path: ./artifacts/win-x64
+        continue-on-error: true
+      - name: Show win-x64 artifact tree
+        if: hashFiles('artifacts/win-x64/**') != ''
         run: |
-          zip -r bakabase-${{needs.prepare.outputs.version}}-${{matrix.artifact}}.zip .
-
-      - name: Create GitHub Release and Upload zip
+          echo "Listing ./artifacts/win-x64"
+          ls -alR ./artifacts/win-x64 | sed -n '1,200p'
+      - name: Zip win-x64 artifact
+        if: hashFiles('artifacts/win-x64/**') != ''
+        run: |
+          cd ./artifacts/win-x64
+          zip -r ../../bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip .
+      - name: Show zipped asset info
+        if: hashFiles('artifacts/win-x64/**') != ''
+        run: |
+          ls -lh bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip || true
+      - name: Determine release tag
+        id: release_tag
+        run: |
+          TAG="${{ needs.prepare.outputs.version }}"
+          echo "name=$TAG" >> $GITHUB_OUTPUT
+          echo "Resolved release tag: $TAG"
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{needs.prepare.outputs.version}}
-          name: ${{needs.prepare.outputs.version}}
-          files: bakabase-${{needs.prepare.outputs.version}}-${{matrix.artifact}}.zip
+          tag_name: ${{ needs.prepare.outputs.version }}
+          files: |
+            bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
