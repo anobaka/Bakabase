@@ -240,6 +240,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ prepare, build ]
     steps:
+      - uses: actions/checkout@v4   # ✅ pull code into workspace
+
       - name: Debug release context
         run: |
           echo "event=${{ github.event_name }}"
