@@ -3,8 +3,7 @@
   "include-v-in-tag": true,
   "packages": {
     ".": {
-      "release-type": "simple",
-      "changelog-path": "CHANGELOG.md"
+      "release-type": "simple"
     }
   }
 }
