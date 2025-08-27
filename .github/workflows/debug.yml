@@ -126,7 +126,7 @@ jobs:
             fs.writeFileSync('cliff.context.enriched.json', json);
             core.setOutput('context', json);
             core.setOutput('context_path', 'cliff.context.enriched.json');
-            console.log(enriched);
+            console.log(JSON.stringify(enriched, null, 2));
 
       - name: Generate final changelog (with context)
         id: cliff_final
