@@ -1,16 +1,16 @@
 name: Build and Deploy
 
 on:
-  # push:
-  #   branches: [ main, 'dev/v*' ]
-  #   tags:
-  #     - 'v*'
-  # pull_request:
-  #   branches: [ main, 'dev/v*' ]
+  push:
+    branches: [ main, 'dev/v*', 'debug-actions' ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, 'dev/v*' ]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Docker image tag (e.g., v1.2.3, 1.2.3, v1.2.3-alpha)'
+        description: 'tag (e.g., v1.2.3, 1.2.3, v1.2.3-alpha)'
         required: true
         type: string
 
@@ -236,7 +236,7 @@ jobs:
           docker tag bakabase:${DOCKER_TAG} ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/bakabase:${DOCKER_TAG}
 
-  release-please:
+  release:
     runs-on: ubuntu-latest
     needs: [ prepare, build ]
     steps:
@@ -250,13 +250,107 @@ jobs:
           echo "ref=${{ github.ref }}"
           echo "ref_name=${{ github.ref_name }}"
           echo "nbgv.version=${{ needs.prepare.outputs.version }}"
-      - name: Generate changelog (git-cliff)
-        id: cliff
+      - name: Find previous release tag
+        id: previous
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const current = "${{ needs.prepare.outputs.version }}";
+            const { owner, repo } = context.repo;
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
+            const stable = releases.filter(r => !r.draft && !r.prerelease && r.tag_name && r.tag_name !== current);
+            let prev = stable[0]?.tag_name;
+            if (!prev && releases.length > 0) {
+              prev = releases.find(r => r.tag_name && r.tag_name !== current)?.tag_name;
+            }
+            if (!prev) {
+              const { execSync } = require('node:child_process');
+              try {
+                prev = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+              } catch {}
+            }
+            if (!prev) {
+              throw new Error('No previous tag found from releases or tags');
+            }
+            core.setOutput('previous_tag', prev);
+
+      - name: Generate initial context (git-cliff)
+        id: cliff_initial
         uses: orhun/git-cliff-action@v4
         with:
-          args: --unreleased --tag "${{ needs.prepare.outputs.version }}" -o CHANGELOG_${{ needs.prepare.outputs.version }}.md
+          config: cliff.toml
+          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --context
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OUTPUT: cliff.context.initial.json
+
+      - name: Build issues context
+        id: ctx
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const fs = require('node:fs');
+            const path = 'cliff.context.initial.json';
+            const text = fs.readFileSync(path, { encoding: 'utf8' });
+            const initial = JSON.parse(text || '{}')[0];
+
+            const issues = {};
+            const { owner, repo } = context.repo;
+
+            const numberSet = new Set();
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              const links = Array.isArray(commit.links) ? commit.links : [];
+              for (const link of links) {
+                const m = /#(\d+)/.exec(link.text || '');
+                if (m) {
+                  numberSet.add(m[1]);
+                }
+              }
+            }
+
+            for (const num of numberSet) {
+              try {
+                const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
+                const info = { title: data.title, url: data.html_url, number: data.number, state: data.state };
+                issues[num] = info;
+                issues['#' + num] = info;
+              } catch (e) {
+                core.warning(`Failed to fetch issue #${num}: ${e.message}`);
+              }
+            }
+
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              const links = Array.isArray(commit.links) ? commit.links : [];
+              const list = [];
+              for (const link of links) {
+                const m = /#(\d+)/.exec(link.text || '');
+                if (m) {
+                  const n = m[1];
+                  const issue = issues[n] || issues['#' + n] || null;
+                  list.push(issue);
+                }
+              }
+              commit.extra ??= {};
+              commit.extra["issues"] = list;
+            }
+
+            const json = JSON.stringify([initial]);
+            fs.writeFileSync('cliff.context.enriched.json', json);
+            core.setOutput('context', json);
+            core.setOutput('context_path', 'cliff.context.enriched.json');
+            console.log(JSON.stringify(initial, null, 2));
+
+      - name: Generate final changelog (with context)
+        id: cliff_final
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --from-context cliff.context.enriched.json
+        env:
+          OUTPUT: CHANGELOG_${{ needs.prepare.outputs.version }}.md
       - name: Download artifact (win-x64)
         uses: actions/download-artifact@v4
         with:
