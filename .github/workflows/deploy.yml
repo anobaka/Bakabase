@@ -351,6 +351,10 @@ jobs:
           args: --from-context cliff.context.enriched.json
         env:
           OUTPUT: CHANGELOG_${{ needs.prepare.outputs.version }}.md
+      - name: Append Aliyun CDN download link to changelog
+        run: |
+          echo "" >> CHANGELOG_${{ needs.prepare.outputs.version }}.md
+          echo "Aliyun CDN 下载地址: https://cdn-public.anobaka.com/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/installer/bakabase.zip" >> CHANGELOG_${{ needs.prepare.outputs.version }}.md
       - name: Download artifact (win-x64)
         uses: actions/download-artifact@v4
         with:
@@ -377,11 +381,22 @@ jobs:
           TAG="${{ needs.prepare.outputs.version }}"
           echo "name=$TAG" >> $GITHUB_OUTPUT
           echo "Resolved release tag: $TAG"
+      - name: Determine prerelease flag
+        id: prerelease
+        run: |
+          v="${{ needs.prepare.outputs.version }}"
+          v="${v,,}"
+          if [[ "$v" == *beta* || "$v" == *rc* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.version }}
           body_path: CHANGELOG_${{ needs.prepare.outputs.version }}.md
+          prerelease: ${{ steps.prerelease.outputs.prerelease == 'true' }}
           files: |
             bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip
         env:
