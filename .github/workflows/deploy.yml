@@ -1,12 +1,12 @@
 name: Build and Deploy
 
 on:
-  push:
-    branches: [ main, 'dev/v*' ]
-    tags:
-      - 'v*'
-  pull_request:
-    branches: [ main, 'dev/v*' ]
+  # push:
+  #   branches: [ main, 'dev/v*' ]
+  #   tags:
+  #     - 'v*'
+  # pull_request:
+  #   branches: [ main, 'dev/v*' ]
   workflow_dispatch:
     inputs:
       tag:
