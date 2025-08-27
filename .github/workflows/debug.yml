@@ -111,7 +111,8 @@ jobs:
                   list.push(issue);
                 }
               }
-              commit.issues = list;
+              commit.extra ??= {};
+              commit.extra["issues"] = list;
             }
 
             const json = JSON.stringify([initial]);

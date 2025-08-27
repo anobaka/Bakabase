@@ -1,5 +1,5 @@
 [git]
-conventional_commits = true
+conventional_commits = false
 filter_unconventional = false
 topo_order = false
 protect_breaking_commits = true
@@ -36,8 +36,8 @@ body = """
 ### {{ group }}
 {% for commit in commits %}
 - {{ commit.message | upper_first }} ({{ commit.id | truncate(length=7) }})
-  {% if commit.issues is defined and commit.issues | length > 0 %}
-    {% for issue in commit.issues %}
+  {% if commit.extra is defined and commit.extra.issues is defined %}
+    {% for issue in commit.extra.issues %}
       - Related: [#{{ issue.number }}]({{ issue.url }}) {{ issue.title }}
     {% endfor %}
   {% endif %}
