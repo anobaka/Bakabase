@@ -57,7 +57,8 @@ jobs:
         with:
           config: cliff.toml
           args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
-          output: CHANGELOG.initial.md
+        env:
+          OUTPUT: CHANGELOG.initial.md
 
       - name: Build issues context from changelog
         id: ctx
@@ -96,8 +97,9 @@ jobs:
         with:
           config: cliff.toml
           args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
-          output: CHANGELOG.final.md
           context: ${{ steps.ctx.outputs.context }}
+        env:
+          OUTPUT: CHANGELOG.final.md
 
       - name: Print outputs
         run: |
