@@ -2,9 +2,9 @@ name: debug-git-cliff
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - debug-actions
+  # push:
+  #   branches:
+  #     - debug-actions
 jobs:
   debug-git-cliff:
     runs-on: ubuntu-latest
