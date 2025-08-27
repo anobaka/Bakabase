@@ -30,7 +30,6 @@ commit_parsers = [
 [changelog]
 header = ""
 body = """
-{% if version %}## {{ version | trim }} - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
 {%- for group, commits in commits | group_by(attribute="group") -%}
 ### {{ group }}
 {% for commit in commits %}
