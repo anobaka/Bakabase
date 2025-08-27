@@ -122,7 +122,7 @@ jobs:
             }
 
             const enriched = { ...initial, issues, issues_meta, commit_issues: commitIssues };
-            const json = JSON.stringify(enriched);
+            const json = JSON.stringify([enriched]);
             fs.writeFileSync('cliff.context.enriched.json', json);
             core.setOutput('context', json);
             core.setOutput('context_path', 'cliff.context.enriched.json');
