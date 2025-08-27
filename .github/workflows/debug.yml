@@ -2,7 +2,9 @@ name: debug-git-cliff
 
 on:
   workflow_dispatch:
-
+  push:
+    branches:
+      - debug-actions
 jobs:
   debug-git-cliff:
     runs-on: ubuntu-latest
@@ -53,7 +55,7 @@ jobs:
         id: cliff_initial
         uses: orhun/git-cliff-action@v3
         with:
-          config: Bakabase/cliff.toml
+          config: cliff.toml
           args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
           output: CHANGELOG.initial.md
 
@@ -92,7 +94,7 @@ jobs:
         id: cliff_final
         uses: orhun/git-cliff-action@v3
         with:
-          config: Bakabase/cliff.toml
+          config: cliff.toml
           args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
           output: CHANGELOG.final.md
           context: ${{ steps.ctx.outputs.context }}
