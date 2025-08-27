@@ -340,6 +340,7 @@ jobs:
               commit.extra["issues"] = list;
             }
 
+            initial.version = "${{ needs.prepare.outputs.version }}";
             const json = JSON.stringify([initial]);
             fs.writeFileSync('cliff.context.enriched.json', json);
             core.setOutput('context', json);
@@ -351,7 +352,7 @@ jobs:
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: --from-context cliff.context.enriched.json --tag "${{ needs.prepare.outputs.version }}"
+          args: --from-context cliff.context.enriched.json
         env:
           OUTPUT: CHANGELOG_${{ needs.prepare.outputs.version }}.md
       - name: Download artifact (win-x64)
