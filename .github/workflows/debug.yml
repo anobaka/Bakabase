@@ -73,7 +73,7 @@ jobs:
             const fs = require('node:fs');
             const path = 'cliff.context.initial.json';
             const text = fs.readFileSync(path, { encoding: 'utf8' });
-            const initial = JSON.parse(text || '{}');
+            const initial = JSON.parse(text || '{}')[0];
 
             const issues = {};
             const issues_meta = {};
