@@ -258,12 +258,15 @@ jobs:
           result-encoding: string
           script: |
             const current = "${{ needs.prepare.outputs.version }}";
+            const isPrerelease = /(?:beta|rc)/i.test(current);
             const { owner, repo } = context.repo;
             const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
-            const stable = releases.filter(r => !r.draft && !r.prerelease && r.tag_name && r.tag_name !== current);
-            let prev = stable[0]?.tag_name;
-            if (!prev && releases.length > 0) {
-              prev = releases.find(r => r.tag_name && r.tag_name !== current)?.tag_name;
+            const allCandidates = releases.filter(r => !r.draft && r.tag_name && r.tag_name !== current);
+            const stableCandidates = allCandidates.filter(r => !r.prerelease);
+            let candidates = isPrerelease ? allCandidates : stableCandidates;
+            let prev = candidates[0]?.tag_name;
+            if (!prev && allCandidates.length > 0) {
+              prev = allCandidates.find(r => r.tag_name && r.tag_name !== current)?.tag_name;
             }
             if (!prev) {
               const { execSync } = require('node:child_process');
