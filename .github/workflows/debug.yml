@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,53 +54,86 @@ jobs:
             }
             core.setOutput('previous_tag', prev);
 
-      - name: Generate initial changelog (range)
+      - name: Generate initial context (git-cliff)
         id: cliff_initial
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
+          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --context
         env:
-          OUTPUT: CHANGELOG.initial.md
+          OUTPUT: cliff.context.initial.json
 
-      - name: Build issues context from changelog
+      - name: Build issues context
         id: ctx
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           result-encoding: string
           script: |
-            const fs = require('fs');
-            const path = 'CHANGELOG.initial.md';
-            const md = fs.readFileSync(path, 'utf8');
-            const set = new Set();
-            const regex = /#(\d+)/g;
-            let m;
-            while ((m = regex.exec(md)) !== null) {
-              set.add(m[1]);
-            }
-            const numbers = Array.from(set);
+            const fs = require('node:fs');
+            const path = 'cliff.context.initial.json';
+            const text = fs.readFileSync(path, { encoding: 'utf8' });
+            const initial = JSON.parse(text || '{}');
+
             const issues = {};
+            const issues_meta = {};
+            const commitIssues = {};
             const { owner, repo } = context.repo;
-            for (const num of numbers) {
+
+            const numberSet = new Set();
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              const links = Array.isArray(commit.links) ? commit.links : [];
+              for (const link of links) {
+                const m = /#(\d+)/.exec(link.text || '');
+                if (m) {
+                  numberSet.add(m[1]);
+                }
+              }
+            }
+
+            for (const num of numberSet) {
               try {
                 const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
-                issues[num] = data.title;
+                const info = { title: data.title, url: data.html_url, number: data.number, state: data.state };
+                issues[num] = info.title;
+                issues['#' + num] = info.title;
+                issues_meta[num] = info;
+                issues_meta['#' + num] = info;
               } catch (e) {
                 core.warning(`Failed to fetch issue #${num}: ${e.message}`);
               }
             }
-            const ctx = { issues };
-            const json = JSON.stringify(ctx);
+
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              const links = Array.isArray(commit.links) ? commit.links : [];
+              const list = [];
+              for (const link of links) {
+                const m = /#(\d+)/.exec(link.text || '');
+                if (m) {
+                  const n = m[1];
+                  const meta = issues_meta[n] || issues_meta['#' + n] || null;
+                  list.push({ number: n, key: '#' + n, title: meta?.title || '', url: meta?.url || '' });
+                }
+              }
+              const commitId = commit.id || commit.sha || '';
+              if (commitId) {
+                commitIssues[commitId] = list;
+              }
+            }
+
+            const enriched = { ...initial, issues, issues_meta, commit_issues: commitIssues };
+            const json = JSON.stringify(enriched);
+            fs.writeFileSync('cliff.context.enriched.json', json);
             core.setOutput('context', json);
-            console.log(ctx);
+            core.setOutput('context_path', 'cliff.context.enriched.json');
+            console.log(enriched);
 
       - name: Generate final changelog (with context)
         id: cliff_final
         uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
-          args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --from-context "${{ steps.ctx.outputs.context }}"
+          args: --from-context cliff.context.enriched.json
         env:
           OUTPUT: CHANGELOG.final.md
 
@@ -107,8 +141,10 @@ jobs:
         run: |
           echo 'Current version: ${{ steps.current.outputs.current_version }}'
           echo 'Previous tag: ${{ steps.previous.outputs.previous_tag }}'
-          echo '--- Initial ---'
-          sed -n '1,120p' CHANGELOG.initial.md | cat
+          echo '--- Initial context ---'
+          sed -n '1,120p' cliff.context.initial.json | cat
+          echo '--- Enriched context ---'
+          sed -n '1,120p' cliff.context.enriched.json | cat
           echo '--- Final ---'
           sed -n '1,120p' CHANGELOG.final.md | cat
 
