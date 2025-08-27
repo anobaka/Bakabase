@@ -31,19 +31,17 @@ commit_parsers = [
 header = ""
 body = """
 {% if version %}## {{ version | trim }} - {{ timestamp | date(format="%Y-%m-%d") }}{% endif %}
-
-{% for group, commits in commits | group_by(attribute="group") %}
+{%- for group, commits in commits | group_by(attribute="group") -%}
 ### {{ group }}
 {% for commit in commits %}
 - {{ commit.message | upper_first }} ({{ commit.id | truncate(length=7) }})
-  {% if commit.extra is defined and commit.extra.issues is defined %}
+  {%- if commit.extra is defined and commit.extra.issues is defined -%}
     {% for issue in commit.extra.issues %}
-      - Related: [#{{ issue.number }}]({{ issue.url }}) {{ issue.title }}
-    {% endfor %}
+  - [#{{ issue.number }}]({{ issue.url }}) {{ issue.title }}
+    {%- endfor -%}
   {% endif %}
 {% endfor %}
-
 {% endfor %}
 """
 footer = ""
-trim = true
+trim = false
