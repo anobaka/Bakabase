@@ -76,8 +76,6 @@ jobs:
             const initial = JSON.parse(text || '{}')[0];
 
             const issues = {};
-            const issues_meta = {};
-            const commitIssues = {};
             const { owner, repo } = context.repo;
 
             const numberSet = new Set();
@@ -95,10 +93,8 @@ jobs:
               try {
                 const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
                 const info = { title: data.title, url: data.html_url, number: data.number, state: data.state };
-                issues[num] = info.title;
-                issues['#' + num] = info.title;
-                issues_meta[num] = info;
-                issues_meta['#' + num] = info;
+                issues[num] = info;
+                issues['#' + num] = info;
               } catch (e) {
                 core.warning(`Failed to fetch issue #${num}: ${e.message}`);
               }
@@ -111,22 +107,18 @@ jobs:
                 const m = /#(\d+)/.exec(link.text || '');
                 if (m) {
                   const n = m[1];
-                  const meta = issues_meta[n] || issues_meta['#' + n] || null;
-                  list.push({ number: n, key: '#' + n, title: meta?.title || '', url: meta?.url || '' });
+                  const issue = issues[n] || issues['#' + n] || null;
+                  list.push(issue);
                 }
               }
-              const commitId = commit.id || commit.sha || '';
-              if (commitId) {
-                commitIssues[commitId] = list;
-              }
+              commit.issues = list;
             }
 
-            const enriched = { ...initial, issues, issues_meta, commit_issues: commitIssues };
-            const json = JSON.stringify([enriched]);
+            const json = JSON.stringify([initial]);
             fs.writeFileSync('cliff.context.enriched.json', json);
             core.setOutput('context', json);
             core.setOutput('context_path', 'cliff.context.enriched.json');
-            console.log(JSON.stringify(enriched, null, 2));
+            console.log(JSON.stringify(initial, null, 2));
 
       - name: Generate final changelog (with context)
         id: cliff_final

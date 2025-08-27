@@ -36,9 +36,9 @@ body = """
 ### {{ group }}
 {% for commit in commits %}
 - {{ commit.message | upper_first }} ({{ commit.id | truncate(length=7) }})
-  {% if commit.links is defined and commit.links | length > 0 %}
-    {% for issue in commit.links %}
-      - Related: [#{{ issue.text }}]({{ issue.href }}){% if issues is defined %} {{ issues[issue.text] | default(value="") }}{% endif %}
+  {% if commit.issues is defined and commit.issues | length > 0 %}
+    {% for issue in commit.issues %}
+      - Related: [#{{ issue.number }}]({{ issue.url }}) {{ issue.title }}
     {% endfor %}
   {% endif %}
 {% endfor %}
