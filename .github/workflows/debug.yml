@@ -53,7 +53,7 @@ jobs:
 
       - name: Generate initial changelog (range)
         id: cliff_initial
-        uses: orhun/git-cliff-action@v3
+        uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
           args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
@@ -92,7 +92,7 @@ jobs:
 
       - name: Generate final changelog (with context)
         id: cliff_final
-        uses: orhun/git-cliff-action@v3
+        uses: orhun/git-cliff-action@v4
         with:
           config: cliff.toml
           args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
