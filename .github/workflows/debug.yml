@@ -1,40 +1,109 @@
-name: Debug actions
+name: debug-git-cliff
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-  issues: write
-  pull-requests: write
-
 jobs:
   debug-git-cliff:
     runs-on: ubuntu-latest
-    outputs:
-      release_body: ${{ steps.git-cliff.outputs.content }}
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4   # ✅ pull code into workspace
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
-      - name: Debug release context
-        run: |
-          echo "event=${{ github.event_name }}"
-          echo "ref=${{ github.ref }}"
-          echo "ref_name=${{ github.ref_name }}"
 
-      - name: Generate a changelog
-        uses: orhun/git-cliff-action@v4
-        id: git-cliff
+      - name: Get version by NBGV
+        id: nbgv
+        uses: dotnet/nbgv@v0.4.1
+
+      - name: Export current version
+        id: current
+        run: |
+          echo "current_version=${{ steps.nbgv.outputs.SemVer2 }}" >> $GITHUB_OUTPUT
+
+      - name: Find previous release tag
+        id: previous
+        uses: actions/github-script@v7
         with:
-          config: cliff.toml
-          args: 1.9.2-beta.1..1.9.2-beta.37 -vv --tag 1.9.2-beta.37
-        env:
-          CLIFF_ARCH: x86_64
-          GITHUB_REPO: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const current = "${{ steps.current.outputs.current_version }}";
+            const { owner, repo } = context.repo;
+            const releases = await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 });
+            const stable = releases.filter(r => !r.draft && !r.prerelease && r.tag_name && r.tag_name !== current);
+            let prev = stable[0]?.tag_name;
+            if (!prev && releases.length > 0) {
+              prev = releases.find(r => r.tag_name && r.tag_name !== current)?.tag_name;
+            }
+            if (!prev) {
+              const { execSync } = require('node:child_process');
+              try {
+                prev = execSync('git describe --tags --abbrev=0', { encoding: 'utf8' }).trim();
+              } catch {}
+            }
+            if (!prev) {
+              throw new Error('No previous tag found from releases or tags');
+            }
+            core.setOutput('previous_tag', prev);
 
-      - name: Show changelog
+      - name: Generate initial changelog (range)
+        id: cliff_initial
+        uses: orhun/git-cliff-action@v3
+        with:
+          config: Bakabase/cliff.toml
+          args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
+          output: CHANGELOG.initial.md
+
+      - name: Build issues context from changelog
+        id: ctx
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const fs = require('fs');
+            const path = 'CHANGELOG.initial.md';
+            const md = fs.readFileSync(path, 'utf8');
+            const set = new Set();
+            const regex = /#(\d+)/g;
+            let m;
+            while ((m = regex.exec(md)) !== null) {
+              set.add(m[1]);
+            }
+            const numbers = Array.from(set);
+            const issues = {};
+            const { owner, repo } = context.repo;
+            for (const num of numbers) {
+              try {
+                const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
+                issues[num] = data.title;
+              } catch (e) {
+                core.warning(`Failed to fetch issue #${num}: ${e.message}`);
+              }
+            }
+            const ctx = { issues };
+            const json = JSON.stringify(ctx);
+            core.setOutput('context', json);
+
+      - name: Generate final changelog (with context)
+        id: cliff_final
+        uses: orhun/git-cliff-action@v3
+        with:
+          config: Bakabase/cliff.toml
+          args: --range ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }}
+          output: CHANGELOG.final.md
+          context: ${{ steps.ctx.outputs.context }}
+
+      - name: Print outputs
         run: |
-          echo "Generated changelog:"
-          echo "${{ steps.git-cliff.outputs.content }}"
+          echo 'Current version: ${{ steps.current.outputs.current_version }}'
+          echo 'Previous tag: ${{ steps.previous.outputs.previous_tag }}'
+          echo '--- Initial ---'
+          sed -n '1,120p' CHANGELOG.initial.md | cat
+          echo '--- Final ---'
+          sed -n '1,120p' CHANGELOG.final.md | cat
+
+

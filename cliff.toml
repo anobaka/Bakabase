@@ -1,12 +1,12 @@
 [git]
 conventional_commits = true
-filter_unconventional = true
+filter_unconventional = false
 topo_order = false
 protect_breaking_commits = true
-issue_patterns = [
-  "(?im)(close[sd]?|fix(e[sd])?|resolve[sd]?) #\\d+[;]?",
-  "(?m)#\\d+[;]?"
+link_parsers = [
+  { pattern = "#(\\d+)", href = "https://github.com/anobaka/Bakabase/issues/$1"}
 ]
+filter_commits = false
 
 commit_parsers = [
   { message = "^feat", group = "Features" },
@@ -22,10 +22,10 @@ commit_parsers = [
   { message = "^revert", group = "Reverts" },
 ]
 
-[remote.github]
-owner = "anobaka"
-repo  = "Bakabase"
-token = "$GITHUB_TOKEN"
+# [remote.github]
+# owner = "anobaka"
+# repo  = "Bakabase"
+# token = "GITHUB_TOKEN"
 
 [changelog]
 header = ""
@@ -36,9 +36,9 @@ body = """
 ### {{ group }}
 {% for commit in commits %}
 - {{ commit.message | upper_first }} ({{ commit.id | truncate(length=7) }})
-  {% if commit.issues is defined and commit.issues | length > 0 %}
-    {% for issue in commit.issues %}
-      - Related: [#{{ issue.id }}]({{ issue.url }}){% if issue.title %} {{ issue.title }}{% endif %}
+  {% if commit.links is defined and commit.links | length > 0 %}
+    {% for issue in commit.links %}
+      - Related: [#{{ issue.text }}]({{ issue.href }}){% if issues is defined %} {{ issues[issue.text] | default(value="") }}{% endif %}
     {% endfor %}
   {% endif %}
 {% endfor %}
