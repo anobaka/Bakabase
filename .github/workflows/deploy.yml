@@ -365,6 +365,11 @@ jobs:
           args: --from-context cliff.context.enriched.json
         env:
           OUTPUT: CHANGELOG_${{ needs.prepare.outputs.version }}.md
+      - name: Upload changelog artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: changelog-md
+          path: CHANGELOG_${{ needs.prepare.outputs.version }}.md
       - name: Download artifact (win-x64)
         uses: actions/download-artifact@v4
         with:
@@ -412,3 +417,27 @@ jobs:
             bakabase-${{ needs.prepare.outputs.version }}-win-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  generate-readme-oss:
+    runs-on: ubuntu-latest
+    needs: [ prepare, release ]
+    steps:
+      - name: Download changelog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: changelog-md
+          path: .
+      - name: Create README.md
+        run: cp "CHANGELOG_${{ needs.prepare.outputs.version }}.md" README.md
+      - name: Install ossutil
+        run: |
+          wget -O ossutil64 https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64
+          chmod +x ossutil64
+      - name: Upload README.md to OSS
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+          OSS_ENDPOINT: http://oss-accelerate.aliyuncs.com
+        run: |
+          ./ossutil64 config -e $OSS_ENDPOINT -i $OSS_ACCESS_KEY_ID -k $OSS_ACCESS_KEY_SECRET
+          ./ossutil64 cp README.md oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/README.md
