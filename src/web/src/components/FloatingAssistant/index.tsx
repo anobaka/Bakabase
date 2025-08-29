@@ -375,6 +375,7 @@ const FloatingAssistant = () => {
           case TaskAction.Start:
             opts.push(
               <Button
+                key={`start-${task.id}`}
                 isIconOnly
                 color={"secondary"}
                 size={"sm"}
@@ -390,6 +391,7 @@ const FloatingAssistant = () => {
           case TaskAction.Pause:
             opts.push(
               <Button
+                key={`pause-${task.id}`}
                 isIconOnly
                 color={"warning"}
                 size={"sm"}
@@ -420,6 +422,7 @@ const FloatingAssistant = () => {
           case TaskAction.Stop:
             opts.push(
               <Button
+                key={`stop-${task.id}`}
                 isIconOnly
                 color={"danger"}
                 size={"sm"}
@@ -448,6 +451,7 @@ const FloatingAssistant = () => {
           case TaskAction.Clean:
             opts.push(
               <Button
+                key={`clean-${task.id}`}
                 // color={'success'}
                 isIconOnly
                 size={"sm"}
@@ -463,6 +467,7 @@ const FloatingAssistant = () => {
           case TaskAction.Config:
             opts.push(
               <Button
+                key={`config-${task.id}`}
                 isIconOnly
                 size={"sm"}
                 variant={"light"}

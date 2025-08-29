@@ -1665,6 +1665,9 @@
   "Create task": "创建任务",
   "Start all": "全部开始",
   "Stop all": "全部停止",
+  "Cleanup": "清理",
+  "Delete all completed tasks": "删除所有已完成任务",
+  "Delete all failed tasks": "删除所有失败任务",
   "Export all tasks": "导出全部任务",
   "Configurations": "配置",
   "Next start time": "下次开始时间",
@@ -2330,5 +2333,8 @@
   "Marked as synced": "已标记为已同步",
   "MediaLibrary.DeleteConfirm": "确定删除媒体库吗？",
   "Enhancement.DeleteByEnhancer.SelectEnhancerTitle": "选择一个增强器以删除增强数据",
-  "Enhancement.DeleteByEnhancer.NoEnhancerInTemplate": "模板中未配置任何增强器"
+  "Enhancement.DeleteByEnhancer.NoEnhancerInTemplate": "模板中未配置任何增强器",
+  "Reset cover cache of current resource": "重置当前资源的封面缓存",
+  "Cover cache has been reset": "封面缓存已被重置",
+  "No tasks found": "未找到任务"
 }

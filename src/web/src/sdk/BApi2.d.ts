@@ -356,6 +356,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/cache/resource/{resourceId}/type/{type}/existence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CheckResourceCacheExistence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cache/resource/{resourceId}/type/{type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteResourceCacheByResourceIdAndCacheType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/cache/category/{categoryId}/type/{type}": {
         parameters: {
             query?: never;
@@ -1204,6 +1236,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeleteEnhancementsByMediaLibraryAndEnhancer"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/media-library/{mediaLibraryId}/enhancer/enhanced-counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetEnhancedResourceCountsByMediaLibrary"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6422,6 +6470,14 @@ export interface components {
                 [key: string]: components["schemas"]["Bakabase.Abstractions.Models.Domain.SpecialText"][] | null;
             };
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Int32]]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: {
+                [key: string]: number;
+            };
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.String,Bakabase.InsideWorld.Models.Constants.MediaType]]": {
             /** Format: int32 */
             code: number;
@@ -7786,6 +7842,58 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.CacheOverviewViewModel]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.CacheOverviewViewModel]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.CacheOverviewViewModel]"];
+                };
+            };
+        };
+    };
+    CheckResourceCacheExistence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+                /** @description [1: Covers, 2: PlayableFiles] */
+                type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                };
+            };
+        };
+    };
+    DeleteResourceCacheByResourceIdAndCacheType: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+                /** @description [1: Covers, 2: PlayableFiles] */
+                type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -9549,6 +9657,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetEnhancedResourceCountsByMediaLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mediaLibraryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Int32]]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Int32]]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Collections.Generic.Dictionary`2[System.Int32,System.Int32]]"];
                 };
             };
         };

@@ -12,6 +12,7 @@ using Bakabase.Infrastructures.Components.Configurations.App;
 using Bakabase.InsideWorld.Business.Components.Configurations;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Extensions;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
@@ -82,7 +83,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
 
         public async Task GetInitialData()
         {
-            await Clients.Caller.GetData(nameof(DownloadTaskDbModel), await _downloadTaskService.GetAllDto());
+            await Clients.Caller.GetData(nameof(DownloadTask), await _downloadTaskService.GetAllDto());
 
             foreach (var (optionsType, optionsManagerObj) in _optionsManagerPool.AllOptionsManagers)
             {

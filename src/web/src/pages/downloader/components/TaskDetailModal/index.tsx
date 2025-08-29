@@ -173,7 +173,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
               <Input
                 defaultValue={f.defaultValue}
                 label={f.label && t(f.label)}
-                placeholder={f.placeholder && t(f.placeholder)}
+                placeholder={f.placeholder}
                 size={"sm"}
                 value={form.keys?.[0]}
                 onValueChange={(v) => {
@@ -188,7 +188,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
             return (
               <Textarea
                 label={f.label && t(f.label)}
-                placeholder={f.placeholder && t(f.placeholder)}
+                placeholder={f.placeholder}
                 size={"sm"}
                 value={form.keys?.join("\n")}
                 onValueChange={(v) => {

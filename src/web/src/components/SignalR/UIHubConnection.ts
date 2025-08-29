@@ -49,7 +49,7 @@ export const UIHubConnection = () => {
         case "BackgroundTask":
           useBackgroundTasksStore.getState().setTasks(data);
           break;
-        case "DownloadTaskDbModel":
+        case "DownloadTask":
           useDownloadTasksStore.getState().setTasks(data);
           break;
         case "DependentComponentContext":

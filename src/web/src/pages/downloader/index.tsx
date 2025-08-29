@@ -37,7 +37,6 @@ import {
   Listbox,
   ListboxItem,
   Modal,
-  Progress,
 } from "@/components/bakaui";
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
@@ -61,6 +60,8 @@ import RequestStatistics from "@/pages/downloader/components/RequestStatistics";
 import DownloadTaskDetailModal from "./components/TaskDetailModal";
 
 import envConfig from "@/config/env.ts";
+
+import { CircularProgress } from "@heroui/react";
 
 // const testTasks: DownloadTask[] = [
 //   {
@@ -129,8 +130,7 @@ const DownloaderPage = () => {
         actionOnConflict,
       },
       {
-        showErrorToast: (r) =>
-          (r.code >= 404 || r.code < 200) && r.code != ResponseCode.Conflict,
+        showErrorToast: (r) => (r.code >= 404 || r.code < 200) && r.code != ResponseCode.Conflict,
       },
     );
 
@@ -188,38 +188,35 @@ const DownloaderPage = () => {
         }}
       >
         <MenuItem
+          className={"flex items-center gap-2"}
           onClick={() => {
             startTasksManually(selectedTaskIdsRef.current);
           }}
         >
-          <div>
-            <MdPlayCircle />
-            {moreThanOne && (
-              <>
-                {t<string>("Bulk")}
-                &nbsp;
-              </>
-            )}
-            {t<string>("Start")}
-          </div>
+          <MdPlayCircle />
+          {moreThanOne && (
+            <>
+              {t<string>("Bulk")}
+              &nbsp;
+            </>
+          )}
+          {t<string>("Start")}
         </MenuItem>
         <MenuItem
-          onClick={() =>
-            BApi.downloadTask.stopDownloadTasks(selectedTaskIdsRef.current)
-          }
+          className={"flex items-center gap-2"}
+          onClick={() => BApi.downloadTask.stopDownloadTasks(selectedTaskIdsRef.current)}
         >
-          <div>
-            <MdAccessTime />
-            {moreThanOne && (
-              <>
-                {t<string>("Bulk")}
-                &nbsp;
-              </>
-            )}
-            {t<string>("Stop")}
-          </div>
+          <MdAccessTime />
+          {moreThanOne && (
+            <>
+              {t<string>("Bulk")}
+              &nbsp;
+            </>
+          )}
+          {t<string>("Stop")}
         </MenuItem>
         <MenuItem
+          className={"flex items-center gap-2 danger"}
           onClick={() => {
             createPortal(Modal, {
               defaultVisible: true,
@@ -234,16 +231,14 @@ const DownloaderPage = () => {
             });
           }}
         >
-          <div className={"danger"}>
-            <MdDelete />
-            {moreThanOne && (
-              <>
-                {t<string>("Bulk")}
-                &nbsp;
-              </>
-            )}
-            {t<string>("Delete")}
-          </div>
+          <MdDelete />
+          {moreThanOne && (
+            <>
+              {t<string>("Bulk")}
+              &nbsp;
+            </>
+          )}
+          {t<string>("Delete")}
         </MenuItem>
       </ControlledMenu>
     );
@@ -267,19 +262,13 @@ const DownloaderPage = () => {
     loadDownloaderDefinitions();
   }, []);
 
-  console.log(
-    selectedTaskIdsRef.current,
-    SelectionMode[selectionModeRef.current],
-  );
+  console.log(selectedTaskIdsRef.current, SelectionMode[selectionModeRef.current]);
 
   const onTaskClick = (taskId: number) => {
     console.log(SelectionMode[selectionModeRef.current]);
     switch (selectionModeRef.current) {
       case SelectionMode.Default:
-        if (
-          selectedTaskIdsRef.current.includes(taskId) &&
-          selectedTaskIdsRef.current.length == 1
-        ) {
+        if (selectedTaskIdsRef.current.includes(taskId) && selectedTaskIdsRef.current.length == 1) {
           setSelectedTaskIds([]);
         } else {
           setSelectedTaskIds([taskId]);
@@ -287,9 +276,7 @@ const DownloaderPage = () => {
         break;
       case SelectionMode.Ctrl:
         if (selectedTaskIdsRef.current.includes(taskId)) {
-          setSelectedTaskIds(
-            selectedTaskIdsRef.current.filter((id) => id != taskId),
-          );
+          setSelectedTaskIds(selectedTaskIdsRef.current.filter((id) => id != taskId));
         } else {
           setSelectedTaskIds([...selectedTaskIdsRef.current, taskId]);
         }
@@ -298,11 +285,8 @@ const DownloaderPage = () => {
         if (selectedTaskIdsRef.current.length == 0) {
           setSelectedTaskIds([taskId]);
         } else {
-          const lastSelectedTaskId =
-            selectedTaskIdsRef.current[selectedTaskIds.length - 1];
-          const lastSelectedTaskIndex = tasks.findIndex(
-            (t) => t.id == lastSelectedTaskId,
-          );
+          const lastSelectedTaskId = selectedTaskIdsRef.current[selectedTaskIds.length - 1];
+          const lastSelectedTaskIndex = tasks.findIndex((t) => t.id == lastSelectedTaskId);
           const currentTaskIndex = tasks.findIndex((t) => t.id == taskId);
           const start = Math.min(lastSelectedTaskIndex, currentTaskIndex);
           const end = Math.max(lastSelectedTaskIndex, currentTaskIndex);
@@ -347,9 +331,7 @@ const DownloaderPage = () => {
         <div className="flex items-center gap-2">
           <ButtonGroup size={"sm"}>
             {sortedThirdPartyIds.map((s) => {
-              const count = tasks.filter(
-                (t) => t.thirdPartyId == s.value,
-              ).length;
+              const count = tasks.filter((t) => t.thirdPartyId == s.value).length;
               const isDeveloping = isThirdPartyDeveloping(s.value);
               const isSelected = form.thirdPartyIds?.some((a) => a == s.value);
 
@@ -374,9 +356,7 @@ const DownloaderPage = () => {
                   <div className={"flex items-center gap-1"}>
                     <ThirdPartyIcon thirdPartyId={s.value} />
                     <span>{s.label}</span>
-                    {isDeveloping && (
-                      <DevelopingChip showTooltip={false} size="sm" />
-                    )}
+                    {isDeveloping && <DevelopingChip showTooltip={false} size="sm" />}
                     {count > 0 && (
                       <Chip size={"sm"} variant={"flat"}>
                         {count}
@@ -394,15 +374,14 @@ const DownloaderPage = () => {
             {downloadTaskDtoStatuses.map((s) => {
               const count = tasks.filter((t) => t.status == s.value).length;
               const chipColor =
-                DownloadTaskDtoStatusIceLabelStatusMap[
-                  s.value! as DownloadTaskDtoStatus
-                ];
+                DownloadTaskDtoStatusIceLabelStatusMap[s.value! as DownloadTaskDtoStatus];
               const isSelected = form.statuses?.some((a) => a == s.value);
 
               return (
                 <Button
                   key={s.value}
-                  color={isSelected ? "primary" : "default"}
+                  // color={chipColor}
+                  variant={isSelected ? "solid" : "flat"}
                   onPress={() => {
                     let statuses = form.statuses || [];
 
@@ -418,14 +397,10 @@ const DownloaderPage = () => {
                   }}
                 >
                   <div className="flex items-center gap-1">
-                    <Chip color={chipColor} size={"sm"} variant={"light"}>
+                    <Chip color={isSelected ? "default" : chipColor} size={"sm"} variant={"light"}>
                       {t<string>(s.label)}
+                      {count}
                     </Chip>
-                    {count > 0 && (
-                      <Chip size={"sm"} variant={"flat"}>
-                        {count}
-                      </Chip>
-                    )}
                   </div>
                 </Button>
               );
@@ -486,6 +461,64 @@ const DownloaderPage = () => {
           </Button>
         </div>
         <div className="flex items-center gap-1">
+          <Dropdown>
+            <DropdownTrigger>
+              <Button size={"sm"} variant={"flat"}>
+                <AiOutlineDelete className={"text-base"} />
+                {t<string>("Cleanup")}
+              </Button>
+            </DropdownTrigger>
+            <DropdownMenu
+              onAction={(key) => {
+                switch (key as string) {
+                  case "delete_completed": {
+                    const ids = tasks
+                      .filter((t) => t.status == DownloadTaskDtoStatus.Complete)
+                      .map((t) => t.id);
+
+                    if (ids.length === 0) return;
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t<string>("Deleting {{count}} download tasks", { count: ids.length }),
+                      onOk: async () => {
+                        await BApi.downloadTask.deleteDownloadTasks({ ids });
+                      },
+                    });
+                    break;
+                  }
+                  case "delete_failed": {
+                    const ids = tasks
+                      .filter((t) => t.status == DownloadTaskDtoStatus.Failed)
+                      .map((t) => t.id);
+
+                    if (ids.length === 0) return;
+                    createPortal(Modal, {
+                      defaultVisible: true,
+                      title: t<string>("Deleting {{count}} download tasks", { count: ids.length }),
+                      onOk: async () => {
+                        await BApi.downloadTask.deleteDownloadTasks({ ids });
+                      },
+                    });
+                    break;
+                  }
+                }
+              }}
+            >
+              <DropdownItem
+                key="delete_completed"
+                startContent={<AiOutlineDelete className={"text-base"} />}
+              >
+                {t<string>("Delete all completed tasks")}
+              </DropdownItem>
+              <DropdownItem
+                key="delete_failed"
+                color={"danger"}
+                startContent={<AiOutlineDelete className={"text-base"} />}
+              >
+                {t<string>("Delete all failed tasks")}
+              </DropdownItem>
+            </DropdownMenu>
+          </Dropdown>
           <RequestStatistics />
           <Button
             size={"sm"}
@@ -524,6 +557,7 @@ const DownloaderPage = () => {
           <Listbox
             isVirtualized
             className={"p-0"}
+            emptyContent={t<string>("No tasks found")}
             label={"Select from 1000 items"}
             selectionMode={"multiple"}
             variant={"flat"}
@@ -533,9 +567,10 @@ const DownloaderPage = () => {
             }}
           >
             {filteredTasks.map((task, index) => {
-              const hasErrorMessage =
-                task.status == DownloadTaskDtoStatus.Failed && task.message;
+              const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
               const selected = selectedTaskIds.indexOf(task.id) > -1;
+
+              log("rendering task", task, index);
 
               return (
                 <ListboxItem key={index}>
@@ -563,21 +598,24 @@ const DownloaderPage = () => {
                       <div className={"flex flex-col gap-1"}>
                         <div className={"flex items-center gap-1"}>
                           <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
-                          <span className={"text-lg"}>
-                            {task.name ?? task.key}
-                          </span>
+                          <span className={"text-lg"}>{task.name ?? task.key}</span>
                         </div>
                         <div className={"flex items-center gap-1"}>
-                          <span className={"opacity-60"}>
-                            {task.name && task.key}
-                          </span>
+                          <span className={"opacity-60"}>{task.name && task.key}</span>
+                          {task.nextStartDt && (
+                            <Chip color={"default"} size={"sm"}>
+                              {t<string>("Next start time")}:
+                              {moment(task.nextStartDt).format("YYYY-MM-DD HH:mm:ss")}
+                            </Chip>
+                          )}
+                        </div>
+                      </div>
+                      <div className={"flex items-center"}>
+                        <div className={"mr-8 flex items-center gap-2"}>
                           <Chip
-                            color={
-                              DownloadTaskDtoStatusIceLabelStatusMap[
-                                task.status
-                              ]
-                            }
-                            size={"sm"}
+                            color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
+                            // size={"lg"}
+                            // size={"sm"}
                             variant={"light"}
                           >
                             {t<string>(DownloadTaskDtoStatus[task.status])}
@@ -587,7 +625,7 @@ const DownloaderPage = () => {
                             <Button
                               isIconOnly
                               color={"danger"}
-                              size={"sm"}
+                              // size={"sm"}
                               variant={"light"}
                               onPress={() => {
                                 if (hasErrorMessage) {
@@ -604,23 +642,24 @@ const DownloaderPage = () => {
                               {task.failureTimes}
                             </Button>
                           )}
-                          {task.nextStartDt && (
-                            <Chip color={"default"} size={"sm"}>
-                              {t<string>("Next start time")}:
-                              {moment(task.nextStartDt).format(
-                                "YYYY-MM-DD HH:mm:ss",
-                              )}
-                            </Chip>
-                          )}
+                          <CircularProgress
+                            disableAnimation
+                            // value={task.progress}
+                            showValueLabel
+                            color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
+                            size={"lg"}
+                            value={task.progress}
+                            // textRender={() => `${task.progress?.toFixed(2)}%`}
+                            // progressive={t.status != DownloadTaskStatus.Failed}
+                          />
                         </div>
-                      </div>
-                      <div className={"flex items-center"}>
                         {task.availableActions?.map((a) => {
                           switch (a) {
                             case DownloadTaskAction.StartManually:
                             case DownloadTaskAction.Restart:
                               return (
                                 <Button
+                                  key={`start-${task.id}-${a}`}
                                   isIconOnly
                                   size={"sm"}
                                   variant={"light"}
@@ -631,22 +670,19 @@ const DownloaderPage = () => {
                                   {a == DownloadTaskAction.Restart ? (
                                     <AiOutlineRedo className={"text-lg"} />
                                   ) : (
-                                    <AiOutlinePlayCircle
-                                      className={"text-lg"}
-                                    />
+                                    <AiOutlinePlayCircle className={"text-lg"} />
                                   )}
                                 </Button>
                               );
                             case DownloadTaskAction.Disable:
                               return (
                                 <Button
+                                  key={`stop-${task.id}-${a}`}
                                   isIconOnly
                                   size={"sm"}
                                   variant={"light"}
                                   onPress={() => {
-                                    BApi.downloadTask.stopDownloadTasks([
-                                      task.id,
-                                    ]);
+                                    BApi.downloadTask.stopDownloadTasks([task.id]);
                                   }}
                                 >
                                   <AiOutlineStop className={"text-lg"} />
@@ -692,9 +728,7 @@ const DownloaderPage = () => {
                                 case "delete":
                                   createPortal(Modal, {
                                     defaultVisible: true,
-                                    title: t<string>(
-                                      "Are you sure to delete it?",
-                                    ),
+                                    title: t<string>("Are you sure to delete it?"),
                                     onOk: () =>
                                       BApi.downloadTask.deleteDownloadTasks({
                                         ids: [task.id],
@@ -707,9 +741,7 @@ const DownloaderPage = () => {
                             <DropdownItem
                               key="delete"
                               color={"danger"}
-                              startContent={
-                                <AiOutlineDelete className={"text-lg"} />
-                              }
+                              startContent={<AiOutlineDelete className={"text-lg"} />}
                             >
                               {t<string>("Delete")}
                             </DropdownItem>
@@ -717,18 +749,16 @@ const DownloaderPage = () => {
                         </Dropdown>
                       </div>
                     </div>
-                    <div className="progress">
-                      <Progress
-                        // value={task.progress}
-                        color={
-                          DownloadTaskDtoStatusProgressBarColorMap[task.status]
-                        }
-                        size={"sm"}
-                        value={task.progress}
-                        // textRender={() => `${task.progress?.toFixed(2)}%`}
-                        // progressive={t.status != DownloadTaskStatus.Failed}
-                      />
-                    </div>
+                    {/*<div className="progress">*/}
+                    {/*  <Progress*/}
+                    {/*    // value={task.progress}*/}
+                    {/*    color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}*/}
+                    {/*    size={"sm"}*/}
+                    {/*    value={task.progress}*/}
+                    {/*    // textRender={() => `${task.progress?.toFixed(2)}%`}*/}
+                    {/*    // progressive={t.status != DownloadTaskStatus.Failed}*/}
+                    {/*  />*/}
+                    {/*</div>*/}
                     {/* <CircularProgress */}
                     {/*   value={task.progress} */}
                     {/*   color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
@@ -759,10 +789,7 @@ DownloaderPage.displayName = "DownloaderPage";
 //   },
 // ];
 
-const DownloadTaskDtoStatusIceLabelStatusMap: Record<
-  DownloadTaskDtoStatus,
-  ChipProps["color"]
-> = {
+const DownloadTaskDtoStatusIceLabelStatusMap: Record<DownloadTaskDtoStatus, ChipProps["color"]> = {
   [DownloadTaskDtoStatus.Idle]: "default",
   [DownloadTaskDtoStatus.InQueue]: "default",
   [DownloadTaskDtoStatus.Downloading]: "primary",

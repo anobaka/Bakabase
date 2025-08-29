@@ -15,6 +15,8 @@ import { useAppContextStore } from "@/stores/appContext";
 import { CoverFit, ResourceCacheType } from "@/sdk/constants";
 import { Button, Carousel, Modal, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import toast from "@/components/bakaui/components/Toast";
+import BApi from "@/sdk/BApi";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
@@ -258,13 +260,16 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           isIconOnly
           size={"sm"}
           variant={"light"}
-          onPress={(e) => {
+          onPress={async (e) => {
+
+            const cacheExists = (await BApi.cache.checkResourceCacheExistence(resource.id, ResourceCacheType.Covers)).data ?? false;
+
             createPortal(Modal, {
               defaultVisible: true,
               size: 'lg',
               title: t<string>('ResourceCover.CoverTips.Title'),
               children: (
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-6">
                   <div>
                     <div className="font-medium">{t<string>('ResourceCover.CoverTips.S1.Title')}</div>
                     <div className="text-sm mb-1">{t<string>('ResourceCover.CoverTips.S1.Happens')}</div>
@@ -291,6 +296,31 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                       <li>{t<string>('ResourceCover.CoverTips.S2.Todo.DisableCache')}</li>
                     </ol>
                   </div>
+                  {cacheExists && (
+                    <div>
+                      <div className="font-medium">{t<string>('Cover cache')}</div>
+                      <Button
+                        size={"sm"}
+                        variant={"flat"}
+                        onPress={async () => {
+                          try {
+                            await BApi.cache.deleteResourceCacheByResourceIdAndCacheType(
+                              resource.id,
+                              ResourceCacheType.Covers,
+                            );
+                            await BApi.resource.discoverResourceCover(resource.id);
+                            loadCover(true);
+                            toast.success(t<string>('Cover cache has been reset'));
+                          } catch (err) {
+                            toast.danger('Failed');
+                            log(err);
+                          }
+                        }}
+                      >
+                        {t<string>('Reset cover cache of current resource')}
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ),
               footer: { actions: ['ok'] },
