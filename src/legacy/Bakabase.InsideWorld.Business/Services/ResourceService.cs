@@ -1256,6 +1256,19 @@ namespace Bakabase.InsideWorld.Business.Services
             };
         }
 
+        public async Task<ResourceCache?> GetResourceCache(int id)
+        {
+            return (await _resourceCacheOrm.GetByKey(id))?.ToDomainModel();
+        }
+
+        public async Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type)
+        {
+            await _resourceCacheOrm.UpdateAll(c => c.ResourceId == resourceId, x =>
+            {
+                x.CachedTypes &= ~type;
+            });
+        }
+
         public async Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type)
         {
             var resources = await GetAllDbModels(d => d.CategoryId == categoryId);

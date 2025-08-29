@@ -257,11 +257,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 }
             }
 
-            // Check if download path is set
-            if (string.IsNullOrWhiteSpace(options.DefaultPath))
-            {
-                return BaseResponseBuilder.BuildBadRequest(localizer.DownloadPathNotSet());
-            }
+            // // Check if download path is set
+            // if (string.IsNullOrWhiteSpace(options.DefaultPath))
+            // {
+            //     return BaseResponseBuilder.BuildBadRequest(localizer.DownloadPathNotSet());
+            // }
 
             // Perform additional validation
             var additionalValidation = await ValidateAdditional(options);

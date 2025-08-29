@@ -9,6 +9,7 @@ link_parsers = [
 filter_commits = false
 
 commit_parsers = [
+  { message = "^change", group = "General changes" },
   { message = "^feat", group = "Features" },
   { message = "^fix", group = "Bug Fixes" },
   { message = "^perf", group = "Performance" },

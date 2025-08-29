@@ -24,6 +24,22 @@ public class CacheController(IResourceService resourceService) : Controller
         return new SingletonResponse<CacheOverviewViewModel>(await resourceService.GetCacheOverview());
     }
 
+    [HttpGet("resource/{resourceId:int}/type/{type}/existence")]
+    [SwaggerOperation(OperationId = "CheckResourceCacheExistence")]
+    public async Task<SingletonResponse<bool>> CheckResourceCacheExistence(int resourceId, ResourceCacheType type)
+    {
+        var cache = await resourceService.GetResourceCache(resourceId);
+        return new SingletonResponse<bool>(cache?.CachedTypes?.Contains(type) == true);
+    }
+    
+    [HttpDelete("resource/{resourceId:int}/type/{type}")]
+    [SwaggerOperation(OperationId = "DeleteResourceCacheByResourceIdAndCacheType")]
+    public async Task<BaseResponse> DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type)
+    {
+        await resourceService.DeleteResourceCacheByResourceIdAndCacheType(resourceId, type);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpDelete("category/{categoryId:int}/type/{type}")]
     [SwaggerOperation(OperationId = "DeleteResourceCacheByCategoryIdAndCacheType")]
     public async Task<BaseResponse> DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type)

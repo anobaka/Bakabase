@@ -3602,6 +3602,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   data?: Record<string, BakabaseAbstractionsModelsDomainSpecialText[] | null>;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32 {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: Record<string, number>;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType {
   /** @format int32 */
   code: number;
@@ -5181,6 +5188,44 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/cache`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name CheckResourceCacheExistence
+     * @request GET:/cache/resource/{resourceId}/type/{type}/existence
+     */
+    checkResourceCacheExistence: (
+      resourceId: number,
+      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemBoolean, any>({
+        path: `/cache/resource/${resourceId}/type/${type}/existence`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name DeleteResourceCacheByResourceIdAndCacheType
+     * @request DELETE:/cache/resource/{resourceId}/type/{type}
+     */
+    deleteResourceCacheByResourceIdAndCacheType: (
+      resourceId: number,
+      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/cache/resource/${resourceId}/type/${type}`,
+        method: "DELETE",
         format: "json",
         ...params,
       }),
@@ -7148,39 +7193,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
-     * @name GetEnhancedResourceCountByMediaLibraryAndEnhancer
-     * @request GET:/media-library/{mediaLibraryId}/enhancer/{enhancerId}/enhanced-count
-     */
-    getEnhancedResourceCountByMediaLibraryAndEnhancer: (
-      mediaLibraryId: number,
-      enhancerId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library/${mediaLibraryId}/enhancer/${enhancerId}/enhanced-count`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
      * @name GetEnhancedResourceCountsByMediaLibrary
      * @request GET:/media-library/{mediaLibraryId}/enhancer/enhanced-counts
      */
-    getEnhancedResourceCountsByMediaLibrary: (
-      mediaLibraryId: number,
-      query?: {
-        enhancerIds?: number[];
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<any, any>({
+    getEnhancedResourceCountsByMediaLibrary: (mediaLibraryId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
+        any
+      >({
         path: `/media-library/${mediaLibraryId}/enhancer/enhanced-counts`,
         method: "GET",
-        query: query,
         format: "json",
         ...params,
       }),

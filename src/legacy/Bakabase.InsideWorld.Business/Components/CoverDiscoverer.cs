@@ -76,7 +76,7 @@ public class CoverDiscoverer(ILoggerFactory loggerFactory, FfMpegService ffMpegS
                     }
 
                     var firstVideoFile = files.FirstOrDefault(t =>
-                        InternalOptions.VideoExtensions.Contains(Path.GetExtension(t.Name)));
+                        InternalOptions.VideoExtensions.Contains(Path.GetExtension(t.Name)) && t.Length > 0);
                     if (firstVideoFile == null)
                     {
                         break;

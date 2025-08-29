@@ -306,14 +306,16 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.ExHentai
             return r;
         }
 
-        public async Task<byte[]> DownloadImage(string pageUrl)
+        public async Task<(byte[] Data, string? ContentType)> DownloadImage(string pageUrl)
         {
             var pageHtml = await GetHtmlAsync(HttpClient, pageUrl);
             var pageCq = new CQ(pageHtml);
             var img = pageCq["#img"];
             var imgUrl = img.Attr("src");
-            var bytes = await HttpClient.GetByteArrayAsync(imgUrl);
-            return bytes;
+            var rsp = await HttpClient.GetAsync(imgUrl);
+            var contentType = rsp.Content.Headers.ContentType?.MediaType;
+            var bytes = await rsp.Content.ReadAsByteArrayAsync();
+            return (bytes, contentType);
         }
 
         private static List<ExHentaiResource> ParseList(CQ cq)

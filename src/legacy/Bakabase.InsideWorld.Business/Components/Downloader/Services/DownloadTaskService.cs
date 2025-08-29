@@ -82,7 +82,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     // Logger.LogInformation(
                     //     $"Use new value: {value} to update download task to: {JsonConvert.SerializeObject(task)}");
                     await Update(task);
-                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTaskDbModel),
+                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
                         ToDto(new[] {task}).FirstOrDefault()!);
                 }
             }
@@ -201,7 +201,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 }
             }
 
-            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTaskDbModel),
+            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
                 ToDto(new[] {task}).FirstOrDefault()!);
         }
 
@@ -267,7 +267,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             (t, s) => { t.Progress = (decimal) s; });
 
         public async Task OnCurrentChanged(int taskId) =>
-            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTaskDbModel), await GetDto(taskId));
+            await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), await GetDto(taskId));
 
         public async Task OnCheckpointChanged(int taskId, string checkpoint) => await OnChange(taskId, checkpoint,
             t => t.Checkpoint,
@@ -321,7 +321,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 await using var scope = ServiceProvider.CreateAsyncScope();
                 var tasks = await scope.ServiceProvider.GetRequiredService<DownloadTaskService>().GetAllDto();
                 var uiHub = scope.ServiceProvider.GetRequiredService<IHubContext<WebGuiHub, IWebGuiClient>>();
-                await uiHub.Clients.All.GetData(nameof(DownloadTaskDbModel), tasks);
+                await uiHub.Clients.All.GetData(nameof(DownloadTask), tasks);
             });
         }
 

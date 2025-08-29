@@ -116,7 +116,9 @@ public interface IResourceService
     /// </summary>
     /// <returns></returns>
     Task<CacheOverviewViewModel> GetCacheOverview();
+    Task<ResourceCache?> GetResourceCache(int id);
 
+    Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type);
     Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type);
     Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type);
 

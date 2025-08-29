@@ -11,8 +11,10 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.Constants;
@@ -28,7 +30,7 @@ using Image = SixLabors.ImageSharp.Image;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/tool")]
-    public class ToolController(ICoverDiscoverer coverDiscoverer) : Controller
+    public class ToolController(ICoverDiscoverer coverDiscoverer, IResourceService resourceService) : Controller
     {
         [HttpGet("open")]
         [SwaggerOperation(OperationId = "OpenFileOrDirectory")]
@@ -154,6 +156,23 @@ namespace Bakabase.Service.Controllers
                 }
             };
             p.Start();
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("generate-files-to-embedded")]
+        [SwaggerOperation(OperationId = "GenerateFilesToEmbedded")]
+        public async Task<BaseResponse> GenerateFilesToEmbedded(string dir)
+        {
+            var folderPath = Path.Combine(dir, "raw");
+            var resources = await resourceService.GetAll(null, ResourceAdditionalItem.All);
+            foreach(var r in resources) {
+              var filePath = Path.Combine(folderPath, $"{r.Id}.txt");
+              var content = new string?[]
+              {
+                  r.DisplayName,
+              };
+            }
+
             return BaseResponseBuilder.Ok;
         }
     }

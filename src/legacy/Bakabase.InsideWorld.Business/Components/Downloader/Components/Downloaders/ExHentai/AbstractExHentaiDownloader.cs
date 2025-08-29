@@ -11,6 +11,9 @@ using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Localization;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai
 {
@@ -183,11 +186,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                             const int maxTryTimes = 10;
                             var tryTimes = 0;
                             byte[] data;
+                            string? contentType = null;
                             while (true)
                             {
                                 try
                                 {
-                                    data = await Client.DownloadImage(pageUrl);
+                                    var r = await Client.DownloadImage(pageUrl);
+                                    data = r.Data;
+                                    contentType = r.ContentType;
                                     break;
                                 }
                                 catch (Exception)
@@ -200,9 +206,59 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 }
                             }
 
-                            await File.WriteAllBytesAsync(fullname, data, ct);
+                            string MapContentTypeToExtension(string? ict)
+                            {
+                                return ict?.ToLowerInvariant() switch
+                                {
+                                    "image/jpeg" => ".jpg",
+                                    "image/jpg" => ".jpg",
+                                    "image/png" => ".png",
+                                    "image/webp" => ".webp",
+                                    "image/gif" => ".gif",
+                                    "image/bmp" => ".bmp",
+                                    "image/tiff" => ".tiff",
+                                    _ => string.Empty
+                                };
+                            }
 
-                            doneStates[fullname] = true;
+                            var targetExt = Path.GetExtension(fullname);
+                            var actualExt = MapContentTypeToExtension(contentType);
+
+                            var wrotePath = fullname;
+                            var wrote = false;
+
+                            if (actualExt.IsNullOrEmpty() || string.Equals(actualExt, targetExt, StringComparison.OrdinalIgnoreCase))
+                            {
+                                await File.WriteAllBytesAsync(fullname, data, ct);
+                                wrote = true;
+                            }
+                            else
+                            {
+                                // Try convert to target format indicated by title
+                                try
+                                {
+                                    using var image = Image.Load(data);
+                                    await image.SaveAsync(fullname, ct);
+                                    wrote = true;
+                                }
+                                catch
+                                {
+                                    // ignore conversion failure
+                                }
+
+                                if (!wrote)
+                                {
+                                    // Fallback: save using actual format extension
+                                    var dirName = Path.GetDirectoryName(fullname)!;
+                                    var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fullname);
+                                    var actualFullName = Path.Combine(dirName, fileNameWithoutExt + actualExt);
+                                    await File.WriteAllBytesAsync(actualFullName, data, ct);
+                                    wrote = true;
+                                    wrotePath = actualFullName;
+                                }
+                            }
+
+                            doneStates[wrotePath] = true;
                             if (onProgress != null)
                             {
                                 await onProgress((tmpCount + doneStates.Count(a => a.Value)) * 100m / detail.FileCount);
