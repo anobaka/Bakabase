@@ -30,6 +30,7 @@ import DeleteItemsWithSameNamesModal from "@/pages/file-processor/RootTreeEntry/
 import GroupModal from "@/pages/file-processor/RootTreeEntry/components/GroupModal";
 import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
+import FolderSelector from "@/components/FolderSelector";
 
 type Props = {
   selectedEntries: Entry[];
@@ -148,7 +149,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
       });
     }
 
-    if (capabilities?.includes("delete-all-by-name")) {
+    if (capabilities?.includes("delete-all-same-name")) {
       items.push({
         icon: <DeleteColumnOutlined className={"text-base"} />,
         label: t<string>("Delete items with the same names"),
@@ -168,13 +169,14 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
           count: selectedEntries.length,
         }),
         onClick: () => {
-          createPortal(MediaLibraryPathSelectorV2, {
-            onSelect: (id, path, isLegacyMediaLibrary) => {
+          createPortal(FolderSelector, {
+            onSelect: (path: string) => {
               return BApi.file.moveEntries({
                 destDir: path,
                 entryPaths: selectedEntries.map((e) => e.path),
               });
             },
+            sources: ["media library", "custom"],
           });
         },
       });

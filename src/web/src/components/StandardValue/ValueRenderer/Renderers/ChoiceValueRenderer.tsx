@@ -20,11 +20,12 @@ type ChoiceValueRendererProps = ValueRendererProps<string[]> & {
   multiple?: boolean;
   getDataSource?: () => Promise<Data[]>;
   valueAttributes?: { color?: string }[];
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("ChoiceValueRenderer");
 const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
-  const { value, editor, variant, getDataSource, multiple, valueAttributes } =
+  const { value, editor, variant, getDataSource, multiple, valueAttributes, size } =
     props;
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -90,7 +91,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
             <Chip
               className={"h-auto whitespace-break-spaces py-1"}
               radius={"sm"}
-              size={"sm"}
+              size={size}
               style={styles}
             >
               {v}

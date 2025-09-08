@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
@@ -22,7 +23,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override ExHentaiDownloadTaskType EnumTaskType => ExHentaiDownloadTaskType.List;
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             var checkpointContext = new RangeCheckpointContext(task.Checkpoint);
 

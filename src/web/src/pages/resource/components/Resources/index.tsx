@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  AutoSizer,
-  CellMeasurer,
-  CellMeasurerCache,
-  Grid,
-} from "react-virtualized";
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useRef,
-} from "react";
+import type { GridCellProps } from "react-virtualized";
+
+import { AutoSizer, CellMeasurer, CellMeasurerCache, Grid } from "react-virtualized";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
 
 import { buildLogger } from "@/components/utils";
@@ -39,7 +31,7 @@ type Props = {
     rowIndex, // Vertical (row) index of cell
     style,
     measure,
-  }) => any;
+  }: GridCellProps & { measure: () => void }) => any;
   cellCount: number;
   onScroll?: (event: ScrollEvent) => any;
   onScrollToTop?: () => any;
@@ -52,16 +44,13 @@ export type ResourcesRef = {
 const log = buildLogger("Resources");
 
 const Resources = forwardRef<ResourcesRef, Props>(
-  (
-    { columnCount, loadMore, renderCell, cellCount, onScroll, onScrollToTop },
-    ref,
-  ) => {
+  ({ columnCount, loadMore, renderCell, cellCount, onScroll, onScrollToTop }, ref) => {
     const loadingRef = useRef<boolean>(false);
     const gridRef = useRef<any>();
     const cacheRef = useRef(
       new CellMeasurerCache({
-        defaultHeight: 0,
-        defaultWidth: 200,
+        defaultHeight: 180,
+        defaultWidth: 160,
         fixedWidth: true,
       }),
     );
@@ -75,8 +64,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
     useEffect(() => {
       if (!containerRef.current) return;
       const resizeObserver = new ResizeObserver(() => {
-        const clearCache =
-          prevContainerWidthRef.current != containerRef.current?.clientWidth;
+        const clearCache = prevContainerWidthRef.current != containerRef.current?.clientWidth;
 
         prevContainerWidthRef.current = containerRef.current?.clientWidth;
         onResize(clearCache);
@@ -91,7 +79,15 @@ const Resources = forwardRef<ResourcesRef, Props>(
 
     const containerRef = useRef<HTMLDivElement | null>(null);
 
-    const cellRenderer = ({ columnIndex, key, parent, rowIndex, style }) => (
+    const cellRenderer = ({
+      columnIndex,
+      key,
+      parent,
+      rowIndex,
+      style,
+      isScrolling,
+      isVisible,
+    }: GridCellProps) => (
       <CellMeasurer
         key={key}
         cache={cacheRef.current}
@@ -99,16 +95,18 @@ const Resources = forwardRef<ResourcesRef, Props>(
         parent={parent}
         rowIndex={rowIndex}
       >
-        {({ measure }) =>
-          renderCell({
+        {({ measure }) => {
+          return renderCell({
             columnIndex,
             key,
             parent,
             rowIndex,
             style,
             measure,
-          })
-        }
+            isScrolling,
+            isVisible,
+          });
+        }}
       </CellMeasurer>
     );
 
@@ -117,7 +115,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
     }, [columnCount]);
 
     const onResize = (clearCache: boolean = false) => {
-      log("on resize on scroll", gridRef, containerRef.current?.clientHeight);
+      log("on resize on scroll", gridRef, containerRef.current?.clientHeight, clearCache);
       // gridRef.current?.scrollToPosition(scrollTopRef.current);
       if (clearCache) {
         // todo: clear cache will cause the grid scrolls to bottom when height downsized which may trigger load more behavior.
@@ -139,8 +137,7 @@ const Resources = forwardRef<ResourcesRef, Props>(
       const containerWidth = containerRef.current?.clientWidth ?? 0;
       const containerHeight = containerRef.current?.clientHeight ?? 0;
 
-      const columnWidth =
-        (containerWidth - verScrollbarWidthRef.current) / columnCount;
+      const columnWidth = (containerWidth - verScrollbarWidthRef.current) / columnCount;
 
       log(containerWidth, containerHeight, columnWidth, columnCount, gridRef);
 
@@ -166,8 +163,8 @@ const Resources = forwardRef<ResourcesRef, Props>(
                 <Grid
                   cellRenderer={cellRenderer}
                   ref={gridRef}
-                // height={containerHeight}
-                // width={containerWidth}
+                  // height={containerHeight}
+                  // width={containerWidth}
                   columnCount={columnCount}
                   columnWidth={columnWidth}
                   containerStyle={{
@@ -175,37 +172,37 @@ const Resources = forwardRef<ResourcesRef, Props>(
                   }}
                   height={height}
                   overscanIndicesGetter={({
-                                          cellCount,
-                                          overscanCellsCount,
-                                          startIndex,
-                                          stopIndex,
-                                        }) => ({
-                  overscanStartIndex: Math.max(
-                    0,
-                    startIndex - overscanCellsCount,
-                  ),
-                  overscanStopIndex: Math.min(
-                    cellCount - 1,
-                    stopIndex + overscanCellsCount,
-                  ),
-                })}
+                    cellCount,
+                    overscanCellsCount,
+                    startIndex,
+                    stopIndex,
+                  }) => ({
+                    overscanStartIndex: Math.max(
+                      0,
+                      startIndex - overscanCellsCount,
+                    ),
+                    overscanStopIndex: Math.min(
+                      cellCount - 1,
+                      stopIndex + overscanCellsCount,
+                    ),
+                  })}
                   overscanRowCount={4}
                   rowCount={Math.ceil(cellCount / columnCount)}
                   rowHeight={cacheRef.current.rowHeight}
                   width={width}
                   onScroll={e => {
-                  log('onScroll', e);
-                  scrollTopRef.current = e.scrollTop;
-                  onScroll?.(e);
-                }}
+                    log('onScroll', e);
+                    scrollTopRef.current = e.scrollTop;
+                    onScroll?.(e);
+                  }}
                   onScrollbarPresenceChange={e => {
-                  log('onScrollbarPresenceChange', e);
-                  const newWidth = e.vertical ? e.size : 0;
-                  if (newWidth != verScrollbarWidthRef.current) {
-                    verScrollbarWidthRef.current = newWidth;
-                    onResize(true);
-                  }
-                }}
+                    const newWidth = e.vertical ? e.size : 0;
+                    log('onScrollbarPresenceChange', e, newWidth, verScrollbarWidthRef.current);
+                    if (newWidth != verScrollbarWidthRef.current) {
+                      verScrollbarWidthRef.current = newWidth;
+                      onResize(true);
+                    }
+                  }}
                 />
               )}
             </AutoSizer>

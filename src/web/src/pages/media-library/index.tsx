@@ -3,15 +3,15 @@
 import type { Key } from "@react-types/shared";
 import type { MediaLibraryTemplatePage } from "../media-library-template/models";
 import type { MediaLibrary, MediaLibraryPlayer } from "./models";
+import type { InputProps } from "@heroui/react";
+import type { ButtonProps, SelectProps } from "@/components/bakaui";
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
-import { FaRegSave, FaSort } from "react-icons/fa";
-import toast from "react-hot-toast";
+import { FaSort } from "react-icons/fa";
 import {
-  AiOutlineEdit,
-  AiOutlineEllipsis,
+  AiOutlineDelete,
   AiOutlineFolderOpen,
   AiOutlineImport,
   AiOutlinePlusCircle,
@@ -19,11 +19,12 @@ import {
   AiOutlineSearch,
 } from "react-icons/ai";
 import { MdOutlineDelete } from "react-icons/md";
-import { IoIosSync, IoMdExit } from "react-icons/io";
+import { IoIosSync } from "react-icons/io";
 import { TbTemplate } from "react-icons/tb";
 import { PiEmpty } from "react-icons/pi";
 import { BsController } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
+import { CiCircleMore } from "react-icons/ci";
 
 import SyncStatus from "./components/SyncStatus";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
@@ -47,35 +48,22 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
+  toast,
 } from "@/components/bakaui";
-import PathAutocomplete from "@/components/PathAutocomplete";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
-import { isNotEmpty, splitPathIntoSegments } from "@/components/utils";
+import { splitPathIntoSegments } from "@/components/utils";
 import PresetTemplateBuilder from "@/pages/media-library-template/components/PresetTemplateBuilder";
 import TemplateModal from "@/pages/media-library-template/components/TemplateModal";
 import { InternalProperty, PropertyPool, SearchOperation } from "@/sdk/constants";
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
 import DeleteEnhancementsByEnhancerSelectorModal from "@/pages/media-library/components/DeleteEnhancementsByEnhancerSelectorModal";
-import { CiCircleMore } from "react-icons/ci";
+import { EditableValue } from "@/components/EditableValue";
 
 enum SortBy {
   Path = 1,
   Template = 2,
 }
-
-const validate = (mls: Partial<MediaLibrary>[]): boolean => {
-  return mls.every(
-    (ml) =>
-      Array.isArray(ml.paths) &&
-      ml.paths.length > 0 &&
-      ml.paths.every((p) => !!p) &&
-      new Set(ml.paths).size === ml.paths.length &&
-      isNotEmpty(ml.name) &&
-      ml.templateId != undefined &&
-      ml.templateId > 0,
-  );
-};
 
 const MediaLibraryPage = () => {
   const { t } = useTranslation();
@@ -86,11 +74,7 @@ const MediaLibraryPage = () => {
   const [templates, setTemplates] = useState<MediaLibraryTemplatePage[]>([]);
   const templatesRef = useRef<Record<number, MediaLibraryTemplatePage>>({});
   const [sortBy, setSortBy] = useState<SortBy>(SortBy.Path);
-  const [editingMediaLibraries, setEditingMediaLibraries] = useState<
-    Partial<MediaLibrary>[] | undefined
-  >();
   const forceUpdate = useUpdate();
-  const mediaLibrariesBeforeEditRef = useRef<MediaLibrary[] | undefined>();
   const outdatedModalRef = useRef<{ check: () => Promise<void> } | null>(null);
 
   const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
@@ -138,30 +122,88 @@ const MediaLibraryPage = () => {
   }, [sortBy, mediaLibraries]);
 
   const renderPath = (ml: MediaLibrary) => {
+    const paths = ml.paths ?? [];
+
+    if (paths.length == 0) {
+      return (
+        <Button
+          isIconOnly
+          color="primary"
+          size="sm"
+          variant="light"
+          onPress={() => {
+            ml.paths.push("");
+            forceUpdate();
+          }}
+        >
+          <AiOutlinePlusCircle className={"text-lg"} />
+        </Button>
+      );
+    }
+
     return (
       <div className={"flex flex-col gap-1"}>
-        {(ml.paths ?? []).map((p, idx) => (
-          <Button
-            key={idx}
-            className={"justify-start"}
-            color={"default"}
-            size={"sm"}
-            variant={"flat"}
-            onPress={() => BApi.tool.openFileOrDirectory({ path: p })}
-          >
-            <AiOutlineFolderOpen className={"text-lg"} />
-            {p}
-          </Button>
-        ))}
+        {paths.map((p, idx) => {
+          return (
+            <div key={p} className="flex items-center gap-1">
+              <Button
+                key={idx}
+                className={"justify-start"}
+                color={"default"}
+                size={"sm"}
+                variant={"flat"}
+                onPress={() => BApi.tool.openFileOrDirectory({ path: p })}
+              >
+                <AiOutlineFolderOpen className={"text-lg"} />
+                {p}
+              </Button>
+              <Button
+                isIconOnly
+                color="primary"
+                size="sm"
+                variant="light"
+                onPress={() => {
+                  ml.paths.push("");
+                  forceUpdate();
+                }}
+              >
+                <AiOutlinePlusCircle className={"text-lg"} />
+              </Button>
+              <Button
+                isIconOnly
+                color="danger"
+                size="sm"
+                variant="light"
+                onPress={() => {
+                  createPortal(Modal, {
+                    defaultVisible: true,
+                    title: t("Remove folder from media library?"),
+                    children: t("This operation will not affect the files in the directory."),
+                    onOk: async () => {
+                      const newPaths = ml.paths?.filter((x) => x != p);
+                      const rsp = await BApi.mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                        paths: newPaths,
+                      });
+
+                      if (!rsp.code) {
+                        ml.paths = newPaths;
+                        forceUpdate();
+                      }
+                    },
+                  });
+                }}
+              >
+                <AiOutlineDelete className={"text-lg"} />
+              </Button>
+            </div>
+          );
+        })}
       </div>
     );
   };
 
   const renderTable = () => {
-    const isEditing = !!editingMediaLibraries;
-    const rows = isEditing ? (editingMediaLibraries as Partial<MediaLibrary>[]) : mediaLibraries;
-
-    if (!isEditing && rows.length === 0) {
+    if (mediaLibraries.length === 0) {
       return (
         <div className={"flex items-center gap-2 grow justify-center"}>
           <PiEmpty className={"text-2xl"} />
@@ -171,69 +213,7 @@ const MediaLibraryPage = () => {
     }
 
     return (
-      <Table
-        removeWrapper
-        className="mt-2"
-        topContent={
-          isEditing ? (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  color="primary"
-                  size="sm"
-                  onPress={() =>
-                    setEditingMediaLibraries([{}].concat(rows as Partial<MediaLibrary>[]))
-                  }
-                >
-                  <AiOutlinePlusCircle className="text-base" />
-                  {t<string>("MediaLibrary.Add")}
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  color={"primary"}
-                  isDisabled={!validate(editingMediaLibraries as Partial<MediaLibrary>[])}
-                  size={"sm"}
-                  onPress={async () => {
-                    createPortal(Modal, {
-                      defaultVisible: true,
-                      title: t<string>("MediaLibrary.SaveAll"),
-                      children: t<string>("MediaLibrary.SaveAllConfirm"),
-                      onOk: async () => {
-                        const data = editingMediaLibraries as MediaLibrary[];
-                        const r = await BApi.mediaLibraryV2.saveAllMediaLibrariesV2(data);
-
-                        if (!r.code) {
-                          setEditingMediaLibraries(undefined);
-                          toast.success(t<string>("MediaLibrary.Saved"));
-
-                          outdatedModalRef.current?.check();
-                          mediaLibrariesBeforeEditRef.current = undefined;
-                        }
-                      },
-                    });
-                  }}
-                >
-                  <FaRegSave className={"text-base"} />
-                  {t<string>("MediaLibrary.Save")}
-                </Button>
-                <Button
-                  color={"default"}
-                  size={"sm"}
-                  variant={"flat"}
-                  onPress={() => {
-                    setEditingMediaLibraries(undefined);
-                    mediaLibrariesBeforeEditRef.current = undefined;
-                  }}
-                >
-                  <IoMdExit className={"text-base"} />
-                  {t<string>("MediaLibrary.ExitEditingMode")}
-                </Button>
-              </div>
-            </div>
-          ) : undefined
-        }
-      >
+      <Table removeWrapper className="mt-2">
         <TableHeader>
           <TableColumn>{t<string>("MediaLibrary.Name")}</TableColumn>
           <TableColumn>{t<string>("MediaLibrary.Path")}</TableColumn>
@@ -242,178 +222,7 @@ const MediaLibraryPage = () => {
           <TableColumn width="200">{t<string>("Operations")}</TableColumn>
         </TableHeader>
         <TableBody>
-          {rows.map((row, i) => {
-            if (isEditing) {
-              const e = row as Partial<MediaLibrary>;
-              const paths = Array.isArray(e.paths) ? e.paths : (e.paths = []);
-
-              if (paths.length === 0) paths.push("");
-
-              return (
-                <TableRow key={i}>
-                  {/* Name */}
-                  <TableCell>
-                    <Input
-                      isRequired
-                      isInvalid={e.name == undefined || e.name.length == 0}
-                      label={t<string>("MediaLibrary.Name")}
-                      placeholder={t<string>("MediaLibrary.NamePlaceholder")}
-                      size={"sm"}
-                      value={e.name}
-                      onValueChange={(v) => {
-                        e.name = v;
-                        forceUpdate();
-                      }}
-                    />
-                  </TableCell>
-                  {/* Paths */}
-                  <TableCell>
-                    <div className={"flex flex-col gap-1"}>
-                      {paths.map((p, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          <PathAutocomplete
-                            endContent={
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  isIconOnly
-                                  color="primary"
-                                  size="sm"
-                                  variant="light"
-                                  onPress={() => {
-                                    paths.push("");
-                                    e.paths = paths;
-                                    forceUpdate();
-                                  }}
-                                >
-                                  <AiOutlinePlusCircle className="text-lg" />
-                                </Button>
-                                {paths.length > 1 && (
-                                  <Button
-                                    isIconOnly
-                                    color="danger"
-                                    size="sm"
-                                    variant="light"
-                                    onPress={() => {
-                                      paths.splice(idx, 1);
-                                      e.paths = paths;
-                                      forceUpdate();
-                                    }}
-                                  >
-                                    <MdOutlineDelete className={"text-lg"} />
-                                  </Button>
-                                )}
-                              </div>
-                            }
-                            isInvalid={!p}
-                            isRequired={idx === 0}
-                            label={
-                              paths.length > 1
-                                ? `${t<string>("MediaLibrary.Path")}${idx + 1}`
-                                : t<string>("MediaLibrary.Path")
-                            }
-                            pathType="folder"
-                            placeholder={t<string>("MediaLibrary.PathPlaceholder")}
-                            size="sm"
-                            value={p}
-                            onChange={(v) => {
-                              paths[idx] = v;
-                              e.paths = paths.filter(Boolean);
-                              forceUpdate();
-                            }}
-                            onSelectionChange={(selectedPath) => {
-                              paths[idx] = selectedPath;
-                              e.paths = paths.filter(Boolean);
-                              forceUpdate();
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </TableCell>
-                  {/* Template */}
-                  <TableCell>
-                    <Select
-                      isRequired
-                      dataSource={templates
-                        .map(
-                          (t) =>
-                            ({
-                              textValue: `#${t.id} ${t.name}`,
-                              label: `#${t.id} ${t.name}`,
-                              value: t.id,
-                            }) as {
-                              label?: any;
-                              value: Key;
-                              textValue?: string;
-                              isDisabled?: boolean;
-                            },
-                        )
-                        .concat([
-                          {
-                            label: (
-                              <div className={"flex items-center gap-1"}>
-                                <AiOutlineImport className={"text-lg"} />
-                                {t<string>("MediaLibrary.CreateNewTemplate")}
-                              </div>
-                            ),
-                            value: -1,
-                            textValue: t<string>("MediaLibrary.CreateNewTemplate"),
-                          },
-                        ])}
-                      isInvalid={e.templateId == undefined || e.templateId <= 0}
-                      label={t<string>("MediaLibrary.Template")}
-                      placeholder={t<string>("MediaLibrary.TemplatePlaceholder")}
-                      selectedKeys={e.templateId ? [e.templateId.toString()] : undefined}
-                      size={"sm"}
-                      onSelectionChange={(keys) => {
-                        const arr = Array.from(keys);
-
-                        if (arr.length > 0) {
-                          const idStr = arr[0] as string;
-                          const value = parseInt(idStr, 10);
-
-                          if (value == -1) {
-                            createPortal(PresetTemplateBuilder, {
-                              onSubmitted: async (id) => {
-                                e.templateId = id;
-                                await loadTemplates();
-                              },
-                            });
-                          } else {
-                            e.templateId = value;
-                            forceUpdate();
-                          }
-                        }
-                      }}
-                    />
-                  </TableCell>
-                  {/* Players (empty in edit) */}
-                  <TableCell>{null}</TableCell>
-                  {/* Actions */}
-                  <TableCell>
-                    <Button
-                      isIconOnly
-                      color={"danger"}
-                      variant={"light"}
-                      onPress={() => {
-                        editingMediaLibraries!.splice(i, 1);
-                        forceUpdate();
-                      }}
-                    >
-                      <MdOutlineDelete className={"text-lg"} />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            }
-
+          {mediaLibraries.map((row, i) => {
             const ml = row as MediaLibrary;
             const template = templates.find((t) => t.id == ml.templateId);
             const getCssVariable = (variableName: string) => {
@@ -428,7 +237,40 @@ const MediaLibraryPage = () => {
                 {/* Name */}
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <div style={{ color: ml.color ?? textColor }}>{ml.name}</div>
+                    <EditableValue<string, InputProps, ButtonProps & { value: string }>
+                      Editor={Input}
+                      Viewer={({ value, ...props }) => (
+                        <Button
+                          size="sm"
+                          style={{ color: ml.color ?? textColor }}
+                          variant="light"
+                          {...props}
+                        >
+                          {value}
+                        </Button>
+                      )}
+                      editorProps={{
+                        size: "sm",
+                        isRequired: true,
+                      }}
+                      trigger="viewer"
+                      value={ml.name}
+                      onSubmit={async (v) => {
+                        if (v == undefined || v.length == 0) {
+                          toast.danger(t<string>("Name cannot be empty"));
+
+                          return;
+                        }
+                        const rsp = await BApi.mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                          name: v,
+                        });
+
+                        if (!rsp.code) {
+                          ml.name = v;
+                          forceUpdate();
+                        }
+                      }}
+                    />
                     <ColorPicker
                       color={ml.color ?? textColor}
                       onChange={async (color) => {
@@ -448,24 +290,123 @@ const MediaLibraryPage = () => {
                 <TableCell>{renderPath(ml)}</TableCell>
                 {/* Template */}
                 <TableCell>
-                  <Button
-                    className={"text-left"}
-                    isDisabled={!template}
-                    radius={"sm"}
-                    size={"sm"}
-                    startContent={<TbTemplate className={"text-base"} />}
-                    variant={"light"}
-                    onPress={() => {
-                      if (ml.templateId) {
-                        createPortal(TemplateModal, {
-                          id: ml.templateId,
-                          onDestroyed: loadTemplates,
+                  <EditableValue<
+                    number,
+                    Omit<SelectProps, "value"> & {
+                      onValueChange?: (value: number) => void;
+                      value: number;
+                    },
+                    ButtonProps & { value: number }
+                  >
+                    Editor={({ onValueChange, value, ...props }) => (
+                      <Select
+                        isRequired
+                        dataSource={templates
+                          .map(
+                            (t) =>
+                              ({
+                                textValue: `#${t.id} ${t.name}`,
+                                label: `#${t.id} ${t.name}`,
+                                value: t.id,
+                              }) as {
+                                label?: any;
+                                value: Key;
+                                textValue?: string;
+                                isDisabled?: boolean;
+                              },
+                          )
+                          .concat([
+                            {
+                              label: (
+                                <div className={"flex items-center gap-1"}>
+                                  <AiOutlineImport className={"text-lg"} />
+                                  {t<string>("MediaLibrary.CreateNewTemplate")}
+                                </div>
+                              ),
+                              value: -1,
+                              textValue: t<string>("MediaLibrary.CreateNewTemplate"),
+                            },
+                          ])}
+                        isInvalid={value == undefined || value <= 0}
+                        label={t<string>("MediaLibrary.Template")}
+                        placeholder={t<string>("MediaLibrary.TemplatePlaceholder")}
+                        selectedKeys={value ? [value.toString()] : undefined}
+                        size={"sm"}
+                        onSelectionChange={(keys) => {
+                          const arr = Array.from(keys);
+
+                          if (arr.length > 0) {
+                            const idStr = arr[0] as string;
+                            const value = parseInt(idStr, 10);
+
+                            if (value == -1) {
+                              createPortal(PresetTemplateBuilder, {
+                                onSubmitted: async (id) => {
+                                  onValueChange?.(id);
+                                  await loadTemplates();
+                                },
+                              });
+                            } else {
+                              onValueChange?.(value);
+                              forceUpdate();
+                            }
+                          }
+                        }}
+                      />
+                    )}
+                    Viewer={({ value }) =>
+                      value ? (
+                        <Button
+                          className={"text-left"}
+                          isDisabled={!template}
+                          radius={"sm"}
+                          size={"sm"}
+                          startContent={<TbTemplate className={"text-base"} />}
+                          variant={"light"}
+                          onPress={() => {
+                            if (ml.templateId) {
+                              createPortal(TemplateModal, {
+                                id: ml.templateId,
+                                onDestroyed: loadTemplates,
+                              });
+                            }
+                          }}
+                        >
+                          {template?.name ?? t<string>("MediaLibrary.Unknown")}
+                        </Button>
+                      ) : (
+                        <Chip size="sm" variant="light" color="danger">
+                          {t<string>("Media library template must be set")}
+                        </Chip>
+                      )
+                    }
+                    className="grow"
+                    editorProps={
+                      {
+                        // size: "sm",
+                      }
+                    }
+                    value={ml.templateId}
+                    onSubmit={async (v) => {
+                      if (v == undefined || v <= 0) {
+                        toast.danger(t<string>("Template cannot be empty"));
+
+                        return;
+                      }
+
+                      if (ml.templateId != v) {
+                        ml.templateId = v;
+                        const rsp = await BApi.mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                          templateId: v,
                         });
+
+                        if (!rsp.code) {
+                          outdatedModalRef.current?.check();
+                          forceUpdate();
+                        }
                       }
                     }}
-                  >
-                    {template?.name ?? t<string>("MediaLibrary.Unknown")}
-                  </Button>
+                  />
                 </TableCell>
                 {/* Players */}
                 <TableCell>
@@ -531,71 +472,77 @@ const MediaLibraryPage = () => {
                 {/* Actions */}
                 <TableCell>
                   <div className="flex items-center gap-1">
-                    <Chip
-                      color={"success"}
-                      size={"sm"}
-                      startContent={<AiOutlineProduct className={"text-lg"} />}
-                      variant={"light"}
-                    >
-                      {ml.resourceCount}
-                    </Chip>
-                    <Tooltip content={t<string>("MediaLibrary.SearchResources")} placement="top">
-                      <Button
-                        isIconOnly
-                        className={""}
-                        radius={"sm"}
+                    <Tooltip content={ml.resourceCount > 0 ? t<string>("{{count}} resource(s) loaded in this media library.", {
+                      count: ml.resourceCount,
+                    }) : t<string>("No resource loaded in this media library, you can click the synchronize button to load resources.")} placement="top">
+                      <Chip
+                        color={"success"}
                         size={"sm"}
+                        startContent={<AiOutlineProduct className={"text-lg"} />}
                         variant={"light"}
-                        onPress={() => {
-                          createPortal(Modal, {
-                            title: t<string>("MediaLibrary.Confirm"),
-                            children: t<string>("MediaLibrary.LeavePageConfirm"),
-                            defaultVisible: true,
-                            onOk: async () => {
-                              const valuePropertyResponse =
-                                await BApi.resource.getFilterValueProperty({
-                                  propertyPool: PropertyPool.Internal,
-                                  propertyId: InternalProperty.MediaLibraryV2,
-                                  operation: SearchOperation.Equals,
-                                });
-                              const searchForm = {
-                                group: {
-                                  combinator: 1,
-                                  disabled: false,
-                                  filters: [
-                                    {
-                                      propertyPool: PropertyPool.Internal,
-                                      propertyId: InternalProperty.MediaLibraryV2,
-                                      operation: SearchOperation.Equals,
-                                      dbValue: ml.id.toString(),
-                                      bizValue: ml.name,
-                                      valueProperty: valuePropertyResponse.data,
-                                      disabled: false,
-                                    },
-                                  ],
-                                },
-                                page: 1,
-                                pageSize: 100,
-                              };
-                              const query = encodeURIComponent(JSON.stringify(searchForm));
-
-                              navigate(`/resource?query=${query}`);
-                            },
-                            footer: {
-                              actions: ["ok", "cancel"],
-                              okProps: {
-                                children: t<string>("MediaLibrary.Continue"),
-                              },
-                              cancelProps: {
-                                children: t<string>("MediaLibrary.Cancel"),
-                              },
-                            },
-                          });
-                        }}
                       >
-                        <AiOutlineSearch className={"text-lg"} />
-                      </Button>
+                        {ml.resourceCount}
+                      </Chip>
                     </Tooltip>
+                    {ml.resourceCount > 0 && (
+                      <Tooltip content={t<string>("MediaLibrary.SearchResources")} placement="top">
+                        <Button
+                          isIconOnly
+                          className={""}
+                          radius={"sm"}
+                          size={"sm"}
+                          variant={"light"}
+                          onPress={() => {
+                            createPortal(Modal, {
+                              title: t<string>("MediaLibrary.Confirm"),
+                              children: t<string>("MediaLibrary.LeavePageConfirm"),
+                              defaultVisible: true,
+                              onOk: async () => {
+                                const valuePropertyResponse =
+                                  await BApi.resource.getFilterValueProperty({
+                                    propertyPool: PropertyPool.Internal,
+                                    propertyId: InternalProperty.MediaLibraryV2,
+                                    operation: SearchOperation.Equals,
+                                  });
+                                const searchForm = {
+                                  group: {
+                                    combinator: 1,
+                                    disabled: false,
+                                    filters: [
+                                      {
+                                        propertyPool: PropertyPool.Internal,
+                                        propertyId: InternalProperty.MediaLibraryV2,
+                                        operation: SearchOperation.Equals,
+                                        dbValue: ml.id.toString(),
+                                        bizValue: ml.name,
+                                        valueProperty: valuePropertyResponse.data,
+                                        disabled: false,
+                                      },
+                                    ],
+                                  },
+                                  page: 1,
+                                  pageSize: 100,
+                                };
+                                const query = encodeURIComponent(JSON.stringify(searchForm));
+
+                                navigate(`/resource?query=${query}`);
+                              },
+                              footer: {
+                                actions: ["ok", "cancel"],
+                                okProps: {
+                                  children: t<string>("MediaLibrary.Continue"),
+                                },
+                                cancelProps: {
+                                  children: t<string>("MediaLibrary.Cancel"),
+                                },
+                              },
+                            });
+                          }}
+                        >
+                          <AiOutlineSearch className={"text-lg"} />
+                        </Button>
+                      </Tooltip>
+                    )}
                     <SyncStatus
                       id={ml.id}
                       onSyncCompleted={() => {
@@ -675,7 +622,7 @@ const MediaLibraryPage = () => {
                           className="text-danger"
                           startContent={<MdOutlineDelete className={"text-lg"} />}
                         >
-                          {t<string>("Delete")}
+                          {t<string>("Delete this media library")}
                         </DropdownItem>
                       </DropdownMenu>
                     </Dropdown>
@@ -694,59 +641,54 @@ const MediaLibraryPage = () => {
       <OutdatedModal ref={(r) => (outdatedModalRef.current = r)} />
       <div className={"flex items-center justify-between"}>
         <div className={"flex items-center gap-1"}>
-          {editingMediaLibraries ? null : (
-            <>
-              <Button
-                color={"primary"}
-                size={"sm"}
-                onPress={() => {
-                  mediaLibrariesBeforeEditRef.current = JSON.parse(
-                    JSON.stringify(mediaLibraries),
-                  ) as MediaLibrary[];
-                  setEditingMediaLibraries(
-                    mediaLibraries.length == 0
-                      ? [{}]
-                      : (JSON.parse(JSON.stringify(mediaLibraries)) as Partial<MediaLibrary>[]),
-                  );
-                }}
-              >
-                <AiOutlineEdit className={"text-base"} />
-                {t<string>("MediaLibrary.AddOrEdit")}
-              </Button>
-              <Button
-                color={"secondary"}
-                size={"sm"}
-                onPress={() => {
-                  BApi.mediaLibraryV2.syncAllMediaLibrariesV2();
-                }}
-              >
-                <IoIosSync className={"text-lg"} />
-                {t<string>("MediaLibrary.SynchronizeAll")}
-              </Button>
-            </>
-          )}
+          <Button
+            color={"primary"}
+            size={"sm"}
+            onPress={async () => {
+              const no =
+                mediaLibraries
+                  .map((ml) => ml.name.split(" "))
+                  .filter((x) => x.length > 1)
+                  .map((x) => parseInt(x[1], 10))
+                  .reduce((a, b) => Math.max(a, b), 0) + 1;
+              const name = `${t("Media library")} ${no}`;
+
+              await BApi.mediaLibraryV2.addMediaLibraryV2({
+                name,
+                paths: [],
+              });
+              await loadMediaLibraries();
+            }}
+          >
+            <AiOutlinePlusCircle className={"text-lg"} />
+            {t<string>("MediaLibrary.Add")}
+          </Button>
+          <Button
+            color={"secondary"}
+            size={"sm"}
+            onPress={() => {
+              BApi.mediaLibraryV2.syncAllMediaLibrariesV2();
+            }}
+          >
+            <IoIosSync className={"text-lg"} />
+            {t<string>("MediaLibrary.SynchronizeAll")}
+          </Button>
         </div>
-        {!editingMediaLibraries && (
-          <div>
-            <Button
-              color={"default"}
-              size={"sm"}
-              variant={"flat"}
-              onPress={() => setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)}
-            >
-              <FaSort className={"text-base"} />
-              {t<string>("MediaLibrary.SortBy", {
-                sortBy: t<string>(`MediaLibrary.SortBy.${SortBy[sortBy]}`),
-              })}
-            </Button>
-          </div>
-        )}
+        <div>
+          <Button
+            color={"default"}
+            size={"sm"}
+            variant={"flat"}
+            onPress={() => setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)}
+          >
+            <FaSort className={"text-base"} />
+            {t<string>("MediaLibrary.SortBy", {
+              sortBy: t<string>(`MediaLibrary.SortBy.${SortBy[sortBy]}`),
+            })}
+          </Button>
+        </div>
       </div>
-      {editingMediaLibraries ? (
-        <div className="flex flex-col gap-2 w-full h-full">{renderTable()}</div>
-      ) : (
-        renderTable()
-      )}
+      {renderTable()}
     </div>
   );
 };

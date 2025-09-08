@@ -5,7 +5,7 @@ import type { SearchFormOrderModel } from "@/pages/resource/models";
 import React, { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
-import { FaSortAmountDownAlt, FaSortAmountUpAlt } from "react-icons/fa";
+import { FaSortAmountDown, FaSortAmountDownAlt, FaSortAmountUpAlt } from "react-icons/fa";
 
 import {
   resourceSearchSortableProperties,
@@ -57,9 +57,9 @@ const OrderSelector = ({
               title={t<string>(y.label)}
             >
               {y.asc ? (
-                <FaSortAmountUpAlt className={"text-lg"} />
-              ) : (
                 <FaSortAmountDownAlt className={"text-lg"} />
+              ) : (
+                <FaSortAmountDown className={"text-lg"} />
               )}
               {t<string>(x.label)}
             </div>

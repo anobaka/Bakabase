@@ -43,8 +43,8 @@ import "@szhsin/react-menu/dist/transitions/slide.css";
 import {
   DownloadTaskAction,
   DownloadTaskActionOnConflict,
-  DownloadTaskDtoStatus,
-  downloadTaskDtoStatuses,
+  DownloadTaskStatus,
+  downloadTaskStatuses,
   ResponseCode,
 } from "@/sdk/constants";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
@@ -62,6 +62,7 @@ import DownloadTaskDetailModal from "./components/TaskDetailModal";
 import envConfig from "@/config/env.ts";
 
 import { CircularProgress } from "@heroui/react";
+import { DownloadTaskTypeIconMap } from "./components/TaskDetailModal/models";
 
 // const testTasks: DownloadTask[] = [
 //   {
@@ -141,6 +142,7 @@ const DownloaderPage = () => {
         title: t<string>("Found some conflicted tasks"),
         children: rsp.message,
         footer: {
+          actions: ["ok", "cancel"],
           okProps: {
             children: t<string>("Download selected tasks firstly"),
           },
@@ -240,6 +242,38 @@ const DownloaderPage = () => {
           )}
           {t<string>("Delete")}
         </MenuItem>
+        <MenuItem
+          className={"flex items-center gap-2"}
+          onClick={() => {
+            const ids = selectedTaskIdsRef.current;
+
+            createPortal(Modal, {
+              defaultVisible: true,
+              title: t<string>(
+                ids.length > 1 ? "Clear checkpoints for {{count}} tasks" : "Clear checkpoint",
+                { count: ids.length },
+              ),
+              onOk: async () => {
+                await BApi.request<void, any>({
+                  path: "/download-task/checkpoint",
+                  method: "DELETE",
+                  body: ids,
+                  type: "application/json",
+                  format: "json",
+                } as any);
+              },
+            });
+          }}
+        >
+          <AiOutlineWarning />
+          {moreThanOne && (
+            <>
+              {t<string>("Bulk")}
+              &nbsp;
+            </>
+          )}
+          {t<string>("Clear checkpoints")}
+        </MenuItem>
       </ControlledMenu>
     );
   }, [menuProps]);
@@ -264,7 +298,16 @@ const DownloaderPage = () => {
 
   console.log(selectedTaskIdsRef.current, SelectionMode[selectionModeRef.current]);
 
-  const onTaskClick = (taskId: number) => {
+  const onTaskClick = (taskId: number, e?: any) => {
+    const nextMode = e
+      ? e.shiftKey
+        ? SelectionMode.Shift
+        : e.ctrlKey || e.metaKey
+          ? SelectionMode.Ctrl
+          : SelectionMode.Default
+      : SelectionMode.Default;
+
+    selectionModeRef.current = nextMode;
     console.log(SelectionMode[selectionModeRef.current]);
     switch (selectionModeRef.current) {
       case SelectionMode.Default:
@@ -286,12 +329,12 @@ const DownloaderPage = () => {
           setSelectedTaskIds([taskId]);
         } else {
           const lastSelectedTaskId = selectedTaskIdsRef.current[selectedTaskIds.length - 1];
-          const lastSelectedTaskIndex = tasks.findIndex((t) => t.id == lastSelectedTaskId);
-          const currentTaskIndex = tasks.findIndex((t) => t.id == taskId);
+          const lastSelectedTaskIndex = filteredTasks.findIndex((t) => t.id == lastSelectedTaskId);
+          const currentTaskIndex = filteredTasks.findIndex((t) => t.id == taskId);
           const start = Math.min(lastSelectedTaskIndex, currentTaskIndex);
           const end = Math.max(lastSelectedTaskIndex, currentTaskIndex);
 
-          setSelectedTaskIds(tasks.slice(start, end + 1).map((t) => t.id));
+          setSelectedTaskIds(filteredTasks.slice(start, end + 1).map((t) => t.id));
         }
         break;
     }
@@ -338,7 +381,8 @@ const DownloaderPage = () => {
               return (
                 <Button
                   key={s.value}
-                  color={isSelected ? "primary" : "default"}
+                  // color={isSelected ? "primary" : "default"}
+                  variant={isSelected ? "solid" : "flat"}
                   onPress={() => {
                     let thirdPartyIds = form.thirdPartyIds || [];
 
@@ -371,10 +415,9 @@ const DownloaderPage = () => {
         <div>{t<string>("Status")}</div>
         <div className="flex items-center gap-2">
           <ButtonGroup size={"sm"}>
-            {downloadTaskDtoStatuses.map((s) => {
+            {downloadTaskStatuses.map((s) => {
               const count = tasks.filter((t) => t.status == s.value).length;
-              const chipColor =
-                DownloadTaskDtoStatusIceLabelStatusMap[s.value! as DownloadTaskDtoStatus];
+              const chipColor = DownloadTaskStatusIceLabelStatusMap[s.value! as DownloadTaskStatus];
               const isSelected = form.statuses?.some((a) => a == s.value);
 
               return (
@@ -399,7 +442,7 @@ const DownloaderPage = () => {
                   <div className="flex items-center gap-1">
                     <Chip color={isSelected ? "default" : chipColor} size={"sm"} variant={"light"}>
                       {t<string>(s.label)}
-                      {count}
+                      {count > 0 && <span>&nbsp;({count})</span>}
                     </Chip>
                   </div>
                 </Button>
@@ -473,7 +516,7 @@ const DownloaderPage = () => {
                 switch (key as string) {
                   case "delete_completed": {
                     const ids = tasks
-                      .filter((t) => t.status == DownloadTaskDtoStatus.Complete)
+                      .filter((t) => t.status == DownloadTaskStatus.Complete)
                       .map((t) => t.id);
 
                     if (ids.length === 0) return;
@@ -488,7 +531,7 @@ const DownloaderPage = () => {
                   }
                   case "delete_failed": {
                     const ids = tasks
-                      .filter((t) => t.status == DownloadTaskDtoStatus.Failed)
+                      .filter((t) => t.status == DownloadTaskStatus.Failed)
                       .map((t) => t.id);
 
                     if (ids.length === 0) return;
@@ -557,23 +600,27 @@ const DownloaderPage = () => {
           <Listbox
             isVirtualized
             className={"p-0"}
+            // color={"primary"}
             emptyContent={t<string>("No tasks found")}
             label={"Select from 1000 items"}
-            selectionMode={"multiple"}
+            // selectionMode={"multiple"}
             variant={"flat"}
             virtualization={{
               maxListboxHeight: taskListHeight,
               itemHeight: 75,
             }}
           >
-            {filteredTasks.map((task, index) => {
-              const hasErrorMessage = task.status == DownloadTaskDtoStatus.Failed && task.message;
+            {filteredTasks.map((task) => {
+              const hasErrorMessage = task.status == DownloadTaskStatus.Failed && task.message;
               const selected = selectedTaskIds.indexOf(task.id) > -1;
-
-              log("rendering task", task, index);
+              const Icon = DownloadTaskTypeIconMap[task.thirdPartyId!]?.[task.type];
+              log("rendering task", task);
 
               return (
-                <ListboxItem key={index}>
+                <ListboxItem
+                  key={task.id}
+                  className={`${selected ? "bg-primary-50 dark:bg-primary-900/20" : ""}`}
+                >
                   <div
                     key={task.id}
                     onContextMenu={e => {
@@ -589,15 +636,15 @@ const DownloaderPage = () => {
                       toggleMenu(true);
                       forceUpdate();
                     }}
-                    // className={`${selected ? 'selected' : ''}`}
-                    className={'flex flex-col gap-1'}
+                    className={`flex flex-col gap-1`}
                     // style={style}
-                    onClick={() => onTaskClick(task.id)}
+                    onClick={(e) => onTaskClick(task.id, e)}
                   >
                     <div className={"flex items-center justify-between"}>
                       <div className={"flex flex-col gap-1"}>
-                        <div className={"flex items-center gap-1"}>
+                        <div className={"flex items-center gap-2"}>
                           <ThirdPartyIcon thirdPartyId={task.thirdPartyId} />
+                          {Icon && <Icon className="text-base" />}
                           <span className={"text-lg"}>{task.name ?? task.key}</span>
                         </div>
                         <div className={"flex items-center gap-1"}>
@@ -613,15 +660,15 @@ const DownloaderPage = () => {
                       <div className={"flex items-center"}>
                         <div className={"mr-8 flex items-center gap-2"}>
                           <Chip
-                            color={DownloadTaskDtoStatusIceLabelStatusMap[task.status]}
+                            color={DownloadTaskStatusIceLabelStatusMap[task.status]}
                             // size={"lg"}
                             // size={"sm"}
                             variant={"light"}
                           >
-                            {t<string>(DownloadTaskDtoStatus[task.status])}
+                            {t<string>(DownloadTaskStatus[task.status])}
                             {task.current}
                           </Chip>
-                          {task.status == DownloadTaskDtoStatus.Failed && (
+                          {task.status == DownloadTaskStatus.Failed && (
                             <Button
                               isIconOnly
                               color={"danger"}
@@ -646,7 +693,7 @@ const DownloaderPage = () => {
                             disableAnimation
                             // value={task.progress}
                             showValueLabel
-                            color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}
+                            color={DownloadTaskStatusProgressBarColorMap[task.status]}
                             size={"lg"}
                             value={task.progress}
                             // textRender={() => `${task.progress?.toFixed(2)}%`}
@@ -752,7 +799,7 @@ const DownloaderPage = () => {
                     {/*<div className="progress">*/}
                     {/*  <Progress*/}
                     {/*    // value={task.progress}*/}
-                    {/*    color={DownloadTaskDtoStatusProgressBarColorMap[task.status]}*/}
+                    {/*    color={DownloadTaskStatusProgressBarColorMap[task.status]}*/}
                     {/*    size={"sm"}*/}
                     {/*    value={task.progress}*/}
                     {/*    // textRender={() => `${task.progress?.toFixed(2)}%`}*/}
@@ -761,7 +808,7 @@ const DownloaderPage = () => {
                     {/*</div>*/}
                     {/* <CircularProgress */}
                     {/*   value={task.progress} */}
-                    {/*   color={DownloadTaskDtoStatusProgressBarColorMap[task.status]} */}
+                    {/*   color={DownloadTaskStatusProgressBarColorMap[task.status]} */}
                     {/*   size={'sm'} */}
                     {/* /> */}
                   </div>
@@ -778,40 +825,40 @@ const DownloaderPage = () => {
 
 DownloaderPage.displayName = "DownloaderPage";
 //     progress: 80,
-//     status: DownloadTaskDtoStatus.Downloading,
+//     status: DownloadTaskStatus.Downloading,
 //   },
 //   {
 //     key: 'cxzkocnmaqwkodn wkjodas1',
 //     name: 'pppppppppppp',
 //     progress: 30,
-//     status: DownloadTaskDtoStatus.Failed,
+//     status: DownloadTaskStatus.Failed,
 //     message: 'dawsdasda',
 //   },
 // ];
 
-const DownloadTaskDtoStatusIceLabelStatusMap: Record<DownloadTaskDtoStatus, ChipProps["color"]> = {
-  [DownloadTaskDtoStatus.Idle]: "default",
-  [DownloadTaskDtoStatus.InQueue]: "default",
-  [DownloadTaskDtoStatus.Downloading]: "primary",
-  [DownloadTaskDtoStatus.Failed]: "danger",
-  [DownloadTaskDtoStatus.Complete]: "success",
-  [DownloadTaskDtoStatus.Starting]: "warning",
-  [DownloadTaskDtoStatus.Stopping]: "warning",
-  [DownloadTaskDtoStatus.Disabled]: "default",
+const DownloadTaskStatusIceLabelStatusMap: Record<DownloadTaskStatus, ChipProps["color"]> = {
+  [DownloadTaskStatus.Idle]: "default",
+  [DownloadTaskStatus.InQueue]: "default",
+  [DownloadTaskStatus.Downloading]: "primary",
+  [DownloadTaskStatus.Failed]: "danger",
+  [DownloadTaskStatus.Complete]: "success",
+  [DownloadTaskStatus.Starting]: "warning",
+  [DownloadTaskStatus.Stopping]: "warning",
+  [DownloadTaskStatus.Disabled]: "default",
 };
 
-const DownloadTaskDtoStatusProgressBarColorMap: Record<
-  DownloadTaskDtoStatus,
+const DownloadTaskStatusProgressBarColorMap: Record<
+  DownloadTaskStatus,
   CircularProgressProps["color"]
 > = {
-  [DownloadTaskDtoStatus.Idle]: "default",
-  [DownloadTaskDtoStatus.InQueue]: "default",
-  [DownloadTaskDtoStatus.Downloading]: "primary",
-  [DownloadTaskDtoStatus.Failed]: "danger",
-  [DownloadTaskDtoStatus.Complete]: "success",
-  [DownloadTaskDtoStatus.Starting]: "warning",
-  [DownloadTaskDtoStatus.Stopping]: "warning",
-  [DownloadTaskDtoStatus.Disabled]: "default",
+  [DownloadTaskStatus.Idle]: "default",
+  [DownloadTaskStatus.InQueue]: "default",
+  [DownloadTaskStatus.Downloading]: "primary",
+  [DownloadTaskStatus.Failed]: "danger",
+  [DownloadTaskStatus.Complete]: "success",
+  [DownloadTaskStatus.Starting]: "warning",
+  [DownloadTaskStatus.Stopping]: "warning",
+  [DownloadTaskStatus.Disabled]: "default",
 };
 
 enum SelectionMode {
@@ -821,7 +868,7 @@ enum SelectionMode {
 }
 
 type SearchForm = {
-  statuses?: DownloadTaskDtoStatus[];
+  statuses?: DownloadTaskStatus[];
   keyword?: string;
   thirdPartyIds?: ThirdPartyId[];
 };

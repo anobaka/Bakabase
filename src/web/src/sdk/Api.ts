@@ -704,6 +704,8 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryV2PatchInputModel {
   resourceCount?: number;
   color?: string;
   syncVersion?: string;
+  /** @format int32 */
+  templateId?: number;
 }
 
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
@@ -1065,6 +1067,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSavedSearch {
+  id: string;
   search: BakabaseModulesSearchModelsDbResourceSearchDbModel;
   name: string;
 }
@@ -1374,15 +1377,8 @@ export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsCon
  * [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
  * @format int32
  */
-export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDtoStatus =
-  100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
-
-/**
- * [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
- * @format int32
- */
 export type BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus =
-  100 | 200 | 300 | 400;
+  100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
 
 export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask {
   /** @format int32 */
@@ -1406,7 +1402,7 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   message?: string;
   checkpoint?: string;
   /** [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled] */
-  status: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskDtoStatus;
+  status: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus;
   downloadPath: string;
   current?: string;
   /** @format int32 */
@@ -1498,35 +1494,6 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   ids: number[];
   /** [0: NotSet, 1: StopOthers, 2: Ignore] */
   actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
-  /** @format int32 */
-  id: number;
-  /** @minLength 1 */
-  key: string;
-  name?: string;
-  /** [1: Bilibili, 2: ExHentai, 3: Pixiv, 4: Bangumi, 5: SoulPlus, 6: DLsite, 7: Fanbox, 8: Fantia, 9: Cien, 10: Patreon, 11: Tmdb] */
-  thirdPartyId: BakabaseInsideWorldModelsConstantsThirdPartyId;
-  /** @format int32 */
-  type: number;
-  /** @format double */
-  progress: number;
-  /** @format date-time */
-  downloadStatusUpdateDt: string;
-  /** @format int64 */
-  interval?: number;
-  /** @format int32 */
-  startPage?: number;
-  /** @format int32 */
-  endPage?: number;
-  message?: string;
-  checkpoint?: string;
-  /** [100: InProgress, 200: Disabled, 300: Complete, 400: Failed] */
-  status: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskStatus;
-  autoRetry: boolean;
-  /** @minLength 1 */
-  downloadPath: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
@@ -1747,6 +1714,7 @@ export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptio
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions {
   workingDirectory: string;
+  triggerMovingAfterPlayingFirstFile: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsJavLibraryOptions {
@@ -1825,11 +1793,11 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   disableCache: boolean;
   /** [1: Contain, 2: Cover] */
   coverFit: BakabaseInsideWorldModelsConstantsCoverFit;
-  /** [1: MediaLibrary, 2: Category, 4: Tags, 7: All] */
-  displayContents: BakabaseInsideWorldModelsConstantsResourceDisplayContent;
   disableCoverCarousel: boolean;
   displayResourceId: boolean;
   hideResourceTimeInfo: boolean;
+  displayProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
+  inlineDisplayName: boolean;
 }
 
 /**
@@ -1961,12 +1929,6 @@ export type BakabaseInsideWorldModelsConstantsMediaType = 1 | 2 | 3 | 4 | 5 | 10
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsPlaylistItemType = 1 | 2 | 3 | 4;
-
-/**
- * [1: MediaLibrary, 2: Category, 4: Tags, 7: All]
- * @format int32
- */
-export type BakabaseInsideWorldModelsConstantsResourceDisplayContent = 1 | 2 | 4 | 7;
 
 /**
  * [1: Layer, 2: Regex, 3: FixedText]
@@ -2568,6 +2530,12 @@ export interface BakabaseServiceModelsInputFileNameModifierProcessInputModel {
 export interface BakabaseServiceModelsInputFileSystemEntryGroupInputModel {
   paths: string[];
   groupInternal: boolean;
+  /**
+   * @format double
+   * @min 0
+   * @max 1
+   */
+  similarityThreshold: number;
 }
 
 export interface BakabaseServiceModelsInputIdBasedDataSortInputModel {
@@ -2621,7 +2589,6 @@ export interface BakabaseServiceModelsInputResourceSearchInputModel {
 
 export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
   search: BakabaseServiceModelsInputResourceSearchInputModel;
-  name: string;
 }
 
 export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
@@ -2860,6 +2827,7 @@ export interface BakabaseServiceModelsViewResourceSearchViewModel {
 }
 
 export interface BakabaseServiceModelsViewSavedSearchViewModel {
+  id: string;
   search: BakabaseServiceModelsViewResourceSearchViewModel;
   name: string;
 }
@@ -2958,13 +2926,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBu
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloaderDefinition[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsPlayListModelsDomainPlayList {
@@ -3084,13 +3045,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceSearchFilterViewModel[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceModelsViewSavedSearchViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -3576,6 +3530,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourceSearchViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewSavedSearchViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
@@ -4577,7 +4538,7 @@ export class HttpClient<SecurityDataType = unknown> {
   protected processResponseData = <T = any>(response: BaseResponse, params: FullRequestParams): T => {
     // Check if the response has a code property (API response structure)
     if (response && typeof response === "object" && "code" in response) {
-      log(response)
+      log('[response]', params.path, response)
       switch (response.code) {
         case 0:
           break;
@@ -6324,7 +6285,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderModelsDbDownloadTaskDbModel,
+        BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsDownloadTask,
         any
       >({
         path: `/download-task`,
@@ -6439,6 +6400,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopDownloadTasks: (data: number[], params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/download-task/download`,
+        method: "DELETE",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name ClearDownloadTaskCheckpoints
+     * @request DELETE:/download-task/checkpoint
+     */
+    clearDownloadTaskCheckpoints: (data: number[], params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task/checkpoint`,
         method: "DELETE",
         body: data,
         type: ContentType.Json,
@@ -6681,7 +6659,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseServiceModelsInputSavedSearchAddInputModel,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel,
+        any
+      >({
         path: `/resource/saved-search`,
         method: "POST",
         body: data,
@@ -6694,31 +6675,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name GetSavedSearches
-     * @request GET:/resource/saved-search
-     */
-    getSavedSearches: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewSavedSearchViewModel,
-        any
-      >({
-        path: `/resource/saved-search`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Resource
      * @name PutSavedSearchName
-     * @request PUT:/resource/saved-search/{idx}/name
+     * @request PUT:/resource/saved-search
      */
-    putSavedSearchName: (idx: number, data: string, params: RequestParams = {}) =>
+    putSavedSearchName: (
+      data: string,
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/saved-search/${idx}/name`,
+        path: `/resource/saved-search`,
         method: "PUT",
+        query: query,
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -6729,13 +6699,43 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name DeleteSavedSearch
-     * @request DELETE:/resource/saved-search/{idx}
+     * @name GetSavedSearch
+     * @request GET:/resource/saved-search
      */
-    deleteSavedSearch: (idx: number, params: RequestParams = {}) =>
+    getSavedSearch: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewSavedSearchViewModel,
+        any
+      >({
+        path: `/resource/saved-search`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name DeleteSavedSearch
+     * @request DELETE:/resource/saved-search
+     */
+    deleteSavedSearch: (
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/saved-search/${idx}`,
+        path: `/resource/saved-search`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -6751,6 +6751,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       data: BakabaseServiceModelsInputResourceSearchInputModel,
       query?: {
         saveSearch?: boolean;
+        searchId?: string;
       },
       params: RequestParams = {},
     ) =>
@@ -8337,10 +8338,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
-     * @name MergeFileSystemEntries
+     * @name GroupFileSystemEntries
      * @request PUT:/file/group
      */
-    mergeFileSystemEntries: (
+    groupFileSystemEntries: (
       data: BakabaseServiceModelsInputFileSystemEntryGroupInputModel,
       params: RequestParams = {},
     ) =>
@@ -8439,6 +8440,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/file/hardware-acceleration/clear-cache`,
         method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name GetFirstFileByExtension
+     * @request GET:/file/first-file-by-ext
+     */
+    getFirstFileByExtension: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/file/first-file-by-ext`,
+        method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -9061,6 +9083,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/options/filesystem`,
         method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name AddLatestMovingDestination
+     * @request PUT:/options/filesystem/latest-moving-destination
+     */
+    addLatestMovingDestination: (data: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/filesystem/latest-moving-destination`,
+        method: "PUT",
         body: data,
         type: ContentType.Json,
         format: "json",
@@ -10499,6 +10538,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/tool/open-file`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Tool
+     * @name GenerateFilesToEmbedded
+     * @request GET:/tool/generate-files-to-embedded
+     */
+    generateFilesToEmbedded: (
+      query?: {
+        dir?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/tool/generate-files-to-embedded`,
         method: "GET",
         query: query,
         format: "json",

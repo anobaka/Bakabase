@@ -24,11 +24,13 @@ type AttachmentValueRendererProps = Omit<
   "variant"
 > & {
   variant: ValueRendererProps<string[]>["variant"];
+  size?: "sm" | "md" | "lg";
 };
 const AttachmentValueRenderer = ({
   value,
   variant,
   editor,
+  size,
   ...props
 }: AttachmentValueRendererProps) => {
   const { t } = useTranslation();
@@ -70,7 +72,7 @@ const AttachmentValueRenderer = ({
                     const newValue = value.filter(e => e != v);
                     editor?.onValueChange?.(newValue, newValue);
                   }}
-                  size={'sm'}
+                  size={size}
                   // variant={'light'}
                   className={'top-0 right-0 absolute hidden group-hover:block'}
                 >
@@ -89,6 +91,7 @@ const AttachmentValueRenderer = ({
               <Button
                 isIconOnly
                 color={"primary"}
+                size={size}
                 variant={"light"}
                 onClick={() => {
                   createPortal(FileSystemSelectorModal, {

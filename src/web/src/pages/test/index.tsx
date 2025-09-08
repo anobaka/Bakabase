@@ -33,8 +33,10 @@ import PropertyMatcher from "@/components/PropertyMatcher";
 import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
+import FolderSelectorTest from "./cases/FolderSelectorTest";
 
 const components = {
+  FolderSelectorTest: <FolderSelectorTest />,
   ErrorBoundaryTest: <ErrorBoundaryTestPage />,
   FileNameModifierTest: <FileNameModifierTestPage />,
   PropertyMatcher: (

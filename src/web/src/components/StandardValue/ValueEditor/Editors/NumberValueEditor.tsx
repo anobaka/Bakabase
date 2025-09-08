@@ -9,18 +9,21 @@ import { Input } from "@/components/bakaui";
 type NumberValueEditorProps = ValueEditorProps<number | undefined> & {
   label?: string;
   placeholder?: string;
+  size?: "sm" | "md" | "lg";
 };
 const NumberValueEditor = ({
   value,
   onValueChange,
   label,
   placeholder,
+  size,
   ...props
 }: NumberValueEditorProps) => {
   const valueRef = useRef(value);
 
   return (
     <Input
+      size={size}
       autoFocus
       defaultValue={valueRef.current?.toString()}
       label={label}

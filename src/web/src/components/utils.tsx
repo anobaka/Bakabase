@@ -537,7 +537,7 @@ export function wrapWithStaticShowMethod<T extends {}>(
   return Enhance;
 }
 
-export function standardizePath(path?: string) {
+export function standardizePath(path?: string): string | undefined {
   if (path == undefined) {
     return;
   }
@@ -548,6 +548,21 @@ export function standardizePath(path?: string) {
   }
 
   return np;
+}
+
+export function getStandardParentPath(path?: string): string | undefined {
+  if (path == undefined) {
+    return undefined;
+  }
+  const stdPath = standardizePath(path)!;
+  const segments = splitPathIntoSegments(stdPath)!;
+  const suffix = segments.slice(0, -1).join(BusinessConstants.pathSeparator);
+  if (suffix.length == 0) {
+    return undefined;
+  }
+  const match = stdPath.match(/^([\\/]+)(.*)/);
+  const prefix = match ? match[1] : "";
+  return `${prefix}${suffix}`;
 }
 
 export function buildLogger(key: string) {

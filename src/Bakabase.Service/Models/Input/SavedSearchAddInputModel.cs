@@ -4,6 +4,6 @@ namespace Bakabase.Service.Models.Input;
 
 public record SavedSearchAddInputModel
 {
+    // public string Id { get; set; } = null!;
     public ResourceSearchInputModel Search { get; set; } = null!;
-    public string Name { get; set; } = null!;
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import i18n from "i18next";
-import { MdInsertDriveFile } from "react-icons/md";
+import { MdFolder, MdInsertDriveFile } from "react-icons/md";
 
 import "./index.scss";
 import _ from "lodash";
@@ -10,6 +10,8 @@ import _ from "lodash";
 import { IconType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { splitPathIntoSegments } from "@/components/utils";
+import { useIconsStore } from "@/stores/icons";
+import { useUpdate } from "react-use";
 
 type Props = {
   type: IconType;
@@ -57,45 +59,31 @@ const FileSystemEntryIcon = ({
   disableCache,
 }: Props) => {
   const cacheKey = buildCacheKey(type, path);
-
-  const [icons, iconsDispatchers] = useState<{ [key: string]: string }>({});
-  const [iconImgData, setIconImgData] = useState(
-    disableCache ? undefined : icons[cacheKey],
-  );
+  const { icons, add } = useIconsStore();
+  const iconCache = icons[cacheKey] as string;
+  const iconImgDataRef = useRef<string | undefined>(disableCache ? undefined : (iconCache === undefined ? undefined : iconCache));
+  const forceUpdate = useUpdate();
 
   // console.log(path, type, size, iconImgData);
 
   useEffect(() => {
-    if (!iconImgData) {
+    // console.log('cacheKey', cacheKey);
+    // console.log('iconImgDataRef.current', iconImgDataRef.current);
+    // console.log('disableCache', disableCache);
+    // console.log('icons', icons);
+    if (iconImgDataRef.current === undefined) {
       BApi.file
         .getIconData({
           type,
           path,
         })
         .then((r) => {
-          iconsDispatchers({ ...icons, [cacheKey]: r.data });
-          setIconImgData(r.data);
+          add({ [cacheKey]: r.data });
+          // console.log('add', { [cacheKey]: r.data });
+          iconImgDataRef.current = (r.data);
+          forceUpdate();
         });
     }
-    // console.log(ext, icons);
-    // if (!iconImgData && !type) {
-    //   if (ext in icons) {
-    //     setIconImgData(icons[ext]);
-    //   } else {
-    //     const isCompressedFileContent = path!.includes('!');
-    //     if (!isCompressedFileContent) {
-    //       GetIconData({
-    //         path,
-    //       })
-    //         .invoke((t) => {
-    //           if (!t.code) {
-    //             iconsDispatchers.add({ [ext]: t.data });
-    //             setIconImgData(t.data);
-    //           }
-    //         });
-    //     }
-    //   }
-    // }
   }, []);
 
   return (
@@ -113,17 +101,23 @@ const FileSystemEntryIcon = ({
       {/*     <use xlinkHref="#icon-folder1" /> */}
       {/*   </svg> */}
       {/* ) : */}
-      {iconImgData ? (
-        <img alt={""} src={iconImgData} />
+      {iconImgDataRef.current ? (
+        <img alt={""} src={iconImgDataRef.current} />
       ) : (
-        <MdInsertDriveFile
-          style={{
+        type == IconType.Directory ? (
+          <MdFolder style={{
             color: "#ccc",
             fontSize: size,
-          }}
-          title={i18n.t<string>("Unknown file type")}
-        />
-      )}
+          }} />
+        ) :
+          (<MdInsertDriveFile
+            style={{
+              color: "#ccc",
+              fontSize: size,
+            }}
+            title={i18n.t<string>("Unknown file type")}
+          />
+          ))}
     </div>
   );
 };

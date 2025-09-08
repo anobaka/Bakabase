@@ -18,7 +18,7 @@ namespace Bakabase.InsideWorld.Models.Configs
 
         public void AddRecentMovingDestination(string destination)
         {
-            const int capacity = 5;
+            const int capacity = 10;
 
             RecentMovingDestinations ??= [];
             var paths = RecentMovingDestinations.Where(x => x != destination).ToList();
@@ -49,6 +49,7 @@ namespace Bakabase.InsideWorld.Models.Configs
         public record FileProcessorOptions
         {
             public string WorkingDirectory { get; set; } = string.Empty;
+            public bool TriggerMovingAfterPlayingFirstFile { get; set; } = false;
         }
     }
 }

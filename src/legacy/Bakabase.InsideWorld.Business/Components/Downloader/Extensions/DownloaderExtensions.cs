@@ -1,19 +1,10 @@
-﻿using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
-using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
-using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
+﻿using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
-using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
 using Bootstrap.Components.DependencyInjection;
@@ -33,7 +24,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 services.AddScoped(downloaderDefinition.DownloaderType);
                 services.AddSingleton(downloaderDefinition.HelperType);
             }
-            
+
             services.RegisterAllRegisteredTypeAs<IDownloader>();
             services.RegisterAllRegisteredTypeAs<IDownloaderHelper>();
 
@@ -56,26 +47,26 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
             var allDownloaders = downloaderManager.Downloaders;
 
-            DownloadTaskDtoStatus status;
+            DownloadTaskStatus status;
             if (downloader == null)
             {
                 status = task.Status switch
                 {
-                    DownloadTaskStatus.InProgress => allDownloaders.Values.Any(a =>
+                    DownloadTaskDbModelStatus.InProgress => allDownloaders.Values.Any(a =>
                         a.ThirdPartyId == task.ThirdPartyId && a.IsOccupyingDownloadTaskSource())
-                        ? DownloadTaskDtoStatus.InQueue
-                        : DownloadTaskDtoStatus.Idle,
-                    DownloadTaskStatus.Disabled => DownloadTaskDtoStatus.Disabled,
-                    DownloadTaskStatus.Complete => DownloadTaskDtoStatus.Complete,
-                    DownloadTaskStatus.Failed => DownloadTaskDtoStatus.Failed,
+                        ? DownloadTaskStatus.InQueue
+                        : DownloadTaskStatus.Idle,
+                    DownloadTaskDbModelStatus.Disabled => DownloadTaskStatus.Disabled,
+                    DownloadTaskDbModelStatus.Complete => DownloadTaskStatus.Complete,
+                    DownloadTaskDbModelStatus.Failed => DownloadTaskStatus.Failed,
                     _ => throw new ArgumentOutOfRangeException()
                 };
             }
             else
             {
-                if (task.Status == DownloadTaskStatus.Disabled)
+                if (task.Status == DownloadTaskDbModelStatus.Disabled)
                 {
-                    status = DownloadTaskDtoStatus.Disabled;
+                    status = DownloadTaskStatus.Disabled;
                 }
                 else
                 {
@@ -84,14 +75,14 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                         DownloaderStatus.JustCreated => allDownloaders.Any(a =>
                             a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&
                             a.Value.IsOccupyingDownloadTaskSource())
-                            ? DownloadTaskDtoStatus.InQueue
-                            : DownloadTaskDtoStatus.Idle,
-                        DownloaderStatus.Starting => DownloadTaskDtoStatus.Starting,
-                        DownloaderStatus.Downloading => DownloadTaskDtoStatus.Downloading,
-                        DownloaderStatus.Complete => DownloadTaskDtoStatus.Complete,
-                        DownloaderStatus.Failed => DownloadTaskDtoStatus.Failed,
-                        DownloaderStatus.Stopping => DownloadTaskDtoStatus.Stopping,
-                        DownloaderStatus.Stopped => DownloadTaskDtoStatus.Disabled,
+                            ? DownloadTaskStatus.InQueue
+                            : DownloadTaskStatus.Idle,
+                        DownloaderStatus.Starting => DownloadTaskStatus.Starting,
+                        DownloaderStatus.Downloading => DownloadTaskStatus.Downloading,
+                        DownloaderStatus.Complete => DownloadTaskStatus.Complete,
+                        DownloaderStatus.Failed => DownloadTaskStatus.Failed,
+                        DownloaderStatus.Stopping => DownloadTaskStatus.Stopping,
+                        DownloaderStatus.Stopped => DownloadTaskStatus.Disabled,
                         _ => throw new ArgumentOutOfRangeException()
                     };
                     // Same as JustCreated
@@ -101,8 +92,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                         status = allDownloaders.Any(a =>
                             a.Key != task.Id && a.Value.ThirdPartyId == task.ThirdPartyId &&
                             a.Value.IsOccupyingDownloadTaskSource())
-                            ? DownloadTaskDtoStatus.InQueue
-                            : DownloadTaskDtoStatus.Idle;
+                            ? DownloadTaskStatus.InQueue
+                            : DownloadTaskStatus.Idle;
                     }
                 }
             }
@@ -112,8 +103,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
             switch (status)
             {
-                case DownloadTaskDtoStatus.Idle:
-                case DownloadTaskDtoStatus.Complete:
+                case DownloadTaskStatus.Idle:
+                case DownloadTaskStatus.Complete:
                 {
                     if (task.Interval.HasValue)
                     {
@@ -122,7 +113,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
                     break;
                 }
-                case DownloadTaskDtoStatus.Failed:
+                case DownloadTaskStatus.Failed:
                 {
                     if (downloader?.FailureTimes > 0 && task.AutoRetry)
                     {
@@ -137,11 +128,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
                     break;
                 }
-                case DownloadTaskDtoStatus.InQueue:
-                case DownloadTaskDtoStatus.Starting:
-                case DownloadTaskDtoStatus.Downloading:
-                case DownloadTaskDtoStatus.Disabled:
-                case DownloadTaskDtoStatus.Stopping:
+                case DownloadTaskStatus.InQueue:
+                case DownloadTaskStatus.Starting:
+                case DownloadTaskStatus.Downloading:
+                case DownloadTaskStatus.Disabled:
+                case DownloadTaskStatus.Stopping:
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -149,7 +140,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 
             if (actions.Contains(DownloadTaskAction.Restart) || actions.Contains(DownloadTaskAction.StartManually))
             {
-                if (status != DownloadTaskDtoStatus.Disabled)
+                if (status != DownloadTaskStatus.Disabled)
                 {
                     if (nextStartDt.HasValue && DateTime.Now > nextStartDt.Value)
                     {
@@ -182,6 +173,47 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
             };
 
             return dto;
+        }
+
+        public static DownloadTaskDbModel? ToDbModel(this DownloadTask? task)
+        {
+            if (task == null)
+            {
+                return null;
+            }
+
+            return new DownloadTaskDbModel
+            {
+                Id = task.Id,
+                Key = task.Key,
+                Name = task.Name,
+                ThirdPartyId = task.ThirdPartyId,
+                Type = task.Type,
+                Progress = task.Progress,
+                DownloadStatusUpdateDt = task.DownloadStatusUpdateDt,
+                Interval = task.Interval,
+                StartPage = task.StartPage,
+                EndPage = task.EndPage,
+                Message = task.Message,
+                Checkpoint = task.Checkpoint,
+                Status = task.Status.ToDomainModel(),
+                AutoRetry = task.AutoRetry,
+                DownloadPath = task.DownloadPath
+            };
+        }
+
+        public static DownloadTaskDbModelStatus ToDomainModel(this DownloadTaskStatus status) {
+          return status switch {
+            DownloadTaskStatus.Disabled => DownloadTaskDbModelStatus.Disabled,
+            DownloadTaskStatus.Complete => DownloadTaskDbModelStatus.Complete,
+            DownloadTaskStatus.Failed => DownloadTaskDbModelStatus.Failed,
+            DownloadTaskStatus.Idle => DownloadTaskDbModelStatus.InProgress,
+            DownloadTaskStatus.InQueue => DownloadTaskDbModelStatus.InProgress,
+            DownloadTaskStatus.Starting => DownloadTaskDbModelStatus.InProgress,
+            DownloadTaskStatus.Downloading => DownloadTaskDbModelStatus.InProgress,
+            DownloadTaskStatus.Stopping => DownloadTaskDbModelStatus.InProgress,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+          };
         }
     }
 }

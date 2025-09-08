@@ -89,13 +89,18 @@ public class MediaLibraryV2Service<TDbContext>(
             data.SyncVersion = model.SyncVersion;
         }
 
-        if (model.Paths.IsNotEmpty())
+        if (model.Paths != null)
         {
             if (!data.Paths.SequenceEqual(model.Paths))
             {
                 data.SyncVersion = null;
                 data.Paths = model.Paths;
             }
+        }
+
+        if (model.TemplateId.HasValue)
+        {
+            data.TemplateId = model.TemplateId;
         }
         
         if (model.Name.IsNotEmpty())
@@ -325,14 +330,29 @@ public class MediaLibraryV2Service<TDbContext>(
 
                 #region Clean
 
+                var changedResources = new HashSet<Resource>();
                 var cleanProgressor = mlProgressor.CreateNewScope(baseProgress, ProgressPerMediaLibrary.Clean);
                 if (onProcessChange != null)
                 {
                     await onProcessChange(localizer.SyncMediaLibrary_TaskProcess_CleanupResources(ml.Name));
                 }
-
-                var resourcesToBeDeleted =
-                    unknownDbResources.Where(x => x.ShouldBeDeletedSinceFileNotFound(syncOptions)).ToList();
+                
+                var resourcesToBeDeleted = new List<Resource>();
+                foreach (var unknownDbResource in unknownDbResources)
+                {
+                    if (unknownDbResource.ShouldBeDeletedSinceFileNotFound(syncOptions))
+                    {
+                        resourcesToBeDeleted.Add(unknownDbResource);
+                    }
+                    else
+                    {
+                        if (unknownDbResource.Tags.Add(ResourceTag.PathDoesNotExist))
+                        {
+                            changedResources.Add(unknownDbResource);
+                        }
+                    }
+                }
+                
                 if (resourcesToBeDeleted.Any())
                 {
                     await resourceService.DeleteByKeys(resourcesToBeDeleted.Select(r => r.Id).ToArray(), false);
@@ -370,7 +390,6 @@ public class MediaLibraryV2Service<TDbContext>(
                 #region Merge and update
 
                 var updateProgressor = mlProgressor.CreateNewScope(baseProgress, ProgressPerMediaLibrary.Update);
-                var changedResources = new HashSet<Resource>();
                 foreach (var cr in conflictDbResources)
                 {
                     var tmpResource = tempSyncResourceMap[cr.Path];

@@ -11,11 +11,13 @@ type BooleanValueRendererProps = Omit<
   "variant"
 > & {
   variant: ValueRendererProps<boolean>["variant"] | "switch";
+  size?: "sm" | "md" | "lg";
 };
 const BooleanValueRenderer = ({
   value,
   variant,
   editor,
+  size,
   ...props
 }: BooleanValueRendererProps) => {
   const { t } = useTranslation();
@@ -29,7 +31,7 @@ const BooleanValueRenderer = ({
         <Checkbox
           disableAnimation={!editor}
           isSelected={value}
-          size={"sm"}
+          size={size}
           onValueChange={(v) => editor?.onValueChange?.(v, v)}
         />
       );
@@ -38,7 +40,7 @@ const BooleanValueRenderer = ({
         <Switch
           disableAnimation={!editor}
           isSelected={value}
-          size={"sm"}
+          size={size}
           onValueChange={(v) => editor?.onValueChange?.(v, v)}
         />
       );

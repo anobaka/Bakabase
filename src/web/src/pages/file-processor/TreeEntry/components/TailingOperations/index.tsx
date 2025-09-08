@@ -3,11 +3,7 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { TreeEntryProps } from "@/pages/file-processor/TreeEntry";
 
-import {
-  FolderOpenOutlined,
-  SyncOutlined,
-  UploadOutlined,
-} from "@ant-design/icons";
+import { FolderOpenOutlined, SyncOutlined, UploadOutlined } from "@ant-design/icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -54,9 +50,7 @@ const TailingOperations = (props: Props) => {
         >
           <Button
             isIconOnly
-            className={
-              "w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"
-            }
+            className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}
             variant={"light"}
             onClick={(e) => {
               e.stopPropagation();

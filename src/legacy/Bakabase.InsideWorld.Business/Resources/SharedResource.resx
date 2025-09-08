@@ -444,4 +444,7 @@ The version of lux is not limited.</value>
   <data name="Resource" xml:space="preserve">
     <value>Resource</value>
   </data>
+  <data name="Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
 </root>

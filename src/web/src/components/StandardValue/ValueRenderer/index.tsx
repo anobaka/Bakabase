@@ -29,7 +29,7 @@ const log = buildLogger("StandardValueRenderer");
 const StandardValueRenderer = (props: Props) => {
   const { value, type, variant = "default", propertyType } = props;
 
-  log(props);
+  // log(props);
 
   switch (type) {
     case StandardValueType.String:
@@ -65,16 +65,12 @@ const StandardValueRenderer = (props: Props) => {
     case StandardValueType.Link:
       return <LinkValueRenderer value={value as LinkValue} variant={variant} />;
     case StandardValueType.Boolean:
-      return (
-        <BooleanValueRenderer value={value as boolean} variant={variant} />
-      );
+      return <BooleanValueRenderer value={value as boolean} variant={variant} />;
     case StandardValueType.DateTime: {
       return (
         <DateTimeValueRenderer
           as={
-            propertyType == undefined || propertyType == PropertyType.DateTime
-              ? "datetime"
-              : "date"
+            propertyType == undefined || propertyType == PropertyType.DateTime ? "datetime" : "date"
           }
           format={
             propertyType == undefined || propertyType == PropertyType.DateTime
@@ -87,26 +83,13 @@ const StandardValueRenderer = (props: Props) => {
       );
     }
     case StandardValueType.Time: {
-      return (
-        <TimeValueRenderer
-          format={"HH:mm:ss"}
-          value={value as Duration}
-          variant={variant}
-        />
-      );
+      return <TimeValueRenderer format={"HH:mm:ss"} value={value as Duration} variant={variant} />;
     }
     case StandardValueType.ListListString: {
-      return (
-        <MultilevelValueRenderer
-          value={value as string[][]}
-          variant={variant}
-        />
-      );
+      return <MultilevelValueRenderer value={value as string[][]} variant={variant} />;
     }
     case StandardValueType.ListTag:
-      return (
-        <TagsValueRenderer value={value as TagValue[]} variant={variant} />
-      );
+      return <TagsValueRenderer value={value as TagValue[]} variant={variant} />;
   }
 };
 

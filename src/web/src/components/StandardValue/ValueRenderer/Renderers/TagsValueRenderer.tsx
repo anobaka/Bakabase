@@ -17,6 +17,7 @@ type TagsValueRendererProps = ValueRendererProps<TagValue[], string[]> & {
     (TagValue & { value: string; color?: string })[]
   >;
   valueAttributes?: { color?: string }[];
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("TagsValueRenderer");
@@ -25,7 +26,7 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
 
   // log(props);
 
-  const { value, editor, variant, getDataSource, valueAttributes } = props;
+  const { value, editor, variant, getDataSource, valueAttributes, size } = props;
 
   const simpleLabels = value?.map((v) => {
     if (v.group != undefined && v.group.length > 0) {
@@ -95,7 +96,7 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
   const startEditing = editor ? showEditor : undefined;
 
   if (!value || value.length == 0) {
-    return <NotSet onClick={startEditing} />;
+    return <NotSet onClick={startEditing} size={size} />;
   }
 
   if (variant == "light") {
@@ -130,7 +131,7 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
           }
 
           return (
-            <Chip radius={"sm"} size={"sm"} style={styles}>
+            <Chip radius={"sm"} size={size} style={styles}>
               {l}
             </Chip>
           );

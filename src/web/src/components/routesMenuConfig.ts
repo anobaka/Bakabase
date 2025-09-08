@@ -31,6 +31,7 @@ import { TbToolsKitchen } from "react-icons/tb";
 
 import DashboardPage from "@/pages/dashboard";
 import ResourcePage from "@/pages/resource";
+import ResourcePage2 from "@/pages/resource2";
 import MediaLibraryPage from "@/pages/media-library";
 import MediaLibraryTemplatePage from "@/pages/media-library-template";
 import CustomComponentPage from "@/pages/custom-component";
@@ -78,10 +79,18 @@ export const routesMenuConfig: RouteMenuItem[] = [
     layout: "basic",
     menu: false, // 首页不在菜单中
   },
+  // {
+  //   name: "Resource",
+  //   path: "/resource",
+  //   component: ResourcePage,
+  //   icon: AiOutlinePicture,
+  //   layout: "basic",
+  //   menu: true,
+  // },
   {
     name: "Resource",
-    path: "/resource",
-    component: ResourcePage,
+    path: "/resource2",
+    component: ResourcePage2,
     icon: AiOutlinePicture,
     layout: "basic",
     menu: true,

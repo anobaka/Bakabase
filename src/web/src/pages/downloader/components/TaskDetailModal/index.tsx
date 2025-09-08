@@ -21,6 +21,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import {
   DownloadTaskFieldMap,
   DownloadTaskFieldType,
+  DownloadTaskTypeIconMap,
 } from "@/pages/downloader/components/TaskDetailModal/models.ts";
 import LuxRequired from "@/pages/downloader/components/TaskDetailModal/components/LuxRequired.tsx";
 import FfMpegRequired from "@/pages/downloader/components/TaskDetailModal/components/FfMpegRequired.tsx";
@@ -378,6 +379,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                   <ButtonGroup size={"sm"}>
                     {availableTaskTypes.map((taskType) => {
                       const isSelected = form.type === taskType.value;
+                      const Icon = DownloadTaskTypeIconMap[form.thirdPartyId!]?.[taskType.value];
 
                       return (
                         <Button
@@ -394,6 +396,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                             }
                           }}
                         >
+                          {Icon && <Icon className="text-base" />}
                           {t(taskType.label)}
                         </Button>
                       );

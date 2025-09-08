@@ -15,6 +15,7 @@ export const useIconsStore = create<IconsState>((set, get) => ({
         newIcons[e] = icons[e];
       });
 
+      // console.log('newIcons', newIcons);
       return { icons: newIcons };
     }),
 }));

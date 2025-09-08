@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
@@ -21,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             _specialTextService = specialTextService;
         }
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             Logger.LogInformation("Starting Fantia download task: {TaskId}, Type: {TaskType}", task.Id, EnumTaskType);
             
@@ -56,10 +57,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
-        protected abstract Task DownloadFromFanclub(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct);
-        protected abstract Task DownloadFromFollowing(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct);
-        protected abstract Task DownloadSinglePost(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct);
-        protected abstract Task DownloadByPlan(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct);
+        protected abstract Task DownloadFromFanclub(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct);
+        protected abstract Task DownloadFromFollowing(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct);
+        protected abstract Task DownloadSinglePost(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct);
+        protected abstract Task DownloadByPlan(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct);
 
         protected string BuildFileName(Dictionary<string, object> namingContext, string namingConvention)
         {

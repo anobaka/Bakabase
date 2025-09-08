@@ -12,11 +12,12 @@ import { buildLogger } from "@/components/utils";
 type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
   format?: string;
   as: "datetime" | "date";
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("DateTimeValueRenderer");
 const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
-  const { value: propsValue, format, as, variant, editor } = props;
+  const { value: propsValue, format, as, variant, editor, size } = props;
 
   log(props);
   const [editing, setEditing] = useState(false);
@@ -54,6 +55,7 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
       granularity={as == "datetime" ? "second" : "day"}
       isReadOnly={!editor}
       value={value}
+      size={size}
       onBlur={() => {
         log("onBlur", value);
         editor?.onValueChange?.(value);

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
@@ -75,7 +76,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             }
         }
 
-        private async Task<BaseResponse> _tryStart(DownloadTaskDbModel task, bool stopConflicts)
+        private async Task<BaseResponse> _tryStart(DownloadTask task, bool stopConflicts)
         {
             var helper = _downloaderFactory.GetHelper(task.ThirdPartyId, task.Type);
             await helper.ValidateOptionsAsync();
@@ -128,7 +129,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
             return BaseResponseBuilder.Ok;
         }
 
-        public async Task<BaseResponse> Start(DownloadTaskDbModel task, bool stopConflicts)
+        public async Task<BaseResponse> Start(DownloadTask task, bool stopConflicts)
         {
             return await _tryStart(task, stopConflicts);
         }

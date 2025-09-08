@@ -7,6 +7,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -18,6 +19,8 @@ using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Models.Constants;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Compression;
@@ -71,11 +74,14 @@ namespace Bakabase.Service.Controllers
         private readonly FfMpegService _ffMpegService;
         private readonly HardwareAccelerationService _hardwareAccelerationService;
 
+        private readonly ISystemPlayer _systemPlayer;
+
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
-            BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter, 
-            FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService)
+            BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
+            FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService,
+            ISystemPlayer systemPlayer)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -89,6 +95,7 @@ namespace Bakabase.Service.Controllers
             _guiAdapter = guiAdapter;
             _ffMpegService = ffMpegService;
             _hardwareAccelerationService = hardwareAccelerationService;
+            _systemPlayer = systemPlayer;
 
             _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
         }
@@ -99,9 +106,11 @@ namespace Bakabase.Service.Controllers
             string root)
         {
             var files = Directory.GetFiles(root)
-                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x), false)).ToArray();
+                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x), false))
+                .ToArray();
             var directories = Directory.GetDirectories(root)
-                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x)!, true)).ToArray();
+                .Select(x => new FileSystemEntryNameViewModel(x.StandardizePath()!, Path.GetFileName(x)!, true))
+                .ToArray();
 
             return new ListResponse<FileSystemEntryNameViewModel>(files.Concat(directories)
                 .OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase));
@@ -482,7 +491,37 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "OpenRecycleBin")]
         public async Task<BaseResponse> OpenRecycleBin()
         {
-            Process.Start("explorer.exe", "shell:RecycleBinFolder");
+            var command = "";
+            var args = "";
+
+            switch (AppService.OsPlatform)
+            {
+                case OsPlatform.Unknown:
+                case OsPlatform.Osx:
+                    throw new PlatformNotSupportedException();
+                case OsPlatform.Windows:
+                    command = "explorer.exe";
+                    args = "shell:RecycleBinFolder";
+                    break;
+                case OsPlatform.Linux:
+                    command = "xdg-open";
+                    args = "~/.local/share/Trash";
+                    break;
+                case OsPlatform.FreeBsd:
+                    command = "xdg-open";
+                    args = "~/.Trash";
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = command,
+                Arguments = args,
+                UseShellExecute = true
+            });
+
             return BaseResponseBuilder.Ok;
         }
 
@@ -503,7 +542,7 @@ namespace Bakabase.Service.Controllers
 
             await _fsOptionsManager.SaveAsync(options =>
             {
-                options.RecentMovingDestinations = new[] {model.DestDir}
+                options.RecentMovingDestinations = new[] { model.DestDir }
                     .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToList();
             });
 
@@ -557,6 +596,7 @@ namespace Bakabase.Service.Controllers
                     ConflictKeys = [taskId]
                 });
             }
+
             return BaseResponseBuilder.Ok;
         }
 
@@ -609,9 +649,11 @@ namespace Bakabase.Service.Controllers
 
             var viewModels = files
                 .Select(f =>
-                    new FileSystemEntryNameViewModel(f.StandardizePath()!, f.StandardizePath()!.Replace(model.WorkingDir, null), false))
+                    new FileSystemEntryNameViewModel(f.StandardizePath()!,
+                        f.StandardizePath()!.Replace(model.WorkingDir, null), false))
                 .Concat(directories.Select(d =>
-                    new FileSystemEntryNameViewModel(d.StandardizePath()!, d.StandardizePath()!.Replace(model.WorkingDir, null), true)))
+                    new FileSystemEntryNameViewModel(d.StandardizePath()!,
+                        d.StandardizePath()!.Replace(model.WorkingDir, null), true)))
                 .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
 
             return new ListResponse<FileSystemEntryNameViewModel>(viewModels);
@@ -741,11 +783,14 @@ namespace Bakabase.Service.Controllers
                     else
                     {
                         // Get hardware acceleration info (cached)
-                        var hwAccelInfo = await _hardwareAccelerationService.GetHardwareAccelerationInfoAsync(HttpContext.RequestAborted);
+                        var hwAccelInfo =
+                            await _hardwareAccelerationService.GetHardwareAccelerationInfoAsync(HttpContext
+                                .RequestAborted);
                         var preferredCodec = hwAccelInfo.PreferredCodec;
-                        
-                        _logger.LogInformation("Using codec {Codec} for video transcoding of {FileName}", preferredCodec, Path.GetFileName(fullname));
-                        
+
+                        _logger.LogInformation("Using codec {Codec} for video transcoding of {FileName}",
+                            preferredCodec, Path.GetFileName(fullname));
+
                         // Transcode to h264 using ffmpeg with hardware acceleration if available
                         var ffmpegPath = _ffMpegService.FfMpegExecutable;
                         var ffmpegCmd = Cli.Wrap(ffmpegPath)
@@ -754,7 +799,7 @@ namespace Bakabase.Service.Controllers
                                 args
                                     .Add("-i").Add(fullname)
                                     .Add("-c:v").Add(preferredCodec);
-                                
+
                                 // Add hardware-specific options based on the codec
                                 if (preferredCodec == "h264_nvenc")
                                 {
@@ -785,7 +830,7 @@ namespace Bakabase.Service.Controllers
                                     args
                                         .Add("-preset").Add("ultrafast");
                                 }
-                                
+
                                 args
                                     .Add("-b:v").Add("3M")
                                     .Add("-maxrate").Add("4M")
@@ -797,7 +842,7 @@ namespace Bakabase.Service.Controllers
                                     .Add("pipe:1");
                             })
                             .WithStandardOutputPipe(PipeTarget.ToStream(Response.Body, true));
-                        
+
                         // Set response headers for streaming mp4
                         Response.ContentType = "video/mp4";
                         Response.Headers["Content-Disposition"] = $"inline; filename=\"{Path.GetFileName(fullname)}\"";
@@ -1089,7 +1134,7 @@ namespace Bakabase.Service.Controllers
         {
             if (System.IO.File.Exists(path))
             {
-                return new ListResponse<string>(new[] {path});
+                return new ListResponse<string>(new[] { path });
             }
 
             if (!Directory.Exists(path))
@@ -1168,7 +1213,7 @@ namespace Bakabase.Service.Controllers
                     {
                         foreach (var path in pg)
                         {
-                            if (System.IO.File.Exists(path))
+                            if (System.IO.File.Exists(path) || Directory.Exists(path))
                             {
                                 batches.GetOrAdd(pg.Key, _ => []).Add(path);
                             }
@@ -1185,24 +1230,56 @@ namespace Bakabase.Service.Controllers
             var vms = batches.Select(g =>
             {
                 var rootPath = g.Key.StandardizePath()!;
-                return new FileSystemEntryGroupResultViewModel
+                var vm = new FileSystemEntryGroupResultViewModel
                 {
-                    RootPath = rootPath,
-                    Groups = g.Value.GroupBy(Path.GetFileNameWithoutExtension)
+                    RootPath = rootPath
+                };
+                if (model.SimilarityThreshold == 1.0m)
+                {
+                    vm.Groups = g.Value.GroupBy(Path.GetFileNameWithoutExtension)
                         .Where(x => x.Key.IsNotEmpty()).Select(x =>
                             new FileSystemEntryGroupResultViewModel.GroupViewModel
                             {
                                 DirectoryName = x.Key.StandardizePath()!,
-                                Filenames = x.Select(y => Path.GetFileName(y)).ToArray()
-                            }).ToArray()
-                };
+                                Filenames = x.Select(y => Path.GetFileName(y)!).ToArray()
+                            }).ToArray();
+                }
+                else
+                {
+                    var groups = new Dictionary<string, List<string>>();
+                    foreach (var path in g.Value)
+                    {
+                        var key = Path.GetFileNameWithoutExtension(path);
+                        if (key.IsNotEmpty())
+                        {
+                            var similarKey =
+                                groups.Keys.FirstOrDefault(x => x.IsSimilarTo(key, model.SimilarityThreshold));
+                            if (similarKey.IsNotEmpty())
+                            {
+                                groups[similarKey].Add(path);
+                            }
+                            else
+                            {
+                                groups[key] = [path];
+                            }
+                        }
+                    }
+
+                    vm.Groups = groups.Select(x => new FileSystemEntryGroupResultViewModel.GroupViewModel
+                    {
+                        DirectoryName = x.Value.Select(x => Path.GetFileNameWithoutExtension(x)!).OrderByDescending(y => y.Length).First().StandardizePath()!,
+                        Filenames = x.Value.Select(y => Path.GetFileName(y)!).ToArray()
+                    }).ToArray();
+                }
+
+                return vm;
             });
 
             return new ListResponse<FileSystemEntryGroupResultViewModel>(vms);
         }
 
         [HttpPut("group")]
-        [SwaggerOperation(OperationId = "MergeFileSystemEntries")]
+        [SwaggerOperation(OperationId = "GroupFileSystemEntries")]
         public async Task<BaseResponse> Group([FromBody] FileSystemEntryGroupInputModel model)
         {
             var r = await GroupPreview(model);
@@ -1269,6 +1346,20 @@ namespace Bakabase.Service.Controllers
         {
             _hardwareAccelerationService.ClearCache();
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("first-file-by-ext")]
+        [SwaggerOperation(OperationId = "GetFirstFileByExtension")]
+        public async Task<ListResponse<string>> GetFirstFileByExtension(string path)
+        {
+            if (System.IO.File.Exists(path))
+            {
+                return new ListResponse<string>([path]);
+            }
+
+            var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
+            var fileGroup = files.GroupBy(Path.GetExtension).OrderByDescending(x => x.Count()).Select(a => a.First());
+            return new ListResponse<string>(fileGroup);
         }
     }
 }

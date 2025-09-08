@@ -8,8 +8,8 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useUpdate, useUpdateEffect } from "react-use";
 import { DisconnectOutlined } from "@ant-design/icons";
 
-import Resources from "./components/Resources";
 import styles from "./index.module.scss";
+import Resources from "./components/Resources";
 import FilterPanel from "./components/FilterPanel";
 
 import BApi from "@/sdk/BApi";
@@ -283,14 +283,7 @@ const ResourcePage: React.FC = () => {
   };
 
   const renderCell = useCallback(
-    ({
-      columnIndex,
-      key,
-      parent,
-      rowIndex,
-      style,
-      measure,
-    }: GridCellRenderArgs) => {
+    ({ columnIndex, key, parent, rowIndex, style, measure }: GridCellRenderArgs) => {
       const index = rowIndex * columnCount + columnIndex;
 
       if (index >= resources.length) {
@@ -310,9 +303,7 @@ const ResourcePage: React.FC = () => {
         >
           <ResourceCard
             // debug
-            biggerCoverPlacement={
-              index % columnCount < columnCount / 2 ? "right" : "left"
-            }
+            biggerCoverPlacement={index % columnCount < columnCount / 2 ? "right" : "left"}
             mode={multiSelection ? "select" : "default"}
             resource={resource}
             selected={selected}
@@ -415,14 +406,9 @@ const ResourcePage: React.FC = () => {
             onScroll={(e) => {
               // console.log('scrolling!!!!', e);
               // return;
-              if (
-                e.scrollHeight < e.scrollTop + e.clientHeight + 200 &&
-                !searchingRef.current
-              ) {
+              if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
                 searchingRef.current = true;
-                const totalPage = Math.ceil(
-                  (pageable?.totalCount ?? 0) / PageSize,
-                );
+                const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
 
                 if (
                   searchFormRef.current?.page != undefined &&
@@ -439,9 +425,7 @@ const ResourcePage: React.FC = () => {
                 }
               }
 
-              const items = pageContainerRef.current?.querySelectorAll(
-                "div[role='resource']",
-              );
+              const items = pageContainerRef.current?.querySelectorAll("div[role='resource']");
 
               if (items && items.length > 0) {
                 const x = e.clientWidth / 2;
@@ -462,13 +446,9 @@ const ResourcePage: React.FC = () => {
                     closest = item;
                   }
                 }
-                const centerResourceId = parseInt(
-                  closest.getAttribute("data-id"),
-                  10,
-                );
+                const centerResourceId = parseInt(closest.getAttribute("data-id"), 10);
                 const pageOffset = Math.floor(
-                  resources.findIndex((r) => r.id == centerResourceId) /
-                    PageSize,
+                  resources.findIndex((r) => r.id == centerResourceId) / PageSize,
                 );
                 const currentPage = pageOffset + initStartPageRef.current;
 
@@ -507,9 +487,7 @@ const ResourcePage: React.FC = () => {
         </>
       )}
       <div
-        className={
-          "mt-10 flex items-center gap-2 justify-center left-0 w-ful bottom-0"
-        }
+        className={"mt-10 flex items-center gap-2 justify-center left-0 w-ful bottom-0"}
         style={{ position: resources.length == 0 ? "relative" : "absolute" }}
       >
         {/* <Spinner label={t<string>('Searching...')} /> */}
@@ -521,16 +499,12 @@ const ResourcePage: React.FC = () => {
               <div className={"mb-2 flex items-center gap-1"}>
                 <DisconnectOutlined className={"text-base"} />
                 <Chip variant={"light"}>
-                  {t<string>(
-                    "Resource Not Found. You can try the following solutions:",
-                  )}
+                  {t<string>("Resource Not Found. You can try the following solutions:")}
                 </Chip>
               </div>
               <div className={"flex flex-col gap-2"}>
                 <div className={"flex items-center gap-1"}>
-                  {t<string>(
-                    "1. Please check if the search criteria is correct.",
-                  )}
+                  {t<string>("1. Please check if the search criteria is correct.")}
                   <Button
                     color={"primary"}
                     radius={"sm"}
@@ -547,12 +521,7 @@ const ResourcePage: React.FC = () => {
                   {t<string>(
                     "2. Please ensure that media libraries are created, bound to a template, and fully synchronized.",
                   )}
-                  <Link
-                    isBlock
-                    href={"#/media-library"}
-                    size={"sm"}
-                    underline={"none"}
-                  >
+                  <Link isBlock href={"#/media-library"} size={"sm"} underline={"none"}>
                     {t<string>("Go to media library page")}
                   </Link>
                 </div>

@@ -3,9 +3,6 @@
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
-import { Img } from "react-image";
-import { LoadingOutlined } from "@ant-design/icons";
-import { MdBrokenImage } from "react-icons/md";
 
 import envConfig from "@/config/env";
 import { buildLogger, uuidv4 } from "@/components/utils";
@@ -13,12 +10,12 @@ import MediaPreviewerPage from "@/components/MediaPreviewer";
 import "./index.scss";
 import { useAppContextStore } from "@/stores/appContext";
 import { CoverFit, ResourceCacheType } from "@/sdk/constants";
-import { Button, Carousel, Modal, Tooltip } from "@/components/bakaui";
+import { Carousel, Tooltip, Image } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import toast from "@/components/bakaui/components/Toast";
-import BApi from "@/sdk/BApi";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
+
+import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
 
 type TooltipPlacement =
   | "top"
@@ -49,8 +46,6 @@ export interface IResourceCoverRef {
   load: (disableBrowserCache?: boolean) => void;
 }
 
-const log = buildLogger("ResourceCover");
-
 const ResourceCover = React.forwardRef((props: Props, ref) => {
   const {
     resource,
@@ -64,9 +59,10 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   } = props;
   // log('rendering', props);
   const { t } = useTranslation();
+  const log = buildLogger(`ResourceCover:${resource.id}|${resource.path}`);
+
+  // useTraceUpdate(props, `ResourceCover:${resource.id}|${resource.path}`);
   const forceUpdate = useUpdate();
-  const [loading, setLoading] = useState(true);
-  const [loaded, setLoaded] = useState(false);
   const [urls, setUrls] = useState<string[]>();
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
@@ -82,6 +78,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     w: 0,
     h: 0,
   });
+
+  const [failureUrls, setFailureUrls] = useState<Set<string>>(new Set());
 
   // log(resource);
 
@@ -122,6 +120,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       const serverAddress =
         resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
+      log("cps", cps, "cache", resource.cache);
+
       if (cps.length > 0) {
         urls.push(
           ...cps.map(
@@ -137,7 +137,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           urls[i] += urls[i].includes("?") ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
         }
       }
-      log(urls, resource);
+      // log(urls, resource);
       setUrls(urls);
     },
     [resource, useCache],
@@ -207,41 +207,52 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     height: containerRef.current?.clientHeight,
                   }}
                 >
-                  <Img
-                    key={url}
-                    className={`${dynamicClassName} max-w-full max-h-full`}
-                    fetchPriority={"low"}
-                    loader={<LoadingOutlined className={"text-2xl"} />}
-                    src={url}
-                    unloader={renderBrokenCover()}
-                    onError={(e) => {
-                      log(e);
-                    }}
-                    onLoad={(e) => {
-                      setLoaded(true);
-                      // forceUpdate();
-                      const img = e.target as HTMLImageElement;
+                  {/* https://github.com/heroui-inc/heroui/issues/4756 */}
+                  {failureUrls.has(url) ? (
+                    <FallbackCover afterClearingCache={() => loadCover(true)} id={resource.id} />
+                  ) : (
+                    <Image
+                      key={url}
+                      className={`${dynamicClassName} max-w-full max-h-full`}
+                      // fallbackSrc={renderBrokenCover()}
+                      // fallbackSrc={
+                      //   <FallbackCover
+                      //     afterClearingCache={() => loadCover(true)}
+                      //     id={resource.id}
+                      //   />
+                      // }
+                      loading={"eager"}
+                      src={url}
+                      onError={() => {
+                        failureUrls.add(url);
+                        setFailureUrls(new Set<string>(failureUrls));
+                        log("failed to load url", url);
+                      }}
+                      onLoad={(e) => {
+                        // forceUpdate();
+                        const img = e.target as HTMLImageElement;
 
-                      log("loaded", e, img);
-                      if (img) {
-                        if (!maxCoverRawSizeRef.current) {
-                          maxCoverRawSizeRef.current = {
-                            w: img.naturalWidth,
-                            h: img.naturalHeight,
-                          };
-                        } else {
-                          maxCoverRawSizeRef.current.w = Math.max(
-                            maxCoverRawSizeRef.current.w,
-                            img.naturalWidth,
-                          );
-                          maxCoverRawSizeRef.current.h = Math.max(
-                            maxCoverRawSizeRef.current.h,
-                            img.naturalHeight,
-                          );
+                        // log("loaded", e, img);
+                        if (img) {
+                          if (!maxCoverRawSizeRef.current) {
+                            maxCoverRawSizeRef.current = {
+                              w: img.naturalWidth,
+                              h: img.naturalHeight,
+                            };
+                          } else {
+                            maxCoverRawSizeRef.current.w = Math.max(
+                              maxCoverRawSizeRef.current.w,
+                              img.naturalWidth,
+                            );
+                            maxCoverRawSizeRef.current.h = Math.max(
+                              maxCoverRawSizeRef.current.h,
+                              img.naturalHeight,
+                            );
+                          }
                         }
-                      }
-                    }}
-                  />
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             );
@@ -252,86 +263,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
     return null;
   }, [urls, coverFit, disableCarousel]);
-
-  const renderBrokenCover = useCallback(() => {
-    return (
-      <Tooltip content={t<string>("ResourceCover.CoverTips.Tooltip")}>
-        <Button
-          isIconOnly
-          size={"sm"}
-          variant={"light"}
-          onPress={async (e) => {
-
-            const cacheExists = (await BApi.cache.checkResourceCacheExistence(resource.id, ResourceCacheType.Covers)).data ?? false;
-
-            createPortal(Modal, {
-              defaultVisible: true,
-              size: 'lg',
-              title: t<string>('ResourceCover.CoverTips.Title'),
-              children: (
-                <div className="flex flex-col gap-6">
-                  <div>
-                    <div className="font-medium">{t<string>('ResourceCover.CoverTips.S1.Title')}</div>
-                    <div className="text-sm mb-1">{t<string>('ResourceCover.CoverTips.S1.Happens')}</div>
-                    <ul className="list-disc pl-5 text-sm">
-                      <li>{t<string>('ResourceCover.CoverTips.S1.When.NotImage')}</li>
-                      <li>{t<string>("ResourceCover.CoverTips.S1.When.NoImageInFolder")}</li>
-                    </ul>
-                    <div className="text-sm mt-1">{t<string>('ResourceCover.CoverTips.S1.Todo')}</div>
-                    <ol className="list-decimal pl-5 text-sm">
-                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.ManualSet')}</li>
-                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.FFmpeg')}</li>
-                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.Enhancers')}</li>
-                      <li>{t<string>('ResourceCover.CoverTips.S1.Todo.Cache')}</li>
-                    </ol>
-                  </div>
-                  <div>
-                    <div className="font-medium">{t<string>('ResourceCover.CoverTips.S2.Title')}</div>
-                    <div className="text-sm mb-1">{t<string>('ResourceCover.CoverTips.S2.Happens')}</div>
-                    <ul className="list-disc pl-5 text-sm">
-                      <li>{t<string>('ResourceCover.CoverTips.S2.When.CacheDeleted')}</li>
-                    </ul>
-                    <div className="text-sm mt-1">{t<string>('ResourceCover.CoverTips.S2.Todo')}</div>
-                    <ol className="list-decimal pl-5 text-sm">
-                      <li>{t<string>('ResourceCover.CoverTips.S2.Todo.DisableCache')}</li>
-                    </ol>
-                  </div>
-                  {cacheExists && (
-                    <div>
-                      <div className="font-medium">{t<string>('Cover cache')}</div>
-                      <Button
-                        size={"sm"}
-                        variant={"flat"}
-                        onPress={async () => {
-                          try {
-                            await BApi.cache.deleteResourceCacheByResourceIdAndCacheType(
-                              resource.id,
-                              ResourceCacheType.Covers,
-                            );
-                            await BApi.resource.discoverResourceCover(resource.id);
-                            loadCover(true);
-                            toast.success(t<string>('Cover cache has been reset'));
-                          } catch (err) {
-                            toast.danger('Failed');
-                            log(err);
-                          }
-                        }}
-                      >
-                        {t<string>('Reset cover cache of current resource')}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ),
-              footer: { actions: ['ok'] },
-            });
-          }}
-        >
-          <MdBrokenImage className={'text-2xl'} />
-        </Button>
-      </Tooltip>
-    )
-  }, []);
 
   const renderContainer = () => {
     return (
@@ -388,6 +319,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
   }
 
+  // log("render", "failure urls", failureUrls);
+
   return (
     <Tooltip
       // key={urls?.join(',')}
@@ -413,24 +346,33 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                     maxHeight: tooltipHeight,
                   }}
                 >
-                  <Img
-                    // key={url}
-                    alt={''}
-                    fetchPriority={"low"}
-                    loader={(
-                      <LoadingOutlined className={'text-2xl'} />
-                    )}
-                    onLoad={e => {
-                      log('loaded bigger', e);
-                    }}
-                    // src={url}
-                    src={url}
-                    style={{
-                      maxWidth: tooltipWidth,
-                      maxHeight: tooltipHeight,
-                    }}
-                    unloader={renderBrokenCover()}
-                  />
+                  {failureUrls.has(url) ? (
+                    <FallbackCover afterClearingCache={() => loadCover(true)} id={resource.id} />
+                  ) : (
+                    <Image
+                      key={url}
+                      alt={""}
+                      // fallbackSrc={
+                      //   <FallbackCover
+                      //     afterClearingCache={() => loadCover(true)}
+                      //     id={resource.id}
+                      //   />
+                      // }
+                      loading={"eager"}
+                      src={url}
+                      style={{
+                        maxWidth: tooltipWidth,
+                        maxHeight: tooltipHeight,
+                      }}
+                      onError={() => {
+                        failureUrls.add(url);
+                        setFailureUrls(new Set<string>(failureUrls));
+                      }}
+                      onLoad={(e) => {
+                        // log('loaded bigger', e);
+                      }}
+                    />
+                  )}
                 </div>
               </div>
             ))}

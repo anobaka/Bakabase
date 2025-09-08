@@ -13,11 +13,12 @@ import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/component
 import { buildLogger } from "@/components/utils";
 type RatingValueRendererProps = ValueRendererProps<number, number> & {
   allowHalf?: boolean;
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("RatingValueRenderer");
 const RatingValueRenderer = (props: RatingValueRendererProps) => {
-  const { value: propsValue, editor, variant, allowHalf = true } = props;
+  const { value: propsValue, editor, variant, allowHalf = true, size } = props;
   const [value, setValue] = useState(propsValue);
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
@@ -29,7 +30,7 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
   }, [propsValue]);
 
   const startEditing = editor ? () => setEditing(true) : undefined;
-  const changeValue = (v: number) => {
+  const changeValue = (v: number | undefined) => {
     setValue(v);
     setEditing(false);
     // console.log('changeValue', v);
@@ -41,7 +42,8 @@ const RatingValueRenderer = (props: RatingValueRendererProps) => {
       <NumberValueEditor
         placeholder={t<string>("Set rating")}
         value={value}
-        onValueChange={changeValue}
+        size={size}
+        onValueChange={(dv, bv) => changeValue(dv)}
       />
     );
   } else {

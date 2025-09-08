@@ -6,6 +6,9 @@ import {
   PixivDownloadTaskType,
   ThirdPartyId,
 } from "@/sdk/constants";
+import { IconType } from "react-icons";
+import { AiOutlineSearch, AiOutlineStar, AiOutlineUnorderedList } from "react-icons/ai";
+import { FaImages, FaMagnet, FaRankingStar } from "react-icons/fa6";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -16,6 +19,23 @@ export type ThirdPartyFormComponentProps<TEnumType> = {
   onChange: (form: Partial<Form>) => void;
   isReadOnly?: boolean;
 };
+
+export const DownloadTaskTypeIconMap: Record<number, Record<number, IconType>> = {
+  [ThirdPartyId.Bilibili]: {
+    [BilibiliDownloadTaskType.Favorites]: AiOutlineStar,
+  },
+  [ThirdPartyId.ExHentai]: {
+    [ExHentaiDownloadTaskType.List]: AiOutlineUnorderedList,
+    [ExHentaiDownloadTaskType.Torrent]: FaMagnet,
+    [ExHentaiDownloadTaskType.Watched]: AiOutlineStar,
+    [ExHentaiDownloadTaskType.SingleWork]: FaImages,
+  },
+  [ThirdPartyId.Pixiv]: {
+    [PixivDownloadTaskType.Following]: AiOutlineStar,
+    [PixivDownloadTaskType.Ranking]: FaRankingStar,
+    [PixivDownloadTaskType.Search]: AiOutlineSearch,
+  }
+} 
 
 export enum DownloadTaskFieldType {
   BilibiliFavorites = 1,
@@ -148,7 +168,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
     ],
     [ExHentaiDownloadTaskType.SingleWork]: [
       {
-        type: DownloadTaskFieldType.Key,
+        type: DownloadTaskFieldType.Keys,
         placeholder: `https://exhentai.org/g/xxxxx/xxxxx/`,
         label: "Url",
       },

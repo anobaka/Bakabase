@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Microsoft.Extensions.Logging;
@@ -21,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
         }
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             // Basic framework implementation
             // TODO: Implement actual Cien API integration and download logic

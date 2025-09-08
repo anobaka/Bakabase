@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
         }
 
-        protected override async Task DownloadFromCreator(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromCreator(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             // Framework implementation for downloading all posts from a specific creator
             Logger.LogInformation("Downloading from creator for task: {TaskId}", task.Id);
@@ -71,19 +72,19 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
-        protected override async Task DownloadFromFollowing(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromFollowing(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             // Not applicable for creator-specific downloader
             throw new NotSupportedException("Following download not supported by creator downloader");
         }
 
-        protected override async Task DownloadSinglePost(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadSinglePost(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             // Not applicable for creator-specific downloader
             throw new NotSupportedException("Single post download not supported by creator downloader");
         }
 
-        private string ExtractCreatorIdFromTask(DownloadTaskDbModel task)
+        private string ExtractCreatorIdFromTask(DownloadTask task)
         {
             // TODO: Parse creator ID from task key/url
             // Example: "https://creator.fanbox.cc" -> "creator"

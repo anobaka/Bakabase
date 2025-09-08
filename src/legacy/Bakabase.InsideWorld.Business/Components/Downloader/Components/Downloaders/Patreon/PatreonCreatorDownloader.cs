@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Microsoft.Extensions.Logging;
 
@@ -16,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
         }
 
-        protected override async Task DownloadFromCreator(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromCreator(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             // Basic framework implementation
             // TODO: Implement actual Patreon API integration and download logic
@@ -53,22 +54,22 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
-        protected override async Task DownloadFromPledging(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromPledging(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Pledging download not supported in Creator downloader");
         }
 
-        protected override async Task DownloadSinglePost(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadSinglePost(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Single post download not supported in Creator downloader");
         }
 
-        protected override async Task DownloadByTier(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadByTier(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Tier download not supported in Creator downloader");
         }
 
-        protected override async Task DownloadFromCampaignFeed(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromCampaignFeed(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Campaign feed download not supported in Creator downloader");
         }

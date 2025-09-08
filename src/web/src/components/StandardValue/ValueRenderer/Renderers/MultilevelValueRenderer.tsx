@@ -19,6 +19,7 @@ type MultilevelValueRendererProps = ValueRendererProps<string[][], string[]> & {
   multiple?: boolean;
   getDataSource?: () => Promise<MultilevelData<string>[]>;
   valueAttributes?: { color?: string }[][];
+  size?: "sm" | "md" | "lg";
 };
 const MultilevelValueRenderer = ({
   value,
@@ -28,6 +29,7 @@ const MultilevelValueRenderer = ({
   multiple,
   defaultEditing,
   valueAttributes,
+  size,
   ...props
 }: MultilevelValueRendererProps) => {
   const { t } = useTranslation();
@@ -87,7 +89,7 @@ const MultilevelValueRenderer = ({
     return (
       <Button
         radius={"sm"}
-        size={"sm"}
+        size={size}
         variant={"light"}
         onPress={editor ? showEditor : undefined}
       >
@@ -116,7 +118,7 @@ const MultilevelValueRenderer = ({
             }
 
             return (
-              <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+              <Chip radius={"sm"} size={size} variant={"flat"}>
                 {label}
               </Chip>
             );

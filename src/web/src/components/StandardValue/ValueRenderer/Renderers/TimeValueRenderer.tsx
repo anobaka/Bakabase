@@ -9,12 +9,14 @@ import { TimeInput } from "@/components/bakaui";
 import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
 type TimeValueRendererProps = ValueRendererProps<Duration, Duration> & {
   format?: string;
+  size?: "sm" | "md" | "lg";
 };
 const TimeValueRenderer = ({
   value,
   format,
   variant,
   editor,
+  size,
   ...props
 }: TimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
@@ -34,6 +36,7 @@ const TimeValueRenderer = ({
       <TimeInput
         isReadOnly={!editor}
         value={value}
+        size={size}
         onBlur={(x) => {
           editor?.onValueChange?.(
             editingValueRef.current,
@@ -47,7 +50,7 @@ const TimeValueRenderer = ({
   }
 
   if (value == undefined) {
-    return <NotSet onClick={startEditing} />;
+    return <NotSet onClick={startEditing} size={size} />;
   } else {
     return <span onClick={startEditing}>{value?.format(f)}</span>;
   }

@@ -13,11 +13,12 @@ type NumberValueRendererProps = ValueRendererProps<number, number> & {
   precision?: number;
   as?: "number" | "progress";
   suffix?: string;
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("NumberValueRenderer");
 const NumberValueRenderer = (props: NumberValueRendererProps) => {
-  const { value, precision, editor, variant, suffix, as, ...otherProps } =
+  const { value, precision, editor, variant, suffix, as, size, ...otherProps } =
     props;
 
   log(props);
@@ -50,7 +51,7 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
       </span>
     );
   } else {
-    return <Progress size={"sm"} value={value} onClick={startEditing} />;
+    return <Progress size={size} value={value} onClick={startEditing} />;
   }
 };
 

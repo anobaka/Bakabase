@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
@@ -24,14 +25,14 @@ namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class DownloaderExtensions
     {
-        public static async Task<ListResponse<DownloadTaskDbModel>> AddTasksAsync(this DownloadTaskAddInputModel model,
+        public static async Task<ListResponse<DownloadTask>> ValidateTasksAsync(this DownloadTaskAddInputModel model,
             IStringLocalizer localizer, CancellationToken cancellationToken = default)
         {
             // Validation is now handled in the downloader helpers via BuildTasks method
             // Basic null check
             if (model == null)
             {
-                return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest("Model cannot be null");
+                return ListResponseBuilder<DownloadTask>.BuildBadRequest("Model cannot be null");
             }
 
             // Clean up keys - remove empty/null values
@@ -41,18 +42,18 @@ namespace Bakabase.InsideWorld.Business.Extensions
 
             if (model.Keys?.Any() == true)
             {
-                var tasks = new List<DownloadTaskDbModel>();
+                var tasks = new List<DownloadTask>();
                 
                 for (int i = 0; i < model.Keys.Count; i++)
                 {
                     var key = model.Keys[i];
                     var name = model.Names?.ElementAtOrDefault(i) ?? key; // Use key as name if no name provided
                     
-                    tasks.Add(new DownloadTaskDbModel
+                    tasks.Add(new DownloadTask
                     {
                         ThirdPartyId = model.ThirdPartyId,
                         Interval = model.Interval,
-                        Status = DownloadTaskStatus.InProgress,
+                        Status = DownloadTaskStatus.Idle,
                         Type = model.Type,
                         Key = key,
                         Name = name,
@@ -64,16 +65,16 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     });
                 }
                 
-                return new ListResponse<DownloadTaskDbModel>(tasks);
+                return new ListResponse<DownloadTask>(tasks);
             }
 
             if (doNotNeedKey)
             {
-                var task = new DownloadTaskDbModel
+                var task = new DownloadTask
                 {
                     ThirdPartyId = model.ThirdPartyId,
                     Interval = model.Interval,
-                    Status = DownloadTaskStatus.InProgress,
+                    Status = DownloadTaskStatus.Idle,
                     Type = model.Type,
                     DownloadPath = model.DownloadPath,
                     AutoRetry = model.AutoRetry,
@@ -81,19 +82,10 @@ namespace Bakabase.InsideWorld.Business.Extensions
                     EndPage = model.EndPage,
                     Checkpoint = model.Checkpoint,
                 };
-                return new ListResponse<DownloadTaskDbModel>([task]);
+                return new ListResponse<DownloadTask>([task]);
             }
 
-            return ListResponseBuilder<DownloadTaskDbModel>.BuildBadRequest(localizer[SharedResource.Downloader_KeyIsMissing]);
-        }
-
-        /// <summary>
-        /// Synchronous version for backward compatibility (legacy method)
-        /// </summary>
-        public static ListResponse<DownloadTaskDbModel> AddTasks(this DownloadTaskAddInputModel model,
-            IStringLocalizer localizer)
-        {
-            return model.AddTasksAsync(localizer).GetAwaiter().GetResult();
+            return ListResponseBuilder<DownloadTask>.BuildBadRequest(localizer[SharedResource.Downloader_KeyIsMissing]);
         }
 
         /// <summary>

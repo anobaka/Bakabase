@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
@@ -59,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             return Math.Floor(globalProgress * 100) / 100;
         }
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             //var p = 0m;
             //var unit = 100m / 23;

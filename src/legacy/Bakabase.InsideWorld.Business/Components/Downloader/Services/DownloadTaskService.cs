@@ -1,15 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Text;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.Gui;
-using Bakabase.Infrastructures.Components.SystemService;
-using Bakabase.InsideWorld.Business.Components;
-using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
@@ -17,30 +11,22 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Business.Components.Gui;
-using Bakabase.InsideWorld.Business.Resources;
-using Bakabase.InsideWorld.Models.Constants;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bakabase.InsideWorld.Models.Models.Dtos;
-using Bakabase.InsideWorld.Models.Models.Entities;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Components.Office.Excel;
 using Bootstrap.Components.Orm.Infrastructures;
 using Bootstrap.Extensions;
 using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
-using FluentAssertions.Common;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using NPOI.SS.Formula.Functions;
-using NPOI.XSSF.UserModel;
 using DownloadTask = Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 {
+    /// <summary>
+    /// todo: extract interface
+    /// </summary>
     public class DownloadTaskService : ResourceService<InsideWorldDbContext, DownloadTaskDbModel, int>
     {
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
@@ -67,23 +53,23 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
         private DownloadTask[] ToDto(IEnumerable<DownloadTaskDbModel> tasks)
         {
-            return tasks.Select(task => task.ToDomainModel(DownloaderManager)).ToArray();
+            return tasks.Select(task => task.ToDomainModel(DownloaderManager)!).ToArray();
         }
 
-        protected async Task OnChange(int taskId, object value, Func<DownloadTaskDbModel, object> getter,
-            Action<DownloadTaskDbModel, object> setter)
+        protected async Task OnChange(int taskId, object value, Func<DownloadTask, object> getter,
+            Action<DownloadTask, object> setter)
         {
             try
             {
-                var task = await GetByKey(taskId);
+                var task = (await GetByKey(taskId)).ToDomainModel(DownloaderManager)!;
                 if (getter(task) != value)
                 {
                     setter(task, value);
                     // Logger.LogInformation(
                     //     $"Use new value: {value} to update download task to: {JsonConvert.SerializeObject(task)}");
-                    await Update(task);
-                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask),
-                        ToDto(new[] {task}).FirstOrDefault()!);
+                    var dbModel = task.ToDbModel()!;
+                    await Update(dbModel);
+                    await UiHub.Clients.All.GetIncrementalData(nameof(DownloadTask), task);
                 }
             }
             catch (Exception ex)
@@ -97,11 +83,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             DownloadTaskActionOnConflict actionOnConflict = DownloadTaskActionOnConflict.Ignore)
         {
             var tasks = await GetAll(exp);
-            var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskStatus.Disabled or DownloadTaskStatus.Failed)
+            var badStatusTasks = tasks.Where(a => a.Status is DownloadTaskDbModelStatus.Disabled or DownloadTaskDbModelStatus.Failed)
                 .ToArray();
             foreach (var badStatusTask in badStatusTasks)
             {
-                badStatusTask.Status = DownloadTaskStatus.InProgress;
+                badStatusTask.Status = DownloadTaskDbModelStatus.InProgress;
             }
 
             await UpdateRange(badStatusTasks);
@@ -116,10 +102,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         public async Task Stop(Expression<Func<DownloadTaskDbModel, bool>>? exp = null)
         {
             var tasks = await GetAll(exp);
-            var notDisabledTasks = tasks.Where(a => a.Status != DownloadTaskStatus.Disabled).ToArray();
+            var notDisabledTasks = tasks.Where(a => a.Status != DownloadTaskDbModelStatus.Disabled).ToArray();
             foreach (var t in notDisabledTasks)
             {
-                t.Status = DownloadTaskStatus.Disabled;
+                t.Status = DownloadTaskDbModelStatus.Disabled;
             }
 
             await UpdateRange(notDisabledTasks);
@@ -144,7 +130,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         public async Task OnStatusChanged(int taskId, IDownloader downloader, object? extraData)
         {
-            DownloadTaskStatus? newStatus = null;
+            DownloadTaskDbModelStatus? newStatus = null;
             switch (downloader.Status)
             {
                 case DownloaderStatus.JustCreated:
@@ -157,10 +143,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     switch (downloader.StoppedBy!.Value)
                     {
                         case DownloaderStopBy.ManuallyStop:
-                            newStatus = DownloadTaskStatus.Disabled;
+                            newStatus = DownloadTaskDbModelStatus.Disabled;
                             break;
                         case DownloaderStopBy.AppendToTheQueue:
-                            newStatus = DownloadTaskStatus.InProgress;
+                            newStatus = DownloadTaskDbModelStatus.InProgress;
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -169,10 +155,10 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                     break;
                 }
                 case DownloaderStatus.Complete:
-                    newStatus = DownloadTaskStatus.Complete;
+                    newStatus = DownloadTaskDbModelStatus.Complete;
                     break;
                 case DownloaderStatus.Failed:
-                    newStatus = DownloadTaskStatus.Failed;
+                    newStatus = DownloadTaskDbModelStatus.Failed;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -185,7 +171,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 task.DownloadStatusUpdateDt = DateTime.Now;
                 task.Message = downloader.Message;
 
-                if (newStatus == DownloadTaskStatus.Complete)
+                if (newStatus == DownloadTaskDbModelStatus.Complete)
                 {
                     if (downloader.Checkpoint.IsNotEmpty())
                     {
@@ -194,8 +180,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
                 }
 
                 await base.Update(task);
-                if (newStatus is DownloadTaskStatus.Complete or DownloadTaskStatus.Failed
-                    or DownloadTaskStatus.Disabled)
+                if (newStatus is DownloadTaskDbModelStatus.Complete or DownloadTaskDbModelStatus.Failed
+                    or DownloadTaskDbModelStatus.Disabled)
                 {
                     await TryStartAllTasks(DownloadTaskStartMode.AutoStart, null, DownloadTaskActionOnConflict.Ignore);
                 }
@@ -227,7 +213,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
 
             foreach (var tt in filteredTasks)
             {
-                var rsp = await DownloaderManager.Start(tasks[tt],
+                var rsp = await DownloaderManager.Start(tt,
                     actionOnConflict == DownloadTaskActionOnConflict.StopOthers);
 
                 if (rsp.Code != (int) ResponseCode.Success)
@@ -333,11 +319,17 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             return rsp;
         }
 
-        public override Task<ListResponse<DownloadTaskDbModel>> AddRange(IEnumerable<DownloadTaskDbModel> resources)
+        public async Task<ListResponse<DownloadTask>> AddRange(IEnumerable<DownloadTask> resources)
         {
-            var rsp = base.AddRange(resources);
+            var arr = resources.ToArray();
+            var dbModels = resources.Select(r => r.ToDbModel()!).ToArray();
+            var rsp = await base.AddRange(dbModels);
+            for (var i = 0; i < arr.Length; i++)
+            {
+                arr[i].Id = rsp.Data[i].Id;
+            }
             PushAllDataToUi();
-            return rsp;
+            return new ListResponse<DownloadTask>(arr);
         }
 
         public async Task<BaseResponse> Delete(DownloadTaskDeleteInputModel model)
@@ -353,6 +345,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
             await Stop(t => ids.Contains(t.Id));
             await RemoveByKeys(ids);
 
+            PushAllDataToUi();
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> ClearCheckpoints(Expression<Func<DownloadTaskDbModel, bool>>? exp = null)
+        {
+            var tasks = await GetAll(exp);
+            foreach (var t in tasks)
+            {
+                t.Checkpoint = null;
+            }
+            await UpdateRange(tasks);
             PushAllDataToUi();
             return BaseResponseBuilder.Ok;
         }

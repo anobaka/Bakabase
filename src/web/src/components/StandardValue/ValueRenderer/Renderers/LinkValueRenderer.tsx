@@ -10,11 +10,14 @@ import { useState } from "react";
 import ExternalLink from "@/components/ExternalLink";
 import { Button, Input, Popover } from "@/components/bakaui";
 
-type LinkValueRendererProps = ValueRendererProps<LinkValue> & {};
+type LinkValueRendererProps = ValueRendererProps<LinkValue> & {
+  size?: "sm" | "md" | "lg";
+};
 const LinkValueRenderer = ({
   value,
   editor,
   variant,
+  size,
   ...props
 }: LinkValueRendererProps) => {
   const { t } = useTranslation();
@@ -58,7 +61,7 @@ const LinkValueRenderer = ({
           <div className={"flex flex-col gap-1"}>
             <Input
               label={t<string>("Text")}
-              size={"sm"}
+              size={size}
               value={editingValue?.text}
               onValueChange={(text) => {
                 setEditingValue({
@@ -69,7 +72,7 @@ const LinkValueRenderer = ({
             />
             <Input
               label={t<string>("Link")}
-              size={"sm"}
+              size={size}
               value={editingValue?.url}
               onValueChange={(url) => {
                 setEditingValue({
@@ -81,7 +84,7 @@ const LinkValueRenderer = ({
             <div className={"flex items-center gap-2 justify-center"}>
               <Button
                 color={"primary"}
-                size={"sm"}
+                size={size}
                 onClick={() => {
                   editor?.onValueChange?.(editingValue, editingValue);
                   setEditingValue(undefined);
@@ -90,7 +93,7 @@ const LinkValueRenderer = ({
                 {t<string>("Submit")}
               </Button>
               <Button
-                size={"sm"}
+                size={size}
                 onClick={() => {
                   setEditingValue(undefined);
                 }}

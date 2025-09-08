@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
@@ -14,7 +15,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Compo
         string? Current { get; }
         Task Stop(DownloaderStopBy stopBy);
         DownloaderStopBy? StoppedBy { get; set; }
-        Task Start(DownloadTaskDbModel task);
+        Task Start(DownloadTask task);
         string? Message { get; }
         int FailureTimes { get; }
         string? Checkpoint { get; }

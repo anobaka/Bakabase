@@ -1,20 +1,16 @@
 "use client";
 
 import type { SearchForm } from "@/pages/resource/models";
-import type { SavedSearchRef } from "@/pages/resource/components/FilterPanel/SavedSearches";
 
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
 import {
-  OrderedListOutlined,
   QuestionCircleOutlined,
-  SaveOutlined,
   SearchOutlined,
   SnippetsOutlined,
 } from "@ant-design/icons";
-import toast from "react-hot-toast";
-import { AiOutlineSearch } from "react-icons/ai";
+import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
 
 import styles from "./index.module.scss";
@@ -23,30 +19,20 @@ import OrderSelector from "./OrderSelector";
 import FilterPortal from "./FilterPortal";
 
 import BApi from "@/sdk/BApi";
-import { useUiOptionsStore } from "@/stores/options";
 import { PlaylistCollection } from "@/components/Playlist";
-import {
-  Button,
-  Checkbox,
-  Chip,
-  Input,
-  Modal,
-  Popover,
-  Spinner,
-  Tooltip,
-} from "@/components/bakaui";
-import SavedSearches from "@/pages/resource/components/FilterPanel/SavedSearches";
+import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import { ResourceTag } from "@/sdk/constants";
 import HandleUnknownResources from "@/components/HandleUnknownResources";
 import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
+import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
 interface IProps {
   selectedResourceIds?: number[];
   maxResourceColCount?: number;
   searchForm?: SearchForm;
-  onSearch?: (form: Partial<SearchForm>) => Promise<any>;
+  onSearch?: (form: Partial<SearchForm>, newTab: boolean) => Promise<any>;
   reloadResources: (ids: number[]) => any;
   multiSelection?: boolean;
   rearrangeResources?: () => any;
@@ -63,65 +49,66 @@ const defaultSearchForm = (): SearchForm => ({
   page: 1,
   pageSize: 0,
 });
-const FilterPanel = ({
-  maxResourceColCount = DefaultMaxResourceColCount,
-  selectedResourceIds,
-  onSearch,
-  searchForm: propsSearchForm,
-  multiSelection = false,
-  rearrangeResources,
-  onSelectAllChange,
-  resourceCount,
-  totalFilteredResourceCount,
-}: IProps) => {
+
+const log = buildLogger("FilterPanel");
+
+const FilterPanel = (props: IProps) => {
+
+  const {
+    maxResourceColCount = DefaultMaxResourceColCount,
+    selectedResourceIds,
+    onSearch,
+    searchForm: propsSearchForm,
+    multiSelection = false,
+    rearrangeResources,
+    onSelectAllChange,
+    resourceCount,
+    totalFilteredResourceCount,
+  } = props;
+
+  useTraceUpdate(props, "FilterPanel");
+
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      log("🔵 first time render");
+      isFirstRender.current = false;
+    } else {
+      log("🟡 update render");
+    }
+  });
+
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const uiOptions = useUiOptionsStore((state) => state.data);
-
-  const [colCountsDataSource, setColCountsDataSource] = useState<
-    { label: any; value: number }[]
-  >([]);
-  const colCount = uiOptions.resource?.colCount ?? DefaultResourceColCount;
+  
 
   const [selectedAll, setSelectedAll] = useState(false);
 
-  const [searchForm, setSearchForm] = useState<SearchForm>(
-    propsSearchForm || defaultSearchForm(),
-  );
+  const [searchForm, setSearchForm] = useState<SearchForm>(propsSearchForm || defaultSearchForm());
   const [searching, setSearching] = useState(false);
 
-  const [selectingAllFilteredResources, setSelectingAllFilteredResources] =
-    useState(false);
-
-  const savedSearchesRef = useRef<SavedSearchRef>(null);
+  const [selectingAllFilteredResources, setSelectingAllFilteredResources] = useState(false);
 
   useUpdateEffect(() => {
     setSearchForm(propsSearchForm || defaultSearchForm());
   }, [propsSearchForm]);
 
-  useEffect(() => {
-    const ccds: { label: any; value: number }[] = [];
-
-    for (let i = MinResourceColCount; i <= maxResourceColCount; i++) {
-      ccds.push({
-        label: i,
-        value: i,
-      });
-    }
-    setColCountsDataSource(ccds);
-  }, [maxResourceColCount]);
+  
 
   useUpdateEffect(() => {
     console.log("Search form changed", searchForm);
   }, [searchForm]);
 
-  const search = async (patches: Partial<SearchForm>) => {
+  const search = async (patches: Partial<SearchForm>, newTab: boolean = false) => {
     if (onSearch) {
       setSearching(true);
 
+      // console.log("12345", newTab, onSearch);
+
       try {
-        await onSearch(patches);
+        await onSearch(patches, newTab);
       } catch (e) {
         console.error(e);
       } finally {
@@ -164,14 +151,8 @@ const FilterPanel = ({
             });
           }}
         />{" "}
-        <SavedSearches
-          ref={savedSearchesRef}
-          onSelect={(nf) => {
-            search(nf);
-          }}
-        />
       </div>
-      {searchForm.group && (
+      {searchForm.group && (searchForm.group.filters && searchForm.group.filters.length > 0 || searchForm.group.groups && searchForm.group.groups.length > 0) && (
         <FilterGroupsPanel
           group={searchForm.group}
           onChange={(v) => {
@@ -220,6 +201,23 @@ const FilterPanel = ({
             {t<string>("Search")}
           </Button>
           <Button
+            // color={"primary"}
+            isLoading={searching}
+            size={"sm"}
+            onPress={async () => {
+              await search(
+                {
+                  ...searchForm,
+                  page: 1,
+                },
+                true,
+              );
+            }}
+          >
+            <AiOutlineExport className={"text-base"} />
+            {t<string>("Search in new tab")}
+          </Button>
+          {/* <Button
             isIconOnly
             size={"sm"}
             onPress={() => {
@@ -257,7 +255,7 @@ const FilterPanel = ({
             }}
           >
             <SaveOutlined className={"text-base"} />
-          </Button>
+          </Button> */}
         </div>
         <div className={"flex items-center gap-2"}>
           {multiSelection && (
@@ -265,18 +263,11 @@ const FilterPanel = ({
               <SnippetsOutlined className={"text-base"} />
             </Chip>
           )}
-          <Popover
-            color={"success"}
-            trigger={<QuestionCircleOutlined className={"text-base"} />}
-          >
+          <Popover color={"success"} trigger={<QuestionCircleOutlined className={"text-base"} />}>
             <div className={"flex flex-col gap-1"}>
+              <div>{t<string>("Hold down Ctrl to select multiple resources.")}</div>
               <div>
-                {t<string>("Hold down Ctrl to select multiple resources.")}
-              </div>
-              <div>
-                {t<string>(
-                  "You can perform more actions by right-clicking on the resource.",
-                )}
+                {t<string>("You can perform more actions by right-clicking on the resource.")}
               </div>
             </div>
           </Popover>
@@ -317,11 +308,7 @@ const FilterPanel = ({
             }
           >
             <Checkbox
-              isSelected={
-                selectedAll &&
-                selectedResourceIds &&
-                selectedResourceIds?.length > 0
-              }
+              isSelected={selectedAll && selectedResourceIds && selectedResourceIds?.length > 0}
               size={"sm"}
               onValueChange={(isSelected) => {
                 onSelectAllChange(isSelected);
@@ -377,45 +364,6 @@ const FilterPanel = ({
             }
           >
             <PlaylistCollection />
-          </Popover>
-          <Popover
-            placement={"bottom-end"}
-            trigger={
-              <Button
-                color={"default"}
-                size={"sm"}
-                startContent={<OrderedListOutlined />}
-              >
-                {t<string>("Column count")}
-                &nbsp;
-                {colCount}
-              </Button>
-            }
-          >
-            <div className={"grid grid-cols-4 gap-1 p-1 rounded"}>
-              {colCountsDataSource.map((cc, i) => {
-                return (
-                  <Button
-                    key={i}
-                    className={"min-w-0 pl-2 pr-2"}
-                    color={"default"}
-                    size={"sm"}
-                    onClick={async () => {
-                      const patches = {
-                        resource: {
-                          ...(uiOptions?.resource || {}),
-                          colCount: cc.value,
-                        },
-                      };
-
-                      await BApi.options.patchUiOptions(patches);
-                    }}
-                  >
-                    {cc.label}
-                  </Button>
-                );
-              })}
-            </div>
           </Popover>
           <MiscellaneousOptions rearrangeResources={rearrangeResources} />
         </div>

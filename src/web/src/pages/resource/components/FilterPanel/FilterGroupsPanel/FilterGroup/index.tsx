@@ -23,6 +23,8 @@ import Filter from "./Filter";
 import { Button, Popover, Tooltip } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import RecentFilters from "@/pages/resource/components/FilterPanel/RecentFilters";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import FilterModal from "../../FilterModal";
 
 type Props = {
   group: ResourceSearchFilterGroup;
@@ -41,6 +43,7 @@ const FilterGroup = ({
 }: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
+  const { createPortal } = useBakabaseContext();
 
   const [group, setGroup] =
     React.useState<ResourceSearchFilterGroup>(propsGroup);
@@ -169,13 +172,18 @@ const FilterGroup = ({
                 <Button
                   size={"sm"}
                   onPress={() => {
-                    changeGroup({
-                      ...groupRef.current,
-                      filters: [
-                        ...(groupRef.current.filters || []),
-                        { disabled: false },
-                      ],
-                    });
+                    createPortal(
+                      FilterModal, {
+                        isNew: true,
+                        filter: { disabled: false },
+                        onSubmit: (filter) => {
+                          changeGroup({
+                            ...groupRef.current,
+                            filters: [...(groupRef.current.filters || []), filter],
+                          });
+                        }
+                      }
+                    )
                   }}
                 >
                   <FilterOutlined className={"text-base"} />

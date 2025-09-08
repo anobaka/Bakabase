@@ -29,6 +29,7 @@ import { PropertyPool } from "@/sdk/constants";
 import PropertyPoolIcon from "@/components/Property/components/PropertyPoolIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import BApi from "@/sdk/BApi.tsx";
+import PropertyExtra from "./components/PropertyExtra";
 
 type Props = {
   property: IProperty;
@@ -69,32 +70,6 @@ const V2 = ({
   const removable = property.pool == PropertyPool.Custom && props.removable;
 
   const selected = isSelected === true;
-
-  const renderExtra = () => {
-    if (property.pool != PropertyPool.Custom) {
-      return null;
-    }
-
-    if (!property.valueCount) {
-      return null;
-    }
-
-    return (
-      <div className={`text-xs flex items-center gap-1`}>
-        <Tooltip
-          content={t<string>("{{count}} values", {
-            count: property.valueCount,
-          })}
-          placement={"bottom"}
-        >
-          <div className={"flex gap-0.5 items-center"}>
-            <DatabaseOutlined className={"text-sm"}/>
-            {property.valueCount}
-          </div>
-        </Tooltip>
-      </div>
-    );
-  };
 
   const showDetail = () => {
     createPortal(PropertyModal, {
@@ -165,7 +140,7 @@ const V2 = ({
           <div className={"text-base text-left"}>
             {property.name}
           </div>
-          {renderExtra()}
+          <PropertyExtra property={property} />
         </div>
       </CardBody>
     </Card>

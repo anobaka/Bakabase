@@ -192,7 +192,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             return Task.CompletedTask;
         }
 
-        public async Task Start(DownloadTaskDbModel task)
+        public async Task Start(DownloadTask task)
         {
             if (Status is DownloaderStatus.Stopped or DownloaderStatus.JustCreated or DownloaderStatus.Failed
                 or DownloaderStatus.Complete)
@@ -253,7 +253,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
-        protected abstract Task StartCore(DownloadTaskDbModel task, CancellationToken ct);
+        protected abstract Task StartCore(DownloadTask task, CancellationToken ct);
 
         public virtual void Dispose()
         {

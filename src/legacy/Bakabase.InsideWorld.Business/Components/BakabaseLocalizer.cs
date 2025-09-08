@@ -215,5 +215,10 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(Resource)];
         }
+
+        public string Search()
+        {
+            return this[nameof(Search)];
+        }
     }
 }

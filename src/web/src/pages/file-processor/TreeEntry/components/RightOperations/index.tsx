@@ -19,6 +19,7 @@ import WrapModal from "@/pages/file-processor/RootTreeEntry/components/WrapModal
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
 import BApi from "@/sdk/BApi";
+import FolderSelector from "@/components/FolderSelector";
 
 type Props = {
   entry: Entry;
@@ -44,7 +45,6 @@ const RightOperations = ({ entry, capabilities }: Props) => {
             <Button size={"sm"} variant={"ghost"}>
               <FileZipOutlined className={"text-sm"} />
               {t<string>("Decompress")}
-              <Kbd>d</Kbd>
             </Button>
           }
         />
@@ -62,7 +62,6 @@ const RightOperations = ({ entry, capabilities }: Props) => {
         >
           <ApartmentOutlined className={"text-sm"} />
           {t<string>("Wrap")}
-          <Kbd>w</Kbd>
         </Button>
       )}
       {isMovable && (
@@ -71,8 +70,9 @@ const RightOperations = ({ entry, capabilities }: Props) => {
           size={"sm"}
           variant={"ghost"}
           onClick={(e) => {
-            createPortal(MediaLibraryPathSelectorV2, {
-              onSelect: (id, path, isLegacyMediaLibrary) => {
+            createPortal(FolderSelector, {
+              sources: ['media library', 'custom'],
+              onSelect: (path: string) => {
                 return BApi.file.moveEntries({
                   destDir: path,
                   entryPaths: [entry.path],
@@ -83,7 +83,6 @@ const RightOperations = ({ entry, capabilities }: Props) => {
         >
           <SendOutlined className={"text-sm"} />
           {t<string>("Move")}
-          <Kbd>m</Kbd>
         </Button>
       )}
     </>

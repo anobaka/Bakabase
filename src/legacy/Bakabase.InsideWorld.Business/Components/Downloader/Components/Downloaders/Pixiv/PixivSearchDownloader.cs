@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using static Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models.PixivSearchResponse;
@@ -22,7 +23,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override PixivDownloadTaskType EnumTaskType => PixivDownloadTaskType.Search;
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             // Categories: https://www.pixiv.net/tags/%E6%B1%8E%E7%94%A8%E5%9E%8B%E3%83%96%E3%83%AA/{(top)?/illustrations/manga/novels/artworks}?order=popular_male_d&mode=safe&wlt=3000&hlt=3000
             // User not supported: https://www.pixiv.net/search_user.php?nick=%E6%B1%8E%E7%94%A8%E5%9E%8B%E3%83%96%E3%83%AA&s_mode=s_usr

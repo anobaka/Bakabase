@@ -11,12 +11,13 @@ import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
 import { diff } from "deep-diff";
 import { List } from "react-virtualized";
+import { AiOutlinePlayCircle } from "react-icons/ai";
 
 import OperationButton from "./components/OperationButton";
 import EditableFileName from "./components/EditableFileName";
 import RightOperations from "./components/RightOperations";
 
-import { toast } from "@/components/bakaui";
+import { toast, Tooltip } from "@/components/bakaui";
 import { BTaskStatus, IconType, IwFsType } from "@/sdk/constants";
 
 import "@szhsin/react-menu/dist/index.css";
@@ -29,12 +30,7 @@ import {
   EntryStatus,
   IwFsEntryAction,
 } from "@/core/models/FileExplorer/Entry";
-import {
-  buildLogger,
-  humanFileSize,
-  standardizePath,
-  uuidv4,
-} from "@/components/utils";
+import { buildLogger, humanFileSize, standardizePath, uuidv4 } from "@/components/utils";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import MediaPlayer from "@/components/MediaPlayer";
 import BApi from "@/sdk/BApi";
@@ -46,17 +42,7 @@ import LeftIcon from "./components/LeftIcon";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { BTaskStopButton } from "@/components/BTask";
-
-export type Capability =
-  | "wrap"
-  | "extract"
-  | "move"
-  | "delete"
-  | "rename"
-  | "decompress"
-  | "delete-all-by-name"
-  | "group"
-  | "play";
+import { Capability } from "../RootTreeEntry/models";
 
 export type TreeEntryProps = {
   entry: Entry;
@@ -73,6 +59,8 @@ export type TreeEntryProps = {
   style?: any;
   onContextMenu?: (e, entry: Entry) => void;
   onLoadFail?: (rsp, entry: Entry) => void;
+
+  afterPlayedFirstFile?: (entry: Entry) => any;
 };
 
 // todo: split this component into base components: simple, advance
@@ -88,6 +76,7 @@ const TreeEntry = (props: TreeEntryProps) => {
     onContextMenu = (e, entry) => {},
     onLoadFail = (rsp, entry) => {},
     expandable = true,
+    afterPlayedFirstFile,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -151,14 +140,13 @@ const TreeEntry = (props: TreeEntryProps) => {
       expand: expand,
       collapse: collapse,
       scrollTo: (path: string) => {
-        const row = entryRef.current.filteredChildren.findIndex(
-          (e) => e.path == path,
-        );
+        const row = entryRef.current.filteredChildren.findIndex((e) => e.path == path);
 
         log("scrolling to", path, row, virtualListRef.current);
         virtualListRef.current?.scrollToRow(row);
       },
       setLoading,
+      playFirstFile
     };
 
     log(
@@ -225,19 +213,15 @@ const TreeEntry = (props: TreeEntryProps) => {
         en.properties.includes(EntryProperty.ChildrenCount)
       ) {
         elements.push(
-          <Chip color={"secondary"} size={"sm"} variant={"light"}>
+          <Chip color={"secondary"} size={"sm"} variant={"light"} key="children-count">
             <FileOutlined className={"text-sm"} />
             {en.childrenCount}
           </Chip>,
         );
       }
-      if (
-        en.size != undefined &&
-        en.size > 0 &&
-        en.properties.includes(EntryProperty.Size)
-      ) {
+      if (en.size != undefined && en.size > 0 && en.properties.includes(EntryProperty.Size)) {
         elements.push(
-          <Chip color={"secondary"} size={"sm"} variant={"light"}>
+          <Chip color={"secondary"} size={"sm"} variant={"light"} key="size">
             {humanFileSize(en.size, false)}
           </Chip>,
         );
@@ -305,6 +289,7 @@ const TreeEntry = (props: TreeEntryProps) => {
       return (
         <MemoTreeEntryPage
           key={e.id}
+          afterPlayedFirstFile={afterPlayedFirstFile}
           capabilities={capabilities}
           entry={e}
           expandable={e.expandable}
@@ -333,18 +318,13 @@ const TreeEntry = (props: TreeEntryProps) => {
    * Height of only one row will cause the full-re-rendering of the list, so we do not need to render a specific child.
    */
   const renderChildren = useCallback(() => {
-    log(
-      "Rendering children",
-      entryRef.current,
-      entryRef.current.filteredChildren,
-    );
+    log("Rendering children", entryRef.current, entryRef.current.filteredChildren);
 
     pendingRenderingRef.current = true;
 
     if (domRef.current?.parentElement) {
       const newWidth =
-        domRef.current.parentElement.clientWidth +
-        (entryRef.current.isRoot ? 0 : -15);
+        domRef.current.parentElement.clientWidth + (entryRef.current.isRoot ? 0 : -15);
       const newHeight = entryRef.current.childrenHeight;
 
       log(`Recalculated children size: ${newWidth}x${newHeight}`);
@@ -492,8 +472,73 @@ const TreeEntry = (props: TreeEntryProps) => {
     }
   }, []);
 
+  const playFirstFile = useCallback(async () => {
+    if (!(((entryRef.current.childrenCount && entryRef.current.childrenCount > 0) || !entryRef.current.isDirectoryOrDrive) &&
+    capabilities?.includes("play-first-file"))) {
+      return;
+    }
+
+    const rsp = await BApi.file.getFirstFileByExtension({
+      path: entryRef.current.path,
+    });
+    const files = rsp.data ?? [];
+
+    if (files.length == 0) {
+      toast.danger(t<string>("No files under this path"));
+    } else {
+      if (files.length == 1) {
+        await BApi.tool.openFile({ path: files[0] });
+        afterPlayedFirstFile?.(entryRef.current);
+      } else {
+        const modal = createPortal(Modal, {
+          size: "lg",
+          defaultVisible: true,
+          title: t("Multiple file types are found"),
+          children: (
+            <div className="flex flex-col gap-2">
+              <div>{t<string>("Please select one to open")}</div>
+              <div className="flex flex-wrap gap-1">
+                {files.map((x) => {
+                  const segments = x.split(".");
+
+                  return (
+                    <Tooltip className="max-w-[600px]" content={x}>
+                      <Button
+                        onPress={async () => {
+                          await BApi.tool.openFile({ path: x });
+                          afterPlayedFirstFile?.(entryRef.current);
+                          modal.destroy();
+                        }}
+                      >
+                        {segments[segments.length - 1]}
+                      </Button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </div>
+          ),
+          footer: {
+            actions: ["cancel"],
+          },
+        });
+      }
+    }
+  }, []);
+
   // log('Rendering', 'children width', entryRef.current.childrenWidth, domRef.current?.clientWidth, domRef.current, entryRef.current);
   // log(132132321, entryRef.current.task);
+  // {entryRef.current.expanded &&
+  //   (entryRef.current.filteredChildren?.length > 0 ? (
+  //     <div className={`entry-children ${entryRef.current.isRoot ? "root" : ""}`}>
+  //       {entryRef.current.childrenHeight > 0 && (
+  // log('entryRef.current.expanded', entryRef.current.expanded);
+  // log('entryRef.current.filteredChildren?.length', entryRef.current.filteredChildren?.length);
+  // log('entryRef.current.childrenHeight', entryRef.current.childrenHeight);
+  // log('entryRef.current.children', entryRef.current.children);
+  // log('entryRef.current.childrenWidth', entryRef.current.childrenWidth);
+  // log('entryRef.current.isRoot', entryRef.current.isRoot);
+  // log('domRef.current.clientWidth', domRef.current?.clientWidth);
 
   return (
     <div
@@ -514,16 +559,11 @@ const TreeEntry = (props: TreeEntryProps) => {
             e.stopPropagation();
           }}
         >
-          {entryRef.current.type == IwFsType.Invalid && (
-            <div className="invalid-cover" />
-          )}
+          {entryRef.current.type == IwFsType.Invalid && <div className="invalid-cover" />}
           {entryRef.current.task && !entryRef.current.task.error && (
             <div className="running-task-cover">
               <div className="progress">
-                <div
-                  className={"bar"}
-                  style={{ width: `${entryRef.current.task.percentage}%` }}
-                />
+                <div className={"bar"} style={{ width: `${entryRef.current.task.percentage}%` }} />
                 <Spinner size="sm" />
                 &nbsp;
                 <div className="percentage">
@@ -535,11 +575,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                 </div>
               </div>
               <div className="stop">
-                <BTaskStopButton
-                  color={"warning"}
-                  id={entryRef.current.task.id}
-                  size={"small"}
-                />
+                <BTaskStopButton color={"warning"} id={entryRef.current.task.id} size={"small"} />
               </div>
             </div>
           )}
@@ -573,21 +609,13 @@ const TreeEntry = (props: TreeEntryProps) => {
           >
             <div className="left">
               <div className="things-before-name">
-                <LeftIcon
-                  entry={entryRef.current}
-                  expandable={expandable}
-                  loading={loading}
-                />
+                <LeftIcon entry={entryRef.current} expandable={expandable} loading={loading} />
                 {entryRef.current && (
                   <div className="item">
                     <FileSystemEntryIcon
                       path={entryRef.current.path}
                       size={18}
-                      type={
-                        entry.isDirectoryOrDrive
-                          ? IconType.Directory
-                          : IconType.Dynamic
-                      }
+                      type={entry.isDirectoryOrDrive ? IconType.Directory : IconType.Dynamic}
                     />
                   </div>
                 )}
@@ -603,38 +631,46 @@ const TreeEntry = (props: TreeEntryProps) => {
                 path={entry.path}
               />
               <div className="flex items-center">
-                {actions.includes(IwFsEntryAction.Play) &&
-                  capabilities?.includes("play") && (
-                    <OperationButton
-                      isIconOnly
-                      color={"primary"}
-                      onClick={(e) => {
-                        play(entryRef.current);
-                      }}
-                    >
-                      <EyeOutlined className={"text-base"} />
-                    </OperationButton>
-                  )}
+                {actions.includes(IwFsEntryAction.Play) && capabilities?.includes("play") && (
+                  <OperationButton
+                    isIconOnly
+                    color={"primary"}
+                    onClick={(e) => {
+                      play(entryRef.current);
+                    }}
+                  >
+                    <EyeOutlined className={"text-base"} />
+                  </OperationButton>
+                )}
                 &nbsp;
+                {((entry.childrenCount && entry.childrenCount > 0) || !entry.isDirectoryOrDrive) &&
+                  capabilities?.includes("play-first-file") && (
+                    <Tooltip content={t<string>("Quick preview using the default application")}>
+                      <OperationButton
+                        isIconOnly
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          playFirstFile();
+                        }}
+                      >
+                        <AiOutlinePlayCircle className={"text-base"} />
+                      </OperationButton>
+                    </Tooltip>
+                  )}
                 <TailingOperations capabilities={capabilities} entry={entry} />
                 {renderFileSystemInfo()}
                 {renderTaskError()}
               </div>
             </div>
             <div className="right">
-              <RightOperations
-                capabilities={capabilities}
-                entry={entryRef.current}
-              />
+              <RightOperations capabilities={capabilities} entry={entryRef.current} />
             </div>
           </div>
         </div>
       )}
       {entryRef.current.expanded &&
         (entryRef.current.filteredChildren?.length > 0 ? (
-          <div
-            className={`entry-children ${entryRef.current.isRoot ? "root" : ""}`}
-          >
+          <div className={`entry-children ${entryRef.current.isRoot ? "root" : ""}`}>
             {entryRef.current.childrenHeight > 0 && (
               <List
                 ref={(r) => {
@@ -662,9 +698,7 @@ const TreeEntry = (props: TreeEntryProps) => {
             <Spinner size={"sm"} />
           </div>
         ) : (
-          <div
-            className={"flex justify-center items-center gap-2 opacity-70 py-2"}
-          >
+          <div className={"flex justify-center items-center gap-2 opacity-70 py-2"}>
             <InfoCircleOutlined />
             <div>{t<string>("No content")}</div>
           </div>

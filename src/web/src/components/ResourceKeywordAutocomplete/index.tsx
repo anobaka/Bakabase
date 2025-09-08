@@ -79,6 +79,7 @@ export default function ResourceKeywordAutocomplete({
 
   return (
     <Autocomplete
+      aria-label={"Resource Keyword"}
       {...autocompleteProps}
       allowsCustomValue={true}
       inputValue={value ?? ""}

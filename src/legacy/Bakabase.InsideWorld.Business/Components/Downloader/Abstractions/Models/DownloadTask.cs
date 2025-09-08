@@ -25,7 +25,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public int? EndPage { get; set; }
         public string? Message { get; set; }
         public string? Checkpoint { get; set; }
-        public DownloadTaskDtoStatus Status { get; set; }
+        public DownloadTaskStatus Status { get; set; }
         public string DownloadPath { get; set; } = null!;
         public string? Current { get; set; }
         public int FailureTimes { get; set; }

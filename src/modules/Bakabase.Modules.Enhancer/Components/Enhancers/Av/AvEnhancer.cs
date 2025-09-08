@@ -181,25 +181,34 @@ public class AvEnhancer(
                 return null;
             }
 
-            // Download cover and poster images
+            // Download only the first successful cover and poster images
+            var coverSaved = false;
+            var posterSaved = false;
             foreach (var detail in context.Details)
             {
+                if (coverSaved && posterSaved)
+                {
+                    break;
+                }
+
                 try
                 {
-                    if (!string.IsNullOrEmpty(detail.CoverUrl) && !context.CoverPaths.ContainsKey(detail.Source!))
+                    if (!coverSaved && !string.IsNullOrEmpty(detail.CoverUrl))
                     {
                         var imageData = await airavClient.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
                         var extension = Path.GetExtension(detail.CoverUrl.Split('?')[0]) ?? ".jpg";
                         var coverPath = await SaveFile(resource, $"cover_{detail.Source}{extension}", imageData);
                         context.CoverPaths[detail.Source!] = coverPath;
+                        coverSaved = true;
                     }
 
-                    if (!string.IsNullOrEmpty(detail.PosterUrl) && !context.PosterPaths.ContainsKey(detail.Source!))
+                    if (!posterSaved && !string.IsNullOrEmpty(detail.PosterUrl))
                     {
                         var imageData = await airavClient.HttpClient.GetByteArrayAsync(detail.PosterUrl, ct);
                         var extension = Path.GetExtension(detail.PosterUrl.Split('?')[0]) ?? ".jpg";
                         var posterPath = await SaveFile(resource, $"poster_{detail.Source}{extension}", imageData);
                         context.PosterPaths[detail.Source!] = posterPath;
+                        posterSaved = true;
                     }
                 }
                 catch (Exception ex)

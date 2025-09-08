@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
@@ -23,7 +24,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override ExHentaiDownloadTaskType EnumTaskType => ExHentaiDownloadTaskType.Torrent;
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             var gallery = await Client.ParseDetail(task.Key, true);
             task.Name = gallery.RawName ?? gallery.Name;
@@ -31,6 +32,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             {
                 throw new Exception("No torrent for this gallery");
             }
+            
+            var betterName = gallery.RawName.IsNullOrEmpty() ? gallery.Name : gallery.RawName;
+            await OnNameAcquiredInternal(betterName);
 
             var bestTorrent = gallery.Torrents!
                 .OrderByDescending(t => t.Size)

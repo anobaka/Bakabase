@@ -134,60 +134,63 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("saved-search")]
         [SwaggerOperation(OperationId = "SaveNewResourceSearch")]
-        public async Task<BaseResponse> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
+        public async Task<SingletonResponse<SavedSearchViewModel>> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
         {
             model.Search.StandardPageable();
+            var ss = resourceOptionsManager.Value.BuildNewSavedSearch(null, localizer.Search(), model.Search.ToDbModel());
             await resourceOptionsManager.SaveAsync(x =>
             {
-                x.SavedSearches.Add(new ResourceOptions.SavedSearch
-                    {Search = model.Search.ToDbModel(), Name = model.Name});
+                x.SavedSearches.Add(ss);
             });
-            return BaseResponseBuilder.Ok;
+            return await GetSavedSearch(ss.Id);
         }
 
-        [HttpPut("saved-search/{idx:int}/name")]
+        [HttpPut("saved-search")]
         [SwaggerOperation(OperationId = "PutSavedSearchName")]
-        public async Task<BaseResponse> PutSavedSearchName(int idx, [FromBody] string name)
+        public async Task<BaseResponse> PutSavedSearchName(string id, [FromBody] string name)
         {
-            var searches = resourceOptionsManager.Value.SavedSearches ?? [];
-            if (searches.Count <= idx)
+            var searches = resourceOptionsManager.Value.SavedSearches;
+            var search = searches.FirstOrDefault(x => x.Id == id);
+            if (search == null)
             {
-                return BaseResponseBuilder.BuildBadRequest($"Invalid {nameof(idx)}:{idx}");
+                return BaseResponseBuilder.BuildBadRequest($"Can't find search with id: {id}");
             }
 
-            searches[idx].Name = name;
+            search.Name = name;
             await resourceOptionsManager.SaveAsync(x => { x.SavedSearches = searches; });
             return BaseResponseBuilder.Ok;
         }
 
         [HttpGet("saved-search")]
-        [SwaggerOperation(OperationId = "GetSavedSearches")]
-        public async Task<ListResponse<SavedSearchViewModel>> GetSavedSearches()
+        [SwaggerOperation(OperationId = "GetSavedSearch")]
+        public async Task<SingletonResponse<SavedSearchViewModel>> GetSavedSearch(string id)
         {
             var searches = resourceOptionsManager.Value.SavedSearches;
-            var dbModels = searches.Select(x => x.Search).ToArray();
+            var search = searches.FirstOrDefault(x => x.Id == id);
+            if (search == null)
+            {
+                return SingletonResponseBuilder<SavedSearchViewModel>.NotFound;
+            }
+                
+            var dbModels = new[] { search.Search };
             var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer);
-            var ret = searches.Select((s, i) => new SavedSearchViewModel(viewModels[i], s.Name));
-            return new ListResponse<SavedSearchViewModel>(ret);
+            return new SingletonResponse<SavedSearchViewModel>(new SavedSearchViewModel(id, viewModels[0], search.Name));
         }
 
-        [HttpDelete("saved-search/{idx:int}")]
+        [HttpDelete("saved-search")]
         [SwaggerOperation(OperationId = "DeleteSavedSearch")]
-        public async Task<BaseResponse> DeleteSavedSearch(int idx)
+        public async Task<BaseResponse> DeleteSavedSearch(string id)
         {
             await resourceOptionsManager.SaveAsync(x =>
             {
-                if (idx < x.SavedSearches.Count)
-                {
-                    x.SavedSearches.RemoveAt(idx);
-                }
+                x.SavedSearches.RemoveAll(z => z.Id == id);
             });
             return BaseResponseBuilder.Ok;
         }
 
         [HttpPost("search")]
         [SwaggerOperation(OperationId = "SearchResources")]
-        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch)
+        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string searchId)
         {
             model.StandardPageable();
 
@@ -195,7 +198,15 @@ namespace Bakabase.Service.Controllers
             {
                 try
                 {
-                    await resourceOptionsManager.SaveAsync(a => a.LastSearchV2 = model.ToDbModel());
+                    await resourceOptionsManager.SaveAsync(a =>
+                    {
+                        a.LastSearchV2 = model.ToDbModel();
+                        var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
+                        if (search != null)
+                        {
+                            search.Search = model.ToDbModel();
+                        }
+                    });
                 }
                 catch (Exception ex)
                 {

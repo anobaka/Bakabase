@@ -6,14 +6,15 @@ import { Button } from "@/components/bakaui";
 
 type Props = {
   onClick?: () => any;
+  size?: "sm" | "md" | "lg";
 };
 const NotSet = (props: Props) => {
   const { t } = useTranslation();
-  const { onClick } = props;
+  const { onClick, size } = props;
 
   if (onClick) {
     return (
-      <Button radius={"sm"} size={"sm"} variant={"light"} onClick={onClick}>
+      <Button radius={"sm"} size={size} variant={"light"} onClick={onClick}>
         <span className={"opacity-40"}>{t<string>("Click to set")}</span>
       </Button>
     );

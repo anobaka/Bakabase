@@ -19,6 +19,8 @@ import {
 } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
 import RecentFilters from "@/pages/resource/components/FilterPanel/RecentFilters";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import FilterModal from "./FilterModal";
 
 interface FilterPortalProps {
   searchForm: SearchForm;
@@ -30,6 +32,7 @@ export default function FilterPortal({
   onChange,
 }: FilterPortalProps) {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   return (
     <Popover
@@ -48,8 +51,16 @@ export default function FilterPortal({
       >
         <QuickFilter
           onAdded={(newFilter) => {
-            addFilter(searchForm, newFilter);
-            onChange();
+            const filter = newFilter;
+            createPortal(
+              FilterModal, {
+                filter,
+                onSubmit: (filter) => {
+                  addFilter(searchForm, filter);
+                  onChange();
+                }
+              }
+            )
           }}
         />
         <div />
@@ -59,8 +70,16 @@ export default function FilterPortal({
           <Button
             size={"sm"}
             onPress={() => {
-              addFilter(searchForm);
-              onChange();
+              createPortal(
+                FilterModal, {
+                  isNew: true,
+                  filter: { disabled: false },
+                  onSubmit: (filter) => {
+                    addFilter(searchForm, filter)
+                    onChange();
+                  }
+                }
+              )
             }}
           >
             <FilterOutlined className={"text-base"} />
@@ -110,6 +129,6 @@ export default function FilterPortal({
           />
         </div>
       </div>
-    </Popover>
+    </Popover >
   );
 }

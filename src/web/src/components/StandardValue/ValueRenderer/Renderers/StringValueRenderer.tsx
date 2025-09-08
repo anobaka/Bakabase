@@ -13,6 +13,7 @@ import { buildLogger } from "@/components/utils";
 
 type StringValueRendererProps = ValueRendererProps<string> & {
   multiline?: boolean;
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("StringValueRenderer");
@@ -28,9 +29,9 @@ const StringValueRenderer = (props: StringValueRendererProps) => {
 
   const startEditing = editor
     ? () => {
-        log("Start editing");
-        setEditing(true);
-      }
+      log("Start editing");
+      setEditing(true);
+    }
     : undefined;
 
   if (!editing) {
@@ -39,7 +40,7 @@ const StringValueRenderer = (props: StringValueRendererProps) => {
     }
   }
 
-  log(props);
+  // log(props);
 
   const completeEditing = () => {
     editor?.onValueChange?.(value, value);
@@ -52,23 +53,9 @@ const StringValueRenderer = (props: StringValueRendererProps) => {
 
   if (editing) {
     if (multiline) {
-      return (
-        <Textarea
-          autoFocus
-          value={value}
-          onBlur={completeEditing}
-          onValueChange={setValue}
-        />
-      );
+      return <Textarea size={props.size} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
     } else {
-      return (
-        <Input
-          autoFocus
-          value={value}
-          onBlur={completeEditing}
-          onValueChange={setValue}
-        />
-      );
+      return <Input size={props.size} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
     }
   } else {
     if (multiline) {

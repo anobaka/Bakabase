@@ -74,13 +74,10 @@ public class DownloadTaskController : Controller
 
     [HttpPost]
     [SwaggerOperation(OperationId = "AddDownloadTask")]
-    public async Task<ListResponse<DownloadTaskDbModel>> Add([FromBody] DownloadTaskAddInputModel model)
+    public async Task<ListResponse<DownloadTask>> Add([FromBody] DownloadTaskAddInputModel model)
     {
-        var taskResult = model.AddTasks(_localizer);
-        if (taskResult.Code != 0) return taskResult;
-
-
-        var tasks = taskResult.Data;
+        var helper = _downloaderFactory.GetHelper(model.ThirdPartyId, model.Type);
+        var tasks = await helper.BuildTasks(model);
         if (tasks.Any())
         {
             if (!model.IsDuplicateAllowed)
@@ -94,7 +91,7 @@ public class DownloadTaskController : Controller
                     return string.Join(',', sts.Select(c => c.Name ?? c.Key));
                 }).Where(a => a.Value.IsNotEmpty()).ToDictionary(a => a.Key.Name ?? a.Key.Key, a => a.Value);
                 if (similarTasks.Any())
-                    return ListResponseBuilder<DownloadTaskDbModel>.Build(ResponseCode.Conflict,
+                    return ListResponseBuilder<DownloadTask>.Build(ResponseCode.Conflict,
                         _localizer[SharedResource.Downloader_MayBeDuplicate,
                             string.Join(Environment.NewLine, similarTasks.Select(a => $"{a.Key}: {a.Value}"))]);
             }
@@ -102,7 +99,7 @@ public class DownloadTaskController : Controller
             return await _service.AddRange(tasks);
         }
 
-        return ListResponseBuilder<DownloadTaskDbModel>.NotModified;
+        return ListResponseBuilder<DownloadTask>.NotModified;
     }
 
     [HttpDelete("{id}")]
@@ -146,6 +143,13 @@ public class DownloadTaskController : Controller
     {
         await _service.Stop(ids.Any() ? t => ids.Contains(t.Id) : null);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpDelete("checkpoint")]
+    [SwaggerOperation(OperationId = "ClearDownloadTaskCheckpoints")]
+    public async Task<BaseResponse> ClearCheckpoints([FromBody] int[] ids)
+    {
+        return await _service.ClearCheckpoints(ids.Any() ? t => ids.Contains(t.Id) : null);
     }
 
     [HttpGet("xlsx")]

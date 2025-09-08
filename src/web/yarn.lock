@@ -6610,12 +6610,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:18.3.0":
-  version: 18.3.0
-  resolution: "@types/react-dom@npm:18.3.0"
+"@types/react-dom@npm:18.0.0":
+  version: 18.0.0
+  resolution: "@types/react-dom@npm:18.0.0"
   dependencies:
     "@types/react": "npm:*"
-  checksum: 10c0/6c90d2ed72c5a0e440d2c75d99287e4b5df3e7b011838cdc03ae5cd518ab52164d86990e73246b9d812eaf02ec351d74e3b4f5bd325bf341e13bf980392fd53b
+  checksum: 10c0/77070ed87e5628d6b35e18d534c5abcbe42d4d876de1957f31c160692274e57b60e81d6f4ff0ee369e600e759b83fda576da8954d4c5dd2e4382a9dd94ab05c2
   languageName: node
   linkType: hard
 
@@ -6631,22 +6631,31 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:*":
-  version: 19.1.8
-  resolution: "@types/react@npm:19.1.8"
+"@types/react-virtualized@npm:^9.22.2":
+  version: 9.22.2
+  resolution: "@types/react-virtualized@npm:9.22.2"
   dependencies:
-    csstype: "npm:^3.0.2"
-  checksum: 10c0/4908772be6dc941df276931efeb0e781777fa76e4d5d12ff9f75eb2dcc2db3065e0100efde16fde562c5bafa310cc8f50c1ee40a22640459e066e72cd342143e
+    "@types/prop-types": "npm:*"
+    "@types/react": "npm:*"
+  checksum: 10c0/e46ae29ef3187d15c1a6693694e2612da0b6a7f259b12f86b58d150df02e5ca8bb4776cbe6059af5e0e6e48584e5fa10465e951662a3f74e47663a742f4d4d5d
   languageName: node
   linkType: hard
 
-"@types/react@npm:18.3.3":
-  version: 18.3.3
-  resolution: "@types/react@npm:18.3.3"
+"@types/react@npm:18.0.0":
+  version: 18.0.0
+  resolution: "@types/react@npm:18.0.0"
   dependencies:
     "@types/prop-types": "npm:*"
+    "@types/scheduler": "npm:*"
     csstype: "npm:^3.0.2"
-  checksum: 10c0/fe455f805c5da13b89964c3d68060cebd43e73ec15001a68b34634604a78140e6fc202f3f61679b9d809dde6d7a7c2cb3ed51e0fd1462557911db09879b55114
+  checksum: 10c0/e00cd004181e021b8ddee34470d936dda1c067a602dfee615e79d68dc2c67f5e66a2b917e3e72c4a8ad7c4591086bf4c8d4148ebac13061e6388903760e08cfd
+  languageName: node
+  linkType: hard
+
+"@types/scheduler@npm:*":
+  version: 0.26.0
+  resolution: "@types/scheduler@npm:0.26.0"
+  checksum: 10c0/84626b06551ab7e1247412a2588430da5cd75263a353f1fd70593ca7331d43797937b89fe587089c6b3613d0658986087c5f0b2debef5bae831cdc1104a432ef
   languageName: node
   linkType: hard
 
@@ -15850,6 +15859,7 @@ __metadata:
     "@types/node": "npm:20.5.7"
     "@types/react": "npm:18.3.3"
     "@types/react-dom": "npm:18.3.0"
+    "@types/react-virtualized": "npm:^9.22.2"
     "@types/uuid": "npm:^10.0.0"
     "@typescript-eslint/eslint-plugin": "npm:^8.37.0"
     "@typescript-eslint/parser": "npm:^8.37.0"

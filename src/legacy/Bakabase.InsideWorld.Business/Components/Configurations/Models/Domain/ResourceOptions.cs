@@ -29,6 +29,31 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public List<ResourceFilter> RecentFilters { get; set; } = [];
         public SynchronizationOptionsModel? SynchronizationOptions { get; set; }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="translationOfSearch">Default to 'Search' (in english).</param>
+        /// <param name="search"></param>
+        public SavedSearch BuildNewSavedSearch(string? id, string translationOfSearch, ResourceSearchDbModel? search)
+        {
+            id ??= Guid.NewGuid().ToString("N")[..6];
+            var ss = SavedSearches.FirstOrDefault(x => x.Id == id);
+            if (ss != null)
+            {
+                return ss;
+            }
+
+            search ??= new ResourceSearchDbModel { Page = 1, PageSize = 50 };
+
+            var candidateNoList = SavedSearches.Where(x => x.Name.StartsWith(translationOfSearch))
+                .Select(a => a.Name.Split(' ')).Where(x => x.Length > 1).Select(a => a[1])
+                .Select(x => int.TryParse(x, out var no) ? no : 0).ToList();
+            var nextNo = Math.Max((candidateNoList.Any() ? candidateNoList.Max() : 0) + 1, SavedSearches.Count);
+
+            return new SavedSearch { Id = id, Name = $"{translationOfSearch} {nextNo}", Search = search };
+        }
+
         public record ResourceFilter
         {
             public PropertyPool PropertyPool { get; set; }
@@ -85,6 +110,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
 
         public record SavedSearch
         {
+            public string Id { get; set; } = Guid.NewGuid().ToString("N")[..6];
             public ResourceSearchDbModel Search { get; set; } = null!;
             public string Name { get; set; } = string.Empty;
         }

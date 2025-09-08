@@ -1081,6 +1081,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/checkpoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["ClearDownloadTaskCheckpoints"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/xlsx": {
         parameters: {
             query?: never;
@@ -1681,7 +1697,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put: operations["MergeFileSystemEntries"];
+        put: operations["GroupFileSystemEntries"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1747,6 +1763,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["ClearHardwareAccelerationCache"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file/first-file-by-ext": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetFirstFileByExtension"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2361,6 +2393,22 @@ export interface paths {
         patch: operations["PatchFileSystemOptions"];
         trace?: never;
     };
+    "/options/filesystem/latest-moving-destination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["AddLatestMovingDestination"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/options/javlibrary": {
         parameters: {
             query?: never;
@@ -2944,41 +2992,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["GetSavedSearches"];
-        put?: never;
-        post: operations["SaveNewResourceSearch"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resource/saved-search/{idx}/name": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
+        get: operations["GetSavedSearch"];
         put: operations["PutSavedSearchName"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resource/saved-search/{idx}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
+        post: operations["SaveNewResourceSearch"];
         delete: operations["DeleteSavedSearch"];
         options?: never;
         head?: never;
@@ -3491,6 +3507,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["OpenFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/tool/generate-files-to-embedded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GenerateFilesToEmbedded"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4106,6 +4138,8 @@ export interface components {
             resourceCount?: number;
             color?: string;
             syncVersion?: string;
+            /** Format: int32 */
+            templateId?: number;
         };
         "Bakabase.Abstractions.Models.Input.ResourcePropertyValuePutInputModel": {
             /** Format: int32 */
@@ -4432,6 +4466,7 @@ export interface components {
             dbValue?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SavedSearch": {
+            id: string;
             search: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
             name: string;
         };
@@ -4713,13 +4748,7 @@ export interface components {
          * @description [100: Idle, 200: InQueue, 300: Starting, 400: Downloading, 500: Stopping, 600: Complete, 700: Failed, 800: Disabled]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskDtoStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
-        /**
-         * Format: int32
-         * @description [100: InProgress, 200: Disabled, 300: Complete, 400: Failed]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400;
+        "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus": 100 | 200 | 300 | 400 | 500 | 600 | 700 | 800;
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask": {
             /** Format: int32 */
             id: number;
@@ -4740,7 +4769,7 @@ export interface components {
             endPage?: number;
             message?: string;
             checkpoint?: string;
-            status: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskDtoStatus"];
+            status: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus"];
             downloadPath: string;
             current?: string;
             /** Format: int32 */
@@ -4819,30 +4848,6 @@ export interface components {
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskStartRequestModel": {
             ids: number[];
             actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
-        };
-        "Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel": {
-            /** Format: int32 */
-            id: number;
-            key: string;
-            name?: string;
-            thirdPartyId: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ThirdPartyId"];
-            /** Format: int32 */
-            type: number;
-            /** Format: double */
-            progress: number;
-            /** Format: date-time */
-            downloadStatusUpdateDt: string;
-            /** Format: int64 */
-            interval?: number;
-            /** Format: int32 */
-            startPage?: number;
-            /** Format: int32 */
-            endPage?: number;
-            message?: string;
-            checkpoint?: string;
-            status: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskStatus"];
-            autoRetry: boolean;
-            downloadPath: string;
         };
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
@@ -5012,6 +5017,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileProcessorOptions": {
             workingDirectory: string;
+            triggerMovingAfterPlayingFirstFile: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.JavLibraryOptions": {
             cookie?: string;
@@ -5074,10 +5080,11 @@ export interface components {
             disableMediaPreviewer: boolean;
             disableCache: boolean;
             coverFit: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverFit"];
-            displayContents: components["schemas"]["Bakabase.InsideWorld.Models.Constants.ResourceDisplayContent"];
             disableCoverCarousel: boolean;
             displayResourceId: boolean;
             hideResourceTimeInfo: boolean;
+            displayProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
+            inlineDisplayName: boolean;
         };
         /**
          * Format: int32
@@ -5181,12 +5188,6 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Models.Constants.PlaylistItemType": 1 | 2 | 3 | 4;
-        /**
-         * Format: int32
-         * @description [1: MediaLibrary, 2: Category, 4: Tags, 7: All]
-         * @enum {integer}
-         */
-        "Bakabase.InsideWorld.Models.Constants.ResourceDisplayContent": 1 | 2 | 4 | 7;
         /**
          * Format: int32
          * @description [1: Layer, 2: Regex, 3: FixedText]
@@ -5587,6 +5588,8 @@ export interface components {
         "Bakabase.Service.Models.Input.FileSystemEntryGroupInputModel": {
             paths: string[];
             groupInternal: boolean;
+            /** Format: double */
+            similarityThreshold: number;
         };
         "Bakabase.Service.Models.Input.IdBasedDataSortInputModel": {
             ids: number[];
@@ -5629,7 +5632,6 @@ export interface components {
         };
         "Bakabase.Service.Models.Input.SavedSearchAddInputModel": {
             search: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
-            name: string;
         };
         "Bakabase.Service.Models.View.BulkModificationDiffViewModel": {
             /** Format: int32 */
@@ -5827,6 +5829,7 @@ export interface components {
             tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
         };
         "Bakabase.Service.Models.View.SavedSearchViewModel": {
+            id: string;
             search: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             name: string;
         };
@@ -5911,12 +5914,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloaderDefinition"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList]": {
             /** Format: int32 */
@@ -6019,12 +6016,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchFilterViewModel"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Service.Models.View.SavedSearchViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bootstrap.Components.Logging.LogService.Models.Entities.Log]": {
             /** Format: int32 */
@@ -6445,6 +6436,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.SavedSearchViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]": {
             /** Format: int32 */
@@ -9176,9 +9173,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Models.Db.DownloadTaskDbModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.DownloadTask]"];
                 };
             };
         };
@@ -9321,6 +9318,35 @@ export interface operations {
         };
     };
     StopDownloadTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": number[];
+                "application/json": number[];
+                "text/json": number[];
+                "application/*+json": number[];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ClearDownloadTaskCheckpoints: {
         parameters: {
             query?: never;
             header?: never;
@@ -10430,7 +10456,7 @@ export interface operations {
             };
         };
     };
-    MergeFileSystemEntries: {
+    GroupFileSystemEntries: {
         parameters: {
             query?: never;
             header?: never;
@@ -10569,6 +10595,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetFirstFileByExtension: {
+        parameters: {
+            query?: {
+                path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
                 };
             };
         };
@@ -12073,6 +12123,35 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FileSystemOptionsPatchInputModel"];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FileSystemOptionsPatchInputModel"];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FileSystemOptionsPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AddLatestMovingDestination: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string;
+                "application/json": string;
+                "text/json": string;
+                "application/*+json": string;
             };
         };
         responses: {
@@ -13660,9 +13739,11 @@ export interface operations {
             };
         };
     };
-    GetSavedSearches: {
+    GetSavedSearch: {
         parameters: {
-            query?: never;
+            query?: {
+                id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -13675,9 +13756,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
+                };
+            };
+        };
+    };
+    PutSavedSearchName: {
+        parameters: {
+            query?: {
+                id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": string;
+                "application/json": string;
+                "text/json": string;
+                "application/*+json": string;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
@@ -13704,51 +13816,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    PutSavedSearchName: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                idx: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": string;
-                "application/json": string;
-                "text/json": string;
-                "application/*+json": string;
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.SavedSearchViewModel]"];
                 };
             };
         };
     };
     DeleteSavedSearch: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                idx: number;
+            query?: {
+                id?: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -13770,6 +13851,7 @@ export interface operations {
         parameters: {
             query?: {
                 saveSearch?: boolean;
+                searchId?: string;
             };
             header?: never;
             path?: never;
@@ -14602,6 +14684,30 @@ export interface operations {
         parameters: {
             query?: {
                 path?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GenerateFilesToEmbedded: {
+        parameters: {
+            query?: {
+                dir?: string;
             };
             header?: never;
             path?: never;

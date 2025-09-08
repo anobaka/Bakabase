@@ -36,6 +36,8 @@ type Props<
   viewerProps?: Omit<TViewerProps, keyof ComponentCommonProps<TValue>>;
   editorProps?: Omit<TEditorProps, keyof ComponentCommonProps<TValue>>;
   onSubmit?: (value?: TValue) => any | Promise<any>;
+  className?: string;
+  trigger?: "viewer" | "edit-button",
 } & ComponentCommonProps<TValue>;
 
 // & SimpleEditableValueProps<TValue> & EditorProps<TValue> & ViewProps<TValue>;
@@ -50,6 +52,8 @@ function EditableValue<
   viewerProps,
   Editor,
   editorProps,
+  className,
+  trigger = "edit-button",
   ...commonProps
 }: Props<TValue, TEditorProps, TViewerProps>) {
   const [editing, setEditing] = useState(false);
@@ -59,7 +63,7 @@ function EditableValue<
   console.log(Viewer, viewerProps, commonProps);
 
   return (
-    <div className={"flex items-center gap-2"}>
+    <div className={`flex items-center gap-2 ${className}`}>
       {editing ? (
         <>
           <Editor
@@ -106,18 +110,26 @@ function EditableValue<
             {...(viewerProps as unknown as TViewerProps)}
             {...commonProps}
             isReadOnly
-          />
-          <Button
-            isIconOnly
-            size={"sm"}
-            variant={"light"}
-            onPress={() => {
-              setEditingValue(commonProps.value);
-              setEditing(true);
+            onClick={() => {
+              if (trigger == "viewer") {
+                setEditingValue(commonProps.value);
+                setEditing(true);
+              }
             }}
-          >
-            <AiOutlineEdit className={"text-base"} />
-          </Button>
+          />
+          {trigger == "edit-button" && (
+            <Button
+              isIconOnly
+              size={"sm"}
+              variant={"light"}
+              onPress={() => {
+                setEditingValue(commonProps.value);
+                setEditing(true);
+              }}
+            >
+              <AiOutlineEdit className={"text-base"} />
+            </Button>
+          )}
         </>
       )}
     </div>

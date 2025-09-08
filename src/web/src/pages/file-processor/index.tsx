@@ -5,7 +5,7 @@ import "./index.scss";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import RootTreeEntryPage from "./RootTreeEntry";
+import RootTreeEntry from "./RootTreeEntry";
 
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type RootEntry from "@/core/models/FileExplorer/RootEntry";
@@ -13,6 +13,10 @@ import type RootEntry from "@/core/models/FileExplorer/RootEntry";
 import { buildLogger } from "@/components/utils";
 import { useFileSystemOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
+import { Checkbox } from "@/components/bakaui/components/Checkbox";
+import FolderSelector from "@/components/FolderSelector";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { Tooltip } from "@/components/bakaui";
 
 const log = buildLogger("FileProcessor");
 const FileProcessorPage = () => {
@@ -28,6 +32,10 @@ const FileProcessorPage = () => {
   const optionsStore = useFileSystemOptionsStore((state) => state);
   const [rootPath, setRootPath] = useState<string>();
   const [rootPathInitialized, setRootPathInitialized] = useState(false);
+
+  const fpOptionsRef = useRef(optionsStore.data?.fileProcessor);
+
+  const { createPortal } = useBakabaseContext();
 
   useUpdateEffect(() => {
     if (rootRef.current) {
@@ -49,6 +57,10 @@ const FileProcessorPage = () => {
       setRootPathInitialized(true);
     }
   }, [rootPathInitialized, optionsStore.initialized]);
+
+  useEffect(() => {
+    fpOptionsRef.current = optionsStore.data?.fileProcessor;
+  }, [optionsStore]);
 
   useEffect(() => {
     return () => {
@@ -98,21 +110,67 @@ const FileProcessorPage = () => {
 
   return (
     <div className={"file-explorer-page"}>
-      <div className={"file-explorer"}>
-        <div className="root relative overflow-hidden" tabIndex={0}>
+      <div className={"file-explorer flex flex-col gap-0"}>
+        <div className="flex items-center justify-between">
+          <div />
+          <div>
+            <Tooltip
+              content={t("Usually this will work fine if you are categorizing files.")}
+              placement="bottom"
+            >
+              <Checkbox
+                isSelected={optionsStore.data?.fileProcessor?.triggerMovingAfterPlayingFirstFile}
+                onValueChange={(v) => {
+                  BApi.options.patchFileSystemOptions({
+                    ...optionsStore.data,
+                    fileProcessor: {
+                      ...optionsStore.data?.fileProcessor,
+                      triggerMovingAfterPlayingFirstFile: v,
+                      workingDirectory: optionsStore.data?.fileProcessor?.workingDirectory ?? "",
+                    },
+                  });
+                }}
+              >
+                {t("Trigger moving after playing first file")}
+              </Checkbox>
+            </Tooltip>
+          </div>
+        </div>
+        <div className="root relative overflow-hidden min-h-0 grow" tabIndex={0}>
           <div className={"absolute top-0 left-0 w-full h-full flex flex-col"}>
             {rootPathInitialized && (
-              <RootTreeEntryPage
+              <RootTreeEntry
                 expandable
+                afterPlayedFirstFile={(entry) => {
+                  // console.log(
+                  //   "afterPlayedFirstFile",
+                  //   optionsStore.data?.fileProcessor?.triggerMovingAfterPlayingFirstFile,
+                  // );
+                  if (fpOptionsRef.current?.triggerMovingAfterPlayingFirstFile) {
+                    createPortal(FolderSelector, {
+                      sources: ["media library", "custom"],
+                      onSelect: (path: string) => {
+                        return BApi.file.moveEntries({
+                          destDir: path,
+                          entryPaths: [entry.path],
+                        });
+                      },
+                    });
+                  }
+                }}
                 capabilities={[
+                  "select",
+                  "multi-select",
+                  "range-select",
                   "decompress",
                   "wrap",
                   "move",
                   "extract",
                   "delete",
                   "rename",
-                  "delete-all-by-name",
+                  "delete-all-same-name",
                   "group",
+                  "play-first-file",
                 ]}
                 rootPath={rootPath}
                 selectable={"multiple"}
@@ -128,9 +186,8 @@ const FileProcessorPage = () => {
                 onInitialized={(v) => {
                   if (v != undefined) {
                     BApi.options.patchFileSystemOptions({
-                      ...optionsStore,
                       fileProcessor: {
-                        ...(optionsStore.fileProcessor || {}),
+                        ...(fpOptionsRef.current ?? { triggerMovingAfterPlayingFirstFile: false }),
                         workingDirectory: v,
                       },
                     });

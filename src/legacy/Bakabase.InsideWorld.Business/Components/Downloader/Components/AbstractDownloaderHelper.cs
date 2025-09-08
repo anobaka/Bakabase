@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -102,7 +103,9 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 StartPage = model.StartPage,
                 EndPage = model.EndPage,
                 Interval = model.Interval,
-                AutoRetry = model.AutoRetry
+                AutoRetry = model.AutoRetry,
+                Status = DownloadTaskStatus.Idle,
+                DownloadPath = model.DownloadPath
             }).ToArray() ?? [];
 
             return tasks;

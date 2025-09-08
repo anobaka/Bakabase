@@ -49,4 +49,5 @@ public interface IBakabaseLocalizer
     string SyncMediaLibrary_TaskProcess_AlmostComplete(string name);
     string MediaType(MediaType type);
     string Resource();
+    string Search();
 }

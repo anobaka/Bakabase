@@ -23,7 +23,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Db
         public int? EndPage { get; set; }
         public string? Message { get; set; }
         public string? Checkpoint { get; set; }
-        public DownloadTaskStatus Status { get; set; } = DownloadTaskStatus.InProgress;
+        public DownloadTaskDbModelStatus Status { get; set; } = DownloadTaskDbModelStatus.InProgress;
         public bool AutoRetry { get; set; }
         [Required]
         public string DownloadPath { get; set; } = string.Empty;

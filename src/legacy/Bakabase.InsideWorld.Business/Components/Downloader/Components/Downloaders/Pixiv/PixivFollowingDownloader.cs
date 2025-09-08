@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv.Models;
@@ -26,7 +27,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         private static readonly HashSet<string> UrlKeywords = new()
             {"bookmark_new_illust_r18.php", "bookmark_new_illust.php"};
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             if (UrlKeywords.Any(a => task.Key.Contains(a) && !task.Key.Contains($"novel/{a}")))
             {

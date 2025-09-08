@@ -1,8 +1,4 @@
-import type {
-  DownloadTaskAction,
-  DownloadTaskDtoStatus,
-  ThirdPartyId,
-} from "@/sdk/constants";
+import type { DownloadTaskAction, DownloadTaskStatus, ThirdPartyId } from "@/sdk/constants";
 
 export type DownloadTask = {
   id: number;
@@ -17,7 +13,7 @@ export type DownloadTask = {
   endPage?: number;
   message?: string;
   checkpoint?: string;
-  status: DownloadTaskDtoStatus;
+  status: DownloadTaskStatus;
   downloadPath?: string;
   current?: string;
   failureTimes: number;

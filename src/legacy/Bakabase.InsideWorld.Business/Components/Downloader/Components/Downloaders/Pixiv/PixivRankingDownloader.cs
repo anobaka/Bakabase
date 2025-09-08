@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bootstrap.Extensions;
@@ -21,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override PixivDownloadTaskType EnumTaskType => PixivDownloadTaskType.Ranking;
 
-        protected override async Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
         {
             // Illustrations in ranking will be changed on every day and there is not so many of them, so we do not use any checkpoint.
             var page = 0;

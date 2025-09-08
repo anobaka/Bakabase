@@ -1034,21 +1034,33 @@ export enum ResourceDisplayContent {
   MediaLibrary = 1,
   Category = 2,
   Tags = 4,
-  All = 7
+  AddedDate = 8,
+  UpdatedDate = 16,
+  FileCreatedDate = 32,
+  Default = 39,
+  FileModifiedDate = 64
 }
 
 export const resourceDisplayContents = [
   { label: 'MediaLibrary', value: ResourceDisplayContent.MediaLibrary },
   { label: 'Category', value: ResourceDisplayContent.Category },
   { label: 'Tags', value: ResourceDisplayContent.Tags },
-  { label: 'All', value: ResourceDisplayContent.All }
+  { label: 'AddedDate', value: ResourceDisplayContent.AddedDate },
+  { label: 'UpdatedDate', value: ResourceDisplayContent.UpdatedDate },
+  { label: 'FileCreatedDate', value: ResourceDisplayContent.FileCreatedDate },
+  { label: 'Default', value: ResourceDisplayContent.Default },
+  { label: 'FileModifiedDate', value: ResourceDisplayContent.FileModifiedDate }
 ] as const;
 
 export const ResourceDisplayContentLabel: Record<ResourceDisplayContent, string> = {
   [ResourceDisplayContent.MediaLibrary]: 'MediaLibrary',
   [ResourceDisplayContent.Category]: 'Category',
   [ResourceDisplayContent.Tags]: 'Tags',
-  [ResourceDisplayContent.All]: 'All'
+  [ResourceDisplayContent.AddedDate]: 'AddedDate',
+  [ResourceDisplayContent.UpdatedDate]: 'UpdatedDate',
+  [ResourceDisplayContent.FileCreatedDate]: 'FileCreatedDate',
+  [ResourceDisplayContent.Default]: 'Default',
+  [ResourceDisplayContent.FileModifiedDate]: 'FileModifiedDate'
 };
 
 export enum ResourceLanguage {
@@ -2704,37 +2716,25 @@ export const DownloadTaskActionOnConflictLabel: Record<DownloadTaskActionOnConfl
   [DownloadTaskActionOnConflict.Ignore]: 'Ignore'
 };
 
-export enum DownloadTaskDtoStatus {
-  Idle = 100,
-  InQueue = 200,
-  Starting = 300,
-  Downloading = 400,
-  Stopping = 500,
-  Complete = 600,
-  Failed = 700,
-  Disabled = 800
+export enum DownloadTaskDbModelStatus {
+  InProgress = 100,
+  Disabled = 200,
+  Complete = 300,
+  Failed = 400
 }
 
-export const downloadTaskDtoStatuses = [
-  { label: 'Idle', value: DownloadTaskDtoStatus.Idle },
-  { label: 'InQueue', value: DownloadTaskDtoStatus.InQueue },
-  { label: 'Starting', value: DownloadTaskDtoStatus.Starting },
-  { label: 'Downloading', value: DownloadTaskDtoStatus.Downloading },
-  { label: 'Stopping', value: DownloadTaskDtoStatus.Stopping },
-  { label: 'Complete', value: DownloadTaskDtoStatus.Complete },
-  { label: 'Failed', value: DownloadTaskDtoStatus.Failed },
-  { label: 'Disabled', value: DownloadTaskDtoStatus.Disabled }
+export const downloadTaskDbModelStatuses = [
+  { label: 'InProgress', value: DownloadTaskDbModelStatus.InProgress },
+  { label: 'Disabled', value: DownloadTaskDbModelStatus.Disabled },
+  { label: 'Complete', value: DownloadTaskDbModelStatus.Complete },
+  { label: 'Failed', value: DownloadTaskDbModelStatus.Failed }
 ] as const;
 
-export const DownloadTaskDtoStatusLabel: Record<DownloadTaskDtoStatus, string> = {
-  [DownloadTaskDtoStatus.Idle]: 'Idle',
-  [DownloadTaskDtoStatus.InQueue]: 'InQueue',
-  [DownloadTaskDtoStatus.Starting]: 'Starting',
-  [DownloadTaskDtoStatus.Downloading]: 'Downloading',
-  [DownloadTaskDtoStatus.Stopping]: 'Stopping',
-  [DownloadTaskDtoStatus.Complete]: 'Complete',
-  [DownloadTaskDtoStatus.Failed]: 'Failed',
-  [DownloadTaskDtoStatus.Disabled]: 'Disabled'
+export const DownloadTaskDbModelStatusLabel: Record<DownloadTaskDbModelStatus, string> = {
+  [DownloadTaskDbModelStatus.InProgress]: 'InProgress',
+  [DownloadTaskDbModelStatus.Disabled]: 'Disabled',
+  [DownloadTaskDbModelStatus.Complete]: 'Complete',
+  [DownloadTaskDbModelStatus.Failed]: 'Failed'
 };
 
 export enum DownloadTaskStartMode {
@@ -2753,24 +2753,36 @@ export const DownloadTaskStartModeLabel: Record<DownloadTaskStartMode, string> =
 };
 
 export enum DownloadTaskStatus {
-  InProgress = 100,
-  Disabled = 200,
-  Complete = 300,
-  Failed = 400
+  Idle = 100,
+  InQueue = 200,
+  Starting = 300,
+  Downloading = 400,
+  Stopping = 500,
+  Complete = 600,
+  Failed = 700,
+  Disabled = 800
 }
 
 export const downloadTaskStatuses = [
-  { label: 'InProgress', value: DownloadTaskStatus.InProgress },
-  { label: 'Disabled', value: DownloadTaskStatus.Disabled },
+  { label: 'Idle', value: DownloadTaskStatus.Idle },
+  { label: 'InQueue', value: DownloadTaskStatus.InQueue },
+  { label: 'Starting', value: DownloadTaskStatus.Starting },
+  { label: 'Downloading', value: DownloadTaskStatus.Downloading },
+  { label: 'Stopping', value: DownloadTaskStatus.Stopping },
   { label: 'Complete', value: DownloadTaskStatus.Complete },
-  { label: 'Failed', value: DownloadTaskStatus.Failed }
+  { label: 'Failed', value: DownloadTaskStatus.Failed },
+  { label: 'Disabled', value: DownloadTaskStatus.Disabled }
 ] as const;
 
 export const DownloadTaskStatusLabel: Record<DownloadTaskStatus, string> = {
-  [DownloadTaskStatus.InProgress]: 'InProgress',
-  [DownloadTaskStatus.Disabled]: 'Disabled',
+  [DownloadTaskStatus.Idle]: 'Idle',
+  [DownloadTaskStatus.InQueue]: 'InQueue',
+  [DownloadTaskStatus.Starting]: 'Starting',
+  [DownloadTaskStatus.Downloading]: 'Downloading',
+  [DownloadTaskStatus.Stopping]: 'Stopping',
   [DownloadTaskStatus.Complete]: 'Complete',
-  [DownloadTaskStatus.Failed]: 'Failed'
+  [DownloadTaskStatus.Failed]: 'Failed',
+  [DownloadTaskStatus.Disabled]: 'Disabled'
 };
 
 export enum DependentComponentStatus {

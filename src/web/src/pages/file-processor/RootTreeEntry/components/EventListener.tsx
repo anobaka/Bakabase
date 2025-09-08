@@ -19,6 +19,7 @@ const EventListener = (props: Props) => {
   const { t } = useTranslation();
   const propsRef = useRef(props);
   const selectionModeRef = useRef<SelectionMode>(SelectionMode.Normal);
+  const shiftHoldingRef = useRef(false);
 
   useEffect(() => {
     // Check if we're in browser environment
@@ -56,6 +57,7 @@ const EventListener = (props: Props) => {
         break;
       case "Shift":
         changeSelectionMode(SelectionMode.Shift);
+        shiftHoldingRef.current = true;
         break;
       case "Delete":
         propsRef.current.onDelete?.();
@@ -73,6 +75,7 @@ const EventListener = (props: Props) => {
         break;
       case "Shift":
         changeSelectionMode(SelectionMode.Normal);
+        shiftHoldingRef.current = false;
         break;
     }
   }, []);

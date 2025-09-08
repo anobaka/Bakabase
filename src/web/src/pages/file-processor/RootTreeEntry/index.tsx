@@ -2,6 +2,7 @@
 
 import type { TreeEntryProps } from "@/pages/file-processor/TreeEntry";
 import type { Entry } from "@/core/models/FileExplorer/Entry";
+import type { Capability } from "./models";
 
 import React, {
   forwardRef,
@@ -21,25 +22,23 @@ import {
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { ControlledMenu, useMenuState } from "@szhsin/react-menu";
+import _ from "lodash";
 
 import EventListener, { SelectionMode } from "./components/EventListener";
 import ContextMenu from "./components/ContextMenu";
+import { FileSystemTreeEntryCapabilityMap } from "./models";
+import Shortcuts from "./components/Shortcuts";
 
 import TreeEntry from "@/pages/file-processor/TreeEntry";
 import BApi from "@/sdk/BApi";
-import {
-  buildLogger,
-  splitPathIntoSegments,
-  standardizePath,
-} from "@/components/utils";
-import BusinessConstants from "@/components/BusinessConstants";
+import { buildLogger, getStandardParentPath, standardizePath } from "@/components/utils";
 import RootEntry from "@/core/models/FileExplorer/RootEntry";
 import { Button, Chip, Input } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DeleteConfirmationModal from "@/pages/file-processor/RootTreeEntry/components/DeleteConfirmationModal";
 import WrapModal from "@/pages/file-processor/RootTreeEntry/components/WrapModal";
-import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
 import ExtractModal from "@/pages/file-processor/RootTreeEntry/components/ExtractModal";
+import FolderSelector from "@/components/FolderSelector";
 
 type Props = {
   rootPath?: string;
@@ -47,14 +46,15 @@ type Props = {
   selectable: "disabled" | "single" | "multiple";
   defaultSelectedPath?: string;
   onInitialized?: (path?: string) => any;
-  onDoubleClick?: (event, entry: Entry) => boolean;
+  onDoubleClick?: (event: React.MouseEvent<any>, entry: Entry) => boolean;
+  afterPlayedFirstFile?: (entry: Entry) => any;
 } & Pick<TreeEntryProps, "capabilities" | "expandable" | "filter">;
 
 const log = buildLogger("RootTreeEntry");
 
 export type RootTreeEntryRef = { root?: Entry };
 
-const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
+const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
   (
     {
       rootPath,
@@ -66,12 +66,15 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
       defaultSelectedPath,
       expandable = false,
       capabilities,
+      afterPlayedFirstFile,
     },
     ref,
   ) => {
     const { t } = useTranslation();
     const forceUpdate = useUpdate();
     const { createPortal } = useBakabaseContext();
+
+    const initializedRootPathRef = useRef<string>();
 
     const inputBlurHandlerRef = useRef<any>();
 
@@ -87,9 +90,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
 
     const defaultSelectedPathInitializedRef = useRef(false);
 
-    const [historyRootPaths, setHistoryRootPaths] = useState<
-      (string | undefined)[]
-    >([]);
+    const [historyRootPaths, setHistoryRootPaths] = useState<(string | undefined)[]>([]);
     const historyRootPathsRef = useRef(historyRootPaths);
 
     const [filterInputValue, setFilterInputValue] = useState<string>();
@@ -115,39 +116,30 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
       onSelectedRef.current?.(selectedEntriesRef.current);
     }, [selectedEntries]);
 
-    const initialize = useCallback(
-      async (path?: string, addToHistory: boolean = true) => {
-        let finalPath = standardizePath(path);
+    const initialize = useCallback(async (path?: string, addToHistory: boolean = true) => {
+      let finalPath = standardizePath(path);
 
-        if (finalPath != undefined && finalPath.length > 0) {
-          const isFile = (await BApi.file.checkPathIsFile({ path: finalPath }))
-            .data;
+      if (finalPath != undefined && finalPath.length > 0) {
+        const isFile = (await BApi.file.checkPathIsFile({ path: finalPath })).data;
 
-          if (isFile) {
-            finalPath = splitPathIntoSegments(finalPath)
-              .slice(0, -1)
-              .join(BusinessConstants.pathSeparator);
-          }
+        if (isFile) {
+          finalPath = getStandardParentPath(finalPath)!;
         }
-        shiftSelectionStartRef.current = undefined;
+      }
+      shiftSelectionStartRef.current = undefined;
 
-        if (addToHistory && rootRef.current) {
-          const history = historyRootPathsRef.current;
+      if (addToHistory && rootRef.current) {
+        const history = historyRootPathsRef.current;
 
-          if (
-            history.length == 0 ||
-            history[history.length - 1] != rootRef.current.path
-          ) {
-            setHistoryRootPaths([...history, rootRef.current.path]);
-          }
+        if (history.length == 0 || history[history.length - 1] != rootRef.current.path) {
+          setHistoryRootPaths([...history, rootRef.current.path]);
         }
+      }
 
-        log("initialize", finalPath, historyRootPathsRef.current);
+      log("initialize", finalPath, historyRootPathsRef.current);
 
-        setRoot(new RootEntry(finalPath));
-      },
-      [],
-    );
+      setRoot(new RootEntry(finalPath));
+    }, []);
 
     useEffect(() => {
       initialize(rootPath);
@@ -246,7 +238,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
             setSelectedEntries([]);
           }}
           onDelete={() => {
-            if (selectedEntriesRef.current.length > 0) {
+            if (selectedEntriesRef.current.length > 0 && capabilities?.includes("delete")) {
               createPortal(DeleteConfirmationModal, {
                 entries: selectedEntriesRef.current,
                 rootPath: rootRef.current?.path,
@@ -254,76 +246,100 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
             }
           }}
           onKeyDown={(key, evt) => {
-            switch (key) {
-              case "w": {
-                if (selectedEntriesRef.current.length > 0) {
-                  createPortal(WrapModal, {
-                    entries: selectedEntriesRef.current,
-                  });
-                }
-                break;
-              }
-              case "m": {
-                if (selectedEntriesRef.current.length > 0) {
-                  createPortal(MediaLibraryPathSelectorV2, {
-                    onSelect: (id, path, isLegacyMediaLibrary) => {
-                      return BApi.file.moveEntries({
-                        destDir: path,
-                        entryPaths: selectedEntriesRef.current.map(
-                          (e) => e.path,
-                        ),
-                      });
-                    },
-                  });
-                }
-                break;
-              }
-              case "d": {
-                if (selectedEntriesRef.current.length > 0) {
-                  BApi.file.decompressFiles({
-                    paths: selectedEntriesRef.current.map((e) => e.path),
-                  });
-                }
-                break;
-              }
-              case "e": {
-                if (selectedEntriesRef.current.length > 0) {
-                  createPortal(ExtractModal, {
-                    entries: selectedEntriesRef.current,
-                  });
-                }
-                break;
-              }
-              case "a": {
-                if (evt.ctrlKey) {
-                  let parent: Entry | undefined;
+            log("event listener", "key down", key, evt);
+            const c = _.keys(FileSystemTreeEntryCapabilityMap).find(
+              (k) => FileSystemTreeEntryCapabilityMap[k as Capability].shortcut?.key == key,
+            ) as Capability | undefined;
 
-                  for (const se of selectedEntriesRef.current) {
-                    if (se.parent) {
-                      if (!parent || parent.path.startsWith(se.parent.path)) {
-                        parent = se.parent;
+            if (c) {
+              evt.stopPropagation();
+              evt.preventDefault();
+              if (capabilities?.includes(c)) {
+                switch (c) {
+                  case "wrap":
+                    if (selectedEntriesRef.current.length > 0) {
+                      createPortal(WrapModal, {
+                        entries: selectedEntriesRef.current,
+                      });
+                    }
+                    break;
+                  case "extract":
+                    if (selectedEntriesRef.current.length > 0) {
+                      createPortal(ExtractModal, {
+                        entries: selectedEntriesRef.current,
+                      });
+                    }
+                    break;
+                  case "move":
+                    if (selectedEntriesRef.current.length > 0) {
+                      createPortal(FolderSelector, {
+                        onSelect: (path: string) => {
+                          return BApi.file.moveEntries({
+                            destDir: path,
+                            entryPaths: selectedEntriesRef.current.map((e) => e.path),
+                          });
+                        },
+                        sources: ["media library", "custom"],
+                      });
+                    }
+                    break;
+                  case "delete":
+                    break;
+                  case "rename":
+                    break;
+                  case "decompress":
+                    if (selectedEntriesRef.current.length > 0) {
+                      BApi.file.decompressFiles({
+                        paths: selectedEntriesRef.current.map((e) => e.path),
+                      });
+                    }
+                    break;
+                  case "delete-all-same-name":
+                    break;
+                  case "group":
+                    break;
+                  case "play":
+                    break;
+                  case "play-first-file":
+                    if (selectedEntriesRef.current.length == 1) {
+                      selectedEntriesRef.current[0].ref?.playFirstFile();
+                    }
+                    break;
+                }
+              }
+            } else {
+              switch (key) {
+                case "a": {
+                  if (evt.ctrlKey) {
+                    let parent: Entry | undefined;
+
+                    for (const se of selectedEntriesRef.current) {
+                      if (se.parent) {
+                        if (!parent || parent.path.startsWith(se.parent.path)) {
+                          parent = se.parent;
+                        }
                       }
                     }
-                  }
-                  parent ??= rootRef.current;
+                    parent ??= rootRef.current;
 
-                  log("Select all filtered children of entry", parent);
+                    log("Select all filtered children of entry", parent);
 
-                  if (parent) {
-                    const newSelectedEntries: Entry[] = [];
+                    if (parent) {
+                      const newSelectedEntries: Entry[] = [];
 
-                    for (const c of parent.filteredChildren) {
-                      newSelectedEntries.push(c);
-                      c.select(true);
+                      for (const c of parent.filteredChildren) {
+                        newSelectedEntries.push(c);
+                        c.select(true);
+                      }
+                      const others = selectedEntriesRef.current.filter(
+                        (s) => !newSelectedEntries.includes(s),
+                      );
+
+                      for (const o of others) {
+                        o.select(false);
+                      }
+                      setSelectedEntries(newSelectedEntries);
                     }
-                    const others = selectedEntriesRef.current.filter(
-                      (s) => !newSelectedEntries.includes(s),
-                    );
-
-                    for (const o of others) {
-                      o.select(false);
-                    }
-                    setSelectedEntries(newSelectedEntries);
                   }
                 }
               }
@@ -358,18 +374,10 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
             variant={"light"}
             onClick={() => {
               if (root) {
-                const segments = splitPathIntoSegments(root.path);
-                const isUncPath = root.path.startsWith(
-                  BusinessConstants.uncPathPrefix,
-                );
+                const newRootPath = getStandardParentPath(root.path);
 
-                // console.log(root.path, segments, isUncPath);
-                if (segments.length > 0 && !isUncPath) {
-                  const newRoot = segments
-                    .slice(0, segments.length - 1)
-                    .join(BusinessConstants.pathSeparator);
-
-                  initialize(newRoot);
+                if (newRootPath) {
+                  initialize(newRootPath);
                 }
               }
             }}
@@ -439,9 +447,11 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
             <FolderOpenOutlined className={"text-base"} />
             {t<string>("Recycle bin")}
           </Button>
+          <Shortcuts capabilities={capabilities} />
         </div>
         <div className={"grow min-h-0"}>
           <TreeEntry
+            afterPlayedFirstFile={afterPlayedFirstFile}
             capabilities={capabilities}
             entry={root}
             expandable={expandable}
@@ -453,16 +463,11 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
                 return false;
               }
 
-              if (
-                selectable == "single" ||
-                selectionModeRef.current == SelectionMode.Normal
-              ) {
+              if (selectable == "single" || selectionModeRef.current == SelectionMode.Normal) {
                 shiftSelectionStartRef.current = e;
                 if (selectedEntriesRef.current.includes(e)) {
                   if (selectedEntriesRef.current.length > 1) {
-                    for (const se of selectedEntriesRef.current.filter(
-                      (x) => x != e,
-                    )) {
+                    for (const se of selectedEntriesRef.current.filter((x) => x != e)) {
                       se.select(false);
                     }
                     setSelectedEntries([e]);
@@ -487,8 +492,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
                 case SelectionMode.Ctrl: {
                   shiftSelectionStartRef.current = e;
                   if (selectedEntriesRef.current.includes(e)) {
-                    selectedEntriesRef.current =
-                      selectedEntriesRef.current.filter((x) => x != e);
+                    selectedEntriesRef.current = selectedEntriesRef.current.filter((x) => x != e);
                   } else {
                     selectedEntriesRef.current.push(e);
                   }
@@ -497,8 +501,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
                   return true;
                 }
                 case SelectionMode.Shift: {
-                  shiftSelectionStartRef.current ??=
-                    e.parent!.filteredChildren![0]!;
+                  shiftSelectionStartRef.current ??= e.parent!.filteredChildren![0]!;
                   let startParent = shiftSelectionStartRef.current.parent;
                   const startParentSet = new Set<Entry>();
 
@@ -516,10 +519,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
                     endParent = endParent.parent;
                   }
 
-                  const buildPreorderTraversal = (
-                    entry: Entry,
-                    result: Entry[],
-                  ) => {
+                  const buildPreorderTraversal = (entry: Entry, result: Entry[]) => {
                     result.push(entry);
                     if (entry.expanded && entry.filteredChildren) {
                       for (const child of entry.filteredChildren) {
@@ -530,16 +530,11 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
                   const preorderTraversal: Entry[] = [];
 
                   buildPreorderTraversal(endParent!, preorderTraversal);
-                  const startIdx = preorderTraversal.indexOf(
-                    shiftSelectionStartRef.current,
-                  );
+                  const startIdx = preorderTraversal.indexOf(shiftSelectionStartRef.current);
                   const endIdx = preorderTraversal.indexOf(e);
                   const minIdx = Math.min(startIdx, endIdx);
                   const maxIdx = Math.max(startIdx, endIdx);
-                  const newSelectedEntries = preorderTraversal.slice(
-                    minIdx,
-                    maxIdx + 1,
-                  );
+                  const newSelectedEntries = preorderTraversal.slice(minIdx, maxIdx + 1);
 
                   // console.log(minIdx, maxIdx, endParent);
                   for (let i = minIdx; i <= maxIdx; i++) {
@@ -564,8 +559,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
             onChildrenLoaded={(e) => {
               if (!defaultSelectedPathInitializedRef.current) {
                 defaultSelectedPathInitializedRef.current = true;
-                const standardDefaultSelectedPath =
-                  standardizePath(defaultSelectedPath);
+                const standardDefaultSelectedPath = standardizePath(defaultSelectedPath);
 
                 if (
                   standardDefaultSelectedPath != undefined &&
@@ -580,10 +574,7 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
 
                     selected.select(true);
                     // pick a better view
-                    const scrollToRow = Math.min(
-                      e.filteredChildren.length - 1,
-                      selectedRow + 2,
-                    );
+                    const scrollToRow = Math.min(e.filteredChildren.length - 1, selectedRow + 2);
 
                     e.ref?.scrollTo(e.filteredChildren[scrollToRow].path);
                     setSelectedEntries([selected]);
@@ -591,7 +582,10 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
                 }
               }
               log("12312321321321321", e);
-              onInitialized?.(e?.path);
+              if (initializedRootPathRef.current != e.path) {
+                initializedRootPathRef.current = e.path;
+                onInitialized?.(e?.path);
+              }
               forceUpdate();
             }}
             onContextMenu={(evt, entry) => {
@@ -617,4 +611,4 @@ const RootTreeEntryPage = forwardRef<RootTreeEntryRef, Props>(
   },
 );
 
-export default RootTreeEntryPage;
+export default RootTreeEntry;

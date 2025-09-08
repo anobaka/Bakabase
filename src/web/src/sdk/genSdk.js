@@ -31,7 +31,7 @@ async function generateSdk() {
     const outputFile = path.resolve(outputPath, "Api.ts");
 
     console.log(`Generating SDK...${outputPath}`);
-    
+
     await generateApi({
       url: "http://127.0.0.1:8080/internal-doc/swagger/v1/swagger.json",
       name: "Api.ts",
@@ -40,15 +40,15 @@ async function generateSdk() {
       generateUnionEnums: true,
       modular: false,
     });
-    
+
     // 在生成的文件第一行插入导入语句
     const apiFilePath = outputFile;
     if (fs.existsSync(apiFilePath)) {
       let content = fs.readFileSync(apiFilePath, 'utf-8');
-      
+
       // 在文件开头添加导入语句
       content = IMPORTS + LOG + content;
-  
+
       content = content.replace(
         'export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;',
         'export type ResponseFormat = keyof Omit<Body, "body" | "bodyUsed">;\n\n' + BASE_RESPONSE_TYPE
@@ -98,7 +98,7 @@ async function generateSdk() {
   protected processResponseData = <T = any>(response: BaseResponse, params: FullRequestParams): T => {
     // Check if the response has a code property (API response structure)
     if (response && typeof response === "object" && "code" in response) {
-      log(response)
+      log('[response]', params.path, response)
       switch (response.code) {
         case 0:
           break;
@@ -121,11 +121,11 @@ async function generateSdk() {
         `
 
       )
-      
+
       fs.writeFileSync(apiFilePath, content, 'utf-8');
       console.log("SDK generated successfully!");
     }
-    
+
   } catch (error) {
     console.error(error);
     process.exit(1);

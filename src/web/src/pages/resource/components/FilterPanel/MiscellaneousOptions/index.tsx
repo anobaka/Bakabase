@@ -4,35 +4,31 @@ import type { BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions } from 
 
 import {
   AppstoreAddOutlined,
+  CloseOutlined,
   DashboardOutlined,
-  EyeOutlined,
+  DatabaseOutlined,
   FullscreenOutlined,
   PlayCircleOutlined,
   QuestionCircleOutlined,
   ZoomInOutlined,
 } from "@ant-design/icons";
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { AiOutlineFieldNumber } from "react-icons/ai";
+import { AiOutlineFieldNumber, AiOutlineOrderedList, AiOutlineSetting } from "react-icons/ai";
 import { BiCarousel } from "react-icons/bi";
 
-import {
-  Button,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-  Tooltip,
-} from "@/components/bakaui";
-import {
-  CoverFit,
-  ResourceDisplayContent,
-  resourceDisplayContents,
-} from "@/sdk/constants";
+import { Button, Checkbox, Chip, Divider, Modal, Spacer, Tooltip, ButtonGroup } from "@/components/bakaui";
+import { CoverFit, PropertyPool } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/stores/options";
 import { buildLogger } from "@/components/utils";
+import PropertySelector from "@/components/PropertySelector";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { PropertyMap } from "@/components/types";
+import _ from "lodash";
+import { ImEmbed } from "react-icons/im";
+import { PropertyLabel } from "@/components/Property";
 
 type Props = {
   rearrangeResources?: () => any;
@@ -40,196 +36,249 @@ type Props = {
 
 const log = buildLogger("MiscellaneousOptions");
 
-type Item = {
-  key: ListBoxItemKey;
-  label: string;
-  Icon: React.FC<{ className?: string }>;
-  tip?: any;
-};
+const MinResourceColCount = 3;
+const DefaultResourceColCount = 6;
+const MaxResourceColCount = 12;
 
-type ListBoxItemKey =
-  | "FillCover"
-  | "ShowLargerCoverOnHover"
-  | "PreviewOnHover"
-  | "UseCache"
-  | "CoverCarousel"
-  | "DisplayResourceId";
 const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
   const { t } = useTranslation();
-  const uiOptions = useUiOptionsStore((state) => state.data);
-  const options = uiOptions.resource;
-
-  const currentResourceDisplayContents =
-    uiOptions.resource?.displayContents ?? ResourceDisplayContent.All;
-  const selectableResourceDisplayContents = resourceDisplayContents
-    .filter((d) => d.value != ResourceDisplayContent.All)
-    .map((x) => ({
-      label: t<string>("Show") + t<string>(x.label),
-      value: x.value.toString(),
-    }));
-
-  const items: Item[] = [
-    ...selectableResourceDisplayContents.map((d) => ({
-      key: `DisplayContent-${d.value.toString()}` as ListBoxItemKey,
-      label: d.label,
-      Icon: EyeOutlined,
-    })),
-    {
-      key: "FillCover",
-      label: t<string>("Fill cover"),
-      Icon: FullscreenOutlined,
-    },
-    {
-      key: "ShowLargerCoverOnHover",
-      label: t<string>("Show larger cover on mouse hover"),
-      Icon: ZoomInOutlined,
-    },
-    {
-      key: "PreviewOnHover",
-      label: t<string>("Preview files of a resource on mouse hover"),
-      Icon: PlayCircleOutlined,
-    },
-    {
-      key: "UseCache",
-      label: t<string>("Use cache"),
-      Icon: DashboardOutlined,
-      tip: (
-        <div className={"max-w-[400px]"}>
-          {t<string>(
-            "Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.",
-          )}
-          <Button
-            size={"sm"}
-            variant={"flat"}
-            // color={'secondary'}
-            onClick={() => {
-              navigate("/cache");
-            }}
-          >
-            {t<string>("Manage cache")}
-          </Button>
-        </div>
-      ),
-    },
-    {
-      key: "CoverCarousel",
-      label: t<string>("Cover carousel"),
-      Icon: BiCarousel,
-    },
-    {
-      key: "DisplayResourceId",
-      label: t<string>("Display resource ID"),
-      Icon: AiOutlineFieldNumber,
-    },
-  ];
+  const { createPortal } = useBakabaseContext();
+  const uiOptionsStore = useUiOptionsStore();
+  const resourceUiOptions = uiOptionsStore.data?.resource;
+  const currentColCount = resourceUiOptions?.colCount ?? DefaultResourceColCount;
+  const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
 
   const navigate = useNavigate();
 
-  const buildSelectedKeys = () => {
-    const keys: ListBoxItemKey[] = [];
+  const loadProperties = async () => {
+    const psr =
+      (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const ps = _.mapValues(
+      _.groupBy(psr, (x) => x.pool),
+      (v) => _.keyBy(v, (x) => x.id),
+    );
 
-    if (options?.coverFit === CoverFit.Cover) {
-      keys.push("FillCover");
-    }
-    if (!options?.disableCache) {
-      keys.push("UseCache");
-    }
-    if (options?.showBiggerCoverWhileHover) {
-      keys.push("ShowLargerCoverOnHover");
-    }
-    if (!options?.disableMediaPreviewer) {
-      keys.push("PreviewOnHover");
-    }
-    for (const d of selectableResourceDisplayContents) {
-      if (currentResourceDisplayContents & d.value) {
-        keys.push(`DisplayContent-${d.value}` as ListBoxItemKey);
-      }
-    }
-    if (!options?.disableCoverCarousel) {
-      keys.push("CoverCarousel");
-    }
-    if (options?.displayResourceId) {
-      keys.push("DisplayResourceId");
-    }
-
-    return keys;
+    setPropertyMap(ps);
   };
 
-  const selectedKeys = buildSelectedKeys();
+  useEffect(() => {
+    loadProperties();
+  }, [])
+
+  const [visible, setVisible] = useState(false);
+
+  const patchOptions = async (options: Partial<BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions>) => {
+    await uiOptionsStore.patch({ resource: { ...resourceUiOptions, ...options } });
+  };
 
   return (
-    <Dropdown>
-      <DropdownTrigger>
-        <Button isIconOnly size={"sm"} variant={"light"}>
-          <AppstoreAddOutlined className={"text-xl"} />
-        </Button>
-      </DropdownTrigger>
-      <DropdownMenu
-        aria-label="Multiple selection example"
-        closeOnSelect={false}
-        color={'primary'}
-        variant="flat"
-        onSelectionChange={keys => {
-          if (keys instanceof Set) {
-            const stringKeys: ListBoxItemKey[] = Array.from(keys).map(k => k.toString() as ListBoxItemKey);
-            let dc: ResourceDisplayContent = 0;
-            for (const key of stringKeys) {
-              if (key.startsWith('DisplayContent-')) {
-                dc |= parseInt(key.replace('DisplayContent-', ''), 10);
-              }
-            }
-
-            const newOptions: BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions = {
-              ...options,
-              coverFit: stringKeys.includes('FillCover') ? CoverFit.Cover : CoverFit.Contain,
-              disableCache: !stringKeys.includes('UseCache'),
-              showBiggerCoverWhileHover: stringKeys.includes('ShowLargerCoverOnHover'),
-              disableMediaPreviewer: !stringKeys.includes('PreviewOnHover'),
-              displayContents: dc,
-              disableCoverCarousel: !stringKeys.includes('CoverCarousel'),
-              displayResourceId: stringKeys.includes('DisplayResourceId'),
-            };
-
-            log(keys, newOptions);
-            BApi.options.patchUiOptions({
-              resource: newOptions,
-            }).then(r => {
-              if ((currentResourceDisplayContents & ResourceDisplayContent.Tags) != (dc & ResourceDisplayContent.Tags)) {
-                rearrangeResources?.();
-              }
-            });
-          }
-        }}
-        selectionMode="multiple"
-        // selectedKeys={selectableResourceDisplayContents.filter(c => currentResourceDisplayContents & c.value).map(c => c.value.toString())}
-        selectedKeys={selectedKeys}
-      >
-        {items.map((item) => {
-          return (
-            <DropdownItem
-              key={item.key}
-              className={selectedKeys.includes(item.key) ? "text-primary" : ""}
-              startContent={<item.Icon className={"text-base"} />}
-            >
-              {item.tip ? (
+    <>
+      <Button isIconOnly size={"sm"} variant={"light"} onPress={() => setVisible(true)}>
+        <AiOutlineSetting className={"text-xl"} />
+      </Button>
+      {visible && (
+        <Modal
+          size="lg"
+          title={t<string>("Display options")}
+          visible={visible}
+          onClose={() => setVisible(false)}
+          footer={false}
+        >
+          <div className={"flex flex-col gap-3"}>
+            <div className={"flex items-center gap-2"}>
+              <div className={"text-sm"}>{t<string>("Column count")}</div>
+              <div className={"flex flex-wrap gap-1"}>
+                <ButtonGroup>
+                  {Array.from({ length: (MaxResourceColCount - MinResourceColCount + 1) }, (_, idx) => idx + MinResourceColCount).map((num) => (
+                    <Button
+                      key={num}
+                      className={"min-w-0 px-6"}
+                      size={"sm"}
+                      color={currentColCount === num ? "primary" : "default"}
+                      onPress={() => patchOptions({ colCount: num })}
+                    >
+                      {num}
+                    </Button>
+                  ))}
+                </ButtonGroup>
+              </div>
+            </div>
+            <div>
+              <Checkbox
+                isSelected={resourceUiOptions?.coverFit === CoverFit.Cover}
+                onValueChange={(checked) =>
+                  patchOptions({ coverFit: checked ? CoverFit.Cover : CoverFit.Contain })
+                }
+              >
                 <div className={"flex items-center gap-1"}>
-                  {item.label}
-                  <Tooltip
-                    color={"secondary"}
-                    content={item.tip}
-                    placement={"left"}
-                  >
-                    <QuestionCircleOutlined className={"text-base"} />
-                  </Tooltip>
+                  <FullscreenOutlined className={"text-base"} />
+                  {t<string>("Fill cover")}
                 </div>
-              ) : (
-                item.label
-              )}
-            </DropdownItem>
-          );
-        })}
-      </DropdownMenu>
-    </Dropdown>
+              </Checkbox>
+            </div>
+
+            <div>
+              <Checkbox
+                isSelected={!!resourceUiOptions?.showBiggerCoverWhileHover}
+                onValueChange={(checked) =>
+                  patchOptions({ showBiggerCoverWhileHover: checked })
+                }
+              >
+                <div className={"flex items-center gap-1"}>
+                  <ZoomInOutlined className={"text-base"} />
+                  {t<string>("Show larger cover on mouse hover")}
+                </div>
+              </Checkbox>
+            </div>
+
+            <div>
+              <Checkbox
+                isSelected={!resourceUiOptions?.disableMediaPreviewer}
+                onValueChange={(checked) =>
+                  patchOptions({ disableMediaPreviewer: !checked })
+                }
+              >
+                <div className={"flex items-center gap-1"}>
+                  <PlayCircleOutlined className={"text-base"} />
+                  {t<string>("Preview files of a resource on mouse hover")}
+                </div>
+              </Checkbox>
+            </div>
+
+            <div className={"flex flex-col gap-1"}>
+              <Checkbox
+                isSelected={resourceUiOptions?.inlineDisplayName}
+                onValueChange={(checked) =>
+                  patchOptions({ inlineDisplayName: checked })
+                }
+              >
+                <div className={"flex items-center gap-1"}>
+                  <ImEmbed className={"text-base"} />
+                  {t<string>("Inline display name and tags")}
+                </div>
+              </Checkbox>
+              <div className={"opacity-60 text-sm"}>
+                {t<string>(
+                  "Inline the display name and tags will place them inside the bottom area of the resource cover, rather than below the cover.",
+                )}
+              </div>
+            </div>
+
+            <div className={"flex flex-col gap-1"}>
+              <Checkbox
+                isSelected={!resourceUiOptions?.disableCache}
+                onValueChange={(checked) =>
+                  patchOptions({ disableCache: !checked })
+                }
+              >
+                <div className={"flex items-center gap-1"}>
+                  <DatabaseOutlined className={"text-base"} />
+                  {t<string>("Use cache")}
+                </div>
+              </Checkbox>
+              <div>
+                <span className={"opacity-60 text-sm"}>
+                  {t<string>(
+                    "Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.",
+                  )}
+                </span>
+                <Button
+                  size={"sm"}
+                  variant={"light"}
+                  color="primary"
+                  onClick={() => {
+                    navigate("/cache");
+                  }}
+                >
+                  {t<string>("Manage cache")}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Checkbox
+                isSelected={!resourceUiOptions?.disableCoverCarousel}
+                onValueChange={(checked) =>
+                  patchOptions({ disableCoverCarousel: !checked })
+                }
+              >
+                <div className={"flex items-center gap-1"}>
+                  <BiCarousel className={"text-base"} />
+                  {t<string>("Cover carousel")}
+                </div>
+              </Checkbox>
+            </div>
+
+            <div>
+              <Checkbox
+                isSelected={!!resourceUiOptions?.displayResourceId}
+                onValueChange={(checked) =>
+                  patchOptions({ displayResourceId: checked })
+                }
+              >
+                <div className={"flex items-center gap-1"}>
+                  <AiOutlineFieldNumber className={"text-base"} />
+                  {t<string>("Display resource ID")}
+                </div>
+              </Checkbox>
+            </div>
+
+            <Divider />
+            <div className={"flex flex-col gap-1"}>
+              <div className={"flex items-center gap-2"}>
+                <AppstoreAddOutlined className={"text-base"} />
+                <div className={"text-sm"}>{t<string>("Display properties")}</div>
+                <div className={"text-sm text-default-500"}>
+                  {t<string>("Selected")}: {resourceUiOptions?.displayProperties?.length ?? 0}
+                </div>
+                <Button
+                  size={"sm"}
+                  variant={"flat"}
+                  onPress={() => {
+                    const selection = (resourceUiOptions?.displayProperties ?? []).map((k) => ({ id: k.id, pool: k.pool as any }));
+                    createPortal(PropertySelector, {
+                      selection,
+                      multiple: true,
+                      pool: PropertyPool.All,
+                      onSubmit: async (selected) => {
+                        patchOptions({ displayProperties: selected.map((p: any) => ({ id: p.id, pool: p.pool })) })
+                      },
+                    });
+                  }}
+                >
+                  {t<string>("Select properties")}
+                </Button>
+              </div>
+              <div className={"flex items-center flex-wrap gap-1"}>
+                {resourceUiOptions?.displayProperties?.map((p) => {
+                  const property = propertyMap[p.pool as PropertyPool]?.[p.id];
+                  if (!property) {
+                    return null;
+                  }
+                  return (
+                    <div className={"flex items-center gap-1"} key={`${p.pool}-${p.id}`}>
+                      {property ? (
+                        <PropertyLabel
+                          property={property}
+                          showPool={true}
+                        />
+                      ) : (
+                        <Chip>{t("Unknown property")}</Chip>
+                      )}
+                      <Button color="danger" isIconOnly size={"sm"} variant={"light"} onPress={() => {
+                        patchOptions({ displayProperties: resourceUiOptions?.displayProperties?.filter((pp) => pp.id !== p.id && pp.pool !== p.pool) })
+                      }}>
+                        <CloseOutlined />
+                      </Button>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 };
 

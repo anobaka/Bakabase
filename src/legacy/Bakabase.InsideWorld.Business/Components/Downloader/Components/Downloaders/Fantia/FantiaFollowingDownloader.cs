@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Microsoft.Extensions.Logging;
 
@@ -16,12 +17,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         {
         }
 
-        protected override async Task DownloadFromFanclub(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromFanclub(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Fanclub download not supported in Following downloader");
         }
 
-        protected override async Task DownloadFromFollowing(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadFromFollowing(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             // Basic framework implementation
             // TODO: Implement actual Fantia API integration and download logic
@@ -57,12 +58,12 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             }
         }
 
-        protected override async Task DownloadSinglePost(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadSinglePost(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Single post download not supported in Following downloader");
         }
 
-        protected override async Task DownloadByPlan(DownloadTaskDbModel task, string downloadPath, string namingConvention, CancellationToken ct)
+        protected override async Task DownloadByPlan(DownloadTask task, string downloadPath, string namingConvention, CancellationToken ct)
         {
             throw new NotImplementedException("Plan download not supported in Following downloader");
         }

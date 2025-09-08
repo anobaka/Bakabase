@@ -51,6 +51,7 @@ export type Props = {
   dbValue?: string;
   variant?: "default" | "light";
   defaultEditing?: boolean;
+  size?: "sm" | "md" | "lg";
 };
 
 const log = buildLogger("PropertyValueRenderer");
@@ -62,6 +63,7 @@ const PropertyValueRenderer = (props: Props) => {
     dbValue,
     bizValue,
     defaultEditing,
+    size = "md",
   } = props;
   const { t } = useTranslation();
 
@@ -102,6 +104,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -118,6 +121,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -169,6 +173,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv == undefined ? undefined : [typedBv]}
           valueAttributes={vas}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -195,6 +200,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           valueAttributes={vas}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -224,6 +230,7 @@ const PropertyValueRenderer = (props: Props) => {
           suffix={"%"}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -237,6 +244,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -250,6 +258,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -263,6 +272,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -276,6 +286,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -291,6 +302,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -304,6 +316,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -317,6 +330,7 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -344,6 +358,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           valueAttributes={vas}
           variant={variant}
+          size={size}
         />
       );
     }
@@ -373,6 +388,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           valueAttributes={vas}
           variant={variant}
+          size={size}
         />
       );
     }

@@ -23,8 +23,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
         protected readonly ExHentaiClient Client;
         protected readonly ISpecialTextService SpecialTextService;
         protected readonly IHostEnvironment Env;
-
-
+        
         protected AbstractExHentaiDownloader(IServiceProvider serviceProvider,
             IStringLocalizer<SharedResource> localizer,
             ExHentaiClient client, ISpecialTextService specialTextService,

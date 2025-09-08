@@ -4,12 +4,13 @@ import type { ResourceSearchFilter } from "../FilterGroupsPanel/models";
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
-import { Button } from "@heroui/react";
-import { AiOutlineSelect } from "react-icons/ai";
+import { Button, Chip } from "@heroui/react";
+import { AiOutlineRightCircle, AiOutlineSelect } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import Filter from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/FilterGroup/Filter";
+import { Tooltip } from "@/components/bakaui";
 
 interface IProps {
   onSelectFilter?: (filter: ResourceSearchFilter) => void;
@@ -42,20 +43,12 @@ const RecentFilters = ({ onSelectFilter }: IProps) => {
   return (
     <div className={"grid-cols-2 gap-1"}>
       {recentFilters.map((filter, index) => (
-        <div key={index} className="flex items-center justify-between gap-1">
-          <Filter isReadonly filter={filter} />
-          <div className={"flex items-center"}>
-            <Button
-              isIconOnly
-              color={"primary"}
-              size={"sm"}
-              variant={"light"}
-              onPress={() => onSelectFilter?.(filter)}
-            >
-              <AiOutlineSelect className={"text-lg"} />
-            </Button>
-          </div>
-        </div>
+        <Tooltip content={t("Apply this filter to the current search")} placement="right">
+          <Button key={index} className="flex items-center justify-between gap-1" variant="light" size="sm" color="primary">
+            <Filter isReadonly filter={filter} removeBackground />
+            <AiOutlineRightCircle className={"text-lg"} />
+          </Button>
+        </Tooltip>
       ))}
     </div>
   );

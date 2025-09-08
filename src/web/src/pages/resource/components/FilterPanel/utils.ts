@@ -42,7 +42,7 @@ export const addFilter = (form: SearchForm, filter?: ResourceSearchFilter) => {
       availableOperations: [],
     };
   }
-
+  
   // Ensure form has a group to add the filter to
   if (!form.group) {
     form.group = {
@@ -59,5 +59,5 @@ export const addFilter = (form: SearchForm, filter?: ResourceSearchFilter) => {
   }
   form.group.filters.push(filter);
 
-  return form;
+  return filter;
 };

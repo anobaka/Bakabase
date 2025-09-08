@@ -506,4 +506,6 @@ export interface IEntryRef {
   get filteredChildren(): Entry[];
 
   setLoading: (loading: boolean) => void;
+
+  playFirstFile: () => Promise<void>;
 }

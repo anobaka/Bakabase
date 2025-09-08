@@ -333,6 +333,17 @@ namespace Bakabase.Service.Controllers
             });
             return BaseResponseBuilder.Ok;
         }
+        
+        [HttpPut("filesystem/latest-moving-destination")]
+        [SwaggerOperation(OperationId = "AddLatestMovingDestination")]
+        public async Task<BaseResponse> AddLatestMovingDestination([FromBody] string destination)
+        {
+            await _bakabaseOptionsManager.Get<FileSystemOptions>().SaveAsync(options =>
+            {
+                options.AddRecentMovingDestination(destination.StandardizePath()!);
+            });
+            return BaseResponseBuilder.Ok;
+        }
 
         [HttpGet("javlibrary")]
         [SwaggerOperation(OperationId = "GetJavLibraryOptions")]
@@ -469,7 +480,7 @@ namespace Bakabase.Service.Controllers
         {
             var recentFilters = _bakabaseOptionsManager.Get<ResourceOptions>().Value.RecentFilters ?? [];
             var dbModels = recentFilters.ToList();
-            var propertyPool = (PropertyPool)dbModels.Select(x => x.PropertyPool).Cast<int>().Sum();
+            var propertyPool = (PropertyPool)dbModels.Select(x => x.PropertyPool).Cast<int>().Distinct().Sum();
             var propertyMap = (await _propertyService.GetProperties(propertyPool)).ToMap();
             var viewModels = dbModels.Select(d =>
             {

@@ -6,22 +6,22 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
 {
     public class DownloaderUtils
     {
-        public static readonly Dictionary<DownloadTaskDtoStatus, DownloadTaskAction[]> AvailableActions = new()
+        public static readonly Dictionary<DownloadTaskStatus, DownloadTaskAction[]> AvailableActions = new()
         {
             {
-                DownloadTaskDtoStatus.Idle,
+                DownloadTaskStatus.Idle,
                 [
                     DownloadTaskAction.StartManually, DownloadTaskAction.Disable, 
                     DownloadTaskAction.StartAutomatically
                 ]
             },
-            {DownloadTaskDtoStatus.InQueue, [DownloadTaskAction.Disable, DownloadTaskAction.StartManually] },
-            {DownloadTaskDtoStatus.Starting, [] },
-            {DownloadTaskDtoStatus.Downloading, [DownloadTaskAction.Disable] },
-            {DownloadTaskDtoStatus.Stopping, [] },
-            {DownloadTaskDtoStatus.Complete, [DownloadTaskAction.Restart, DownloadTaskAction.Disable] },
-            {DownloadTaskDtoStatus.Failed, [DownloadTaskAction.Restart, DownloadTaskAction.Disable] },
-            {DownloadTaskDtoStatus.Disabled, [DownloadTaskAction.StartManually] },
+            {DownloadTaskStatus.InQueue, [DownloadTaskAction.Disable, DownloadTaskAction.StartManually] },
+            {DownloadTaskStatus.Starting, [] },
+            {DownloadTaskStatus.Downloading, [DownloadTaskAction.Disable] },
+            {DownloadTaskStatus.Stopping, [] },
+            {DownloadTaskStatus.Complete, [DownloadTaskAction.Restart, DownloadTaskAction.Disable] },
+            {DownloadTaskStatus.Failed, [DownloadTaskAction.Restart, DownloadTaskAction.Disable] },
+            {DownloadTaskStatus.Disabled, [DownloadTaskAction.StartManually] },
         };
 
         public static readonly Dictionary<int, TimeSpan> IntervalsOnContinuousFailures = new()

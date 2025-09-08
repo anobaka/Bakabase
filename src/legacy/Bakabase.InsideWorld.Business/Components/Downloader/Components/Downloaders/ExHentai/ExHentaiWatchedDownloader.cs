@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
 using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
@@ -21,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override ExHentaiDownloadTaskType EnumTaskType => ExHentaiDownloadTaskType.Watched;
 
-        protected override Task StartCore(DownloadTaskDbModel task, CancellationToken ct)
+        protected override Task StartCore(DownloadTask task, CancellationToken ct)
         {
             if (task.Key.IsNullOrEmpty())
             {
