@@ -213,6 +213,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                   ) : (
                     <Image
                       key={url}
+                      removeWrapper
                       className={`${dynamicClassName} max-w-full max-h-full`}
                       // fallbackSrc={renderBrokenCover()}
                       // fallbackSrc={
@@ -351,6 +352,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                   ) : (
                     <Image
                       key={url}
+                      removeWrapper
                       alt={""}
                       // fallbackSrc={
                       //   <FallbackCover
