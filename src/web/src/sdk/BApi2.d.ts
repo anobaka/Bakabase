@@ -427,12 +427,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetCategory"];
         put?: never;
         post?: never;
+        /** @deprecated */
         delete: operations["DeleteCategory"];
         options?: never;
         head?: never;
+        /** @deprecated */
         patch: operations["PatchCategory"];
         trace?: never;
     };
@@ -443,8 +446,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetAllCategories"];
         put?: never;
+        /** @deprecated */
         post: operations["AddCategory"];
         delete?: never;
         options?: never;
@@ -461,6 +466,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["DuplicateCategory"];
         delete?: never;
         options?: never;
@@ -476,6 +482,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["PutCategoryResourceDisplayNameTemplate"];
         post?: never;
         delete?: never;
@@ -492,6 +499,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["ConfigureCategoryComponents"];
         post?: never;
         delete?: never;
@@ -508,6 +516,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["SortCategories"];
         post?: never;
         delete?: never;
@@ -524,6 +533,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["BindCustomPropertiesToCategory"];
         post?: never;
         delete?: never;
@@ -541,7 +551,9 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["BindCustomPropertyToCategory"];
+        /** @deprecated */
         delete: operations["UnlinkCustomPropertyFromCategory"];
         options?: never;
         head?: never;
@@ -556,6 +568,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["SortCustomPropertiesInCategory"];
         post?: never;
         delete?: never;
@@ -571,6 +584,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["PreviewCategoryDisplayNameTemplate"];
         put?: never;
         post?: never;
@@ -587,12 +601,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetCategoryEnhancerOptions"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /** @deprecated */
         patch: operations["PatchCategoryEnhancerOptions"];
         trace?: never;
     };
@@ -606,9 +622,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** @deprecated */
         delete: operations["DeleteCategoryEnhancerTargetOptions"];
         options?: never;
         head?: never;
+        /** @deprecated */
         patch: operations["PatchCategoryEnhancerTargetOptions"];
         trace?: never;
     };
@@ -622,6 +640,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** @deprecated */
         delete: operations["UnbindCategoryEnhancerTargetProperty"];
         options?: never;
         head?: never;
@@ -636,6 +655,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["StartSyncingCategoryResources"];
         post?: never;
         delete?: never;
@@ -651,6 +671,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetComponentDescriptors"];
         put?: never;
         post?: never;
@@ -667,6 +688,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetComponentDescriptorByKey"];
         put?: never;
         post?: never;
@@ -683,6 +705,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["DiscoverDependentComponent"];
         put?: never;
         post?: never;
@@ -699,6 +722,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetDependentComponentLatestVersion"];
         put?: never;
         post?: never;
@@ -717,6 +741,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["InstallDependentComponent"];
         delete?: never;
         options?: never;
@@ -733,6 +758,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["AddComponentOptions"];
         delete?: never;
         options?: never;
@@ -748,8 +774,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["PutComponentOptions"];
         post?: never;
+        /** @deprecated */
         delete: operations["RemoveComponentOptions"];
         options?: never;
         head?: never;
@@ -1920,8 +1948,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetAllMediaLibraries"];
         put?: never;
+        /** @deprecated */
         post: operations["AddMediaLibrary"];
         delete?: never;
         options?: never;
@@ -1936,9 +1966,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @deprecated */
         get: operations["GetMediaLibrary"];
+        /** @deprecated */
         put: operations["PatchMediaLibrary"];
         post?: never;
+        /** @deprecated */
         delete: operations["DeleteMediaLibrary"];
         options?: never;
         head?: never;
@@ -1953,6 +1986,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["StartSyncMediaLibrary"];
         post?: never;
         delete?: never;
@@ -1970,6 +2004,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["ValidatePathConfiguration"];
         delete?: never;
         options?: never;
@@ -1985,6 +2020,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["SortMediaLibrariesInCategory"];
         post?: never;
         delete?: never;
@@ -2002,7 +2038,9 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["AddMediaLibraryPathConfiguration"];
+        /** @deprecated */
         delete: operations["RemoveMediaLibraryPathConfiguration"];
         options?: never;
         head?: never;
@@ -2018,6 +2056,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["AddMediaLibrariesInBulk"];
         delete?: never;
         options?: never;
@@ -2034,6 +2073,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /** @deprecated */
         post: operations["AddMediaLibraryRootPathsInBulk"];
         delete?: never;
         options?: never;
@@ -2049,6 +2089,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        /** @deprecated */
         put: operations["StartSyncingMediaLibraryResources"];
         post?: never;
         delete?: never;
@@ -3840,6 +3881,8 @@ export interface components {
             enhancerId: number;
             targetOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerTargetAllInOneOptions"][];
             expressions?: string[];
+            requirements?: number[];
+            keywordProperty?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ScopePropertyKey"];
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerTargetAllInOneOptions": {
             /** Format: int32 */
@@ -4029,6 +4072,12 @@ export interface components {
             hasMorePlayableFiles: boolean;
             playableFilePaths?: string[];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
+            scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
         };
         "Bakabase.Abstractions.Models.Domain.SpecialText": {
             /** Format: int32 */
@@ -5371,6 +5420,7 @@ export interface components {
             readonly targets: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerTargetDescriptor"][];
             /** Format: int32 */
             readonly propertyValueScope: number;
+            readonly tags: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancerTag"][];
         };
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerTargetDescriptor": {
             /** Format: int32 */
@@ -5391,9 +5441,17 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancementAdditionalItem": 0 | 1;
+        /**
+         * Format: int32
+         * @description [1: UseRegex, 2: UseKeyword]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancerTag": 1 | 2;
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerFullOptions": {
             targetOptions?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerTargetFullOptions"][];
+            requirements?: components["schemas"]["Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId"][];
             expressions?: string[];
+            keywordProperty?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ScopePropertyKey"];
         };
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerTargetFullOptions": {
             /** Format: int32 */

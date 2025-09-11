@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
@@ -13,6 +14,7 @@ using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
 {
+    [Obsolete]
     [Route("~/component-options")]
     public class ComponentOptionsController : Controller
     {

@@ -43,11 +43,11 @@ public static class ServiceCollectionExtensions
             var localizer = sp.GetRequiredService<IEnhancerLocalizer>();
             var enhancerDescriptors = SpecificEnumUtils<EnhancerId>.Values.Select(enhancerId =>
             {
-                var attr = enhancerId.GetAttribute<EnhancerAttribute>();
+                var attr = enhancerId.GetAttribute<EnhancerAttribute>()!;
                 var targets = Enum.GetValues(attr.TargetEnumType).Cast<Enum>();
                 var targetDescriptors = targets.Select(target =>
                 {
-                    var targetAttr = target.GetAttribute<EnhancerTargetAttribute>();
+                    var targetAttr = target.GetAttribute<EnhancerTargetAttribute>()!;
                     var converter = targetAttr.Converter == null
                         ? null
                         : Activator.CreateInstance(targetAttr.Converter) as IEnhancementConverter;
@@ -66,7 +66,7 @@ public static class ServiceCollectionExtensions
                 }).ToArray();
 
                 return (IEnhancerDescriptor) new EnhancerDescriptor(enhancerId, localizer, targetDescriptors,
-                    attr.PropertyValueScope);
+                    attr.PropertyValueScope, attr.Tags);
             }).ToArray();
             return new EnhancerDescriptors(enhancerDescriptors, localizer);
         });

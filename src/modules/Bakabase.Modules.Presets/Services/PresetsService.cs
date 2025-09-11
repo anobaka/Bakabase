@@ -43,7 +43,7 @@ internal class PresetsService(
         var enhancers = enhancerDescriptors.Descriptors.Select(d =>
             new MediaLibraryTemplatePresetDataPool.Enhancer((EnhancerId)d.Id, d.Name, d.Description,
                 d.Targets.Where(x => x.ReservedPropertyCandidate.HasValue)
-                    .Select(x => x.ReservedPropertyCandidate!.Value).ToArray(), d.Targets.Select(p =>
+                    .Select(x => x.ReservedPropertyCandidate!.Value).Distinct().ToArray(), d.Targets.Select(p =>
                 {
                     if (p.ReservedPropertyCandidate.HasValue)
                     {

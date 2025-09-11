@@ -48,7 +48,10 @@ public static class MediaLibraryTemplateExtensions
         {
             EnhancerId = options.EnhancerId,
             TargetOptions = options.TargetOptions?.Select(t => t.ToDbModel()).ToList(),
-            Expressions = options.Expressions?.Any() == true ? JsonConvert.SerializeObject(options.Expressions) : null
+            Expressions = options.Expressions?.Any() == true ? JsonConvert.SerializeObject(options.Expressions) : null,
+            Requirements = options.Requirements,
+            KeywordProperty = options.KeywordProperty,
+            PretreatKeyword = options.PretreatKeyword
         };
     }
 
@@ -138,7 +141,10 @@ public static class MediaLibraryTemplateExtensions
             TargetOptions = dbModel.TargetOptions?.Select(t => t.ToDomainModel()).ToList(),
             Expressions = dbModel.Expressions.IsNullOrEmpty()
                 ? null
-                : JsonConvert.DeserializeObject<List<string>>(dbModel.Expressions)
+                : JsonConvert.DeserializeObject<List<string>>(dbModel.Expressions),
+            Requirements = dbModel.Requirements,
+            KeywordProperty = dbModel.KeywordProperty,
+            PretreatKeyword = dbModel.PretreatKeyword
         };
     }
 

@@ -1,35 +1,40 @@
 ﻿using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 
-public class DLsiteEnhancer : AbstractEnhancer<DLsiteEnhancerTarget, DLsiteEnhancerContext, object?>
+public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsiteEnhancerContext, object?>
 {
     private readonly DLsiteClient _client;
+    private readonly IStandardValueService _standardValueService;
 
     /// <summary>
     /// BJ/VJ/RJ
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex IdRegex = new System.Text.RegularExpressions.Regex(@"[BVR]J\d{6,10}");
 
-    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client) : base(loggerFactory, fileManager)
+    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client, IStandardValueService standardValueService, ISpecialTextService specialTextService) : base(loggerFactory, fileManager, standardValueService, specialTextService)
     {
         _client = client;
+        _standardValueService = standardValueService;
     }
 
-    protected override async Task<DLsiteEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+    protected override async Task<DLsiteEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
         CancellationToken ct)
     {
-        var match = IdRegex.Match(resource.FileName);
+        var match = IdRegex.Match(keyword);
         if (!match.Success)
         {
             return null;

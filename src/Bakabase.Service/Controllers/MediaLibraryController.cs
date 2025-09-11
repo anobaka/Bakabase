@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Dto;
@@ -14,6 +15,7 @@ using MediaLibrary = Bakabase.Abstractions.Models.Domain.MediaLibrary;
 
 namespace Bakabase.Service.Controllers
 {
+    [Obsolete]
     [Route("~/media-library")]
     public class MediaLibraryController(IMediaLibraryService service) : Controller
     {

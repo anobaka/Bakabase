@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import DiffMatchPatch from "diff-match-patch";
 import "./index.scss";
 import { useTranslation } from "react-i18next";
 import { ArrowRightOutlined, QuestionCircleOutlined } from "@ant-design/icons";
@@ -18,6 +19,8 @@ import {
   TableHeader,
   TableRow,
   Tooltip,
+  Textarea,
+  Divider,
 } from "@/components/bakaui";
 
 import type { SpecialText } from "@/pages/text/models";
@@ -25,16 +28,16 @@ import type { SpecialText } from "@/pages/text/models";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DetailPage from "@/pages/text/Detail";
 
-const tagRenders = {
-  Single: (t) => t.value1,
-  Wrapper: (t) => (
+const tagRenders: Record<string, (t: SpecialText) => React.ReactNode> = {
+  Single: (t: SpecialText) => t.value1,
+  Wrapper: (t: SpecialText) => (
     <>
       {t.value1}
       <span className={"opacity-50"}>...</span>
       {t.value2}
     </>
   ),
-  Value1ToValue2: (t) => (
+  Value1ToValue2: (t: SpecialText) => (
     <span className={"flex items-center gap-1"}>
       {t.value1}
       <ArrowRightOutlined className={"text-small opacity-50"} />
@@ -43,7 +46,7 @@ const tagRenders = {
   ),
 };
 
-const typeTagRendersMapping = {
+const typeTagRendersMapping: Partial<Record<SpecialTextType, (t: SpecialText) => React.ReactNode>> = {
   [SpecialTextType.Useless]: tagRenders.Single,
   [SpecialTextType.Language]: tagRenders.Value1ToValue2,
   [SpecialTextType.Wrapper]: tagRenders.Wrapper,
@@ -68,16 +71,16 @@ const typeDescriptions = {
 };
 
 const usedInMapping: Record<SpecialTextType, string[]> = {
-  [SpecialTextType.Useless]: ["Bakabase enhancer pretreatment"],
+  [SpecialTextType.Useless]: ["Text pretreatment"],
   [SpecialTextType.Language]: ["Bakabase enhancer analysis"],
   [SpecialTextType.Wrapper]: [
-    "Bakabase enhancer pretreatment",
+    "Text pretreatment",
     "Resource display name template",
     "Exhentai enhancer analysis",
   ],
-  [SpecialTextType.Standardization]: ["Bakabase enhancer pretreatment"],
+  [SpecialTextType.Standardization]: ["Text pretreatment"],
   [SpecialTextType.Volume]: ["Bakabase enhancer analysis"],
-  [SpecialTextType.Trim]: ["Bakabase enhancer pretreatment"],
+  [SpecialTextType.Trim]: ["Text pretreatment"],
   [SpecialTextType.DateTime]: [
     "Bakabase enhancer analysis",
     "Parsing or converting property value",
@@ -90,6 +93,47 @@ const TextPage = () => {
   const [textsMap, setTextsMap] = useState<{
     [key in SpecialTextType]?: SpecialText[];
   }>({});
+
+  const [testInput, setTestInput] = useState<string>("");
+  const [testResult, setTestResult] = useState<string>("");
+  const [isRunning, setIsRunning] = useState<boolean>(false);
+
+  const hasDiff = useMemo(() => testInput !== testResult, [testInput, testResult]);
+
+  const renderDiffChunks = (a: string, b: string) => {
+    if (!a && !b) return null;
+
+    const dmp = new DiffMatchPatch();
+    const diffs = dmp.diff_main(a || "", b || "");
+    dmp.diff_cleanupSemantic(diffs);
+
+    const left: React.ReactNode[] = [];
+    const right: React.ReactNode[] = [];
+
+    for (const [op, text] of diffs as Array<[number, string]>) {
+      if (op === 0) {
+        left.push(<span>{text}</span>);
+        right.push(<span>{text}</span>);
+      } else if (op === -1) {
+        left.push(<span className="bg-danger-100 text-danger-600">{text}</span>);
+      } else if (op === 1) {
+        right.push(<span className="bg-success-100 text-success-700">{text}</span>);
+      }
+    }
+
+    return (
+      <div className="grid grid-cols-2 gap-4">
+        <div className="border border-default-200 rounded-md p-2 whitespace-pre-wrap break-words text-sm">
+          <div className="font-medium mb-2">{t<string>("Original")}</div>
+          <div>{left}</div>
+        </div>
+        <div className="border border-default-200 rounded-md p-2 whitespace-pre-wrap break-words text-sm">
+          <div className="font-medium mb-2">{t<string>("Pretreated")}</div>
+          <div>{right}</div>
+        </div>
+      </div>
+    );
+  };
 
   useEffect(() => {
     loadData();
@@ -248,6 +292,46 @@ const TextPage = () => {
         >
           {t<string>("Add prefabs")}
         </Button>
+      </div>
+      <Divider className="my-4" />
+      <div className="mt-2">
+        <div className="font-medium mb-2">{t<string>("Pretreatment test")}</div>
+        <Textarea
+          minRows={3}
+          placeholder={t<string>("Enter text")}
+          value={testInput}
+          onValueChange={(v) => {
+            setTestInput(v);
+            setTestResult("");
+          }}
+        />
+        <div className="mt-2 flex items-center gap-2">
+          <Button
+            color="primary"
+            size="sm"
+            isLoading={isRunning}
+            onClick={async () => {
+              setIsRunning(true);
+              try {
+                const r = await BApi.specialText.pretreatText({ text: testInput });
+                setTestResult(r.data ?? "");
+              } finally {
+                setIsRunning(false);
+              }
+            }}
+          >
+            {t<string>("Run pretreatment")}
+          </Button>
+        </div>
+        <div className="mt-3">
+          {(!testResult || !testInput) ? null : (
+            hasDiff ? (
+              renderDiffChunks(testInput, testResult)
+            ) : (
+              <div className="text-default-500 text-sm">{t<string>("No changes")}</div>
+            )
+          )}
+        </div>
       </div>
     </div>
   );

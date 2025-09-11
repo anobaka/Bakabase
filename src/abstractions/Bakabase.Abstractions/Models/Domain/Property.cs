@@ -8,10 +8,8 @@ public record Property(
     PropertyType Type,
     string? Name = null,
     object? Options = null,
-    int Order = int.MaxValue)
+    int Order = int.MaxValue): PropertyKey(Pool, Id)
 {
-    public PropertyPool Pool { get; set; } = Pool;
-    public int Id { get; set; } = Id;
     public string Name { get; set; } = Name ?? Type.ToString();
     public PropertyType Type { get; set; } = Type;
     public object? Options { get; set; } = Options;

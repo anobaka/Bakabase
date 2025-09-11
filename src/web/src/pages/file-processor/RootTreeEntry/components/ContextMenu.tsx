@@ -25,7 +25,6 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ExtractModal from "@/pages/file-processor/RootTreeEntry/components/ExtractModal";
 import WrapModal from "@/pages/file-processor/RootTreeEntry/components/WrapModal";
 import DeleteConfirmationModal from "@/pages/file-processor/RootTreeEntry/components/DeleteConfirmationModal";
-import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
 import DeleteItemsWithSameNamesModal from "@/pages/file-processor/RootTreeEntry/components/DeleteItemsWithSameNamesModal";
 import GroupModal from "@/pages/file-processor/RootTreeEntry/components/GroupModal";
 import FileNameModifierModal from "@/components/FileNameModifierModal";
@@ -55,22 +54,14 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
     const decompressableEntries = selectedEntries.filter((x) =>
       x.actions.includes(IwFsEntryAction.Decompress),
     );
-    const expandableEntries = selectedEntries.filter(
-      (x) => x.expandable && !x.expanded,
-    );
-    const collapsableEntries = selectedEntries.filter(
-      (x) => x.expandable && x.expanded,
-    );
-    const directoryEntries = selectedEntries.filter(
-      (e) => e.type == IwFsType.Directory,
-    );
+    const expandableEntries = selectedEntries.filter((x) => x.expandable && !x.expanded);
+    const collapsableEntries = selectedEntries.filter((x) => x.expandable && x.expanded);
+    const directoryEntries = selectedEntries.filter((e) => e.type == IwFsType.Directory);
 
     if (expandableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={"text-base"} />,
-        label: t<string>(
-          selectedEntries.length == 1 ? "Expand" : "Expand selected",
-        ),
+        label: t<string>(selectedEntries.length == 1 ? "Expand" : "Expand selected"),
         onClick: () => {
           for (const entry of expandableEntries) {
             entry.expand(false);
@@ -82,9 +73,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
     if (collapsableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={"text-base"} />,
-        label: t<string>(
-          selectedEntries.length == 1 ? "Collapse" : "Collapse selected",
-        ),
+        label: t<string>(selectedEntries.length == 1 ? "Collapse" : "Collapse selected"),
         onClick: () => {
           for (const entry of collapsableEntries) {
             entry.collapse();
@@ -93,10 +82,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
       });
     }
 
-    if (
-      capabilities?.includes("decompress") &&
-      decompressableEntries.length > 0
-    ) {
+    if (capabilities?.includes("decompress") && decompressableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={"text-base"} />,
         label: t<string>("Decompress {{count}} files", {
@@ -183,17 +169,17 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
     }
 
     if (capabilities?.includes("group")) {
-      const targetEntries = selectedEntries;
+      const fileEntries = selectedEntries.filter((x) => !x.isDirectoryOrDrive);
 
-      if (targetEntries.length > 1) {
+      if (fileEntries.length > 1) {
         items.push({
           icon: <GroupOutlined className={"text-base"} />,
-          label: t<string>("Auto group {{count}} selected items", {
-            count: targetEntries.length,
+          label: t<string>("Auto group {{count}} selected files", {
+            count: fileEntries.length,
           }),
           onClick: () => {
             createPortal(GroupModal, {
-              entries: selectedEntries,
+              entries: fileEntries,
               groupInternal: false,
             });
           },
@@ -205,10 +191,9 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
       if (directoryEntries.length > 0) {
         items.push({
           icon: <GroupOutlined className={"text-base"} />,
-          label: t<string>(
-            "Auto group internal items in {{count}} selected directories",
-            { count: directoryEntries.length },
-          ),
+          label: t<string>("Auto group internal items in {{count}} selected directories", {
+            count: directoryEntries.length,
+          }),
           onClick: () => {
             createPortal(GroupModal, {
               entries: selectedEntries,

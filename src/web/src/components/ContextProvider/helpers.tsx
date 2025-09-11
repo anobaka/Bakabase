@@ -33,7 +33,7 @@ export function createPortal<P extends DestroyableProps>(
   };
 
   root.render(
-    <HashRouter>
+    // <HashRouter>
       <BakabaseContextProvider>
         <C
           {...props}
@@ -45,7 +45,7 @@ export function createPortal<P extends DestroyableProps>(
           }}
         />
       </BakabaseContextProvider>
-    </HashRouter>,
+    // </HashRouter>,
   );
 
   return {

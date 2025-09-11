@@ -77,6 +77,9 @@ namespace Bakabase.Abstractions.Components.Configuration
             },
             {
                 MediaType.Text, TextExtensions
+            },
+            {
+                MediaType.Application, [".exe"]
             }
         };
 

@@ -89,14 +89,14 @@ type Props = {
 const Resource = React.forwardRef((props: Props, ref) => {
   const {
     resource,
-    onTagClick = (propertyId: number, value: TagValue) => { },
+    onTagClick = (propertyId: number, value: TagValue) => {},
     queue,
     ct = new AbortController().signal,
     biggerCoverPlacement,
     style: propStyle = {},
     selected = false,
     mode = "default",
-    onSelected = (id: number) => { },
+    onSelected = (id: number) => {},
     selectedResourceIds: propsSelectedResourceIds,
     onSelectedResourcesChanged,
     debug,
@@ -134,7 +134,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     return {
       id: resource.id,
       reload: reload,
-      select: (selected: boolean) => { },
+      select: (selected: boolean) => {},
     };
   }, []);
 
@@ -421,16 +421,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
               {firstTagsValue.map((v) => {
                 return (
                   <Link
+                    key={`${v.group}:${v.name}`}
                     className={"text-xs cursor-pointer"}
                     color={"foreground"}
                     underline={"none"}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
+                    onPress={(e) => {
                       onTagClick?.(firstTagsValuePropertyId!, v);
                     }}
                     size={"sm"}
-                  // variant={'light'}
+                    // variant={'light'}
                   >
                     #{v.group == undefined ? "" : `${v.group}:`}
                     {v.name}

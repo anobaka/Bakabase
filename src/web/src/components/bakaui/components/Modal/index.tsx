@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import _ from "lodash";
 
-import { Button } from "@/components/bakaui";
+import { Button, toast } from "@/components/bakaui";
 
 interface ISimpleFooter {
   actions: ("ok" | "cancel")[];
@@ -154,6 +154,8 @@ const Modal = (props: ModalProps) => {
                 await r;
                 onClose();
               } catch (e) {
+                toast.danger(t<string>("An error occurred:") + (e as Error)?.message);
+                console.error(e);
               } finally {
                 setOkLoading(false);
               }

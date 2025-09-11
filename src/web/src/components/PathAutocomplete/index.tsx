@@ -16,7 +16,8 @@ export interface PathAutocompleteProps
     AutocompleteProps<{ path: string; name: string; isDirectory: boolean }>,
     "items" | "onInputChange" | "onSelectionChange" | "onChange" | "children"
   > {
-  value: string;
+  value?: string;
+  defaultValue?: string;
   onChange?: (value: string, type?: "file" | "folder") => void;
   onSelectionChange?: (value: string, type: "file" | "folder") => void;
   pathType?: PathType;
@@ -40,7 +41,8 @@ const getFileIcon = (item: PathItem) => {
 };
 
 export default function PathAutocomplete({
-  value,
+  value: propsValue,
+  defaultValue,
   onChange,
   onSelectionChange,
   pathType = "folder",
@@ -50,10 +52,11 @@ export default function PathAutocomplete({
 }: PathAutocompleteProps) {
   const [autocompleteItems, setAutocompleteItems] = useState<PathItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [value, setValue] = useState(propsValue ?? defaultValue);
   const valueRef = useRef(value);
 
   const searchPaths = useCallback(
-    (prefix: string) => {
+    (prefix?: string) => {
       setIsLoading(true);
 
       const reqPrefix = (prefix && prefix.length >= 1) ? prefix : undefined;
@@ -93,7 +96,11 @@ export default function PathAutocomplete({
 
   useUpdateEffect(() => {
     valueRef.current = value;
-  }, [value])
+  }, [value]);
+
+  useUpdateEffect(() => {
+    setValue(propsValue);
+  }, [propsValue]);
 
   // Load drives when component mounts
   useUpdateEffect(() => {
@@ -105,6 +112,7 @@ export default function PathAutocomplete({
 
     // console.log(autocompleteItems, item, inputValue);
 
+    setValue(inputValue);
     onChange?.(
       inputValue,
       item ? (item.isDirectory ? "folder" : "file") : undefined,
@@ -118,6 +126,7 @@ export default function PathAutocomplete({
       const item = autocompleteItems.find((it) => it.path === selectedPath)!;
       const type = item.isDirectory ? "folder" : "file";
 
+      setValue(selectedPath);
       onChange?.(selectedPath, type);
       onSelectionChange?.(selectedPath, type);
     }

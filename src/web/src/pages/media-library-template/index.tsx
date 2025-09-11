@@ -223,6 +223,7 @@ const MediaLibraryTemplatePage = () => {
           </div>
         ) : (
           <Accordion
+            className="px-0"
             selectedKeys={expandedTemplateIds}
             variant="splitted"
             onSelectionChange={(keys) => {

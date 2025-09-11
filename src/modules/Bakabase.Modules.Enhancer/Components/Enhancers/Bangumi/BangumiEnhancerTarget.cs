@@ -31,6 +31,6 @@ public enum BangumiEnhancerTarget
     OtherPropertiesInLeftPanel = 5,
 
     [EnhancerTarget(StandardValueType.ListString, PropertyType.Attachment,
-        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder])]
+        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder], reservedPropertyCandidate: ReservedProperty.Cover)]
     Cover = 6,
 }

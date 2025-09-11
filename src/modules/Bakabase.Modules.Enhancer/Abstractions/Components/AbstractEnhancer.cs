@@ -40,6 +40,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options,
             CancellationToken ct)
         {
+            Logger.LogInformation("Building context for resource [{ResourceId}:{ResourcePath}]", resource.Id, resource.Path);
             var context = await BuildContext(resource, options, ct);
             if (context == null)
             {

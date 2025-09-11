@@ -1,6 +1,6 @@
-import type { EnhancerId } from "@/sdk/constants";
 import type { PropertyPool } from "@/sdk/constants";
 import type { EnhancerTargetDescriptor } from "@/components/EnhancerSelectorV2/models";
+import type { EnhancerId, PropertyValueScope } from "@/sdk/constants";
 
 export interface CategoryEnhancerFullOptions {
   categoryId: number;
@@ -11,6 +11,13 @@ export interface CategoryEnhancerFullOptions {
 
 export interface EnhancerFullOptions {
   targetOptions?: EnhancerTargetFullOptions[];
+  requirements?: EnhancerId[];
+  expressions?: string[];
+  keywordProperty?: {
+    pool: PropertyPool;
+    id: number;
+    scope: PropertyValueScope;
+  };
 }
 
 export interface EnhancerTargetFullOptions {

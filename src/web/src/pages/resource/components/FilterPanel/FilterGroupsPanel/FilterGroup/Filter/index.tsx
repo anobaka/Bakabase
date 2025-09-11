@@ -10,8 +10,8 @@ import { useUpdateEffect } from "react-use";
 import { AiOutlineClose } from "react-icons/ai";
 import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
 
-import PropertySelectorPage from "@/components/PropertySelector";
-import { operations, PropertyPool, SearchOperation } from "@/sdk/constants";
+import PropertySelector from "@/components/PropertySelector";
+import { PropertyPool, SearchOperation } from "@/sdk/constants";
 import {
   Button,
   Dropdown,
@@ -44,7 +44,7 @@ const Filter = ({
   isReadonly,
   isNew,
   disableTooltipOperations,
-  removeBackground
+  removeBackground,
 }: IProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -54,7 +54,7 @@ const Filter = ({
     if (isNew) {
       changeProperty();
     }
-  }, [])
+  }, []);
 
   useUpdateEffect(() => {
     setFilter(propsFilter);
@@ -76,27 +76,25 @@ const Filter = ({
   log(propsFilter, filter);
 
   const changeProperty = () => {
-    createPortal(PropertySelectorPage, {
+    createPortal(PropertySelector, {
       v2: true,
       selection:
         filter.propertyId == undefined
           ? undefined
           : [
-            {
-              id: filter.propertyId,
-              pool: filter.propertyPool!,
-            },
-          ],
+              {
+                id: filter.propertyId,
+                pool: filter.propertyPool!,
+              },
+            ],
       onSubmit: async (selectedProperties) => {
         const property = selectedProperties[0]!;
         const availableOperations =
           (
-            await BApi.resource.getSearchOperationsForProperty(
-              {
-                propertyPool: property.pool,
-                propertyId: property.id,
-              },
-            )
+            await BApi.resource.getSearchOperationsForProperty({
+              propertyPool: property.pool,
+              propertyId: property.id,
+            })
           ).data || [];
         const nf: ResourceSearchFilter = {
           ...filter,
@@ -119,24 +117,19 @@ const Filter = ({
   };
 
   const renderOperations = () => {
-
     if (isReadonly) {
       return (
         <Chip color="secondary" size="sm" variant="light">
           {filter.operation == undefined
             ? t<string>("Condition")
-            : t<string>(
-              `SearchOperation.${SearchOperation[filter.operation]}`,
-            )}
+            : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
         </Chip>
-      )
+      );
     }
 
     if (filter.propertyId == undefined) {
       return (
-        <Tooltip
-          content={t<string>("Please select a property first")}
-        >
+        <Tooltip content={t<string>("Please select a property first")}>
           <Button
             className={"min-w-fit pl-2 pr-2 cursor-not-allowed"}
             color={"secondary"}
@@ -145,9 +138,7 @@ const Filter = ({
           >
             {filter.operation == undefined
               ? t<string>("Condition")
-              : t<string>(
-                `SearchOperation.${SearchOperation[filter.operation]}`,
-              )}
+              : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
           </Button>
         </Tooltip>
       );
@@ -158,9 +149,7 @@ const Filter = ({
     log(operations);
     if (operations.length == 0) {
       return (
-        <Tooltip
-          content={t<string>("Can not operate on this property")}
-        >
+        <Tooltip content={t<string>("Can not operate on this property")}>
           <Button
             className={"min-w-fit pl-2 pr-2 cursor-not-allowed"}
             color={"secondary"}
@@ -169,9 +158,7 @@ const Filter = ({
           >
             {filter.operation == undefined
               ? t<string>("Condition")
-              : t<string>(
-                `SearchOperation.${SearchOperation[filter.operation]}`,
-              )}
+              : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
           </Button>
         </Tooltip>
       );
@@ -187,9 +174,7 @@ const Filter = ({
             >
               {filter.operation == undefined
                 ? t<string>("Condition")
-                : t<string>(
-                  `SearchOperation.${SearchOperation[filter.operation]}`,
-                )}
+                : t<string>(`SearchOperation.${SearchOperation[filter.operation]}`)}
             </Button>
           </DropdownTrigger>
           <DropdownMenu>
@@ -200,9 +185,7 @@ const Filter = ({
               return (
                 <DropdownItem
                   key={operation}
-                  description={
-                    description == descriptionKey ? undefined : description
-                  }
+                  description={description == descriptionKey ? undefined : description}
                   onClick={() => {
                     refreshValue({
                       ...filter,
@@ -260,19 +243,19 @@ const Filter = ({
         dbValue={filter.dbValue}
         defaultEditing={filter.dbValue == undefined}
         property={filter.valueProperty}
-        variant={"light"}
         size="sm"
+        variant={"light"}
         onValueChange={
           isReadonly
             ? undefined
             : (dbValue, bizValue) => {
-              // console.log("123", dbValue, bizValue);
-              changeFilter({
-                ...filter,
-                dbValue: dbValue,
-                bizValue: bizValue,
-              });
-            }
+                // console.log("123", dbValue, bizValue);
+                changeFilter({
+                  ...filter,
+                  dbValue: dbValue,
+                  bizValue: bizValue,
+                });
+              }
         }
       />
     );
@@ -282,7 +265,9 @@ const Filter = ({
     return (
       <div
         className={`flex rounded p-1 items-center ${filter.disabled ? "" : "group/filter-operations"} relative rounded`}
-        style={removeBackground ? undefined : { backgroundColor: "var(--bakaui-overlap-background)" }}
+        style={
+          removeBackground ? undefined : { backgroundColor: "var(--bakaui-overlap-background)" }
+        }
       >
         {filter.disabled && (
           <div
@@ -293,9 +278,7 @@ const Filter = ({
             <MdOutlineFilterAltOff className={"text-lg text-warning"} />
           </div>
         )}
-        <div
-          className={`flex items-center ${filter.disabled ? "opacity-60" : ""}`}
-        >
+        <div className={`flex items-center ${filter.disabled ? "opacity-60" : ""}`}>
           <div className={""}>
             {isReadonly ? (
               <Chip color="success" size="sm" variant="light">
@@ -310,25 +293,20 @@ const Filter = ({
                 // isDisabled={isReadonly}
                 size={"sm"}
                 variant={"light"}
-                onPress={
-                  isReadonly
-                    ? undefined
-                    : changeProperty
-                }
+                onPress={isReadonly ? undefined : changeProperty}
               >
                 {filter.property
                   ? (filter.property.name ?? t<string>("Unknown property"))
                   : t<string>("Property")}
               </Button>
             )}
-
           </div>
           <div className={""}>{renderOperations()}</div>
           <div className={"pr-2"}>{renderValue()}</div>
         </div>
-      </div >
-    )
-  }
+      </div>
+    );
+  };
 
   if (disableTooltipOperations) {
     return renderInner();

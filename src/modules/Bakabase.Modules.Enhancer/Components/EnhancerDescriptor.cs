@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Exceptions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 
 namespace Bakabase.Modules.Enhancer.Components;
@@ -9,13 +10,15 @@ public class EnhancerDescriptor(
     EnhancerId enhancerId,
     IEnhancerLocalizer localizer,
     IEnumerable<IEnhancerTargetDescriptor> targets,
-    int propertyValueScope) : IEnhancerDescriptor
+    int propertyValueScope,
+    EnhancerTag[] tags) : IEnhancerDescriptor
 {
     public int Id { get; } = (int) enhancerId;
     public string Name => localizer.Enhancer_Name(enhancerId);
     public string? Description => localizer.Enhancer_Description(enhancerId);
     public IEnhancerTargetDescriptor[] Targets { get; } = targets.ToArray();
     public int PropertyValueScope { get; } = propertyValueScope;
+    public EnhancerTag[] Tags { get; } = tags;
 
     public IEnhancerTargetDescriptor this[int target]
     {

@@ -14,14 +14,14 @@ import {
   useRef,
   useState,
   useMemo,
+  Fragment,
 } from "react";
-import { useHref, useNavigate } from "react-router-dom";
+import { useHref, useLocation, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 
-import { createPortal } from "@/components/ContextProvider/helpers";
 import { UIHubConnection } from "@/components/SignalR/UIHubConnection";
-import { getUiTheme } from "@/components/utils";
+import { getUiTheme, uuidv4 } from "@/components/utils";
 import { useAppOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
 import i18n from "@/i18n";
@@ -41,7 +41,7 @@ interface IContext {
 }
 
 const BakabaseContext = createContext<IContext>({
-  createPortal,
+  createPortal: (C, props) => ({ key: "", destroy: () => { } }),
   isDarkMode: false,
   isDebugging: false,
 });
@@ -114,10 +114,28 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     [currentTheme],
   );
 
+  const [portals, setPortals] = useState<{ key: string; component: React.ReactNode }[]>([]);
+
+  const mount = (C: ComponentType<any>, props: any) => {
+
+    console.log("[createPortal] mount", C, props);
+
+    const key = uuidv4();
+    setPortals((prev) => [...prev, { key, component: <C {...props} /> }]);
+
+    const destroy = () => {
+      console.log("[createPortal] destroy", key);
+      setPortals((prev) => prev.filter((p) => p.key !== key));
+    };
+
+    return { key, destroy };
+  };
+
   const appOptionsStore = useAppOptionsStore();
   const isDebugging = false;
   const firstTimeGotAppOptionsRef = useRef(false);
 
+  const location = useLocation();
   const navigate = useNavigate();
   const href = useHref;
 
@@ -166,11 +184,15 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [appOptions]);
 
+  useEffect(() => {
+    setPortals([]); // 清空 portals 数组
+  }, [location.pathname]);
+
   console.log(
     "current theme",
     UiTheme[currentTheme.current],
-    // "is dark mode",
-    // isDarkMode,
+    "portals",
+    portals,
   );
 
   return (
@@ -188,10 +210,13 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
           <BakabaseContext.Provider
             value={{
               isDarkMode,
-              createPortal,
+              createPortal: mount,
               isDebugging,
             }}
           >
+            {portals.map(({ key, component }) => (
+              <Fragment key={key}>{component}</Fragment>
+            ))}
             <div
               className={`${isDarkMode ? "dark" : "light"} h-[100vh] w-[100vw] text-foreground bg-background`}
             >

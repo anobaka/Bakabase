@@ -3,16 +3,18 @@
 import type { ReactNode } from "react";
 
 import { AiOutlineCheck, AiOutlineClose, AiOutlineEdit } from "react-icons/ai";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 
 import { Button } from "@/components/bakaui";
 import { isPromise } from "@/components/utils";
+import { useUpdateEffect } from "react-use";
 
 // export type SimpleEditableValueProps<TValue> = {
 //   onSubmit?: (value?: TValue) => any | Promise<any>;
 // };
 
 type ComponentCommonProps<TValue> = {
+  defaultValue?: TValue;
   value?: TValue;
   label?: ReactNode;
   description?: ReactNode;
@@ -57,10 +59,15 @@ function EditableValue<
   ...commonProps
 }: Props<TValue, TEditorProps, TViewerProps>) {
   const [editing, setEditing] = useState(false);
-  const [editingValue, setEditingValue] = useState<TValue>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const initValueRef = useRef(commonProps.value ?? commonProps.defaultValue);
+  const [value, setValue] = useState(initValueRef.current);
 
-  console.log(Viewer, viewerProps, commonProps);
+  console.log(viewerProps, commonProps, value);
+
+  useUpdateEffect(() => {
+    setValue(commonProps.value);
+  }, [commonProps.value]);
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -69,8 +76,8 @@ function EditableValue<
           <Editor
             {...(editorProps as unknown as TEditorProps)}
             {...commonProps}
-            value={editingValue}
-            onValueChange={(v) => setEditingValue(v)}
+            value={value}
+            onValueChange={(v) => setValue(v)}
           />
           <Button
             isIconOnly
@@ -79,7 +86,7 @@ function EditableValue<
             size={"sm"}
             variant={"light"}
             onPress={() => {
-              const func = onSubmit?.(editingValue);
+              const func = onSubmit?.(value);
 
               if (isPromise(func)) {
                 setIsSubmitting(true);
@@ -98,6 +105,8 @@ function EditableValue<
             size={"sm"}
             variant={"light"}
             onPress={() => {
+              // reset value
+              setValue(initValueRef.current);
               setEditing(false);
             }}
           >
@@ -109,10 +118,11 @@ function EditableValue<
           <Viewer
             {...(viewerProps as unknown as TViewerProps)}
             {...commonProps}
+            value={value}
             isReadOnly
             onClick={() => {
               if (trigger == "viewer") {
-                setEditingValue(commonProps.value);
+                // setValue(commonProps.value);
                 setEditing(true);
               }
             }}
@@ -123,7 +133,7 @@ function EditableValue<
               size={"sm"}
               variant={"light"}
               onPress={() => {
-                setEditingValue(commonProps.value);
+                // setValue(commonProps.value);
                 setEditing(true);
               }}
             >

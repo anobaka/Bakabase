@@ -1,5 +1,6 @@
 import type {
   EnhancerId,
+  EnhancerTag,
   EnhancerTargetOptionsItem,
   PropertyType,
   StandardValueType,
@@ -10,6 +11,7 @@ export type EnhancerDescriptor = {
   name: string;
   description?: string;
   targets: EnhancerTargetDescriptor[];
+  tags: EnhancerTag[];
 };
 
 export type EnhancerTargetDescriptor = {

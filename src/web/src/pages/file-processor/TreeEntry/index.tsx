@@ -1,4 +1,6 @@
 "use client";
+import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
+import type { Capability } from "../RootTreeEntry/models";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -22,7 +24,6 @@ import { BTaskStatus, IconType, IwFsType } from "@/sdk/constants";
 
 import "@szhsin/react-menu/dist/index.css";
 import "@szhsin/react-menu/dist/transitions/slide.css";
-import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
 
 import {
   Entry,
@@ -42,7 +43,6 @@ import LeftIcon from "./components/LeftIcon";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { BTaskStopButton } from "@/components/BTask";
-import { Capability } from "../RootTreeEntry/models";
 
 export type TreeEntryProps = {
   entry: Entry;
@@ -146,7 +146,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         virtualListRef.current?.scrollToRow(row);
       },
       setLoading,
-      playFirstFile
+      playFirstFile,
     };
 
     log(
@@ -213,7 +213,7 @@ const TreeEntry = (props: TreeEntryProps) => {
         en.properties.includes(EntryProperty.ChildrenCount)
       ) {
         elements.push(
-          <Chip color={"secondary"} size={"sm"} variant={"light"} key="children-count">
+          <Chip key="children-count" color={"secondary"} size={"sm"} variant={"light"}>
             <FileOutlined className={"text-sm"} />
             {en.childrenCount}
           </Chip>,
@@ -221,7 +221,7 @@ const TreeEntry = (props: TreeEntryProps) => {
       }
       if (en.size != undefined && en.size > 0 && en.properties.includes(EntryProperty.Size)) {
         elements.push(
-          <Chip color={"secondary"} size={"sm"} variant={"light"} key="size">
+          <Chip key="size" color={"secondary"} size={"sm"} variant={"light"}>
             {humanFileSize(en.size, false)}
           </Chip>,
         );
@@ -473,8 +473,13 @@ const TreeEntry = (props: TreeEntryProps) => {
   }, []);
 
   const playFirstFile = useCallback(async () => {
-    if (!(((entryRef.current.childrenCount && entryRef.current.childrenCount > 0) || !entryRef.current.isDirectoryOrDrive) &&
-    capabilities?.includes("play-first-file"))) {
+    if (
+      !(
+        ((entryRef.current.childrenCount && entryRef.current.childrenCount > 0) ||
+          !entryRef.current.isDirectoryOrDrive) &&
+        capabilities?.includes("play-first-file")
+      )
+    ) {
       return;
     }
 

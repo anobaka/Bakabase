@@ -243,7 +243,8 @@
     <value>通过文件(夹)名提取信息。在您启用本增强器之前，您必须先在配置页面配置正则表达式。</value>
   </data>
   <data name="Enhancer_Regex_Target_CaptureGroups_Description" xml:space="preserve">
-    <value>您必须先在配置页面配置正确的捕获组，然后在这里填入组名，否则增强将不会生效</value>
+    <value>您必须先在配置页面配置正确的捕获组，然后在这里填入组名，否则增强将不会生效。
+捕获组默认使用多选类型存储，您可以将其保存至其他属性，转换规则可以参考自定义属性值的转换规则。</value>
   </data>
   <data name="Enhancer_Kodi_Name" xml:space="preserve">
     <value>Kodi</value>

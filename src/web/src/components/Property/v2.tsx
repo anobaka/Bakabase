@@ -128,7 +128,7 @@ const V2 = ({
   }
 
   const card = (
-    <Card isPressable onPress={onClick}>
+    <Card isPressable={!disabled} onPress={onClick} className={disabled ? "cursor-not-allowed opacity-60" : ""}>
       <CardBody className={"flex flex-col gap-1"}>
         {(!hidePool || !hideType) && (
           <div className="flex items-center gap-1">

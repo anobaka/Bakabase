@@ -1,10 +1,14 @@
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components.Enhancers;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Airav;
 using Bakabase.Modules.ThirdParty.ThirdParties.AiravCC;
 using Bakabase.Modules.ThirdParty.ThirdParties.Avsex;
@@ -95,17 +99,16 @@ public class AvEnhancer(
     PrestigeClient prestigeClient,
     ThePornDBClient thePornDbClient,
     ThePornDBMoviesClient thePornDbMoviesClient,
-    XcityClient xcityClient)
-    : AbstractEnhancer<AvEnhancerTarget, AvEnhancerContext, object?>(loggerFactory, fileManager)
+    XcityClient xcityClient, IStandardValueService standardValueService, ISpecialTextService specialTextService)
+    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService)
 {
     protected override EnhancerId TypedId => EnhancerId.Av;
 
-    protected override async Task<AvEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+    protected override async Task<AvEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
         CancellationToken ct)
     {
         try
         {
-            var keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
             var context = new AvEnhancerContext();
 
             // Define all clients that implement SearchAndParseVideo returning IAvDetail

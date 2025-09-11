@@ -447,4 +447,7 @@ The version of lux is not limited.</value>
   <data name="Search" xml:space="preserve">
     <value>Search</value>
   </data>
+  <data name="Enhancer_CircularDependencyDetected" xml:space="preserve">
+    <value>Circular dependency detected in enhancers: {0}</value>
+  </data>
 </root>

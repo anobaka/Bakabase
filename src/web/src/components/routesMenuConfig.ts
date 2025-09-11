@@ -157,7 +157,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Text",
+        name: "Special text",
         path: "/text",
         component: TextPage,
         icon: AiOutlineFieldString,

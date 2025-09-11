@@ -220,5 +220,10 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(Search)];
         }
+
+        public string Enhancer_CircularDependencyDetected(string[] enhancers)
+        {
+            return this[nameof(Enhancer_CircularDependencyDetected), string.Join("->", enhancers)];
+        }
     }
 }

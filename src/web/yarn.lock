@@ -6529,6 +6529,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/deep-diff@npm:^1.0.5":
+  version: 1.0.5
+  resolution: "@types/deep-diff@npm:1.0.5"
+  checksum: 10c0/8b6513fd91fe907699972fa3ee4f74dd1e608bfcf1110625b623ce33e879280c3c961f479bb142b7ca8d9729b149d4a67b5d6367904c7eb15fe9c3418e3a212d
+  languageName: node
+  linkType: hard
+
+"@types/diff-match-patch@npm:^1.0.36":
+  version: 1.0.36
+  resolution: "@types/diff-match-patch@npm:1.0.36"
+  checksum: 10c0/0bad011ab138baa8bde94e7815064bb881f010452463272644ddbbb0590659cb93f7aa2776ff442c6721d70f202839e1053f8aa62d801cc4166f7a3ea9130055
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:1.0.8, @types/estree@npm:^1.0.6":
   version: 1.0.8
   resolution: "@types/estree@npm:1.0.8"
@@ -15855,6 +15869,8 @@ __metadata:
     "@tailwindcss/postcss": "npm:4.1.11"
     "@tailwindcss/vite": "npm:4.1.11"
     "@tanstack/react-query": "npm:^5.28.9"
+    "@types/deep-diff": "npm:^1.0.5"
+    "@types/diff-match-patch": "npm:^1.0.36"
     "@types/lodash": "npm:^4.17.20"
     "@types/node": "npm:20.5.7"
     "@types/react": "npm:18.3.3"

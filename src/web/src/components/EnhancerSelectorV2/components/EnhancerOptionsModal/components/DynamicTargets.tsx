@@ -1,10 +1,7 @@
 "use client";
 
 import type { EnhancerTargetFullOptions } from "../models";
-import type {
-  EnhancerDescriptor,
-  EnhancerTargetDescriptor,
-} from "../../../models";
+import type { EnhancerDescriptor, EnhancerTargetDescriptor } from "../../../models";
 import type { PropertyMap } from "@/components/types";
 
 import { ApartmentOutlined, PlusCircleOutlined } from "@ant-design/icons";
@@ -36,11 +33,13 @@ type Props = {
   onPropertyChanged?: () => any;
   optionsList?: EnhancerTargetFullOptions[];
   onChange?: (options: EnhancerTargetFullOptions[]) => any;
+  candidateTargetsMap?: Record<number, string[] | undefined>;
 };
 
 type Group = {
   descriptor: EnhancerTargetDescriptor;
   subOptions: EnhancerTargetFullOptions[];
+  candidateTargets?: string[];
 };
 
 const log = buildLogger("DynamicTargets");
@@ -48,10 +47,10 @@ const log = buildLogger("DynamicTargets");
 const buildGroups = (
   descriptors: EnhancerTargetDescriptor[],
   optionsList?: EnhancerTargetFullOptions[],
+  candidateTargetsMap?: Record<number, string[] | undefined>,
 ) => {
   return descriptors.map((descriptor) => {
-    const subOptions =
-      optionsList?.filter((x) => x.target == descriptor.id) || [];
+    const subOptions = optionsList?.filter((x) => x.target == descriptor.id) || [];
     let defaultOptions = subOptions.find((x) => x.dynamicTarget == undefined);
 
     if (defaultOptions == undefined) {
@@ -66,6 +65,7 @@ const buildGroups = (
     return {
       descriptor: descriptor,
       subOptions: subOptions,
+      candidateTargets: candidateTargetsMap?.[descriptor.id],
     };
   });
 };
@@ -73,14 +73,14 @@ const DynamicTargets = (props: Props) => {
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
 
-  const { propertyMap, optionsList, enhancer, onPropertyChanged, onChange } =
+  const { propertyMap, optionsList, enhancer, onPropertyChanged, onChange, candidateTargetsMap } =
     props;
   const dynamicTargetDescriptors = enhancer.targets.filter((x) => x.isDynamic);
   const [groups, setGroups] = useState<Group[]>([]);
 
   useEffect(() => {
-    setGroups(buildGroups(dynamicTargetDescriptors, optionsList));
-  }, []);
+    setGroups(buildGroups(dynamicTargetDescriptors, optionsList, candidateTargetsMap));
+  }, [candidateTargetsMap]);
 
   const updateGroups = (groups: Group[]) => {
     setGroups([...groups]);
@@ -90,12 +90,13 @@ const DynamicTargets = (props: Props) => {
     onChange?.(ol);
   };
 
-  // log('rendering', optionsList, groups);
+  log("rendering", optionsList, groups);
 
   return groups.length > 0 ? (
     <div className={"flex flex-col gap-y-2"}>
       {groups.map((g) => {
-        const { descriptor, subOptions } = g;
+        const { descriptor, subOptions, candidateTargets } = g;
+        const notEmptyTargets = subOptions.filter((x) => x.dynamicTarget != undefined);
 
         return (
           <div>
@@ -103,52 +104,53 @@ const DynamicTargets = (props: Props) => {
             {/* see https://github.com/nextui-org/nextui/issues/729 */}
             <Table removeWrapper aria-label={"Dynamic target"}>
               <TableHeader>
-                <TableColumn width={"41.666667%"}>
+                <TableColumn align={"center"} width={80}>
+                  {t<string>("Configured")}
+                </TableColumn>
+                <TableColumn width={"33.3333%"}>
                   {descriptor.name}
                   &nbsp;
-                  <Popover
-                    trigger={<ApartmentOutlined className={"text-base"} />}
-                  >
+                  <Popover trigger={<ApartmentOutlined className={"text-base"} />}>
                     {t<string>(
                       "This is not a fixed enhancement target, which will be replaced with other content when data is collected",
                     )}
                   </Popover>
                 </TableColumn>
-                <TableColumn
-                  className={"flex items-center gap-1"}
-                  width={"25%"}
-                >
-                  {t<string>("Bind property")}
-                  {subOptions.length > 0 && (
-                    <PropertiesMatcher
-                      properties={enhancer.targets.map((td) => ({
-                        type: td.propertyType,
-                        name: td.name,
-                      }))}
-                      onValueChanged={(ps) => {
-                        for (let i = 0; i < ps.length; i++) {
-                          const p = ps[i];
+                <TableColumn width={"25%"}>
+                  <div className={"flex items-center gap-1"}>
+                    {t<string>("Bind property")}
+                    {notEmptyTargets.length > 0 && (
+                      <PropertiesMatcher
+                        properties={notEmptyTargets.map((td) => ({
+                          type: descriptor.propertyType,
+                          name: td.dynamicTarget!,
+                        }))}
+                        onValueChanged={(ps) => {
+                          for (let i = 0; i < ps.length; i++) {
+                            const p = ps[i];
 
-                          if (p) {
-                            subOptions[i] = {
-                              ...subOptions[i],
-                              propertyId: p.id,
-                              propertyPool: p.pool,
-                              target: enhancer.targets[i]!.id,
-                            };
+                            if (p) {
+                              subOptions[i] = {
+                                ...subOptions[i],
+                                propertyId: p.id,
+                                propertyPool: p.pool,
+                                target: descriptor.id,
+                              };
 
-                            if (propertyMap) {
-                              const pMap = (propertyMap[p.pool] ??= {});
-                              if (!(p.id in pMap)) {
-                                pMap[p.id] = p;
+                              if (propertyMap) {
+                                const pMap = (propertyMap[p.pool] ??= {});
+
+                                if (!(p.id in pMap)) {
+                                  pMap[p.id] = p;
+                                }
                               }
                             }
                           }
-                        }
-                        updateGroups(groups);
-                      }}
-                    />
-                  )}
+                          updateGroups(groups);
+                        }}
+                      />
+                    )}
+                  </div>
                 </TableColumn>
                 <TableColumn width={"25%"}>
                   <div className={"flex items-center gap-1"}>
@@ -169,6 +171,7 @@ const DynamicTargets = (props: Props) => {
                       key={i}
                       descriptor={descriptor}
                       dynamicTarget={data.dynamicTarget}
+                      dynamicTargetCandidates={candidateTargets}
                       options={data}
                       propertyMap={propertyMap}
                       onChange={(newOptions) => {
@@ -194,10 +197,7 @@ const DynamicTargets = (props: Props) => {
                 const currentTargets = subOptions
                   .filter((x) => x.dynamicTarget != undefined)
                   .map((x) => x.dynamicTarget!);
-                const nextTarget = generateNextWithPrefix(
-                  t<string>("Target"),
-                  currentTargets,
-                );
+                const nextTarget = generateNextWithPrefix(t<string>("Target"), currentTargets);
                 const newOptions = createEnhancerTargetOptions(descriptor);
 
                 newOptions.dynamicTarget = nextTarget;

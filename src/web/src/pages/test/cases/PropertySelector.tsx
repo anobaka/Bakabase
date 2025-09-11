@@ -5,12 +5,14 @@ import type { ResourceSearchFilter } from "@/pages/resource/components/FilterPan
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import PropertySelectorPage from "@/components/PropertySelector";
+import PropertySelector from "@/components/PropertySelector";
 import { Button } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
-const PropertySelectorPage = () => {
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
+const PropertySelectorTest = () => {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<ResourceSearchFilter>({});
+  const { createPortal } = useBakabaseContext();
 
   return (
     <Button
@@ -18,7 +20,7 @@ const PropertySelectorPage = () => {
       size={"small"}
       type={"primary"}
       onClick={() => {
-        PropertySelectorPage.show({
+        createPortal(PropertySelector, {
           selection: {
             [filter.propertyPool == PropertyPool.Custom
               ? "reservedPropertyIds"
@@ -47,6 +49,6 @@ const PropertySelectorPage = () => {
   );
 };
 
-PropertySelectorPage.displayName = "PropertySelectorPage";
+PropertySelectorTest.displayName = "PropertySelectorTest";
 
-export default PropertySelectorPage;
+export default PropertySelectorTest;

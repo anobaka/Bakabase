@@ -3,22 +3,29 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
 
-public class BangumiEnhancer(ILoggerFactory loggerFactory, BangumiClient client, IFileManager fileManager)
-    : AbstractEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(loggerFactory, fileManager)
+public class BangumiEnhancer(
+    ILoggerFactory loggerFactory,
+    BangumiClient client,
+    IFileManager fileManager,
+    IStandardValueService standardValueService,
+    ISpecialTextService specialTextService)
+    : AbstractKeywordEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(loggerFactory, fileManager,
+        standardValueService, specialTextService)
 {
-    protected override async Task<BangumiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+    protected override async Task<BangumiEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
+        EnhancerFullOptions options, CancellationToken ct)
     {
-        var keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
         var detail = await client.SearchAndParseFirst(keyword);
 
         if (detail != null)

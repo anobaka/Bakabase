@@ -1,10 +1,12 @@
 import type { IdName } from "@/components/types";
-import type {
-  PathPropertyExtractorBasePathType,
-  PropertyPool,
-} from "@/sdk/constants";
 import type { IProperty } from "@/components/Property/models";
 import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
+import type {
+  EnhancerId,
+  PathPropertyExtractorBasePathType,
+  PropertyPool,
+  PropertyValueScope,
+} from "@/sdk/constants";
 
 export enum PathPositioner {
   Layer = 1,
@@ -67,4 +69,11 @@ export type MediaLibraryTemplateEnhancerOptions = {
   enhancerId: number;
   targetOptions?: EnhancerTargetFullOptions[];
   expressions?: string[];
+  requirements?: EnhancerId[];
+  keywordProperty?: {
+    pool: PropertyPool;
+    id: number;
+    scope: PropertyValueScope;
+  };
+  pretreatKeyword?: boolean;
 };

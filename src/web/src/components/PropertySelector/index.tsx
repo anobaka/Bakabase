@@ -10,7 +10,7 @@ import PropertyModal from "../PropertyModal";
 
 import Property from "@/components/Property";
 import PropertyV2 from "@/components/Property/v2";
-import { buildLogger, createPortalOfComponent } from "@/components/utils";
+import { buildLogger } from "@/components/utils";
 import { PropertyPool, PropertyType, StandardValueType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { Button, Chip, Divider, Modal, Spacer } from "@/components/bakaui";
@@ -78,26 +78,28 @@ const PropertySelector = (props: IProps) => {
   }, []);
 
   const renderProperty = (property: IProperty) => {
-    const selected = selection.some(
-      (s) => s.id == property.id && s.pool == property.pool,
-    );
+    const selected = selection.some((s) => s.id == property.id && s.pool == property.pool);
+
+    const disabled = isDisabled?.(property);
 
     if (v2) {
       return (
         <PropertyV2
           key={`${property.id}-${property.pool}`}
-          disabled={isDisabled?.(property)}
+          disabled={disabled}
           editable={editable}
-          property={property}
           isSelected={selected}
+          property={property}
           removable={removable}
           onClick={async () => {
+            if (disabled) {
+              return;
+            }
+
             if (multiple) {
               if (selected) {
                 setSelection(
-                  selection.filter(
-                    (s) => s.id != property.id || s.pool != property.pool,
-                  ),
+                  selection.filter((s) => s.id != property.id || s.pool != property.pool),
                 );
               } else {
                 setSelection([
@@ -139,11 +141,7 @@ const PropertySelector = (props: IProps) => {
         onClick={async () => {
           if (multiple) {
             if (selected) {
-              setSelection(
-                selection.filter(
-                  (s) => s.id != property.id || s.pool != property.pool,
-                ),
-              );
+              setSelection(selection.filter((s) => s.id != property.id || s.pool != property.pool));
             } else {
               setSelection([
                 ...selection,
@@ -266,19 +264,14 @@ const PropertySelector = (props: IProps) => {
 
   // Sort properties with latest used properties having higher priority
   const sortedFilteredProperties = filteredProperties.sort((a, b) => {
-    const latestUsedProperties =
-      uiOptionsStore.data?.latestUsedProperties ?? [];
-    let aIndex = latestUsedProperties.findIndex(
-      (l) => l.id === a.id && l.pool === a.pool,
-    );
+    const latestUsedProperties = uiOptionsStore.data?.latestUsedProperties ?? [];
+    let aIndex = latestUsedProperties.findIndex((l) => l.id === a.id && l.pool === a.pool);
 
     if (aIndex == -1) {
       aIndex = Number.MAX_SAFE_INTEGER;
     }
 
-    let bIndex = latestUsedProperties.findIndex(
-      (l) => l.id === b.id && l.pool === b.pool,
-    );
+    let bIndex = latestUsedProperties.findIndex((l) => l.id === b.id && l.pool === b.pool);
 
     if (bIndex == -1) {
       bIndex = Number.MAX_SAFE_INTEGER;
@@ -294,9 +287,7 @@ const PropertySelector = (props: IProps) => {
   );
 
   const selectedProperties = selection
-    .map((s) =>
-      sortedFilteredProperties.find((p) => p.id == s.id && p.pool == s.pool),
-    )
+    .map((s) => sortedFilteredProperties.find((p) => p.id == s.id && p.pool == s.pool))
     .filter((x) => x)
     .map((x) => x!);
   const unselectedProperties = sortedFilteredProperties.filter(
@@ -316,9 +307,7 @@ const PropertySelector = (props: IProps) => {
               onPress={() => {
                 createPortal(PropertyModal, {
                   onSaved: loadProperties,
-                  validValueTypes: valueTypes?.map(
-                    (v) => v as unknown as PropertyType,
-                  ),
+                  validValueTypes: valueTypes?.map((v) => v as unknown as PropertyType),
                 });
               }}
             >
@@ -358,9 +347,7 @@ const PropertySelector = (props: IProps) => {
     <Modal
       footer={multiple && propertyCount > 0 ? true : <Spacer />}
       size={"2xl"}
-      title={
-        title ?? t<string>(multiple ? "Select properties" : "Select a property")
-      }
+      title={title ?? t<string>(multiple ? "Select properties" : "Select a property")}
       visible={visible}
       onClose={() => {
         setVisible(false);
@@ -383,9 +370,7 @@ const PropertySelector = (props: IProps) => {
               onPress={() => {
                 createPortal(PropertyModal, {
                   onSaved: loadProperties,
-                  validValueTypes: valueTypes?.map(
-                    (v) => v as unknown as PropertyType,
-                  ),
+                  validValueTypes: valueTypes?.map((v) => v as unknown as PropertyType),
                 });
               }}
             >
@@ -397,8 +382,5 @@ const PropertySelector = (props: IProps) => {
     </Modal>
   );
 };
-
-PropertySelector.show = (props: IProps) =>
-  createPortalOfComponent(PropertySelector, props);
 
 export default PropertySelector;

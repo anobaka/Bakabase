@@ -447,4 +447,7 @@
   <data name="Search" xml:space="preserve">
     <value>搜索</value>
   </data>
+  <data name="Enhancer_CircularDependencyDetected" xml:space="preserve">
+    <value>检测到增强器循环引用：{0}</value>
+  </data>
 </root>

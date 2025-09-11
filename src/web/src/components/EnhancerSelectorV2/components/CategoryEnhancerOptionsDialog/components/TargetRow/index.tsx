@@ -1,10 +1,7 @@
 "use client";
 
 import type { EnhancerTargetFullOptions } from "../../models";
-import type {
-  EnhancerDescriptor,
-  EnhancerTargetDescriptor,
-} from "../../../../models";
+import type { EnhancerDescriptor, EnhancerTargetDescriptor } from "../../../../models";
 import type { IProperty } from "@/components/Property/models";
 
 import {
@@ -23,16 +20,13 @@ import PropertyTip from "./PropertyTip";
 import TargetOptions from "./TargetOptions";
 
 import { Button, Chip, Input, Tooltip } from "@/components/bakaui";
-import PropertySelectorPage from "@/components/PropertySelector";
+import PropertySelector from "@/components/PropertySelector";
 import BApi from "@/sdk/BApi";
 import { PropertyLabel } from "@/components/Property";
-import {
-  PropertyPool,
-  SpecialTextType,
-  StandardValueType,
-} from "@/sdk/constants";
+import { PropertyPool, SpecialTextType, StandardValueType } from "@/sdk/constants";
 import { IntegrateWithSpecialTextLabel } from "@/components/SpecialText";
 import { buildLogger } from "@/components/utils";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
 
 interface Props {
   target: number;
@@ -79,6 +73,7 @@ const TargetRow = (props: Props) => {
   const [dynamicTargetError, setDynamicTargetError] = useState<string>();
   const dynamicTargetInputValueRef = useRef<string>();
   const [editingDynamicTarget, setEditingDynamicTarget] = useState(false);
+  const { createPortal } = useBakabaseContext();
 
   const validateDynamicTarget = (newTarget: string) => {
     let error;
@@ -97,14 +92,10 @@ const TargetRow = (props: Props) => {
   };
 
   useUpdateEffect(() => {
-    setOptions(
-      propsOptions ?? defaultCategoryEnhancerTargetOptions(descriptor),
-    );
+    setOptions(propsOptions ?? defaultCategoryEnhancerTargetOptions(descriptor));
   }, [propsOptions]);
 
-  const patchTargetOptions = async (
-    patches: Partial<EnhancerTargetFullOptions>,
-  ) => {
+  const patchTargetOptions = async (patches: Partial<EnhancerTargetFullOptions>) => {
     const newOptions = {
       ...options,
       ...patches,
@@ -131,14 +122,10 @@ const TargetRow = (props: Props) => {
   };
 
   const unbindProperty = async () => {
-    await BApi.category.unbindCategoryEnhancerTargetProperty(
-      category.id,
-      enhancer.id,
-      {
-        target: target,
-        dynamicTarget: dynamicTarget,
-      },
-    );
+    await BApi.category.unbindCategoryEnhancerTargetProperty(category.id, enhancer.id, {
+      target: target,
+      dynamicTarget: dynamicTarget,
+    });
     options.propertyId = undefined;
     setOptions({ ...options });
     onChange?.(options);
@@ -146,12 +133,9 @@ const TargetRow = (props: Props) => {
 
   const dt = options.dynamicTarget ?? dynamicTarget;
 
-  const targetLabel = descriptor.isDynamic
-    ? (dt ?? t<string>("Default"))
-    : descriptor.name;
+  const targetLabel = descriptor.isDynamic ? (dt ?? t<string>("Default")) : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
-  const integratedSpecialTextType =
-    StdValueSpecialTextIntegrationMap[descriptor.valueType];
+  const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
 
   let property: IProperty | undefined;
 
@@ -165,9 +149,7 @@ const TargetRow = (props: Props) => {
   log(props, options, propsOptions, property);
 
   return (
-    <div
-      className={`flex items-center gap-1 ${noPropertyBound ? "opacity-60" : ""}`}
-    >
+    <div className={`flex items-center gap-1 ${noPropertyBound ? "opacity-60" : ""}`}>
       <div className={"w-5/12"}>
         <div className={"flex flex-col gap-2"}>
           <div className={"flex items-center gap-1"}>
@@ -230,9 +212,7 @@ const TargetRow = (props: Props) => {
                 </Chip>
                 {/* {targetLabel} */}
                 {integratedSpecialTextType && (
-                  <IntegrateWithSpecialTextLabel
-                    type={integratedSpecialTextType}
-                  />
+                  <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
                 )}
                 {descriptor.description && (
                   <Tooltip content={descriptor.description} placement={"right"}>
@@ -259,7 +239,7 @@ const TargetRow = (props: Props) => {
               isDisabled={options?.autoBindProperty}
               variant={"light"}
               onClick={() => {
-                PropertySelectorPage.show({
+                createPortal(PropertySelector, {
                   addable: true,
                   editable: true,
                   pool: PropertyPool.Custom | PropertyPool.Reserved,
@@ -275,11 +255,7 @@ const TargetRow = (props: Props) => {
                 });
               }}
             >
-              {property ? (
-                <PropertyLabel property={property} />
-              ) : (
-                t<string>("Select a property")
-              )}
+              {property ? <PropertyLabel property={property} /> : t<string>("Select a property")}
             </Button>
             {property && (
               <>
@@ -324,14 +300,10 @@ const TargetRow = (props: Props) => {
               size={"sm"}
               variant={"light"}
               onClick={() => {
-                BApi.category.deleteCategoryEnhancerTargetOptions(
-                  category.id,
-                  enhancer.id,
-                  {
-                    target,
-                    dynamicTarget: dt,
-                  },
-                );
+                BApi.category.deleteCategoryEnhancerTargetOptions(category.id, enhancer.id, {
+                  target,
+                  dynamicTarget: dt,
+                });
                 onDeleted?.();
               }}
             >

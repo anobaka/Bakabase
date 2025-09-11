@@ -12,7 +12,7 @@ public enum DLsiteEnhancerTarget
     Name,
 
     [EnhancerTarget(StandardValueType.ListString, PropertyType.Attachment,
-        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder])]
+        [EnhancerTargetOptionsItem.AutoBindProperty, EnhancerTargetOptionsItem.CoverSelectOrder], reservedPropertyCandidate: ReservedProperty.Cover)]
     Cover,
 
     [EnhancerTarget(StandardValueType.ListString, PropertyType.MultipleChoice,

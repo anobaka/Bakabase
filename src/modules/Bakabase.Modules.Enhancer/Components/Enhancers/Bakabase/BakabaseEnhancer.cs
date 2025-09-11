@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -10,9 +11,11 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Extensions;
 using Bootstrap.Models;
 using Microsoft.Extensions.Logging;
@@ -24,25 +27,25 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         ISpecialTextService specialTextService,
         IBakabaseLocalizer localizer,
         IFileManager fileManager,
-        ICoverDiscoverer coverDiscoverer)
-        : AbstractEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(loggerFactory,
-            fileManager)
+        ICoverDiscoverer coverDiscoverer,
+        IStandardValueService standardValueService
+        )
+        : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(loggerFactory,
+            fileManager, standardValueService, specialTextService)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
 
-        protected override async Task<BakabaseEnhancerContext?> BuildContext(Resource resource,
+        protected override async Task<BakabaseEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
             EnhancerFullOptions options, CancellationToken ct)
         {
-            var name = resource.FileName;
+            var name = keyword;
             if (name.IsNullOrEmpty())
             {
                 throw new ArgumentNullException(nameof(name));
             }
 
             var ctx = new BakabaseEnhancerContext();
-
-            name = await specialTextService.Pretreatment(name);
 
             if (await IsValid(name))
             {
@@ -101,19 +104,27 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             var coverSelectionOrder =
                 options.TargetOptions?.FirstOrDefault(to => to.Target == (int) BakabaseEnhancerTarget.Cover)
                     ?.CoverSelectOrder ?? CoverSelectOrder.FilenameAscending;
-            var cover = await coverDiscoverer.Discover(resource.Path, coverSelectionOrder, false, ct);
-            if (cover != null)
+            try
             {
-                if (string.IsNullOrEmpty(cover.Path))
+                var cover = await coverDiscoverer.Discover(resource.Path, coverSelectionOrder, false, ct);
+                if (cover != null)
                 {
-                    ctx.CoverPath = await cover.SaveTo(BuildFilePath(resource, "cover"), true, CancellationToken.None);
-                }
-                else
-                {
-                    ctx.CoverPath = cover.Path;
+                    if (string.IsNullOrEmpty(cover.Path))
+                    {
+                        ctx.CoverPath = await cover.SaveTo(BuildFilePath(resource, "cover"), true,
+                            CancellationToken.None);
+                    }
+                    else
+                    {
+                        ctx.CoverPath = cover.Path;
+                    }
                 }
             }
-
+            catch (Exception e)
+            {
+                Logger.LogError(e, $"An error occurred during discovering cover for resource {resource.Id} at {resource.Path}");
+            }
+            
             return ctx;
         }
 

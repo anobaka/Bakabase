@@ -13,12 +13,12 @@ import { Button, Card, Modal, Tooltip } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import PropertySelectorPage from "@/components/PropertySelector";
+import PropertySelector from "@/components/PropertySelector";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 
 type Props = {
   matchedProperty?: IProperty;
-  name: string;
+  name?: string;
   type: PropertyType;
   options?: any;
   isClearable?: boolean;
@@ -60,7 +60,7 @@ const PropertyMatcher = ({
             // color={'primary'}
             variant={"light"}
             onPress={() => {
-              createPortal(PropertySelectorPage, {
+              createPortal(PropertySelector, {
                 pool: PropertyPool.Custom | PropertyPool.Reserved,
                 multiple: false,
                 onSubmit: async (selection) => {
@@ -91,10 +91,27 @@ const PropertyMatcher = ({
         <Button
           isIconOnly
           color={"primary"}
+          isLoading={isFindingBestMatch}
           size={"sm"}
           variant={"light"}
-          isLoading={isFindingBestMatch}
           onPress={async () => {
+            if (name == undefined || name.length == 0) {
+              createPortal(
+                Modal, {
+                  defaultVisible: true,
+                  title: t<string>("No proper property name provided"),
+                  children: (
+                    <div className={"flex flex-col gap-2"}>
+                      {t<string>("Please provide a property name")}
+                    </div>
+                  ),
+                  footer: {
+                    actions: ['cancel']
+                  }
+                }
+              )
+              return;
+            }
             setIsFindingBestMatch(true);
             try {
               const candidate = await BApi.property.findBestMatchingProperty({
@@ -114,19 +131,13 @@ const PropertyMatcher = ({
                       <div className={"grid grid-cols-2 gap-2"}>
                         <Card
                           isPressable
-                          className={
-                            "flex flex-col items-center gap-2 justify-center py-2"
-                          }
+                          className={"flex flex-col items-center gap-2 justify-center py-2"}
                           onPress={async () => {
-                            const r = await BApi.customProperty.addCustomProperty(
-                              {
-                                name: name,
-                                type: type,
-                                options: options
-                                  ? JSON.stringify(options)
-                                  : undefined,
-                              },
-                            );
+                            const r = await BApi.customProperty.addCustomProperty({
+                              name: name,
+                              type: type,
+                              options: options ? JSON.stringify(options) : undefined,
+                            });
 
                             if (r.code) {
                               throw new Error(r.message);
@@ -142,12 +153,10 @@ const PropertyMatcher = ({
                         </Card>
                         <Card
                           isPressable
-                          className={
-                            "flex flex-col items-center gap-2 justify-center py-2"
-                          }
+                          className={"flex flex-col items-center gap-2 justify-center py-2"}
                           onPress={() => {
                             modal.destroy();
-                            createPortal(PropertySelectorPage, {
+                            createPortal(PropertySelector, {
                               pool: PropertyPool.Custom | PropertyPool.Reserved,
                               multiple: false,
                               onSubmit: async (selection) => {

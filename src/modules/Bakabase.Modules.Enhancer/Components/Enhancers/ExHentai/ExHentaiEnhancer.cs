@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -11,7 +12,9 @@ using Microsoft.Extensions.Options;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
+using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai.Models.RequestModels;
 
@@ -22,17 +25,18 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         ExHentaiClient exHentaiClient,
         IServiceProvider services,
         ISpecialTextService specialTextService,
-        IFileManager fileManager)
-        : AbstractEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager)
+        IFileManager fileManager,
+        IStandardValueService standardValueService)
+        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;
         private readonly ISpecialTextService _specialTextService = specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
-        protected override async Task<ExHentaiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options, CancellationToken ct)
+        protected override async Task<ExHentaiEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options, CancellationToken ct)
         {
-            var name = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
+            var name = keyword;
             var urlKeywords = new HashSet<string>();
 
             var names = new List<string> {resource.FileName}.Where(a => a.IsNotEmpty()).ToArray();
@@ -55,10 +59,10 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                     }
                 }
 
-                foreach (var (str, keyword) in urlKeywordCandidates)
+                foreach (var (str, urlKeyword) in urlKeywordCandidates)
                 {
                     name = name.Replace(str, null);
-                    urlKeywords.Add(keyword);
+                    urlKeywords.Add(urlKeyword);
                 }
             }
 

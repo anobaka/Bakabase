@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,6 +15,7 @@ using ComponentDescriptor = Bakabase.Abstractions.Models.Domain.ComponentDescrip
 
 namespace Bakabase.Service.Controllers
 {
+    [Obsolete]
     [Route("~/component")]
     public class ComponentController : Controller
     {

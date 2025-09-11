@@ -5,6 +5,8 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.Abstractions.Components.Tasks;
@@ -27,6 +29,7 @@ public class BTaskHandler
     public readonly ConcurrentQueue<BTaskEvent<string?>> ProcessEvents = [];
     private TimeSpan _elapsedOnLastPercentageChange = TimeSpan.Zero;
     public Stopwatch Sw { get; } = new();
+    private ILogger _logger;
 
     public DateTime? NextTimeStartAt
     {
@@ -91,6 +94,8 @@ public class BTaskHandler
         _rootServiceProvider = rootServiceProvider;
         _onStatusChange = onStatusChange;
         _onPercentageChanged = onPercentageChanged;
+        var loggerName = $"{GetType().FullName}:{task.Id}:{task.Name}";
+        _logger = rootServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(loggerName);
     }
 
     public async Task UpdateTask(Action<BTask> update)
@@ -121,6 +126,8 @@ public class BTaskHandler
             {
                 await _onStatusChange(prevStatus, Task);
             }
+            
+            _logger.LogInformation($"status changed from [{prevStatus}] to [{Task.Status}]");
         }
 
         if (_onChange != null)
@@ -211,6 +218,7 @@ public class BTaskHandler
                 }
                 else
                 {
+                    _logger.LogError(e, "Task failed");
                     await UpdateTask(t =>
                     {
                         t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());

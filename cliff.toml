@@ -15,11 +15,11 @@ commit_parsers = [
   { message = "^perf", group = "Performance" },
   { message = "^refactor", group = "Refactoring" },
   { message = "^docs", group = "Documentation" },
-  { message = "^style", group = "Styling", skip = true },
-  { message = "^test", group = "Testing", skip = true },
-  { message = "^build", group = "Build System", skip = true },
-  { message = "^ci", group = "CI", skip = true },
-  { message = "^chore", group = "Chores", skip = true },
+  { message = "^style", group = "Styling" },
+  { message = "^test", group = "Testing" },
+  { message = "^build", group = "Build System" },
+  { message = "^ci", group = "CI" },
+  { message = "^chore", group = "Chores" },
   { message = "^revert", group = "Reverts" },
 ]
 

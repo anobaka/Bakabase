@@ -26,17 +26,11 @@ import {
   PropertyPool,
   IconType,
 } from "@/sdk/constants";
-import {
-  Chip,
-  Listbox,
-  ListboxItem,
-  Popover,
-  Tooltip,
-} from "@/components/bakaui";
+import { Chip, Listbox, ListboxItem, Popover, Tooltip } from "@/components/bakaui";
 import BusinessConstants from "@/components/BusinessConstants";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import PropertySelectorPage from "@/components/PropertySelector";
+import PropertySelector from "@/components/PropertySelector";
 import { PscPropertyType } from "@/components/PathSegmentsConfiguration/models/PscPropertyType";
 
 type Props = {
@@ -73,12 +67,9 @@ const Segments = ({
         startContent={icon}
         variant={"faded"}
       >
-        {t<string>(
-          available
-            ? "{{mode}} mode is available"
-            : "{{mode}} mode is unavailable",
-          { mode: name },
-        )}
+        {t<string>(available ? "{{mode}} mode is available" : "{{mode}} mode is unavailable", {
+          mode: name,
+        })}
       </Chip>
     );
 
@@ -105,9 +96,7 @@ const Segments = ({
     );
   };
 
-  const buildSelectiveMatcherRightContent = (
-    m: SelectiveMatcher,
-  ): React.ReactNode[] => {
+  const buildSelectiveMatcherRightContent = (m: SelectiveMatcher): React.ReactNode[] => {
     const { layer: l, regex: r, oneClick: o } = m.matchModes;
 
     const showReplace = m.isConfigurable && m.replaceCurrent;
@@ -144,11 +133,7 @@ const Segments = ({
     return firstLineNodes;
   };
 
-  const selectMatcher = (
-    c: PscMatcher,
-    property: PscProperty,
-    newValue: PscMatcherValue,
-  ) => {
+  const selectMatcher = (c: PscMatcher, property: PscProperty, newValue: PscMatcherValue) => {
     let pvs = value.filter((v) => v.property.equals(property));
     const nv = value.filter((v) => !pvs.includes(v));
 
@@ -156,9 +141,7 @@ const Segments = ({
       pvs.splice(0, pvs.length);
     }
 
-    const sameValue = pvs.find(
-      (v) => v.property.equals(property) && v.value?.equals(newValue),
-    );
+    const sameValue = pvs.find((v) => v.property.equals(property) && v.value?.equals(newValue));
 
     if (!sameValue) {
       pvs.push({
@@ -186,21 +169,13 @@ const Segments = ({
       for (let i = 0; i < segments.length; i++) {
         if (i > 0) {
           elements.push(
-            <span
-              className={"text-xl"}
-              style={{ color: "var(--bakaui-warning)" }}
-            >
+            <span className={"text-xl"} style={{ color: "var(--bakaui-warning)" }}>
               /
             </span>,
           );
         }
 
-        const {
-          text,
-          selectiveMatchers = [],
-          matchResults = [],
-          disabled,
-        } = segments[i];
+        const { text, selectiveMatchers = [], matchResults = [], disabled } = segments[i];
 
         const sc = (
           <div
@@ -212,9 +187,7 @@ const Segments = ({
                 {matchResults.map((mr) => {
                   const { property, errors = [] } = mr;
                   const hasError = errors.length > 0;
-                  const values = value.filter((v) =>
-                    v.property.equals(mr.property),
-                  );
+                  const values = value.filter((v) => v.property.equals(mr.property));
                   const v = values[mr.valueIndex ?? 0]?.value;
                   let colorKey: ChipProps["color"] = "primary";
 
@@ -308,9 +281,7 @@ const Segments = ({
 
                           if (o.available) {
                             selectMatcher(
-                              visibleMatchers.find(
-                                (t) => t.propertyType == m.propertyType,
-                              )!,
+                              visibleMatchers.find((t) => t.propertyType == m.propertyType)!,
                               PscProperty.fromPscType(m.propertyType),
                               new PscMatcherValue({
                                 valueType: ResourceMatcherValueType.FixedText,
@@ -341,9 +312,7 @@ const Segments = ({
                                 case PscPropertyType.Resource:
                                 case PscPropertyType.Rating:
                                 case PscPropertyType.Introduction: {
-                                  const property = PscProperty.fromPscType(
-                                    m.propertyType,
-                                  );
+                                  const property = PscProperty.fromPscType(m.propertyType);
 
                                   createPortal(SegmentMatcherConfiguration, {
                                     ...props,
@@ -351,8 +320,7 @@ const Segments = ({
                                     onSubmit: (value) => {
                                       selectMatcher(
                                         visibleMatchers.find(
-                                          (t) =>
-                                            t.propertyType == m.propertyType,
+                                          (t) => t.propertyType == m.propertyType,
                                         )!,
                                         property,
                                         value,
@@ -362,7 +330,7 @@ const Segments = ({
                                   break;
                                 }
                                 case PscPropertyType.CustomProperty: {
-                                  createPortal(PropertySelectorPage, {
+                                  createPortal(PropertySelector, {
                                     pool: PropertyPool.Custom,
                                     multiple: false,
                                     addable: true,
@@ -374,24 +342,19 @@ const Segments = ({
                                         name: p.name!,
                                       });
 
-                                      createPortal(
-                                        SegmentMatcherConfiguration,
-                                        {
-                                          ...props,
-                                          property,
-                                          onSubmit: (value) => {
-                                            selectMatcher(
-                                              visibleMatchers.find(
-                                                (t) =>
-                                                  t.propertyType ==
-                                                  m.propertyType,
-                                              )!,
-                                              property,
-                                              value,
-                                            );
-                                          },
+                                      createPortal(SegmentMatcherConfiguration, {
+                                        ...props,
+                                        property,
+                                        onSubmit: (value) => {
+                                          selectMatcher(
+                                            visibleMatchers.find(
+                                              (t) => t.propertyType == m.propertyType,
+                                            )!,
+                                            property,
+                                            value,
+                                          );
                                         },
-                                      );
+                                      });
                                     },
                                   });
                                   break;
@@ -403,8 +366,7 @@ const Segments = ({
                       }}
                     >
                       {selectiveMatchers.map((m, i) => {
-                        const rightContents =
-                          buildSelectiveMatcherRightContent(m);
+                        const rightContents = buildSelectiveMatcherRightContent(m);
 
                         return (
                           <ListboxItem
@@ -426,9 +388,7 @@ const Segments = ({
                               <span className={"text-base"}>
                                 {t<string>(PscPropertyType[m.propertyType])}
                               </span>
-                              <div className={"flex items-center gap-2"}>
-                                {rightContents}
-                              </div>
+                              <div className={"flex items-center gap-2"}>{rightContents}</div>
                             </div>
                           </ListboxItem>
                         );
@@ -449,9 +409,7 @@ const Segments = ({
         elements.push(sc);
       }
 
-      return (
-        <div className={"flex flex-wrap items-center gap-1"}>{elements}</div>
-      );
+      return <div className={"flex flex-wrap items-center gap-1"}>{elements}</div>;
     }
   };
 

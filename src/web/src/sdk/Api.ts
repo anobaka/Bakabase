@@ -346,6 +346,8 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerOpt
   enhancerId: number;
   targetOptions?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions[];
   expressions?: string[];
+  requirements?: number[];
+  keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions {
@@ -565,6 +567,15 @@ export interface BakabaseAbstractionsModelsDomainResourceCache {
   hasMorePlayableFiles: boolean;
   playableFilePaths?: string[];
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
+}
+
+export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
 }
 
 export interface BakabaseAbstractionsModelsDomainSpecialText {
@@ -2160,6 +2171,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescripto
   targets: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDescriptor[];
   /** @format int32 */
   propertyValueScope: number;
+  tags: BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancerTag[];
 }
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDescriptor {
@@ -2187,9 +2199,17 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
   | 0
   | 1;
 
+/**
+ * [1: UseRegex, 2: UseKeyword]
+ * @format int32
+ */
+export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancerTag = 1 | 2;
+
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
   targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[];
+  requirements?: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId[];
   expressions?: string[];
+  keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
 }
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions {
@@ -5236,6 +5256,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name GetCategory
      * @request GET:/category/{id}
+     * @deprecated
      */
     getCategory: (
       id: number,
@@ -5262,6 +5283,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name PatchCategory
      * @request PATCH:/category/{id}
+     * @deprecated
      */
     patchCategory: (
       id: number,
@@ -5283,6 +5305,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name DeleteCategory
      * @request DELETE:/category/{id}
+     * @deprecated
      */
     deleteCategory: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5298,6 +5321,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name GetAllCategories
      * @request GET:/category
+     * @deprecated
      */
     getAllCategories: (
       query?: {
@@ -5323,6 +5347,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name AddCategory
      * @request POST:/category
+     * @deprecated
      */
     addCategory: (
       data: BakabaseAbstractionsModelsInputCategoryAddInputModel,
@@ -5343,6 +5368,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name DuplicateCategory
      * @request POST:/category/{id}/duplication
+     * @deprecated
      */
     duplicateCategory: (
       id: number,
@@ -5364,6 +5390,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name PutCategoryResourceDisplayNameTemplate
      * @request PUT:/category/{id}/resource-display-name-template
+     * @deprecated
      */
     putCategoryResourceDisplayNameTemplate: (
       id: number,
@@ -5385,6 +5412,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name ConfigureCategoryComponents
      * @request PUT:/category/{id}/component
+     * @deprecated
      */
     configureCategoryComponents: (
       id: number,
@@ -5406,6 +5434,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name SortCategories
      * @request PUT:/category/orders
+     * @deprecated
      */
     sortCategories: (
       data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel,
@@ -5426,6 +5455,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name BindCustomPropertiesToCategory
      * @request PUT:/category/{id}/custom-properties
+     * @deprecated
      */
     bindCustomPropertiesToCategory: (
       id: number,
@@ -5447,6 +5477,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name BindCustomPropertyToCategory
      * @request POST:/category/{categoryId}/custom-property/{customPropertyId}
+     * @deprecated
      */
     bindCustomPropertyToCategory: (
       categoryId: number,
@@ -5466,6 +5497,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name UnlinkCustomPropertyFromCategory
      * @request DELETE:/category/{categoryId}/custom-property/{customPropertyId}
+     * @deprecated
      */
     unlinkCustomPropertyFromCategory: (
       categoryId: number,
@@ -5485,6 +5517,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name SortCustomPropertiesInCategory
      * @request PUT:/category/{categoryId}/custom-property/order
+     * @deprecated
      */
     sortCustomPropertiesInCategory: (
       categoryId: number,
@@ -5506,6 +5539,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name PreviewCategoryDisplayNameTemplate
      * @request GET:/category/{id}/resource/resource-display-name-template/preview
+     * @deprecated
      */
     previewCategoryDisplayNameTemplate: (
       id: number,
@@ -5536,6 +5570,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name GetCategoryEnhancerOptions
      * @request GET:/category/{id}/enhancer/{enhancerId}/options
+     * @deprecated
      */
     getCategoryEnhancerOptions: (id: number, enhancerId: number, params: RequestParams = {}) =>
       this.request<
@@ -5554,6 +5589,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name PatchCategoryEnhancerOptions
      * @request PATCH:/category/{id}/enhancer/{enhancerId}/options
+     * @deprecated
      */
     patchCategoryEnhancerOptions: (
       id: number,
@@ -5576,6 +5612,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name DeleteCategoryEnhancerTargetOptions
      * @request DELETE:/category/{id}/enhancer/{enhancerId}/options/target
+     * @deprecated
      */
     deleteCategoryEnhancerTargetOptions: (
       id: number,
@@ -5601,6 +5638,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name PatchCategoryEnhancerTargetOptions
      * @request PATCH:/category/{id}/enhancer/{enhancerId}/options/target
+     * @deprecated
      */
     patchCategoryEnhancerTargetOptions: (
       id: number,
@@ -5629,6 +5667,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name UnbindCategoryEnhancerTargetProperty
      * @request DELETE:/category/{id}/enhancer/{enhancerId}/options/target/property
+     * @deprecated
      */
     unbindCategoryEnhancerTargetProperty: (
       id: number,
@@ -5654,6 +5693,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Category
      * @name StartSyncingCategoryResources
      * @request PUT:/category/{id}/synchronization
+     * @deprecated
      */
     startSyncingCategoryResources: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -5734,6 +5774,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name GetComponentDescriptors
      * @request GET:/component
+     * @deprecated
      */
     getComponentDescriptors: (
       query?: {
@@ -5761,6 +5802,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name GetComponentDescriptorByKey
      * @request GET:/component/key
+     * @deprecated
      */
     getComponentDescriptorByKey: (
       query?: {
@@ -5787,6 +5829,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name DiscoverDependentComponent
      * @request GET:/component/dependency/discovery
+     * @deprecated
      */
     discoverDependentComponent: (
       query?: {
@@ -5808,6 +5851,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name GetDependentComponentLatestVersion
      * @request GET:/component/dependency/latest-version
+     * @deprecated
      */
     getDependentComponentLatestVersion: (
       query?: {
@@ -5834,6 +5878,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name InstallDependentComponent
      * @request POST:/component/dependency
+     * @deprecated
      */
     installDependentComponent: (
       query?: {
@@ -5856,6 +5901,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags ComponentOptions
      * @name AddComponentOptions
      * @request POST:/component-options
+     * @deprecated
      */
     addComponentOptions: (
       data: BakabaseInsideWorldModelsRequestModelsComponentOptionsAddRequestModel,
@@ -5879,6 +5925,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags ComponentOptions
      * @name PutComponentOptions
      * @request PUT:/component-options/{id}
+     * @deprecated
      */
     putComponentOptions: (
       id: number,
@@ -5900,6 +5947,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags ComponentOptions
      * @name RemoveComponentOptions
      * @request DELETE:/component-options/{id}
+     * @deprecated
      */
     removeComponentOptions: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -7214,6 +7262,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name GetAllMediaLibraries
      * @request GET:/media-library
+     * @deprecated
      */
     getAllMediaLibraries: (
       query?: {
@@ -7239,6 +7288,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name AddMediaLibrary
      * @request POST:/media-library
+     * @deprecated
      */
     addMediaLibrary: (
       data: BakabaseAbstractionsModelsDtoMediaLibraryAddDto,
@@ -7259,6 +7309,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name GetMediaLibrary
      * @request GET:/media-library/{id}
+     * @deprecated
      */
     getMediaLibrary: (
       id: number,
@@ -7285,6 +7336,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name DeleteMediaLibrary
      * @request DELETE:/media-library/{id}
+     * @deprecated
      */
     deleteMediaLibrary: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -7300,6 +7352,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name PatchMediaLibrary
      * @request PUT:/media-library/{id}
+     * @deprecated
      */
     patchMediaLibrary: (
       id: number,
@@ -7321,6 +7374,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name StartSyncMediaLibrary
      * @request PUT:/media-library/sync
+     * @deprecated
      */
     startSyncMediaLibrary: (params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
@@ -7336,6 +7390,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name ValidatePathConfiguration
      * @request POST:/media-library/path-configuration-validation
+     * @deprecated
      */
     validatePathConfiguration: (
       data: BakabaseAbstractionsModelsDomainPathConfiguration,
@@ -7359,6 +7414,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name SortMediaLibrariesInCategory
      * @request PUT:/media-library/orders-in-category
+     * @deprecated
      */
     sortMediaLibrariesInCategory: (
       data: BakabaseInsideWorldModelsRequestModelsIdBasedSortRequestModel,
@@ -7379,6 +7435,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name AddMediaLibraryPathConfiguration
      * @request POST:/media-library/{id}/path-configuration
+     * @deprecated
      */
     addMediaLibraryPathConfiguration: (
       id: number,
@@ -7400,6 +7457,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name RemoveMediaLibraryPathConfiguration
      * @request DELETE:/media-library/{id}/path-configuration
+     * @deprecated
      */
     removeMediaLibraryPathConfiguration: (
       id: number,
@@ -7421,6 +7479,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name AddMediaLibrariesInBulk
      * @request POST:/media-library/bulk-add/{cId}
+     * @deprecated
      */
     addMediaLibrariesInBulk: (
       cId: number,
@@ -7442,6 +7501,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name AddMediaLibraryRootPathsInBulk
      * @request POST:/media-library/{mlId}/path-configuration/root-paths
+     * @deprecated
      */
     addMediaLibraryRootPathsInBulk: (
       mlId: number,
@@ -7463,6 +7523,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags MediaLibrary
      * @name StartSyncingMediaLibraryResources
      * @request PUT:/media-library/{id}/synchronization
+     * @deprecated
      */
     startSyncingMediaLibraryResources: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

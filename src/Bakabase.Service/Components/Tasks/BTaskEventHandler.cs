@@ -8,14 +8,15 @@ using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.Tasks;
 
-public class BTaskEventHandler(IHubContext<WebGuiHub, IWebGuiClient> uiHub, IGuiAdapter guiAdapter) : IBTaskEventHandler
+public class BTaskEventHandler(IHubContext<WebGuiHub, IWebGuiClient> uiHub, IGuiAdapter guiAdapter, ILogger<BTaskEventHandler> logger) : IBTaskEventHandler
 {
     public async Task OnTaskChange(BTaskViewModel task)
     {
-
+        // logger.LogInformation($"BTask status changed: [{task.Id}]{task.Name} -> {task.Status}", task);
         await uiHub.Clients.All.GetIncrementalData("BTask", task);
     }
 

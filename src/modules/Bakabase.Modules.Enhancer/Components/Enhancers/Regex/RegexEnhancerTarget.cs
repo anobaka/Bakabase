@@ -9,5 +9,5 @@ public enum RegexEnhancerTarget
 {
     [EnhancerTarget(StandardValueType.ListString, PropertyType.MultipleChoice,
         [EnhancerTargetOptionsItem.AutoBindProperty], true)]
-    CaptureGroups,
+    CaptureGroups = 0
 }

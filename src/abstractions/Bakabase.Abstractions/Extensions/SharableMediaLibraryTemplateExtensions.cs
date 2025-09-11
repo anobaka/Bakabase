@@ -79,7 +79,9 @@ public static class SharableMediaLibraryTemplateExtensions
         return new SharableMediaLibraryTemplateEnhancerOptions
         {
             EnhancerId = options.EnhancerId,
-            TargetOptions = options.TargetOptions?.Select(x => x.ToSharable()).ToList()
+            TargetOptions = options.TargetOptions?.Select(x => x.ToSharable()).ToList(),
+            Requirements = options.Requirements,
+            KeywordProperty = options.KeywordProperty
         };
     }
 
@@ -191,7 +193,9 @@ public static class SharableMediaLibraryTemplateExtensions
         return new MediaLibraryTemplateEnhancerOptions
         {
             EnhancerId = sharable.EnhancerId,
-            TargetOptions = targetOptions
+            TargetOptions = targetOptions,
+            Requirements = sharable.Requirements,
+            KeywordProperty = sharable.KeywordProperty
         };
     }
 

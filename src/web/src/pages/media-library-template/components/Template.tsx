@@ -5,40 +5,45 @@ import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models"
 import type { PropertyMap } from "@/components/types";
 import type { IProperty } from "@/components/Property/models";
 import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
-
-import {
-  IoLocate,
-  IoPlayCircleOutline,
-  IoRocketOutline,
-} from "react-icons/io5";
+import { IoGitBranchOutline, IoLocate, IoPlayCircleOutline, IoRocketOutline } from "react-icons/io5";
 import {
   AiOutlineDelete,
   AiOutlineEdit,
   AiOutlinePlusCircle,
   AiOutlineSisternode,
-  AiOutlineEllipsis,
 } from "react-icons/ai";
 import { CiCircleMore, CiFilter } from "react-icons/ci";
 import { TbDatabase } from "react-icons/tb";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { TiChevronRightOutline, TiFlowChildren } from "react-icons/ti";
-import { MdOutlineSubtitles } from "react-icons/md";
+import { MdOutlineCleaningServices, MdOutlineSubtitles } from "react-icons/md";
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
-import toast from "react-hot-toast";
 import _ from "lodash";
+import { MdOutlineDelete } from "react-icons/md";
 
 import Block from "@/pages/media-library-template/components/Block";
 import {
   PathFilterDemonstrator,
   PathFilterModal,
 } from "@/pages/media-library-template/components/PathFilter";
-import { Button, Chip, Modal, Select, Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
-import { MdOutlineDelete } from "react-icons/md";
+import {
+  Button,
+  Chip,
+  Modal,
+  Select,
+  Tooltip,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Checkbox,
+  toast,
+} from "@/components/bakaui";
 import PlayableFileSelectorModal from "@/pages/media-library-template/components/PlayableFileSelectorModal";
-import PropertySelectorPage from "@/components/PropertySelector";
-import { PropertyPool } from "@/sdk/constants";
+import PropertySelector from "@/components/PropertySelector";
+import { PropertyPool, PropertyValueScope } from "@/sdk/constants";
 import BriefProperty from "@/components/Chips/Property/BriefProperty";
 import {
   PathPropertyExtractorDemonstrator,
@@ -52,6 +57,8 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import BApi from "@/sdk/BApi";
 import { willCauseCircleReference } from "@/components/utils";
 import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
+import { LuRegex } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 
 type Props = {
   template: MediaLibraryTemplatePage;
@@ -70,13 +77,10 @@ const Template = ({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
+  const navigate = useNavigate();
 
-  const [enhancers, setEnhancers] = React.useState<EnhancerDescriptor[]>(
-    enhancersCache ?? [],
-  );
-  const [propertyMap, setPropertyMap] = React.useState<PropertyMap>(
-    propertyMapCache ?? {},
-  );
+  const [enhancers, setEnhancers] = React.useState<EnhancerDescriptor[]>(enhancersCache ?? []);
+  const [propertyMap, setPropertyMap] = React.useState<PropertyMap>(propertyMapCache ?? {});
   const [templates, setTemplates] = React.useState<MediaLibraryTemplatePage[]>(
     templatesCache ?? [],
   );
@@ -110,8 +114,7 @@ const Template = ({
   }, [templatesCache]);
 
   const loadProperties = async () => {
-    const psr =
-      (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
     const ps = _.mapValues(
       _.groupBy(psr, (x) => x.pool),
       (v) => _.keyBy(v, (x) => x.id),
@@ -121,16 +124,16 @@ const Template = ({
   };
 
   const putTemplate = async (tpl: MediaLibraryTemplatePage) => {
-    const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(
-      tpl.id,
-      tpl as any,
-    );
+    const r = await BApi.mediaLibraryTemplate.putMediaLibraryTemplate(tpl.id, tpl as any);
 
     if (!r.code) {
       toast.success(t<string>("Saved successfully"));
       onChange?.();
       forceUpdate();
+      return;
     }
+
+    throw new Error(r.message);
   };
 
   const renderChildSelector = (tpl: MediaLibraryTemplatePage) => {
@@ -149,10 +152,10 @@ const Template = ({
         .map((x) => x.id.toString()),
     );
 
-    console.log(
-      tpl.childTemplateId,
-      tpl.childTemplateId ? [tpl.childTemplateId.toString()] : undefined,
-    );
+    // console.log(
+    // tpl.childTemplateId,
+    // tpl.childTemplateId ? [tpl.childTemplateId.toString()] : undefined,
+    // );
 
     return (
       <div className={"inline-flex items-center gap-2"}>
@@ -170,9 +173,7 @@ const Template = ({
           fullWidth={false}
           label={`${t<string>("Child template")} (${t<string>("optional")})`}
           placeholder={t<string>("Select a child template")}
-          selectedKeys={
-            tpl.childTemplateId ? [tpl.childTemplateId.toString()] : []
-          }
+          selectedKeys={tpl.childTemplateId ? [tpl.childTemplateId.toString()] : []}
           size={"sm"}
           onSelectionChange={(keys) => {
             const id = parseInt(Array.from(keys)[0] as string, 10);
@@ -200,12 +201,12 @@ const Template = ({
     );
   };
 
+  console.log('template', template);
+
   return (
     <div className={"flex flex-col gap-2"}>
       <Block
-        description={t<string>(
-          "Determine which files or folders will be considered as resources",
-        )}
+        description={t<string>("Determine which files or folders will be considered as resources")}
         leftIcon={<IoLocate className={"text-large"} />}
         rightIcon={<AiOutlinePlusCircle className={"text-large"} />}
         title={`1. ${t<string>("Resource filter")}`}
@@ -269,9 +270,7 @@ const Template = ({
         </div>
       </Block>
       <Block
-        description={t<string>(
-          "Determine which files be considered as playable files",
-        )}
+        description={t<string>("Determine which files be considered as playable files")}
         leftIcon={<IoPlayCircleOutline className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-base"} />}
         title={`2. ${t<string>("Playable(Runnable) files")}`}
@@ -311,14 +310,12 @@ const Template = ({
         </div>
       </Block>
       <Block
-        description={t<string>(
-          "You can configure which properties your resource includes",
-        )}
+        description={t<string>("You can configure which properties your resource includes")}
         leftIcon={<TbDatabase className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-large"} />}
         title={`3. ${t<string>("Properties")}`}
         onRightIconPress={() => {
-          createPortal(PropertySelectorPage, {
+          createPortal(PropertySelector, {
             v2: true,
             selection: template.properties,
             pool: PropertyPool.Reserved | PropertyPool.Custom,
@@ -341,14 +338,8 @@ const Template = ({
           {template.properties?.map((p, i) => {
             return (
               <>
-                <div
-                  key={`${p.pool}-${p.id}`}
-                  className={"flex items-center gap-2"}
-                >
-                  <BriefProperty
-                    fields={["name", "pool", "type"]}
-                    property={p.property}
-                  />
+                <div key={`${p.pool}-${p.id}`} className={"flex items-center gap-2"}>
+                  <BriefProperty fields={["name", "pool", "type"]} property={p.property} />
                   <div className={"flex items-center gap-1"}>
                     {p.valueLocators?.map((v) => {
                       return (
@@ -435,8 +426,10 @@ const Template = ({
               return t<string>("Unknown enhancer");
             }
 
+            const keywordProperty = e.keywordProperty ? propertyMap[e.keywordProperty.pool]?.[e.keywordProperty.id] : undefined;
+
             return (
-              <div>
+              <div className="flex flex-col gap-1">
                 <div className={"flex items-center gap-1"}>
                   <BriefEnhancer enhancer={enhancer} />
                   <Button
@@ -446,10 +439,12 @@ const Template = ({
                     onPress={async () => {
                       createPortal(EnhancerOptionsModal, {
                         enhancer,
-                        options: e,
+                        options: JSON.parse(JSON.stringify(e)),
                         onSubmit: async (options) => {
-                          Object.assign(e, options);
-                          await putTemplate(template);
+                          const updatedTemplate = JSON.parse(JSON.stringify(template));
+                          Object.assign(updatedTemplate.enhancers![i], options);
+                          await putTemplate(updatedTemplate);
+                          Object.assign(template, updatedTemplate);
 
                           // After saving enhancer options, check for properties referenced by enhancers
                           // that are not yet bound to the current template, or newly created properties
@@ -460,31 +455,29 @@ const Template = ({
                           }[] = [];
 
                           (template.enhancers ?? []).forEach((enh) => {
-                            (enh.targetOptions ?? []).forEach(
-                              (to: EnhancerTargetFullOptions) => {
-                                if (
-                                  to &&
-                                  !to.autoBindProperty &&
-                                  to.propertyPool != undefined &&
-                                  to.propertyId != undefined
-                                ) {
-                                  referencedPairs.push({
-                                    pool: to.propertyPool as PropertyPool,
-                                    id: to.propertyId as number,
-                                  });
-                                }
-                              },
-                            );
+                            (enh.targetOptions ?? []).forEach((to: EnhancerTargetFullOptions) => {
+                              const targetDescriptor = enhancer.targets.find((x) => x.id == to.target);
+                              if (targetDescriptor?.isDynamic && to.dynamicTarget == undefined) {
+                                return;
+                              }
+                              if (
+                                to &&
+                                !to.autoBindProperty &&
+                                to.propertyPool != undefined &&
+                                to.propertyPool > 0 &&
+                                to.propertyId != undefined
+                              ) {
+                                referencedPairs.push({
+                                  pool: to.propertyPool as PropertyPool,
+                                  id: to.propertyId as number,
+                                });
+                              }
+                            });
                           });
 
-                          const uniqPairs = _.uniqBy(
-                            referencedPairs,
-                            (p) => `${p.pool}:${p.id}`,
-                          );
+                          const uniqPairs = _.uniqBy(referencedPairs, (p) => `${p.pool}:${p.id}`);
                           const boundKeySet = new Set(
-                            (template.properties ?? []).map(
-                              (p) => `${p.pool}:${p.id}`,
-                            ),
+                            (template.properties ?? []).map((p) => `${p.pool}:${p.id}`),
                           );
                           const unboundPairs = uniqPairs.filter(
                             (p) => !boundKeySet.has(`${p.pool}:${p.id}`),
@@ -492,11 +485,8 @@ const Template = ({
 
                           if (unboundPairs.length > 0) {
                             const psr =
-                              (
-                                await BApi.property.getPropertiesByPool(
-                                  PropertyPool.All,
-                                )
-                              ).data || [];
+                              (await BApi.property.getPropertiesByPool(PropertyPool.All)).data ||
+                              [];
                             const ps = _.mapValues(
                               _.groupBy(psr, (x) => x.pool),
                               (v) => _.keyBy(v, (x) => x.id),
@@ -509,18 +499,11 @@ const Template = ({
                             if (propsToBind.length > 0) {
                               createPortal(Modal, {
                                 defaultVisible: true,
-                                title: t<string>(
-                                  "Bind referenced properties to current template?",
-                                ),
+                                title: t<string>("Bind referenced properties to current template?"),
                                 children: (
-                                  <div
-                                    className={"flex flex-col gap-1 flex-wrap"}
-                                  >
+                                  <div className={"flex flex-col gap-1 flex-wrap"}>
                                     {propsToBind.map((p) => (
-                                      <BriefProperty
-                                        key={`${p.pool}:${p.id}`}
-                                        property={p}
-                                      />
+                                      <BriefProperty key={`${p.pool}:${p.id}`} property={p} />
                                     ))}
                                   </div>
                                 ),
@@ -561,12 +544,12 @@ const Template = ({
                       selectionMode="single"
                       onSelectionChange={(keys) => {
                         const key = Array.from(keys ?? [])[0] as string;
+
                         if (key === "deleteEnhancements") {
                           createPortal(DeleteEnhancementsModal, {
-                            title: t<string>(
-                              "Enhancement.DeleteAllByEnhancerForTemplate",
-                              { templateName: template.name },
-                            ),
+                            title: t<string>("Enhancement.DeleteAllByEnhancerForTemplate", {
+                              templateName: template.name,
+                            }),
                             description: t<string>(
                               "Enhancement.DeleteAllByEnhancerForTemplate.ScopeWarning",
                             ),
@@ -610,81 +593,119 @@ const Template = ({
                     </DropdownMenu>
                   </Dropdown>
                 </div>
-                {e.expressions && e.expressions.length > 0 && (
-                  <div>
-                    <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                      {t<string>("Expressions")}
-                    </Chip>
-                    {e.expressions.map((x) => (
-                      <div>{x}</div>
-                    ))}
-                  </div>
-                )}
+                <div className="grid gap-x-2 text-xs opacity-100" style={{ gridTemplateColumns: "auto 1fr" }}>
+                  {e.requirements && e.requirements.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <IoGitBranchOutline className={"text-lg"} />
+                        {t<string>("Prerequisite enhancers")}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {e.requirements.map((r) => (
+                          <BriefEnhancer enhancer={enhancers.find((x) => x.id == r)!} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {e.keywordProperty && (
+                    <>
+                      <Tooltip color="secondary" content={t<string>("The property used to generate the keyword for enhancers that need it. Default is file/folder name.")}>
+                        <div className="flex items-center gap-1">
+                          <IoLocate className={"text-lg"} />
+                          {t<string>("Keyword property")}
+                        </div>
+                      </Tooltip>
+                      <div className="flex items-center gap-1">
+                        <BriefProperty property={keywordProperty!} />
+                        {e.keywordProperty.pool != PropertyPool.Internal && (
+                          <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                            {t<string>(`PropertyValueScope.${PropertyValueScope[e.keywordProperty.scope]}`)}
+                          </Chip>
+                        )}
+                      </div>
+                    </>
+                  )}
+                  {e.pretreatKeyword && (
+                    <>
+                      <Tooltip color="secondary" content={t<string>("Whether to pretreat the keyword before using it.")}>
+                        <div className="flex items-center gap-1">
+                          <MdOutlineCleaningServices className={"text-lg"} />
+                          {t<string>("Pretreat keyword")}
+                        </div>
+                      </Tooltip>
+                      <div className="flex items-center gap-1">
+                        <Checkbox isSelected size="sm" />
+                        <Button size='sm' variant='light' color="primary"
+                          onPress={() => {
+                            createPortal(Modal, {
+                              defaultVisible: true,
+                              title: t<string>("About to leave current page"),
+                              children: t<string>("Sure?"),
+                              onOk: async () => {
+                                navigate("/text");
+                              },
+                            });
+                          }}>
+                          {t<string>("Configure special texts for pretreatment")}
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                  {e.expressions && e.expressions.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <LuRegex className={"text-lg"} />
+                        {t<string>("Expressions")}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {e.expressions.map((x) => (
+                          <Chip radius={"sm"} size={"sm"} variant={"flat"}>{x}</Chip>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div>
                   {e.targetOptions ? (
                     <div className={"flex flex-wrap items-center gap-1"}>
                       {enhancer?.targets?.map((target, tIdx) => {
-                        const tos = e.targetOptions!.filter(
-                          (x) => x.target == target.id,
-                        );
+                        const tos = e.targetOptions!.filter((x) => x.target == target.id);
 
                         if (!tos || tos.length == 0) {
                           return null;
                         }
                         if (target.isDynamic) {
-                          const mainOptions = tos.find(
-                            (x) => x.dynamicTarget == undefined,
-                          );
-                          const otherOptions = tos.filter(
-                            (x) => x != mainOptions,
-                          );
+                          const mainOptions = tos.find((x) => x.dynamicTarget == undefined);
+                          const otherOptions = tos.filter((x) => x != mainOptions);
 
                           return (
                             <>
                               <div className={"flex items-center gap-1"}>
-                                <Chip
-                                  radius={"sm"}
-                                  size={"sm"}
-                                  variant={"flat"}
-                                >
+                                <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                                   {target.name}
                                 </Chip>
                                 {target.description && (
                                   <Tooltip content={target.description}>
-                                    <QuestionCircleOutlined
-                                      className={"text-base"}
-                                    />
+                                    <QuestionCircleOutlined className={"text-base"} />
                                   </Tooltip>
                                 )}
-                                {mainOptions?.autoBindProperty &&
-                                  t<string>("Auto bind property")}
+                                {mainOptions?.autoBindProperty && t<string>("Auto bind property")}
                                 {mainOptions?.autoMatchMultilevelString &&
                                   t<string>("Auto match multilevel string")}
                               </div>
                               {otherOptions.map((to) => {
                                 const property =
-                                  to.propertyPool != undefined &&
-                                  to.propertyId != undefined
-                                    ? propertyMap[to.propertyPool]?.[
-                                        to.propertyId
-                                      ]
+                                  to.propertyPool != undefined && to.propertyId != undefined
+                                    ? propertyMap[to.propertyPool]?.[to.propertyId]
                                     : undefined;
 
                                 return (
                                   <div className={"flex items-center gap-1"}>
-                                    <AiOutlineSisternode
-                                      className={"text-base"}
-                                    />
-                                    <Chip
-                                      radius={"sm"}
-                                      size={"sm"}
-                                      variant={"flat"}
-                                    >
+                                    <AiOutlineSisternode className={"text-base"} />
+                                    <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                                       {to.dynamicTarget}
                                     </Chip>
-                                    <TiChevronRightOutline
-                                      className={"text-base"}
-                                    />
+                                    <TiChevronRightOutline className={"text-base"} />
                                     {to.autoBindProperty ? (
                                       t<string>("Auto bind property")
                                     ) : property ? (
@@ -705,8 +726,7 @@ const Template = ({
                         } else {
                           const to = tos[0]!;
                           const property =
-                            to.propertyPool != undefined &&
-                            to.propertyId != undefined
+                            to.propertyPool != undefined && to.propertyId != undefined
                               ? propertyMap[to.propertyPool]?.[to.propertyId]
                               : undefined;
 
@@ -715,26 +735,16 @@ const Template = ({
                               <div className={"flex items-center gap-1"}>
                                 {target.description ? (
                                   <Tooltip content={target.description}>
-                                    <Chip
-                                      radius={"sm"}
-                                      size={"sm"}
-                                      variant={"flat"}
-                                    >
+                                    <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                                       {target.name}
                                     </Chip>
                                   </Tooltip>
                                 ) : (
-                                  <Chip
-                                    radius={"sm"}
-                                    size={"sm"}
-                                    variant={"flat"}
-                                  >
+                                  <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                                     {target.name}
                                   </Chip>
                                 )}
-                                <TiChevronRightOutline
-                                  className={"text-base"}
-                                />
+                                <TiChevronRightOutline className={"text-base"} />
                                 {to.autoBindProperty ? (
                                   t<string>("Auto bind property")
                                 ) : property ? (
@@ -754,9 +764,7 @@ const Template = ({
                       })}
                     </div>
                   ) : (
-                    <div className="opacity-60">
-                      {t<string>("Not configured")}
-                    </div>
+                    <div className="opacity-60">{t<string>("This enhancer won't have any effect since no target property is mapped. You need to configure at least one target property to let enhancer save data to.")}</div>
                   )}
                 </div>
               </div>
@@ -765,9 +773,7 @@ const Template = ({
         </div>
       </Block>
       <Block
-        description={t<string>(
-          "You can customize the display name of the resource",
-        )}
+        description={t<string>("You can customize the display name of the resource")}
         leftIcon={<MdOutlineSubtitles className={"text-large"} />}
         rightIcon={<AiOutlineEdit className={"text-large"} />}
         title={`5. ${t<string>("Display name template")}`}
@@ -792,20 +798,20 @@ const Template = ({
         descriptionPlacement={"bottom"}
         title={`6. ${t<string>("Subresource")}`}
         leftIcon={<TiFlowChildren className={"text-large"} />}
-        // rightIcon={<AiOutlineEdit className={'text-large'} />}
-        // onRightIconPress={() => {
-        //   createPortal(
-        //     DisplayNameTemplateEditorModal, {
-        //       properties: tpl.properties?.map(p => p.property!) ?? [],
-        //       template: tpl.displayNameTemplate,
-        //       onSubmit: async template => {
-        //         tpl.displayNameTemplate = template;
-        //         await putTemplate(tpl);
-        //         forceUpdate();
-        //       },
-        //     },
-        //   );
-        // }}
+      // rightIcon={<AiOutlineEdit className={'text-large'} />}
+      // onRightIconPress={() => {
+      //   createPortal(
+      //     DisplayNameTemplateEditorModal, {
+      //       properties: tpl.properties?.map(p => p.property!) ?? [],
+      //       template: tpl.displayNameTemplate,
+      //       onSubmit: async template => {
+      //         tpl.displayNameTemplate = template;
+      //         await putTemplate(tpl);
+      //         forceUpdate();
+      //       },
+      //     },
+      //   );
+      // }}
       >
         {renderChildSelector(template)}
       </Block>

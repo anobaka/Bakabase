@@ -5,11 +5,7 @@ import type { EnhancerTargetDescriptor } from "../../../../models";
 import type { IProperty } from "@/components/Property/models";
 import type { PropertyPool } from "@/sdk/constants";
 
-import {
-  DeleteOutlined,
-  EditOutlined,
-  QuestionCircleOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, QuestionCircleOutlined } from "@ant-design/icons";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
@@ -19,7 +15,7 @@ import { createEnhancerTargetOptions } from "../../models";
 
 import TargetOptions from "./TargetOptions";
 
-import { Button, Chip, Input, Tooltip } from "@/components/bakaui";
+import { Autocomplete, AutocompleteItem, Button, Chip, Tooltip } from "@/components/bakaui";
 import { SpecialTextType, StandardValueType } from "@/sdk/constants";
 import { IntegrateWithSpecialTextLabel } from "@/components/SpecialText";
 import { buildLogger } from "@/components/utils";
@@ -36,6 +32,7 @@ interface Props {
   propertyMap?: { [key in PropertyPool]?: Record<number, IProperty> };
   onPropertyChanged?: () => any;
   onChange?: (options: EnhancerTargetFullOptions) => any;
+  dynamicTargetCandidates?: string[];
 }
 
 const StdValueSpecialTextIntegrationMap: {
@@ -57,9 +54,10 @@ const TargetRow = (props: Props) => {
     descriptor,
     onPropertyChanged,
     onChange,
+    dynamicTargetCandidates,
   } = props;
 
-  const [options, setOptions] = useState<Partial<EnhancerTargetFullOptions>>(
+  const [options, setOptions] = useState<EnhancerTargetFullOptions>(
     propsOptions ?? createEnhancerTargetOptions(descriptor),
   );
   const [dynamicTargetError, setDynamicTargetError] = useState<string>();
@@ -86,9 +84,7 @@ const TargetRow = (props: Props) => {
     setOptions(propsOptions ?? createEnhancerTargetOptions(descriptor));
   }, [propsOptions]);
 
-  const patchTargetOptions = async (
-    patches: Partial<EnhancerTargetFullOptions>,
-  ) => {
+  const patchTargetOptions = async (patches: Partial<EnhancerTargetFullOptions>) => {
     const newOptions = {
       ...options,
       ...patches,
@@ -99,8 +95,7 @@ const TargetRow = (props: Props) => {
 
     if (
       !newOptions.autoBindProperty &&
-      (newOptions.propertyPool == undefined ||
-        newOptions.propertyId == undefined)
+      (newOptions.propertyPool == undefined || newOptions.propertyId == undefined)
     ) {
       return;
     }
@@ -110,12 +105,9 @@ const TargetRow = (props: Props) => {
 
   const dt = options.dynamicTarget ?? dynamicTarget;
 
-  const targetLabel = descriptor.isDynamic
-    ? (dt ?? t<string>("Default"))
-    : descriptor.name;
+  const targetLabel = descriptor.isDynamic ? (dt ?? t<string>("Default")) : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
-  const integratedSpecialTextType =
-    StdValueSpecialTextIntegrationMap[descriptor.valueType];
+  const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
 
   let property: IProperty | undefined;
 
@@ -131,7 +123,9 @@ const TargetRow = (props: Props) => {
   return (
     <div className={"flex items-center gap-1"}>
       <div className={"w-[80px] flex justify-center"}>
-        {noPropertyBound ? (
+        {isDefaultTargetOfDynamic ? (
+          "-"
+        ) : noPropertyBound ? (
           <Chip color={"warning"} size={"sm"} variant={"light"}>
             <AiOutlineClose className={"text-lg text-warning"} />
           </Chip>
@@ -146,10 +140,13 @@ const TargetRow = (props: Props) => {
           <div className={"flex items-center gap-1"}>
             {descriptor.isDynamic && !isDefaultTargetOfDynamic ? (
               editingDynamicTarget ? (
-                <Input
-                  defaultValue={dynamicTargetInputValueRef.current}
+                <Autocomplete
+                  allowsCustomValue
+                  isRequired
+                  defaultInputValue={dynamicTargetInputValueRef.current}
                   errorMessage={dynamicTargetError}
                   isInvalid={dynamicTargetError != undefined}
+                  items={dynamicTargetCandidates?.map((k) => ({ label: k, value: k })) ?? []}
                   size={"sm"}
                   onBlur={() => {
                     if (
@@ -163,12 +160,14 @@ const TargetRow = (props: Props) => {
                     dynamicTargetInputValueRef.current = undefined;
                     setEditingDynamicTarget(false);
                   }}
-                  onValueChange={(v) => {
+                  onInputChange={(v) => {
                     if (validateDynamicTarget(v)) {
                       dynamicTargetInputValueRef.current = v;
                     }
                   }}
-                />
+                >
+                  {(c) => <AutocompleteItem key={c.value}>{c.label}</AutocompleteItem>}
+                </Autocomplete>
               ) : (
                 <Button
                   // size={'sm'}
@@ -194,12 +193,15 @@ const TargetRow = (props: Props) => {
                 />
                 {/* {targetLabel} */}
                 {integratedSpecialTextType && (
-                  <IntegrateWithSpecialTextLabel
-                    type={integratedSpecialTextType}
-                  />
+                  <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
                 )}
                 {descriptor.description && (
-                  <Tooltip content={descriptor.description} placement={"right"}>
+                  <Tooltip
+                    className="max-w-[400px]"
+                    color="secondary"
+                    content={descriptor.description}
+                    placement={"right"}
+                  >
                     <QuestionCircleOutlined className={"text-base"} />
                   </Tooltip>
                 )}
@@ -220,7 +222,7 @@ const TargetRow = (props: Props) => {
             <PropertyMatcher
               isClearable
               matchedProperty={property}
-              name={descriptor.name}
+              name={descriptor.isDynamic ? options.dynamicTarget : descriptor.name}
               type={descriptor.propertyType}
               onValueChanged={(property) => {
                 if (!property) {
@@ -241,10 +243,7 @@ const TargetRow = (props: Props) => {
       <div className={"w-1/4"}>
         <div className={"flex flex-col gap-2"}>
           <TargetOptions
-            isDisabled={
-              !options.autoBindProperty &&
-              (!options.propertyId || !options.propertyPool)
-            }
+            isDisabled={!options.autoBindProperty && (!options.propertyId || !options.propertyPool)}
             options={options}
             optionsItems={descriptor.optionsItems}
             onChange={patchTargetOptions}

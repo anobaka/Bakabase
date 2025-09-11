@@ -10,16 +10,8 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import {
-  Button,
-  Card,
-  CardBody,
-  Input,
-  Modal,
-  Select,
-  Tooltip,
-} from "@/components/bakaui";
-import PropertySelectorPage from "@/components/PropertySelector";
+import { Button, Card, CardBody, Input, Modal, Select, Tooltip } from "@/components/bakaui";
+import PropertySelector from "@/components/PropertySelector";
 import { PropertyPool, propertyValueScopes } from "@/sdk/constants";
 import ProcessStep from "@/pages/bulk-modification2/components/BulkModification/ProcessStep";
 import ProcessStepModal from "@/pages/bulk-modification2/components/BulkModification/ProcessStepModal";
@@ -38,19 +30,13 @@ const validate = (v?: Partial<BulkModificationVariable>) =>
   !(!v || !v.name || !v.propertyId || !v.propertyPool || v.scope == undefined);
 
 const log = buildLogger("VariableModal");
-const VariableModal = ({
-  variable: propsVariable,
-  onDestroyed,
-  onChange,
-}: Props) => {
+const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const bmInternals = useBulkModificationInternalsStore.getState();
 
-  const [variable, setVariable] = useState<Partial<BulkModificationVariable>>(
-    propsVariable ?? {},
-  );
+  const [variable, setVariable] = useState<Partial<BulkModificationVariable>>(propsVariable ?? {});
 
   useUpdateEffect(() => {
     setVariable(propsVariable ?? {});
@@ -79,10 +65,7 @@ const VariableModal = ({
     >
       <Card>
         <CardBody>
-          <div
-            className={"grid items-center gap-2"}
-            style={{ gridTemplateColumns: "auto 1fr" }}
-          >
+          <div className={"grid items-center gap-2"} style={{ gridTemplateColumns: "auto 1fr" }}>
             <div className={"text-right"}>{t<string>("Property")}</div>
             <div className={"flex items-center gap-2"}>
               <Button
@@ -90,7 +73,7 @@ const VariableModal = ({
                 size="sm"
                 variant={"flat"}
                 onClick={() => {
-                  createPortal(PropertySelectorPage, {
+                  createPortal(PropertySelector, {
                     pool: PropertyPool.All,
                     multiple: false,
                     selection: variable?.property
@@ -102,9 +85,7 @@ const VariableModal = ({
                         ]
                       : undefined,
                     isDisabled: (p) =>
-                      !bmInternals.supportedStandardValueTypes?.includes(
-                        p.bizValueType,
-                      ),
+                      !bmInternals.supportedStandardValueTypes?.includes(p.bizValueType),
                     onSubmit: async (ps) => {
                       const p = ps[0];
 
@@ -146,9 +127,7 @@ const VariableModal = ({
                 }))}
                 placeholder={t<string>("Select a scope for property value")}
                 selectedKeys={
-                  variable?.scope == undefined
-                    ? undefined
-                    : [variable.scope.toString()]
+                  variable?.scope == undefined ? undefined : [variable.scope.toString()]
                 }
                 selectionMode={"single"}
                 size="sm"
@@ -193,9 +172,7 @@ const VariableModal = ({
                       "If a preprocessing procedure is set, the variables will be preprocessed first before being used.",
                     )}
                   </div>
-                  <div>
-                    {t<string>("You can add multiple preprocessing steps.")}
-                  </div>
+                  <div>{t<string>("You can add multiple preprocessing steps.")}</div>
                 </div>
               }
             >

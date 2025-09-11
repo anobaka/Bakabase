@@ -50,4 +50,5 @@ public interface IBakabaseLocalizer
     string MediaType(MediaType type);
     string Resource();
     string Search();
+    string Enhancer_CircularDependencyDetected(string[] enhancers);
 }

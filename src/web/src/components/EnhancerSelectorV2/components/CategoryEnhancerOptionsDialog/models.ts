@@ -1,4 +1,4 @@
-import type { EnhancerId } from "@/sdk/constants";
+import type { EnhancerId, PropertyValueScope } from "@/sdk/constants";
 import type { PropertyPool } from "@/sdk/constants";
 import type { EnhancerTargetDescriptor } from "@/components/EnhancerSelectorV2/models";
 
@@ -11,6 +11,14 @@ export interface CategoryEnhancerFullOptions {
 
 export interface EnhancerFullOptions {
   targetOptions?: EnhancerTargetFullOptions[];
+  requirements?: EnhancerId[];
+  expressions?: string[];
+  keywordProperty?: {
+    pool: PropertyPool;
+    id: number;
+    scope: PropertyValueScope;
+  };
+  pretreatKeyword?: boolean;
 }
 
 export interface EnhancerTargetFullOptions {
@@ -34,7 +42,3 @@ export function defaultCategoryEnhancerTargetOptions(
 
   return eto;
 }
-
-export type RegexEnhancerFullOptions = EnhancerFullOptions & {
-  expressions: string[];
-};

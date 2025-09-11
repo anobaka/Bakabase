@@ -59,6 +59,7 @@ import { InternalProperty, PropertyPool, SearchOperation } from "@/sdk/constants
 import { buildColorValueString } from "@/components/bakaui/components/ColorPicker";
 import DeleteEnhancementsByEnhancerSelectorModal from "@/pages/media-library/components/DeleteEnhancementsByEnhancerSelectorModal";
 import { EditableValue } from "@/components/EditableValue";
+import PathAutocomplete, { PathAutocompleteProps } from "@/components/PathAutocomplete";
 
 enum SortBy {
   Path = 1,
@@ -146,17 +147,44 @@ const MediaLibraryPage = () => {
         {paths.map((p, idx) => {
           return (
             <div key={p} className="flex items-center gap-1">
-              <Button
-                key={idx}
-                className={"justify-start"}
-                color={"default"}
-                size={"sm"}
-                variant={"flat"}
-                onPress={() => BApi.tool.openFileOrDirectory({ path: p })}
-              >
-                <AiOutlineFolderOpen className={"text-lg"} />
-                {p}
-              </Button>
+              <EditableValue<string, PathAutocompleteProps, ButtonProps & { value: string }>
+                className="grow"
+                Viewer={({ value, ...props }) => value ? <Button
+                  key={idx}
+                  className={"justify-start"}
+                  color={"default"}
+                  size={"sm"}
+                  variant={"flat"}
+                  onPress={() => BApi.tool.openFileOrDirectory({ path: p })}
+                >
+                  <AiOutlineFolderOpen className={"text-lg"} />
+                  {value}
+                </Button> : null}
+                Editor={({onValueChange, ...props}) => <PathAutocomplete
+                  maxResults={100}
+                  label={
+                    paths.length > 1
+                      ? `${t<string>("MediaLibrary.Path")}${idx + 1}`
+                      : t<string>("MediaLibrary.Path")
+                  }
+                  pathType="folder"
+                  placeholder={t<string>("MediaLibrary.PathPlaceholder")}
+                  size="sm"
+                  onSelectionChange={onValueChange}
+                  {...props}
+                />
+                }
+                onSubmit={async v => {
+                  paths[idx] = v ?? "";
+                  ml.paths = paths;
+                  await BApi.mediaLibraryV2.patchMediaLibraryV2(ml.id, {
+                    paths: paths,
+                  });
+                  outdatedModalRef.current?.check();
+                  forceUpdate();
+                }}
+                defaultValue={p}
+              />
               <Button
                 isIconOnly
                 color="primary"
@@ -525,7 +553,7 @@ const MediaLibraryPage = () => {
                                 };
                                 const query = encodeURIComponent(JSON.stringify(searchForm));
 
-                                navigate(`/resource?query=${query}`);
+                                navigate(`/resource2?query=${query}`);
                               },
                               footer: {
                                 actions: ["ok", "cancel"],
@@ -593,7 +621,7 @@ const MediaLibraryPage = () => {
                               ),
                               onOk: async () => {
                                 await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
-                                forceUpdate();
+                                loadMediaLibraries();
                               },
                               footer: {
                                 actions: ["ok", "cancel"],

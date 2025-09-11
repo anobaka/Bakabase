@@ -2053,6 +2053,21 @@ export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, s
   [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
 };
 
+export enum EnhancerTag {
+  UseRegex = 1,
+  UseKeyword = 2
+}
+
+export const enhancerTags = [
+  { label: 'UseRegex', value: EnhancerTag.UseRegex },
+  { label: 'UseKeyword', value: EnhancerTag.UseKeyword }
+] as const;
+
+export const EnhancerTagLabel: Record<EnhancerTag, string> = {
+  [EnhancerTag.UseRegex]: 'UseRegex',
+  [EnhancerTag.UseKeyword]: 'UseKeyword'
+};
+
 export enum BackgroundTaskName {
   SyncMediaLibrary = 1,
   PrepareCache = 2,

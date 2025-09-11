@@ -12,11 +12,8 @@ import { CardHeader } from "@heroui/react";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 
 import { Button, Card, CardBody, Modal, Tooltip } from "@/components/bakaui";
-import PropertySelectorPage from "@/components/PropertySelector";
-import {
-  BulkModificationProcessorValueType,
-  PropertyPool,
-} from "@/sdk/constants";
+import PropertySelector from "@/components/PropertySelector";
+import { BulkModificationProcessorValueType, PropertyPool } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ProcessStep from "@/pages/bulk-modification2/components/BulkModification/ProcessStep";
 import ProcessStepModal from "@/pages/bulk-modification2/components/BulkModification/ProcessStepModal";
@@ -36,20 +33,13 @@ const AllBulkModificationValueTypes = [
   BulkModificationProcessorValueType.ManuallyInput,
   BulkModificationProcessorValueType.Variable,
 ];
-const ProcessModal = ({
-  onDestroyed,
-  process: propsProcess,
-  onSubmit,
-  variables,
-}: Props) => {
+const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const bmInternals = useBulkModificationInternalsStore.getState();
 
-  const [process, setProcess] = useState<Partial<BulkModificationProcess>>(
-    propsProcess ?? {},
-  );
+  const [process, setProcess] = useState<Partial<BulkModificationProcess>>(propsProcess ?? {});
 
   return (
     <Modal
@@ -72,10 +62,7 @@ const ProcessModal = ({
     >
       <Card>
         <CardBody>
-          <div
-            className={"grid items-center gap-2"}
-            style={{ gridTemplateColumns: "auto 1fr" }}
-          >
+          <div className={"grid items-center gap-2"} style={{ gridTemplateColumns: "auto 1fr" }}>
             <div className={"text-right"}>{t<string>("Property")}</div>
             <div>
               <Button
@@ -83,15 +70,11 @@ const ProcessModal = ({
                 size="sm"
                 variant={"light"}
                 onClick={() => {
-                  createPortal(PropertySelectorPage, {
+                  createPortal(PropertySelector, {
                     pool: PropertyPool.All,
                     isDisabled: (p) =>
-                      bmInternals.disabledPropertyKeys?.[p.pool]?.includes(
-                        p.id,
-                      ) ||
-                      !bmInternals.supportedStandardValueTypes?.includes(
-                        p.bizValueType,
-                      ),
+                      bmInternals.disabledPropertyKeys?.[p.pool]?.includes(p.id) ||
+                      !bmInternals.supportedStandardValueTypes?.includes(p.bizValueType),
                     multiple: false,
                     onSubmit: async (ps) => {
                       const p = ps[0];
@@ -123,9 +106,7 @@ const ProcessModal = ({
             <Tooltip
               content={
                 <div>
-                  <div>
-                    {t<string>("You can add multiple preprocessing steps.")}
-                  </div>
+                  <div>{t<string>("You can add multiple preprocessing steps.")}</div>
                 </div>
               }
             >

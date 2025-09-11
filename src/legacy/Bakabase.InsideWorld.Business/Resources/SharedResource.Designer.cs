@@ -692,5 +692,11 @@ namespace Bakabase.InsideWorld.Business.Resources {
                 return ResourceManager.GetString("Search", resourceCulture);
             }
         }
+        
+        internal static string Enhancer_CircularDependencyDetected {
+            get {
+                return ResourceManager.GetString("Enhancer_CircularDependencyDetected", resourceCulture);
+            }
+        }
     }
 }
