@@ -77,4 +77,34 @@ internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) :
     {
         return this[nameof(Enhancer_ReApplyingEnhancements), count];
     }
+
+    public string Enhance()
+    {
+        return this[nameof(Enhance)];
+    }
+
+    public string Enhancer_KeywordPropertyIsEmpty(string poolName, string propertyName, string scopeName)
+    {
+        return this[nameof(Enhancer_KeywordPropertyIsEmpty), poolName, propertyName, scopeName];
+    }
+
+    public string Enhancer_UsePropertyAsKeyword(string poolName, string propertyName, string scopeName)
+    {
+        return this[nameof(Enhancer_UsePropertyAsKeyword), poolName, propertyName, scopeName];
+    }
+
+    public string Enhancer_UseFilenameAsKeyword(string filename)
+    {
+        return this[nameof(Enhancer_UseFilenameAsKeyword), filename];
+    }
+
+    public string Enhancer_KeywordPretreatStatus(bool enabled)
+    {
+        return this[nameof(Enhancer_KeywordPretreatStatus), enabled];
+    }
+
+    public string Enhancer_KeywordAfterPretreatment(string keyword)
+    {
+        return this[nameof(Enhancer_KeywordAfterPretreatment), keyword];
+    }
 }

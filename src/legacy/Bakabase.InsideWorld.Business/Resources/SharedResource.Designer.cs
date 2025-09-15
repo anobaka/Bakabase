@@ -698,5 +698,215 @@ namespace Bakabase.InsideWorld.Business.Resources {
                 return ResourceManager.GetString("Enhancer_CircularDependencyDetected", resourceCulture);
             }
         }
+        
+        internal static string MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries {
+            get {
+                return ResourceManager.GetString("MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries", resourceCulture);
+            }
+        }
+        
+        internal static string Init {
+            get {
+                return ResourceManager.GetString("Init", resourceCulture);
+            }
+        }
+        
+        internal static string ResourceDiscovery {
+            get {
+                return ResourceManager.GetString("ResourceDiscovery", resourceCulture);
+            }
+        }
+        
+        internal static string PickResourcesToValidate {
+            get {
+                return ResourceManager.GetString("PickResourcesToValidate", resourceCulture);
+            }
+        }
+        
+        internal static string PropertyValuesGeneratedOnSynchronization {
+            get {
+                return ResourceManager.GetString("PropertyValuesGeneratedOnSynchronization", resourceCulture);
+            }
+        }
+        
+        internal static string NoPropertiesGeneratedOnSynchronization {
+            get {
+                return ResourceManager.GetString("NoPropertiesGeneratedOnSynchronization", resourceCulture);
+            }
+        }
+        
+        internal static string DiscoveringPlayableFiles {
+            get {
+                return ResourceManager.GetString("DiscoveringPlayableFiles", resourceCulture);
+            }
+        }
+        
+        internal static string FoundPlayableFiles {
+            get {
+                return ResourceManager.GetString("FoundPlayableFiles", resourceCulture);
+            }
+        }
+        
+        internal static string NoPlayableFiles {
+            get {
+                return ResourceManager.GetString("NoPlayableFiles", resourceCulture);
+            }
+        }
+        
+        internal static string NoExtensionsConfigured {
+            get {
+                return ResourceManager.GetString("NoExtensionsConfigured", resourceCulture);
+            }
+        }
+        
+        internal static string NoPlayableFileLocatorConfigured {
+            get {
+                return ResourceManager.GetString("NoPlayableFileLocatorConfigured", resourceCulture);
+            }
+        }
+        
+        internal static string RunningEnhancers {
+            get {
+                return ResourceManager.GetString("RunningEnhancers", resourceCulture);
+            }
+        }
+        
+        internal static string StartEnhancing {
+            get {
+                return ResourceManager.GetString("StartEnhancing", resourceCulture);
+            }
+        }
+        
+        internal static string ResourceEnhanced {
+            get {
+                return ResourceManager.GetString("ResourceEnhanced", resourceCulture);
+            }
+        }
+        
+        internal static string Enhancer {
+            get {
+                return ResourceManager.GetString("Enhancer", resourceCulture);
+            }
+        }
+        
+        internal static string Context {
+            get {
+                return ResourceManager.GetString("Context", resourceCulture);
+            }
+        }
+        
+        internal static string ResourceDisplayName {
+            get {
+                return ResourceManager.GetString("ResourceDisplayName", resourceCulture);
+            }
+        }
+        
+        internal static string DisplayName {
+            get {
+                return ResourceManager.GetString("DisplayName", resourceCulture);
+            }
+        }
+        
+        internal static string Summary {
+            get {
+                return ResourceManager.GetString("Summary", resourceCulture);
+            }
+        }
+        
+        internal static string Complete {
+            get {
+                return ResourceManager.GetString("Complete", resourceCulture);
+            }
+        }
+        
+        internal static string PlayableFiles {
+            get {
+                return ResourceManager.GetString("PlayableFiles", resourceCulture);
+            }
+        }
+        
+        internal static string MediaLibraryTemplate_Name {
+            get {
+                return ResourceManager.GetString("MediaLibraryTemplate_Name", resourceCulture);
+            }
+        }
+        
+        internal static string MediaLibraryTemplate_Id {
+            get {
+                return ResourceManager.GetString("MediaLibraryTemplate_Id", resourceCulture);
+            }
+        }
+        
+        internal static string PropertyValuesGeneratedByEnhancer {
+            get {
+                return ResourceManager.GetString("PropertyValuesGeneratedByEnhancer", resourceCulture);
+            }
+        }
+        
+        internal static string NoPropertyValuesGeneratedByEnhancer {
+            get {
+                return ResourceManager.GetString("NoPropertyValuesGeneratedByEnhancer", resourceCulture);
+            }
+        }
+        
+        internal static string Found {
+            get {
+                return ResourceManager.GetString("Found", resourceCulture);
+            }
+        }
+        
+        internal static string Searching {
+            get {
+                return ResourceManager.GetString("Searching", resourceCulture);
+            }
+        }
+        
+        internal static string Count {
+            get {
+                return ResourceManager.GetString("Count", resourceCulture);
+            }
+        }
+        
+        internal static string Keyword {
+            get {
+                return ResourceManager.GetString("Keyword", resourceCulture);
+            }
+        }
+        
+        internal static string NoEnhancerConfigured {
+            get {
+                return ResourceManager.GetString("NoEnhancerConfigured", resourceCulture);
+            }
+        }
+        
+        internal static string BuildingData {
+            get {
+                return ResourceManager.GetString("BuildingData", resourceCulture);
+            }
+        }
+        
+        internal static string Failed {
+            get {
+                return ResourceManager.GetString("Failed", resourceCulture);
+            }
+        }
+        
+        internal static string EnhancementCompleted {
+            get {
+                return ResourceManager.GetString("EnhancementCompleted", resourceCulture);
+            }
+        }
+        
+        internal static string NotSet {
+            get {
+                return ResourceManager.GetString("NotSet", resourceCulture);
+            }
+        }
+        
+        internal static string NoPropertyValuesGeneratedOnSynchronization {
+            get {
+                return ResourceManager.GetString("NoPropertyValuesGeneratedOnSynchronization", resourceCulture);
+            }
+        }
     }
 }

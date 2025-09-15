@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -21,18 +25,24 @@ using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Presets.Abstractions;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
+using Bootstrap.Components.Tasks;
 using Bootstrap.Extensions;
+using Bootstrap.Models;
 using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Metadata.Profiles.Exif;
@@ -51,6 +61,10 @@ public class MediaLibraryTemplateService<TDbContext>(
     IMediaLibraryService mediaLibraryService,
     IBOptions<EnhancerOptions> enhancerOptions,
     IBakabaseLocalizer localizer,
+    IEnumerable<IEnhancer> enhancers,
+    IPropertyLocalizer propertyLocalizer,
+    IEnhancerDescriptors enhancerDescriptors,
+    BakaTracingContext tracingContext,
     IServiceProvider serviceProvider)
     : ScopedService(serviceProvider), IMediaLibraryTemplateService
     where TDbContext : DbContext
@@ -58,6 +72,10 @@ public class MediaLibraryTemplateService<TDbContext>(
     protected IEnhancerService EnhancerService => GetRequiredService<IEnhancerService>();
     protected IPresetsService BuiltinMediaLibraryTemplateService => GetRequiredService<IPresetsService>();
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
+    protected IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
+
+    protected ConcurrentDictionary<EnhancerId, IEnhancer> EnhancerMap =
+        new(enhancers.ToDictionary(d => (EnhancerId)d.Id, d => d));
 
     protected async Task Populate(MediaLibraryTemplate[] templates, MediaLibraryTemplateAdditionalItem additionalItems)
     {
@@ -355,7 +373,8 @@ public class MediaLibraryTemplateService<TDbContext>(
                 }
                 else
                 {
-                    throw new Exception(localizer.Enhancer_CircularDependencyDetected(simpleDepsCopy.Keys.Select(k => ((EnhancerId)k).ToString()).ToArray()));
+                    throw new Exception(localizer.Enhancer_CircularDependencyDetected(simpleDepsCopy.Keys
+                        .Select(k => ((EnhancerId)k).ToString()).ToArray()));
                 }
             }
         }
@@ -365,6 +384,13 @@ public class MediaLibraryTemplateService<TDbContext>(
 
     public async Task Delete(int id)
     {
+        var mediaLibraries = await MediaLibraryV2Service.GetAll(x => x.TemplateId == id);
+        if (mediaLibraries.Any())
+        {
+            throw new Exception(localizer
+                .MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries(mediaLibraries.Select(x => x.Name)));
+        }
+
         await orm.RemoveByKey(id);
     }
 
@@ -595,5 +621,231 @@ public class MediaLibraryTemplateService<TDbContext>(
             Name = @new.Name,
             CreatedAt = @new.CreatedAt,
         });
+    }
+
+    public async Task Validate(int id, MediaLibraryTemplateValidationInputModel model, CancellationToken ct)
+    {
+        var template = await Get(id, MediaLibraryTemplateAdditionalItem.ChildTemplate);
+        tracingContext.AddTrace(LogLevel.Information, localizer.Init(),
+            (localizer.MediaLibraryTemplate_Id(), template.Id),
+            (localizer.MediaLibraryTemplate_Name(), template.Name));
+
+        tracingContext.AddTrace(LogLevel.Information, localizer.ResourceDiscovery(), localizer.Searching());
+        var limit = Math.Max(1, model.LimitResourcesCount ?? 3);
+        var rootPath = model.RootPath.StandardizePath()!;
+        var tmpResources = await template.DiscoverResources(rootPath, null, null, PauseToken.None, ct, 1);
+        tracingContext.AddTrace(LogLevel.Information, localizer.ResourceDiscovery(),
+            (localizer.Found(), tmpResources.Count));
+        var resources = tmpResources.SelectMany(r => r.Flatten(0, null)).Where(x =>
+            model.ResourceKeyword.IsNullOrEmpty() ||
+            x.FileName.Contains(model.ResourceKeyword, StringComparison.OrdinalIgnoreCase)).Take(limit).ToList();
+        tracingContext.AddTrace(LogLevel.Information, localizer.PickResourcesToValidate(),
+        [
+            (localizer.Count(), resources.Count),
+            (localizer.Keyword(), model.ResourceKeyword ?? localizer.NotSet()),
+            ..resources.Select(r => (localizer.Resource(), r.Path))
+        ]);
+        var playableFilesExtensions =
+            (template.PlayableFileLocator?.ExtensionGroups?.SelectMany(x => x.Extensions ?? []) ?? [])
+            .Concat(template.PlayableFileLocator?.Extensions ?? [])
+            .ToHashSet();
+        foreach (var resource in resources)
+        {
+            tracingContext.AddTrace(LogLevel.Information,
+                localizer.BuildingData(),
+                (localizer.Resource(), resource.Path));
+            {
+                var properties = new List<(PropertyPool Pool, PropertyType Type, string Name, object? BizValue)>();
+                if (resource.Properties != null)
+                {
+                    foreach (var (pool, pvs) in resource.Properties)
+                    {
+                        foreach (var (pId, pv) in pvs)
+                        {
+                            var syncScopeValue = pv.Values
+                                ?.FirstOrDefault(v => v.Scope == (int)PropertyValueScope.Synchronization)?.BizValue;
+                            if (syncScopeValue != null)
+                            {
+                                properties.Add(
+                                    ((PropertyPool)pool, pv.Type, pv.Name ?? localizer.Unknown(),
+                                        syncScopeValue.SerializeBizValueAsStandardValue(pv.Type)));
+                            }
+                        }
+                    }
+                }
+
+                if (properties.Any())
+                {
+                    var context = properties.Select(p => (
+                        $"[{propertyLocalizer.PropertyPoolName(p.Pool)}:{propertyLocalizer.PropertyTypeName(p.Type)}]{p.Name}",
+                        (object?)p.BizValue.SerializeBizValueAsStandardValue(p.Type))).ToArray();
+                    tracingContext.AddTrace(LogLevel.Information,
+                        localizer.PropertyValuesGeneratedOnSynchronization(), context);
+                }
+                else
+                {
+                    tracingContext.AddTrace(LogLevel.Information,
+                        localizer.NoPropertyValuesGeneratedOnSynchronization());
+                }
+            }
+
+            {
+                if (playableFilesExtensions.Any())
+                {
+                    var fileCount = template.PlayableFileLocator?.MaxFileCount ?? int.MaxValue;
+                    var files = resource.IsFile
+                        ? [resource.Path]
+                        : Directory.GetFiles(resource.Path, "*", SearchOption.AllDirectories);
+                    var playableFiles = files.Where(f => playableFilesExtensions.Contains(Path.GetExtension(f)))
+                        .Take(fileCount)
+                        .ToArray();
+                    var samples = playableFiles.Take(3)
+                        .Select(f =>
+                        {
+                            var stdPath = f.StandardizePath()!;
+                            return resource.IsFile ? Path.GetFileName(stdPath) : stdPath.Replace(resource.Path, string.Empty);
+                        }).ToList();
+                    if (samples.Any())
+                    {
+                        var samplesText =
+                            $"{string.Join(", ", samples)}{(samples.Count < playableFiles.Length ? $" and {playableFiles.Length - samples.Count} more" : "")}"
+                                .Trim();
+                        tracingContext.AddTrace(LogLevel.Information, localizer.FoundPlayableFiles(),
+                            (localizer.PlayableFiles(), samplesText));
+                    }
+                    else
+                    {
+                        tracingContext.AddTrace(LogLevel.Warning, localizer.NoPlayableFiles(),
+                            localizer.PlayableFiles());
+                    }
+
+                }
+                else
+                {
+                    tracingContext.AddTrace(LogLevel.Warning, localizer.NoPlayableFiles(),
+                        localizer.NoExtensionsConfigured());
+                }
+            }
+
+            {
+                if (template.Enhancers != null && template.Enhancers.Any())
+                {
+                    // Build requirement map to resolve execution order
+                    var requirementMap = template.Enhancers.ToDictionary(
+                        e => (EnhancerId)e.EnhancerId,
+                        e => (e.Requirements?.Select(x => (EnhancerId)x).ToHashSet()) ?? new HashSet<EnhancerId>()
+                    );
+
+                    var optionsMapAll = template.Enhancers
+                        .ToDictionary(d => d.EnhancerId, d => d.ToEnhancerFullOptions());
+
+                    var remaining = requirementMap.Keys.ToHashSet();
+
+                    while (remaining.Any())
+                    {
+                        var ready = remaining.Where(eid => requirementMap[eid].Count == 0).ToArray();
+                        if (!ready.Any())
+                        {
+                            tracingContext.AddTrace(LogLevel.Error,
+                                localizer.Enhancer_CircularDependencyDetected(remaining.Select(k => k.ToString())
+                                    .ToArray()));
+                            return;
+                        }
+
+                        foreach (var enhancerId in ready)
+                        {
+                            tracingContext.AddTrace(LogLevel.Information, localizer.StartEnhancing(),
+                                (localizer.Enhancer(), enhancerId.ToString()));
+
+                            // Apply this enhancer only, in order
+                            var singleOptions = new Dictionary<int, EnhancerFullOptions>
+                            {
+                                [(int)enhancerId] = optionsMapAll[(int)enhancerId]
+                            };
+
+                            Exception? err = null;
+                            try
+                            {
+                                await EnhancerService.Enhance(resource, singleOptions);
+                            }
+                            catch (Exception ex)
+                            {
+                                err = ex;
+                            }
+
+                            if (err == null)
+                            {
+                                var properties =
+                                    new List<(PropertyPool Pool, PropertyType Type, string Name, object? BizValue)>();
+                                if (resource.Properties != null)
+                                {
+                                    var ed = enhancerDescriptors[(int)enhancerId];
+                                    foreach (var (pool, pvs) in resource.Properties)
+                                    {
+                                        foreach (var (pId, pv) in pvs)
+                                        {
+                                            var enhancedValue = pv.Values
+                                                ?.FirstOrDefault(v => v.Scope == ed.PropertyValueScope)?.BizValue;
+                                            if (enhancedValue != null)
+                                            {
+                                                properties.Add(
+                                                    ((PropertyPool)pool, pv.Type, pv.Name ?? localizer.Unknown(),
+                                                        enhancedValue));
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (properties.Any())
+                                {
+                                    var context = properties.Select(p => (
+                                        $"[{propertyLocalizer.PropertyPoolName(p.Pool)}:{propertyLocalizer.PropertyTypeName(p.Type)}]{p.Name}",
+                                        (object?)p.BizValue.SerializeBizValueAsStandardValue(p.Type))).ToArray();
+                                    tracingContext.AddTrace(LogLevel.Information, localizer.EnhancementCompleted(),
+                                        context);
+                                }
+                                else
+                                {
+                                    tracingContext.AddTrace(LogLevel.Warning,
+                                        localizer.EnhancementCompleted(),
+                                        localizer.NoPropertyValuesGeneratedByEnhancer());
+                                }
+                            }
+                            else
+                            {
+                                tracingContext.AddTrace(LogLevel.Error, localizer.Failed(), err.Message);
+                            }
+
+                            // Mark as done and remove from others' requirements
+                            remaining.Remove(enhancerId);
+                            foreach (var kv in requirementMap.Values)
+                            {
+                                kv.Remove(enhancerId);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    tracingContext.AddTrace(LogLevel.Information, localizer.NoEnhancerConfigured());
+                }
+            }
+            {
+                if (template.DisplayNameTemplate.IsNotEmpty())
+                {
+                    var wrappers = (await specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
+                        .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
+                    foreach (var r in resources)
+                    {
+                        r.DisplayName =
+                            ResourceService.BuildDisplayNameForResource(r, template.DisplayNameTemplate, wrappers);
+                        tracingContext.AddTrace(LogLevel.Information, localizer.ResourceDisplayName(),
+                            (localizer.DisplayName(), r.DisplayName));
+                    }
+                }
+            }
+        }
+
+        tracingContext.AddTrace(LogLevel.Information, localizer.Complete());
     }
 }

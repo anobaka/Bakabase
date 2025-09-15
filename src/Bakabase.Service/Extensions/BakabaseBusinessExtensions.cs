@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Extensions;
+﻿using Bakabase.Abstractions.Components.Tracing;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
@@ -155,6 +156,8 @@ namespace Bakabase.Service.Extensions
             services.AddFileNameModifier();
 
             services.AddPlayList();
+
+            services.AddBakaTracing();
 
             #endregion
 

@@ -489,9 +489,6 @@
   <data name="Enhancer_Kodi_Target_Resume_Name" xml:space="preserve">
     <value>续播</value>
   </data>
-  <data name="Enhancer_Kodi_Target_MusicVideo_Name" xml:space="preserve">
-    <value>音乐视频</value>
-  </data>
   <data name="Enhancer_Kodi_Target_Ratings_Name" xml:space="preserve">
     <value>评分</value>
   </data>
@@ -629,5 +626,23 @@
   </data>
   <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
     <value>马赛克</value>
+  </data>
+  <data name="Enhance" xml:space="preserve">
+    <value>增强</value>
+  </data>
+  <data name="Enhancer_KeywordPropertyIsEmpty" xml:space="preserve">
+    <value>已设置关键字属性为[{2}]维度的属性[{0}]{1}，但获取到的值为空，使用文件/文件夹名称作为备用</value>
+  </data>
+  <data name="Enhancer_UsePropertyAsKeyword" xml:space="preserve">
+    <value>使用[{2}]维度的属性[{0}]{1}作为关键字</value>
+  </data>
+  <data name="Enhancer_UseFilenameAsKeyword" xml:space="preserve">
+    <value>使用文件名[{0}]作为关键字</value>
+  </data>
+  <data name="Enhancer_KeywordPretreatStatus" xml:space="preserve">
+    <value>关键字预处理启用状态: {0}</value>
+  </data>
+  <data name="Enhancer_KeywordAfterPretreatment" xml:space="preserve">
+    <value>预处理后的关键字: {0}</value>
   </data>
 </root>

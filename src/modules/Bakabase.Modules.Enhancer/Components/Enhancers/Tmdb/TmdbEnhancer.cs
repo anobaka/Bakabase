@@ -15,8 +15,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Tmdb;
 
-public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFileManager fileManager, IStandardValueService standardValueService, ISpecialTextService specialTextService)
-    : AbstractKeywordEnhancer<TmdbEnhancerTarget, TmdbEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService)
+public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFileManager fileManager, IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
+    : AbstractKeywordEnhancer<TmdbEnhancerTarget, TmdbEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
 {
     protected override async Task<TmdbEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
         CancellationToken ct)

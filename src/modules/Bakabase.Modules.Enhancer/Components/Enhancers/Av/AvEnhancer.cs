@@ -99,8 +99,8 @@ public class AvEnhancer(
     PrestigeClient prestigeClient,
     ThePornDBClient thePornDbClient,
     ThePornDBMoviesClient thePornDbMoviesClient,
-    XcityClient xcityClient, IStandardValueService standardValueService, ISpecialTextService specialTextService)
-    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService)
+    XcityClient xcityClient, IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
+    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
 {
     protected override EnhancerId TypedId => EnhancerId.Av;
 

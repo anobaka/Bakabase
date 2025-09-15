@@ -488,9 +488,6 @@
   <data name="Enhancer_Kodi_Target_Resume_Name" xml:space="preserve">
     <value>Resume</value>
   </data>
-  <data name="Enhancer_Kodi_Target_MusicVideo_Name" xml:space="preserve">
-    <value>Music Video</value>
-  </data>
   <data name="Enhancer_Kodi_Target_Ratings_Name" xml:space="preserve">
     <value>Ratings</value>
   </data>
@@ -628,5 +625,23 @@
   </data>
   <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
     <value>Mosaic</value>
+  </data>
+  <data name="Enhance" xml:space="preserve">
+    <value>Enhance</value>
+  </data>
+  <data name="Enhancer_KeywordPropertyIsEmpty" xml:space="preserve">
+    <value>Keyword property has been set to [{0}]{1} from scope [{2}] but got empty value, use file/folder name as fallback</value>
+  </data>
+  <data name="Enhancer_UsePropertyAsKeyword" xml:space="preserve">
+    <value>Use property [{0}]{1} from scope [{2}] as keyword</value>
+  </data>
+  <data name="Enhancer_UseFilenameAsKeyword" xml:space="preserve">
+    <value>Use filename [{0}] as keyword</value>
+  </data>
+  <data name="Enhancer_KeywordPretreatStatus" xml:space="preserve">
+    <value>Keyword pretreat status: {0}</value>
+  </data>
+  <data name="Enhancer_KeywordAfterPretreatment" xml:space="preserve">
+    <value>Keyword after pretreatment: {0}</value>
   </data>
 </root>

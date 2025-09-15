@@ -27,6 +27,7 @@ using Newtonsoft.Json;
 using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancer;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -51,6 +52,7 @@ namespace Bakabase.Modules.Enhancer.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IPropertyService _propertyService;
         private readonly IMediaLibraryV2Service _mediaLibraryV2Service;
+        private readonly BakaTracingContext _tracingContext;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
             ICustomPropertyValueService customPropertyValueService,
@@ -58,7 +60,7 @@ namespace Bakabase.Modules.Enhancer.Services
             IStandardValueService standardValueService, IEnhancerLocalizer enhancerLocalizer,
             IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger,
             ICategoryService categoryService, IEnhancementRecordService enhancementRecordService, IReservedPropertyValueService reservedPropertyValueService,
-            IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider, IPropertyService propertyService, IMediaLibraryV2Service mediaLibraryV2Service)
+            IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider, IPropertyService propertyService, IMediaLibraryV2Service mediaLibraryV2Service, BakaTracingContext tracingContext)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -76,6 +78,7 @@ namespace Bakabase.Modules.Enhancer.Services
             _serviceProvider = serviceProvider;
             _propertyService = propertyService;
             _mediaLibraryV2Service = mediaLibraryV2Service;
+            _tracingContext = tracingContext;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 

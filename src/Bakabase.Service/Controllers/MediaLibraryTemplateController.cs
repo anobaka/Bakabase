@@ -9,6 +9,10 @@ using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Text.Json;
+using System.Threading;
+using Bakabase.Abstractions.Components.Tracing;
+using Microsoft.AspNetCore.Http;
 
 namespace Bakabase.Service.Controllers;
 
@@ -122,5 +126,34 @@ public class MediaLibraryTemplateController(
     public async Task<SingletonResponse<int>> AddFromPresetBuilder([FromBody] MediaLibraryTemplateCompactBuilder model)
     {
         return new(data: await presetsService.AddMediaLibrary(model));
+    }
+
+    [HttpPost("{id:int}/validate")]
+    [SwaggerOperation(OperationId = "ValidateMediaLibraryTemplate")]
+    public async Task<IActionResult> Validate(int id, [FromBody] MediaLibraryTemplateValidationInputModel model,
+        [FromServices] BakaTracingContext tracingContext)
+    {
+        Response.Headers.ContentType = "application/x-ndjson";
+        var validationTask = Task.Run(async () =>
+        {
+            try
+            {
+                await service.Validate(id, model, HttpContext.RequestAborted);
+            }
+            finally
+            {
+                tracingContext.Complete();
+            }
+        });
+
+        await foreach (var trace in tracingContext.ReadTracesAsync())
+        {
+            var json = JsonSerializer.Serialize(trace, JsonSerializerOptions.Web);
+            await Response.WriteAsync(json + "\n", HttpContext.RequestAborted);
+            await Response.Body.FlushAsync(HttpContext.RequestAborted);
+        }
+
+        await validationTask;
+        return new EmptyResult();
     }
 }

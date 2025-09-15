@@ -1,6 +1,7 @@
 "use client";
 
 import type { components } from "@/sdk/BApi2";
+import Markdown from 'react-markdown';
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -52,7 +53,7 @@ const AppInfo = ({ appInfo }) => {
   useEffect(() => {
     checkNewAppVersion();
 
-    return () => {};
+    return () => { };
   }, []);
 
   const renderNewVersion = () => {
@@ -91,7 +92,7 @@ const AppInfo = ({ appInfo }) => {
                           size: "xl",
                           title: newVersion.version,
                           defaultVisible: true,
-                          children: <pre>{newVersion.changelog}</pre>,
+                          children: <Markdown components={{a: (props) => <ExternalLink {...props} target="_blank" />}}>{newVersion.changelog}</Markdown>,
                           footer: { actions: ["cancel"] },
                         });
                       }}
@@ -113,7 +114,7 @@ const AppInfo = ({ appInfo }) => {
                 </Button>
                 {newVersion.installers?.length > 0 ? (
                   <>
-                    <Divider orientation={"ver"} />
+                    <Divider orientation={"vertical"} />
                     <Popover
                       trigger={
                         <Button color={"primary"} size={"sm"} variant={"light"}>
@@ -122,7 +123,6 @@ const AppInfo = ({ appInfo }) => {
                           )}
                         </Button>
                       }
-                      triggerType={"click"}
                     >
                       {newVersion.installers.map((i) => (
                         <div key={i.url}>
@@ -148,21 +148,15 @@ const AppInfo = ({ appInfo }) => {
         }
       case UpdaterStatus.Running:
         return (
-          <div style={{ display: "flex", alignItems: "center" }}>
-            {newVersion?.version}
-            &nbsp;
-            {t<string>("Updating")}
-            &nbsp;
-            <div style={{ width: 400 }}>
-              <Progress progressive percent={appUpdaterState.percentage} />
-            </div>
-          </div>
+          <Progress
+            showValueLabel
+            className="w-[200px] pl-3" size="sm" value={appUpdaterState.percentage} label={`${t<string>("Downloading")} ${newVersion?.version ?? ''}`} />
         );
       case UpdaterStatus.PendingRestart:
         return (
           <Button
             size={"small"}
-            type={"primary"}
+            color={"primary"}
             onClick={() => {
               BApi.updater.restartAndUpdateApp();
             }}
@@ -174,11 +168,11 @@ const AppInfo = ({ appInfo }) => {
         return (
           <>
             {t<string>("Failed to update app")}:{" "}
-            {t<string>(appUpdaterState.error)}
+            {t<string>(appUpdaterState.error!)}
             &nbsp;
             <Button
-              text
-              type={"primary"}
+              variant="light"
+              color={"primary"}
               onClick={() => {
                 BApi.updater.startUpdatingApp();
               }}

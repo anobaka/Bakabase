@@ -10,10 +10,10 @@ using System.Xml.Serialization;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi;
 
-public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager)
-    : AbstractEnhancer<KodiEnhancerTarget, KodiEnhancerContext, object?>(loggerFactory, fileManager)
+public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, IServiceProvider serviceProvider)
+    : AbstractEnhancer<KodiEnhancerTarget, KodiEnhancerContext, object?>(loggerFactory, fileManager, serviceProvider)
 {
-    protected override async Task<KodiEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+    protected override async Task<KodiEnhancerContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
         CancellationToken ct)
     {
         try

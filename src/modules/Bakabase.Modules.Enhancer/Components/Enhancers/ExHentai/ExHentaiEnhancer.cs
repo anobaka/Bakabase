@@ -26,8 +26,9 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         IServiceProvider services,
         ISpecialTextService specialTextService,
         IFileManager fileManager,
-        IStandardValueService standardValueService)
-        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService)
+        IStandardValueService standardValueService,
+        IServiceProvider serviceProvider)
+        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;

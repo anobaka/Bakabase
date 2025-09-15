@@ -32,6 +32,9 @@ namespace Bakabase.InsideWorld.Business.Components
         public string Component_NotDeletableWhenUsingByCategories(IEnumerable<string> categoryNames) =>
             this[nameof(Component_NotDeletableWhenUsingByCategories), string.Join(',', categoryNames)];
 
+        public string MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries(IEnumerable<string> mediaLibraryNames) =>
+            this[nameof(MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries), string.Join(',', mediaLibraryNames)];
+
         public string Category_Invalid((string Name, string Error)[] nameAndErrors) => this[nameof(Category_Invalid),
             string.Join(Environment.NewLine, nameAndErrors.Select(a => $"{a.Name}:{a.Error}"))];
 
@@ -101,6 +104,11 @@ namespace Bakabase.InsideWorld.Business.Components
             this[$"{nameof(Reserved_Resource_Property_Name)}_{property}"];
 
         public string Unknown() => this[nameof(Unknown)];
+        public string Failed()
+        {
+            return this[nameof(Failed)];
+        }
+
         public string Decompress() => this[nameof(Decompress)];
         public string MoveFiles() => this[nameof(MoveFiles)];
         public string MoveFile(string src, string dest) => this[nameof(MoveFile), src, dest];
@@ -221,9 +229,171 @@ namespace Bakabase.InsideWorld.Business.Components
             return this[nameof(Search)];
         }
 
+        public string Searching()
+        {
+            return this[nameof(Searching)];
+        }
+
+        public string Found()
+        {
+            return this[nameof(Found)];
+        }
+
+        public string NotSet()
+        {
+            return this[nameof(NotSet)];
+        }
+
+        public string Count()
+        {
+            return this[nameof(Count)];
+        }
+
+        public string Keyword()
+        {
+            return this[nameof(Keyword)];
+        }
+
         public string Enhancer_CircularDependencyDetected(string[] enhancers)
         {
             return this[nameof(Enhancer_CircularDependencyDetected), string.Join("->", enhancers)];
+        }
+
+        public string MediaLibraryTemplate_ValidationTraceTopic(string topic) => topic;
+
+        public string MediaLibraryTemplate_Name()
+        {
+            return this[nameof(MediaLibraryTemplate_Name)];
+        }
+
+        public string MediaLibraryTemplate_Id()
+        {
+            return this[nameof(MediaLibraryTemplate_Id)];
+        }
+
+        public string Init()
+        {
+            return this[nameof(Init)];
+        }
+
+        public string ResourceDiscovery()
+        {
+            return this[nameof(ResourceDiscovery)];
+        }
+
+        public string PickResourcesToValidate()
+        {
+            return this[nameof(PickResourcesToValidate)];
+        }
+        
+        public string PropertyValuesGeneratedOnSynchronization()
+        {
+            return this[nameof(PropertyValuesGeneratedOnSynchronization)];
+        }
+
+        public string NoPropertyValuesGeneratedOnSynchronization()
+        {
+            return this[nameof(NoPropertyValuesGeneratedOnSynchronization)];
+        }
+
+        public string PropertyValuesGeneratedByEnhancer()
+        {
+            return this[nameof(PropertyValuesGeneratedByEnhancer)];
+        }
+
+        public string NoPropertyValuesGeneratedByEnhancer()
+        {
+            return this[nameof(NoPropertyValuesGeneratedByEnhancer)];
+        }
+
+        public string DiscoveringPlayableFiles()
+        {
+            return this[nameof(DiscoveringPlayableFiles)];
+        }
+
+        public string FoundPlayableFiles()
+        {
+            return this[nameof(FoundPlayableFiles)];
+        }
+
+        public string NoPlayableFiles()
+        {
+            return this[nameof(NoPlayableFiles)];
+        }
+
+        public string NoExtensionsConfigured()
+        {
+            return this[nameof(NoExtensionsConfigured)];
+        }
+
+        public string NoPlayableFileLocatorConfigured()
+        {
+            return this[nameof(NoPlayableFileLocatorConfigured)];
+        }
+
+        public string RunningEnhancers()
+        {
+            return this[nameof(RunningEnhancers)];
+        }
+
+        public string StartEnhancing()
+        {
+            return this[nameof(StartEnhancing)];
+        }
+
+        public string EnhancementCompleted()
+        {
+            return this[nameof(EnhancementCompleted)];
+        }
+
+        public string ResourceEnhanced()
+        {
+            return this[nameof(ResourceEnhanced)];
+        }
+
+        public string Enhancer()
+        {
+            return this[nameof(Enhancer)];
+        }
+
+        public string NoEnhancerConfigured()
+        {
+            return this[nameof(NoEnhancerConfigured)];
+        }
+
+        public string Context()
+        {
+            return this[nameof(Context)];
+        }
+
+        public string ResourceDisplayName()
+        {
+            return this[nameof(ResourceDisplayName)];
+        }
+
+        public string DisplayName()
+        {
+            return this[nameof(DisplayName)];
+        }
+
+        public string Summary()
+        {
+            return this[nameof(Summary)];
+        }
+
+        public string Complete()
+        {
+            return this[nameof(Complete)];
+        }
+
+        public string PlayableFiles()
+        {
+            return this[nameof(PlayableFiles)];
+        }
+
+        public string BuildingData()
+        {
+            return this[nameof(BuildingData)];
         }
     }
 }

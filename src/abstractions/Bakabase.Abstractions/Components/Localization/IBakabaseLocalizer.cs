@@ -11,6 +11,7 @@ public interface IBakabaseLocalizer
     LocalizedString this[string name] { get; }
     LocalizedString this[string name, params object?[] arguments] { get; }
     string Component_NotDeletableWhenUsingByCategories(IEnumerable<string> categoryNames);
+    string MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries(IEnumerable<string> mediaLibraryNames);
     string Category_Invalid((string Name, string Error)[] nameAndErrors);
     string CookieValidation_Fail(string url, string? message, string? content);
     string Resource_NotFound(int id);
@@ -25,6 +26,7 @@ public interface IBakabaseLocalizer
     string SpecialText_HistoricalLanguageValue2ShouldBeModified();
     string Reserved_Resource_Property_Name(ReservedProperty property);
     string Unknown();
+    string Failed();
     string Decompress();
     string MoveFiles();
     string MoveFile(string src, string dest);
@@ -50,5 +52,40 @@ public interface IBakabaseLocalizer
     string MediaType(MediaType type);
     string Resource();
     string Search();
+    string Searching();
+    string Found();
+    string NotSet();
+    string Count();
+    string Keyword();
     string Enhancer_CircularDependencyDetected(string[] enhancers);
+    string MediaLibraryTemplate_ValidationTraceTopic(string topic);
+    string MediaLibraryTemplate_Name();
+    string MediaLibraryTemplate_Id();
+
+    // Validation trace topics and labels
+    string Init();
+    string ResourceDiscovery();
+    string PickResourcesToValidate();
+    string PropertyValuesGeneratedOnSynchronization();
+    string NoPropertyValuesGeneratedOnSynchronization();
+    string PropertyValuesGeneratedByEnhancer();
+    string NoPropertyValuesGeneratedByEnhancer();
+    string DiscoveringPlayableFiles();
+    string FoundPlayableFiles();
+    string NoPlayableFiles();
+    string NoExtensionsConfigured();
+    string NoPlayableFileLocatorConfigured();
+    string RunningEnhancers();
+    string StartEnhancing();
+    string EnhancementCompleted();
+    string ResourceEnhanced();
+    string Enhancer();
+    string NoEnhancerConfigured();
+    string Context();
+    string ResourceDisplayName();
+    string DisplayName();
+    string Summary();
+    string Complete();
+    string PlayableFiles();
+    string BuildingData();
 }

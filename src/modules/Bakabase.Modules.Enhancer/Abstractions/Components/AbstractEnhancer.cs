@@ -1,14 +1,17 @@
 ﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Extensions;
 using Humanizer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Abstractions.Components
@@ -24,14 +27,24 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
     {
         protected readonly ILogger Logger;
         private readonly IFileManager _fileManager;
+        protected readonly IEnhancerLocalizer Localizer;
+        protected readonly IPropertyLocalizer PropertyLocalizer;
+        protected readonly IServiceProvider ServiceProvider;
+        protected BakaTracingContext? TracingContext => ScopedBakaTracingContextAccessor.Current.Value;
 
-        protected AbstractEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager)
+        protected AbstractEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, IServiceProvider serviceProvider)
         {
             _fileManager = fileManager;
+            ServiceProvider = serviceProvider;
             Logger = loggerFactory.CreateLogger(GetType());
+            Localizer = serviceProvider.GetRequiredService<IEnhancerLocalizer>();
+            PropertyLocalizer = serviceProvider.GetRequiredService<IPropertyLocalizer>();
         }
 
-        protected abstract Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+        public async Task<object?> BuildContext(Resource resource, EnhancerFullOptions options,
+            CancellationToken ct) => await BuildContextInternal(resource, options, ct);
+        
+        protected abstract Task<TContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
             CancellationToken ct);
 
         public int Id => (int) TypedId;
@@ -41,7 +54,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
             CancellationToken ct)
         {
             Logger.LogInformation("Building context for resource [{ResourceId}:{ResourcePath}]", resource.Id, resource.Path);
-            var context = await BuildContext(resource, options, ct);
+            var context = await BuildContextInternal(resource, options, ct);
             if (context == null)
             {
                 return null;

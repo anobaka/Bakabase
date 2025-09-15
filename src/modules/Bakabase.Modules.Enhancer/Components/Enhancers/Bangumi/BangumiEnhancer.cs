@@ -19,9 +19,10 @@ public class BangumiEnhancer(
     BangumiClient client,
     IFileManager fileManager,
     IStandardValueService standardValueService,
-    ISpecialTextService specialTextService)
+    ISpecialTextService specialTextService,
+    IServiceProvider serviceProvider)
     : AbstractKeywordEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(loggerFactory, fileManager,
-        standardValueService, specialTextService)
+        standardValueService, specialTextService, serviceProvider)
 {
     protected override async Task<BangumiEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
         EnhancerFullOptions options, CancellationToken ct)

@@ -1,6 +1,6 @@
 [git]
-conventional_commits = false
-filter_unconventional = false
+conventional_commits = true
+filter_unconventional = true
 topo_order = false
 protect_breaking_commits = true
 link_parsers = [
@@ -45,9 +45,10 @@ body = """
 {% if version %}
 
 ### 下载地址
-
-- 阿里云CDN: https://cdn-public.anobaka.com/app/bakabase/inside-world/{{ version | trim }}/installer/bakabase.zip
-- Github: 通过附件下载对应版本的压缩包即可。
+- 可通过程序内【系统】-【配置】界面一键更新
+- 完整安装包下载:
+  - 通过阿里云CDN下载: https://cdn-public.anobaka.com/app/bakabase/inside-world/{{ version | trim }}/installer/bakabase.zip
+  - 通过Github下载: 通过附件下载对应版本的压缩包即可。
 {% endif %}
 """
 footer = ""

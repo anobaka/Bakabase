@@ -28,10 +28,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         IBakabaseLocalizer localizer,
         IFileManager fileManager,
         ICoverDiscoverer coverDiscoverer,
-        IStandardValueService standardValueService
+        IStandardValueService standardValueService,
+        IServiceProvider serviceProvider
         )
         : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(loggerFactory,
-            fileManager, standardValueService, specialTextService)
+            fileManager, standardValueService, specialTextService, serviceProvider)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;

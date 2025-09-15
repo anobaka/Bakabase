@@ -1,11 +1,15 @@
 using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Extensions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers;
@@ -15,15 +19,14 @@ public abstract class
         ILoggerFactory loggerFactory,
         IFileManager fileManager,
         IStandardValueService standardValueService,
-        ISpecialTextService specialTextService)
+        ISpecialTextService specialTextService,
+        IServiceProvider serviceProvider)
     : AbstractEnhancer<TEnumTarget, TContext,
-        TEnhancerOptions>(loggerFactory,
-        fileManager)
-    where TEnumTarget : Enum
+        TEnhancerOptions>(loggerFactory, fileManager, serviceProvider) where TEnumTarget : Enum
     where TEnhancerOptions : class?
     where TContext : class?
 {
-    protected override async Task<TContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+    protected override async Task<TContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
         CancellationToken ct)
     {
         string? keyword = null;
@@ -61,20 +64,35 @@ public abstract class
                     keyword = val;
                 }
             }
+
+            TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(), Localizer.Enhancer_UsePropertyAsKeyword(
+                PropertyLocalizer.PropertyPoolName(options.KeywordProperty.Pool),
+                options.KeywordProperty.Id.ToString(), options.KeywordProperty.Scope.ToString()));
+
             if (keyword.IsNullOrEmpty())
             {
-                Logger.LogWarning($"Keyword property has been set to [{options.KeywordProperty.Pool}]{options.KeywordProperty.Id} from scope [{(PropertyValueScope)options.KeywordProperty.Scope}] but got empty value, use file/folder name as fallback");
+                var msg = Localizer.Enhancer_KeywordPropertyIsEmpty(
+                    PropertyLocalizer.PropertyPoolName(options.KeywordProperty.Pool),
+                    options.KeywordProperty.Id.ToString(), options.KeywordProperty.Scope.ToString());
+                TracingContext?.AddTrace(LogLevel.Warning, Localizer.Enhance(), msg);
+                Logger.LogWarning(msg);
             }
         }
 
         if (keyword.IsNullOrEmpty())
         {
             keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
+            TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(), Localizer.Enhancer_UseFilenameAsKeyword(keyword));
         }
+
+        TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(),
+            Localizer.Enhancer_KeywordPretreatStatus(options.PretreatKeyword ?? false));
 
         if (options.PretreatKeyword == true)
         {
             keyword = await specialTextService.Pretreatment(keyword);
+            TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(),
+                Localizer.Enhancer_KeywordAfterPretreatment(keyword));
         }
 
         return await BuildContextInternal(keyword, resource, options, ct);

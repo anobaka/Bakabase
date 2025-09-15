@@ -450,4 +450,109 @@
   <data name="Enhancer_CircularDependencyDetected" xml:space="preserve">
     <value>检测到增强器循环引用：{0}</value>
   </data>
+  <data name="MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries" xml:space="preserve">
+    <value>以下媒体库正在使用当前模板，请修改后再试: {0}</value>
+  </data>
+  <data name="Init" xml:space="preserve">
+    <value>初始化</value>
+  </data>
+  <data name="ResourceDiscovery" xml:space="preserve">
+    <value>发现资源</value>
+  </data>
+  <data name="PickResourcesToValidate" xml:space="preserve">
+    <value>选取用于验证的资源</value>
+  </data>
+  <data name="PropertyValuesGeneratedOnSynchronization" xml:space="preserve">
+    <value>同步生成的属性值</value>
+  </data>
+  <data name="NoPropertiesGeneratedOnSynchronization" xml:space="preserve">
+    <value>未在同步阶段生成任何属性值</value>
+  </data>
+  <data name="DiscoveringPlayableFiles" xml:space="preserve">
+    <value>检索可播放文件</value>
+  </data>
+  <data name="FoundPlayableFiles" xml:space="preserve">
+    <value>发现可播放文件</value>
+  </data>
+  <data name="NoPlayableFiles" xml:space="preserve">
+    <value>未找到可播放文件</value>
+  </data>
+  <data name="NoExtensionsConfigured" xml:space="preserve">
+    <value>未配置扩展名</value>
+  </data>
+  <data name="NoPlayableFileLocatorConfigured" xml:space="preserve">
+    <value>未配置可播放文件定位器</value>
+  </data>
+  <data name="RunningEnhancers" xml:space="preserve">
+    <value>执行增强器</value>
+  </data>
+  <data name="StartEnhancing" xml:space="preserve">
+    <value>开始增强</value>
+  </data>
+  <data name="ResourceEnhanced" xml:space="preserve">
+    <value>已增强资源</value>
+  </data>
+  <data name="Enhancer" xml:space="preserve">
+    <value>增强器</value>
+  </data>
+  <data name="Context" xml:space="preserve">
+    <value>上下文</value>
+  </data>
+  <data name="ResourceDisplayName" xml:space="preserve">
+    <value>资源显示名</value>
+  </data>
+  <data name="DisplayName" xml:space="preserve">
+    <value>显示名</value>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>总结</value>
+  </data>
+  <data name="Complete" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="PlayableFiles" xml:space="preserve">
+    <value>可播放文件</value>
+  </data>
+  <data name="MediaLibraryTemplate_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="MediaLibraryTemplate_Id" xml:space="preserve">
+    <value>编号</value>
+  </data>
+  <data name="PropertyValuesGeneratedByEnhancer" xml:space="preserve">
+    <value>增强属性值</value>
+  </data>
+  <data name="NoPropertyValuesGeneratedByEnhancer" xml:space="preserve">
+    <value>增强器未创建任何属性值</value>
+  </data>
+  <data name="Found" xml:space="preserve">
+    <value>已发现</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>搜索中</value>
+  </data>
+  <data name="Count" xml:space="preserve">
+    <value>数量</value>
+  </data>
+  <data name="Keyword" xml:space="preserve">
+    <value>关键字</value>
+  </data>
+  <data name="NoEnhancerConfigured" xml:space="preserve">
+    <value>未配置增强器</value>
+  </data>
+  <data name="BuildingData" xml:space="preserve">
+    <value>构造数据中</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>失败</value>
+  </data>
+  <data name="EnhancementCompleted" xml:space="preserve">
+    <value>增强完成</value>
+  </data>
+  <data name="NotSet" xml:space="preserve">
+    <value>未设置</value>
+  </data>
+  <data name="NoPropertyValuesGeneratedOnSynchronization" xml:space="preserve">
+    <value>同步过程中未生成属性值</value>
+  </data>
 </root>

@@ -119,12 +119,12 @@ const AliasPage = () => {
     });
   };
 
-  console.log("1232131231", bulkOperationContext.preferredTexts);
+  // console.log("1232131231", bulkOperationContext.preferredTexts);
 
   return (
     <div className="">
       <div className={"flex items-center justify-between"}>
-        <div>
+        <div className="flex items-center gap-2">
           <Input
             placeholder={t<string>("Press enter to search")}
             startContent={<SearchOutlined className={"text-sm"} />}
@@ -141,6 +141,11 @@ const AliasPage = () => {
               })
             }
           />
+          <div className="text-xs text-default-500">
+            {t<string>(
+              "Alias is used to replace the original text of property values in UI, such as translations, etc.",
+            )}
+          </div>
         </div>
         <div className={"flex items-center gap-2"}>
           <Button
@@ -158,6 +163,7 @@ const AliasPage = () => {
                   await BApi.alias.addAlias({
                     text: value,
                   });
+                  search();
                 },
               });
             }}
@@ -327,6 +333,7 @@ const AliasPage = () => {
       {aliases.length > 0 && (
         <div className={"mt-1"}>
           <Table
+            removeWrapper
             isCompact
             isStriped
             bottomContent={renderPagination()}

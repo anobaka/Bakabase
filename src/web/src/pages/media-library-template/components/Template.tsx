@@ -16,12 +16,13 @@ import { CiCircleMore, CiFilter } from "react-icons/ci";
 import { TbDatabase } from "react-icons/tb";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 import { TiChevronRightOutline, TiFlowChildren } from "react-icons/ti";
-import { MdOutlineCleaningServices, MdOutlineSubtitles } from "react-icons/md";
+import { MdOutlineCleaningServices, MdOutlineSubtitles, MdOutlineFactCheck } from "react-icons/md";
 import React, { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate, useUpdateEffect } from "react-use";
 import _ from "lodash";
 import { MdOutlineDelete } from "react-icons/md";
+import { VscDebugAll } from "react-icons/vsc";
 
 import Block from "@/pages/media-library-template/components/Block";
 import {
@@ -53,6 +54,7 @@ import EnhancerSelectorModal from "@/pages/media-library-template/components/Enh
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
 import DisplayNameTemplateEditorModal from "@/pages/media-library-template/components/DisplayNameTemplateEditorModal";
+import ValidateModal from "@/pages/media-library-template/components/ValidateModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
 import { willCauseCircleReference } from "@/components/utils";
@@ -798,73 +800,24 @@ const Template = ({
         descriptionPlacement={"bottom"}
         title={`6. ${t<string>("Subresource")}`}
         leftIcon={<TiFlowChildren className={"text-large"} />}
-      // rightIcon={<AiOutlineEdit className={'text-large'} />}
-      // onRightIconPress={() => {
-      //   createPortal(
-      //     DisplayNameTemplateEditorModal, {
-      //       properties: tpl.properties?.map(p => p.property!) ?? [],
-      //       template: tpl.displayNameTemplate,
-      //       onSubmit: async template => {
-      //         tpl.displayNameTemplate = template;
-      //         await putTemplate(tpl);
-      //         forceUpdate();
-      //       },
-      //     },
-      //   );
-      // }}
       >
         {renderChildSelector(template)}
       </Block>
-      {/* <Block */}
-      {/*   title={t<string>('Preview')} */}
-      {/*   icon={<AiOutlineEdit className={'text-base'} />} */}
-      {/*   onIconPress={() => { */}
-      {/*     let { samplePaths } = tpl; */}
-      {/*     createPortal( */}
-      {/*       Modal, { */}
-      {/*         defaultVisible: true, */}
-      {/*         title: t<string>('Setup paths for preview'), */}
-      {/*         children: ( */}
-      {/*           <div> */}
-      {/*             <div className={'opacity-60'}> */}
-      {/*               <div>{t<string>('To create a preview, you must enter at least one path that will be applied to the current template. For a better preview effect, you can add as many representative subpaths as possible starting from the second line.')}</div> */}
-      {/*               <div>{t<string>('If you have set up an enhancer to retrieve data from third parties, an excessive number of subpaths may slow down the preview creation process.')}</div> */}
-      {/*             </div> */}
-      {/*             <div> */}
-      {/*               <Textarea */}
-      {/*                 defaultValue={samplePaths?.join('\n')} */}
-      {/*                 onValueChange={v => samplePaths = v.split('\n')} */}
-      {/*                 placeholder={t<string>('Paths separated by line')} */}
-      {/*                 fullWidth */}
-      {/*                 isMultiline */}
-      {/*               /> */}
-      {/*             </div> */}
-      {/*           </div> */}
-      {/*         ), */}
-      {/*         size: 'lg', */}
-      {/*         onOk: () => { */}
-      {/*           tpl.samplePaths = samplePaths; */}
-      {/*           forceUpdate(); */}
-      {/*         }, */}
-      {/*       }, */}
-      {/*     ); */}
-      {/*   }} */}
-      {/* > */}
-      {/*   {(!tpl.samplePaths || tpl.samplePaths.length == 0) ? ( */}
-      {/*     <div>{t<string>('This template cannot be previewed because no sample path has been configured.')}</div> */}
-      {/*   ) : ( */}
-      {/*     <div> */}
-      {/*       <Button */}
-      {/*         size={'sm'} */}
-      {/*         isIconOnly */}
-      {/*         variant={'light'} */}
-      {/*         color={'secondary'} */}
-      {/*       > */}
-      {/*         <AiOutlineSync className={'text-base'} /> */}
-      {/*       </Button> */}
-      {/*     </div> */}
-      {/*   )} */}
-      {/* </Block> */}
+      <Block
+        description={t<string>("Validate your template on sample resources and see live traces.")}
+        leftIcon={<MdOutlineFactCheck className={"text-large"} />}
+        title={`7. ${t<string>("Validate")}`}
+      >
+        <div className="flex items-center gap-1">
+          <Button size="sm" variant="flat" color="success" onPress={() => createPortal(ValidateModal, { templateId: template.id })}>
+            <VscDebugAll className={"text-lg"} />
+            {t<string>("Validate")}
+          </Button>
+          <div className="text-xs opacity-70">
+            {t<string>("Run a quick validation to check resource discovery, properties, playable files, enhancers and display names.")}
+          </div>
+        </div>
+      </Block>
     </div>
   );
 };

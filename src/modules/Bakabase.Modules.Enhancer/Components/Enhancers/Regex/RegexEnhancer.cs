@@ -22,10 +22,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
 public class RegexEnhancer(
     ILoggerFactory loggerFactory,
     IFileManager fileManager,
-    IBOptions<EnhancerOptions> enhancerOptions)
-    : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, object?>(loggerFactory, fileManager)
+    IBOptions<EnhancerOptions> enhancerOptions,
+    IServiceProvider serviceProvider)
+    : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, object?>(loggerFactory, fileManager, serviceProvider)
 {
-    protected override async Task<RegexEnhancerContext?> BuildContext(Resource resource, EnhancerFullOptions options,
+    protected override async Task<RegexEnhancerContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
         CancellationToken ct)
     {
         var expressions = options.Expressions ?? enhancerOptions.Value.RegexEnhancer?.Expressions ?? [];

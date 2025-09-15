@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Components.Tracing;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Models.View;
@@ -34,4 +35,7 @@ public interface IMediaLibraryTemplateService
     Task<byte[]> AppendShareCodeToPng(int id, byte[] png);
     Task AddByMediaLibraryV1(int v1Id, int pcIdx, string templateName);
     Task Duplicate(int id);
+
+    Task Validate(int id,
+        MediaLibraryTemplateValidationInputModel model, CancellationToken ct);
 }

@@ -25,7 +25,7 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
     /// </summary>
     private static readonly System.Text.RegularExpressions.Regex IdRegex = new System.Text.RegularExpressions.Regex(@"[BVR]J\d{6,10}");
 
-    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client, IStandardValueService standardValueService, ISpecialTextService specialTextService) : base(loggerFactory, fileManager, standardValueService, specialTextService)
+    public DLsiteEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, DLsiteClient client, IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider) : base(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
     {
         _client = client;
         _standardValueService = standardValueService;

@@ -690,4 +690,13 @@
   "Pretreated": "Pretreated",
   "No changes": "No changes",
   "Diffs": "Diffs"
+  ,
+  "Validate media library template": "Validate media library template",
+  "Root path": "Root path",
+  "Pick a directory or file path": "Pick a directory or file path",
+  "Limit resources count": "Limit resources count",
+  "Resource keyword": "Resource keyword",
+  "Validating...": "Validating...",
+  "Validate your template on sample resources and see live traces.": "Validate your template on sample resources and see live traces.",
+  "Run a quick validation to check resource discovery, properties, playable files, enhancers and display names.": "Run a quick validation to check resource discovery, properties, playable files, enhancers and display names."
 }

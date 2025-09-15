@@ -450,4 +450,109 @@ The version of lux is not limited.</value>
   <data name="Enhancer_CircularDependencyDetected" xml:space="preserve">
     <value>Circular dependency detected in enhancers: {0}</value>
   </data>
+  <data name="MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries" xml:space="preserve">
+    <value>Not deletable when using by media libraries: {0}</value>
+  </data>
+  <data name="Init" xml:space="preserve">
+    <value>Init</value>
+  </data>
+  <data name="ResourceDiscovery" xml:space="preserve">
+    <value>Resource discovery</value>
+  </data>
+  <data name="PickResourcesToValidate" xml:space="preserve">
+    <value>Picke resources to validate</value>
+  </data>
+  <data name="PropertyValuesGeneratedOnSynchronization" xml:space="preserve">
+    <value>Properties generated on synchronization</value>
+  </data>
+  <data name="NoPropertiesGeneratedOnSynchronization" xml:space="preserve">
+    <value>No properties generated on synchronization</value>
+  </data>
+  <data name="DiscoveringPlayableFiles" xml:space="preserve">
+    <value>Discovering playable files</value>
+  </data>
+  <data name="FoundPlayableFiles" xml:space="preserve">
+    <value>Found playable files</value>
+  </data>
+  <data name="NoPlayableFiles" xml:space="preserve">
+    <value>No playable files</value>
+  </data>
+  <data name="NoExtensionsConfigured" xml:space="preserve">
+    <value>No extensions configured</value>
+  </data>
+  <data name="NoPlayableFileLocatorConfigured" xml:space="preserve">
+    <value>Playable file locator is not configured</value>
+  </data>
+  <data name="RunningEnhancers" xml:space="preserve">
+    <value>Running enhancers</value>
+  </data>
+  <data name="StartEnhancing" xml:space="preserve">
+    <value>Start enhancing</value>
+  </data>
+  <data name="ResourceEnhanced" xml:space="preserve">
+    <value>Resource enhanced</value>
+  </data>
+  <data name="Enhancer" xml:space="preserve">
+    <value>Enhancer</value>
+  </data>
+  <data name="Context" xml:space="preserve">
+    <value>Context</value>
+  </data>
+  <data name="ResourceDisplayName" xml:space="preserve">
+    <value>Resource display name</value>
+  </data>
+  <data name="DisplayName" xml:space="preserve">
+    <value>Display name</value>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Summary</value>
+  </data>
+  <data name="Complete" xml:space="preserve">
+    <value>Complete</value>
+  </data>
+  <data name="PlayableFiles" xml:space="preserve">
+    <value>Playable files</value>
+  </data>
+  <data name="MediaLibraryTemplate_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="MediaLibraryTemplate_Id" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="PropertyValuesGeneratedByEnhancer" xml:space="preserve">
+    <value>Property value created by enhancer</value>
+  </data>
+  <data name="NoPropertyValuesGeneratedByEnhancer" xml:space="preserve">
+    <value>No property value is created by enhancer</value>
+  </data>
+  <data name="Found" xml:space="preserve">
+    <value>Found</value>
+  </data>
+  <data name="Searching" xml:space="preserve">
+    <value>Searching</value>
+  </data>
+  <data name="Count" xml:space="preserve">
+    <value>Count</value>
+  </data>
+  <data name="Keyword" xml:space="preserve">
+    <value>Keyword</value>
+  </data>
+  <data name="NoEnhancerConfigured" xml:space="preserve">
+    <value>No enhancer configured</value>
+  </data>
+  <data name="BuildingData" xml:space="preserve">
+    <value>Building data</value>
+  </data>
+  <data name="Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="EnhancementCompleted" xml:space="preserve">
+    <value>Enhancement completed</value>
+  </data>
+  <data name="NotSet" xml:space="preserve">
+    <value>Not set</value>
+  </data>
+  <data name="NoPropertyValuesGeneratedOnSynchronization" xml:space="preserve">
+    <value>No property value generated on synchronization</value>
+  </data>
 </root>
