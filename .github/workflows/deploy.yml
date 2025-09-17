@@ -2,7 +2,8 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main, 'release/v*', 'debug-actions' ]
+    # we do not use nbgv to set version for release branches, we use tag instead.
+    branches: [ main, 'debug-actions' ]
     tags:
       - 'v*'
   # pull_request:
@@ -40,10 +41,15 @@ jobs:
       - name: Set version and tag info
         id: set-var
         run: |
-          echo "version=${{ env.NBGV_CloudBuildNumber }}" >> $GITHUB_OUTPUT
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            # strip leading 'v' or 'V' from tag when setting version
+            TAG_NO_V="${TAG_NAME#v}"
+            TAG_NO_V="${TAG_NO_V#V}"
+            echo "version=${TAG_NO_V}" >> $GITHUB_OUTPUT
             echo "is_tag=true" >> $GITHUB_OUTPUT
           else
+            echo "version=${{ env.NBGV_CloudBuildNumber }}" >> $GITHUB_OUTPUT
             echo "is_tag=false" >> $GITHUB_OUTPUT
           fi
       - name: Debug prepare context
@@ -393,7 +399,11 @@ jobs:
       - name: Determine release tag
         id: release_tag
         run: |
-          TAG="${{ needs.prepare.outputs.version }}"
+          if [[ "${{ needs.prepare.outputs.is_tag }}" == "true" ]]; then
+            TAG="${{ github.ref_name }}"  # use original tag (may include 'v')
+          else
+            TAG="v${{ needs.prepare.outputs.version }}"  # fallback to computed version
+          fi
           echo "name=$TAG" >> $GITHUB_OUTPUT
           echo "Resolved release tag: $TAG"
       - name: Determine prerelease flag
@@ -409,7 +419,7 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.prepare.outputs.version }}
+          tag_name: ${{ steps.release_tag.outputs.name }}
           target_commitish: ${{ github.sha }}
           body_path: CHANGELOG_${{ needs.prepare.outputs.version }}.md
           prerelease: ${{ steps.prerelease.outputs.prerelease == 'true' }}
