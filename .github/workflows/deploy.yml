@@ -2,9 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main, 'debug-actions' ]
-  pull_request:
-    branches: [ main, 'dev/v*' ]
+    branches: [ main, 'dev/v*', 'debug-actions' ]
+  # pull_request:
+  #   branches: [ main, 'dev/v*' ]
   workflow_dispatch:
 
 permissions:
