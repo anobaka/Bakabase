@@ -1,12 +1,13 @@
 {
     "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
-    "version": "1.9.2-beta.{height}",
+    "version": "1.9.2",
     "publicReleaseRefSpec": [
       "^refs/heads/main$",
-      "^refs/tags/v\\d+\\.\\d+"
+      "^refs/tags/v\\d+\\.\\d+",
+      "^refs/heads/release/v\\d+\\.\\d+"
     ],
     "release": {
-      "branchName": "dev/v{version}",
+      "branchName": "release/v{version}",
       "firstUnstableTag": "beta"
     },
     "cloudBuild": {
