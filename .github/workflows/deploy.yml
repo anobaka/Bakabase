@@ -2,17 +2,10 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main, 'dev/v*', 'debug-actions' ]
-    tags:
-      - 'v*'
+    branches: [ main, 'debug-actions' ]
   pull_request:
     branches: [ main, 'dev/v*' ]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'tag (e.g., v1.2.3, 1.2.3, v1.2.3-alpha)'
-        required: true
-        type: string
 
 permissions:
   contents: write
