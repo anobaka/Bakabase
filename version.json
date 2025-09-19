@@ -1,25 +1,14 @@
 {
-    "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
-    "version": "2.0-beta",
-    "publicReleaseRefSpec": [
-      "^refs/heads/release/v\\d+\\.\\d+\\.\\d+"
-    ],
-    "release": {
-      "branchName": "release/v{version}",
-      "firstUnstableTag": "beta"
-    },
-    "cloudBuild": {
-      "setVersionVariables": true,
-      "buildNumber": {
-        "enabled": false,
-        "includeCommitId": {
-          "when": "nonPublicReleaseOnly",
-          "where": "buildMetadata"
-        }
-      }
-    },
-    "gitCommitIdShortFixedLength": 0,
-    "gitCommitIdShortAutoMinimum": 0,
-    "versionHeightOffset": -1
+  "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
+  "version": "2.0",
+  "versionHeightOffset": -1,
+  "gitCommitIdShortFixedLength": 0,
+  "gitCommitIdShortAutoMinimum": 0,
+  "publicReleaseRefSpec": [
+    "^refs/heads/release/v\\d+\\.\\d+\\.\\d+"
+  ],
+  "release": {
+    "branchName": "release/v{version}",
+    "firstUnstableTag": "beta"
+  }
 }
-  
