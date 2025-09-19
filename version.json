@@ -1,9 +1,8 @@
 {
     "$schema": "https://raw.githubusercontent.com/dotnet/Nerdbank.GitVersioning/main/src/NerdBank.GitVersioning/version.schema.json",
-    "version": "1.9.2-beta.{height}",
+    "version": "2.0-beta",
     "publicReleaseRefSpec": [
-      "^refs/tags/v\\d+\\.\\d+.\\d+",
-      "^refs/heads/release/v\\d+\\.\\d+.\\d+"
+      "^refs/heads/release/v\\d+\\.\\d+\\.\\d+"
     ],
     "release": {
       "branchName": "release/v{version}",
@@ -20,6 +19,7 @@
       }
     },
     "gitCommitIdShortFixedLength": 0,
-    "gitCommitIdShortAutoMinimum": 0
+    "gitCommitIdShortAutoMinimum": 0,
+    "versionHeightOffset": -1
 }
   

@@ -3,9 +3,9 @@ name: Build and Deploy
 on:
   push:
     # we do not use nbgv to set version for release branches, we use tag instead.
-    branches: [ main, 'debug-actions' ]
-    tags:
-      - 'v*'
+    branches: [ main, 'debug-actions', 'release/v*' ]
+    # tags:
+    #   - 'v*'
   # pull_request:
   #   branches: [ main, 'dev/v*' ]
   workflow_dispatch:
