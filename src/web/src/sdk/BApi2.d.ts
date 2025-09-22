@@ -2242,6 +2242,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/media-library-template/{id}/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ValidateMediaLibraryTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/media-library-v2": {
         parameters: {
             query?: never;
@@ -3883,6 +3899,7 @@ export interface components {
             expressions?: string[];
             requirements?: number[];
             keywordProperty?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ScopePropertyKey"];
+            pretreatKeyword?: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.MediaLibraryTemplateEnhancerTargetAllInOneOptions": {
             /** Format: int32 */
@@ -4173,6 +4190,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateImportInputModel+TExtensionGroupConversion": {
             /** Format: int32 */
             toExtensionGroupId: number;
+        };
+        "Bakabase.Abstractions.Models.Input.MediaLibraryTemplateValidationInputModel": {
+            rootPath: string;
+            /** Format: int32 */
+            limitResourcesCount?: number;
+            resourceKeyword?: string;
         };
         "Bakabase.Abstractions.Models.Input.MediaLibraryV2AddOrPutInputModel": {
             name: string;
@@ -5066,7 +5089,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Models.Configs.FileSystemOptions+FileProcessorOptions": {
             workingDirectory: string;
-            triggerMovingAfterPlayingFirstFile: boolean;
+            showOperationsAfterPlayingFirstFile: boolean;
         };
         "Bakabase.InsideWorld.Models.Configs.JavLibraryOptions": {
             cookie?: string;
@@ -5420,7 +5443,7 @@ export interface components {
             readonly targets: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerTargetDescriptor"][];
             /** Format: int32 */
             readonly propertyValueScope: number;
-            readonly tags: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancerTag"][];
+            readonly tags: components["schemas"]["Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerTag"][];
         };
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerTargetDescriptor": {
             /** Format: int32 */
@@ -5441,17 +5464,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancementAdditionalItem": 0 | 1;
-        /**
-         * Format: int32
-         * @description [1: UseRegex, 2: UseKeyword]
-         * @enum {integer}
-         */
-        "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancerTag": 1 | 2;
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerFullOptions": {
             targetOptions?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerTargetFullOptions"][];
             requirements?: components["schemas"]["Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId"][];
             expressions?: string[];
             keywordProperty?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ScopePropertyKey"];
+            pretreatKeyword?: boolean;
         };
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerTargetFullOptions": {
             /** Format: int32 */
@@ -5470,6 +5488,12 @@ export interface components {
          * @enum {integer}
          */
         "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        /**
+         * Format: int32
+         * @description [1: UseRegex, 2: UseKeyword]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerTag": 1 | 2;
         "Bakabase.Modules.Enhancer.Models.Input.CategoryEnhancerOptionsPatchInputModel": {
             options?: components["schemas"]["Bakabase.Modules.Enhancer.Abstractions.Models.Domain.EnhancerFullOptions"];
             active?: boolean;
@@ -11591,6 +11615,33 @@ export interface operations {
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
                 };
+            };
+        };
+    };
+    ValidateMediaLibraryTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateValidationInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateValidationInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateValidationInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.MediaLibraryTemplateValidationInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

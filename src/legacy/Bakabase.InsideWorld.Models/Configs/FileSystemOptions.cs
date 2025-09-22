@@ -49,7 +49,7 @@ namespace Bakabase.InsideWorld.Models.Configs
         public record FileProcessorOptions
         {
             public string WorkingDirectory { get; set; } = string.Empty;
-            public bool TriggerMovingAfterPlayingFirstFile { get; set; } = false;
+            public bool ShowOperationsAfterPlayingFirstFile { get; set; } = false;
         }
     }
 }

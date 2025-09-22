@@ -39,7 +39,11 @@ export interface ModalProps
   size?: Size;
   okProps?: ButtonProps;
 }
-
+/**
+ * 
+ * @param props.style.maxWidth: set this property to value like '85vw' to extend the width of the modal
+ * @returns 
+ */
 const Modal = (props: ModalProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(props.defaultVisible ?? props.visible);

@@ -3,10 +3,9 @@ import type { DestroyableProps } from "../bakaui/types";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
-import { Accordion, AccordionItem, Modal } from "../bakaui";
+import { Modal } from "../bakaui";
 
-import CustomPathSelectorInner from "./components/CustomPathSelectorInner";
-import MediaLibraryPathSelectorInner from "./components/MediaLibraryPathSelectorInner";
+import FolderSelectorInner from "./components/FolderSelectorInner";
 import { useFileSystemOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 
@@ -22,41 +21,6 @@ const FolderSelector = (props: Props) => {
   const { sources, onSelect: propsOnSelect, onDestroyed } = props;
   const [visible, setVisible] = useState(true);
 
-  const [mlPaths, setMlPaths] = useState<Set<string>>(new Set());
-
-  const onSelect = async (path: string) => {
-    await BApi.options.addLatestMovingDestination(path);
-    propsOnSelect(path);
-    setVisible(false);
-  };
-
-  const onPathsLoaded = (paths: Set<string>) => {
-    setMlPaths(paths);
-  };
-
-  const renderSourceInner = (source: Source) => {
-    switch (source) {
-      case "media library":
-        return <MediaLibraryPathSelectorInner onSelect={onSelect} onPathsLoaded={onPathsLoaded} />;
-      case "custom":
-        return <CustomPathSelectorInner onSelect={onSelect} mlPaths={mlPaths} />;
-    }
-  };
-
-  const renderSources = () => {
-    return (
-      <Accordion hideIndicator selectedKeys={sources.map((s) => s)} variant="splitted">
-        {sources.map((s) => {
-          return (
-            <AccordionItem key={s} aria-label={t(s)} title={t(s)}>
-              {renderSourceInner(s)}
-            </AccordionItem>
-          );
-        })}
-      </Accordion>
-    );
-  };
-
   return (
     <Modal
       footer={false}
@@ -69,7 +33,13 @@ const FolderSelector = (props: Props) => {
       // onOpenChange={}
       title={t('Select Path')}
     >
-      {renderSources()}
+      <FolderSelectorInner
+        sources={sources}
+        onSelect={async (path) => {
+          propsOnSelect(path);
+          setVisible(false);
+        }}
+      />
     </Modal>
   );
 };

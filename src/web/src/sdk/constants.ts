@@ -1534,6 +1534,21 @@ export const EnhancerIdLabel: Record<EnhancerId, string> = {
   [EnhancerId.Av]: 'Av'
 };
 
+export enum EnhancerTag {
+  UseRegex = 1,
+  UseKeyword = 2
+}
+
+export const enhancerTags = [
+  { label: 'UseRegex', value: EnhancerTag.UseRegex },
+  { label: 'UseKeyword', value: EnhancerTag.UseKeyword }
+] as const;
+
+export const EnhancerTagLabel: Record<EnhancerTag, string> = {
+  [EnhancerTag.UseRegex]: 'UseRegex',
+  [EnhancerTag.UseKeyword]: 'UseKeyword'
+};
+
 export enum TmdbEnhancerTarget {
   Title = 1,
   OriginalTitle = 2,
@@ -2051,21 +2066,6 @@ export const EnhancerTargetOptionsItemLabel: Record<EnhancerTargetOptionsItem, s
   [EnhancerTargetOptionsItem.AutoBindProperty]: 'AutoBindProperty',
   [EnhancerTargetOptionsItem.AutoMatchMultilevelString]: 'AutoMatchMultilevelString',
   [EnhancerTargetOptionsItem.CoverSelectOrder]: 'CoverSelectOrder'
-};
-
-export enum EnhancerTag {
-  UseRegex = 1,
-  UseKeyword = 2
-}
-
-export const enhancerTags = [
-  { label: 'UseRegex', value: EnhancerTag.UseRegex },
-  { label: 'UseKeyword', value: EnhancerTag.UseKeyword }
-] as const;
-
-export const EnhancerTagLabel: Record<EnhancerTag, string> = {
-  [EnhancerTag.UseRegex]: 'UseRegex',
-  [EnhancerTag.UseKeyword]: 'UseKeyword'
 };
 
 export enum BackgroundTaskName {

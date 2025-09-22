@@ -15,6 +15,7 @@ import { useFileSystemOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import { Checkbox } from "@/components/bakaui/components/Checkbox";
 import FolderSelector from "@/components/FolderSelector";
+import AfterFirstPlayOperationsModal from "@/pages/file-processor/components/AfterFirstPlayOperationsModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Tooltip } from "@/components/bakaui";
 
@@ -119,19 +120,19 @@ const FileProcessorPage = () => {
               placement="bottom"
             >
               <Checkbox
-                isSelected={optionsStore.data?.fileProcessor?.triggerMovingAfterPlayingFirstFile}
+                isSelected={optionsStore.data?.fileProcessor?.showOperationsAfterPlayingFirstFile}
                 onValueChange={(v) => {
                   BApi.options.patchFileSystemOptions({
                     ...optionsStore.data,
                     fileProcessor: {
                       ...optionsStore.data?.fileProcessor,
-                      triggerMovingAfterPlayingFirstFile: v,
+                      showOperationsAfterPlayingFirstFile: v,
                       workingDirectory: optionsStore.data?.fileProcessor?.workingDirectory ?? "",
                     },
                   });
                 }}
               >
-                {t("Trigger moving after playing first file")}
+                {t("Show operations after playing first file")}
               </Checkbox>
             </Tooltip>
           </div>
@@ -144,17 +145,11 @@ const FileProcessorPage = () => {
                 afterPlayedFirstFile={(entry) => {
                   // console.log(
                   //   "afterPlayedFirstFile",
-                  //   optionsStore.data?.fileProcessor?.triggerMovingAfterPlayingFirstFile,
+                  //   optionsStore.data?.fileProcessor?.showOperationsAfterPlayingFirstFile,
                   // );
-                  if (fpOptionsRef.current?.triggerMovingAfterPlayingFirstFile) {
-                    createPortal(FolderSelector, {
-                      sources: ["media library", "custom"],
-                      onSelect: (path: string) => {
-                        return BApi.file.moveEntries({
-                          destDir: path,
-                          entryPaths: [entry.path],
-                        });
-                      },
+                  if (fpOptionsRef.current?.showOperationsAfterPlayingFirstFile) {
+                    createPortal(AfterFirstPlayOperationsModal, {
+                      entry,
                     });
                   }
                 }}
@@ -187,7 +182,7 @@ const FileProcessorPage = () => {
                   if (v != undefined) {
                     BApi.options.patchFileSystemOptions({
                       fileProcessor: {
-                        ...(fpOptionsRef.current ?? { triggerMovingAfterPlayingFirstFile: false }),
+                        ...(fpOptionsRef.current ?? { showOperationsAfterPlayingFirstFile: false }),
                         workingDirectory: v,
                       },
                     });

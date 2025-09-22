@@ -2356,7 +2356,11 @@
   "custom": "自定义",
   "media library": "媒体库",
   "Manually enter a path": "手动输入路径",
-  "Trigger moving after playing first file": "播放第一个文件后移动",
+  "Show operations after playing first file": "播放第一个文件后显示操作",
+  "After first play: operations": "首次播放后：可执行的操作",
+  "Move to...": "移动到...",
+  "Current Path": "当前路径",
+  "Usually this will work fine if you are categorizing files.": "如果你是在做分类，这通常可以很好地工作。",
   "Usually this will work fine if you are categorizing files.": "通常情况下，当您分类文件时，这会很好用。",
   "AddedDate": "添加日期",
   "UpdatedDate": "更新日期",
@@ -2441,5 +2445,10 @@
   "Please provide a property name": "请提供一个属性名",
   "Third party integration": "第三方集成",
   "Change log": "更新日志",
-  "Alias is used to replace the original text of property values in UI, such as translations, etc.": "别名用于替换属性值在 UI 中的原始文本，例如翻译等。"
+  "Alias is used to replace the original text of property values in UI, such as translations, etc.": "别名用于替换属性值在 UI 中的原始文本，例如翻译等。",
+  "Are you sure you want to delete this file/folder?": "确定要删除这个文件/文件夹吗？",
+  "We noticed that you played the first file in this path. Would you like to proceed with the following actions?": "我们注意到您播放了此路径中的第一个文件。您想继续执行以下操作吗？",
+  "You can move it to another path.": "您可以将它移动到另一个路径。",
+  "Or delete it?": "或者删除它？",
+  "Delete this file/folder?": "删除这个文件/文件夹？"
 }

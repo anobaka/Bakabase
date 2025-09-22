@@ -34,8 +34,10 @@ import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import FolderSelectorTest from "./cases/FolderSelectorTest";
+import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsModalTest";
 
 const components = {
+  AfterFirstPlayOperationsModalTest: <AfterFirstPlayOperationsModalTest />,
   FolderSelectorTest: <FolderSelectorTest />,
   ErrorBoundaryTest: <ErrorBoundaryTestPage />,
   FileNameModifierTest: <FileNameModifierTestPage />,

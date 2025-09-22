@@ -348,6 +348,7 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerOpt
   expressions?: string[];
   requirements?: number[];
   keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
+  pretreatKeyword?: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions {
@@ -699,6 +700,13 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputM
 export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModelTExtensionGroupConversion {
   /** @format int32 */
   toExtensionGroupId: number;
+}
+
+export interface BakabaseAbstractionsModelsInputMediaLibraryTemplateValidationInputModel {
+  rootPath: string;
+  /** @format int32 */
+  limitResourcesCount?: number;
+  resourceKeyword?: string;
 }
 
 export interface BakabaseAbstractionsModelsInputMediaLibraryV2AddOrPutInputModel {
@@ -1725,7 +1733,7 @@ export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileMoverOptio
 
 export interface BakabaseInsideWorldModelsConfigsFileSystemOptionsFileProcessorOptions {
   workingDirectory: string;
-  triggerMovingAfterPlayingFirstFile: boolean;
+  showOperationsAfterPlayingFirstFile: boolean;
 }
 
 export interface BakabaseInsideWorldModelsConfigsJavLibraryOptions {
@@ -2171,7 +2179,7 @@ export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescripto
   targets: BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDescriptor[];
   /** @format int32 */
   propertyValueScope: number;
-  tags: BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancerTag[];
+  tags: BakabaseModulesEnhancerModelsDomainConstantsEnhancerTag[];
 }
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerTargetDescriptor {
@@ -2199,17 +2207,12 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
   | 0
   | 1;
 
-/**
- * [1: UseRegex, 2: UseKeyword]
- * @format int32
- */
-export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancerTag = 1 | 2;
-
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
   targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[];
   requirements?: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId[];
   expressions?: string[];
   keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
+  pretreatKeyword?: boolean;
 }
 
 export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions {
@@ -2231,6 +2234,12 @@ export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFu
  * @format int32
  */
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+/**
+ * [1: UseRegex, 2: UseKeyword]
+ * @format int32
+ */
+export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerTag = 1 | 2;
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
   options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
@@ -7789,6 +7798,26 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         body: data,
         type: ContentType.Json,
         format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name ValidateMediaLibraryTemplate
+     * @request POST:/media-library-template/{id}/validate
+     */
+    validateMediaLibraryTemplate: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateValidationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/media-library-template/${id}/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
         ...params,
       }),
   };
