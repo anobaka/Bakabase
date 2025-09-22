@@ -30,21 +30,28 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
 
             if (type == IwFsType.Unknown)
             {
-                if (InternalOptions.ImageExtensions.Contains(ext))
+                if (Directory.Exists(path))
                 {
-                    type = IwFsType.Image;
+                    type = IwFsType.Directory;
                 }
                 else
                 {
-                    if (InternalOptions.VideoExtensions.Contains(ext))
+                    if (InternalOptions.ImageExtensions.Contains(ext))
                     {
-                        type = IwFsType.Video;
+                        type = IwFsType.Image;
                     }
                     else
                     {
-                        if (InternalOptions.AudioExtensions.Contains(ext))
+                        if (InternalOptions.VideoExtensions.Contains(ext))
                         {
-                            type = IwFsType.Audio;
+                            type = IwFsType.Video;
+                        }
+                        else
+                        {
+                            if (InternalOptions.AudioExtensions.Contains(ext))
+                            {
+                                type = IwFsType.Audio;
+                            }
                         }
                     }
                 }

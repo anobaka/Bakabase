@@ -1,8 +1,4 @@
-import type {
-  BTaskResourceType,
-  BTaskStatus,
-  BTaskType,
-} from "@/sdk/constants";
+import type { BTaskResourceType, BTaskStatus, BTaskType } from "@/sdk/constants";
 
 export type BTask = {
   id: string;
@@ -19,7 +15,7 @@ export type BTask = {
   conflictWithTaskKeys?: string[];
   estimateRemainingTime?: string; // ISO 8601 duration string
   startedAt?: string; // ISO 8601 datetime string
-  createdAt?: string; // ISO 8601 datetime string
+  createdAt: string; // ISO 8601 datetime string
   reasonForUnableToStart?: string;
   nextTimeStartAt?: string;
   isPersistent: boolean;

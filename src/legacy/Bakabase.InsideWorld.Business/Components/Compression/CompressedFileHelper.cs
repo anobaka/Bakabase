@@ -51,7 +51,8 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
                 var keyName = Path.GetFileNameWithoutExtension(f);
                 var ext2 = Path.GetExtension(keyName);
-                if (ext2.IsNotEmpty())
+                // ignore part segment on single file
+                if (ext2.IsNotEmpty() && fileOrFullNames.Length > 1)
                 {
                     if (ext1IsKeyExt)
                     {

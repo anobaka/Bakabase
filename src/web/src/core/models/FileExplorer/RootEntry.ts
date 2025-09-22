@@ -8,12 +8,7 @@ import { Entry } from "@/core/models/FileExplorer/Entry";
 import BusinessConstants from "@/components/BusinessConstants";
 import BApi from "@/sdk/BApi";
 import { buildLogger, splitPathIntoSegments } from "@/components/utils";
-import {
-  BTaskResourceType,
-  BTaskStatus,
-  IwFsEntryChangeType,
-  IwFsType,
-} from "@/sdk/constants";
+import { BTaskResourceType, BTaskStatus, IwFsEntryChangeType, IwFsType } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import { useIwFsEntryChangeEventsStore } from "@/stores/iwFsEntryChangeEvents";
 
@@ -92,16 +87,16 @@ class RootEntry extends Entry {
         (x.status == BTaskStatus.Running ||
           x.status == BTaskStatus.Paused ||
           x.status == BTaskStatus.Error ||
-          x.status == BTaskStatus.NotStarted),
+          x.status == BTaskStatus.NotStarted ||
+          x.status == BTaskStatus.Completed ||
+          x.status == BTaskStatus.Cancelled),
     );
-    const targetTasksMap: Record<string, BTask[]> = _.flatMap(
-      targetTasks,
-      (t) =>
-        (t.resourceKeys ?? []).map((k) => ({
-          path: k as string,
-          task: t,
-        })),
-    ).reduce((s, t) => {
+    const targetTasksMap: Record<string, BTask[]> = _.flatMap(targetTasks, (t) =>
+      (t.resourceKeys ?? []).map((k) => ({
+        path: k as string,
+        task: t,
+      })),
+    ).reduce<Record<string, BTask[]>>((s, t) => {
       if (t.path in s) {
         s[t.path].push(t.task);
       } else {
@@ -111,42 +106,45 @@ class RootEntry extends Entry {
       return s;
     }, {});
 
-    // log(targetTasks);
+    // log(targetTasksMap);
 
     for (const path of Object.keys(self.nodeMap)) {
       const node = self.nodeMap[path]!;
       const prevTask = node.task;
-      const incomingTasks = targetTasksMap[path] ?? [];
-      let task = incomingTasks[0];
+      const incomingTasks = (targetTasksMap[path] ?? []).sort(
+        (a, b) => -a.createdAt?.localeCompare(b.createdAt),
+      );
+      let task: BTask | undefined = incomingTasks[0];
 
-      if (incomingTasks.length > 1) {
-        task = _.sortBy(incomingTasks, (x) => {
-          switch (x.status) {
-            case BTaskStatus.Error:
-              return -1;
-            case BTaskStatus.Running:
-              return 0;
-            case BTaskStatus.Paused:
-              return 1;
-            case BTaskStatus.NotStarted:
-              return 2;
-            case BTaskStatus.Completed:
-            case BTaskStatus.Cancelled:
-              return 999;
-          }
-        })[0];
+      // log(task);
+
+      if (task) {
+        if (task.status == BTaskStatus.Completed || task.status == BTaskStatus.Cancelled) {
+          task = undefined;
+        }
       }
+
+      // if (incomingTasks.length > 1) {
+      //   task = _.sortBy(incomingTasks, (x) => {
+      //     switch (x.status) {
+      //       case BTaskStatus.Error:
+      //         return -1;
+      //       case BTaskStatus.Running:
+      //         return 0;
+      //       case BTaskStatus.Paused:
+      //         return 1;
+      //       case BTaskStatus.NotStarted:
+      //         return 2;
+      //       case BTaskStatus.Completed:
+      //       case BTaskStatus.Cancelled:
+      //         return 999;
+      //     }
+      //   })[0];
+      // }
       const differences = diff(prevTask, task);
 
       if (differences) {
-        log(
-          "TaskChanged",
-          differences,
-          "current: ",
-          task,
-          "previous: ",
-          prevTask,
-        );
+        log("TaskChanged", differences, "current: ", task, "previous: ", prevTask);
         renderingQueue.push(path, RenderType.ForceUpdate);
         node.task = task;
       }
@@ -174,34 +172,31 @@ class RootEntry extends Entry {
 
       // ignore previous tasks
       // path - event index
-      const taskCache: { [key: string]: number } = {};
-      const redundantTaskEventIndexes: number[] = [];
+      // const taskCache: { [key: string]: number } = {};
+      // const redundantTaskEventIndexes: number[] = [];
+
+      // for (let i = 0; i < events.length; i++) {
+      //   const e = events[i]!;
+      //
+      //   if (e.type == IwFsEntryChangeType.TaskChanged) {
+      //     if (e.path in taskCache) {
+      //       redundantTaskEventIndexes.push(taskCache[e.path]!);
+      //     }
+      //     taskCache[e.path] = i;
+      //   }
+      // }
+      // const filteredEvents = events.filter((_, i) => !redundantTaskEventIndexes.includes(i));
+      //
+      // if (filteredEvents.length != events.length) {
+      //   log(
+      //     `Reduced ${events.length - filteredEvents.length} task events for same path`,
+      //     filteredEvents,
+      //   );
+      // }
 
       for (let i = 0; i < events.length; i++) {
-        const e = events[i]!;
-
-        if (e.type == IwFsEntryChangeType.TaskChanged) {
-          if (e.path in taskCache) {
-            redundantTaskEventIndexes.push(taskCache[e.path]!);
-          }
-          taskCache[e.path] = i;
-        }
-      }
-      const filteredEvents = events.filter(
-        (_, i) => !redundantTaskEventIndexes.includes(i),
-      );
-
-      if (filteredEvents.length != events.length) {
-        log(
-          `Reduced ${events.length - filteredEvents.length} task events for same path`,
-          filteredEvents,
-        );
-      }
-
-      for (let i = 0; i < filteredEvents.length; i++) {
-        const evt = filteredEvents[i]!;
-        const changedEntryPath =
-          evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
+        const evt = events[i]!;
+        const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
         const changedEntry: Entry | undefined = self.nodeMap[changedEntryPath];
         const segments = splitPathIntoSegments(evt.path);
         const parentPath = segments
@@ -246,9 +241,9 @@ class RootEntry extends Entry {
                 }
                 renderingQueue.push(parent.path, RenderType.ForceUpdate);
                 break;
-              case IwFsEntryChangeType.TaskChanged:
-                // Not rendered, ignore
-                break;
+              // case IwFsEntryChangeType.TaskChanged:
+              //   // Not rendered, ignore
+              //   break;
             }
           }
         } else {

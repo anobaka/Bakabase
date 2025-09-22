@@ -30,9 +30,7 @@ interface Props {
   passwords?: string[];
 }
 
-const loadTopNPasswords = async (
-  type: PasswordSearchOrder,
-): Promise<IPassword[]> => {
+const loadTopNPasswords = async (type: PasswordSearchOrder): Promise<IPassword[]> => {
   const rsp = await BApi.password.searchPasswords({
     // @ts-ignore
     order: type,
@@ -49,9 +47,7 @@ const DecompressBalloon = (props: Props) => {
   const customPasswordRef = useRef<string>();
 
   const [recentPasswords, setRecentPasswords] = useState<IPassword[]>([]);
-  const [frequentlyUsedPasswords, setFrequentlyUsedPasswords] = useState<
-    IPassword[]
-  >([]);
+  const [frequentlyUsedPasswords, setFrequentlyUsedPasswords] = useState<IPassword[]>([]);
 
   const decompress = useCallback((path: string, password?: string) => {
     // Notification.open({
@@ -71,9 +67,7 @@ const DecompressBalloon = (props: Props) => {
 
   const onBalloonVisible = useCallback(async () => {
     setRecentPasswords(await loadTopNPasswords(PasswordSearchOrder.Latest));
-    setFrequentlyUsedPasswords(
-      await loadTopNPasswords(PasswordSearchOrder.Frequency),
-    );
+    setFrequentlyUsedPasswords(await loadTopNPasswords(PasswordSearchOrder.Frequency));
   }, []);
 
   const openPasswordSelector = useCallback(() => {
@@ -103,15 +97,13 @@ const DecompressBalloon = (props: Props) => {
         return (
           <div className={"secondary"}>
             <div className="tip">
-              {t<string>(
-                `Alternatively, you can choose a password from ${label} passwords:`,
-              )}
+              {t<string>(`Alternatively, you can choose a password from ${label} passwords:`)}
               {passwords.length === 5 && (
                 <Button
                   className={"show-more"}
+                  color={"primary"}
                   size={"sm"}
                   variant={"light"}
-                  color={"primary"}
                   onClick={openPasswordSelector}
                 >
                   {t<string>("Show more")}
@@ -173,11 +165,11 @@ const DecompressBalloon = (props: Props) => {
                     password: passwords[0],
                   }}
                 >
-                  By default, we will use{" "}
-                  <Button variant={"light"} color={"primary"} size={"sm"}>
+                  By default, we will use&nbsp;
+                  <Button color={"primary"} size={"sm"} variant={"light"}>
                     password
-                  </Button>{" "}
-                  as password.
+                  </Button>
+                  &nbsp; as password.
                 </Trans>
               </div>
             )}
@@ -209,20 +201,9 @@ const DecompressBalloon = (props: Props) => {
             {renderTopNPasswords(PasswordSearchOrder.Frequency)}
 
             <div className={"secondary"}>
-              <div className="tip">
-                {t<string>("Or you can use a custom password:")}
-              </div>
+              <div className="tip">{t<string>("Or you can use a custom password:")}</div>
               <Input
                 isClearable
-                placeholder={i18n.t<string>("Password")}
-                size={"sm"}
-                style={{ width: "100%" }}
-                onValueChange={(v) => {
-                  customPasswordRef.current = v;
-                }}
-                onKeyDown={(e) => {
-                  e.stopPropagation();
-                }}
                 endContent={
                   <Button
                     size={"sm"}
@@ -231,15 +212,22 @@ const DecompressBalloon = (props: Props) => {
                       if (customPasswordRef.current) {
                         decompress(entry.path, customPasswordRef.current);
                       } else {
-                        toast.danger(
-                          i18n.t<string>("Password can not be empty"),
-                        );
+                        toast.danger(i18n.t<string>("Password can not be empty"));
                       }
                     }}
                   >
                     {t<string>("Use custom password to decompress")}
                   </Button>
                 }
+                placeholder={i18n.t<string>("Password")}
+                size={"sm"}
+                style={{ width: "100%" }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                }}
+                onValueChange={(v) => {
+                  customPasswordRef.current = v;
+                }}
               />
             </div>
           </div>
