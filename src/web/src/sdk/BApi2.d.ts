@@ -5915,6 +5915,13 @@ export interface components {
             search: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             name: string;
         };
+        "Bakabase.Service.Models.View.UnknownResourcesCountViewModel": {
+            /** Format: int32 */
+            unknownMediaLibraryCount: number;
+            unknownPathCountByMediaLibraryId: {
+                [key: string]: number;
+            };
+        };
         "Bootstrap.Components.Logging.LogService.Models.Entities.Log": {
             /** Format: int32 */
             id: number;
@@ -6524,6 +6531,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.SavedSearchViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UnknownResourcesCountViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.UnknownResourcesCountViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]": {
             /** Format: int32 */
@@ -14279,7 +14292,9 @@ export interface operations {
     };
     GetUnknownResources: {
         parameters: {
-            query?: never;
+            query?: {
+                mediaLibraryId?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -14336,9 +14351,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UnknownResourcesCountViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UnknownResourcesCountViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.UnknownResourcesCountViewModel]"];
                 };
             };
         };

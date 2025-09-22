@@ -495,24 +495,71 @@ namespace Bakabase.Service.Controllers
 
         [HttpGet("unknown")]
         [SwaggerOperation(OperationId = "GetUnknownResources")]
-        public async Task<ListResponse<Resource>> GetUnknownResources()
+        public async Task<ListResponse<Resource>> GetUnknownResources(int? mediaLibraryId)
         {
-            var resources = await service.GetUnknownResources();
-            return new ListResponse<Resource>(resources);
+            if (mediaLibraryId.HasValue)
+            {
+                // Unknown type b: resources under specific media library that have PathDoesNotExist
+                var items = await service.GetAll(
+                    x => x.CategoryId == 0 && x.MediaLibraryId == mediaLibraryId.Value &&
+                         (x.Tags & ResourceTag.PathDoesNotExist) > 0,
+                    ResourceAdditionalItem.All);
+                return new ListResponse<Resource>(items);
+            }
+
+            // Unknown type a: resources with unknown media library (media library v2 not found)
+            var mediaLibrariesV2 = await mediaLibraryV2Service.GetAll();
+            var validIds = mediaLibrariesV2.Select(m => m.Id).ToHashSet();
+            var typeAItems = await service.GetAll(
+                x => x.CategoryId == 0 && !validIds.Contains(x.MediaLibraryId),
+                ResourceAdditionalItem.All);
+            return new ListResponse<Resource>(typeAItems);
         }
 
         [HttpGet("unknown/count")]
         [SwaggerOperation(OperationId = "GetUnknownResourcesCount")]
-        public async Task<SingletonResponse<int>> GetUnknownCount()
+        public async Task<SingletonResponse<UnknownResourcesCountViewModel>> GetUnknownCount()
         {
-            return new SingletonResponse<int>(data: await service.GetUnknownCount());
+            var mediaLibrariesV2 = await mediaLibraryV2Service.GetAll();
+
+            var mediaLibraryV2Ids = mediaLibrariesV2.Select(m => m.Id).ToHashSet();
+
+            var allResources = await service.GetAllDbModels(x => x.CategoryId == 0, true);
+
+            var unknownMediaLibraryCount = allResources.Count(x => !mediaLibraryV2Ids.Contains(x.MediaLibraryId));
+
+            // Per-media-library PathDoesNotExist for media-library v2 only
+            var unknownPathPerMl = allResources
+                .Where(x => x.Tags.HasFlag(ResourceTag.PathDoesNotExist))
+                .GroupBy(x => x.MediaLibraryId)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            var data = new UnknownResourcesCountViewModel
+            {
+                UnknownMediaLibraryCount = unknownMediaLibraryCount,
+                UnknownPathCountByMediaLibraryId = unknownPathPerMl
+            };
+
+            return new SingletonResponse<UnknownResourcesCountViewModel>(data);
         }
 
         [HttpDelete("unknown")]
         [SwaggerOperation(OperationId = "DeleteUnknownResources")]
-        public async Task<BaseResponse> DeleteUnknown()
+        public async Task<BaseResponse> DeleteUnknown(int? mediaLibraryId)
         {
-            await service.DeleteUnknown();
+            if (mediaLibraryId.HasValue)
+            {
+                // Delete type-b: PathDoesNotExist under specified media library
+                var resources = await service.GetAllDbModels(x => x.CategoryId == 0 && x.MediaLibraryId == mediaLibraryId.Value && (x.Tags & ResourceTag.PathDoesNotExist) > 0);
+                await service.DeleteByKeys(resources.Select(r => r.Id).ToArray(), false);
+                return BaseResponseBuilder.Ok;
+            }
+
+            // Delete type-a: unknown media library
+            var mediaLibrariesV2 = await mediaLibraryV2Service.GetAll();
+            var validIds = mediaLibrariesV2.Select(m => m.Id).ToHashSet();
+            var unknowns = await service.GetAllDbModels(x => x.CategoryId == 0 && !validIds.Contains(x.MediaLibraryId));
+            await service.DeleteByKeys(unknowns.Select(r => r.Id).ToArray(), false);
             return BaseResponseBuilder.Ok;
         }
 

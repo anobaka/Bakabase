@@ -24,7 +24,6 @@ import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import { ResourceTag } from "@/sdk/constants";
-import HandleUnknownResources from "@/components/HandleUnknownResources";
 import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
 import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
@@ -322,7 +321,6 @@ const FilterPanel = (props: IProps) => {
                 : t<string>("Select all")}
             </Checkbox>
           </Tooltip>
-          <HandleUnknownResources onHandled={() => search({})} />
           {totalFilteredResourceCount && totalFilteredResourceCount > 0 ? (
             <div className={"flex items-center gap-1"}>
               <Tooltip content={t<string>("Loaded resources")}>

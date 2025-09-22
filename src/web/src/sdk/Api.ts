@@ -2861,6 +2861,12 @@ export interface BakabaseServiceModelsViewSavedSearchViewModel {
   name: string;
 }
 
+export interface BakabaseServiceModelsViewUnknownResourcesCountViewModel {
+  /** @format int32 */
+  unknownMediaLibraryCount: number;
+  unknownPathCountByMediaLibraryId: Record<string, number>;
+}
+
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   id: number;
@@ -3566,6 +3572,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewSavedSearchViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUnknownResourcesCountViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewUnknownResourcesCountViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
@@ -7053,13 +7066,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetUnknownResources
      * @request GET:/resource/unknown
      */
-    getUnknownResources: (params: RequestParams = {}) =>
+    getUnknownResources: (
+      query?: {
+        /** @format int32 */
+        mediaLibraryId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
         any
       >({
         path: `/resource/unknown`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -7071,10 +7091,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteUnknownResources
      * @request DELETE:/resource/unknown
      */
-    deleteUnknownResources: (params: RequestParams = {}) =>
+    deleteUnknownResources: (
+      query?: {
+        /** @format int32 */
+        mediaLibraryId?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource/unknown`,
         method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -7087,7 +7114,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request GET:/resource/unknown/count
      */
     getUnknownResourcesCount: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUnknownResourcesCountViewModel,
+        any
+      >({
         path: `/resource/unknown/count`,
         method: "GET",
         format: "json",

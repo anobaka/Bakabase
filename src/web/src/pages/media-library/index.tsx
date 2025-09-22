@@ -20,6 +20,7 @@ import {
 } from "react-icons/ai";
 import { MdOutlineDelete } from "react-icons/md";
 import { IoIosSync } from "react-icons/io";
+import { AiOutlineFileUnknown } from "react-icons/ai";
 import { TbTemplate } from "react-icons/tb";
 import { PiEmpty } from "react-icons/pi";
 import { BsController } from "react-icons/bs";
@@ -60,11 +61,15 @@ import { buildColorValueString } from "@/components/bakaui/components/ColorPicke
 import DeleteEnhancementsByEnhancerSelectorModal from "@/pages/media-library/components/DeleteEnhancementsByEnhancerSelectorModal";
 import { EditableValue } from "@/components/EditableValue";
 import PathAutocomplete, { PathAutocompleteProps } from "@/components/PathAutocomplete";
+import { BakabaseServiceModelsViewUnknownResourcesCountViewModel } from "@/sdk/Api";
+import HandleUnknownResourcesModal from "@/components/HandleUnknownResourcesModal";
 
 enum SortBy {
   Path = 1,
   Template = 2,
 }
+
+type UnknownResourceCount = BakabaseServiceModelsViewUnknownResourcesCountViewModel;
 
 const MediaLibraryPage = () => {
   const { t } = useTranslation();
@@ -77,12 +82,15 @@ const MediaLibraryPage = () => {
   const [sortBy, setSortBy] = useState<SortBy>(SortBy.Path);
   const forceUpdate = useUpdate();
   const outdatedModalRef = useRef<{ check: () => Promise<void> } | null>(null);
+  const [unknownResourceCounts, setUnknownResourceCounts] = useState<UnknownResourceCount>();
 
   const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
     const r = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
     const list = r.data ?? [];
 
     setMediaLibraries(list);
+    const unknown = await BApi.resource.getUnknownResourcesCount();
+    setUnknownResourceCounts(unknown.data);
 
     return list;
   };
@@ -160,7 +168,7 @@ const MediaLibraryPage = () => {
                   <AiOutlineFolderOpen className={"text-lg"} />
                   {value}
                 </Button> : null}
-                Editor={({onValueChange, ...props}) => <PathAutocomplete
+                Editor={({ onValueChange, ...props }) => <PathAutocomplete
                   maxResults={100}
                   label={
                     paths.length > 1
@@ -229,6 +237,8 @@ const MediaLibraryPage = () => {
       </div>
     );
   };
+
+  const mediaLibraryUnknownResourcesCounts = unknownResourceCounts?.unknownPathCountByMediaLibraryId ?? {};
 
   const renderTable = () => {
     if (mediaLibraries.length === 0) {
@@ -512,6 +522,26 @@ const MediaLibraryPage = () => {
                         {ml.resourceCount}
                       </Chip>
                     </Tooltip>
+                    {/* Unknown resources of type b (PathDoesNotExist) */}
+                    {mediaLibraryUnknownResourcesCounts[ml.id] > 0 && (
+                      <Tooltip content={t<string>("Handle {{count}} unknown resources in this media library", { count: mediaLibraryUnknownResourcesCounts[ml.id] })} placement="top">
+                        <Button
+                          isIconOnly
+                          radius={"sm"}
+                          size={"sm"}
+                          color="warning"
+                          variant={"light"}
+                          onPress={async () => {
+                            createPortal(HandleUnknownResourcesModal, {
+                              mediaLibraryId: ml.id,
+                              onHandled: () => loadMediaLibraries(),
+                            });
+                          }}
+                        >
+                          <AiOutlineFileUnknown className={"text-lg"} />
+                        </Button>
+                      </Tooltip>
+                    )}
                     {ml.resourceCount > 0 && (
                       <Tooltip content={t<string>("MediaLibrary.SearchResources")} placement="top">
                         <Button
@@ -574,14 +604,7 @@ const MediaLibraryPage = () => {
                     <SyncStatus
                       id={ml.id}
                       onSyncCompleted={() => {
-                        BApi.mediaLibraryV2.getMediaLibraryV2(ml.id).then((r) => {
-                          if (!r.data) return;
-                          const updatedMediaLibraries = mediaLibraries.map((m) =>
-                            m.id === ml.id ? r.data! : m,
-                          );
-
-                          setMediaLibraries(updatedMediaLibraries);
-                        });
+                        loadMediaLibraries();
                       }}
                     />
                     <Dropdown>
@@ -664,6 +687,8 @@ const MediaLibraryPage = () => {
     );
   };
 
+  const unknownMediaLibraryResourceCount = unknownResourceCounts?.unknownMediaLibraryCount ?? 0;
+
   return (
     <div className={"h-full flex flex-col"}>
       <OutdatedModal ref={(r) => (outdatedModalRef.current = r)} />
@@ -701,10 +726,26 @@ const MediaLibraryPage = () => {
             <IoIosSync className={"text-lg"} />
             {t<string>("MediaLibrary.SynchronizeAll")}
           </Button>
+          {unknownMediaLibraryResourceCount > 0 && (
+            <Button
+              isIconOnly
+              radius={"sm"}
+              size={"sm"}
+              variant={"light"}
+              onPress={async () => {
+                createPortal(HandleUnknownResourcesModal, {
+                  onHandled: () => loadMediaLibraries(),
+                });
+              }}
+            >
+              <AiOutlineFileUnknown className={"text-lg"} />
+              {t<string>("Handle {{count}} unknown resources", { count: unknownMediaLibraryResourceCount })}
+            </Button>
+          )}
         </div>
         <div>
           <Button
-            color={"default"}
+            color={"warning"}
             size={"sm"}
             variant={"flat"}
             onPress={() => setSortBy(SortBy.Path == sortBy ? SortBy.Template : SortBy.Path)}
@@ -717,7 +758,7 @@ const MediaLibraryPage = () => {
         </div>
       </div>
       {renderTable()}
-    </div>
+    </div >
   );
 };
 

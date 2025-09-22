@@ -2450,5 +2450,6 @@
   "We noticed that you played the first file in this path. Would you like to proceed with the following actions?": "我们注意到您播放了此路径中的第一个文件。您想继续执行以下操作吗？",
   "You can move it to another path.": "您可以将它移动到另一个路径。",
   "Or delete it?": "或者删除它？",
-  "Delete this file/folder?": "删除这个文件/文件夹？"
+  "Delete this file/folder?": "删除这个文件/文件夹？",
+  "Handle {{count}} unknown resources in this media library": "处理当前媒体库的{{count}}个未知资源"
 }

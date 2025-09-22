@@ -32,7 +32,6 @@ import {
   Modal,
   Spinner,
 } from "@/components/bakaui";
-import HandleUnknownResources from "@/components/HandleUnknownResources";
 const CategoryPage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -242,7 +241,6 @@ const CategoryPage = () => {
           )}
         </div>
         <div className="right">
-          <HandleUnknownResources />
           <Button
             color={"primary"}
             size={"small"}
