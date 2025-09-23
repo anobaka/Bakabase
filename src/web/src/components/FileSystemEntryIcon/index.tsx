@@ -20,7 +20,7 @@ type Props = {
   disableCache?: boolean;
 };
 
-const buildCacheKey = (type: IconType, path?: string): string => {
+const buildCacheKey = (type: IconType, path?: string): string | undefined => {
   let suffix = "";
 
   switch (type) {
@@ -29,7 +29,8 @@ const buildCacheKey = (type: IconType, path?: string): string => {
       break;
     case IconType.Dynamic: {
       if (!path) {
-        throw new Error("Path is required for dynamic icon");
+        // console.error("Path is required for dynamic icon");
+        return undefined;
       }
 
       if (path.endsWith(".exe") || path.endsWith(".app")) {
@@ -60,7 +61,7 @@ const FileSystemEntryIcon = ({
 }: Props) => {
   const cacheKey = buildCacheKey(type, path);
   const { icons, add } = useIconsStore();
-  const iconCache = icons[cacheKey] as string;
+  const iconCache = cacheKey == undefined ? undefined : icons[cacheKey] as string;
   const iconImgDataRef = useRef<string | undefined>(disableCache ? undefined : (iconCache === undefined ? undefined : iconCache));
   const forceUpdate = useUpdate();
 
@@ -71,7 +72,7 @@ const FileSystemEntryIcon = ({
     // console.log('iconImgDataRef.current', iconImgDataRef.current);
     // console.log('disableCache', disableCache);
     // console.log('icons', icons);
-    if (iconImgDataRef.current === undefined) {
+    if (iconImgDataRef.current === undefined && cacheKey != undefined) {
       BApi.file
         .getIconData({
           type,

@@ -16,8 +16,10 @@ import BApi from "@/sdk/BApi";
 import { Checkbox } from "@/components/bakaui/components/Checkbox";
 import FolderSelector from "@/components/FolderSelector";
 import AfterFirstPlayOperationsModal from "@/pages/file-processor/components/AfterFirstPlayOperationsModal";
+import { MdUnarchive } from "react-icons/md";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Tooltip } from "@/components/bakaui";
+import { Button, Tooltip } from "@/components/bakaui";
+import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
 
 const log = buildLogger("FileProcessor");
 const FileProcessorPage = () => {
@@ -109,17 +111,28 @@ const FileProcessorPage = () => {
 
   // console.log('render all selected', allSelected);
 
+  console.log('root path', rootPath, 'root ref', rootRef);
+
   return (
     <div className={"file-explorer-page"}>
       <div className={"file-explorer flex flex-col gap-0"}>
         <div className="flex items-center justify-between">
           <div />
-          <div>
+          <div className="flex items-center gap-2">
+            {rootPath && (
+              <Button size="sm" variant="flat" onPress={() => {
+                createPortal(BulkDecompressionToolModal, { paths: [rootPath] });
+              }}>
+                <MdUnarchive className="text-lg" />
+                {t("Bulk decompression all decompressed files in current folder")}
+              </Button>
+            )}
             <Tooltip
               content={t("Usually this will work fine if you are categorizing files.")}
               placement="bottom"
             >
               <Checkbox
+                size="sm"
                 isSelected={optionsStore.data?.fileProcessor?.showOperationsAfterPlayingFirstFile}
                 onValueChange={(v) => {
                   BApi.options.patchFileSystemOptions({
@@ -186,6 +199,7 @@ const FileProcessorPage = () => {
                         workingDirectory: v,
                       },
                     });
+                    setRootPath(v);
                   }
                 }}
               />

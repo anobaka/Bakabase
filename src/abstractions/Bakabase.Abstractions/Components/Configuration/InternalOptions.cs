@@ -58,6 +58,10 @@ namespace Bakabase.Abstractions.Components.Configuration
             ".gz",
             ".tgz"
         );
+        
+        public static readonly ImmutableHashSet<string> CompoundCompressedFileExtensions =
+            ImmutableHashSet.Create(StringComparer.OrdinalIgnoreCase,
+                ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.Z", ".tar.lz", ".tar.lzma", ".tar.tgz");
 
         public static readonly ImmutableHashSet<string> TextExtensions = ImmutableHashSet.Create(
             StringComparer.OrdinalIgnoreCase,

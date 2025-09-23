@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using Bakabase.InsideWorld.Business.Components.Compression;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -6,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Bakabase.Tests
 {
     [TestClass]
-    public class CompressedFileTests
+    public class CompressedFileHelperTests
     {
         [TestMethod]
         public void Test()
@@ -81,7 +82,7 @@ namespace Bakabase.Tests
 [Entry]C:/2.tar.gz
 ";
 
-            Assert.AreEqual(str, rightStr);
+            Assert.AreEqual(rightStr, str);
         }
     }
 }

@@ -11,7 +11,8 @@ public static class StringExtensions
     private static readonly char[] PathSeparatorCandidates =
     [
         Path.AltDirectorySeparatorChar,
-        Path.DirectorySeparatorChar
+        Path.DirectorySeparatorChar,
+        InternalOptions.WindowsSpecificDirSeparator
         // Path.VolumeSeparatorChar, 
         // Path.PathSeparator
     ];

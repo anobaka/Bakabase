@@ -1501,6 +1501,285 @@ export const TagGroupAdditionalItemLabel: Record<TagGroupAdditionalItem, string>
   [TagGroupAdditionalItem.TagNamePreferredAlias]: 'TagNamePreferredAlias'
 };
 
+export enum CaptchaType {
+  Image = 1,
+  SmsMessage = 2
+}
+
+export const captchaTypes = [
+  { label: 'Image', value: CaptchaType.Image },
+  { label: 'SmsMessage', value: CaptchaType.SmsMessage }
+] as const;
+
+export const CaptchaTypeLabel: Record<CaptchaType, string> = {
+  [CaptchaType.Image]: 'Image',
+  [CaptchaType.SmsMessage]: 'SmsMessage'
+};
+
+export enum DingSysLevel {
+  Other = 0,
+  MainAdministrator = 1,
+  SubAdministrator = 2,
+  Boss = 100
+}
+
+export const dingSysLevels = [
+  { label: 'Other', value: DingSysLevel.Other },
+  { label: 'MainAdministrator', value: DingSysLevel.MainAdministrator },
+  { label: 'SubAdministrator', value: DingSysLevel.SubAdministrator },
+  { label: 'Boss', value: DingSysLevel.Boss }
+] as const;
+
+export const DingSysLevelLabel: Record<DingSysLevel, string> = {
+  [DingSysLevel.Other]: 'Other',
+  [DingSysLevel.MainAdministrator]: 'MainAdministrator',
+  [DingSysLevel.SubAdministrator]: 'SubAdministrator',
+  [DingSysLevel.Boss]: 'Boss'
+};
+
+export enum ResponseCode {
+  Success = 0,
+  NotModified = 304,
+  InvalidPayloadOrOperation = 400,
+  Unauthenticated = 401,
+  Unauthorized = 403,
+  NotFound = 404,
+  Conflict = 409,
+  SystemError = 500,
+  Timeout = 504,
+  InvalidCaptcha = 100400
+}
+
+export const responseCodes = [
+  { label: 'Success', value: ResponseCode.Success },
+  { label: 'NotModified', value: ResponseCode.NotModified },
+  { label: 'InvalidPayloadOrOperation', value: ResponseCode.InvalidPayloadOrOperation },
+  { label: 'Unauthenticated', value: ResponseCode.Unauthenticated },
+  { label: 'Unauthorized', value: ResponseCode.Unauthorized },
+  { label: 'NotFound', value: ResponseCode.NotFound },
+  { label: 'Conflict', value: ResponseCode.Conflict },
+  { label: 'SystemError', value: ResponseCode.SystemError },
+  { label: 'Timeout', value: ResponseCode.Timeout },
+  { label: 'InvalidCaptcha', value: ResponseCode.InvalidCaptcha }
+] as const;
+
+export const ResponseCodeLabel: Record<ResponseCode, string> = {
+  [ResponseCode.Success]: 'Success',
+  [ResponseCode.NotModified]: 'NotModified',
+  [ResponseCode.InvalidPayloadOrOperation]: 'InvalidPayloadOrOperation',
+  [ResponseCode.Unauthenticated]: 'Unauthenticated',
+  [ResponseCode.Unauthorized]: 'Unauthorized',
+  [ResponseCode.NotFound]: 'NotFound',
+  [ResponseCode.Conflict]: 'Conflict',
+  [ResponseCode.SystemError]: 'SystemError',
+  [ResponseCode.Timeout]: 'Timeout',
+  [ResponseCode.InvalidCaptcha]: 'InvalidCaptcha'
+};
+
+export enum RuntimeMode {
+  Dev = 0,
+  WinForms = 1,
+  Docker = 2
+}
+
+export const runtimeModes = [
+  { label: 'Dev', value: RuntimeMode.Dev },
+  { label: 'WinForms', value: RuntimeMode.WinForms },
+  { label: 'Docker', value: RuntimeMode.Docker }
+] as const;
+
+export const RuntimeModeLabel: Record<RuntimeMode, string> = {
+  [RuntimeMode.Dev]: 'Dev',
+  [RuntimeMode.WinForms]: 'WinForms',
+  [RuntimeMode.Docker]: 'Docker'
+};
+
+export enum Operation {
+  DELETE = 0,
+  INSERT = 1,
+  EQUAL = 2
+}
+
+export const operations = [
+  { label: 'DELETE', value: Operation.DELETE },
+  { label: 'INSERT', value: Operation.INSERT },
+  { label: 'EQUAL', value: Operation.EQUAL }
+] as const;
+
+export const OperationLabel: Record<Operation, string> = {
+  [Operation.DELETE]: 'DELETE',
+  [Operation.INSERT]: 'INSERT',
+  [Operation.EQUAL]: 'EQUAL'
+};
+
+export enum ProgressorClientAction {
+  Start = 1,
+  Stop = 2,
+  Initialize = 3
+}
+
+export const progressorClientActions = [
+  { label: 'Start', value: ProgressorClientAction.Start },
+  { label: 'Stop', value: ProgressorClientAction.Stop },
+  { label: 'Initialize', value: ProgressorClientAction.Initialize }
+] as const;
+
+export const ProgressorClientActionLabel: Record<ProgressorClientAction, string> = {
+  [ProgressorClientAction.Start]: 'Start',
+  [ProgressorClientAction.Stop]: 'Stop',
+  [ProgressorClientAction.Initialize]: 'Initialize'
+};
+
+export enum ProgressorEvent {
+  StateChanged = 1,
+  ProgressChanged = 2,
+  ErrorOccurred = 3
+}
+
+export const progressorEvents = [
+  { label: 'StateChanged', value: ProgressorEvent.StateChanged },
+  { label: 'ProgressChanged', value: ProgressorEvent.ProgressChanged },
+  { label: 'ErrorOccurred', value: ProgressorEvent.ErrorOccurred }
+] as const;
+
+export const ProgressorEventLabel: Record<ProgressorEvent, string> = {
+  [ProgressorEvent.StateChanged]: 'StateChanged',
+  [ProgressorEvent.ProgressChanged]: 'ProgressChanged',
+  [ProgressorEvent.ErrorOccurred]: 'ErrorOccurred'
+};
+
+export enum ProgressorStatus {
+  Idle = 1,
+  Running = 2,
+  Complete = 3,
+  Suspended = 4
+}
+
+export const progressorStatuses = [
+  { label: 'Idle', value: ProgressorStatus.Idle },
+  { label: 'Running', value: ProgressorStatus.Running },
+  { label: 'Complete', value: ProgressorStatus.Complete },
+  { label: 'Suspended', value: ProgressorStatus.Suspended }
+] as const;
+
+export const ProgressorStatusLabel: Record<ProgressorStatus, string> = {
+  [ProgressorStatus.Idle]: 'Idle',
+  [ProgressorStatus.Running]: 'Running',
+  [ProgressorStatus.Complete]: 'Complete',
+  [ProgressorStatus.Suspended]: 'Suspended'
+};
+
+export enum FileStorageUploadResponseCode {
+  Success = 0,
+  Error = 500
+}
+
+export const fileStorageUploadResponseCodes = [
+  { label: 'Success', value: FileStorageUploadResponseCode.Success },
+  { label: 'Error', value: FileStorageUploadResponseCode.Error }
+] as const;
+
+export const FileStorageUploadResponseCodeLabel: Record<FileStorageUploadResponseCode, string> = {
+  [FileStorageUploadResponseCode.Success]: 'Success',
+  [FileStorageUploadResponseCode.Error]: 'Error'
+};
+
+export enum MessageStatus {
+  ToBeSent = 0,
+  Succeed = 1,
+  Failed = 2
+}
+
+export const messageStatuses = [
+  { label: 'ToBeSent', value: MessageStatus.ToBeSent },
+  { label: 'Succeed', value: MessageStatus.Succeed },
+  { label: 'Failed', value: MessageStatus.Failed }
+] as const;
+
+export const MessageStatusLabel: Record<MessageStatus, string> = {
+  [MessageStatus.ToBeSent]: 'ToBeSent',
+  [MessageStatus.Succeed]: 'Succeed',
+  [MessageStatus.Failed]: 'Failed'
+};
+
+export enum NotificationType {
+  Os = 1,
+  Email = 2,
+  OsAndEmail = 3,
+  WeChat = 4,
+  Sms = 8
+}
+
+export const notificationTypes = [
+  { label: 'Os', value: NotificationType.Os },
+  { label: 'Email', value: NotificationType.Email },
+  { label: 'OsAndEmail', value: NotificationType.OsAndEmail },
+  { label: 'WeChat', value: NotificationType.WeChat },
+  { label: 'Sms', value: NotificationType.Sms }
+] as const;
+
+export const NotificationTypeLabel: Record<NotificationType, string> = {
+  [NotificationType.Os]: 'Os',
+  [NotificationType.Email]: 'Email',
+  [NotificationType.OsAndEmail]: 'OsAndEmail',
+  [NotificationType.WeChat]: 'WeChat',
+  [NotificationType.Sms]: 'Sms'
+};
+
+export enum AdbDeviceState {
+  Device = 1,
+  Offline = 2,
+  NoDevice = 3
+}
+
+export const adbDeviceStates = [
+  { label: 'Device', value: AdbDeviceState.Device },
+  { label: 'Offline', value: AdbDeviceState.Offline },
+  { label: 'NoDevice', value: AdbDeviceState.NoDevice }
+] as const;
+
+export const AdbDeviceStateLabel: Record<AdbDeviceState, string> = {
+  [AdbDeviceState.Device]: 'Device',
+  [AdbDeviceState.Offline]: 'Offline',
+  [AdbDeviceState.NoDevice]: 'NoDevice'
+};
+
+export enum AdbExceptionCode {
+  Error = 1,
+  InvalidExitCode = 2
+}
+
+export const adbExceptionCodes = [
+  { label: 'Error', value: AdbExceptionCode.Error },
+  { label: 'InvalidExitCode', value: AdbExceptionCode.InvalidExitCode }
+] as const;
+
+export const AdbExceptionCodeLabel: Record<AdbExceptionCode, string> = {
+  [AdbExceptionCode.Error]: 'Error',
+  [AdbExceptionCode.InvalidExitCode]: 'InvalidExitCode'
+};
+
+export enum AdbInternalError {
+  Error = 1,
+  INSTALL_FAILED_ALREADY_EXISTS = 100,
+  DELETE_FAILED_INTERNAL_ERROR = 101,
+  FailedToConnectDevice = 200
+}
+
+export const adbInternalErrors = [
+  { label: 'Error', value: AdbInternalError.Error },
+  { label: 'INSTALL_FAILED_ALREADY_EXISTS', value: AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS },
+  { label: 'DELETE_FAILED_INTERNAL_ERROR', value: AdbInternalError.DELETE_FAILED_INTERNAL_ERROR },
+  { label: 'FailedToConnectDevice', value: AdbInternalError.FailedToConnectDevice }
+] as const;
+
+export const AdbInternalErrorLabel: Record<AdbInternalError, string> = {
+  [AdbInternalError.Error]: 'Error',
+  [AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS]: 'INSTALL_FAILED_ALREADY_EXISTS',
+  [AdbInternalError.DELETE_FAILED_INTERNAL_ERROR]: 'DELETE_FAILED_INTERNAL_ERROR',
+  [AdbInternalError.FailedToConnectDevice]: 'FailedToConnectDevice'
+};
+
 export enum EnhancerId {
   Bakabase = 1,
   ExHentai = 2,
@@ -2818,285 +3097,6 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.Installing]: 'Installing'
 };
 
-export enum CaptchaType {
-  Image = 1,
-  SmsMessage = 2
-}
-
-export const captchaTypes = [
-  { label: 'Image', value: CaptchaType.Image },
-  { label: 'SmsMessage', value: CaptchaType.SmsMessage }
-] as const;
-
-export const CaptchaTypeLabel: Record<CaptchaType, string> = {
-  [CaptchaType.Image]: 'Image',
-  [CaptchaType.SmsMessage]: 'SmsMessage'
-};
-
-export enum DingSysLevel {
-  Other = 0,
-  MainAdministrator = 1,
-  SubAdministrator = 2,
-  Boss = 100
-}
-
-export const dingSysLevels = [
-  { label: 'Other', value: DingSysLevel.Other },
-  { label: 'MainAdministrator', value: DingSysLevel.MainAdministrator },
-  { label: 'SubAdministrator', value: DingSysLevel.SubAdministrator },
-  { label: 'Boss', value: DingSysLevel.Boss }
-] as const;
-
-export const DingSysLevelLabel: Record<DingSysLevel, string> = {
-  [DingSysLevel.Other]: 'Other',
-  [DingSysLevel.MainAdministrator]: 'MainAdministrator',
-  [DingSysLevel.SubAdministrator]: 'SubAdministrator',
-  [DingSysLevel.Boss]: 'Boss'
-};
-
-export enum ResponseCode {
-  Success = 0,
-  NotModified = 304,
-  InvalidPayloadOrOperation = 400,
-  Unauthenticated = 401,
-  Unauthorized = 403,
-  NotFound = 404,
-  Conflict = 409,
-  SystemError = 500,
-  Timeout = 504,
-  InvalidCaptcha = 100400
-}
-
-export const responseCodes = [
-  { label: 'Success', value: ResponseCode.Success },
-  { label: 'NotModified', value: ResponseCode.NotModified },
-  { label: 'InvalidPayloadOrOperation', value: ResponseCode.InvalidPayloadOrOperation },
-  { label: 'Unauthenticated', value: ResponseCode.Unauthenticated },
-  { label: 'Unauthorized', value: ResponseCode.Unauthorized },
-  { label: 'NotFound', value: ResponseCode.NotFound },
-  { label: 'Conflict', value: ResponseCode.Conflict },
-  { label: 'SystemError', value: ResponseCode.SystemError },
-  { label: 'Timeout', value: ResponseCode.Timeout },
-  { label: 'InvalidCaptcha', value: ResponseCode.InvalidCaptcha }
-] as const;
-
-export const ResponseCodeLabel: Record<ResponseCode, string> = {
-  [ResponseCode.Success]: 'Success',
-  [ResponseCode.NotModified]: 'NotModified',
-  [ResponseCode.InvalidPayloadOrOperation]: 'InvalidPayloadOrOperation',
-  [ResponseCode.Unauthenticated]: 'Unauthenticated',
-  [ResponseCode.Unauthorized]: 'Unauthorized',
-  [ResponseCode.NotFound]: 'NotFound',
-  [ResponseCode.Conflict]: 'Conflict',
-  [ResponseCode.SystemError]: 'SystemError',
-  [ResponseCode.Timeout]: 'Timeout',
-  [ResponseCode.InvalidCaptcha]: 'InvalidCaptcha'
-};
-
-export enum RuntimeMode {
-  Dev = 0,
-  WinForms = 1,
-  Docker = 2
-}
-
-export const runtimeModes = [
-  { label: 'Dev', value: RuntimeMode.Dev },
-  { label: 'WinForms', value: RuntimeMode.WinForms },
-  { label: 'Docker', value: RuntimeMode.Docker }
-] as const;
-
-export const RuntimeModeLabel: Record<RuntimeMode, string> = {
-  [RuntimeMode.Dev]: 'Dev',
-  [RuntimeMode.WinForms]: 'WinForms',
-  [RuntimeMode.Docker]: 'Docker'
-};
-
-export enum Operation {
-  DELETE = 0,
-  INSERT = 1,
-  EQUAL = 2
-}
-
-export const operations = [
-  { label: 'DELETE', value: Operation.DELETE },
-  { label: 'INSERT', value: Operation.INSERT },
-  { label: 'EQUAL', value: Operation.EQUAL }
-] as const;
-
-export const OperationLabel: Record<Operation, string> = {
-  [Operation.DELETE]: 'DELETE',
-  [Operation.INSERT]: 'INSERT',
-  [Operation.EQUAL]: 'EQUAL'
-};
-
-export enum ProgressorClientAction {
-  Start = 1,
-  Stop = 2,
-  Initialize = 3
-}
-
-export const progressorClientActions = [
-  { label: 'Start', value: ProgressorClientAction.Start },
-  { label: 'Stop', value: ProgressorClientAction.Stop },
-  { label: 'Initialize', value: ProgressorClientAction.Initialize }
-] as const;
-
-export const ProgressorClientActionLabel: Record<ProgressorClientAction, string> = {
-  [ProgressorClientAction.Start]: 'Start',
-  [ProgressorClientAction.Stop]: 'Stop',
-  [ProgressorClientAction.Initialize]: 'Initialize'
-};
-
-export enum ProgressorEvent {
-  StateChanged = 1,
-  ProgressChanged = 2,
-  ErrorOccurred = 3
-}
-
-export const progressorEvents = [
-  { label: 'StateChanged', value: ProgressorEvent.StateChanged },
-  { label: 'ProgressChanged', value: ProgressorEvent.ProgressChanged },
-  { label: 'ErrorOccurred', value: ProgressorEvent.ErrorOccurred }
-] as const;
-
-export const ProgressorEventLabel: Record<ProgressorEvent, string> = {
-  [ProgressorEvent.StateChanged]: 'StateChanged',
-  [ProgressorEvent.ProgressChanged]: 'ProgressChanged',
-  [ProgressorEvent.ErrorOccurred]: 'ErrorOccurred'
-};
-
-export enum ProgressorStatus {
-  Idle = 1,
-  Running = 2,
-  Complete = 3,
-  Suspended = 4
-}
-
-export const progressorStatuses = [
-  { label: 'Idle', value: ProgressorStatus.Idle },
-  { label: 'Running', value: ProgressorStatus.Running },
-  { label: 'Complete', value: ProgressorStatus.Complete },
-  { label: 'Suspended', value: ProgressorStatus.Suspended }
-] as const;
-
-export const ProgressorStatusLabel: Record<ProgressorStatus, string> = {
-  [ProgressorStatus.Idle]: 'Idle',
-  [ProgressorStatus.Running]: 'Running',
-  [ProgressorStatus.Complete]: 'Complete',
-  [ProgressorStatus.Suspended]: 'Suspended'
-};
-
-export enum FileStorageUploadResponseCode {
-  Success = 0,
-  Error = 500
-}
-
-export const fileStorageUploadResponseCodes = [
-  { label: 'Success', value: FileStorageUploadResponseCode.Success },
-  { label: 'Error', value: FileStorageUploadResponseCode.Error }
-] as const;
-
-export const FileStorageUploadResponseCodeLabel: Record<FileStorageUploadResponseCode, string> = {
-  [FileStorageUploadResponseCode.Success]: 'Success',
-  [FileStorageUploadResponseCode.Error]: 'Error'
-};
-
-export enum MessageStatus {
-  ToBeSent = 0,
-  Succeed = 1,
-  Failed = 2
-}
-
-export const messageStatuses = [
-  { label: 'ToBeSent', value: MessageStatus.ToBeSent },
-  { label: 'Succeed', value: MessageStatus.Succeed },
-  { label: 'Failed', value: MessageStatus.Failed }
-] as const;
-
-export const MessageStatusLabel: Record<MessageStatus, string> = {
-  [MessageStatus.ToBeSent]: 'ToBeSent',
-  [MessageStatus.Succeed]: 'Succeed',
-  [MessageStatus.Failed]: 'Failed'
-};
-
-export enum NotificationType {
-  Os = 1,
-  Email = 2,
-  OsAndEmail = 3,
-  WeChat = 4,
-  Sms = 8
-}
-
-export const notificationTypes = [
-  { label: 'Os', value: NotificationType.Os },
-  { label: 'Email', value: NotificationType.Email },
-  { label: 'OsAndEmail', value: NotificationType.OsAndEmail },
-  { label: 'WeChat', value: NotificationType.WeChat },
-  { label: 'Sms', value: NotificationType.Sms }
-] as const;
-
-export const NotificationTypeLabel: Record<NotificationType, string> = {
-  [NotificationType.Os]: 'Os',
-  [NotificationType.Email]: 'Email',
-  [NotificationType.OsAndEmail]: 'OsAndEmail',
-  [NotificationType.WeChat]: 'WeChat',
-  [NotificationType.Sms]: 'Sms'
-};
-
-export enum AdbDeviceState {
-  Device = 1,
-  Offline = 2,
-  NoDevice = 3
-}
-
-export const adbDeviceStates = [
-  { label: 'Device', value: AdbDeviceState.Device },
-  { label: 'Offline', value: AdbDeviceState.Offline },
-  { label: 'NoDevice', value: AdbDeviceState.NoDevice }
-] as const;
-
-export const AdbDeviceStateLabel: Record<AdbDeviceState, string> = {
-  [AdbDeviceState.Device]: 'Device',
-  [AdbDeviceState.Offline]: 'Offline',
-  [AdbDeviceState.NoDevice]: 'NoDevice'
-};
-
-export enum AdbExceptionCode {
-  Error = 1,
-  InvalidExitCode = 2
-}
-
-export const adbExceptionCodes = [
-  { label: 'Error', value: AdbExceptionCode.Error },
-  { label: 'InvalidExitCode', value: AdbExceptionCode.InvalidExitCode }
-] as const;
-
-export const AdbExceptionCodeLabel: Record<AdbExceptionCode, string> = {
-  [AdbExceptionCode.Error]: 'Error',
-  [AdbExceptionCode.InvalidExitCode]: 'InvalidExitCode'
-};
-
-export enum AdbInternalError {
-  Error = 1,
-  INSTALL_FAILED_ALREADY_EXISTS = 100,
-  DELETE_FAILED_INTERNAL_ERROR = 101,
-  FailedToConnectDevice = 200
-}
-
-export const adbInternalErrors = [
-  { label: 'Error', value: AdbInternalError.Error },
-  { label: 'INSTALL_FAILED_ALREADY_EXISTS', value: AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS },
-  { label: 'DELETE_FAILED_INTERNAL_ERROR', value: AdbInternalError.DELETE_FAILED_INTERNAL_ERROR },
-  { label: 'FailedToConnectDevice', value: AdbInternalError.FailedToConnectDevice }
-] as const;
-
-export const AdbInternalErrorLabel: Record<AdbInternalError, string> = {
-  [AdbInternalError.Error]: 'Error',
-  [AdbInternalError.INSTALL_FAILED_ALREADY_EXISTS]: 'INSTALL_FAILED_ALREADY_EXISTS',
-  [AdbInternalError.DELETE_FAILED_INTERNAL_ERROR]: 'DELETE_FAILED_INTERNAL_ERROR',
-  [AdbInternalError.FailedToConnectDevice]: 'FailedToConnectDevice'
-};
-
 export enum BulkModificationProcessorOptionsItemsFilterBy {
   All = 1,
   Containing = 2,
@@ -3845,4 +3845,46 @@ export const LogLevelLabel: Record<LogLevel, string> = {
   [LogLevel.Error]: 'Error',
   [LogLevel.Critical]: 'Critical',
   [LogLevel.None]: 'None'
+};
+
+export enum DecompressionStatus {
+  Pending = 1,
+  Decompressing = 2,
+  Success = 3,
+  Error = 4
+}
+
+export const decompressionStatuses = [
+  { label: 'Pending', value: DecompressionStatus.Pending },
+  { label: 'Decompressing', value: DecompressionStatus.Decompressing },
+  { label: 'Success', value: DecompressionStatus.Success },
+  { label: 'Error', value: DecompressionStatus.Error }
+] as const;
+
+export const DecompressionStatusLabel: Record<DecompressionStatus, string> = {
+  [DecompressionStatus.Pending]: 'Pending',
+  [DecompressionStatus.Decompressing]: 'Decompressing',
+  [DecompressionStatus.Success]: 'Success',
+  [DecompressionStatus.Error]: 'Error'
+};
+
+export enum CompressedFileDetectionResultStatus {
+  Init = 1,
+  Inprogress = 2,
+  Complete = 3,
+  Error = 4
+}
+
+export const compressedFileDetectionResultStatuses = [
+  { label: 'Init', value: CompressedFileDetectionResultStatus.Init },
+  { label: 'Inprogress', value: CompressedFileDetectionResultStatus.Inprogress },
+  { label: 'Complete', value: CompressedFileDetectionResultStatus.Complete },
+  { label: 'Error', value: CompressedFileDetectionResultStatus.Error }
+] as const;
+
+export const CompressedFileDetectionResultStatusLabel: Record<CompressedFileDetectionResultStatus, string> = {
+  [CompressedFileDetectionResultStatus.Init]: 'Init',
+  [CompressedFileDetectionResultStatus.Inprogress]: 'Inprogress',
+  [CompressedFileDetectionResultStatus.Complete]: 'Complete',
+  [CompressedFileDetectionResultStatus.Error]: 'Error'
 };

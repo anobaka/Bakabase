@@ -17,6 +17,7 @@ using JetBrains.Annotations;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression
 {
+    [Obsolete]
     public class CompressedFileHelper
     {
         private static readonly Regex PartExtRegex = new Regex(@"^\.(?<prefix>[a-zA-Z]{0,5})?(?<index>\d{0,5})$");

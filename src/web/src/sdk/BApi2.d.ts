@@ -1381,6 +1381,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/decompression/detect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DetectCompressedFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file/decompression/decompress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DecompressCompressedFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/top-level-file-system-entries": {
         parameters: {
             query?: never;
@@ -5679,6 +5711,25 @@ export interface components {
         "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
             orderedPropertyIds: number[];
         };
+        "Bakabase.Service.Models.Input.CompressedFileDetectionInputModel": {
+            paths: string[];
+            includeUnknownFiles: boolean;
+            /** Format: int32 */
+            unknownFilesMinMb?: number;
+        };
+        "Bakabase.Service.Models.Input.DecompressionInputModel": {
+            onFailureContinue: boolean;
+            items: components["schemas"]["Bakabase.Service.Models.Input.DecompressionInputModelItem"][];
+        };
+        "Bakabase.Service.Models.Input.DecompressionInputModelItem": {
+            key: string;
+            directory: string;
+            files: string[];
+            password?: string;
+            decompressToNewFolder: boolean;
+            deleteAfterDecompression: boolean;
+            moveToParent: boolean;
+        };
         "Bakabase.Service.Models.Input.FileNameModifierProcessInputModel": {
             filePaths: string[];
             operations: components["schemas"]["Bakabase.InsideWorld.Business.Components.FileNameModifier.Models.FileNameModifierOperation"][];
@@ -5801,6 +5852,38 @@ export interface components {
             name: string;
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
         };
+        "Bakabase.Service.Models.View.CompressedFileDetectionResultViewModel": {
+            key: string;
+            status?: components["schemas"]["Bakabase.Service.Models.View.Constants.CompressedFileDetectionResultStatus"];
+            message?: string;
+            directory?: string;
+            groupKey?: string;
+            files?: string[];
+            fileSizes?: number[];
+            password?: string;
+            wrongPasswords?: string[];
+            passwordCandidates?: string[];
+            decompressToDirName?: string;
+            contentSampleGroups?: components["schemas"]["Bakabase.Service.Models.View.CompressedFileDetectionResultViewModel+SampleGroup"][];
+        };
+        "Bakabase.Service.Models.View.CompressedFileDetectionResultViewModel+SampleGroup": {
+            isFile: boolean;
+            /** Format: int32 */
+            count: number;
+            samples: string[];
+        };
+        /**
+         * Format: int32
+         * @description [1: Init, 2: Inprogress, 3: Complete, 4: Error]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Models.View.Constants.CompressedFileDetectionResultStatus": 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [1: Pending, 2: Decompressing, 3: Success, 4: Error]
+         * @enum {integer}
+         */
+        "Bakabase.Service.Models.View.Constants.DecompressionStatus": 1 | 2 | 3 | 4;
         "Bakabase.Service.Models.View.CustomPropertyViewModel": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
@@ -5817,6 +5900,13 @@ export interface components {
             /** Format: int32 */
             valueCount?: number;
             categories?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"][];
+        };
+        "Bakabase.Service.Models.View.DecompressionResultViewModel": {
+            key: string;
+            status: components["schemas"]["Bakabase.Service.Models.View.Constants.DecompressionStatus"];
+            /** Format: int32 */
+            percentage?: number;
+            message?: string;
         };
         "Bakabase.Service.Models.View.EnhancementViewModel": {
             /** Format: int32 */
@@ -10024,6 +10114,56 @@ export interface operations {
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
+            };
+        };
+    };
+    DetectCompressedFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    DecompressCompressedFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.DecompressionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.DecompressionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.DecompressionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.DecompressionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

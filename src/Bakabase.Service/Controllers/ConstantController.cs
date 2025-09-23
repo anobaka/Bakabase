@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Service.Models.View.Constants;
 using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
@@ -23,6 +24,8 @@ namespace Bakabase.Service.Controllers
                     .Where(t => t.Name.Contains("Bakabase") || t.Name == "Bootstrap").Select(Assembly.Load).ToList();
                 var enums = assemblies.SelectMany(t => t.GetTypes().Where(t => t.IsEnum)).ToList();
                 enums.Add(SpecificTypeUtils<LogLevel>.Type);
+                enums.Add(SpecificTypeUtils<DecompressionStatus>.Type);
+                enums.Add(SpecificTypeUtils<CompressedFileDetectionResultStatus>.Type);
                 return enums;
             }
         }

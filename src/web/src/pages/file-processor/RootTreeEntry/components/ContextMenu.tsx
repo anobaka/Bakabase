@@ -30,6 +30,8 @@ import GroupModal from "@/pages/file-processor/RootTreeEntry/components/GroupMod
 import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
+import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
+import { AiOutlineFileZip } from "react-icons/ai";
 
 type Props = {
   selectedEntries: Entry[];
@@ -204,6 +206,17 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
       }
     }
 
+    if (capabilities?.includes("decompress")) {
+      // Detect compressed files
+      items.push({
+        icon: <AiOutlineFileZip className={"text-base"} />,
+        label: t<string>("Use bulk decompression tool"),
+        onClick: () => {
+          createPortal(BulkDecompressionToolModal, { paths: selectedEntries.map(e => e.path) });
+        },
+      });
+    }
+ 
     items.push({
       icon: <CopyOutlined className={"text-base"} />,
       label: t<string>("Copy {{count}} names", {
