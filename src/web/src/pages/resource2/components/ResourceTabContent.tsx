@@ -106,7 +106,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     if (selected) {
       if (includeNotLoaded) {
         const r = await BApi.resource.searchAllResourceIds(
-          searchForm ?? { page: 1, pageSize: 100000000 },
+          searchFormRef.current ?? { page: 1, pageSize: 100000000 },
         );
         const ids = r.data || [];
 
