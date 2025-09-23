@@ -79,7 +79,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     }
                 }
 
-                var dir = Path.GetDirectoryName(f);
+                var dir = Path.GetDirectoryName(f)!;
 
                 if (!allDirGroups.TryGetValue(dir, out var d))
                 {
@@ -172,7 +172,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                     result.AddRange(extGroups.Select(g => new CompressedFileGroup
                     {
                         Extension = g.FirstOrDefault(a => a.TypeKey.IsNotEmpty())?.TypeKey,
-                        Files = g.Select(t => Path.Combine(dirGroups.Key, $"{kn}{t.Raw}").StandardizePath()).ToList(),
+                        Files = g.Select(t => Path.Combine(dirGroups.Key, $"{kn}{t.Raw}").StandardizePath()!).ToList(),
                         KeyName = kn?.Trim()
                     }));
                 }

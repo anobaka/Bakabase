@@ -2551,6 +2551,10 @@ export interface BakabaseServiceModelsInputCategoryCustomPropertySortInputModel 
   orderedPropertyIds: number[];
 }
 
+export interface BakabaseServiceModelsInputCompressedFileDetectionInputModel {
+  paths: string[];
+}
+
 export interface BakabaseServiceModelsInputFileNameModifierProcessInputModel {
   filePaths: string[];
   operations: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation[];
@@ -7989,6 +7993,25 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
   };
   file = {
+    /**
+     * No description
+     *
+     * @tags File
+     * @name DetectCompressedFiles
+     * @request POST:/file/decompression/detect
+     */
+    detectCompressedFiles: (
+      data: BakabaseServiceModelsInputCompressedFileDetectionInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/file/decompression/detect`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+
     /**
      * No description
      *

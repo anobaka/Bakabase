@@ -1381,6 +1381,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/decompression/detect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DetectCompressedFiles"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/top-level-file-system-entries": {
         parameters: {
             query?: never;
@@ -5662,6 +5678,9 @@ export interface components {
         };
         "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
             orderedPropertyIds: number[];
+        };
+        "Bakabase.Service.Models.Input.CompressedFileDetectionInputModel": {
+            paths: string[];
         };
         "Bakabase.Service.Models.Input.FileNameModifierProcessInputModel": {
             filePaths: string[];
@@ -10011,6 +10030,31 @@ export interface operations {
             };
         };
     };
+    DetectCompressedFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.CompressedFileDetectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     GetTopLevelFileSystemEntryNames: {
         parameters: {
             query?: {
@@ -14316,7 +14360,9 @@ export interface operations {
     };
     DeleteUnknownResources: {
         parameters: {
-            query?: never;
+            query?: {
+                mediaLibraryId?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;

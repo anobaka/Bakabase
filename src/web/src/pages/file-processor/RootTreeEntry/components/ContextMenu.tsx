@@ -204,6 +204,17 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
       }
     }
 
+    // Detect compressed files
+    items.push({
+      icon: <GroupOutlined className={"text-base"} />,
+      label: t<string>("Detect compressed files"),
+      onClick: () => {
+        import("./DetectCompressedFilesModal").then(({ default: DetectCompressedFilesModal }) => {
+          createPortal(DetectCompressedFilesModal, { entries: selectedEntries });
+        });
+      },
+    });
+
     items.push({
       icon: <CopyOutlined className={"text-base"} />,
       label: t<string>("Copy {{count}} names", {

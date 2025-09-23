@@ -10,6 +10,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,7 +34,9 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Service.Models.Input;
+using Bakabase.Service.Models.Input.Constants;
 using Bakabase.Service.Models.View;
+using Bakabase.Service.Models.View.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Cryptography;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -47,6 +50,7 @@ using CliWrap.Buffered;
 using CsQuery.ExtensionMethods.Internal;
 using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -97,7 +101,403 @@ namespace Bakabase.Service.Controllers
             _hardwareAccelerationService = hardwareAccelerationService;
             _systemPlayer = systemPlayer;
 
-            _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
+            // _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
+            _sevenZExecutable = "/Users/anobaka/Downloads/7z2501-mac/7zz";
+        }
+
+        [HttpPost("decompression/run")] // chunked progress per file
+        [SwaggerOperation(OperationId = "RunDecompressionWithOperations")] 
+        public async Task<IActionResult> RunDecompressionWithOperations([FromBody] DecompressionStartInputModel input)
+        {
+            Response.Headers.ContentType = "application/x-ndjson";
+            var ct = HttpContext.RequestAborted;
+
+            foreach (var item in input.Items)
+            {
+                if (ct.IsCancellationRequested) break;
+
+                var file = item.File;
+                var parent = Path.GetDirectoryName(file)!;
+                var keyName = Path.GetFileNameWithoutExtension(file);
+                var targetDir = Path.Combine(parent, keyName);
+
+                var processRegex = new Regex(@"\d+\%");
+                var osb = new StringBuilder();
+                var esb = new StringBuilder();
+
+                var args = new List<string?>
+                {
+                    "x",
+                    file,
+                    item.Password.IsNotEmpty() ? $"-p{item.Password}" : null,
+                    $"-o{targetDir}",
+                    "-sccUTF-8",
+                    "-scsUTF-16LE",
+                    "-bsp1"
+                }.OfType<string>().ToArray();
+
+                var cmd = Cli.Wrap(_sevenZExecutable)
+                    .WithWorkingDirectory(parent)
+                    .WithValidation(CommandResultValidation.None)
+                    .WithArguments(args, true)
+                    .WithStandardErrorPipe(PipeTarget.Merge(
+                        PipeTarget.ToDelegate(async line =>
+                        {
+                        }, Encoding.UTF8),
+                        PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
+                    .WithStandardOutputPipe(PipeTarget.Merge(
+                        PipeTarget.ToDelegate(async line =>
+                        {
+                            var match = processRegex.Match(line);
+                            if (match.Success)
+                            {
+                                await Response.WriteAsync(JsonSerializer.Serialize(new
+                                {
+                                    type = "progress",
+                                    file,
+                                    message = match.Value
+                                }, JsonSerializerOptions.Web) + "\n", ct);
+                                await Response.Body.FlushAsync(ct);
+                            }
+                        }, Encoding.UTF8),
+                        PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
+
+                var result = await cmd.ExecuteAsync(ct);
+                if (result.ExitCode != 0)
+                {
+                    await Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        type = "error",
+                        file,
+                        message = esb.ToString()
+                    }, JsonSerializerOptions.Web) + "\n", ct);
+                    await Response.Body.FlushAsync(ct);
+                    if (input.OnFailureContinue)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                // post operations
+                try
+                {
+                    if (item.ExtractAction == ExtractActionAfterDecompression.InnerSecondLayer)
+                    {
+                        // Move the contents of the single top-level folder up one level (second layer inner)
+                        var dirs = Directory.Exists(targetDir) ? Directory.GetDirectories(targetDir) : [];
+                        if (dirs.Length == 1)
+                        {
+                            var inner = dirs[0];
+                            foreach (var p in Directory.GetFileSystemEntries(inner))
+                            {
+                                var dest = Path.Combine(targetDir, Path.GetFileName(p));
+                                if (Directory.Exists(p)) Directory.Move(p, dest);
+                                else System.IO.File.Move(p, dest);
+                            }
+                            Directory.Delete(inner, true);
+                        }
+                    }
+                    else if (item.ExtractAction == ExtractActionAfterDecompression.OuterFirstLayerRemoveParent)
+                    {
+                        // Move extracted first-layer contents to parent of current path, then delete current targetDir
+                        if (Directory.Exists(targetDir))
+                        {
+                            foreach (var p in Directory.GetFileSystemEntries(targetDir))
+                            {
+                                var dest = Path.Combine(parent, Path.GetFileName(p));
+                                if (Directory.Exists(p)) Directory.Move(p, dest);
+                                else System.IO.File.Move(p, dest);
+                            }
+                            Directory.Delete(targetDir, true);
+                        }
+                    }
+
+                    if (item.DeleteCompressedAfter)
+                    {
+                        try { System.IO.File.Delete(file); } catch { /* ignore */ }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await Response.WriteAsync(JsonSerializer.Serialize(new
+                    {
+                        type = "error",
+                        file,
+                        message = ex.Message
+                    }, JsonSerializerOptions.Web) + "\n", ct);
+                    await Response.Body.FlushAsync(ct);
+                }
+
+                await Response.WriteAsync(JsonSerializer.Serialize(new
+                {
+                    type = "result",
+                    file,
+                    message = "Completed"
+                }, JsonSerializerOptions.Web) + "\n", ct);
+                await Response.Body.FlushAsync(ct);
+            }
+
+            await Response.WriteAsync(JsonSerializer.Serialize(new { type = "done" }, JsonSerializerOptions.Web) + "\n", ct);
+            await Response.Body.FlushAsync(ct);
+            return new EmptyResult();
+        }
+
+        [HttpPost("decompression/detect")]
+        [SwaggerOperation(OperationId = "DetectCompressedFiles")]
+        public async Task<IActionResult> DetectCompressedFiles([FromBody] CompressedFileDetectionInputModel model)
+        {
+            Response.Headers.ContentType = "application/x-ndjson";
+            var ct = HttpContext.RequestAborted;
+
+            var thresholdBytes = model.IncludeUnknownFilesLargerThanMb.HasValue
+                ? model.IncludeUnknownFilesLargerThanMb.Value * 1024L * 1024L
+                : 0;
+            var allPaths = model.Paths.Distinct().OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
+            var pathQueue = new Queue<string>(allPaths);
+            var prevPath = "";
+            var specifiedFiles = new List<string>();
+            var allGroups = new List<CompressedFileHelper.CompressedFileGroup>();
+            while (pathQueue.Count != 0)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var path = pathQueue.Dequeue();
+                if (path.StartsWith(prevPath) && prevPath.IsNotEmpty())
+                {
+                    continue;
+                }
+
+                var dir = new DirectoryInfo(path);
+                if (dir.Exists)
+                {
+                    var files = dir.GetFiles("*", SearchOption.AllDirectories)
+                        .Where(f => f.Length >= thresholdBytes)
+                        .Select(f => f.FullName).ToArray();
+                    path += InternalOptions.DirSeparator;
+                    var groups = CompressedFileHelper.Group(files);
+                    foreach (var group in groups)
+                    {
+                        await YieldReturnGroupInitialized(group);
+                    }
+
+                    allGroups.AddRange(groups);
+                }
+                else
+                {
+                    var file = new FileInfo(path);
+                    if (file.Exists)
+                    {
+                        if (file.Length >= thresholdBytes)
+                        {
+                            specifiedFiles.Add(path);
+                        }
+                        else
+                        {
+                            throw new Exception($"{path} is not found in the file system");
+                        }
+                    }
+                }
+
+                prevPath = path;
+            }
+
+            var specifiedFileGroups = CompressedFileHelper.Group(specifiedFiles.ToArray());
+            foreach (var group in specifiedFileGroups)
+            {
+                await YieldReturnGroupInitialized(group);
+            }
+
+            allGroups.AddRange(specifiedFileGroups);
+
+            foreach (var group in allGroups)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var viewModelKey = group.Files[0];
+
+                var vm = new CompressedFileDetectionResultViewModel
+                {
+                    Key = viewModelKey,
+                    Status = CompressedFileDetectionResultStatus.Inprogress
+                };
+                await YieldReturn(vm);
+
+                var entry = group.Files.First();
+                var passwordCandidates = group.Files[0].GetPasswordsFromPath();
+                var password = default(string);
+                var pickedTestStdOut = default(string);
+
+                        // Try without password first, then candidates
+                var success = false;
+                var wrongPasswords = new HashSet<string>();
+                        foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
+                        {
+                    ct.ThrowIfCancellationRequested();
+
+                            var processRegex = new Regex(@"\d+\%");
+                            var esb = new StringBuilder();
+                    var osb = new StringBuilder();
+
+                            var args = new List<string?>
+                            {
+                                "t",
+                                entry,
+                                candidate.IsNotEmpty() ? $"-p{candidate}" : null,
+                                "-sccUTF-8",
+                                "-scsUTF-16LE",
+                        "-bsp1",
+                        "-bb1"
+                            }.OfType<string>().ToArray();
+
+                            var command = Cli.Wrap(_sevenZExecutable)
+                                .WithWorkingDirectory(Path.GetDirectoryName(entry)!)
+                                .WithValidation(CommandResultValidation.None)
+                                .WithArguments(args, true)
+                                .WithStandardErrorPipe(PipeTarget.Merge(
+                            PipeTarget.ToDelegate((line) =>
+                            {
+                                if (line.Contains("Wrong password") && candidate.IsNotEmpty())
+                                {
+                                    wrongPasswords.Add(candidate);
+                                        }
+                                    }, Encoding.UTF8),
+                            PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
+                        .WithStandardOutputPipe(PipeTarget.Merge(
+                            PipeTarget.ToDelegate(async (line, ct2) =>
+                            {
+                                // var match = processRegex.Match(line);
+                                // if (match.Success)
+                                // {
+                                //     
+                                //     var progress = new CompressedFileDetectionResultViewModel
+                                //     {
+                                //         Key = viewModelKey,
+                                //         Status = CompressedFileDetectionResultType.Inprogress,
+                                //     };
+                                //     await Response.WriteAsync(
+                                //         JsonSerializer.Serialize(progress, JsonSerializerOptions.Web) + "\n",
+                                //         ct);
+                                //     await Response.Body.FlushAsync(ct);
+                                // }
+                                //
+                            }, Encoding.UTF8),
+                            PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
+
+                            var result = await command.ExecuteAsync(ct);
+
+                    vm.Message = $"{osb}\n{esb}";
+                    await YieldReturn(vm);
+
+                            if (result.ExitCode == 0)
+                            {
+                        password = candidate;
+                        pickedTestStdOut = osb.ToString();
+                        success = true;
+                                break;
+                            }
+                        }
+
+                // Build sample groups from 't' output to avoid a separate 'l' call
+                        var sampleGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
+                        try
+                        {
+                    var lines = (pickedTestStdOut ?? string.Empty)
+                        .Split('\n', '\r')
+                        .Where(x => x.IsNotEmpty())
+                        .ToArray();
+                    // 7z t outputs lines like: "Testing     path/inside/file.ext"
+                    var testingPrefix = "Testing ";
+                    var entryPaths = lines
+                        .Select(l =>
+                        {
+                            var t = l.Trim();
+                            if (!t.StartsWith(testingPrefix, StringComparison.OrdinalIgnoreCase))
+                            {
+                                return null;
+                            }
+
+                            var path = Regex.Replace(t, $"^{testingPrefix}", string.Empty).StandardizePath()!;
+                            return path;
+                        })
+                        .OfType<string>()
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .ToList();
+
+                    // group and sampling by first layer of paths
+                    var firstLayers = entryPaths.Select(p =>
+                    {
+                        var segments = p.Split('/');
+                        return (IsFile: segments.Length == 1, Segment: segments[0]);
+                    }).GroupBy(f => f.Segment).Select(x => x.First()).ToList();
+                    var dirs = firstLayers.Where(f => !f.IsFile).Select(s => s.Segment).ToArray();
+                    var files = firstLayers.Where(f => f.IsFile).Select(s => s.Segment).ToArray();
+                    var firstLayerExtensionGroups =
+                        files.GroupBy(Path.GetExtension).Select(x =>
+                            new CompressedFileDetectionResultViewModel.SampleGroup
+                            {
+                                Count = x.Count(),
+                                IsFile = true,
+                                Samples = x.Take(3).ToArray()
+                            });
+                    var nameGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
+                    if (dirs.Any())
+                    {
+                        nameGroups.Add(new CompressedFileDetectionResultViewModel.SampleGroup
+                        {
+                            Count = dirs.Count(),
+                            IsFile = false,
+                            Samples = dirs.Take(3).ToArray()
+                        });
+                    }
+
+                    nameGroups.AddRange(firstLayerExtensionGroups);
+                                        sampleGroups.AddRange(nameGroups);
+                        }
+                        catch
+                        {
+                            // ignore sampling errors
+                        }
+
+                        var final = new CompressedFileDetectionResultViewModel
+                        {
+                    Key = viewModelKey,
+                    Status = success
+                        ? CompressedFileDetectionResultStatus.Complete
+                        : CompressedFileDetectionResultStatus.Error,
+                    PasswordCandidates = [],
+                    Password = password,
+                    ContentSampleGroups = sampleGroups.ToArray(),
+                    WrongPasswords = wrongPasswords.ToArray()
+                };
+                await YieldReturn(final);
+            }
+
+            return new EmptyResult();
+
+            async Task YieldReturnGroupInitialized(CompressedFileHelper.CompressedFileGroup group)
+            {
+                await YieldReturn(new CompressedFileDetectionResultViewModel
+                {
+                    Key = group.Files[0],
+                    Status = CompressedFileDetectionResultStatus.Init,
+                    Directory = Path.GetDirectoryName(group.Files[0]).StandardizePath()!,
+                            GroupKey = group.KeyName,
+                            Files = group.Files.ToArray(),
+                            DecompressToDirName = group.KeyName,
+                    PasswordCandidates = group.Files[0].GetPasswordsFromPath()
+                });
+            }
+
+            async Task YieldReturn(CompressedFileDetectionResultViewModel viewModel)
+            {
+                await Response.WriteAsync(JsonSerializer.Serialize(viewModel, JsonSerializerOptions.Web) + "\n",
+                    HttpContext.RequestAborted);
+                await Response.Body.FlushAsync(HttpContext.RequestAborted);
+            }
         }
 
         [HttpGet("top-level-file-system-entries")]
