@@ -555,4 +555,7 @@
   <data name="NoPropertyValuesGeneratedOnSynchronization" xml:space="preserve">
     <value>同步过程中未生成属性值</value>
   </data>
+  <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
+    <value>生成资源标记</value>
+  </data>
 </root>

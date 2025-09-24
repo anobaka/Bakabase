@@ -51,6 +51,12 @@ public static class ResourceCacheExtensions
 
                         break;
                     }
+                    case ResourceCacheType.ResourceMarkers:
+                    {
+                        // No additional data to deserialize for ResourceMarkers
+                        // The presence of this flag in CachedTypes indicates the marker file was created
+                        break;
+                    }
                     default:
                         throw new ArgumentOutOfRangeException();
                 }

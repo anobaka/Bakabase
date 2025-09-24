@@ -3831,10 +3831,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.ReservedProperty": 12 | 13 | 22;
         /**
          * Format: int32
-         * @description [1: Covers, 2: PlayableFiles]
+         * @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType": 1 | 2;
+        "Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType": 1 | 2 | 4;
         /**
          * Format: int32
          * @description [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary]
@@ -4574,6 +4574,7 @@ export interface components {
             idsOfMediaLibraryRecentlyMovedTo?: number[];
             recentFilters: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+ResourceFilter"][];
             synchronizationOptions?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel"];
+            keepResourcesOnPathChange: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+CoverOptionsModel": {
             saveMode?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverSaveMode"];
@@ -5754,6 +5755,8 @@ export interface components {
             searchCriteria?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             synchronizationOptions?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationOptionsModel"];
             recentFilters?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+ResourceFilter"][];
+            keepResourcesOnPathChange?: boolean;
+            deleteKeepResourceMarkers?: boolean;
         };
         "Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel": {
             combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
@@ -8050,7 +8053,7 @@ export interface operations {
             header?: never;
             path: {
                 resourceId: number;
-                /** @description [1: Covers, 2: PlayableFiles] */
+                /** @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };
             cookie?: never;
@@ -8076,7 +8079,7 @@ export interface operations {
             header?: never;
             path: {
                 resourceId: number;
-                /** @description [1: Covers, 2: PlayableFiles] */
+                /** @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };
             cookie?: never;
@@ -8102,7 +8105,7 @@ export interface operations {
             header?: never;
             path: {
                 categoryId: number;
-                /** @description [1: Covers, 2: PlayableFiles] */
+                /** @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };
             cookie?: never;
@@ -8128,7 +8131,7 @@ export interface operations {
             header?: never;
             path: {
                 mediaLibraryId: number;
-                /** @description [1: Covers, 2: PlayableFiles] */
+                /** @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };
             cookie?: never;

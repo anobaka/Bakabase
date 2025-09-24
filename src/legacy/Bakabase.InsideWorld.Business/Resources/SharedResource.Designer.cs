@@ -169,6 +169,15 @@ namespace Bakabase.InsideWorld.Business.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Generate resource marker.
+        /// </summary>
+        internal static string BTask_Name_GenerateResourceMarker {
+            get {
+                return ResourceManager.GetString("BTask_Name_GenerateResourceMarker", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Move files.
         /// </summary>
         internal static string BTask_Name_MoveFiles {

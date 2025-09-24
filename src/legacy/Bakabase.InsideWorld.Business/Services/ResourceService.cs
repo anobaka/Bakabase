@@ -1,8 +1,6 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.FileSystem;
-using Bakabase.Abstractions.Components.Property;
-using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Models.Db;
@@ -13,26 +11,20 @@ using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
-using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Search;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
-using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
-using Bakabase.InsideWorld.Models.Constants.Aos;
-using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
-using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -48,16 +40,13 @@ using Bootstrap.Models.ResponseModels;
 using CliWrap;
 using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
@@ -656,9 +645,9 @@ namespace Bakabase.InsideWorld.Business.Services
                         }
                         case ResourceAdditionalItem.Cache:
                         {
-                            var cacheMap = (await _orm.DbContext.ResourceCaches
-                                .Where(x => resourceIds.Contains(x.ResourceId))
-                                .ToListAsync()).ToDictionary(d => d.ResourceId, d => d);
+                            var cacheMap =
+                                (await _resourceCacheOrm.GetAll(x => resourceIds.Contains(x.ResourceId))).ToDictionary(
+                                    d => d.ResourceId, d => d);
                             foreach (var r in doList)
                             {
                                 var cache = cacheMap.GetValueOrDefault(r.Id);

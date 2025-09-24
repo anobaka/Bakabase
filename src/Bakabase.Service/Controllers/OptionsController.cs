@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Infrastructures.Components.App;
@@ -34,6 +35,13 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Models.Db;
+using Bootstrap.Components.Orm;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Controllers
 {
@@ -46,10 +54,11 @@ namespace Bakabase.Service.Controllers
         private readonly IGuiAdapter _guiAdapter;
         private readonly IPropertyService _propertyService;
         private readonly IPropertyLocalizer _propertyLocalizer;
+        private readonly IResourceService _resourceService;
 
         public OptionsController(IStringLocalizer<SharedResource> prevLocalizer,
             IBOptionsManager<AppOptions> appOptionsManager, BakabaseOptionsManagerPool bakabaseOptionsManager,
-            IGuiAdapter guiAdapter, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer)
+            IGuiAdapter guiAdapter, IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService resourceService)
         {
             _prevLocalizer = prevLocalizer;
             _appOptionsManager = appOptionsManager;
@@ -57,6 +66,7 @@ namespace Bakabase.Service.Controllers
             _guiAdapter = guiAdapter;
             _propertyService = propertyService;
             _propertyLocalizer = propertyLocalizer;
+            this._resourceService = resourceService;
         }
 
         [HttpGet("app")]
@@ -438,6 +448,9 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchResourceOptions")]
         public async Task<BaseResponse> PatchResourceOptions([FromBody] ResourceOptionsPatchInputModel model)
         {
+            var prev = _bakabaseOptionsManager.Get<ResourceOptions>().Value;
+            var prevKeep = prev.KeepResourcesOnPathChange;
+
             await _bakabaseOptionsManager.Get<ResourceOptions>().SaveAsync(options =>
             {
                 if (model.AdditionalCoverDiscoveringSources != null)
@@ -470,8 +483,147 @@ namespace Bakabase.Service.Controllers
                     options.RecentFilters = model.RecentFilters;
                 }
 
+                if (model.KeepResourcesOnPathChange.HasValue)
+                {
+                    options.KeepResourcesOnPathChange = model.KeepResourcesOnPathChange.Value;
+                }
             });
+
+            if (model.KeepResourcesOnPathChange == false && prevKeep)
+            {
+                // Toggle task registration
+                var taskManager = HttpContext.RequestServices.GetRequiredService<BTaskManager>();
+                const string taskId = "GenerateResourceMarker";
+                await taskManager.Stop(taskId);
+            }
+
             return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("resource/delete-markers")]
+        [SwaggerOperation(OperationId = "DeleteResourceMarkers")]
+        public async Task<IActionResult> DeleteResourceMarkers()
+        {
+            Response.Headers.ContentType = "application/x-ndjson";
+            
+            try
+            {
+                var cacheOrm = HttpContext.RequestServices
+                    .GetRequiredService<
+                        FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
+                var cache = await cacheOrm.GetAll(r =>
+                    (r.CachedTypes & ResourceCacheType.ResourceMarkers) == ResourceCacheType.ResourceMarkers);
+                
+                if (cache.Count == 0)
+                {
+                    var completeMessage = new
+                    {
+                        type = "complete",
+                        total = 0,
+                        deleted = 0,
+                        failed = 0
+                    };
+                    await Response.WriteAsync(JsonSerializer.Serialize(completeMessage) + "\n", HttpContext.RequestAborted);
+                    await Response.Body.FlushAsync(HttpContext.RequestAborted);
+                    return new EmptyResult();
+                }
+                
+                var resourceIds = cache.Select(r => r.ResourceId).ToArray();
+                var resources = await _resourceService.GetAllDbModels(x => resourceIds.Contains(x.Id));
+                
+                // Group resources by path - multiple resources can share the same path
+                var resourcesByPath = resources.GroupBy(r => r.Path).ToDictionary(g => g.Key, g => g.ToList());
+                var uniquePaths = resourcesByPath.Keys.ToList();
+                var total = uniquePaths.Count;
+                var deleted = 0;
+                var failed = 0;
+                var processedCount = 0;
+                
+                // Delete markers by unique paths
+                foreach (var path in uniquePaths)
+                {
+                    try
+                    {
+                        var markerFilePath = System.IO.Path.Combine(path, InternalOptions.ResourceMarkerFileName);
+                        if (System.IO.File.Exists(markerFilePath))
+                        {
+                            System.IO.File.Delete(markerFilePath);
+                            deleted++;
+                        }
+                        
+                        // Update cache for all resources with this path
+                        var resourcesWithPath = resourcesByPath[path];
+                        foreach (var r in resourcesWithPath)
+                        {
+                            var cacheEntry = cache.FirstOrDefault(c => c.ResourceId == r.Id);
+                            if (cacheEntry != null)
+                            {
+                                cacheEntry.CachedTypes &= ~ResourceCacheType.ResourceMarkers;
+                            }
+                        }
+                        
+                        processedCount++;
+                        
+                        // Send progress update
+                        var progress = new
+                        {
+                            type = "progress",
+                            total,
+                            processed = processedCount,
+                            deleted,
+                            failed,
+                            percentage = processedCount * 100 / total,
+                            currentResourcePath = path
+                        };
+                        await Response.WriteAsync(JsonSerializer.Serialize(progress) + "\n", HttpContext.RequestAborted);
+                        await Response.Body.FlushAsync(HttpContext.RequestAborted);
+                    }
+                    catch
+                    {
+                        failed++;
+                        processedCount++;
+                        
+                        // Send progress update even on failure
+                        var progress = new
+                        {
+                            type = "progress",
+                            total,
+                            processed = processedCount,
+                            deleted,
+                            failed,
+                            percentage = processedCount * 100 / total,
+                            currentResourcePath = path
+                        };
+                        await Response.WriteAsync(JsonSerializer.Serialize(progress) + "\n", HttpContext.RequestAborted);
+                        await Response.Body.FlushAsync(HttpContext.RequestAborted);
+                    }
+                }
+
+                await cacheOrm.UpdateRange(cache);
+                
+                // Send complete message
+                var completeMsg = new
+                {
+                    type = "complete",
+                    total,
+                    deleted,
+                    failed
+                };
+                await Response.WriteAsync(JsonSerializer.Serialize(completeMsg) + "\n", HttpContext.RequestAborted);
+                await Response.Body.FlushAsync(HttpContext.RequestAborted);
+            }
+            catch (System.Exception ex)
+            {
+                var errorMsg = new
+                {
+                    type = "error",
+                    message = ex.Message
+                };
+                await Response.WriteAsync(JsonSerializer.Serialize(errorMsg) + "\n", HttpContext.RequestAborted);
+                await Response.Body.FlushAsync(HttpContext.RequestAborted);
+            }
+            
+            return new EmptyResult();
         }
 
         [HttpGet("resource/recent-filters")]

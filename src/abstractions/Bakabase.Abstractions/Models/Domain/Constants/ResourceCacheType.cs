@@ -4,5 +4,6 @@
 public enum ResourceCacheType
 {
     Covers = 1,
-    PlayableFiles
+    PlayableFiles = 2,
+    ResourceMarkers = 4
 }

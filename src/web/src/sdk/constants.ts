@@ -375,17 +375,20 @@ export const ReservedPropertyLabel: Record<ReservedProperty, string> = {
 
 export enum ResourceCacheType {
   Covers = 1,
-  PlayableFiles = 2
+  PlayableFiles = 2,
+  ResourceMarkers = 4
 }
 
 export const resourceCacheTypes = [
   { label: 'Covers', value: ResourceCacheType.Covers },
-  { label: 'PlayableFiles', value: ResourceCacheType.PlayableFiles }
+  { label: 'PlayableFiles', value: ResourceCacheType.PlayableFiles },
+  { label: 'ResourceMarkers', value: ResourceCacheType.ResourceMarkers }
 ] as const;
 
 export const ResourceCacheTypeLabel: Record<ResourceCacheType, string> = {
   [ResourceCacheType.Covers]: 'Covers',
-  [ResourceCacheType.PlayableFiles]: 'PlayableFiles'
+  [ResourceCacheType.PlayableFiles]: 'PlayableFiles',
+  [ResourceCacheType.ResourceMarkers]: 'ResourceMarkers'
 };
 
 export enum ResourceTag {

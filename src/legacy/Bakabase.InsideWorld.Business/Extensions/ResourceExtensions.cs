@@ -191,6 +191,12 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 changed = true;
             }
 
+            if (current.Path != patches.Path)
+            {
+                current.Path = patches.Path;
+                changed = true;
+            }
+
             return changed;
         }
     }

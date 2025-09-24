@@ -116,7 +116,7 @@ const Modal = (props: ModalProps) => {
           ref={ref}
           color="danger"
           variant="light"
-          onPress={onClose}
+          onPress={otherProps.onPress ?? onClose}
           {...otherProps}
         >
           {children ?? t<string>("Close")}
@@ -149,8 +149,8 @@ const Modal = (props: ModalProps) => {
           }}
           color="primary"
           isLoading={okLoading}
-          onPress={async () => {
-            const r = props.onOk?.();
+          onPress={async (e) => {
+            const r = (props.onOk ?? otherProps.onPress)?.(e);
 
             if (r instanceof Promise) {
               setOkLoading(true);

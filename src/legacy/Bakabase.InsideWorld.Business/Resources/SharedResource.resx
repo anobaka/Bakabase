@@ -555,4 +555,7 @@ The version of lux is not limited.</value>
   <data name="NoPropertyValuesGeneratedOnSynchronization" xml:space="preserve">
     <value>No property value generated on synchronization</value>
   </data>
+  <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
+    <value>Generate resource marker</value>
+  </data>
 </root>

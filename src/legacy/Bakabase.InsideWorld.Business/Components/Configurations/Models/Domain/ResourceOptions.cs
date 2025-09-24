@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Bakabase.Abstractions.Models.Db;
@@ -28,6 +28,11 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public int[]? IdsOfMediaLibraryRecentlyMovedTo { get; set; }
         public List<ResourceFilter> RecentFilters { get; set; } = [];
         public SynchronizationOptionsModel? SynchronizationOptions { get; set; }
+        /// <summary>
+        /// When enabled, keep original resource identity when the folder path changes
+        /// by writing a bakabase.json file containing the resource id and reusing it on next sync.
+        /// </summary>
+        public bool KeepResourcesOnPathChange { get; set; }
 
         /// <summary>
         /// 

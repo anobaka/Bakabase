@@ -26,6 +26,9 @@ import { PiEmpty } from "react-icons/pi";
 import { BsController } from "react-icons/bs";
 import { useNavigate } from "react-router-dom";
 import { CiCircleMore } from "react-icons/ci";
+import { useBTasksStore } from "@/stores/bTasks";
+import { BTaskStatus } from "@/sdk/constants";
+import envConfig from "@/config/env";
 
 import SyncStatus from "./components/SyncStatus";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
@@ -38,6 +41,7 @@ import {
   Modal,
   Select,
   Tooltip,
+  Switch,
   ColorPicker,
   Table,
   TableHeader,
@@ -53,6 +57,7 @@ import {
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
+import { useResourceOptionsStore } from "@/stores/options";
 import { splitPathIntoSegments } from "@/components/utils";
 import PresetTemplateBuilder from "@/pages/media-library-template/components/PresetTemplateBuilder";
 import TemplateModal from "@/pages/media-library-template/components/TemplateModal";
@@ -63,6 +68,7 @@ import { EditableValue } from "@/components/EditableValue";
 import PathAutocomplete, { PathAutocompleteProps } from "@/components/PathAutocomplete";
 import { BakabaseServiceModelsViewUnknownResourcesCountViewModel } from "@/sdk/Api";
 import HandleUnknownResourcesModal from "@/components/HandleUnknownResourcesModal";
+import BetaChip from "@/components/Chips/BetaChip";
 import MediaLibrarySelectorV2 from "@/components/MediaLibrarySelectorV2";
 
 enum SortBy {
@@ -84,6 +90,8 @@ const MediaLibraryPage = () => {
   const forceUpdate = useUpdate();
   const outdatedModalRef = useRef<{ check: () => Promise<void> } | null>(null);
   const [unknownResourceCounts, setUnknownResourceCounts] = useState<UnknownResourceCount>();
+  const resourceOptionsStore = useResourceOptionsStore();
+  const resourceOptions = resourceOptionsStore.data;
 
   const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
     const r = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
@@ -776,7 +784,7 @@ const MediaLibraryPage = () => {
     <div className={"h-full flex flex-col"}>
       <OutdatedModal ref={(r) => (outdatedModalRef.current = r)} />
       <div className={"flex items-center justify-between"}>
-        <div className={"flex items-center gap-1"}>
+        <div className={"flex items-center gap-2"}>
           <Button
             color={"primary"}
             size={"sm"}
@@ -825,6 +833,302 @@ const MediaLibraryPage = () => {
               {t<string>("Handle {{count}} unknown resources", { count: unknownMediaLibraryResourceCount })}
             </Button>
           )}
+          <Tooltip
+            content={
+              <div className={"max-w-md space-y-2 text-sm p-2"}>
+                <div>
+                  {t<string>(
+                    "By default, when a folder path changes, the resource data will be created as a new resource."
+                  )}
+                </div>
+                <div>
+                  {t<string>(
+                    "If you enable this feature, a hidden .bakabase.json file will be generated inside folder resources to store their resource IDs."
+                  )}
+                </div>
+                <div>
+                  {t<string>(
+                    "During synchronization, if a folder path changes but contains a .bakabase.json with any matching resource IDs, the resource data will be preserved instead of creating a new resource."
+                  )}
+                </div>
+                <div>
+                  {t<string>(
+                    "Since a path can be added to multiple media libraries, resources under each path will be tracked per media library."
+                  )}
+                </div>
+                <div>
+                  {t<string>(
+                    "Only supports resources in new version (V2) media libraries. Legacy resources (category-based media libraries) are not supported."
+                  )}
+                </div>
+                <div className={"text-warning"}>
+                  {t<string>(
+                    "Enabling this feature will increase synchronization time as marker files need to be generated and verified."
+                  )}
+                </div>
+                <div className={"font-semibold text-warning"}>
+                  {t<string>(
+                    "This feature will work after a complete GenerateResourceMarker task finishes."
+                  )}
+                </div>
+              </div>
+            }
+            placement={"bottom-start"}
+            closeDelay={200}
+          >
+            <div className={"flex items-center gap-2"}>
+              <span className={"text-sm font-medium"}>{t<string>("Keep resources on path change")}
+                <BetaChip />
+              </span>
+              <Switch
+                size={"sm"}
+                isSelected={resourceOptions?.keepResourcesOnPathChange ?? false}
+                onValueChange={async (v) => {
+                  if (!v) {
+                    // Check if task is running
+                    const tasks = useBTasksStore.getState().tasks;
+                    const keepResourcesTask = tasks.find(
+                      (t) =>
+                        t.id === "GenerateResourceMarker" &&
+                        (t.status === BTaskStatus.Running || t.status === BTaskStatus.Paused)
+                    );
+
+                    if (keepResourcesTask) {
+                      // Show modal to confirm stopping the task
+                      const shouldContinue = await new Promise<boolean>((resolve) => {
+                        createPortal(Modal, {
+                          defaultVisible: true,
+                          title: t<string>("Confirm disabling resource markers"),
+                          size: "md",
+                          footer: {
+                            actions: ["cancel", "ok"],
+                            okProps: {
+                              text: t<string>("Confirm and stop task"),
+                              color: "danger",
+                            },
+                            cancelProps: {
+                              text: t<string>("Cancel"),
+                            },
+                          },
+                          onOk: () => resolve(true),
+                          onClose: () => resolve(false),
+                          children: (
+                            <div className={"flex flex-col gap-3"}>
+                              <div>
+                                {t<string>(
+                                  "The GenerateResourceMarker task is currently running."
+                                )}
+                              </div>
+                              <div>
+                                {t<string>(
+                                  "Disabling this feature will stop the task. Are you sure you want to continue?"
+                                )}
+                              </div>
+                            </div>
+                          ),
+                        });
+                      });
+
+                      if (!shouldContinue) {
+                        return;
+                      }
+
+                      // Stop the task
+                      try {
+                        await BApi.backgroundTask.stopBackgroundTask("GenerateResourceMarker", { confirm: true });
+                      } catch (e) {
+                        console.error("Failed to stop task:", e);
+                      }
+                    }
+
+                    // Ask whether to delete markers
+                    const deleteMarkers = await new Promise<boolean>((resolve) => {
+                      createPortal(Modal, {
+                        defaultVisible: true,
+                        title: t<string>("Delete marker files?"),
+                        size: "md",
+                        footer: {
+                          actions: ["cancel", "ok"],
+                          okProps: {
+                            text: t<string>("Delete markers"),
+                            color: "warning",
+                          },
+                          cancelProps: {
+                            text: t<string>("Keep markers"),
+                          },
+                        },
+                        onOk: () => resolve(true),
+                        onClose: () => resolve(false),
+                        children: (
+                          <div className={"flex flex-col gap-2"}>
+                            <div>
+                              {t<string>(
+                                "Do you want to delete all .bakabase.json marker files?"
+                              )}
+                            </div>
+                            <div className={"text-sm opacity-70"}>
+                              {t<string>(
+                                "If you keep them, existing markers will remain in the folders."
+                              )}
+                            </div>
+                          </div>
+                        ),
+                      });
+                    });
+
+                    // Patch options first (without deletion)
+                    await BApi.options.patchResourceOptions({
+                      keepResourcesOnPathChange: false,
+                    });
+
+                    // If user chose to delete markers, show progress modal
+                    if (deleteMarkers) {
+                      await new Promise<void>((resolve) => {
+                        const DeletionProgressModal = () => {
+                          const [progressState, setProgressState] = useState({
+                            percentage: 0,
+                            total: 0,
+                            processed: 0,
+                            deleted: 0,
+                            failed: 0,
+                            currentPath: "",
+                          });
+                          const [visible, setVisible] = useState(true);
+
+                          useEffect(() => {
+                            const abortController = new AbortController();
+
+                            const startDeletion = async () => {
+                              try {
+                                const url = `${envConfig.apiEndpoint}/options/resource/delete-markers`;
+                                const resp = await fetch(url, {
+                                  method: "POST",
+                                  signal: abortController.signal,
+                                });
+
+                                if (!resp.ok || !resp.body) {
+                                  throw new Error(`Request failed: ${resp.status}`);
+                                }
+
+                                const reader = resp.body.getReader();
+                                const decoder = new TextDecoder();
+                                let buffer = "";
+
+                                while (true) {
+                                  const { value, done } = await reader.read();
+                                  if (done) break;
+
+                                  buffer += decoder.decode(value, { stream: true });
+                                  let idx;
+
+                                  while ((idx = buffer.indexOf("\n")) >= 0) {
+                                    const line = buffer.slice(0, idx).trim();
+                                    buffer = buffer.slice(idx + 1);
+                                    if (!line) continue;
+
+                                    try {
+                                      const obj = JSON.parse(line) as {
+                                        type: string;
+                                        total?: number;
+                                        processed?: number;
+                                        deleted?: number;
+                                        failed?: number;
+                                        percentage?: number;
+                                        currentResourcePath?: string;
+                                        message?: string;
+                                      };
+
+                                      if (obj.type === "progress" || obj.type === "complete") {
+                                        setProgressState({
+                                          percentage: obj.percentage || 100,
+                                          total: obj.total || 0,
+                                          processed: obj.processed || obj.total || 0,
+                                          deleted: obj.deleted || 0,
+                                          failed: obj.failed || 0,
+                                          currentPath: obj.currentResourcePath || "",
+                                        });
+                                      } else if (obj.type === "error") {
+                                        toast.danger(obj.message || "Error deleting markers");
+                                      }
+                                    } catch {
+                                      // ignore broken line
+                                    }
+                                  }
+                                }
+                              } catch (e) {
+                                if ((e as Error).name !== "AbortError") {
+                                  toast.danger(t<string>("Failed to delete markers"));
+                                }
+                              } finally {
+                                setVisible(false);
+                                setTimeout(() => resolve(), 500);
+                              }
+                            };
+
+                            startDeletion();
+
+                            return () => {
+                              abortController.abort();
+                            };
+                          }, []);
+
+                          return (
+                            <Modal
+                              visible={visible}
+                              title={t<string>("Deleting resource markers")}
+                              size="md"
+                              isDismissable={false}
+                              hideCloseButton={true}
+                              footer={false}
+                            >
+                              <div className={"flex flex-col gap-4 py-4"}>
+                                <div className={"flex items-center gap-3"}>
+                                  <div className={"animate-spin rounded-full h-8 w-8 border-b-2 border-primary"}></div>
+                                  <div className={"flex-1"}>
+                                    <div className={"font-medium"}>
+                                      {t<string>("Processing {{processed}} of {{total}} resources", {
+                                        processed: progressState.processed,
+                                        total: progressState.total,
+                                      })}
+                                    </div>
+                                    <div className={"text-sm text-gray-500"}>
+                                      {t<string>("Deleted: {{deleted}}, Failed: {{failed}}", {
+                                        deleted: progressState.deleted,
+                                        failed: progressState.failed,
+                                      })}
+                                    </div>
+                                  </div>
+                                  <div className={"text-xl font-bold"}>{progressState.percentage}%</div>
+                                </div>
+                                {progressState.currentPath && (
+                                  <div className={"text-xs text-gray-500 truncate"}>
+                                    {progressState.currentPath}
+                                  </div>
+                                )}
+                                <div className={"w-full bg-gray-200 rounded-full h-2"}>
+                                  <div
+                                    className={"bg-primary h-2 rounded-full transition-all duration-300"}
+                                    style={{ width: `${progressState.percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </Modal>
+                          );
+                        };
+
+                        createPortal(DeletionProgressModal, {});
+                      });
+                    }
+                  } else {
+                    await BApi.options.patchResourceOptions({
+                      keepResourcesOnPathChange: true,
+                    });
+                  }
+                  toast.success(t<string>("Saved"));
+                }}
+              />
+            </div>
+          </Tooltip>
         </div>
         <div>
           <Button

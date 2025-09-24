@@ -193,10 +193,10 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
 export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 | 22;
 
 /**
- * [1: Covers, 2: PlayableFiles]
+ * [1: Covers, 2: PlayableFiles, 4: ResourceMarkers]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2;
+export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 | 4;
 
 /**
  * [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary]
@@ -1068,6 +1068,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   idsOfMediaLibraryRecentlyMovedTo?: number[];
   recentFilters: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
   synchronizationOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
+  keepResourcesOnPathChange: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
@@ -2606,6 +2607,8 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   searchCriteria?: BakabaseServiceModelsInputResourceSearchInputModel;
   synchronizationOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
   recentFilters?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
+  keepResourcesOnPathChange?: boolean;
+  deleteKeepResourceMarkers?: boolean;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
