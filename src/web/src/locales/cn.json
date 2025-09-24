@@ -2441,5 +2441,18 @@
   "Please provide a property name": "请提供一个属性名",
   "Third party integration": "第三方集成",
   "Change log": "更新日志",
-  "Alias is used to replace the original text of property values in UI, such as translations, etc.": "别名用于替换属性值在 UI 中的原始文本，例如翻译等。"
+  "Alias is used to replace the original text of property values in UI, such as translations, etc.": "别名用于替换属性值在 UI 中的原始文本，例如翻译等。",
+  "Are you sure you want to delete this file/folder?": "确定要删除这个文件/文件夹吗？",
+  "We noticed that you played the first file in this path. Would you like to proceed with the following actions?": "我们注意到您播放了此路径中的第一个文件。您想继续执行以下操作吗？",
+  "You can move it to another path.": "您可以将它移动到另一个路径。",
+  "Or delete it?": "或者删除它？",
+  "Delete this file/folder?": "删除这个文件/文件夹？",
+  "Handle {{count}} unknown resources in this media library": "处理当前媒体库的{{count}}个未知资源",
+  "You can migrate data button at top of the page to migrate data to the new media library.": "您可以点击页面顶部的迁移数据按钮，将数据迁移到新的媒体库。",
+  "Migrate data (one-click)": "一键迁移",
+  "Migrating...": "迁移中...",
+  "Some properties cannot be matched": "部分属性无法匹配",
+  "Auto matched": "自动匹配",
+  "Automatically create missing properties": "自动创建缺失的属性",
+  "Keep matched properties, handle missing ones manually": "保留匹配的属性，手动处理缺失的属性"
 }

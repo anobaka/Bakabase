@@ -541,21 +541,31 @@ namespace Bakabase.Modules.Enhancer.Services
                 await _reservedPropertyValueService.AddRange(reservedPropertyValuesToBeAdded);
             }
 
-            var currentApplyingPvScopeKeys = enhancements
-                .Select(e => e.EnhancerId)
-                .ToHashSet()
+            var valueIdsToDelete = new List<int>();
+            // resource id - scope - biz keys
+            var currentApplyingPvScopedKeysByResources = resourceIdEnhancerIdsMap.ToDictionary(d => d.Key, d => d.Value
                 .Select(x => _enhancerDescriptors.TryGet(x)?.PropertyValueScope ?? -1)
                 .Where(x => x > 0)
-                .ToDictionary(d => d, d => pvs.Where(pv => pv.Scope == d).Select(x => x.BizKey));
+                .ToDictionary(x => x, x => pvs.Where(pv => pv.Scope == x).Select(a => a.BizKey).ToHashSet()));
 
-            // var remainingPvScopeKeys = pvs.GroupBy(d => d.Scope)
-            //     .ToDictionary(d => d.Key, d => d.Select(p => p.BizKey).ToHashSet());
-            var valueIdsToDelete = new List<int>();
-            foreach (var scopeValues in currentPropertyValues.GroupBy(x => x.Scope))
+            var currentScopedPvsByResources =
+                currentPropertyValues.GroupBy(v => v.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.GroupBy(a => a.Scope).ToDictionary(b => b.Key, b => b.ToArray()));
+
+            foreach (var (rId, scopedPvBizKeys) in currentApplyingPvScopedKeysByResources)
             {
-                valueIdsToDelete.AddRange(currentApplyingPvScopeKeys.TryGetValue(scopeValues.Key, out var bizKeys)
-                    ? scopeValues.Where(x => !bizKeys.Contains(x.BizKey)).Select(v => v.Id)
-                    : scopeValues.Select(v => v.Id));
+                if (currentScopedPvsByResources.TryGetValue(rId, out var scopedPvs))
+                {
+                    foreach (var (scope, pvBizKeys) in scopedPvBizKeys)
+                    {
+                        if (scopedPvs.TryGetValue(scope, out var currentPvs))
+                        {
+                            var gonePvs = currentPvs.Where(x => !pvBizKeys.Contains(x.BizKey));
+                            valueIdsToDelete.AddRange(gonePvs.Select(a => a.Id));
+                        }
+                    }
+                }
+                
             }
 
             await _customPropertyValueService.RemoveByKeys(valueIdsToDelete);
