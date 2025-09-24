@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
@@ -13,5 +13,6 @@ namespace Bakabase.Service.Models.Input
         public ResourceSearchInputModel? SearchCriteria { get; set; }
         public ResourceOptions.SynchronizationOptionsModel? SynchronizationOptions { get; set; }
         public List<ResourceOptions.ResourceFilter>? RecentFilters { get; set; }
+        public bool? KeepResourcesOnPathChange { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
@@ -470,6 +470,10 @@ namespace Bakabase.Service.Controllers
                     options.RecentFilters = model.RecentFilters;
                 }
 
+                if (model.KeepResourcesOnPathChange.HasValue)
+                {
+                    options.KeepResourcesOnPathChange = model.KeepResourcesOnPathChange.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }
