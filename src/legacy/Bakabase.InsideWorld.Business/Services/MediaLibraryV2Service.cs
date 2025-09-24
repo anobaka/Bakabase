@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -315,6 +315,35 @@ public class MediaLibraryV2Service<TDbContext>(
                     if (dbResource != null)
                     {
                         tr.Id = dbResource.Id;
+                        continue;
+                    }
+
+                    // If not found by path, try bakabase.json when enabled and directory exists
+                    if (!tr.IsFile && resourceOptions.Value.KeepResourcesOnPathChange)
+                    {
+                        try
+                        {
+                            var marker = Path.Combine(tr.Path, "bakabase.json");
+                            if (System.IO.File.Exists(marker))
+                            {
+                                var json = await System.IO.File.ReadAllTextAsync(marker, ct);
+                                var data = Newtonsoft.Json.Linq.JObject.Parse(json);
+                                var id = data["id"]?.Value<int?>();
+                                if (id.HasValue)
+                                {
+                                    // Merge to existing resource by id if it exists in current ML
+                                    var existed = mlResources.FirstOrDefault(r => r.Id == id.Value);
+                                    if (existed != null)
+                                    {
+                                        tr.Id = existed.Id;
+                                    }
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // ignore parse errors
+                        }
                     }
                 }
 

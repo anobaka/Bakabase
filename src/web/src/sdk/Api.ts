@@ -1068,6 +1068,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   idsOfMediaLibraryRecentlyMovedTo?: number[];
   recentFilters: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
   synchronizationOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
+  keepResourcesOnPathChange: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsCoverOptionsModel {
@@ -2584,6 +2585,8 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   searchCriteria?: BakabaseServiceModelsInputResourceSearchInputModel;
   synchronizationOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationOptionsModel;
   recentFilters?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
+  keepResourcesOnPathChange?: boolean;
+  deleteKeepResourceMarkers?: boolean;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {

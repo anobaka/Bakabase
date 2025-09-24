@@ -14,5 +14,6 @@ namespace Bakabase.Service.Models.Input
         public ResourceOptions.SynchronizationOptionsModel? SynchronizationOptions { get; set; }
         public List<ResourceOptions.ResourceFilter>? RecentFilters { get; set; }
         public bool? KeepResourcesOnPathChange { get; set; }
+        public bool? DeleteKeepResourceMarkers { get; set; }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,6 +16,7 @@ public static class MediaLibraryV2Extensions
     {
         var r = new Resource
         {
+            Id = tempSyncResource.Id,
             MediaLibraryId = mediaLibraryId,
             Path = tempSyncResource.Path,
             Directory = Path.GetDirectoryName(tempSyncResource.Path)!.StandardizePath()!,

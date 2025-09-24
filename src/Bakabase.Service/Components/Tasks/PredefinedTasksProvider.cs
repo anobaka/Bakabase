@@ -1,14 +1,17 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
+using System.IO;
+using System.Text.Json;
 
 namespace Bakabase.Service.Components.Tasks;
 
@@ -42,6 +45,40 @@ public class PredefinedTasksProvider
                     var service = sp.GetRequiredService<IFileMover>();
                     await service.MovingFiles(async p => await args.UpdateTask(t => t.Percentage = p), args.PauseToken,
                         args.CancellationToken);
+                }
+            }
+            ,
+            {
+                "KeepResourcesOnPathChange", async (args, sp) =>
+                {
+                    var resourceService = sp.GetRequiredService<IResourceService>();
+                    var resources = await resourceService.GetAll(r => true);
+                    var folderResources = resources.Where(r => !r.IsFile).ToList();
+                    int processed = 0;
+                    foreach (var r in folderResources)
+                    {
+                        args.CancellationToken?.ThrowIfCancellationRequested();
+
+                        var dir = r.Path;
+                        try
+                        {
+                            if (Directory.Exists(dir))
+                            {
+                                var marker = Path.Combine(dir, "bakabase.json");
+                                var content = JsonSerializer.Serialize(new { id = r.Id });
+                                await File.WriteAllTextAsync(marker, content);
+                                File.SetAttributes(marker, File.GetAttributes(marker) | FileAttributes.Hidden);
+                            }
+                        }
+                        catch
+                        {
+                            // ignore per-folder errors
+                        }
+
+                        processed++;
+                        var percent = (int)(processed * 100f / folderResources.Count);
+                        await args.UpdateTask(t => t.Percentage = percent);
+                    }
                 }
             }
         };

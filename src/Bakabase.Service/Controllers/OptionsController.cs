@@ -34,6 +34,8 @@ using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Swashbuckle.AspNetCore.Annotations;
+using Bakabase.Abstractions.Components.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.Service.Controllers
 {
@@ -438,6 +440,10 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "PatchResourceOptions")]
         public async Task<BaseResponse> PatchResourceOptions([FromBody] ResourceOptionsPatchInputModel model)
         {
+            var prev = _bakabaseOptionsManager.Get<ResourceOptions>().Value;
+            var prevKeep = prev.KeepResourcesOnPathChange;
+            var deleteMarkers = false;
+
             await _bakabaseOptionsManager.Get<ResourceOptions>().SaveAsync(options =>
             {
                 if (model.AdditionalCoverDiscoveringSources != null)
@@ -473,8 +479,53 @@ namespace Bakabase.Service.Controllers
                 if (model.KeepResourcesOnPathChange.HasValue)
                 {
                     options.KeepResourcesOnPathChange = model.KeepResourcesOnPathChange.Value;
+                    deleteMarkers = (!options.KeepResourcesOnPathChange && prevKeep) || (model.DeleteKeepResourceMarkers == true);
                 }
             });
+
+            var now = _bakabaseOptionsManager.Get<ResourceOptions>().Value.KeepResourcesOnPathChange;
+            if (now != prevKeep)
+            {
+                // Toggle task registration
+                var taskManager = HttpContext.RequestServices.GetRequiredService<BTaskManager>();
+                const string taskId = "KeepResourcesOnPathChange";
+                if (now)
+                {
+                    // Enqueue predefined task if exists
+                    var predefined = HttpContext.RequestServices.GetRequiredService<Service.Components.Tasks.PredefinedTasksProvider>();
+                    var descriptor = predefined.DescriptorBuilders.FirstOrDefault(x => x.Id == taskId);
+                    if (descriptor != null)
+                    {
+                        await taskManager.Enqueue(descriptor);
+                    }
+                }
+                else
+                {
+                    await taskManager.Clean(taskId);
+                    if (deleteMarkers)
+                    {
+                        // Ask user whether to delete markers is handled on FE; expose endpoint could be added if needed
+                        // Here we attempt a best-effort deletion synchronously
+                        try
+                        {
+                            var resourceService = HttpContext.RequestServices.GetRequiredService<IResourceService>();
+                            var resources = await resourceService.GetAll(r => !r.IsFile);
+                            foreach (var r in resources)
+                            {
+                                var marker = System.IO.Path.Combine(r.Path, "bakabase.json");
+                                if (System.IO.File.Exists(marker))
+                                {
+                                    System.IO.File.Delete(marker);
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // ignore
+                        }
+                    }
+                }
+            }
             return BaseResponseBuilder.Ok;
         }
 

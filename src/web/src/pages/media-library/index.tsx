@@ -38,6 +38,7 @@ import {
   Modal,
   Select,
   Tooltip,
+  Switch,
   ColorPicker,
   Table,
   TableHeader,
@@ -53,6 +54,7 @@ import {
 } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
+import { useResourceOptionsStore } from "@/stores/options";
 import { splitPathIntoSegments } from "@/components/utils";
 import PresetTemplateBuilder from "@/pages/media-library-template/components/PresetTemplateBuilder";
 import TemplateModal from "@/pages/media-library-template/components/TemplateModal";
@@ -83,6 +85,8 @@ const MediaLibraryPage = () => {
   const forceUpdate = useUpdate();
   const outdatedModalRef = useRef<{ check: () => Promise<void> } | null>(null);
   const [unknownResourceCounts, setUnknownResourceCounts] = useState<UnknownResourceCount>();
+  const resourceOptionsStore = useResourceOptionsStore();
+  const resourceOptions = resourceOptionsStore.data;
 
   const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
     const r = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
@@ -744,6 +748,108 @@ const MediaLibraryPage = () => {
           )}
         </div>
         <div>
+          <Chip
+            variant={"flat"}
+            color={"default"}
+            className={"mr-2"}
+          >
+            {t<string>("Keep resources on path change")}
+          </Chip>
+          <Switch
+            isSelected={resourceOptions?.keepResourcesOnPathChange ?? false}
+            onValueChange={async (v) => {
+              if (!v) {
+                // Ask whether to delete markers
+                let deleteMarkers = false;
+                await new Promise<void>((resolve) => {
+                  createPortal(Modal, {
+                    defaultVisible: true,
+                    title: t<string>("Disable keep resources on path change"),
+                    size: "md",
+                    footer: {
+                      actions: ["cancel", "ok"],
+                      okProps: {
+                        text: t<string>("Confirm"),
+                      },
+                      cancelProps: {
+                        text: t<string>("Cancel"),
+                      },
+                      onOk: () => {
+                        deleteMarkers = true;
+                        resolve();
+                      },
+                      onCancel: () => {
+                        deleteMarkers = false;
+                        resolve();
+                      },
+                    },
+                    children: (
+                      <div className={"flex flex-col gap-2"}>
+                        <div>
+                          {t<string>(
+                            "Do you want to delete all bakabase.json marker files?",
+                          )}
+                        </div>
+                        <div className={"text-sm opacity-70"}>
+                          {t<string>(
+                            "If you keep them, existing markers will remain but the task will be stopped.",
+                          )}
+                        </div>
+                      </div>
+                    ),
+                  });
+                });
+
+                await BApi.options.patchResourceOptions({
+                  keepResourcesOnPathChange: false,
+                  deleteKeepResourceMarkers: deleteMarkers,
+                });
+                if (deleteMarkers) {
+                  // backend best-effort deletion already performed on toggle off
+                }
+              } else {
+                await BApi.options.patchResourceOptions({
+                  keepResourcesOnPathChange: true,
+                });
+              }
+              resourceOptionsStore.reload();
+              toast.success(t<string>("Saved"));
+            }}
+          />
+          <Button
+            className={"ml-2"}
+            size={"sm"}
+            variant={"light"}
+            onPress={() => {
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t<string>("How it works"),
+                size: "lg",
+                footer: { actions: ["cancel"], cancelProps: { text: t<string>("Close") } },
+                children: (
+                  <div className={"space-y-2 text-sm"}>
+                    <div>
+                      {t<string>(
+                        "When enabled, a hidden file named bakabase.json is created in every folder resource, storing its id.",
+                      )}
+                    </div>
+                    <div>
+                      {t<string>(
+                        "On synchronization, if a new folder path contains bakabase.json with an id that matches an existing resource, data will be merged instead of creating a new resource.",
+                      )}
+                    </div>
+                    <div>
+                      {t<string>(
+                        "Files are not supported, only folders. Disabling the feature will stop the background task and optionally delete all marker files.",
+                      )}
+                    </div>
+                  </div>
+                ),
+              });
+            }}
+          >
+            {t<string>("Tips")}
+          </Button>
           <Button
             color={"warning"}
             size={"sm"}
