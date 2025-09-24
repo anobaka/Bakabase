@@ -36,6 +36,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using NPOI.SS.Formula.Functions;
 using Org.BouncyCastle.Asn1.Sec;
+using Bakabase.Abstractions.Components.Configuration;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
@@ -318,12 +319,12 @@ public class MediaLibraryV2Service<TDbContext>(
                         continue;
                     }
 
-                    // If not found by path, try bakabase.json when enabled and directory exists
+                    // If not found by path, try marker when enabled and directory exists
                     if (!tr.IsFile && resourceOptions.Value.KeepResourcesOnPathChange)
                     {
                         try
                         {
-                            var marker = Path.Combine(tr.Path, "bakabase.json");
+                            var marker = Path.Combine(tr.Path, InternalOptions.ResourceMarkerFileName);
                             if (System.IO.File.Exists(marker))
                             {
                                 var json = await System.IO.File.ReadAllTextAsync(marker, ct);

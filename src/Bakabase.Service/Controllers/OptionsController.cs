@@ -512,7 +512,7 @@ namespace Bakabase.Service.Controllers
                             var resources = await resourceService.GetAll(r => !r.IsFile);
                             foreach (var r in resources)
                             {
-                                var marker = System.IO.Path.Combine(r.Path, "bakabase.json");
+                                var marker = System.IO.Path.Combine(r.Path, Bakabase.Abstractions.Components.Configuration.InternalOptions.ResourceMarkerFileName);
                                 if (System.IO.File.Exists(marker))
                                 {
                                     System.IO.File.Delete(marker);

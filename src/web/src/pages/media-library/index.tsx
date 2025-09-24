@@ -830,17 +830,17 @@ const MediaLibraryPage = () => {
                   <div className={"space-y-2 text-sm"}>
                     <div>
                       {t<string>(
-                        "When enabled, a hidden file named bakabase.json is created in every folder resource, storing its id.",
+                        "When enabled, a hidden file named .resource.json is created in every folder resource, storing its id.",
                       )}
                     </div>
                     <div>
                       {t<string>(
-                        "On synchronization, if a new folder path contains bakabase.json with an id that matches an existing resource, data will be merged instead of creating a new resource.",
+                        "On synchronization, if a new folder path contains .resource.json with an id that matches an existing resource, data will be merged instead of creating a new resource.",
                       )}
                     </div>
                     <div>
                       {t<string>(
-                        "Files are not supported, only folders. Disabling the feature will stop the background task and optionally delete all marker files.",
+                        "Files are not supported, only folders. Disabling the feature will stop the background task and optionally delete all .resource.json marker files.",
                       )}
                     </div>
                   </div>

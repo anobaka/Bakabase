@@ -12,6 +12,7 @@ using Bakabase.Modules.Enhancer.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.IO;
 using System.Text.Json;
+using Bakabase.Abstractions.Components.Configuration;
 
 namespace Bakabase.Service.Components.Tasks;
 
@@ -64,7 +65,7 @@ public class PredefinedTasksProvider
                         {
                             if (Directory.Exists(dir))
                             {
-                                var marker = Path.Combine(dir, "bakabase.json");
+                                var marker = Path.Combine(dir, InternalOptions.ResourceMarkerFileName);
                                 var content = JsonSerializer.Serialize(new { id = r.Id });
                                 await File.WriteAllTextAsync(marker, content);
                                 File.SetAttributes(marker, File.GetAttributes(marker) | FileAttributes.Hidden);

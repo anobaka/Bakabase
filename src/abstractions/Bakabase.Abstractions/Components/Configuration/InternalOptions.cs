@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
@@ -159,5 +159,7 @@ namespace Bakabase.Abstractions.Components.Configuration
 
         public const int MaxFallbackCoverCount = 10;
         public const int MaxPlayableFilesPerTypeAndSubDir = 3;
+
+        public const string ResourceMarkerFileName = ".resource.json";
     }
 }
