@@ -8919,6 +8919,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  migration = {
+    /**
+     * No description
+     *
+     * @tags Migration
+     * @name MigrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary
+     * @request POST:/migration/categories-media-libraries-and-resources-to-new-media-library
+     */
+    migrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/migration/categories-media-libraries-and-resources-to-new-media-library`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+  };
   options = {
     /**
      * No description

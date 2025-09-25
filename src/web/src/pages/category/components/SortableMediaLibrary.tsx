@@ -15,7 +15,6 @@ import {
 } from "@ant-design/icons";
 import { useUpdate } from "react-use";
 import { AutoTextSize } from "auto-text-size";
-import { TbPackageExport } from "react-icons/tb";
 import { MdDelete, MdSearch, MdPlaylistAdd } from "react-icons/md";
 
 import { DropdownTrigger, toast } from "@/components/bakaui";
@@ -27,7 +26,6 @@ import PathConfigurationDialog from "@/pages/category/components/PathConfigurati
 import AddRootPathsInBulkDialog from "@/pages/category/components/AddRootPathsInBulkDialog";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import {
-  Alert,
   Button,
   Chip,
   Input,
@@ -39,13 +37,10 @@ import {
 } from "@/components/bakaui";
 import SynchronizationConfirmModal from "@/pages/category/components/SynchronizationConfirmModal";
 import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
-const SortableMediaLibrary = ({
-  library,
-  loadAllMediaLibraries,
-  reloadMediaLibrary,
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: library.id });
+const SortableMediaLibrary = ({ library, loadAllMediaLibraries, reloadMediaLibrary }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: library.id,
+  });
 
   const log = buildLogger("SortableMediaLibrary");
 
@@ -118,9 +113,7 @@ const SortableMediaLibrary = ({
 
   const renderCustomProperties = useCallback((p) => {
     let properties =
-      p.rpmValues
-        ?.filter((x) => !x.isResourceProperty)
-        .map((x) => x.propertyName) ?? [];
+      p.rpmValues?.filter((x) => !x.isResourceProperty).map((x) => x.propertyName) ?? [];
 
     properties = properties.filter((p, i) => properties.indexOf(p) === i);
 
@@ -225,12 +218,7 @@ const SortableMediaLibrary = ({
             </AutoTextSize>
             {library.resourceCount > 0 ? (
               <Tooltip content={t<string>("Count of resources")}>
-                <Chip
-                  className={"p-0"}
-                  color={"success"}
-                  size={"sm"}
-                  variant={"light"}
-                >
+                <Chip className={"p-0"} color={"success"} size={"sm"} variant={"light"}>
                   <PictureOutlined className={"text-sm"} />
                   &nbsp;
                   {library.resourceCount}
@@ -263,9 +251,7 @@ const SortableMediaLibrary = ({
                 onClick={() => {
                   createPortal(SynchronizationConfirmModal, {
                     onOk: async () =>
-                      await BApi.mediaLibrary.startSyncingMediaLibraryResources(
-                        library.id,
-                      ),
+                      await BApi.mediaLibrary.startSyncingMediaLibraryResources(library.id),
                   });
                 }}
               >
@@ -300,9 +286,7 @@ const SortableMediaLibrary = ({
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>
-            <Dropdown
-              className={"category-page-media-library-more-operations-popup"}
-            >
+            <Dropdown className={"category-page-media-library-more-operations-popup"}>
               <DropdownTrigger>
                 <Button
                   isIconOnly
@@ -323,10 +307,9 @@ const SortableMediaLibrary = ({
                         "Deleting all enhancement records of resources under this media library",
                       ),
                       onOk: async (deleteEmptyOnly) => {
-                        await BApi.mediaLibrary.deleteByEnhancementsMediaLibrary(
-                          library.id,
-                          { deleteEmptyOnly: deleteEmptyOnly },
-                        );
+                        await BApi.mediaLibrary.deleteByEnhancementsMediaLibrary(library.id, {
+                          deleteEmptyOnly: deleteEmptyOnly,
+                        });
                       },
                     });
                   }}
@@ -341,19 +324,15 @@ const SortableMediaLibrary = ({
                     createPortal(Modal, {
                       defaultVisible: true,
                       title: `${t<string>("Deleting")} ${library.name}`,
-                      children: t<string>(
-                        "Are you sure you want to delete this media library?",
-                      ),
+                      children: t<string>("Are you sure you want to delete this media library?"),
                       onOk: () =>
                         new Promise((resolve, reject) => {
-                          BApi.mediaLibrary
-                            .deleteMediaLibrary(library.id)
-                            .then((a) => {
-                              if (!a.code) {
-                                loadAllMediaLibraries();
-                                resolve(a);
-                              }
-                            });
+                          BApi.mediaLibrary.deleteMediaLibrary(library.id).then((a) => {
+                            if (!a.code) {
+                              loadAllMediaLibraries();
+                              resolve(a);
+                            }
+                          });
                         }),
                     });
                   }}
@@ -386,104 +365,99 @@ const SortableMediaLibrary = ({
               >
                 <div className="flex items-center">
                   <span>{p.path}</span>
-                  <Chip
-                    color={"success"}
-                    radius={"sm"}
-                    size={"sm"}
-                    variant={"light"}
-                  >
+                  <Chip color={"success"} radius={"sm"} size={"sm"} variant={"light"}>
                     {library.fileSystemInformation?.[p.path]?.freeSpaceInGb}GB
                   </Chip>
                   <div className={"flex items-center"}>
-                    <Button
-                      isIconOnly
-                      className={"w-auto min-w-fit px-1"}
-                      color={"primary"}
-                      size={"sm"}
-                      variant={"light"}
-                      onPress={(e) => {
-                        let templateName = "";
+                    {/*<Button*/}
+                    {/*  isIconOnly*/}
+                    {/*  className={"w-auto min-w-fit px-1"}*/}
+                    {/*  color={"primary"}*/}
+                    {/*  size={"sm"}*/}
+                    {/*  variant={"light"}*/}
+                    {/*  onPress={(e) => {*/}
+                    {/*    let templateName = "";*/}
 
-                        createPortal(Modal, {
-                          defaultVisible: true,
-                          size: "lg",
-                          title: t<string>(
-                            "Exporting path configuration as new media library template",
-                          ),
-                          children: (
-                            <div className={"flex flex-col gap-1"}>
-                              <Alert
-                                color={"default"}
-                                description={
-                                  <div>
-                                    <div>
-                                      {t<string>(
-                                        "The resource selection rules, attribute value settings, enhancer configurations, playable file locator, " +
-                                          "and resource naming conventions of the current path will all be exported to the media library template.",
-                                      )}
-                                    </div>
-                                    <div>
-                                      {t<string>(
-                                        "However, the player will not be included. Please configure the player manually in the new media library.",
-                                      )}
-                                    </div>
-                                    <div>
-                                      {t<string>(
-                                        "A media library template is a combination of the rules below and can be reused across multiple paths.",
-                                      )}
-                                    </div>
-                                    <div>
-                                      {t<string>(
-                                        "It is not necessary to create a separate template for each path.",
-                                      )}
-                                    </div>
-                                  </div>
-                                }
-                                title={t<string>(
-                                  "The old categorization and media library features will soon be removed. Please export the data as a new media library template.",
-                                )}
-                              />
-                              <Input
-                                isRequired
-                                label={t<string>("Template name")}
-                                onValueChange={(v) => (templateName = v)}
-                              />
-                            </div>
-                          ),
-                          onOk: async () => {
-                            if (
-                              templateName == undefined ||
-                              templateName.length == 0
-                            ) {
-                              const msg = t<string>(
-                                "Template name is required",
-                              );
+                    {/*    createPortal(Modal, {*/}
+                    {/*      defaultVisible: true,*/}
+                    {/*      size: "lg",*/}
+                    {/*      title: t<string>(*/}
+                    {/*        "Exporting path configuration as new media library template",*/}
+                    {/*      ),*/}
+                    {/*      children: (*/}
+                    {/*        <div className={"flex flex-col gap-1"}>*/}
+                    {/*          <Alert*/}
+                    {/*            color={"default"}*/}
+                    {/*            description={*/}
+                    {/*              <div>*/}
+                    {/*                <div>*/}
+                    {/*                  {t<string>(*/}
+                    {/*                    "The resource selection rules, attribute value settings, enhancer configurations, playable file locator, " +*/}
+                    {/*                      "and resource naming conventions of the current path will all be exported to the media library template.",*/}
+                    {/*                  )}*/}
+                    {/*                </div>*/}
+                    {/*                <div>*/}
+                    {/*                  {t<string>(*/}
+                    {/*                    "However, the player will not be included. Please configure the player manually in the new media library.",*/}
+                    {/*                  )}*/}
+                    {/*                </div>*/}
+                    {/*                <div>*/}
+                    {/*                  {t<string>(*/}
+                    {/*                    "A media library template is a combination of the rules below and can be reused across multiple paths.",*/}
+                    {/*                  )}*/}
+                    {/*                </div>*/}
+                    {/*                <div>*/}
+                    {/*                  {t<string>(*/}
+                    {/*                    "It is not necessary to create a separate template for each path.",*/}
+                    {/*                  )}*/}
+                    {/*                </div>*/}
+                    {/*              </div>*/}
+                    {/*            }*/}
+                    {/*            title={t<string>(*/}
+                    {/*              "The old categorization and media library features will soon be removed. Please export the data as a new media library template.",*/}
+                    {/*            )}*/}
+                    {/*          />*/}
+                    {/*          <Input*/}
+                    {/*            isRequired*/}
+                    {/*            label={t<string>("Template name")}*/}
+                    {/*            onValueChange={(v) => (templateName = v)}*/}
+                    {/*          />*/}
+                    {/*        </div>*/}
+                    {/*      ),*/}
+                    {/*      onOk: async () => {*/}
+                    {/*        if (*/}
+                    {/*          templateName == undefined ||*/}
+                    {/*          templateName.length == 0*/}
+                    {/*        ) {*/}
+                    {/*          const msg = t<string>(*/}
+                    {/*            "Template name is required",*/}
+                    {/*          );*/}
 
-                              toast.error(msg);
-                              throw new Error(msg);
-                            }
-                            const r =
-                              await BApi.mediaLibraryTemplate.addMediaLibraryTemplateByMediaLibraryV1(
-                                {
-                                  v1Id: library.id,
-                                  pcIdx: i,
-                                  name: templateName,
-                                },
-                              );
+                    {/*          toast.error(msg);*/}
+                    {/*          throw new Error(msg);*/}
+                    {/*        }*/}
+                    {/*        const r =*/}
+                    {/*          await BApi.mediaLibraryTemplate.addMediaLibraryTemplateByMediaLibraryV1(*/}
+                    {/*            {*/}
+                    {/*              v1Id: library.id,*/}
+                    {/*              pcIdx: i,*/}
+                    {/*              name: templateName,*/}
+                    {/*            },*/}
+                    {/*          );*/}
 
-                            if (!r.code) {
-                              toast.success(
-                                t<string>(
-                                  "Media library template created successfully",
-                                ),
-                              );
-                            }
-                          },
-                        });
-                      }}
-                    >
-                      <TbPackageExport className={"text-base"} />
-                    </Button>
+                    {/*        if (!r.code) {*/}
+                    {/*          toast.success(*/}
+                    {/*            t<string>(*/}
+                    {/*              "Media library template created successfully",*/}
+                    {/*            ),*/}
+                    {/*          );*/}
+                    {/*        }*/}
+                    {/*      },*/}
+                    {/*    });*/}
+                    {/*  }}*/}
+                    {/*>*/}
+                    {/*  <TbPackageExport className={"text-base"} />*/}
+                    {/*</Button>*/}
                     <Button
                       isIconOnly
                       className={"w-auto min-w-fit px-1"}
@@ -534,9 +508,7 @@ const SortableMediaLibrary = ({
                   </div>
                 </div>
                 {renderFilter(p)}
-                <div className="flex flex-wrap gap-1">
-                  {renderCustomProperties(p)}
-                </div>
+                <div className="flex flex-wrap gap-1">{renderCustomProperties(p)}</div>
               </div>
             );
           })

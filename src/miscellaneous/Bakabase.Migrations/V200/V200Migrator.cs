@@ -7,21 +7,30 @@ using Bakabase.InsideWorld.Business;
 using Bootstrap.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Bakabase.Abstractions.Services;
+using Bakabase.Abstractions.Models.Domain;
+using Bakabase.Abstractions.Models.Input;
+using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
+using Bakabase.InsideWorld.Business.Extensions;
+using Bakabase.InsideWorld.Models.Constants;
+using Microsoft.Extensions.Options;
+using Bakabase.InsideWorld.Models.Configs;
 
-namespace Bakabase.Migrations.V192;
+namespace Bakabase.Migrations.V200;
 
-public class V192Migrator : AbstractMigrator
+public class V200Migrator : AbstractMigrator
 {
-    public V192Migrator(IServiceProvider serviceProvider) : base(serviceProvider)
+    public V200Migrator(IServiceProvider serviceProvider) : base(serviceProvider)
     {
     }
 
-    protected override string ApplyOnVersionEqualsOrBeforeString => "1.9.2-beta.25";
+    protected override string ApplyOnVersionEqualsOrBeforeString => "2.0.0-beta";
     protected override async Task MigrateAfterDbMigrationInternal(object context)
     {
         var dbCtx = GetRequiredService<InsideWorldDbContext>();
-        var enhancements = await dbCtx.Enhancements.ToListAsync();
 
+        // 1) Enhancement migration: fill new Key field
+        var enhancements = await dbCtx.Enhancements.ToListAsync();
         foreach (var enhancement in enhancements)
         {
             enhancement.FillKey();

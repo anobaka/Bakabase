@@ -1,0 +1,10 @@
+---
+description: Maintenance of SDK for backend APIs
+globs:
+alwaysApply: true
+---
+
+- When backend APIs change, the SDK for backend APIs should be updated as well.
+- SDK files are located in the `src/sdk` folder.
+- Use the `gen-sdk` command from `package.json` whenever possible.
+- If `gen-sdk` fails, manually modify the SDK files.

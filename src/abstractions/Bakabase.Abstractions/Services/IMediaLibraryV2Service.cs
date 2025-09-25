@@ -10,7 +10,7 @@ namespace Bakabase.Abstractions.Services;
 
 public interface IMediaLibraryV2Service
 {
-    Task Add(MediaLibraryV2AddOrPutInputModel model);
+    Task<MediaLibraryV2> Add(MediaLibraryV2AddOrPutInputModel model);
     Task Put(int id, MediaLibraryV2AddOrPutInputModel model);
     Task Put(IEnumerable<MediaLibraryV2> data);
     Task Patch(int id, MediaLibraryV2PatchInputModel model);
@@ -20,7 +20,7 @@ public interface IMediaLibraryV2Service
     /// <param name="models"></param>
     /// <returns></returns>
     Task ReplaceAll(MediaLibraryV2[] models);
-    Task<MediaLibraryV2> Get(int id, MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
+    Task<MediaLibraryV2?> Get(int id, MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
 
     Task<List<MediaLibraryV2>> GetByKeys(int[] ids,
         MediaLibraryV2AdditionalItem additionalItems = MediaLibraryV2AdditionalItem.None);
@@ -44,4 +44,6 @@ public interface IMediaLibraryV2Service
     Task MarkAsSynced(int id, int resourceCount, string? syncVersion);
 
     Task<IEnumerable<MediaLibraryV2>> GetAllSyncMayBeOutdated();
+    
+    Task RefreshResourceCount(int id);
 }

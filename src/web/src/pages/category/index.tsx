@@ -13,10 +13,7 @@ import SortableCategoryList from "@/pages/category/components/SortableCategoryLi
 import MediaLibrarySynchronization from "@/pages/category/components/MediaLibrarySynchronization";
 import { useResourceOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
-import {
-  CategoryAdditionalItem,
-  MediaLibraryAdditionalItem,
-} from "@/sdk/constants";
+import { CategoryAdditionalItem, MediaLibraryAdditionalItem } from "@/sdk/constants";
 
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 
@@ -47,6 +44,7 @@ const CategoryPage = () => {
   const [enhancers, setEnhancers] = useState<EnhancerDescriptor[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [migrating, setMigrating] = useState(false);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
   // const gotoNewCategoryPage = (noCategory: boolean) => {
@@ -164,11 +162,9 @@ const CategoryPage = () => {
           )}
         />
         <Alert
-          color={"primary"}
+          color={"warning"}
           icon={<TbPackageExport className={"text-lg"} />}
-          title={t<string>(
-            "You can use this button in your path configuration to export the current media library configuration as a new media library template and bind it to the new media library.",
-          )}
+          title={t<string>("You can migrate data button at top of the page to migrate data to the new media library.")}
         />
       </Modal>
       <div className="header mb-1">
@@ -187,9 +183,7 @@ const CategoryPage = () => {
                   <div>
                     <Input
                       className={"w-full"}
-                      placeholder={t<string>(
-                        "Please enter the name of the category",
-                      )}
+                      placeholder={t<string>("Please enter the name of the category")}
                       size={"md"}
                       onValueChange={(v) => {
                         name = v;
@@ -234,15 +228,30 @@ const CategoryPage = () => {
                   document.getElementById(`category-${id}`)?.scrollIntoView();
                 }}
               >
-                {categories?.map((c) => (
-                  <DropdownItem key={c.id}>{c.name}</DropdownItem>
-                ))}
+                {categories?.map((c) => <DropdownItem key={c.id}>{c.name}</DropdownItem>)}
               </DropdownMenu>
             </Dropdown>
           )}
         </div>
         <div className="right">
           <HandleUnknownResources />
+          <Button
+            color={"warning"}
+            isDisabled={migrating}
+            size={"small"}
+            variant={"flat"}
+            onPress={async () => {
+              try {
+                setMigrating(true);
+                await BApi.migration.migrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary();
+              } finally {
+                setMigrating(false);
+              }
+            }}
+          >
+            <TbPackageExport className={"text-lg"} />
+            {migrating ? t<string>("Migrating...") : t<string>("Migrate data (one-click)")}
+          </Button>
           <Button
             color={"primary"}
             size={"small"}
@@ -288,9 +297,7 @@ const CategoryPage = () => {
               ? dayjs(resourceOptions.lastSyncDt).format("YYYY-MM-DD HH:mm:ss")
               : t<string>("Never")}
           </div>
-          <MediaLibrarySynchronization
-            onComplete={() => loadAllMediaLibraries()}
-          />
+          <MediaLibrarySynchronization onComplete={() => loadAllMediaLibraries()} />
         </div>
       </div>
       {loading && <Spinner />}
