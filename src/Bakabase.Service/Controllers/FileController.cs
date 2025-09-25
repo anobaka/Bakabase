@@ -331,40 +331,40 @@ namespace Bakabase.Service.Controllers
                 var password = default(string);
                 var pickedTestStdOut = default(string);
 
-                        // Try without password first, then candidates
+                // Try without password first, then candidates
                 var success = false;
                 var wrongPasswords = new HashSet<string>();
-                        foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
-                        {
+                foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
+                {
                     ct.ThrowIfCancellationRequested();
 
-                            var processRegex = new Regex(@"\d+\%");
-                            var esb = new StringBuilder();
+                    var processRegex = new Regex(@"\d+\%");
+                    var esb = new StringBuilder();
                     var osb = new StringBuilder();
 
-                            var args = new List<string?>
-                            {
-                                "t",
-                                entry,
-                                candidate.IsNotEmpty() ? $"-p{candidate}" : null,
-                                "-sccUTF-8",
-                                "-scsUTF-16LE",
-                        "-bsp1",
+                    var args = new List<string?>
+                    {
+                        "t",
+                        entry,
+                        candidate.IsNotEmpty() ? $"-p{candidate}" : null,
+                        "-sccUTF-8",
+                        "-scsUTF-16LE",
+                        "-bsp2",
                         "-bb1"
-                            }.OfType<string>().ToArray();
+                    }.OfType<string>().ToArray();
 
-                            var command = Cli.Wrap(_sevenZExecutable)
-                                .WithWorkingDirectory(Path.GetDirectoryName(entry)!)
-                                .WithValidation(CommandResultValidation.None)
-                                .WithArguments(args, true)
-                                .WithStandardErrorPipe(PipeTarget.Merge(
+                    var command = Cli.Wrap(_sevenZExecutable)
+                        .WithWorkingDirectory(Path.GetDirectoryName(entry)!)
+                        .WithValidation(CommandResultValidation.None)
+                        .WithArguments(args, true)
+                        .WithStandardErrorPipe(PipeTarget.Merge(
                             PipeTarget.ToDelegate((line) =>
                             {
                                 if (line.Contains("Wrong password") && candidate.IsNotEmpty())
                                 {
                                     wrongPasswords.Add(candidate);
-                                        }
-                                    }, Encoding.UTF8),
+                                }
+                            }, Encoding.UTF8),
                             PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
                         .WithStandardOutputPipe(PipeTarget.Merge(
                             PipeTarget.ToDelegate(async (line, ct2) =>
@@ -387,44 +387,43 @@ namespace Bakabase.Service.Controllers
                             }, Encoding.UTF8),
                             PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
 
-                            var result = await command.ExecuteAsync(ct);
+                    var result = await command.ExecuteAsync(ct);
 
                     vm.Message = $"{osb}\n{esb}";
                     await YieldReturn(vm);
 
-                            if (result.ExitCode == 0)
-                            {
+                    if (result.ExitCode == 0)
+                    {
                         password = candidate;
                         pickedTestStdOut = osb.ToString();
                         success = true;
-                                break;
-                            }
-                        }
+                        break;
+                    }
+                }
 
                 // Build sample groups from 't' output to avoid a separate 'l' call
-                        var sampleGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
-                        try
-                        {
+                var sampleGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
+                try
+                {
                     var lines = (pickedTestStdOut ?? string.Empty)
                         .Split('\n', '\r')
                         .Where(x => x.IsNotEmpty())
                         .ToArray();
                     // 7z t outputs lines like: "Testing     path/inside/file.ext"
-                    var testingPrefix = "Testing ";
+                    var testingPrefix = "T ";
                     var entryPaths = lines
                         .Select(l =>
                         {
                             var t = l.Trim();
-                            if (!t.StartsWith(testingPrefix, StringComparison.OrdinalIgnoreCase))
+                            if (!t.StartsWith(testingPrefix))
                             {
                                 return null;
                             }
 
-                            var path = Regex.Replace(t, $"^{testingPrefix}", string.Empty).StandardizePath()!;
+                            var path = t.Substring(testingPrefix.Length).Replace(InternalOptions.WindowsSpecificDirSeparator, InternalOptions.DirSeparator);
                             return path;
                         })
                         .OfType<string>()
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
                         .ToList();
 
                     // group and sampling by first layer of paths
@@ -455,15 +454,15 @@ namespace Bakabase.Service.Controllers
                     }
 
                     nameGroups.AddRange(firstLayerExtensionGroups);
-                                        sampleGroups.AddRange(nameGroups);
-                        }
-                        catch
-                        {
-                            // ignore sampling errors
-                        }
+                    sampleGroups.AddRange(nameGroups);
+                }
+                catch
+                {
+                    // ignore sampling errors
+                }
 
-                        var final = new CompressedFileDetectionResultViewModel
-                        {
+                var final = new CompressedFileDetectionResultViewModel
+                {
                     Key = viewModelKey,
                     Status = success
                         ? CompressedFileDetectionResultStatus.Complete
@@ -485,9 +484,9 @@ namespace Bakabase.Service.Controllers
                     Key = group.Files[0],
                     Status = CompressedFileDetectionResultStatus.Init,
                     Directory = Path.GetDirectoryName(group.Files[0]).StandardizePath()!,
-                            GroupKey = group.KeyName,
-                            Files = group.Files.ToArray(),
-                            DecompressToDirName = group.KeyName,
+                    GroupKey = group.KeyName,
+                    Files = group.Files.Select(p => Path.GetFileName(p)!).ToArray(),
+                    DecompressToDirName = group.KeyName,
                     PasswordCandidates = group.Files[0].GetPasswordsFromPath()
                 });
             }

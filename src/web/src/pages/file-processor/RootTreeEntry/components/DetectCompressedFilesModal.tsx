@@ -24,8 +24,11 @@ import {
 import envConfig from "@/config/env";
 import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
 import { IconType } from "@/sdk/constants";
-import { AiOutlineCheckCircle, AiOutlineCloseCircle, AiOutlineFieldTime, AiOutlineInfoCircle } from "react-icons/ai";
+import { AiOutlineCheckCircle, AiOutlineCloseCircle, AiOutlineFieldTime, AiOutlineFolder, AiOutlineInfoCircle, AiOutlineRightCircle } from "react-icons/ai";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { MdOutlineCreateNewFolder } from "react-icons/md";
+import { TbBracketsContainStart } from "react-icons/tb";
+import { LoadingOutlined } from "@ant-design/icons";
 
 enum ExtractActionAfterDecompression {
   None = 0,
@@ -63,19 +66,19 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
   const [detecting, setDetecting] = useState(false);
   const [sizeThresholdMb, setSizeThresholdMb] = useState<number | undefined>(undefined);
   const [onFailureContinue, setOnFailureContinue] = useState(true);
-  const abortRef = useRef<AbortController | null>(null);
-  const runAbortRef = useRef<AbortController | null>(null);
+  const abortDetectingRef = useRef<AbortController | null>(null);
+  const abortDecompressingRef = useRef<AbortController | null>(null);
   const { createPortal } = useBakabaseContext();
 
   const [results, setResults] = useState<CompressedFileDetectionResult[]>([]);
 
-  const start = useCallback(async () => {
+  const startDetecting = useCallback(async () => {
     if (!entries || entries.length === 0) return;
     setDetecting(true);
     setResults([]);
     const controller = new AbortController();
 
-    abortRef.current = controller;
+    abortDetectingRef.current = controller;
 
     try {
       const url = `${envConfig.apiEndpoint}/file/decompression/detect`;
@@ -140,51 +143,51 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
       // silently end on abort or error
     } finally {
       setDetecting(false);
-      abortRef.current = null;
+      abortDetectingRef.current = null;
     }
   }, [entries]);
 
-  const stop = useCallback(() => {
-    abortRef.current?.abort();
-    abortRef.current = null;
+  const stopDetecting = useCallback(() => {
+    abortDetectingRef.current?.abort();
+    abortDetectingRef.current = null;
     setDetecting(false);
   }, []);
 
   const close = useCallback(() => {
-    stop();
+    stopDetecting();
     setVisible(false);
-  }, [stop]);
+  }, [stopDetecting]);
 
   useEffect(() => {
     // auto start
-    start();
+    startDetecting();
 
-    return () => stop();
+    return () => stopDetecting();
   }, []);
 
   const renderStatus = useCallback((result: CompressedFileDetectionResult) => {
     switch (result.status) {
       case CompressedFileDetectionResultStatus.Init:
         return (
-          <Chip size="sm">
+          <Chip size="sm" color='default' variant='light'>
             <AiOutlineFieldTime className="text-lg" />
           </Chip>
         )
       case CompressedFileDetectionResultStatus.Inprogress:
         return (
-          <Chip>
-            <Spinner color="default" label="Default" labelColor="foreground" />
+          <Chip color='default' variant='light'>
+            <Spinner color="default" size='sm' labelColor="foreground" />
           </Chip>
         )
       case CompressedFileDetectionResultStatus.Complete:
         return (
-          <Chip size="sm">
+          <Chip size="sm" color='success' variant='light' >
             <AiOutlineCheckCircle className="text-lg" />
           </Chip>
         )
       case CompressedFileDetectionResultStatus.Error:
         return (
-          <Button size="sm" variant="light" isIconOnly onPress={() => {
+          <Button size="sm" variant="light" isIconOnly color='danger' onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
               size: "xl",
@@ -197,6 +200,8 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
     }
   }, []);
 
+  console.log(results);
+
   return (
     <Modal
       className={"max-w-[90vw]"}
@@ -205,21 +210,21 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
       title={t<string>("Detect compressed files")}
       visible={visible}
       onClose={() => {
-        if (detecting || runAbortRef.current) {
+        if (detecting || abortDecompressingRef.current) {
           if (!confirm(t<string>("A task is running. Close and cancel it?"))) return;
-          stop();
-          runAbortRef.current?.abort();
-          runAbortRef.current = null;
+          stopDetecting();
+          abortDecompressingRef.current?.abort();
+          abortDecompressingRef.current = null;
         }
         close();
       }}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-3">
-        <div>
-          <div>{t("Detect compressed files")}</div>
+        <div className="flex items-center gap-2">
           <div>
             <NumberInput
+              className={'w-[400px]'}
               isClearable
               label={t<string>("Include unknown extensions if size >= (MB)")}
               placeholder={t<string>("Optional")}
@@ -230,22 +235,25 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
           </div>
           <div>
             {!detecting ? (
-              <Button size={"sm"}>{t("Detect compressed files")}</Button>
+              <Button color="primary" onPress={() => {
+                startDetecting();
+              }} >{t("Detect compressed files")}</Button>
             ) : (
-              <Button isLoading size={"sm"} color="danger" variant="light" onPress={stop}>
+              <Button color="danger" variant="light" onPress={stopDetecting}>
+                <LoadingOutlined className="text-lg" />
                 {t("Stop")}
               </Button>
             )}
           </div>
         </div>
 
-        <Table isStriped removeWrapper isCompact>
+        <Table isStriped removeWrapper isCompact className="overflow-y-auto">
           <TableHeader>
             <TableColumn>{t<string>("Files")}</TableColumn>
             <TableColumn>{t<string>("Password")}</TableColumn>
             <TableColumn>{t<string>("Password candidates")}</TableColumn>
             <TableColumn>{t<string>("Status")}</TableColumn>
-            <TableColumn>{t<string>("Operations")}</TableColumn>
+            <TableColumn className="min-w-[260px] w-[260px]">{t<string>("Operations")}</TableColumn>
           </TableHeader>
           <TableBody>
             {results.map((result) => {
@@ -253,26 +261,49 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
                 <TableRow key={result.key}>
                   <TableCell>
                     <div>
-                      <div>
-                        {result.directory}
-                      </div>
-                      <div>
-                        {result.files?.map(f => <Chip size="sm" key={f}>{f}</Chip>)}
-                      </div>
-                      <div>
-                        {result.decompressToDirName}
-                      </div>
-                      <div>
-                        {result.contentSampleGroups?.map((g, gi) => {
-                          const restFileCount = g.count - (g.samples?.length ?? 0);
-                          const sampleFilesText = g.samples?.join(", ");
-                          return (
-                            <Chip variant="flat" size="sm" key={g.samples?.[0] ?? gi}>
-                              <FileSystemEntryIcon type={g.isFile ? IconType.Dynamic : IconType.Directory} size="sm" />
-                              {restFileCount > 0 ? t<string>("{{sampleFilesText}} and {{restFileCount}} more") : sampleFilesText}
-                            </Chip>
-                          )
-                        })}
+                      <Chip size="sm">
+                        <div className="flex items-center gap-1">
+                          <AiOutlineFolder className="text-lg" />
+                          {result.directory}
+                        </div>
+                      </Chip>
+                      <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap gap-1 max-h-[100px] overflow-y-auto">
+                          {result.files?.map(f => <Chip size="sm" variant="light" key={f}>
+                            <div className="flex items-center gap-1">
+                              <FileSystemEntryIcon type={IconType.Dynamic} size={18} path={`${result.directory}/${f}`} />
+                              {f}
+                            </div>
+                          </Chip>)}
+                        </div>
+                        <div>
+                          <AiOutlineRightCircle className="text-lg" />
+                        </div>
+                        <div>
+                          <Chip size="sm" color='success' variant='light'>
+                            <div className="flex items-center gap-1">
+                              <MdOutlineCreateNewFolder className="text-lg" />
+                              {result.decompressToDirName}
+                            </div>
+                          </Chip>
+                        </div>
+                        {result.contentSampleGroups && result.contentSampleGroups.length > 0 && (
+                          <div className="flex flex-wrap gap-1 items-center">
+                            /
+                            {result.contentSampleGroups.map((g, gi) => {
+                              const restFileCount = g.count - (g.samples?.length ?? 0);
+                              const sampleFilesText = g.samples?.join(", ");
+                              return (
+                                <Chip variant="flat" size="sm" key={g.samples?.[0] ?? gi}>
+                                  <div className="flex items-center gap-1">
+                                    <FileSystemEntryIcon type={g.isFile ? IconType.Dynamic : IconType.Directory} size={18} />
+                                    {restFileCount > 0 ? t<string>("{{sampleFilesText}} and {{restFileCount}} more") : sampleFilesText}
+                                  </div>
+                                </Chip>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </TableCell>
@@ -293,17 +324,23 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
                   <TableCell>
                     <div>
                       {result.message && (
-                        <Button size="sm" variant="light" isIconOnly>
+                        <Button size="sm" variant="light" isIconOnly onPress={() => {
+                          createPortal(Modal, {
+                            defaultVisible: true,
+                            size: "xl",
+                            children: <pre>{result.message}</pre>,
+                          });
+                        }}>
                           <AiOutlineInfoCircle className="text-lg" />
                         </Button>
                       )}
                       {result.status == CompressedFileDetectionResultStatus.Complete && (
                         <>
                           <div>
-                            <Checkbox>{t('Delete after decompression')}</Checkbox>
+                            <Checkbox size="sm">{t('Delete after decompression')}</Checkbox>
                           </div>
                           <div>
-                            <Select label={t('Extract after decompression')} dataSource={[{ label: t('Extract to current directory'), value: ExtractActionAfterDecompression.InnerSecondLayer }, { label: t('Extract to new directory'), value: ExtractActionAfterDecompression.OuterFirstLayerRemoveParent }]} isClearable>
+                            <Select size='sm' label={t('Extract after decompression')} dataSource={[{ label: t('Extract to current directory'), value: ExtractActionAfterDecompression.InnerSecondLayer }, { label: t('Extract to new directory'), value: ExtractActionAfterDecompression.OuterFirstLayerRemoveParent }]} isClearable>
                             </Select>
                           </div>
                         </>
@@ -315,20 +352,24 @@ const DetectCompressedFilesModal = ({ entries = [], onDestroyed }: Props) => {
             })}
           </TableBody>
         </Table>
-        <div className="grid grid-cols-2 gap-2" style={{}}>
-          <div />
-          <div>
-            <div className="self-center text-sm opacity-80">{t<string>("On failure continue")}</div>
-            <div className="flex items-center gap-2">
-              <input
+        {results.some(r => r.status == CompressedFileDetectionResultStatus.Complete) && (
+          <div className="flex items-center gap-2" style={{}}>
+            <div>
+              <Checkbox
                 checked={onFailureContinue}
                 type="checkbox"
                 onChange={(e) => setOnFailureContinue(e.currentTarget.checked)}
-              />
-              <span className="text-xs opacity-70">{t<string>("Continue on next file")}</span>
+              >
+                {t<string>("Continue on failure")}
+              </Checkbox>
+            </div>
+            <div>
+              <Button color="primary" onPress={() => {
+                startDecompressing();
+              }} >{t("Decompress")}</Button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </Modal>
   );
