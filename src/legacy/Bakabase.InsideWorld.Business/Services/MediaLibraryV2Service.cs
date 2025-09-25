@@ -147,6 +147,15 @@ public class MediaLibraryV2Service<TDbContext>(
         return data.Where(x => x.SyncMayBeOutdated);
     }
 
+    public async Task RefreshResourceCount(int id)
+    {
+        var count = (await resourceService.GetAllGeneratedByMediaLibraryV2(new[] { id })).Length;
+        await orm.UpdateByKey(id, d =>
+        {
+            d.ResourceCount = count;
+        });
+    }
+
     /// <summary>
     /// <inheritdoc cref="IMediaLibraryV2Service.ReplaceAll"/>
     /// </summary>

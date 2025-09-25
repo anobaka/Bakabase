@@ -128,4 +128,6 @@ public interface IMediaLibraryService
     // /// <param name="keys"></param>
     // /// <returns></returns>
     // Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
+
+    Task RefreshResourceCount(int id);
 }

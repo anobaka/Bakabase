@@ -173,6 +173,15 @@ namespace Bakabase.InsideWorld.Business.Services
             return await _orm.RemoveByKey(key);
         }
 
+        public async Task RefreshResourceCount(int id)
+        {
+            var rs = await ResourceService.GetAllDbModels(x => x.CategoryId > 0 && x.MediaLibraryId == id);
+            await _orm.UpdateByKey(id, d =>
+            {
+                d.ResourceCount = rs.Count;
+            });
+        }
+
         protected async Task<List<MediaLibrary>> ToDomainModels(List<Abstractions.Models.Db.MediaLibraryDbModel> mls,
             MediaLibraryAdditionalItem additionalItems)
         {
