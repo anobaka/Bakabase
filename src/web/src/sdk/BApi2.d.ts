@@ -2354,6 +2354,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/migration/categories-media-libraries-and-resources-to-new-media-library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MigrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/options/app": {
         parameters: {
             query?: never;
@@ -11948,6 +11964,28 @@ export interface operations {
             };
         };
     };
+    MigrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetAppOptions: {
         parameters: {
             query?: never;
@@ -14316,7 +14354,9 @@ export interface operations {
     };
     DeleteUnknownResources: {
         parameters: {
-            query?: never;
+            query?: {
+                mediaLibraryId?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;

@@ -1604,11 +1604,6 @@ namespace Bakabase.InsideWorld.Business.Services
             Dictionary<int, string>? newPaths = null)
         {
             var resources = await _orm.GetByKeys(ids);
-            if (resources == null)
-            {
-                return BaseResponseBuilder.NotFound;
-            }
-
             var resourcesToBeChanged = resources.Where(r => r.MediaLibraryId != mediaLibraryId).ToList();
 
             if (!resourcesToBeChanged.Any())
@@ -1616,7 +1611,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 return BaseResponseBuilder.Ok;
             }
 
-            int categoryId = 0;
+            var categoryId = 0;
             if (isLegacyMediaLibrary)
             {
                 var library = await _mediaLibraryService.Get(mediaLibraryId, MediaLibraryAdditionalItem.None);
@@ -1648,6 +1643,15 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await _orm.UpdateRange(resources);
+
+            if (isLegacyMediaLibrary)
+            {
+                await _mediaLibraryService.RefreshResourceCount(mediaLibraryId);
+            }
+            else
+            {
+                await MediaLibraryV2Service.RefreshResourceCount(mediaLibraryId);
+            }
 
             return BaseResponseBuilder.Ok;
         }

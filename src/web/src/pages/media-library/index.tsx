@@ -63,6 +63,7 @@ import { EditableValue } from "@/components/EditableValue";
 import PathAutocomplete, { PathAutocompleteProps } from "@/components/PathAutocomplete";
 import { BakabaseServiceModelsViewUnknownResourcesCountViewModel } from "@/sdk/Api";
 import HandleUnknownResourcesModal from "@/components/HandleUnknownResourcesModal";
+import MediaLibrarySelectorV2 from "@/components/MediaLibrarySelectorV2";
 
 enum SortBy {
   Path = 1,
@@ -629,6 +630,80 @@ const MediaLibraryPage = () => {
                                 outdatedModalRef.current?.check();
                               },
                             });
+                          } else if (key === "moveResourcesToOtherMediaLibrary") {
+                            createPortal(MediaLibrarySelectorV2, {
+                              confirmation: true,
+                              onSelect: async (toId: number, isLegacy: boolean) => {
+                                if (isLegacy) {
+                                  toast.danger(t<string>("Only media library v2 is supported"));
+                                  return;
+                                }
+                                if (toId === ml.id) {
+                                  toast.warning(t<string>("Cannot move resources to the same media library"));
+                                  return;
+                                }
+
+                                try {
+                                  const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
+                                    propertyPool: PropertyPool.Internal,
+                                    propertyId: InternalProperty.MediaLibraryV2,
+                                    operation: SearchOperation.Equals,
+                                  });
+
+                                  const searchForm = {
+                                    group: {
+                                      combinator: 1,
+                                      disabled: false,
+                                      filters: [
+                                        {
+                                          propertyPool: PropertyPool.Internal,
+                                          propertyId: InternalProperty.MediaLibraryV2,
+                                          operation: SearchOperation.Equals,
+                                          dbValue: ml.id.toString(),
+                                          bizValue: ml.name,
+                                          valueProperty: valuePropertyResponse.data,
+                                          disabled: false,
+                                        },
+                                      ],
+                                    },
+                                    page: 1,
+                                    pageSize: 1000000,
+                                  } as const;
+
+                                  const idsResp = await BApi.resource.searchAllResourceIds(searchForm as any);
+                                  const ids = idsResp.data || [];
+
+                                  if (ids.length > 0) {
+                                    await BApi.resource.moveResources({
+                                      ids,
+                                      mediaLibraryId: toId,
+                                      isLegacyMediaLibrary: false,
+                                    } as any);
+                                  }
+
+                                  // Ask whether to delete the source media library after move
+                                  createPortal(Modal, {
+                                    defaultVisible: true,
+                                    title: t<string>("MediaLibrary.Confirm"),
+                                    children: t<string>("Move resources completed. Delete the source media library?"),
+                                    onOk: async () => {
+                                      await BApi.mediaLibraryV2.deleteMediaLibraryV2(ml.id);
+                                      await loadMediaLibraries();
+                                    },
+                                    onClose: async () => {
+                                      await loadMediaLibraries();
+                                    },
+                                    footer: {
+                                      actions: ["ok", "cancel"],
+                                      okProps: { children: t<string>("Delete"), color: "danger" },
+                                      cancelProps: { children: t<string>("Keep it"), color: "default" },
+                                    },
+                                  });
+                                } catch (e) {
+                                  toast.danger(t<string>("Operation failed"));
+                                }
+                              },
+                            });
                           } else if (key === "deleteMediaLibrary") {
                             createPortal(Modal, {
                               defaultVisible: true,
@@ -667,6 +742,13 @@ const MediaLibraryPage = () => {
                           startContent={<MdOutlineDelete className={"text-lg"} />}
                         >
                           {t<string>("MediaLibrary.DeleteEnhancements")}
+                        </DropdownItem>
+                        <DropdownItem
+                          key="moveResourcesToOtherMediaLibrary"
+                          className="text-primary"
+                          startContent={<AiOutlineImport className={"text-lg"} />}
+                        >
+                          {t<string>("Move resources to another media library")}
                         </DropdownItem>
                         <DropdownItem
                           key="deleteMediaLibrary"
