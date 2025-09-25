@@ -10,7 +10,7 @@ namespace Bakabase.Abstractions.Services;
 
 public interface IMediaLibraryV2Service
 {
-    Task Add(MediaLibraryV2AddOrPutInputModel model);
+    Task<MediaLibraryV2> Add(MediaLibraryV2AddOrPutInputModel model);
     Task Put(int id, MediaLibraryV2AddOrPutInputModel model);
     Task Put(IEnumerable<MediaLibraryV2> data);
     Task Patch(int id, MediaLibraryV2PatchInputModel model);

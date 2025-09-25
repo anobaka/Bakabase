@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Component
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Extensions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Services;
+using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Business.Components.FileExplorer;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Extensions;
 using Bakabase.InsideWorld.Business.Components.Legacy;
@@ -160,6 +161,8 @@ namespace Bakabase.Service.Extensions
             services.AddBakaTracing();
 
             #endregion
+
+            services.AddScoped<MigrationHelper>();
 
             return services;
         }

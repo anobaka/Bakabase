@@ -28,6 +28,7 @@ using Bakabase.Modules.Property.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
+using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Components.Tasks.Progressor.Abstractions;
 using Bootstrap.Extensions;
@@ -54,10 +55,14 @@ public class MediaLibraryV2Service<TDbContext>(
 {
     protected IMediaLibraryTemplateService TemplateService => GetRequiredService<IMediaLibraryTemplateService>();
 
-    public async Task Add(MediaLibraryV2AddOrPutInputModel model)
+    public async Task<MediaLibraryV2> Add(MediaLibraryV2AddOrPutInputModel model)
     {
         var domainModel = new MediaLibraryV2 { Paths = model.Paths, Name = model.Name, Color = model.Color };
-        await orm.Add(domainModel.ToDbModel());
+        var dbModel = domainModel.ToDbModel();
+        await orm.Add(dbModel);
+        orm.DbContext.Detach(dbModel);
+        domainModel.Id = dbModel.Id;
+        return domainModel;
     }
 
     public async Task Put(int id, MediaLibraryV2AddOrPutInputModel model)
