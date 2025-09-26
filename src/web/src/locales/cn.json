@@ -2451,5 +2451,10 @@
   "You can move it to another path.": "您可以将它移动到另一个路径。",
   "Or delete it?": "或者删除它？",
   "Delete this file/folder?": "删除这个文件/文件夹？",
-  "Handle {{count}} unknown resources in this media library": "处理当前媒体库的{{count}}个未知资源"
+  "Handle {{count}} unknown resources in this media library": "处理当前媒体库的{{count}}个未知资源",
+  "Password candidates": "候选密码",
+  "Compressed files handling": "处理压缩文件",
+  "Detect compressed files": "检测压缩文件",
+  "No compressed files detected": "未检测到压缩文件",
+  "Use bulk decompression tool": "使用批量解压工具"
 }

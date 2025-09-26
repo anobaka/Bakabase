@@ -17,7 +17,8 @@ import { Checkbox } from "@/components/bakaui/components/Checkbox";
 import FolderSelector from "@/components/FolderSelector";
 import AfterFirstPlayOperationsModal from "@/pages/file-processor/components/AfterFirstPlayOperationsModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Tooltip } from "@/components/bakaui";
+import { Button, Tooltip } from "@/components/bakaui";
+import BulkDecompressionToolModal from "./RootTreeEntry/components/BulkDecompressionToolModal";
 
 const log = buildLogger("FileProcessor");
 const FileProcessorPage = () => {
@@ -114,7 +115,14 @@ const FileProcessorPage = () => {
       <div className={"file-explorer flex flex-col gap-0"}>
         <div className="flex items-center justify-between">
           <div />
-          <div>
+          <div className="flex items-center gap-2">
+            {rootPath && (
+              <Button size="sm" variant="flat" onPress={() => {
+                createPortal(BulkDecompressionToolModal, { paths: [rootPath] });
+              }}>
+                {t("Use bulk decompression tool for current folder")}
+              </Button>
+            )}
             <Tooltip
               content={t("Usually this will work fine if you are categorizing files.")}
               placement="bottom"

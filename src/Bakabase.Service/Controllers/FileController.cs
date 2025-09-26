@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Security.AccessControl;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -17,7 +12,6 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
@@ -31,10 +25,8 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
-using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Service.Models.Input;
-using Bakabase.Service.Models.Input.Constants;
 using Bakabase.Service.Models.View;
 using Bakabase.Service.Models.View.Constants;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -47,15 +39,12 @@ using Bootstrap.Models.Constants;
 using Bootstrap.Models.ResponseModels;
 using CliWrap;
 using CliWrap.Buffered;
-using CsQuery.ExtensionMethods.Internal;
 using DotNext.Collections.Generic;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Math;
-using SharpCompress.Common;
 using MimeKit;
 using Swashbuckle.AspNetCore.Annotations;
 
@@ -105,9 +94,9 @@ namespace Bakabase.Service.Controllers
             _sevenZExecutable = "/Users/anobaka/Downloads/7z2501-mac/7zz";
         }
 
-        [HttpPost("decompression/run")] // chunked progress per file
-        [SwaggerOperation(OperationId = "RunDecompressionWithOperations")] 
-        public async Task<IActionResult> RunDecompressionWithOperations([FromBody] DecompressionStartInputModel input)
+        [HttpPost("bulk-decompression")] // chunked progress per file
+        [SwaggerOperation(OperationId = "BulkDecompress")]
+        public async Task<IActionResult> BulkDecompress([FromBody] DecompressionStartInputModel input)
         {
             Response.Headers.ContentType = "application/x-ndjson";
             var ct = HttpContext.RequestAborted;
@@ -119,7 +108,7 @@ namespace Bakabase.Service.Controllers
                 var file = item.File;
                 var parent = Path.GetDirectoryName(file)!;
                 var keyName = Path.GetFileNameWithoutExtension(file);
-                var targetDir = Path.Combine(parent, keyName);
+                var targetDir = item.DecompressToNewFolder ? Path.Combine(parent, keyName) : parent;
 
                 var processRegex = new Regex(@"\d+\%");
                 var osb = new StringBuilder();
@@ -141,9 +130,7 @@ namespace Bakabase.Service.Controllers
                     .WithValidation(CommandResultValidation.None)
                     .WithArguments(args, true)
                     .WithStandardErrorPipe(PipeTarget.Merge(
-                        PipeTarget.ToDelegate(async line =>
-                        {
-                        }, Encoding.UTF8),
+                        PipeTarget.ToDelegate(async line => { }, Encoding.UTF8),
                         PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
                     .WithStandardOutputPipe(PipeTarget.Merge(
                         PipeTarget.ToDelegate(async line =>
@@ -176,34 +163,15 @@ namespace Bakabase.Service.Controllers
                     {
                         continue;
                     }
-                    else
-                    {
-                        break;
-                    }
+
+                    break;
                 }
 
                 // post operations
                 try
                 {
-                    if (item.ExtractAction == ExtractActionAfterDecompression.InnerSecondLayer)
+                    if (item.MoveToParent)
                     {
-                        // Move the contents of the single top-level folder up one level (second layer inner)
-                        var dirs = Directory.Exists(targetDir) ? Directory.GetDirectories(targetDir) : [];
-                        if (dirs.Length == 1)
-                        {
-                            var inner = dirs[0];
-                            foreach (var p in Directory.GetFileSystemEntries(inner))
-                            {
-                                var dest = Path.Combine(targetDir, Path.GetFileName(p));
-                                if (Directory.Exists(p)) Directory.Move(p, dest);
-                                else System.IO.File.Move(p, dest);
-                            }
-                            Directory.Delete(inner, true);
-                        }
-                    }
-                    else if (item.ExtractAction == ExtractActionAfterDecompression.OuterFirstLayerRemoveParent)
-                    {
-                        // Move extracted first-layer contents to parent of current path, then delete current targetDir
                         if (Directory.Exists(targetDir))
                         {
                             foreach (var p in Directory.GetFileSystemEntries(targetDir))
@@ -212,13 +180,14 @@ namespace Bakabase.Service.Controllers
                                 if (Directory.Exists(p)) Directory.Move(p, dest);
                                 else System.IO.File.Move(p, dest);
                             }
+
                             Directory.Delete(targetDir, true);
                         }
                     }
 
-                    if (item.DeleteCompressedAfter)
+                    if (item.DeleteAfterDecompression)
                     {
-                        try { System.IO.File.Delete(file); } catch { /* ignore */ }
+                        FileUtils.Delete(file, true, true);
                     }
                 }
                 catch (Exception ex)
@@ -241,7 +210,8 @@ namespace Bakabase.Service.Controllers
                 await Response.Body.FlushAsync(ct);
             }
 
-            await Response.WriteAsync(JsonSerializer.Serialize(new { type = "done" }, JsonSerializerOptions.Web) + "\n", ct);
+            await Response.WriteAsync(JsonSerializer.Serialize(new { type = "done" }, JsonSerializerOptions.Web) + "\n",
+                ct);
             await Response.Body.FlushAsync(ct);
             return new EmptyResult();
         }
