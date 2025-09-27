@@ -22,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         private static readonly Regex PartExtRegex = new Regex(@"^\.(?<prefix>[a-zA-Z]{0,5})?(?<index>\d{0,5})$");
 
         [NotNull]
-        public static List<CompressedFileGroup> Group(string[] fileOrFullNames)
+        public static List<CompressedFileGroup> Group(string[] fileOrFullNames, bool keepFilesWithUnknownExtensions = false)
         {
             // dir - key name - ext info list
             var allDirGroups = new Dictionary<string, Dictionary<string, List<ExtInfo>>>();
@@ -132,7 +132,11 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                         }
 
                         // We don't know what format they are, so just ignore them.
-                        restExtInfoList.RemoveAll(unknownExtInfosWithPartPrefix.Contains);
+                        if (!keepFilesWithUnknownExtensions)
+                        {
+                            restExtInfoList.RemoveAll(unknownExtInfosWithPartPrefix.Contains);
+                        }
+
                         possibleEntries.RemoveAll(usedPes.Contains);
                     }
 

@@ -98,12 +98,7 @@ export class Entry {
     const lowerCasedKeyword = keyword?.toLowerCase();
 
     this._filteredChildren = (this.children ?? []).filter((c) => {
-      if (
-        !(
-          lowerCasedKeyword == undefined ||
-          c.name.toLowerCase().includes(lowerCasedKeyword)
-        )
-      ) {
+      if (!(lowerCasedKeyword == undefined || c.name.toLowerCase().includes(lowerCasedKeyword))) {
         return false;
       }
       if (types && !types.includes(c.type) && c.type != IwFsType.Directory) {
@@ -145,9 +140,7 @@ export class Entry {
 
       this.children ??= [];
       this.children.push(child);
-      this.children = this.children
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name));
+      this.children = this.children.slice().sort((a, b) => a.name.localeCompare(b.name));
       this.refreshFilteredChildren();
     } else {
       if (this.childrenCount != undefined) {
@@ -205,8 +198,7 @@ export class Entry {
     return this._ref != undefined;
   }
 
-  initializationStatus: EntryAsyncOperationStatus =
-    EntryAsyncOperationStatus.NotStarted;
+  initializationStatus: EntryAsyncOperationStatus = EntryAsyncOperationStatus.NotStarted;
 
   async initialize() {
     if (this.initializationStatus != EntryAsyncOperationStatus.NotStarted) {
@@ -224,9 +216,14 @@ export class Entry {
     try {
       for (const property of this.properties) {
         switch (property) {
+          // case EntryProperty.Size: {
+          //   const info = (await BApi.file.getIwFsEntry({ path: this.path })).data;
+          //
+          //   Object.assign(this, info);
+          //   break;
+          // }
           case EntryProperty.ChildrenCount: {
-            if (this.isDirectoryOrDrive) {
-              // @ts-ignore
+            {
               const info = await BApi.file.getIwFsInfo(
                 { path: this.path, type: this.type },
                 { showErrorToast: () => false },
@@ -239,6 +236,20 @@ export class Entry {
                 Object.assign(this, info.data);
               }
             }
+            // if (this.isDirectoryOrDrive) {
+            //   // @ts-ignore
+            //   const info = await BApi.file.getIwFsInfo(
+            //     { path: this.path, type: this.type },
+            //     { showErrorToast: () => false },
+            //   );
+            //
+            //   if (info.code) {
+            //     this.errors[EntryError.InitializationFailed] = info.message!;
+            //   } else {
+            //     // console.log(info.data, this);
+            //     Object.assign(this, info.data);
+            //   }
+            // }
             break;
           }
           // case EntryProperty.TaskInfo: {
@@ -391,8 +402,7 @@ export class Entry {
     const dom = this.ref?.dom;
 
     if (dom) {
-      const childrenWidth =
-        dom.parentElement!.clientWidth - (this.isRoot ? 0 : ChildrenIndent);
+      const childrenWidth = dom.parentElement!.clientWidth - (this.isRoot ? 0 : ChildrenIndent);
 
       if (childrenWidth != this.childrenWidth) {
         this.childrenWidth = childrenWidth;
@@ -476,11 +486,7 @@ export class Entry {
     this._ref?.forceUpdate();
   }
 
-  private simpleRefCall(
-    method: string,
-    fallbackProperty: string,
-    value: any,
-  ): void {
+  private simpleRefCall(method: string, fallbackProperty: string, value: any): void {
     console.log(this._ref, method, this);
     if (this._ref) {
       this._ref[method](value);

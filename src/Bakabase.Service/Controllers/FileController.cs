@@ -223,8 +223,8 @@ namespace Bakabase.Service.Controllers
             Response.Headers.ContentType = "application/x-ndjson";
             var ct = HttpContext.RequestAborted;
 
-            var thresholdBytes = model.IncludeUnknownFilesLargerThanMb.HasValue
-                ? model.IncludeUnknownFilesLargerThanMb.Value * 1024L * 1024L
+            var thresholdBytes = model.UnknownFilesMinMb.HasValue
+                ? model.UnknownFilesMinMb.Value * 1024L * 1024L
                 : 0;
             var allPaths = model.Paths.Distinct().OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToArray();
             var pathQueue = new Queue<string>(allPaths);
@@ -245,10 +245,10 @@ namespace Bakabase.Service.Controllers
                 if (dir.Exists)
                 {
                     var files = dir.GetFiles("*", SearchOption.AllDirectories)
-                        .Where(f => f.Length >= thresholdBytes)
+                        // .Where(f => f.Length >= thresholdBytes)
                         .Select(f => f.FullName).ToArray();
                     path += InternalOptions.DirSeparator;
-                    var groups = CompressedFileHelper.Group(files);
+                    var groups = CompressedFileHelper.Group(files, model.IncludeUnknownFiles);
                     foreach (var group in groups)
                     {
                         await YieldReturnGroupInitialized(group);
@@ -275,7 +275,7 @@ namespace Bakabase.Service.Controllers
                 prevPath = path;
             }
 
-            var specifiedFileGroups = CompressedFileHelper.Group(specifiedFiles.ToArray());
+            var specifiedFileGroups = CompressedFileHelper.Group(specifiedFiles.ToArray(), model.IncludeUnknownFiles);
             foreach (var group in specifiedFileGroups)
             {
                 await YieldReturnGroupInitialized(group);
@@ -286,95 +286,97 @@ namespace Bakabase.Service.Controllers
             foreach (var group in allGroups)
             {
                 ct.ThrowIfCancellationRequested();
-
                 var viewModelKey = group.Files[0];
-
                 var vm = new CompressedFileDetectionResultViewModel
                 {
                     Key = viewModelKey,
                     Status = CompressedFileDetectionResultStatus.Inprogress
                 };
                 await YieldReturn(vm);
-
-                var entry = group.Files.First();
-                var passwordCandidates = group.Files[0].GetPasswordsFromPath();
                 var password = default(string);
-                var pickedTestStdOut = default(string);
-
                 // Try without password first, then candidates
-                var success = false;
-                var wrongPasswords = new HashSet<string>();
-                foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
-                {
-                    ct.ThrowIfCancellationRequested();
-
-                    var processRegex = new Regex(@"\d+\%");
-                    var esb = new StringBuilder();
-                    var osb = new StringBuilder();
-
-                    var args = new List<string?>
-                    {
-                        "t",
-                        entry,
-                        candidate.IsNotEmpty() ? $"-p{candidate}" : null,
-                        "-sccUTF-8",
-                        "-scsUTF-16LE",
-                        "-bsp2",
-                        "-bb1"
-                    }.OfType<string>().ToArray();
-
-                    var command = Cli.Wrap(_sevenZExecutable)
-                        .WithWorkingDirectory(Path.GetDirectoryName(entry)!)
-                        .WithValidation(CommandResultValidation.None)
-                        .WithArguments(args, true)
-                        .WithStandardErrorPipe(PipeTarget.Merge(
-                            PipeTarget.ToDelegate((line) =>
-                            {
-                                if (line.Contains("Wrong password") && candidate.IsNotEmpty())
-                                {
-                                    wrongPasswords.Add(candidate);
-                                }
-                            }, Encoding.UTF8),
-                            PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
-                        .WithStandardOutputPipe(PipeTarget.Merge(
-                            PipeTarget.ToDelegate(async (line, ct2) =>
-                            {
-                                // var match = processRegex.Match(line);
-                                // if (match.Success)
-                                // {
-                                //     
-                                //     var progress = new CompressedFileDetectionResultViewModel
-                                //     {
-                                //         Key = viewModelKey,
-                                //         Status = CompressedFileDetectionResultType.Inprogress,
-                                //     };
-                                //     await Response.WriteAsync(
-                                //         JsonSerializer.Serialize(progress, JsonSerializerOptions.Web) + "\n",
-                                //         ct);
-                                //     await Response.Body.FlushAsync(ct);
-                                // }
-                                //
-                            }, Encoding.UTF8),
-                            PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
-
-                    var result = await command.ExecuteAsync(ct);
-
-                    vm.Message = $"{osb}\n{esb}";
-                    await YieldReturn(vm);
-
-                    if (result.ExitCode == 0)
-                    {
-                        password = candidate;
-                        pickedTestStdOut = osb.ToString();
-                        success = true;
-                        break;
-                    }
-                }
-
-                // Build sample groups from 't' output to avoid a separate 'l' call
                 var sampleGroups = new List<CompressedFileDetectionResultViewModel.SampleGroup>();
+                var wrongPasswords = new HashSet<string>();
                 try
                 {
+
+                    var entry = group.Files.First();
+                    var passwordCandidates = group.Files[0].GetPasswordsFromPath();
+                    var pickedTestStdOut = default(string);
+
+                    foreach (var candidate in new[] { (string)null! }.Concat(passwordCandidates))
+                    {
+                        ct.ThrowIfCancellationRequested();
+
+                        var processRegex = new Regex(@"\d+\%");
+                        var esb = new StringBuilder();
+                        var osb = new StringBuilder();
+
+                        var args = new List<string?>
+                        {
+                            "t",
+                            entry,
+                            candidate.IsNotEmpty() ? $"-p{candidate}" : null,
+                            "-sccUTF-8",
+                            "-scsUTF-16LE",
+                            "-bsp2",
+                            "-bb1"
+                        }.OfType<string>().ToArray();
+
+                        var command = Cli.Wrap(_sevenZExecutable)
+                            .WithWorkingDirectory(Path.GetDirectoryName(entry)!)
+                            .WithValidation(CommandResultValidation.None)
+                            .WithArguments(args, true)
+                            .WithStandardErrorPipe(PipeTarget.Merge(
+                                PipeTarget.ToDelegate((line) =>
+                                {
+                                    if (line.Contains("Wrong password") && candidate.IsNotEmpty())
+                                    {
+                                        wrongPasswords.Add(candidate);
+                                    }
+                                }, Encoding.UTF8),
+                                PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
+                            .WithStandardOutputPipe(PipeTarget.Merge(
+                                PipeTarget.ToDelegate(async (line, ct2) =>
+                                {
+                                    // var match = processRegex.Match(line);
+                                    // if (match.Success)
+                                    // {
+                                    //     
+                                    //     var progress = new CompressedFileDetectionResultViewModel
+                                    //     {
+                                    //         Key = viewModelKey,
+                                    //         Status = CompressedFileDetectionResultType.Inprogress,
+                                    //     };
+                                    //     await Response.WriteAsync(
+                                    //         JsonSerializer.Serialize(progress, JsonSerializerOptions.Web) + "\n",
+                                    //         ct);
+                                    //     await Response.Body.FlushAsync(ct);
+                                    // }
+                                    //
+                                }, Encoding.UTF8),
+                                PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
+
+                        var result = await command.ExecuteAsync(ct);
+
+                        vm.Message = $"{osb}\n{esb}";
+                        await YieldReturn(vm);
+
+                        if (result.ExitCode == 0)
+                        {
+                            pickedTestStdOut = osb.ToString();
+                            vm.Password = password;
+                            vm.Status = CompressedFileDetectionResultStatus.Complete;
+                            break;
+                        }
+                    }
+
+                    vm.PasswordCandidates = [];
+                    vm.WrongPasswords = wrongPasswords.ToArray();
+                    await YieldReturn(vm);
+
+
+                    // Build sample groups from 't' output to avoid a separate 'l' call
                     var lines = (pickedTestStdOut ?? string.Empty)
                         .Split('\n', '\r')
                         .Where(x => x.IsNotEmpty())
@@ -390,7 +392,8 @@ namespace Bakabase.Service.Controllers
                                 return null;
                             }
 
-                            var path = t.Substring(testingPrefix.Length).Replace(InternalOptions.WindowsSpecificDirSeparator, InternalOptions.DirSeparator);
+                            var path = t.Substring(testingPrefix.Length)
+                                .Replace(InternalOptions.WindowsSpecificDirSeparator, InternalOptions.DirSeparator);
                             return path;
                         })
                         .OfType<string>()
@@ -426,23 +429,14 @@ namespace Bakabase.Service.Controllers
                     nameGroups.AddRange(firstLayerExtensionGroups);
                     sampleGroups.AddRange(nameGroups);
                 }
-                catch
+                catch(Exception e)
                 {
-                    // ignore sampling errors
+                    vm.Message = e.Message;
+                    vm.Status = CompressedFileDetectionResultStatus.Error;
                 }
 
-                var final = new CompressedFileDetectionResultViewModel
-                {
-                    Key = viewModelKey,
-                    Status = success
-                        ? CompressedFileDetectionResultStatus.Complete
-                        : CompressedFileDetectionResultStatus.Error,
-                    PasswordCandidates = [],
-                    Password = password,
-                    ContentSampleGroups = sampleGroups.ToArray(),
-                    WrongPasswords = wrongPasswords.ToArray()
-                };
-                await YieldReturn(final);
+                vm.ContentSampleGroups = sampleGroups.ToArray();
+                await YieldReturn(vm);
             }
 
             return new EmptyResult();

@@ -79,7 +79,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(true);
   const [detecting, setDetecting] = useState(false);
-  const [sizeThresholdMb, setSizeThresholdMb] = useState<number | undefined>(undefined);
+  const sizeThresholdMbRef = useRef<number | undefined>(10);
   const [onFailureContinue, setOnFailureContinue] = useState(true);
   const abortDetectingRef = useRef<AbortController | null>(null);
   const abortDecompressingRef = useRef<AbortController | null>(null);
@@ -108,7 +108,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           paths: paths,
-          includeUnknownFilesLargerThanMb: sizeThresholdMb,
+          includeUnknownFilesLargerThanMb: sizeThresholdMbRef.current,
         }),
         signal: controller.signal,
       });
@@ -161,6 +161,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
         }
       }
     } catch (e) {
+      toast.danger(e instanceof Error ? e.message : "Unknown error");
       // silently end on abort or error
     } finally {
       setDetecting(false);
@@ -319,8 +320,8 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
               label={t<string>("Include unknown extensions if size >= (MB)")}
               placeholder={t<string>("Optional")}
               size="sm"
-              value={sizeThresholdMb}
-              onValueChange={(v) => setSizeThresholdMb(v)}
+              defaultValue={sizeThresholdMbRef.current}
+              onValueChange={(v) => sizeThresholdMbRef.current = v}
             />
           </div>
           <div>

@@ -26,7 +26,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer.Information
             }
 
             FileSystemInfo? fileSystemInfo = null;
-            if (type != IwFsType.Unknown)
+            if (type == IwFsType.Unknown)
             {
                 if (Directory.Exists(path))
                 {
