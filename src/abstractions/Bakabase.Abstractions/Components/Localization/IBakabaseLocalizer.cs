@@ -57,7 +57,7 @@ public interface IBakabaseLocalizer
     string NotSet();
     string Count();
     string Keyword();
-    string Enhancer_CircularDependencyDetected(string[] enhancers);
+    string Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected(string[] enhancers);
     string MediaLibraryTemplate_ValidationTraceTopic(string topic);
     string MediaLibraryTemplate_Name();
     string MediaLibraryTemplate_Id();

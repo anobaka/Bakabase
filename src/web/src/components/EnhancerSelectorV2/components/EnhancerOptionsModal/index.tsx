@@ -101,6 +101,8 @@ export default function EnhancerOptionsModal({
     const currentProperty =
       propertyMap?.[options.keywordProperty.pool]?.[options.keywordProperty.id];
 
+    const keywordPropertyScope = options.keywordProperty?.scope;
+
     return (
       <>
         <div className="flex items-center gap-1">
@@ -170,8 +172,10 @@ export default function EnhancerOptionsModal({
               </div>
             }
             label={t<string>("Property value scope")}
+            selectedKeys={
+              keywordPropertyScope == undefined ? [] : [keywordPropertyScope.toString()]
+            }
             size="sm"
-            value={options.keywordProperty?.scope.toString()}
             onSelectionChange={(keys) => {
               const arr = Array.from(keys);
               const vals = arr.map((o) => parseInt(o as string, 10) as PropertyValueScope);
