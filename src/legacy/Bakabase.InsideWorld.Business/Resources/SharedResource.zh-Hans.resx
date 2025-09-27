@@ -447,8 +447,8 @@
   <data name="Search" xml:space="preserve">
     <value>搜索</value>
   </data>
-  <data name="Enhancer_CircularDependencyDetected" xml:space="preserve">
-    <value>检测到增强器循环引用：{0}</value>
+  <data name="Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected" xml:space="preserve">
+    <value>检测到增强器循环引用或为前置增强器未配置：{0}</value>
   </data>
   <data name="MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries" xml:space="preserve">
     <value>以下媒体库正在使用当前模板，请修改后再试: {0}</value>
