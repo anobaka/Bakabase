@@ -373,7 +373,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                 }
                 else
                 {
-                    throw new Exception(localizer.Enhancer_CircularDependencyDetected(simpleDepsCopy.Keys
+                    throw new Exception(localizer.Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected(simpleDepsCopy.Keys
                         .Select(k => ((EnhancerId)k).ToString()).ToArray()));
                 }
             }
@@ -747,7 +747,7 @@ public class MediaLibraryTemplateService<TDbContext>(
                         if (!ready.Any())
                         {
                             tracingContext.AddTrace(LogLevel.Error,
-                                localizer.Enhancer_CircularDependencyDetected(remaining.Select(k => k.ToString())
+                                localizer.Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected(remaining.Select(k => k.ToString())
                                     .ToArray()));
                             return;
                         }

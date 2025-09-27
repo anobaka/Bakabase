@@ -5,7 +5,13 @@ import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models"
 import type { PropertyMap } from "@/components/types";
 import type { IProperty } from "@/components/Property/models";
 import type { EnhancerTargetFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
-import { IoGitBranchOutline, IoLocate, IoPlayCircleOutline, IoRocketOutline } from "react-icons/io5";
+
+import {
+  IoGitBranchOutline,
+  IoLocate,
+  IoPlayCircleOutline,
+  IoRocketOutline,
+} from "react-icons/io5";
 import {
   AiOutlineDelete,
   AiOutlineEdit,
@@ -23,6 +29,8 @@ import { useUpdate, useUpdateEffect } from "react-use";
 import _ from "lodash";
 import { MdOutlineDelete } from "react-icons/md";
 import { VscDebugAll } from "react-icons/vsc";
+import { LuRegex } from "react-icons/lu";
+import { useNavigate } from "react-router-dom";
 
 import Block from "@/pages/media-library-template/components/Block";
 import {
@@ -59,8 +67,6 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import BApi from "@/sdk/BApi";
 import { willCauseCircleReference } from "@/components/utils";
 import DeleteEnhancementsModal from "@/pages/category/components/DeleteEnhancementsModal";
-import { LuRegex } from "react-icons/lu";
-import { useNavigate } from "react-router-dom";
 
 type Props = {
   template: MediaLibraryTemplatePage;
@@ -132,6 +138,7 @@ const Template = ({
       toast.success(t<string>("Saved successfully"));
       onChange?.();
       forceUpdate();
+
       return;
     }
 
@@ -203,7 +210,7 @@ const Template = ({
     );
   };
 
-  console.log('template', template);
+  console.log("template", template);
 
   return (
     <div className={"flex flex-col gap-2"}>
@@ -412,7 +419,7 @@ const Template = ({
             onSubmit: async (ids) => {
               template.enhancers = ids.map((id) => ({
                 enhancerId: id,
-                options: template.enhancers?.find((x) => x.enhancerId == id),
+                ...template.enhancers?.find((x) => x.enhancerId == id),
               }));
               await putTemplate(template);
               forceUpdate();
@@ -428,7 +435,9 @@ const Template = ({
               return t<string>("Unknown enhancer");
             }
 
-            const keywordProperty = e.keywordProperty ? propertyMap[e.keywordProperty.pool]?.[e.keywordProperty.id] : undefined;
+            const keywordProperty = e.keywordProperty
+              ? propertyMap[e.keywordProperty.pool]?.[e.keywordProperty.id]
+              : undefined;
 
             return (
               <div className="flex flex-col gap-1">
@@ -444,6 +453,7 @@ const Template = ({
                         options: JSON.parse(JSON.stringify(e)),
                         onSubmit: async (options) => {
                           const updatedTemplate = JSON.parse(JSON.stringify(template));
+
                           Object.assign(updatedTemplate.enhancers![i], options);
                           await putTemplate(updatedTemplate);
                           Object.assign(template, updatedTemplate);
@@ -458,7 +468,10 @@ const Template = ({
 
                           (template.enhancers ?? []).forEach((enh) => {
                             (enh.targetOptions ?? []).forEach((to: EnhancerTargetFullOptions) => {
-                              const targetDescriptor = enhancer.targets.find((x) => x.id == to.target);
+                              const targetDescriptor = enhancer.targets.find(
+                                (x) => x.id == to.target,
+                              );
+
                               if (targetDescriptor?.isDynamic && to.dynamicTarget == undefined) {
                                 return;
                               }
@@ -595,7 +608,10 @@ const Template = ({
                     </DropdownMenu>
                   </Dropdown>
                 </div>
-                <div className="grid gap-x-2 text-xs opacity-100" style={{ gridTemplateColumns: "auto 1fr" }}>
+                <div
+                  className="grid gap-x-2 text-xs opacity-100"
+                  style={{ gridTemplateColumns: "auto 1fr" }}
+                >
                   {e.requirements && e.requirements.length > 0 && (
                     <>
                       <div className="flex items-center gap-1">
@@ -611,7 +627,12 @@ const Template = ({
                   )}
                   {e.keywordProperty && (
                     <>
-                      <Tooltip color="secondary" content={t<string>("The property used to generate the keyword for enhancers that need it. Default is file/folder name.")}>
+                      <Tooltip
+                        color="secondary"
+                        content={t<string>(
+                          "The property used to generate the keyword for enhancers that need it. Default is file/folder name.",
+                        )}
+                      >
                         <div className="flex items-center gap-1">
                           <IoLocate className={"text-lg"} />
                           {t<string>("Keyword property")}
@@ -621,7 +642,9 @@ const Template = ({
                         <BriefProperty property={keywordProperty!} />
                         {e.keywordProperty.pool != PropertyPool.Internal && (
                           <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                            {t<string>(`PropertyValueScope.${PropertyValueScope[e.keywordProperty.scope]}`)}
+                            {t<string>(
+                              `PropertyValueScope.${PropertyValueScope[e.keywordProperty.scope]}`,
+                            )}
                           </Chip>
                         )}
                       </div>
@@ -629,7 +652,10 @@ const Template = ({
                   )}
                   {e.pretreatKeyword && (
                     <>
-                      <Tooltip color="secondary" content={t<string>("Whether to pretreat the keyword before using it.")}>
+                      <Tooltip
+                        color="secondary"
+                        content={t<string>("Whether to pretreat the keyword before using it.")}
+                      >
                         <div className="flex items-center gap-1">
                           <MdOutlineCleaningServices className={"text-lg"} />
                           {t<string>("Pretreat keyword")}
@@ -637,7 +663,10 @@ const Template = ({
                       </Tooltip>
                       <div className="flex items-center gap-1">
                         <Checkbox isSelected size="sm" />
-                        <Button size='sm' variant='light' color="primary"
+                        <Button
+                          color="primary"
+                          size="sm"
+                          variant="light"
                           onPress={() => {
                             createPortal(Modal, {
                               defaultVisible: true,
@@ -647,7 +676,8 @@ const Template = ({
                                 navigate("/text");
                               },
                             });
-                          }}>
+                          }}
+                        >
                           {t<string>("Configure special texts for pretreatment")}
                         </Button>
                       </div>
@@ -661,7 +691,9 @@ const Template = ({
                       </div>
                       <div className="flex items-center gap-1">
                         {e.expressions.map((x) => (
-                          <Chip radius={"sm"} size={"sm"} variant={"flat"}>{x}</Chip>
+                          <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                            {x}
+                          </Chip>
                         ))}
                       </div>
                     </>
@@ -766,7 +798,11 @@ const Template = ({
                       })}
                     </div>
                   ) : (
-                    <div className="opacity-60">{t<string>("This enhancer won't have any effect since no target property is mapped. You need to configure at least one target property to let enhancer save data to.")}</div>
+                    <div className="opacity-60">
+                      {t<string>(
+                        "This enhancer won't have any effect since no target property is mapped. You need to configure at least one target property to let enhancer save data to.",
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -798,8 +834,8 @@ const Template = ({
           "You can create cascading resources through sub-templates, where the rules of the sub-template will use the path of the resource determined by the current template as the root directory.",
         )}
         descriptionPlacement={"bottom"}
-        title={`6. ${t<string>("Subresource")}`}
         leftIcon={<TiFlowChildren className={"text-large"} />}
+        title={`6. ${t<string>("Subresource")}`}
       >
         {renderChildSelector(template)}
       </Block>
@@ -809,12 +845,19 @@ const Template = ({
         title={`7. ${t<string>("Validate")}`}
       >
         <div className="flex items-center gap-1">
-          <Button size="sm" variant="flat" color="success" onPress={() => createPortal(ValidateModal, { templateId: template.id })}>
+          <Button
+            color="success"
+            size="sm"
+            variant="flat"
+            onPress={() => createPortal(ValidateModal, { templateId: template.id })}
+          >
             <VscDebugAll className={"text-lg"} />
             {t<string>("Validate")}
           </Button>
           <div className="text-xs opacity-70">
-            {t<string>("Run a quick validation to check resource discovery, properties, playable files, enhancers and display names.")}
+            {t<string>(
+              "Run a quick validation to check resource discovery, properties, playable files, enhancers and display names.",
+            )}
           </div>
         </div>
       </Block>

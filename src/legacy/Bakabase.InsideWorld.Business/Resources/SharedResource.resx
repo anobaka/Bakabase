@@ -447,8 +447,8 @@ The version of lux is not limited.</value>
   <data name="Search" xml:space="preserve">
     <value>Search</value>
   </data>
-  <data name="Enhancer_CircularDependencyDetected" xml:space="preserve">
-    <value>Circular dependency detected in enhancers: {0}</value>
+  <data name="Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected" xml:space="preserve">
+    <value>Circular dependency or unsatisfied predecessors detected in enhancers: {0}</value>
   </data>
   <data name="MediaLibraryTemplate_NotDeletableWhenUsingByMediaLibraries" xml:space="preserve">
     <value>Not deletable when using by media libraries: {0}</value>

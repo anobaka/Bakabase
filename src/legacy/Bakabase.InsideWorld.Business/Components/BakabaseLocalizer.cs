@@ -254,9 +254,9 @@ namespace Bakabase.InsideWorld.Business.Components
             return this[nameof(Keyword)];
         }
 
-        public string Enhancer_CircularDependencyDetected(string[] enhancers)
+        public string Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected(string[] enhancers)
         {
-            return this[nameof(Enhancer_CircularDependencyDetected), string.Join("->", enhancers)];
+            return this[nameof(Enhancer_CircularDependencyOrUnsatisfiedPredecessorsDetected), string.Join("->", enhancers)];
         }
 
         public string MediaLibraryTemplate_ValidationTraceTopic(string topic) => topic;
