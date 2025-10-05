@@ -252,7 +252,7 @@ const MediaLibraryPage = () => {
     }
 
     return (
-      <Table removeWrapper className="mt-2">
+      <Table removeWrapper className="mt-2 overflow-x-auto">
         <TableHeader>
           <TableColumn>{t<string>("MediaLibrary.Name")}</TableColumn>
           <TableColumn>{t<string>("MediaLibrary.Path")}</TableColumn>
@@ -283,6 +283,7 @@ const MediaLibraryPage = () => {
                           size="sm"
                           style={{ color: ml.color ?? textColor }}
                           variant="light"
+                          className="whitespace-break-spaces h-auto text-left"
                           {...props}
                         >
                           {value}
