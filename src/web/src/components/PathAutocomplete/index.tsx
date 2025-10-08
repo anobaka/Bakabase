@@ -54,6 +54,7 @@ export default function PathAutocomplete({
   const [isLoading, setIsLoading] = useState(false);
   const [value, setValue] = useState(propsValue ?? defaultValue);
   const valueRef = useRef(value);
+  const isFirstRender = useRef(true);
 
   const searchPaths = useCallback(
     (prefix?: string) => {
@@ -85,9 +86,13 @@ export default function PathAutocomplete({
     [pathType, maxResults],
   );
 
-  // Use react-use's useDebounce
+  // Use react-use's useDebounce (skip on first render)
   useDebounce(
     () => {
+      if (isFirstRender.current) {
+        isFirstRender.current = false;
+        return;
+      }
       searchPaths(value);
     },
     debounceDelay,

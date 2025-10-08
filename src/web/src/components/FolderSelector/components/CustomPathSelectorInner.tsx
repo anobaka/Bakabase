@@ -1,8 +1,8 @@
-import { AiOutlineCheck, AiOutlineCloseCircle } from "react-icons/ai";
+import { AiOutlineCheck, AiOutlineCloseCircle, AiOutlineCopy, AiOutlineDelete } from "react-icons/ai";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Button } from "@/components/bakaui";
+import { Button, toast, Tooltip } from "@/components/bakaui";
 import PathAutocomplete from "@/components/PathAutocomplete";
 import { useFileSystemOptionsStore } from "@/stores/options";
 
@@ -26,29 +26,47 @@ const CustomPathSelectorInner = (props: Props) => {
           // .filter((p) => !warningPaths?.includes(p))
           .map((p) => {
             return (
-              <div key={p} className="flex items-center gap-0">
-                <Button
-                  key={p}
-                  color={mlPaths.has(p) ? "success" : "primary"}
-                  size="sm"
-                  variant="light"
-                  onClick={() => onSelect(p)}
-                >
-                  {p}
-                </Button>
-                <Button
-                  isIconOnly
-                  color="danger"
-                  size="sm"
-                  variant="light"
-                  onPress={async () => {
-                    await fsOptions.patch({
-                      recentMovingDestinations: paths.filter((p) => p !== p),
-                    });
-                  }}
-                >
-                  <AiOutlineCloseCircle className="text-lg" />
-                </Button>
+              <div key={p}>
+                <Tooltip content={
+                  <div className="flex items-center gap-0">
+                    {/* Copy path */}
+                    <Button
+                      isIconOnly
+                      color="default"
+                      size="sm"
+                      variant="light"
+                      onPress={() => {
+                        navigator.clipboard.writeText(p);
+                        toast.success(t<string>("Path copied to clipboard"));
+                      }}
+                    >
+                      <AiOutlineCopy className="text-lg" />
+                    </Button>
+                    <Button
+                      isIconOnly
+                      color="danger"
+                      size="sm"
+                      variant="light"
+                      onPress={async () => {
+                        await fsOptions.patch({
+                          recentMovingDestinations: paths.filter((p) => p !== p),
+                        });
+                      }}
+                    >
+                      <AiOutlineDelete className="text-lg" />
+                    </Button>
+                  </div>
+                }>
+                  <Button
+                    key={p}
+                    color={mlPaths.has(p) ? "success" : "primary"}
+                    size="sm"
+                    variant="light"
+                    onClick={() => onSelect(p)}
+                  >
+                    {p}
+                  </Button>
+                </Tooltip>
               </div>
             );
           })}
