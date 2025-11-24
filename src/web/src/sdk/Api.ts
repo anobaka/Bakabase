@@ -1818,6 +1818,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   hideResourceTimeInfo: boolean;
   displayProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
   inlineDisplayName: boolean;
+  autoSelectFirstPlayableFile: boolean;
 }
 
 /**

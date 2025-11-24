@@ -14,7 +14,7 @@ import {
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";
 
-import { Button } from "@/components/bakaui";
+import { Button, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
@@ -44,9 +44,7 @@ const Navigation = () => {
   console.log("PageNav", pathname);
 
   return (
-    <div
-      className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ""}`}
-    >
+    <div className={`${styles.nav} ${isCollapsed ? `${styles.collapsed}` : ""}`}>
       {/* {loading && (
         <div style={{
           position: 'fixed',
@@ -68,6 +66,9 @@ const Navigation = () => {
       </div>
       <div className={styles.menu}>
         <AntdMenu collapsed={isCollapsed} />
+      </div>
+      <div className={"px-2"}>
+        <Divider orientation={"horizontal"} />
       </div>
       <div className={styles.opts}>
         <Button

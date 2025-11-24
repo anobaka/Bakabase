@@ -88,6 +88,7 @@ const FloatingAssistant = () => {
   const statusRef = useRef(status);
   const [cleaningTaskId, setCleaningTaskId] = useState<string | undefined>();
   const [tasksVisible, setTasksVisible] = useState(false);
+  const [loadingTasks, setLoadingTasks] = useState<Map<string, TaskAction>>(new Map());
   const { createPortal } = useBakabaseContext();
   const { t } = useTranslation();
   const portalRef = useRef<HTMLDivElement | null>(null);
@@ -380,8 +381,18 @@ const FloatingAssistant = () => {
                 color={"secondary"}
                 size={"sm"}
                 variant={"light"}
-                onPress={() => {
-                  BApi.backgroundTask.startBackgroundTask(task.id);
+                isLoading={loadingTasks.get(task.id) === TaskAction.Start}
+                onPress={async () => {
+                  setLoadingTasks(new Map(loadingTasks.set(task.id, TaskAction.Start)));
+                  try {
+                    await BApi.backgroundTask.startBackgroundTask(task.id);
+                  } finally {
+                    setLoadingTasks((prev) => {
+                      const next = new Map(prev);
+                      next.delete(task.id);
+                      return next;
+                    });
+                  }
                 }}
               >
                 <CaretRightOutlined className={"text-base"} />
@@ -396,8 +407,18 @@ const FloatingAssistant = () => {
                 color={"warning"}
                 size={"sm"}
                 variant={"light"}
-                onPress={() => {
-                  BApi.backgroundTask.pauseBackgroundTask(task.id);
+                isLoading={loadingTasks.get(task.id) === TaskAction.Pause}
+                onPress={async () => {
+                  setLoadingTasks(new Map(loadingTasks.set(task.id, TaskAction.Pause)));
+                  try {
+                    await BApi.backgroundTask.pauseBackgroundTask(task.id);
+                  } finally {
+                    setLoadingTasks((prev) => {
+                      const next = new Map(prev);
+                      next.delete(task.id);
+                      return next;
+                    });
+                  }
                 }}
               >
                 <PauseOutlined className={"text-base"} />
@@ -407,12 +428,23 @@ const FloatingAssistant = () => {
           case TaskAction.Resume:
             opts.push(
               <Button
+                key={`resume-${task.id}`}
                 isIconOnly
                 color={"secondary"}
                 size={"sm"}
                 variant={"light"}
-                onPress={() => {
-                  BApi.backgroundTask.resumeBackgroundTask(task.id);
+                isLoading={loadingTasks.get(task.id) === TaskAction.Resume}
+                onPress={async () => {
+                  setLoadingTasks(new Map(loadingTasks.set(task.id, TaskAction.Resume)));
+                  try {
+                    await BApi.backgroundTask.resumeBackgroundTask(task.id);
+                  } finally {
+                    setLoadingTasks((prev) => {
+                      const next = new Map(prev);
+                      next.delete(task.id);
+                      return next;
+                    });
+                  }
                 }}
               >
                 <CaretRightOutlined className={"text-base"} />
@@ -427,6 +459,7 @@ const FloatingAssistant = () => {
                 color={"danger"}
                 size={"sm"}
                 variant={"light"}
+                isLoading={loadingTasks.get(task.id) === TaskAction.Stop}
                 onPress={() => {
                   createPortal(Modal, {
                     defaultVisible: true,
@@ -436,8 +469,18 @@ const FloatingAssistant = () => {
                     children:
                       task.messageOnInterruption ??
                       t<string>("Are you sure to stop this task?"),
-                    onOk: async () =>
-                      await BApi.backgroundTask.stopBackgroundTask(task.id),
+                    onOk: async () => {
+                      setLoadingTasks(new Map(loadingTasks.set(task.id, TaskAction.Stop)));
+                      try {
+                        await BApi.backgroundTask.stopBackgroundTask(task.id);
+                      } finally {
+                        setLoadingTasks((prev) => {
+                          const next = new Map(prev);
+                          next.delete(task.id);
+                          return next;
+                        });
+                      }
+                    },
                     classNames: {
                       wrapper: "floating-assistant-modal",
                     },
@@ -477,7 +520,7 @@ const FloatingAssistant = () => {
                     title: t<string>("About to leave current page"),
                     children: t<string>("Sure?"),
                     onOk: async () => {
-                      navigate("/backgroundtask");
+                      navigate("/background-task");
                     },
                     classNames: {
                       wrapper: "floating-assistant-modal",
@@ -507,7 +550,7 @@ const FloatingAssistant = () => {
         >
           <TableHeader columns={columns.current}>
             {(column) => (
-              <TableColumn key={column.key}>{column.label}</TableColumn>
+              <TableColumn key={column.key}>{t(column.label)}</TableColumn>
             )}
           </TableHeader>
           <TableBody>
@@ -529,7 +572,9 @@ const FloatingAssistant = () => {
                     <div className={"flex items-center gap-1"}>
                       {task.name}
                       {task.isPersistent && (
-                        <PushpinOutlined className={"text-base opacity-40"} />
+                        <Tooltip color={"secondary"} content={t<string>("Persistent scheduled task")}>
+                          <PushpinOutlined className={"text-base opacity-40"} />
+                        </Tooltip>
                       )}
                       {task.description && (
                         <Tooltip color={"secondary"} content={task.description}>

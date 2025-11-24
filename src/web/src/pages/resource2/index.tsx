@@ -178,24 +178,22 @@ const ResourcePage2 = () => {
                         {s.name}
                       </div>
                     )}
-                    <Button
-                      isIconOnly
-                      variant="light"
-                      onPress={() => {
-                        if (activeSearchId == s.id) {
-                          removeSaved(s.id);
-                        }
-                      }}
-                      size="sm"
-                      // color="danger"
-                      className="opacity-60"
-                    >
-                      <AiOutlineClose className={"text-sm"} />
-                    </Button>
                   </>
                 ) : (
                   s.name
                 )}
+                <Button
+                  isIconOnly
+                  variant="light"
+                  onPress={() => {
+                    removeSaved(s.id);
+                  }}
+                  size="sm"
+                  // color="danger"
+                  className="opacity-60"
+                >
+                  <AiOutlineClose className={"text-sm"} />
+                </Button>
               </div>
             }
           />

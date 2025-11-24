@@ -214,7 +214,7 @@ const FilterPanel = (props: IProps) => {
             }}
           >
             <AiOutlineExport className={"text-base"} />
-            {t<string>("Search in new tab")}
+            {t<string>("View in new tab")}
           </Button>
           {/* <Button
             isIconOnly

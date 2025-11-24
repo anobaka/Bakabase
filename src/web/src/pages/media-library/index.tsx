@@ -994,9 +994,14 @@ const MediaLibraryPage = () => {
                             currentPath: "",
                           });
                           const [visible, setVisible] = useState(true);
+                          const [showStopConfirm, setShowStopConfirm] = useState(false);
+                          const [isStopping, setIsStopping] = useState(false);
+                          const [isCancelled, setIsCancelled] = useState(false);
+                          const abortControllerRef = useRef<AbortController | null>(null);
 
                           useEffect(() => {
                             const abortController = new AbortController();
+                            abortControllerRef.current = abortController;
 
                             const startDeletion = async () => {
                               try {
@@ -1040,13 +1045,16 @@ const MediaLibraryPage = () => {
 
                                       if (obj.type === "progress" || obj.type === "complete") {
                                         setProgressState({
-                                          percentage: obj.percentage || 100,
+                                          percentage: obj.percentage || 0,
                                           total: obj.total || 0,
                                           processed: obj.processed || obj.total || 0,
                                           deleted: obj.deleted || 0,
                                           failed: obj.failed || 0,
                                           currentPath: obj.currentResourcePath || "",
                                         });
+                                      } else if (obj.type === "cancelled") {
+                                        setIsCancelled(true);
+                                        toast.warning(t<string>("Operation stopped. Some marker files may remain and need to be deleted manually."));
                                       } else if (obj.type === "error") {
                                         toast.danger(obj.message || "Error deleting markers");
                                       }
@@ -1058,6 +1066,8 @@ const MediaLibraryPage = () => {
                               } catch (e) {
                                 if ((e as Error).name !== "AbortError") {
                                   toast.danger(t<string>("Failed to delete markers"));
+                                } else if (isStopping) {
+                                  setIsCancelled(true);
                                 }
                               } finally {
                                 setVisible(false);
@@ -1072,47 +1082,123 @@ const MediaLibraryPage = () => {
                             };
                           }, []);
 
+                          const handleStopClick = () => {
+                            setShowStopConfirm(true);
+                          };
+
+                          const handleConfirmStop = () => {
+                            setIsStopping(true);
+                            setShowStopConfirm(false);
+                            if (abortControllerRef.current) {
+                              abortControllerRef.current.abort();
+                            }
+                          };
+
                           return (
-                            <Modal
-                              visible={visible}
-                              title={t<string>("Deleting resource markers")}
-                              size="md"
-                              isDismissable={false}
-                              hideCloseButton={true}
-                              footer={false}
-                            >
-                              <div className={"flex flex-col gap-4 py-4"}>
-                                <div className={"flex items-center gap-3"}>
-                                  <div className={"animate-spin rounded-full h-8 w-8 border-b-2 border-primary"}></div>
-                                  <div className={"flex-1"}>
-                                    <div className={"font-medium"}>
-                                      {t<string>("Processing {{processed}} of {{total}} resources", {
-                                        processed: progressState.processed,
-                                        total: progressState.total,
-                                      })}
+                            <>
+                              <Modal
+                                visible={visible}
+                                title={t<string>("Deleting resource markers")}
+                                size="md"
+                                isDismissable={false}
+                                hideCloseButton={true}
+                                footer={
+                                  <div className={"flex justify-end"}>
+                                    <Button
+                                      color="danger"
+                                      variant="light"
+                                      onClick={handleStopClick}
+                                      isDisabled={isStopping || isCancelled}
+                                    >
+                                      {isStopping ? t<string>("Stopping...") : t<string>("Stop")}
+                                    </Button>
+                                  </div>
+                                }
+                              >
+                                <div className={"flex flex-col gap-4 py-4"}>
+                                  <div className={"flex items-center gap-3"}>
+                                    <div className={"animate-spin rounded-full h-8 w-8 border-b-2 border-primary"}></div>
+                                    <div className={"flex-1"}>
+                                      <div className={"font-medium"}>
+                                        {t<string>("Processing {{processed}} of {{total}} resources", {
+                                          processed: progressState.processed,
+                                          total: progressState.total,
+                                        })}
+                                      </div>
+                                      <div className={"text-sm text-gray-500"}>
+                                        {t<string>("Deleted: {{deleted}}, Failed: {{failed}}", {
+                                          deleted: progressState.deleted,
+                                          failed: progressState.failed,
+                                        })}
+                                      </div>
                                     </div>
-                                    <div className={"text-sm text-gray-500"}>
-                                      {t<string>("Deleted: {{deleted}}, Failed: {{failed}}", {
-                                        deleted: progressState.deleted,
-                                        failed: progressState.failed,
-                                      })}
+                                    <div className={"text-xl font-bold"}>{progressState.percentage}%</div>
+                                  </div>
+                                  {progressState.currentPath && (
+                                    <div className={"text-xs text-gray-500 truncate"}>
+                                      {progressState.currentPath}
+                                    </div>
+                                  )}
+                                  <div className={"w-full bg-gray-200 rounded-full h-2"}>
+                                    <div
+                                      className={"bg-primary h-2 rounded-full transition-all duration-300"}
+                                      style={{ width: `${progressState.percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </Modal>
+
+                              <Modal
+                                visible={showStopConfirm}
+                                title={t<string>("Stop deletion operation?")}
+                                size="md"
+                                onClose={() => setShowStopConfirm(false)}
+                                footer={
+                                  <div className={"flex justify-end gap-2"}>
+                                    <Button
+                                      variant="light"
+                                      onClick={() => setShowStopConfirm(false)}
+                                    >
+                                      {t<string>("Cancel")}
+                                    </Button>
+                                    <Button
+                                      color="danger"
+                                      onClick={handleConfirmStop}
+                                    >
+                                      {t<string>("Stop operation")}
+                                    </Button>
+                                  </div>
+                                }
+                              >
+                                <div className={"flex flex-col gap-4"}>
+                                  <div className={"text-warning font-semibold"}>
+                                    {t<string>("Warning")}
+                                  </div>
+                                  <div>
+                                    {t<string>("If you stop this operation now, you will need to delete the remaining marker files manually.")}
+                                  </div>
+                                  <div className={"bg-[var(--bakaui-overlap-background)] p-3 rounded"}>
+                                    <div className={"font-medium mb-2"}>
+                                      {t<string>("Marker file information:")}
+                                    </div>
+                                    <div className={"text-sm space-y-1"}>
+                                      <div>
+                                        {t<string>("File name: {{filename}}", { filename: ".bakabase.json" })}
+                                      </div>
+                                      <div>
+                                        {t<string>("Location: Inside folder resources")}
+                                      </div>
+                                      <div>
+                                        {t<string>("Attribute: Hidden file")}
+                                      </div>
                                     </div>
                                   </div>
-                                  <div className={"text-xl font-bold"}>{progressState.percentage}%</div>
-                                </div>
-                                {progressState.currentPath && (
-                                  <div className={"text-xs text-gray-500 truncate"}>
-                                    {progressState.currentPath}
+                                  <div className={"text-sm text-gray-600"}>
+                                    {t<string>("You can search for and delete these files using your file manager or terminal.")}
                                   </div>
-                                )}
-                                <div className={"w-full bg-gray-200 rounded-full h-2"}>
-                                  <div
-                                    className={"bg-primary h-2 rounded-full transition-all duration-300"}
-                                    style={{ width: `${progressState.percentage}%` }}
-                                  />
                                 </div>
-                              </div>
-                            </Modal>
+                              </Modal>
+                            </>
                           );
                         };
 

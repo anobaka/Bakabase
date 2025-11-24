@@ -2,11 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  DeleteOutlined,
-  FolderOpenOutlined,
-  PlusCircleOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, FolderOpenOutlined, PlusCircleOutlined } from "@ant-design/icons";
 import { MdWarning } from "react-icons/md";
 import moment from "moment";
 import { MdFolder } from "react-icons/md";
@@ -35,10 +31,7 @@ import {
   Textarea,
 } from "@/components/bakaui";
 import { toast } from "@/components/bakaui";
-import {
-  FileSystemSelectorButton,
-  FileSystemSelectorModal,
-} from "@/components/FileSystemSelector";
+import { FileSystemSelectorButton, FileSystemSelectorModal } from "@/components/FileSystemSelector";
 
 import "./index.scss";
 
@@ -126,11 +119,7 @@ const FileMoverPage = () => {
     }
   };
 
-  const updateTarget = (
-    targetPath: string,
-    newTargetPath: string,
-    cb: () => void = () => {},
-  ) => {
+  const updateTarget = (targetPath: string, newTargetPath: string, cb: () => void = () => {}) => {
     const targetIndex = targets.findIndex((a) => a.path == targetPath);
     const target = targets[targetIndex]!;
 
@@ -173,11 +162,7 @@ const FileMoverPage = () => {
     }
   };
 
-  const updateSource = (
-    targetPath: string,
-    sourcePath: string,
-    newSourcePath: string,
-  ) => {
+  const updateSource = (targetPath: string, sourcePath: string, newSourcePath: string) => {
     const target = targets.find((a) => a.path == targetPath);
 
     if (!target || !target.sources) return;
@@ -206,7 +191,7 @@ const FileMoverPage = () => {
   };
 
   const ds: Item[] =
-    targets.reduce<Item[]>((s, t) => {
+    (targets ?? []).reduce<Item[]>((s, t) => {
       const sources = (t.sources || []).slice();
       // sources.push(null);
       const newArr = sources.map((x, i) => ({
@@ -226,10 +211,7 @@ const FileMoverPage = () => {
       }
 
       newArr.sort((a, b) => {
-        return (
-          (a.source == preferredSource ? -1 : 0) -
-          (b.source == preferredSource ? -1 : 0)
-        );
+        return (a.source == preferredSource ? -1 : 0) - (b.source == preferredSource ? -1 : 0);
       });
       if (t.path == preferredTarget) {
         return newArr.concat(s);
@@ -402,16 +384,10 @@ const FileMoverPage = () => {
                             </DropdownItem>
                             <DropdownItem
                               key="select-from-media-library"
-                              startContent={
-                                <AiOutlineProduct className="text-base" />
-                              }
+                              startContent={<AiOutlineProduct className="text-base" />}
                               onPress={() => {
                                 createPortal(MediaLibraryPathSelectorV2, {
-                                  onSelect: (
-                                    id,
-                                    path,
-                                    isLegacyMediaLibrary,
-                                  ) => {
+                                  onSelect: (id, path, isLegacyMediaLibrary) => {
                                     if (!target) {
                                       addTarget(path);
                                     } else {
@@ -428,11 +404,7 @@ const FileMoverPage = () => {
                       </div>
                       {target && (
                         <div className={"flex items-center gap-1"}>
-                          <Tooltip
-                            content={t<string>(
-                              "Overwrite files in target path",
-                            )}
-                          >
+                          <Tooltip content={t<string>("Overwrite files in target path")}>
                             <Checkbox
                               isSelected={record.overwrite}
                               size={"sm"}
@@ -468,9 +440,7 @@ const FileMoverPage = () => {
                                   new Promise((resolve, reject) => {
                                     save(
                                       {
-                                        targets: targets.filter(
-                                          (a) => a.path != target,
-                                        ),
+                                        targets: targets.filter((a) => a.path != target),
                                       },
                                       () => {
                                         resolve(undefined);
@@ -569,14 +539,10 @@ const FileMoverPage = () => {
                                   onOk: () =>
                                     new Promise((resolve, reject) => {
                                       const { target: targetPath } = record;
-                                      const target = targets.find(
-                                        (t) => t.path == targetPath,
-                                      );
+                                      const target = targets.find((t) => t.path == targetPath);
 
                                       if (target) {
-                                        target.sources = target.sources?.filter(
-                                          (a) => a != s,
-                                        );
+                                        target.sources = target.sources?.filter((a) => a != s);
                                       }
                                       save(
                                         {
@@ -610,9 +576,7 @@ const FileMoverPage = () => {
       <div className="opt">
         <div className="left">
           <div className="enable">
-            <div className="label">
-              {t<string>(enabled ? "Enabled" : "Disabled")}
-            </div>
+            <div className="label">{t<string>(enabled ? "Enabled" : "Disabled")}</div>
             <Switch
               isSelected={enabled}
               size={"sm"}
@@ -631,9 +595,7 @@ const FileMoverPage = () => {
               label={t<string>("Delay (minutes)")}
               value={
                 value?.delay
-                  ? dayjs.duration(
-                      moment.duration(value.delay).asMilliseconds(),
-                    )
+                  ? dayjs.duration(moment.duration(value.delay).asMilliseconds())
                   : undefined
               }
               onChange={(c) => {

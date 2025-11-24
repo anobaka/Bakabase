@@ -558,4 +558,10 @@ The version of lux is not limited.</value>
   <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
     <value>Generate resource marker</value>
   </data>
+  <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
+    <value>New Version Available</value>
+  </data>
+  <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
+    <value>A new version ({0}) is available for update.</value>
+  </data>
 </root>

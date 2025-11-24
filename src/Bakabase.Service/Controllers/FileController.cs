@@ -57,7 +57,6 @@ namespace Bakabase.Service.Controllers
         private readonly ISpecialTextService _specialTextService;
         private readonly IWebHostEnvironment _env;
         private readonly BTaskManager _taskManager;
-        private readonly string _sevenZExecutable;
         private readonly CompressedFileService _compressedFileService;
         private readonly IBOptionsManager<FileSystemOptions> _fsOptionsManager;
         private readonly BakabaseLocalizer _localizer;
@@ -90,9 +89,6 @@ namespace Bakabase.Service.Controllers
             _ffMpegService = ffMpegService;
             _hardwareAccelerationService = hardwareAccelerationService;
             _systemPlayer = systemPlayer;
-
-            _sevenZExecutable = Path.Combine(_env.ContentRootPath, "libs/7z.exe");
-            // _sevenZExecutable = "/Users/anobaka/Downloads/7z2501-mac/7zz";
         }
 
         [HttpPost("decompression/detect")]
@@ -183,63 +179,26 @@ namespace Bakabase.Service.Controllers
                     {
                         ct.ThrowIfCancellationRequested();
 
-                        var processRegex = new Regex(@"\d+\%");
-                        var esb = new StringBuilder();
-                        var osb = new StringBuilder();
-
-                        var args = new List<string?>
-                        {
-                            "t",
+                        var result = await _compressedFileService.TestCompressedFile(
                             entry,
-                            candidate.IsNotEmpty() ? $"-p{candidate}" : null,
-                            "-sccUTF-8",
-                            "-scsUTF-16LE",
-                            "-bsp2",
-                            "-bb1"
-                        }.OfType<string>().ToArray();
-
-                        var command = Cli.Wrap(_sevenZExecutable)
-                            .WithWorkingDirectory(Path.GetDirectoryName(entry)!)
-                            .WithValidation(CommandResultValidation.None)
-                            .WithArguments(args, true)
-                            .WithStandardErrorPipe(PipeTarget.Merge(
-                                PipeTarget.ToDelegate((line) =>
+                            candidate,
+                            Path.GetDirectoryName(entry),
+                            onStandardOutput: null,
+                            onStandardError: (line) =>
+                            {
+                                if (line.Contains("Wrong password") && candidate.IsNotEmpty())
                                 {
-                                    if (line.Contains("Wrong password") && candidate.IsNotEmpty())
-                                    {
-                                        wrongPasswords.Add(candidate);
-                                    }
-                                }, Encoding.UTF8),
-                                PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
-                            .WithStandardOutputPipe(PipeTarget.Merge(
-                                PipeTarget.ToDelegate(async (line, ct2) =>
-                                {
-                                    // var match = processRegex.Match(line);
-                                    // if (match.Success)
-                                    // {
-                                    //     
-                                    //     var progress = new CompressedFileDetectionResultViewModel
-                                    //     {
-                                    //         Key = viewModelKey,
-                                    //         Status = CompressedFileDetectionResultType.Inprogress,
-                                    //     };
-                                    //     await Response.WriteAsync(
-                                    //         JsonSerializer.Serialize(progress, JsonSerializerOptions.Web) + "\n",
-                                    //         ct);
-                                    //     await Response.Body.FlushAsync(ct);
-                                    // }
-                                    //
-                                }, Encoding.UTF8),
-                                PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
+                                    wrongPasswords.Add(candidate);
+                                }
+                            },
+                            ct);
 
-                        var result = await command.ExecuteAsync(ct);
-
-                        vm.Message += $"{osb}{Environment.NewLine}{esb}";
+                        vm.Message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
                         await YieldReturn(vm);
 
                         if (result.ExitCode == 0)
                         {
-                            pickedTestStdOut = osb.ToString();
+                            pickedTestStdOut = result.StandardOutput;
                             vm.Password = password;
                             vm.Status = CompressedFileDetectionResultStatus.Complete;
                             break;
@@ -358,54 +317,40 @@ namespace Bakabase.Service.Controllers
                         : item.Directory;
 
                     var processRegex = new Regex(@"\d+\%");
-                    var osb = new StringBuilder();
-                    var esb = new StringBuilder();
-
-                    // Build 7z arguments
-                    var args = new List<string?>
-                    {
-                        "x",
-                        item.Files[0], // Use first file as entry point for multi-part archives
-                        item.Password.IsNotEmpty() ? $"-p{item.Password}" : null,
-                        $"-o{targetDir}",
-                        item.OverwriteExistFiles ? "-aoa" : null, // Overwrite all existing files without prompt
-                        "-sccUTF-8",
-                        "-scsUTF-16LE",
-                        "-bsp1"
-                    }.OfType<string>().ToArray();
 
                     vm.Status = DecompressionStatus.Decompressing;
                     vm.Percentage = 0;
                     // Send decompressing status
                     await YieldReturn(vm);
 
-                    var cmd = Cli.Wrap(_sevenZExecutable)
-                        .WithWorkingDirectory(item.Directory)
-                        .WithValidation(CommandResultValidation.None)
-                        .WithArguments(args, true)
-                        .WithStandardErrorPipe(PipeTarget.Merge(
-                            PipeTarget.ToDelegate(async line => { }, Encoding.UTF8),
-                            PipeTarget.ToStringBuilder(esb, Encoding.UTF8)))
-                        .WithStandardOutputPipe(PipeTarget.Merge(
-                            PipeTarget.ToDelegate(async line =>
+                    var result = await _compressedFileService.ExtractWithProgress(
+                        item.Files[0], // Use first file as entry point for multi-part archives
+                        targetDir,
+                        item.Password,
+                        usePasswordSwitch: true,
+                        overwriteMode: item.OverwriteExistFiles
+                            ? CompressedFileService.OverwriteMode.OverwriteAll
+                            : CompressedFileService.OverwriteMode.None,
+                        progressOutput: CompressedFileService.ProgressOutputTarget.StandardOutput,
+                        workingDirectory: item.Directory,
+                        onStandardOutput: (line) =>
+                        {
+                            var match = processRegex.Match(line);
+                            if (match.Success)
                             {
-                                var match = processRegex.Match(line);
-                                if (match.Success)
+                                var percentageStr = match.Value.TrimEnd('%');
+                                if (int.TryParse(percentageStr, out var percentage))
                                 {
-                                    var percentageStr = match.Value.TrimEnd('%');
-                                    if (int.TryParse(percentageStr, out var percentage))
-                                    {
-                                        vm.Status = DecompressionStatus.Decompressing;
-                                        vm.Percentage = percentage;
-                                        await YieldReturn(vm);
-                                    }
+                                    vm.Status = DecompressionStatus.Decompressing;
+                                    vm.Percentage = percentage;
+                                    YieldReturn(vm).GetAwaiter().GetResult();
                                 }
-                            }, Encoding.UTF8),
-                            PipeTarget.ToStringBuilder(osb, Encoding.UTF8)));
+                            }
+                        },
+                        onStandardError: null,
+                        ct);
 
-                    var result = await cmd.ExecuteAsync(ct);
-
-                    vm.Message += $"{osb}{Environment.NewLine}{esb}";
+                    vm.Message += $"{result.StandardOutput}{Environment.NewLine}{result.StandardError}";
 
                     if (result.ExitCode != 0)
                     {
@@ -1355,8 +1300,6 @@ namespace Bakabase.Service.Controllers
                                 //
                                 // return;
 
-                                var osb = new StringBuilder();
-                                var esb = new StringBuilder();
                                 var workingDir = Path.GetDirectoryName(entry);
                                 var targetDir = Path.Combine(workingDir,
                                     group.KeyName);
@@ -1366,69 +1309,46 @@ namespace Bakabase.Service.Controllers
                                 var messageSb = new StringBuilder();
 
                                 BuildCommand:
-                                var command = Cli.Wrap(_sevenZExecutable)
-                                    .WithWorkingDirectory(workingDir)
-                                    .WithValidation(CommandResultValidation.None)
-                                    .WithArguments(new[]
+                                var result = await _compressedFileService.ExtractWithProgress(
+                                    entry,
+                                    targetDir,
+                                    group.Password,
+                                    usePasswordSwitch: tryPSwitch,
+                                    overwriteMode: tryPSwitch
+                                        ? CompressedFileService.OverwriteMode.SkipExisting
+                                        : CompressedFileService.OverwriteMode.None,
+                                    progressOutput: CompressedFileService.ProgressOutputTarget.StandardError,
+                                    workingDirectory: workingDir,
+                                    onStandardOutput: null,
+                                    onStandardError: async (line) =>
+                                    {
+                                        var match = processRegex.Match(line);
+                                        if (match.Success)
                                         {
-                                            "x",
-                                            entry,
-                                            tryPSwitch
-                                                ? $"-p{group.Password}"
-                                                : null,
-                                            tryPSwitch
-                                                ? $"-aos"
-                                                : null,
-                                            $"-o{targetDir}",
-                                            // redirect process to stderr stream
-                                            "-sccUTF-8",
-                                            "-scsUTF-16LE",
-                                            "-bsp2"
-                                        }.Where(t => t.IsNotEmpty())!,
-                                        true)
-                                    .WithStandardErrorPipe(PipeTarget.Merge(PipeTarget.ToDelegate(async line =>
+                                            var np = int.Parse(match.Value.TrimEnd('%'));
+                                            if (np != args.Task.Percentage)
                                             {
-                                                var match = processRegex.Match(line);
-                                                if (match.Success)
-                                                {
-                                                    var np = int.Parse(match.Value.TrimEnd('%'));
-                                                    if (np != args.Task.Percentage)
-                                                    {
-                                                        await args.UpdateTask(x => x.Percentage = np);
-                                                    }
-                                                }
-                                            },
-                                            Encoding.UTF8),
-                                        PipeTarget.ToStringBuilder(esb,
-                                            Encoding.UTF8)))
-                                    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb,
-                                        Encoding.UTF8));
-                                // Input password via stdin
-                                if (group.Password.IsNotEmpty() && !tryPSwitch)
-                                {
-                                    command = command.WithStandardInputPipe(
-                                        PipeSource.FromString(group.Password!,
-                                            Encoding.UTF8));
-                                }
+                                                await args.UpdateTask(x => x.Percentage = np);
+                                            }
+                                        }
+                                    },
+                                    args.CancellationToken);
 
-                                var result = await command.ExecuteAsync();
                                 if (result.ExitCode == 0)
                                 {
                                     return;
                                 }
 
                                 messageSb.AppendLine($"Decompression exit with code: {result.ExitCode}");
-                                if (osb.Length > 0)
+                                if (result.StandardOutput.Length > 0)
                                 {
-                                    messageSb.AppendLine(osb.ToString());
+                                    messageSb.AppendLine(result.StandardOutput);
                                 }
 
-                                if (esb.Length > 0)
+                                if (result.StandardError.Length > 0)
                                 {
-                                    messageSb.AppendLine(esb.ToString());
+                                    messageSb.AppendLine(result.StandardError);
                                 }
-
-                                messageSb.AppendLine($"Command: {command}");
 
                                 var message = messageSb.ToString();
                                 var wrongPassword = message.Contains("Wrong password");
@@ -1501,8 +1421,6 @@ namespace Bakabase.Service.Controllers
                                     {
                                         tryPSwitch = true;
                                         messageSb.AppendLine("Try to use -p switch, re-decompressing");
-                                        esb.Clear();
-                                        osb.Clear();
                                         goto BuildCommand;
                                     }
 

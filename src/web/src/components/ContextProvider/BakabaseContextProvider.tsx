@@ -7,15 +7,7 @@ import type { BakabaseInfrastructuresComponentsConfigurationsAppAppOptions } fro
 import { HeroUIProvider, Spinner, ToastProvider } from "@heroui/react";
 import Clarity from "@microsoft/clarity";
 import { ConfigProvider, theme } from "antd";
-import {
-  useContext,
-  createContext,
-  useEffect,
-  useRef,
-  useState,
-  useMemo,
-  Fragment,
-} from "react";
+import { useContext, createContext, useEffect, useRef, useState, useMemo, Fragment } from "react";
 import { useHref, useLocation, useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
@@ -41,7 +33,7 @@ interface IContext {
 }
 
 const BakabaseContext = createContext<IContext>({
-  createPortal: (C, props) => ({ key: "", destroy: () => { } }),
+  createPortal: (C, props) => ({ key: "", destroy: () => {} }),
   isDarkMode: false,
   isDebugging: false,
 });
@@ -106,21 +98,16 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [appOptions, setAppOptions] =
     useState<BakabaseInfrastructuresComponentsConfigurationsAppAppOptions>();
 
-  const currentTheme = useRef(
-    getUiTheme(appOptions ? appOptions.uiTheme : getStoredTheme()),
-  );
-  const isDarkMode = useMemo(
-    () => currentTheme.current === UiTheme.Dark,
-    [currentTheme],
-  );
+  const currentTheme = useRef(getUiTheme(appOptions ? appOptions.uiTheme : getStoredTheme()));
+  const isDarkMode = useMemo(() => currentTheme.current === UiTheme.Dark, [currentTheme]);
 
   const [portals, setPortals] = useState<{ key: string; component: React.ReactNode }[]>([]);
 
   const mount = (C: ComponentType<any>, props: any) => {
-
     console.log("[createPortal] mount", C, props);
 
     const key = uuidv4();
+
     setPortals((prev) => [...prev, { key, component: <C {...props} /> }]);
 
     const destroy = () => {
@@ -188,12 +175,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     setPortals([]); // 清空 portals 数组
   }, [location.pathname]);
 
-  console.log(
-    "current theme",
-    UiTheme[currentTheme.current],
-    "portals",
-    portals,
-  );
+  console.log("current theme", UiTheme[currentTheme.current], "portals", portals);
 
   return (
     <>
@@ -201,9 +183,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       <HeroUIProvider navigate={navigate} useHref={href}>
         <ConfigProvider
           theme={{
-            algorithm: isDarkMode
-              ? theme.darkAlgorithm
-              : theme.defaultAlgorithm,
+            algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
           }}
         >
           <ToastProvider placement={"top-center"} />

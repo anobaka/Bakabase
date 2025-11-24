@@ -65,8 +65,9 @@ const AliasPage = () => {
     additionalItems: AliasAdditionalItem.Candidates,
   });
   const [aliases, setAliases] = useState<AliasPage[]>([]);
-  const [bulkOperationContext, setBulkOperationContext] =
-    useState<BulkOperationContext>({ preferredTexts: [] });
+  const [bulkOperationContext, setBulkOperationContext] = useState<BulkOperationContext>({
+    preferredTexts: [],
+  });
   const [totalCount, setTotalCount] = useState(0);
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
 
@@ -82,15 +83,21 @@ const AliasPage = () => {
 
     setForm(nf);
     BApi.alias.searchAliasGroups(nf).then((a) => {
-      setAliases(
-        a.data?.map((x) => ({
-          originalText: x.text!,
-          text: x.text!,
-          preferred: x.preferred ?? undefined,
-          candidates: x.candidates ?? undefined,
-        })) ?? [],
-      );
+      const data = a.data?.map((x) => ({
+        originalText: x.text!,
+        text: x.text!,
+        preferred: x.preferred ?? undefined,
+        candidates: x.candidates ?? undefined,
+      })) ?? [];
+
+      setAliases(data);
       setTotalCount(a.totalCount!);
+
+      // If current page has no data and not on first page, go to last available page
+      if (data.length === 0 && nf.pageIndex > 0 && a.totalCount! > 0) {
+        const lastPage = Math.max(0, Math.ceil(a.totalCount! / nf.pageSize) - 1);
+        search({ pageIndex: lastPage });
+      }
     });
   };
 
@@ -158,7 +165,14 @@ const AliasPage = () => {
                 defaultVisible: true,
                 size: "lg",
                 title: t<string>("Add an alias"),
-                children: <Input onValueChange={(v) => (value = v)} />,
+                children: (
+                  <Input
+                    classNames={{
+                      input: "break-all",
+                    }}
+                    onValueChange={(v) => (value = v)}
+                  />
+                ),
                 onOk: async () => {
                   await BApi.alias.addAlias({
                     text: value,
@@ -217,6 +231,9 @@ const AliasPage = () => {
               <div className={"text-md flex items-center gap-2"}>
                 {t<string>("Bulk operations")}
                 <Tooltip
+                  classNames={{
+                    content: "max-w-md break-all whitespace-normal",
+                  }}
                   content={t<string>(
                     "{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text.",
                     { text: bulkOperationContext.preferredTexts[0] },
@@ -229,12 +246,20 @@ const AliasPage = () => {
                     onClick={() => {
                       createPortal(Modal, {
                         defaultVisible: true,
-                        title: t<string>("Merging alias groups: {{texts}}", {
-                          texts: bulkOperationContext.preferredTexts.join(","),
-                        }),
-                        children: t<string>(
-                          "All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?",
-                          { preferred: bulkOperationContext.preferredTexts[0] },
+                        title: (
+                          <div className="break-all whitespace-normal">
+                            {t<string>("Merging alias groups: {{texts}}", {
+                              texts: bulkOperationContext.preferredTexts.join(", "),
+                            })}
+                          </div>
+                        ),
+                        children: (
+                          <div className="break-all whitespace-normal">
+                            {t<string>(
+                              "All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?",
+                              { preferred: bulkOperationContext.preferredTexts[0] },
+                            )}
+                          </div>
                         ),
                         onOk: async () => {
                           await BApi.alias.mergeAliasGroups({
@@ -256,11 +281,19 @@ const AliasPage = () => {
                   onClick={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>("Deleting alias groups: {{texts}}", {
-                        texts: bulkOperationContext.preferredTexts.join(","),
-                      }),
-                      children: t<string>(
-                        "All selected alias groups and its candidates will be delete and there is no way back, are you sure?",
+                      title: (
+                        <div className="break-all whitespace-normal">
+                          {t<string>("Deleting alias groups: {{texts}}", {
+                            texts: bulkOperationContext.preferredTexts.join(", "),
+                          })}
+                        </div>
+                      ),
+                      children: (
+                        <div className="break-all whitespace-normal">
+                          {t<string>(
+                            "All selected alias groups and its candidates will be delete and there is no way back, are you sure?",
+                          )}
+                        </div>
                       ),
                       onOk: async () => {
                         await BApi.alias.deleteAliasGroups({
@@ -292,24 +325,24 @@ const AliasPage = () => {
                 {bulkOperationContext.preferredTexts.map((t, i) => {
                   return (
                     <Chip
+                      key={t}
+                      classNames={{
+                        base: "max-w-full",
+                        content: "break-all whitespace-normal",
+                      }}
                       color={i == 0 ? "primary" : "default"}
                       radius={"sm"}
                       size={"sm"}
+                      className="h-auto py-1"
                       onClick={() => {
                         bulkOperationContext.preferredTexts.splice(i, 1);
                         setBulkOperationContext({
                           ...bulkOperationContext,
-                          preferredTexts: [
-                            t,
-                            ...bulkOperationContext.preferredTexts,
-                          ],
+                          preferredTexts: [t, ...bulkOperationContext.preferredTexts],
                         });
                       }}
                       onClose={() => {
-                        const texts =
-                          bulkOperationContext.preferredTexts.filter(
-                            (x) => x != t,
-                          );
+                        const texts = bulkOperationContext.preferredTexts.filter((x) => x != t);
 
                         if (texts.length == 0) {
                           resetBulkOperationContext();
@@ -333,9 +366,9 @@ const AliasPage = () => {
       {aliases.length > 0 && (
         <div className={"mt-1"}>
           <Table
-            removeWrapper
             isCompact
             isStriped
+            removeWrapper
             bottomContent={renderPagination()}
             color={"primary"}
             selectedKeys={bulkOperationContext.preferredTexts.filter((x) =>
@@ -352,9 +385,7 @@ const AliasPage = () => {
                 selection = Array.from(keys).map(String);
               }
 
-              const notSelected = aliases
-                .map((x) => x.text)
-                .filter((x) => !selection.includes(x));
+              const notSelected = aliases.map((x) => x.text).filter((x) => !selection.includes(x));
               const ns = Array.from(
                 new Set(
                   bulkOperationContext.preferredTexts
@@ -377,8 +408,8 @@ const AliasPage = () => {
               {aliases.map((a) => {
                 return (
                   <TableRow key={a.text}>
-                    <TableCell>{a.originalText}</TableCell>
-                    <TableCell>
+                    <TableCell className={"break-all max-w-xs"}>{a.originalText}</TableCell>
+                    <TableCell className={"max-w-md"}>
                       <div
                         className={"flex flex-wrap gap-1"}
                         onClick={(e) => {
@@ -390,14 +421,13 @@ const AliasPage = () => {
                         {a.candidates?.map((c) => {
                           return (
                             <Tooltip
+                              key={c}
                               content={
                                 <div className={"flex"}>
                                   <Button
                                     color={"success"}
                                     size={"sm"}
-                                    startContent={
-                                      <ToTopOutlined className={"text-sm"} />
-                                    }
+                                    startContent={<ToTopOutlined className={"text-sm"} />}
                                     variant={"light"}
                                     onClick={() => {
                                       BApi.alias
@@ -418,22 +448,27 @@ const AliasPage = () => {
                               }
                             >
                               <Chip
+                                classNames={{
+                                  base: "max-w-full",
+                                  content: "break-all whitespace-normal",
+                                }}
                                 radius={"sm"}
                                 onClose={() => {
                                   createPortal(Modal, {
                                     defaultVisible: true,
-                                    title: t<string>(
-                                      "Deleting an alias: {{text}}",
-                                      { text: c },
-                                    ),
-                                    content: t<string>(
-                                      "There is no way back, are you sure?",
+                                    title: t<string>("Deleting an alias"),
+                                    children: (
+                                      <div className="break-all whitespace-normal">
+                                        <div>{t("We are deleting")}</div>
+                                        <div className="font-semibold my-2">{c}</div>
+                                        <div>
+                                          {t<string>("There is no way back, are you sure?")}
+                                        </div>
+                                      </div>
                                     ),
                                     onOk: async () => {
                                       await BApi.alias.deleteAlias({ text: c });
-                                      a.candidates = a.candidates?.filter(
-                                        (x) => x != c,
-                                      );
+                                      a.candidates = a.candidates?.filter((x) => x != c);
                                       forceUpdate();
                                     },
                                   });

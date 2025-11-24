@@ -558,4 +558,10 @@
   <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
     <value>生成资源标记</value>
   </data>
+  <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
+    <value>发现新版本</value>
+  </data>
+  <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
+    <value>新版本 ({0}) 可供更新。</value>
+  </data>
 </root>

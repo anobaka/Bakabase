@@ -26,6 +26,11 @@ import { useIwFsEntryChangeEventsStore } from "@/stores/iwFsEntryChangeEvents";
 import { useAppUpdaterStateStore } from "@/stores/appUpdaterState";
 import { useThirdPartyRequestStatisticsStore } from "@/stores/thirdPartyRequestStatistics";
 import { optionsStores } from "@/stores/options";
+import type {
+  AppNotificationMessageViewModel,
+  AppNotificationSeverity,
+  AppNotificationBehavior,
+} from "@/core/models/AppNotification";
 
 const hubEndpoint = `${envConfig.apiEndpoint}/hub/ui`;
 
@@ -141,6 +146,38 @@ export const UIHubConnection = () => {
       useThirdPartyRequestStatisticsStore
         .getState()
         .updateStatistics(statistics);
+    });
+
+    conn.on("OnNotification", (notification: AppNotificationMessageViewModel) => {
+      log("OnNotification", notification);
+
+      const message = notification.message
+        ? `${notification.title}\n${notification.message}`
+        : notification.title;
+
+      const duration = notification.behavior === 0 // AutoDismiss
+        ? notification.durationMs || 5000
+        : 0; // 0 means persistent
+
+      const props = { title: message, timeout: duration, placement: "bottom-right" };
+      
+      // Map severity to toast method
+      switch (notification.severity) {
+        case 0: // Info
+          toast.default(props);
+          break;
+        case 1: // Success
+          toast.success(props);
+          break;
+        case 2: // Warning
+          toast.warning(props);
+          break;
+        case 3: // Error
+          toast.danger(props);
+          break;
+        default:
+          toast.default(props);
+      }
     });
 
     async function onConnected() {

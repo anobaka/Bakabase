@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -505,15 +506,17 @@ namespace Bakabase.Service.Controllers
         public async Task<IActionResult> DeleteResourceMarkers()
         {
             Response.Headers.ContentType = "application/x-ndjson";
-            
+
+            var cacheOrm = HttpContext.RequestServices
+                .GetRequiredService<
+                    FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
+            List<ResourceCacheDbModel> cache = null;
+
             try
             {
-                var cacheOrm = HttpContext.RequestServices
-                    .GetRequiredService<
-                        FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
-                var cache = await cacheOrm.GetAll(r =>
+                cache = await cacheOrm.GetAll(r =>
                     (r.CachedTypes & ResourceCacheType.ResourceMarkers) == ResourceCacheType.ResourceMarkers);
-                
+
                 if (cache.Count == 0)
                 {
                     var completeMessage = new
@@ -527,10 +530,10 @@ namespace Bakabase.Service.Controllers
                     await Response.Body.FlushAsync(HttpContext.RequestAborted);
                     return new EmptyResult();
                 }
-                
+
                 var resourceIds = cache.Select(r => r.ResourceId).ToArray();
                 var resources = await _resourceService.GetAllDbModels(x => resourceIds.Contains(x.Id));
-                
+
                 // Group resources by path - multiple resources can share the same path
                 var resourcesByPath = resources.GroupBy(r => r.Path).ToDictionary(g => g.Key, g => g.ToList());
                 var uniquePaths = resourcesByPath.Keys.ToList();
@@ -538,10 +541,13 @@ namespace Bakabase.Service.Controllers
                 var deleted = 0;
                 var failed = 0;
                 var processedCount = 0;
-                
+
                 // Delete markers by unique paths
                 foreach (var path in uniquePaths)
                 {
+                    // Check for cancellation at the start of each iteration
+                    HttpContext.RequestAborted.ThrowIfCancellationRequested();
+
                     try
                     {
                         var markerFilePath = System.IO.Path.Combine(path, InternalOptions.ResourceMarkerFileName);
@@ -550,7 +556,7 @@ namespace Bakabase.Service.Controllers
                             System.IO.File.Delete(markerFilePath);
                             deleted++;
                         }
-                        
+
                         // Update cache for all resources with this path
                         var resourcesWithPath = resourcesByPath[path];
                         foreach (var r in resourcesWithPath)
@@ -561,9 +567,9 @@ namespace Bakabase.Service.Controllers
                                 cacheEntry.CachedTypes &= ~ResourceCacheType.ResourceMarkers;
                             }
                         }
-                        
+
                         processedCount++;
-                        
+
                         // Send progress update
                         var progress = new
                         {
@@ -578,11 +584,15 @@ namespace Bakabase.Service.Controllers
                         await Response.WriteAsync(JsonSerializer.Serialize(progress) + "\n", HttpContext.RequestAborted);
                         await Response.Body.FlushAsync(HttpContext.RequestAborted);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        throw; // Re-throw to be caught by outer handler
+                    }
                     catch
                     {
                         failed++;
                         processedCount++;
-                        
+
                         // Send progress update even on failure
                         var progress = new
                         {
@@ -600,7 +610,7 @@ namespace Bakabase.Service.Controllers
                 }
 
                 await cacheOrm.UpdateRange(cache);
-                
+
                 // Send complete message
                 var completeMsg = new
                 {
@@ -612,6 +622,37 @@ namespace Bakabase.Service.Controllers
                 await Response.WriteAsync(JsonSerializer.Serialize(completeMsg) + "\n", HttpContext.RequestAborted);
                 await Response.Body.FlushAsync(HttpContext.RequestAborted);
             }
+            catch (OperationCanceledException)
+            {
+                // Update cache with what was processed before cancellation
+                if (cache != null && cache.Count > 0)
+                {
+                    try
+                    {
+                        await cacheOrm.UpdateRange(cache);
+                    }
+                    catch
+                    {
+                        // Ignore cache update errors during cancellation
+                    }
+                }
+
+                // Send cancelled message
+                try
+                {
+                    var cancelledMsg = new
+                    {
+                        type = "cancelled",
+                        message = "Operation was stopped by user"
+                    };
+                    await Response.WriteAsync(JsonSerializer.Serialize(cancelledMsg) + "\n");
+                    await Response.Body.FlushAsync();
+                }
+                catch
+                {
+                    // Ignore write errors during cancellation
+                }
+            }
             catch (System.Exception ex)
             {
                 var errorMsg = new
@@ -619,10 +660,17 @@ namespace Bakabase.Service.Controllers
                     type = "error",
                     message = ex.Message
                 };
-                await Response.WriteAsync(JsonSerializer.Serialize(errorMsg) + "\n", HttpContext.RequestAborted);
-                await Response.Body.FlushAsync(HttpContext.RequestAborted);
+                try
+                {
+                    await Response.WriteAsync(JsonSerializer.Serialize(errorMsg) + "\n");
+                    await Response.Body.FlushAsync();
+                }
+                catch
+                {
+                    // Ignore write errors
+                }
             }
-            
+
             return new EmptyResult();
         }
 

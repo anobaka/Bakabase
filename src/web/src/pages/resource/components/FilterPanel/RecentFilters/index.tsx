@@ -44,7 +44,7 @@ const RecentFilters = ({ onSelectFilter }: IProps) => {
     <div className={"grid-cols-2 gap-1"}>
       {recentFilters.map((filter, index) => (
         <Tooltip content={t("Apply this filter to the current search")} placement="right">
-          <Button key={index} className="flex items-center justify-between gap-1" variant="light" size="sm" color="primary">
+          <Button key={index} className="flex items-center justify-between gap-1" variant="light" size="sm" color="primary" onPress={() => onSelectFilter?.(filter)}>
             <Filter isReadonly filter={filter} removeBackground />
             <AiOutlineRightCircle className={"text-lg"} />
           </Button>

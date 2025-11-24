@@ -14,6 +14,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
 using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.FileMover;
@@ -85,6 +86,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<HardwareAccelerationService>();
             services.TryAddSingleton<LuxService>();
             services.TryAddSingleton<BakabaseUpdaterService>();
+            services.TryAddSingleton<SevenZipService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
 
             services.TryAddSingleton<IBakabaseUpdater>(sp => sp.GetRequiredService<BakabaseUpdaterService>());
@@ -103,9 +105,13 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<BakabaseWebProxy>();
 
             services.AddBTask<BTaskEventHandler>();
+            services.AddSingleton<DynamicTaskRegistry>();
             services.AddSingleton<PredefinedTasksProvider>();
 
             services.AddMediaLibraryTemplate<InsideWorldDbContext>();
+
+            // Add version check job that runs 30 seconds after startup
+            services.AddHostedService<VersionCheckJob>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

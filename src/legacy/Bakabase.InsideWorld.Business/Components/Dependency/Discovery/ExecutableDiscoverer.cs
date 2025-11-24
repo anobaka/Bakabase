@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Models.Constants;
+using Bootstrap.Extensions;
 using CliWrap;
 using Microsoft.Extensions.Logging;
 
@@ -24,7 +25,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
         protected ILogger Logger;
         protected abstract HashSet<string> RequiredRelativeFileNamesWithoutExtensions { get; }
         protected abstract string RelativeFileNameWithoutExtensionForAcquiringVersion { get; }
-        protected abstract string ArgumentsForAcquiringVersion { get; }
+        protected abstract string? ArgumentsForAcquiringVersion { get; }
 
         protected abstract string ParseVersion(string output);
 
@@ -86,8 +87,13 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Discovery
                     $"{RelativeFileNameWithoutExtensionForAcquiringVersion}{executableSuffix}");
                 var osb = new StringBuilder();
                 var esb = new StringBuilder();
-                var cmd = Cli.Wrap(executable)
-                    .WithArguments(ArgumentsForAcquiringVersion)
+                var cmd = Cli.Wrap(executable);
+                if (ArgumentsForAcquiringVersion.IsNotEmpty())
+                {
+                    cmd = cmd.WithArguments(ArgumentsForAcquiringVersion);
+                }
+
+                cmd = cmd
                     .WithStandardOutputPipe(PipeTarget.ToStringBuilder(osb))
                     .WithStandardErrorPipe(PipeTarget.ToStringBuilder(esb))
                     .WithValidation(CommandResultValidation.None);

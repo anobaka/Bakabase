@@ -16,6 +16,7 @@ using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Models.Db;
+using Bakabase.InsideWorld.Models.Configs;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 
@@ -56,11 +57,8 @@ public class PredefinedTasksProvider
             {
                 "GenerateResourceMarker", async (args, sp) =>
                 {
-                    var options = args.RootServiceProvider.GetRequiredService<IBOptions<ResourceOptions>>();
-                    if (!options.Value.KeepResourcesOnPathChange)
-                    {
-                        return;
-                    }
+                    // Note: The enable/disable check has been moved to task definition
+                    // This task will only be enqueued when KeepResourcesOnPathChange is true
 
                     var resourceService = sp.GetRequiredService<IResourceService>();
                     var cacheOrm =
@@ -166,27 +164,69 @@ public class PredefinedTasksProvider
             }
         };
 
-        DescriptorBuilders = simpleTaskBuilders.Select(x => new BTaskHandlerBuilder
+        // Define tasks with their enable conditions and dependencies
+        TaskDefinitions = simpleTaskBuilders.Select(x => new PredefinedTaskDefinition
         {
-            Type = BTaskType.Any,
-            ResourceType = BTaskResourceType.Any,
-            GetName = () => localizer.BTask_Name(x.Key),
-            GetDescription = () => localizer.BTask_Description(x.Key),
-            GetMessageOnInterruption = () => localizer.BTask_MessageOnInterruption(x.Key),
-            CancellationToken = null,
             Id = x.Key,
-            Run = async args =>
+            IsEnabled = () =>
             {
-                await using var scope = serviceProvider.CreateAsyncScope();
-                var sp = scope.ServiceProvider;
-                await x.Value(args, sp);
+                // Define enable conditions for each task
+                switch (x.Key)
+                {
+                    case "GenerateResourceMarker":
+                        var resourceOptions = serviceProvider.GetRequiredService<IBOptions<ResourceOptions>>();
+                        return resourceOptions.Value.KeepResourcesOnPathChange;
+                    case "Enhancement":
+                        return true;
+                    case "PrepareCache":
+                        var uiOptions = serviceProvider.GetRequiredService<IBOptions<UIOptions>>();
+                        return !uiOptions.Value.Resource.DisableCache;
+                    case "MoveFiles":
+                        var fsOptions = serviceProvider.GetRequiredService<IBOptions<FileSystemOptions>>();
+                        return fsOptions.Value.FileMover?.Enabled ?? false;
+
+                    default:
+                        return true;
+                }
             },
-            ConflictKeys = [x.Key],
-            Level = BTaskLevel.Default,
-            Interval = TimeSpan.FromMinutes(1),
-            IsPersistent = true
+            GetInterval = () =>
+            {
+                // Can be made configurable in the future
+                return x.Key switch
+                {
+                    _ => TimeSpan.FromMinutes(1)
+                };
+            },
+            WatchedOptionsTypes = x.Key switch
+            {
+                "GenerateResourceMarker" => new[] { typeof(ResourceOptions) },
+                // "Enhancement" => new[] { typeof(EnhancerOptions) },
+                "PrepareCache" => new[] { typeof(ResourceOptions) },
+                "MoveFiles" => new[] { typeof(FileSystemOptions) },
+                _ => Array.Empty<Type>()
+            },
+            BuildHandler = _ => new BTaskHandlerBuilder
+            {
+                Type = BTaskType.Any,
+                ResourceType = BTaskResourceType.Any,
+                GetName = () => localizer.BTask_Name(x.Key),
+                GetDescription = () => localizer.BTask_Description(x.Key),
+                GetMessageOnInterruption = () => localizer.BTask_MessageOnInterruption(x.Key),
+                CancellationToken = null,
+                Id = x.Key,
+                Run = async args =>
+                {
+                    await using var scope = serviceProvider.CreateAsyncScope();
+                    var sp = scope.ServiceProvider;
+                    await x.Value(args, sp);
+                },
+                ConflictKeys = [x.Key],
+                Level = BTaskLevel.Default,
+                Interval = TimeSpan.FromMinutes(1), // Will be overridden by GetInterval
+                IsPersistent = true
+            }
         }).ToArray();
     }
 
-    public BTaskHandlerBuilder[] DescriptorBuilders { get; }
+    public PredefinedTaskDefinition[] TaskDefinitions { get; }
 }

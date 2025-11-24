@@ -120,7 +120,17 @@ namespace Bakabase.Service.Components
             }
 
             var predefinedTasksProvider = serviceProvider.GetRequiredService<PredefinedTasksProvider>();
-            _ = serviceProvider.InitializeBTasks(predefinedTasksProvider.DescriptorBuilders);
+            var dynamicTaskRegistry = serviceProvider.GetRequiredService<DynamicTaskRegistry>();
+            var taskManager = serviceProvider.GetRequiredService<BTaskManager>();
+
+            // Initialize BTaskManager
+            await taskManager.Initialize();
+
+            // Register all predefined tasks to the dynamic registry
+            foreach (var taskDef in predefinedTasksProvider.TaskDefinitions)
+            {
+                dynamicTaskRegistry.RegisterTask(taskDef);
+            }
         }
 
         protected override Task<string?> CheckIfAppCanExitSafely()

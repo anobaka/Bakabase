@@ -976,6 +976,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             foreach (var tbdCache in tbdCaches)
             {
+                ct.ThrowIfCancellationRequested();
                 try
                 {
                     var cache = await _resourceCacheOrm.GetByKey(tbdCache.ResourceId);

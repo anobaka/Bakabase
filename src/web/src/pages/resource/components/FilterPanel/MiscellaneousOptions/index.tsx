@@ -1,33 +1,31 @@
 "use client";
 
 import type { BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions } from "@/sdk/Api";
+import type { PropertyMap } from "@/components/types";
 
 import {
   AppstoreAddOutlined,
   CloseOutlined,
-  DashboardOutlined,
   DatabaseOutlined,
   FullscreenOutlined,
   PlayCircleOutlined,
-  QuestionCircleOutlined,
   ZoomInOutlined,
 } from "@ant-design/icons";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { AiOutlineFieldNumber, AiOutlineOrderedList, AiOutlineSetting } from "react-icons/ai";
+import { AiOutlineFieldNumber, AiOutlineSetting } from "react-icons/ai";
 import { BiCarousel } from "react-icons/bi";
+import _ from "lodash";
+import { ImEmbed } from "react-icons/im";
 
-import { Button, Checkbox, Chip, Divider, Modal, Spacer, Tooltip, ButtonGroup } from "@/components/bakaui";
+import { Button, Checkbox, Chip, Divider, Modal, ButtonGroup } from "@/components/bakaui";
 import { CoverFit, PropertyPool } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/stores/options";
 import { buildLogger } from "@/components/utils";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { PropertyMap } from "@/components/types";
-import _ from "lodash";
-import { ImEmbed } from "react-icons/im";
 import { PropertyLabel } from "@/components/Property";
 
 type Props = {
@@ -51,8 +49,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
   const navigate = useNavigate();
 
   const loadProperties = async () => {
-    const psr =
-      (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
+    const psr = (await BApi.property.getPropertiesByPool(PropertyPool.All)).data || [];
     const ps = _.mapValues(
       _.groupBy(psr, (x) => x.pool),
       (v) => _.keyBy(v, (x) => x.id),
@@ -63,11 +60,13 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
   useEffect(() => {
     loadProperties();
-  }, [])
+  }, []);
 
   const [visible, setVisible] = useState(false);
 
-  const patchOptions = async (options: Partial<BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions>) => {
+  const patchOptions = async (
+    options: Partial<BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions>,
+  ) => {
     await uiOptionsStore.patch({ resource: { ...resourceUiOptions, ...options } });
   };
 
@@ -78,23 +77,26 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
       </Button>
       {visible && (
         <Modal
+          footer={false}
           size="lg"
           title={t<string>("Display options")}
           visible={visible}
           onClose={() => setVisible(false)}
-          footer={false}
         >
           <div className={"flex flex-col gap-3"}>
             <div className={"flex items-center gap-2"}>
               <div className={"text-sm"}>{t<string>("Column count")}</div>
               <div className={"flex flex-wrap gap-1"}>
                 <ButtonGroup>
-                  {Array.from({ length: (MaxResourceColCount - MinResourceColCount + 1) }, (_, idx) => idx + MinResourceColCount).map((num) => (
+                  {Array.from(
+                    { length: MaxResourceColCount - MinResourceColCount + 1 },
+                    (_, idx) => idx + MinResourceColCount,
+                  ).map((num) => (
                     <Button
                       key={num}
                       className={"min-w-0 px-6"}
-                      size={"sm"}
                       color={currentColCount === num ? "primary" : "default"}
+                      size={"sm"}
                       onPress={() => patchOptions({ colCount: num })}
                     >
                       {num}
@@ -120,9 +122,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div>
               <Checkbox
                 isSelected={!!resourceUiOptions?.showBiggerCoverWhileHover}
-                onValueChange={(checked) =>
-                  patchOptions({ showBiggerCoverWhileHover: checked })
-                }
+                onValueChange={(checked) => patchOptions({ showBiggerCoverWhileHover: checked })}
               >
                 <div className={"flex items-center gap-1"}>
                   <ZoomInOutlined className={"text-base"} />
@@ -134,9 +134,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div>
               <Checkbox
                 isSelected={!resourceUiOptions?.disableMediaPreviewer}
-                onValueChange={(checked) =>
-                  patchOptions({ disableMediaPreviewer: !checked })
-                }
+                onValueChange={(checked) => patchOptions({ disableMediaPreviewer: !checked })}
               >
                 <div className={"flex items-center gap-1"}>
                   <PlayCircleOutlined className={"text-base"} />
@@ -145,12 +143,22 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               </Checkbox>
             </div>
 
+            <div>
+              <Checkbox
+                isSelected={!!resourceUiOptions?.autoSelectFirstPlayableFile}
+                onValueChange={(checked) => patchOptions({ autoSelectFirstPlayableFile: checked })}
+              >
+                <div className={"flex items-center gap-1"}>
+                  <PlayCircleOutlined className={"text-base"} />
+                  {t<string>("Auto-select first file if multiple playable files exist")}
+                </div>
+              </Checkbox>
+            </div>
+
             <div className={"flex flex-col gap-1"}>
               <Checkbox
                 isSelected={resourceUiOptions?.inlineDisplayName}
-                onValueChange={(checked) =>
-                  patchOptions({ inlineDisplayName: checked })
-                }
+                onValueChange={(checked) => patchOptions({ inlineDisplayName: checked })}
               >
                 <div className={"flex items-center gap-1"}>
                   <ImEmbed className={"text-base"} />
@@ -167,9 +175,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div className={"flex flex-col gap-1"}>
               <Checkbox
                 isSelected={!resourceUiOptions?.disableCache}
-                onValueChange={(checked) =>
-                  patchOptions({ disableCache: !checked })
-                }
+                onValueChange={(checked) => patchOptions({ disableCache: !checked })}
               >
                 <div className={"flex items-center gap-1"}>
                   <DatabaseOutlined className={"text-base"} />
@@ -183,9 +189,9 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   )}
                 </span>
                 <Button
+                  color="primary"
                   size={"sm"}
                   variant={"light"}
-                  color="primary"
                   onClick={() => {
                     navigate("/cache");
                   }}
@@ -198,9 +204,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div>
               <Checkbox
                 isSelected={!resourceUiOptions?.disableCoverCarousel}
-                onValueChange={(checked) =>
-                  patchOptions({ disableCoverCarousel: !checked })
-                }
+                onValueChange={(checked) => patchOptions({ disableCoverCarousel: !checked })}
               >
                 <div className={"flex items-center gap-1"}>
                   <BiCarousel className={"text-base"} />
@@ -212,9 +216,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div>
               <Checkbox
                 isSelected={!!resourceUiOptions?.displayResourceId}
-                onValueChange={(checked) =>
-                  patchOptions({ displayResourceId: checked })
-                }
+                onValueChange={(checked) => patchOptions({ displayResourceId: checked })}
               >
                 <div className={"flex items-center gap-1"}>
                   <AiOutlineFieldNumber className={"text-base"} />
@@ -235,13 +237,19 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   size={"sm"}
                   variant={"flat"}
                   onPress={() => {
-                    const selection = (resourceUiOptions?.displayProperties ?? []).map((k) => ({ id: k.id, pool: k.pool as any }));
+                    const selection = (resourceUiOptions?.displayProperties ?? []).map((k) => ({
+                      id: k.id,
+                      pool: k.pool as any,
+                    }));
+
                     createPortal(PropertySelector, {
                       selection,
                       multiple: true,
                       pool: PropertyPool.All,
                       onSubmit: async (selected) => {
-                        patchOptions({ displayProperties: selected.map((p: any) => ({ id: p.id, pool: p.pool })) })
+                        patchOptions({
+                          displayProperties: selected.map((p: any) => ({ id: p.id, pool: p.pool })),
+                        });
                       },
                     });
                   }}
@@ -252,26 +260,35 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               <div className={"flex items-center flex-wrap gap-1"}>
                 {resourceUiOptions?.displayProperties?.map((p) => {
                   const property = propertyMap[p.pool as PropertyPool]?.[p.id];
+
                   if (!property) {
                     return null;
                   }
+
                   return (
-                    <div className={"flex items-center gap-1"} key={`${p.pool}-${p.id}`}>
+                    <div key={`${p.pool}-${p.id}`} className={"flex items-center gap-1"}>
                       {property ? (
-                        <PropertyLabel
-                          property={property}
-                          showPool={true}
-                        />
+                        <PropertyLabel property={property} showPool={true} />
                       ) : (
                         <Chip>{t("Unknown property")}</Chip>
                       )}
-                      <Button color="danger" isIconOnly size={"sm"} variant={"light"} onPress={() => {
-                        patchOptions({ displayProperties: resourceUiOptions?.displayProperties?.filter((pp) => pp.id !== p.id && pp.pool !== p.pool) })
-                      }}>
+                      <Button
+                        isIconOnly
+                        color="danger"
+                        size={"sm"}
+                        variant={"light"}
+                        onPress={() => {
+                          patchOptions({
+                            displayProperties: resourceUiOptions?.displayProperties?.filter(
+                              (pp) => pp.id !== p.id && pp.pool !== p.pool,
+                            ),
+                          });
+                        }}
+                      >
                         <CloseOutlined />
                       </Button>
                     </div>
-                  )
+                  );
                 })}
               </div>
             </div>

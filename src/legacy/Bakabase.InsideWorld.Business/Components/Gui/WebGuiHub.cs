@@ -23,6 +23,7 @@ using Bakabase.InsideWorld.Business.Components.PostParser.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.PostParser.Services;
 using Bakabase.InsideWorld.Business.Models.View;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Abstractions.Models.View;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Components;
@@ -48,6 +49,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
         Task IwFsEntriesChange(List<IwFsEntryChangeEvent> events, CancellationToken ct);
         Task GetAppUpdaterState(UpdaterState state);
         Task UpdateThirdPartyRequestStatistics(ThirdPartyRequestStatistics[] statistics);
+        Task OnNotification(AppNotificationMessageViewModel notification);
     }
 
     public class WebGuiHub : Hub<IWebGuiClient>
@@ -90,7 +92,7 @@ namespace Bakabase.InsideWorld.Business.Components.Gui
                 var genericType = typeof(IOptions<>).MakeGenericType(optionsType);
                 var valueGetter = genericType.GetProperties()
                     .FirstOrDefault(a => a.Name == nameof(IOptions<AppOptions>.Value));
-                var options = valueGetter!.GetMethod!.Invoke(optionsManagerObj, null);
+                var options = valueGetter!.GetMethod!.Invoke(optionsManagerObj, null)!;
                 await Clients.Caller.OptionsChanged(optionsType.Name.Camelize(), options);
             }
 

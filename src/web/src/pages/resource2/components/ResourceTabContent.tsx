@@ -5,7 +5,7 @@ import type { SearchForm } from "@/pages/resource/models";
 
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePrevious, useUpdate, useUpdateEffect } from "react-use";
+import { usePrevious, useUpdate } from "react-use";
 import { DisconnectOutlined } from "@ant-design/icons";
 
 import Resources from "../../resource/components/Resources";
@@ -112,7 +112,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
         setSelectedIds(ids);
       } else {
-        setSelectedIds(resources.map((r) => r.id));
+        setSelectedIds(resourcesRef.current.map((r) => r.id));
       }
     } else {
       setSelectedIds([]);
@@ -231,10 +231,11 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     resourcesRef.current = resources;
   }, [resources]);
 
-  useUpdateEffect(() => {
+  // Sync ref during render phase to ensure renderCell gets the latest value
+  if (selectedIdsRef.current !== selectedIds) {
     selectedIdsRef.current = selectedIds;
     log("SelectedIds", selectedIds);
-  }, [selectedIds]);
+  }
 
   const pageContainerRef = useRef<any>();
 

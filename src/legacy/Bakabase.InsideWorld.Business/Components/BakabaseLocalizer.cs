@@ -395,5 +395,15 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(BuildingData)];
         }
+
+        public string VersionCheck_NewVersionAvailableTitle()
+        {
+            return this[nameof(VersionCheck_NewVersionAvailableTitle)];
+        }
+
+        public string VersionCheck_NewVersionAvailableMessage(string version)
+        {
+            return this[nameof(VersionCheck_NewVersionAvailableMessage), version];
+        }
     }
 }

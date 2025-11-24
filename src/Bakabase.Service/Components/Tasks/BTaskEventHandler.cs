@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.View;
@@ -12,23 +15,113 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Service.Components.Tasks;
 
-public class BTaskEventHandler(IHubContext<WebGuiHub, IWebGuiClient> uiHub, IGuiAdapter guiAdapter, ILogger<BTaskEventHandler> logger) : IBTaskEventHandler
+public class BTaskEventHandler : IBTaskEventHandler, IDisposable
 {
+    private readonly IHubContext<WebGuiHub, IWebGuiClient> _uiHub;
+    private readonly IGuiAdapter _guiAdapter;
+    private readonly ILogger<BTaskEventHandler> _logger;
+
+    private readonly ConcurrentDictionary<string, BTaskViewModel> _pendingIncrementalTasks = new();
+    private readonly SemaphoreSlim _allTasksLock = new(1, 1);
+    private IEnumerable<BTaskViewModel>? _pendingAllTasks;
+    private bool _hasAllTasksUpdate;
+
+    private readonly Timer _flushTimer;
+    private const int FlushIntervalMs = 500;
+
+    public BTaskEventHandler(
+        IHubContext<WebGuiHub, IWebGuiClient> uiHub,
+        IGuiAdapter guiAdapter,
+        ILogger<BTaskEventHandler> logger)
+    {
+        _uiHub = uiHub;
+        _guiAdapter = guiAdapter;
+        _logger = logger;
+
+        _flushTimer = new Timer(FlushPendingEvents, null, FlushIntervalMs, FlushIntervalMs);
+    }
+
     public async Task OnTaskChange(BTaskViewModel task)
     {
         // logger.LogInformation($"BTask status changed: [{task.Id}]{task.Name} -> {task.Status}", task);
-        await uiHub.Clients.All.GetIncrementalData("BTask", task);
+        _pendingIncrementalTasks[task.Id] = task;
     }
 
     public async Task OnAllTasksChange(IEnumerable<BTaskViewModel> tasks)
     {
-        await uiHub.Clients.All.GetData("BTask", tasks);
+        await _allTasksLock.WaitAsync();
+        try
+        {
+            _pendingAllTasks = tasks;
+            _hasAllTasksUpdate = true;
+        }
+        finally
+        {
+            _allTasksLock.Release();
+        }
     }
 
     public async Task OnTaskManagerStatusChange(bool isRunning)
     {
         var filename = isRunning ? "tray-running" : "favicon";
         var icon = $"Assets/{filename}.ico";
-        guiAdapter.SetTrayIcon(new Icon(icon));
+        _guiAdapter.SetTrayIcon(new Icon(icon));
+    }
+
+    private async void FlushPendingEvents(object? state)
+    {
+        try
+        {
+            // 处理全量数据更新（优先级更高）
+            bool shouldSendAll = false;
+            IEnumerable<BTaskViewModel>? allTasks = null;
+
+            await _allTasksLock.WaitAsync();
+            try
+            {
+                if (_hasAllTasksUpdate)
+                {
+                    shouldSendAll = true;
+                    allTasks = _pendingAllTasks;
+                    _hasAllTasksUpdate = false;
+                    _pendingAllTasks = null;
+
+                    // 清空增量队列，因为全量更新包含了所有数据
+                    _pendingIncrementalTasks.Clear();
+                }
+            }
+            finally
+            {
+                _allTasksLock.Release();
+            }
+
+            if (shouldSendAll && allTasks != null)
+            {
+                await _uiHub.Clients.All.GetData("BTask", allTasks);
+                return;
+            }
+
+            // 处理增量数据更新
+            if (!_pendingIncrementalTasks.IsEmpty)
+            {
+                var tasksToSend = _pendingIncrementalTasks.Values.ToList();
+                _pendingIncrementalTasks.Clear();
+
+                foreach (var task in tasksToSend)
+                {
+                    await _uiHub.Clients.All.GetIncrementalData("BTask", task);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error flushing pending BTask events");
+        }
+    }
+
+    public void Dispose()
+    {
+        _flushTimer?.Dispose();
+        _allTasksLock?.Dispose();
     }
 }

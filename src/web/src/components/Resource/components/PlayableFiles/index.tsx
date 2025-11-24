@@ -94,7 +94,9 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
 ) {
   const { t } = useTranslation();
   const log = buildLogger(`ResourcePlayableFiles:${resource.id}|${resource.path}`);
-  const useCache = !useUiOptionsStore((state) => state.data).resource?.disableCache;
+  const uiOptionsStore = useUiOptionsStore();
+  const resourceUiOptions = uiOptionsStore.data?.resource;
+  const useCache = !resourceUiOptions?.disableCache;
 
   const [portalCtx, setPortalCtx] = useState<PlayableFilesCtx>();
   const [dirs, setDirs] = useState<Directory[]>();
@@ -156,6 +158,11 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
         <PortalComponent
           onClick={() => {
             if (portalCtx.files.length == 1 && !portalCtx.hasMore) {
+              play(portalCtx.files[0]!);
+            } else if (
+              resourceUiOptions?.autoSelectFirstPlayableFile &&
+              portalCtx.files.length > 0
+            ) {
               play(portalCtx.files[0]!);
             } else {
               if (dirs) {
@@ -239,6 +246,31 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
               );
             })}
           </div>
+          {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx?.files.length > 1 && (
+            <div className={"pt-3 border-t mt-3"}>
+              <Button
+                color={"primary"}
+                size={"sm"}
+                variant={"flat"}
+                onPress={async () => {
+                  await uiOptionsStore.patch({
+                    resource: {
+                      ...resourceUiOptions,
+                      autoSelectFirstPlayableFile: true,
+                    },
+                  });
+                  setModalVisible(false);
+                  toast.success(
+                    t<string>(
+                      "Auto-select first playable file has been enabled. You can change this in the resource page settings.",
+                    ),
+                  );
+                }}
+              >
+                {t<string>("Auto-select first file if multiple playable files exist")}
+              </Button>
+            </div>
+          )}
         </Modal>
       </>
     );
