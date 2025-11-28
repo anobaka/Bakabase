@@ -32,6 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public bool AutoRetry { get; set; }
         public DateTime? NextStartDt { get; set; }
         public HashSet<DownloadTaskAction> AvailableActions { get; set; } = new();
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         [NotMapped] public string DisplayName => Name ?? Key;
 

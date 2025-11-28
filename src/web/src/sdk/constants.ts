@@ -22,6 +22,42 @@ export const CategoryResourceDisplayNameSegmentTypeLabel: Record<CategoryResourc
   [CategoryResourceDisplayNameSegmentType.RightWrapper]: 'RightWrapper'
 };
 
+export enum AppNotificationBehavior {
+  AutoDismiss = 0,
+  Persistent = 1
+}
+
+export const appNotificationBehaviors = [
+  { label: 'AutoDismiss', value: AppNotificationBehavior.AutoDismiss },
+  { label: 'Persistent', value: AppNotificationBehavior.Persistent }
+] as const;
+
+export const AppNotificationBehaviorLabel: Record<AppNotificationBehavior, string> = {
+  [AppNotificationBehavior.AutoDismiss]: 'AutoDismiss',
+  [AppNotificationBehavior.Persistent]: 'Persistent'
+};
+
+export enum AppNotificationSeverity {
+  Info = 0,
+  Success = 1,
+  Warning = 2,
+  Error = 3
+}
+
+export const appNotificationSeverities = [
+  { label: 'Info', value: AppNotificationSeverity.Info },
+  { label: 'Success', value: AppNotificationSeverity.Success },
+  { label: 'Warning', value: AppNotificationSeverity.Warning },
+  { label: 'Error', value: AppNotificationSeverity.Error }
+] as const;
+
+export const AppNotificationSeverityLabel: Record<AppNotificationSeverity, string> = {
+  [AppNotificationSeverity.Info]: 'Info',
+  [AppNotificationSeverity.Success]: 'Success',
+  [AppNotificationSeverity.Warning]: 'Warning',
+  [AppNotificationSeverity.Error]: 'Error'
+};
+
 export enum BTaskLevel {
   Default = 1,
   Critical = 2
@@ -2385,17 +2421,17 @@ export const BuiltinPropertyForDisplayNameLabel: Record<BuiltinPropertyForDispla
 
 export enum TampermonkeyScript {
   SoulPlus = 1,
-  ExHentai = 2
+  Bakabase = 2
 }
 
 export const tampermonkeyScripts = [
   { label: 'SoulPlus', value: TampermonkeyScript.SoulPlus },
-  { label: 'ExHentai', value: TampermonkeyScript.ExHentai }
+  { label: 'Bakabase', value: TampermonkeyScript.Bakabase }
 ] as const;
 
 export const TampermonkeyScriptLabel: Record<TampermonkeyScript, string> = {
   [TampermonkeyScript.SoulPlus]: 'SoulPlus',
-  [TampermonkeyScript.ExHentai]: 'ExHentai'
+  [TampermonkeyScript.Bakabase]: 'Bakabase'
 };
 
 export enum PostParserSource {

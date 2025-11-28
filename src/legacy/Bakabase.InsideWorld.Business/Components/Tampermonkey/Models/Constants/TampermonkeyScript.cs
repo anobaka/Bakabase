@@ -3,5 +3,5 @@
 public enum TampermonkeyScript
 {
     SoulPlus = 1,
-    ExHentai = 2
+    Bakabase = 2
 }

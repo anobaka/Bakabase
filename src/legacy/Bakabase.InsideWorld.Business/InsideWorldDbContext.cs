@@ -75,6 +75,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ResourceCacheDbModel> ResourceCaches { get; set; }
 
         public DbSet<PlayHistoryDbModel> PlayHistories { get; set; }
+        public DbSet<ThirdPartyContentTrackerDbModel> ThirdPartyContentTrackers { get; set; }
 
         public DbSet<ExtensionGroupDbModel> ExtensionGroups { get; set; }
         public DbSet<MediaLibraryTemplateDbModel> MediaLibraryTemplates { get; set; }
@@ -223,6 +224,13 @@ namespace Bakabase.InsideWorld.Business
             {
                 a.HasIndex(x => x.ResourceId);
                 a.HasIndex(x => x.PlayedAt);
+            });
+
+            modelBuilder.Entity<ThirdPartyContentTrackerDbModel>(t =>
+            {
+                t.HasIndex(x => new { x.DomainKey, x.Filter, x.ContentId }).IsUnique();
+                t.HasIndex(x => x.DomainKey);
+                t.HasIndex(x => x.ViewedAt);
             });
 
             modelBuilder.Entity<MediaLibraryV2DbModel>(t =>

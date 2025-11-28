@@ -18,6 +18,7 @@ using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Service.Models.Input;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -160,10 +161,11 @@ public class DownloadTaskController : Controller
         var filename = $"download-tasks-{DateTime.Now:yyyyMMddHHmmss}.xlsx";
         return File(xlsxBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename);
     }
-    
+
     [SwaggerOperation(OperationId = "GetDownloaderOptions")]
     [HttpGet("downloader/options/{thirdPartyId}")]
-    public async Task<SingletonResponse<DownloaderOptions>> GetDownloaderOptions(ThirdPartyId thirdPartyId, int taskType)
+    public async Task<SingletonResponse<DownloaderOptions>> GetDownloaderOptions(ThirdPartyId thirdPartyId,
+        int taskType)
     {
         return new SingletonResponse<DownloaderOptions>(await _downloaderFactory.GetHelper(thirdPartyId, taskType)
             .GetOptionsAsync());
@@ -171,10 +173,51 @@ public class DownloadTaskController : Controller
 
     [SwaggerOperation(OperationId = "PutDownloaderOptions")]
     [HttpPut("downloader/options/{thirdPartyId}")]
-    public async Task<BaseResponse> PutDownloaderOptions(ThirdPartyId thirdPartyId, int taskType, [FromBody] DownloaderOptions options)
+    public async Task<BaseResponse> PutDownloaderOptions(ThirdPartyId thirdPartyId, int taskType,
+        [FromBody] DownloaderOptions options)
     {
         var helper = _downloaderFactory.GetHelper(thirdPartyId, taskType);
         await helper.PutOptionsAsync(options);
         return BaseResponseBuilder.Ok;
+    }
+
+
+    [HttpPost("exhentai")]
+    [SwaggerOperation(OperationId = "AddExHentaiDownloadTask")]
+    public async Task<BaseResponse> AddExHentaiTask([FromBody] ExHentaiDownloadTaskAddInputModel model)
+    {
+        var downloadPath = _exhentaiOptions.Value.DefaultPath;
+        if (downloadPath.IsNullOrEmpty())
+        {
+            throw new Exception("Download path for exhentai is not set");
+        }
+
+        var baseModel = new DownloadTaskAddInputModel
+        {
+            Type = (int)model.Type,
+            ThirdPartyId = ThirdPartyId.ExHentai,
+            Keys = [model.Link],
+            DownloadPath = downloadPath,
+            AutoRetry = false
+        };
+
+
+        var rsp = await Add(baseModel);
+        if (rsp.Code != 0)
+        {
+            return rsp;
+        }
+
+        // try
+        // {
+        //     var task = rsp.Data!.First();
+        //     await _service.Start(x => x.Id == task.Id);
+        // }
+        // catch (Exception)
+        // {
+        //     // ignored
+        // }
+
+        return rsp;
     }
 }

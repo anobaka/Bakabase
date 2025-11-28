@@ -655,6 +655,11 @@ const DownloaderPage = () => {
                               {moment(task.nextStartDt).format("YYYY-MM-DD HH:mm:ss")}
                             </Chip>
                           )}
+                          <Chip color="default" size="sm">
+                            {t('Created at')}
+                            &nbsp;
+                            {moment(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
+                            </Chip>
                         </div>
                       </div>
                       <div className={"flex items-center"}>

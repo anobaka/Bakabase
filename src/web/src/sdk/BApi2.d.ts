@@ -1157,6 +1157,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/download-task/exhentai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AddExHentaiDownloadTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/{resourceId}/enhancement": {
         parameters: {
             query?: never;
@@ -1893,6 +1909,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/gui/test-notification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SendTestNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/log": {
         parameters: {
             query?: never;
@@ -2560,6 +2592,22 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["PatchResourceOptions"];
+        trace?: never;
+    };
+    "/options/resource/delete-markers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DeleteResourceMarkers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/options/resource/recent-filters": {
@@ -3506,6 +3554,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/third-party-content-tracker/query": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["QueryThirdPartyContentStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/third-party-content-tracker/mark-viewed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["MarkThirdPartyContentAsViewed"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/third-party-content-tracker/nearest-viewed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["FindNearestViewedContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/tool/open": {
         parameters: {
             query?: never;
@@ -3763,6 +3859,18 @@ export interface components {
             readonly canBeInstantiated: boolean;
             associatedCategories?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Category"][];
         };
+        /**
+         * Format: int32
+         * @description [0: AutoDismiss, 1: Persistent]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.AppNotificationBehavior": 0 | 1;
+        /**
+         * Format: int32
+         * @description [0: Info, 1: Success, 2: Warning, 3: Error]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.AppNotificationSeverity": 0 | 1 | 2 | 3;
         /**
          * Format: int32
          * @description [1: ContextCreated, 2: ContextApplied]
@@ -4293,6 +4401,35 @@ export interface components {
             value1?: string;
             value2?: string;
         };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel": {
+            domainKey: string;
+            filter?: string;
+            contentItems: components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel+ContentItem"][];
+        };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel+ContentItem": {
+            contentId: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        "Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel": {
+            domainKey: string;
+            filter?: string;
+            contentIds: string[];
+        };
+        "Bakabase.Abstractions.Models.View.AppNotificationMessageViewModel": {
+            id: string;
+            title: string;
+            message?: string;
+            severity: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.AppNotificationSeverity"];
+            behavior: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.AppNotificationBehavior"];
+            /** Format: int32 */
+            durationMs?: number;
+            /** Format: date-time */
+            createdAt: string;
+            metadata?: {
+                [key: string]: unknown;
+            };
+        };
         "Bakabase.Abstractions.Models.View.CacheOverviewViewModel": {
             categoryCaches: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+CategoryCacheViewModel"][];
             mediaLibraryCaches: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+MediaLibraryCacheViewModel"][];
@@ -4338,6 +4475,20 @@ export interface components {
             type: components["schemas"]["Bakabase.Abstractions.Models.View.Constants.CategoryResourceDisplayNameSegmentType"];
             text: string;
             wrapperPairId?: string;
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel": {
+            contentId: string;
+            /** Format: date-time */
+            viewedAt: string;
+        };
+        "Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel": {
+            contentId: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: date-time */
+            viewedAt?: string;
+            readonly isViewed: boolean;
+            readonly hasUpdate: boolean;
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.AppOptionsPatchRequestModel": {
             language?: string;
@@ -4899,6 +5050,8 @@ export interface components {
             /** Format: date-time */
             nextStartDt?: string;
             availableActions: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskAction"][];
+            /** Format: date-time */
+            createdAt: string;
             readonly displayName: string;
             readonly canStart: boolean;
         };
@@ -4970,6 +5123,12 @@ export interface components {
             ids: number[];
             actionOnConflict: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskActionOnConflict"];
         };
+        /**
+         * Format: int32
+         * @description [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+         * @enum {integer}
+         */
+        "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3 | 4;
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
             files: string[];
@@ -5110,7 +5269,7 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [1: SoulPlus, 2: ExHentai]
+         * @description [1: SoulPlus, 2: Bakabase]
          * @enum {integer}
          */
         "Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript": 1 | 2;
@@ -5206,6 +5365,7 @@ export interface components {
             hideResourceTimeInfo: boolean;
             displayProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
             inlineDisplayName: boolean;
+            autoSelectFirstPlayableFile: boolean;
         };
         /**
          * Format: int32
@@ -5730,6 +5890,11 @@ export interface components {
             decompressToNewFolder: boolean;
             deleteAfterDecompression: boolean;
             moveToParent: boolean;
+            overwriteExistFiles: boolean;
+        };
+        "Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel": {
+            type: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType"];
+            link: string;
         };
         "Bakabase.Service.Models.Input.FileNameModifierProcessInputModel": {
             filePaths: string[];
@@ -6095,6 +6260,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.InsideWorld.Business.Components.Compression.CompressedFileEntry]": {
             /** Format: int32 */
             code: number;
@@ -6382,6 +6553,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.View.MediaLibraryTemplateImportConfigurationViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Infrastructures.Components.App.Models.ResponseModels.AppInfo]": {
             /** Format: int32 */
@@ -9658,6 +9835,35 @@ export interface operations {
             };
         };
     };
+    AddExHentaiDownloadTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ExHentaiDownloadTaskAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetResourceEnhancements: {
         parameters: {
             query?: {
@@ -10945,6 +11151,35 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SendTestNotification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.View.AppNotificationMessageViewModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.View.AppNotificationMessageViewModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.View.AppNotificationMessageViewModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.View.AppNotificationMessageViewModel"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {
@@ -12621,6 +12856,24 @@ export interface operations {
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
+            };
+        };
+    };
+    DeleteResourceMarkers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -14824,7 +15077,7 @@ export interface operations {
     InstallTampermonkeyScript: {
         parameters: {
             query?: {
-                /** @description [1: SoulPlus, 2: ExHentai] */
+                /** @description [1: SoulPlus, 2: Bakabase] */
                 script?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript"];
             };
             header?: never;
@@ -14851,7 +15104,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description [1: SoulPlus, 2: ExHentai] */
+                /** @description [1: SoulPlus, 2: Bakabase] */
                 script: components["schemas"]["Bakabase.InsideWorld.Business.Components.Tampermonkey.Models.Constants.TampermonkeyScript"];
             };
             cookie?: never;
@@ -14885,6 +15138,90 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics[]]"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics[]]"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics[]]"];
+                };
+            };
+        };
+    };
+    QueryThirdPartyContentStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerQueryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerStatusViewModel]"];
+                };
+            };
+        };
+    };
+    MarkThirdPartyContentAsViewed: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.ThirdPartyContentTrackerMarkViewedInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    FindNearestViewedContent: {
+        parameters: {
+            query?: {
+                domainKey?: string;
+                filter?: string;
+                targetContentId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.View.ThirdPartyContentTrackerNearestViewModel]"];
                 };
             };
         };

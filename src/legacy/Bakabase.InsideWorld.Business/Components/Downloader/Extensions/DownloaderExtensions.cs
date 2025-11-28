@@ -170,6 +170,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 NextStartDt = nextStartDt,
                 AvailableActions = actions,
                 AutoRetry = task.AutoRetry,
+                CreatedAt = task.CreatedAt
             };
 
             return dto;
@@ -198,7 +199,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Extensions
                 Checkpoint = task.Checkpoint,
                 Status = task.Status.ToDomainModel(),
                 AutoRetry = task.AutoRetry,
-                DownloadPath = task.DownloadPath
+                DownloadPath = task.DownloadPath,
+                CreatedAt = task.CreatedAt
             };
         }
 

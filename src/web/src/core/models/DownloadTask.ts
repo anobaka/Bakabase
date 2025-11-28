@@ -22,4 +22,5 @@ export type DownloadTask = {
   availableActions: DownloadTaskAction[];
   displayName: string;
   canStart: boolean;
+  createdAt: string;
 };

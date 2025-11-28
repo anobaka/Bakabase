@@ -54,6 +54,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool HideResourceTimeInfo { get; set; }
             public List<PropertyKey> DisplayProperties { get; set; } = [];
             public bool InlineDisplayName { get; set; }
+            public bool AutoSelectFirstPlayableFile { get; set; }
         }
     }
 }

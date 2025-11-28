@@ -101,6 +101,18 @@ export interface BakabaseAbstractionsModelsDomainComponentDescriptor {
 }
 
 /**
+ * [0: AutoDismiss, 1: Persistent]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsAppNotificationBehavior = 0 | 1;
+
+/**
+ * [0: Info, 1: Success, 2: Warning, 3: Error]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity = 0 | 1 | 2 | 3;
+
+/**
  * [1: ContextCreated, 2: ContextApplied]
  * @format int32
  */
@@ -767,6 +779,53 @@ export interface BakabaseAbstractionsModelsInputSpecialTextPatchInputModel {
   value2?: string;
 }
 
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  domainKey: string;
+  /** @maxLength 500 */
+  filter?: string;
+  contentItems: BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModelContentItem[];
+}
+
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModelContentItem {
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  contentId: string;
+  /** @format date-time */
+  updatedAt?: string;
+}
+
+export interface BakabaseAbstractionsModelsInputThirdPartyContentTrackerQueryInputModel {
+  /**
+   * @minLength 1
+   * @maxLength 100
+   */
+  domainKey: string;
+  /** @maxLength 500 */
+  filter?: string;
+  contentIds: string[];
+}
+
+export interface BakabaseAbstractionsModelsViewAppNotificationMessageViewModel {
+  id: string;
+  title: string;
+  message?: string;
+  /** [0: Info, 1: Success, 2: Warning, 3: Error] */
+  severity: BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity;
+  /** [0: AutoDismiss, 1: Persistent] */
+  behavior: BakabaseAbstractionsModelsDomainConstantsAppNotificationBehavior;
+  /** @format int32 */
+  durationMs?: number;
+  /** @format date-time */
+  createdAt: string;
+  metadata?: Record<string, any>;
+}
+
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModel {
   categoryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel[];
   mediaLibraryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel[];
@@ -818,6 +877,22 @@ export interface BakabaseAbstractionsModelsViewResourceDisplayNameViewModelSegme
   type: BakabaseAbstractionsModelsViewConstantsCategoryResourceDisplayNameSegmentType;
   text: string;
   wrapperPairId?: string;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
+  contentId: string;
+  /** @format date-time */
+  viewedAt: string;
+}
+
+export interface BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel {
+  contentId: string;
+  /** @format date-time */
+  updatedAt?: string;
+  /** @format date-time */
+  viewedAt?: string;
+  isViewed: boolean;
+  hasUpdate: boolean;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel {
@@ -1432,6 +1507,8 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   nextStartDt?: string;
   /** @uniqueItems true */
   availableActions: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskAction[];
+  /** @format date-time */
+  createdAt: string;
   displayName: string;
   canStart: boolean;
 }
@@ -1515,6 +1592,13 @@ export interface BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsMode
   /** [0: NotSet, 1: StopOthers, 2: Ignore] */
   actionOnConflict: BakabaseInsideWorldBusinessComponentsDownloaderAbstractionsModelsConstantsDownloadTaskActionOnConflict;
 }
+
+/**
+ * [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+ * @format int32
+ */
+export type BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType =
+  1 | 2 | 3 | 4;
 
 export interface BakabaseInsideWorldBusinessComponentsFileExplorerEntriesIwFsCompressedFileGroup {
   keyName: string;
@@ -1698,7 +1782,7 @@ export interface BakabaseInsideWorldBusinessComponentsPostParserModelsDomainPost
 }
 
 /**
- * [1: SoulPlus, 2: ExHentai]
+ * [1: SoulPlus, 2: Bakabase]
  * @format int32
  */
 export type BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript =
@@ -2573,6 +2657,13 @@ export interface BakabaseServiceModelsInputDecompressionInputModelItem {
   decompressToNewFolder: boolean;
   deleteAfterDecompression: boolean;
   moveToParent: boolean;
+  overwriteExistFiles: boolean;
+}
+
+export interface BakabaseServiceModelsInputExHentaiDownloadTaskAddInputModel {
+  /** [1: SingleWork, 2: Watched, 3: List, 4: Torrent] */
+  type: BakabaseInsideWorldBusinessComponentsDownloaderComponentsDownloadersExHentaiExHentaiDownloadTaskType;
+  link: string;
 }
 
 export interface BakabaseServiceModelsInputFileNameModifierProcessInputModel {
@@ -3012,6 +3103,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsViewResourceDisplayNameViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldBusinessComponentsCompressionCompressedFileEntry {
   /** @format int32 */
   code: number;
@@ -3341,6 +3439,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo {
@@ -7316,6 +7421,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags DownloadTask
+     * @name AddExHentaiDownloadTask
+     * @request POST:/download-task/exhentai
+     */
+    addExHentaiDownloadTask: (
+      data: BakabaseServiceModelsInputExHentaiDownloadTaskAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/download-task/exhentai`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addExHentaiDownloadTask
+     * @name addExHentaiDownloadTaskUrl
+     */
+    addExHentaiDownloadTaskUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/download-task/exhentai`;
+      
+      return baseUrl + path;
+    },
   };
   resource = {
     /**
@@ -10599,6 +10735,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Gui
+     * @name SendTestNotification
+     * @request POST:/gui/test-notification
+     */
+    sendTestNotification: (
+      data: BakabaseAbstractionsModelsViewAppNotificationMessageViewModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/gui/test-notification`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for sendTestNotification
+     * @name sendTestNotificationUrl
+     */
+    sendTestNotificationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/gui/test-notification`;
+      
+      return baseUrl + path;
+    },
   };
   log = {
     /**
@@ -11106,6 +11273,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * @description Build URL for migrateCategoriesMediaLibrariesAndResourcesToNewMediaLibrary
+     * @name migrateCategoriesMediaLibrariesAndResourcesToNewMediaLibraryUrl
+     */
+    migrateCategoriesMediaLibrariesAndResourcesToNewMediaLibraryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/migration/categories-media-libraries-and-resources-to-new-media-library`;
+      
+      return baseUrl + path;
+    },
   };
   options = {
     /**
@@ -11674,6 +11852,31 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchResourceOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/resource`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name DeleteResourceMarkers
+     * @request POST:/options/resource/delete-markers
+     */
+    deleteResourceMarkers: (params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/options/resource/delete-markers`,
+        method: "POST",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for deleteResourceMarkers
+     * @name deleteResourceMarkersUrl
+     */
+    deleteResourceMarkersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/resource/delete-markers`;
       
       return baseUrl + path;
     },
@@ -13398,7 +13601,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     installTampermonkeyScript: (
       query?: {
-        /** [1: SoulPlus, 2: ExHentai] */
+        /** [1: SoulPlus, 2: Bakabase] */
         script?: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript;
       },
       params: RequestParams = {},
@@ -13416,7 +13619,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name installTampermonkeyScriptUrl
      */
     installTampermonkeyScriptUrl: (query?: {
-        /** [1: SoulPlus, 2: ExHentai] */
+        /** [1: SoulPlus, 2: Bakabase] */
         script?: BakabaseInsideWorldBusinessComponentsTampermonkeyModelsConstantsTampermonkeyScript;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -13478,6 +13681,123 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getAllThirdPartyRequestStatisticsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/third-party/request-statistics`;
+      
+      return baseUrl + path;
+    },
+  };
+  thirdPartyContentTracker = {
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name QueryThirdPartyContentStatus
+     * @request POST:/third-party-content-tracker/query
+     */
+    queryThirdPartyContentStatus: (
+      data: BakabaseAbstractionsModelsInputThirdPartyContentTrackerQueryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerStatusViewModel,
+        any
+      >({
+        path: `/third-party-content-tracker/query`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for queryThirdPartyContentStatus
+     * @name queryThirdPartyContentStatusUrl
+     */
+    queryThirdPartyContentStatusUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/query`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name MarkThirdPartyContentAsViewed
+     * @request POST:/third-party-content-tracker/mark-viewed
+     */
+    markThirdPartyContentAsViewed: (
+      data: BakabaseAbstractionsModelsInputThirdPartyContentTrackerMarkViewedInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/third-party-content-tracker/mark-viewed`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for markThirdPartyContentAsViewed
+     * @name markThirdPartyContentAsViewedUrl
+     */
+    markThirdPartyContentAsViewedUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/mark-viewed`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ThirdPartyContentTracker
+     * @name FindNearestViewedContent
+     * @request GET:/third-party-content-tracker/nearest-viewed
+     */
+    findNearestViewedContent: (
+      query?: {
+        domainKey?: string;
+        filter?: string;
+        targetContentId?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewThirdPartyContentTrackerNearestViewModel,
+        any
+      >({
+        path: `/third-party-content-tracker/nearest-viewed`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for findNearestViewedContent
+     * @name findNearestViewedContentUrl
+     */
+    findNearestViewedContentUrl: (query?: {
+        domainKey?: string;
+        filter?: string;
+        targetContentId?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/third-party-content-tracker/nearest-viewed`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },

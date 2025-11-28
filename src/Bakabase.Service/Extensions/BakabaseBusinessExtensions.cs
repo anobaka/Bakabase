@@ -129,7 +129,9 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
             services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, PlayHistoryDbModel, int>>();
             services.AddScoped<IPlayHistoryService, PlayHistoryService>();
-            
+            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ThirdPartyContentTrackerDbModel, int>>();
+            services.AddScoped<IThirdPartyContentTrackerService, ThirdPartyContentTrackerService>();
+
             // todo: this can be moved into abstraction layer.
             services.AddSingleton<Abstractions.Components.Cover.ICoverDiscoverer, CoverDiscoverer>();
 

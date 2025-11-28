@@ -45,7 +45,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             Func<string, Task> onCheckpointChanged,
             CancellationToken ct)
         {
-            var detail = await Client.ParseDetail(url, false);
+            // Parse detail with torrent info to check if torrents are available
+            var detail = await Client.ParseDetail(url, true);
             if (detail == null)
             {
                 throw new Exception($"Got empty response from: {url}");
@@ -55,6 +56,37 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             if (onNameAcquired != null)
             {
                 await onNameAcquired(betterName);
+            }
+
+            // Check if torrents are available and download torrent instead of images
+            if (detail.Torrents?.Any() == true)
+            {
+                // Select the best torrent (largest size, most recent)
+                var bestTorrent = detail.Torrents
+                    .OrderByDescending(t => t.Size)
+                    .ThenByDescending(t => t.UpdatedAt)
+                    .First();
+
+                var path = Path.Combine(downloadPath, $"{betterName.RemoveInvalidFilePathChars()}.torrent");
+
+                if (onCurrentChanged != null)
+                {
+                    await onCurrentChanged("正在下载种子文件...");
+                }
+
+                await Client.DownloadTorrent(bestTorrent.DownloadUrl, path);
+
+                if (onProgress != null)
+                {
+                    await onProgress(100);
+                }
+
+                if (onCheckpointChanged != null)
+                {
+                    await onCheckpointChanged("completed");
+                }
+
+                return;
             }
 
             var baseNameSegmentsValues = new Dictionary<ExHentaiNamingFields, object?>

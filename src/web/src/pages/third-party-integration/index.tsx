@@ -10,11 +10,7 @@ const ThirdPartyIntegrationPage = () => {
   const { t } = useTranslation();
 
   return (
-    <Accordion
-      defaultSelectedKeys={"all"}
-      selectionMode={"multiple"}
-      variant="splitted"
-    >
+    <Accordion defaultSelectedKeys={"all"} selectionMode={"multiple"} variant="splitted">
       <AccordionItem key="SoulPlus" title="SoulPlus">
         <div>
           <div className={"flex items-center gap-2"}>
@@ -54,7 +50,7 @@ const ThirdPartyIntegrationPage = () => {
               variant={"light"}
               onPress={() => {
                 BApi.tampermonkey.installTampermonkeyScript({
-                  script: TampermonkeyScript.ExHentai,
+                  script: TampermonkeyScript.Bakabase,
                 });
               }}
             >

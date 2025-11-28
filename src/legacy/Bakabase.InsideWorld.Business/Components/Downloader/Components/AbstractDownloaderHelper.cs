@@ -105,7 +105,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 Interval = model.Interval,
                 AutoRetry = model.AutoRetry,
                 Status = DownloadTaskStatus.Idle,
-                DownloadPath = model.DownloadPath
+                DownloadPath = model.DownloadPath,
+                CreatedAt = DateTime.Now
             }).ToArray() ?? [];
 
             return tasks;
