@@ -227,13 +227,28 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Tooltip>
           )}
           {resource.playedAt && (
-            <Tooltip
-              content={t<string>("Last played at {{dt}}", {
-                dt: resource.playedAt,
-              })}
-            >
-              <HistoryOutlined />
-            </Tooltip>
+            <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+              <div className={"flex items-center gap-1"}>
+                <HistoryOutlined />
+                {(() => {
+                  const playedMoment = moment(resource.playedAt);
+                  const now = moment();
+                  const diffMinutes = now.diff(playedMoment, "minutes");
+                  const diffHours = now.diff(playedMoment, "hours");
+                  const diffDays = now.diff(playedMoment, "days");
+
+                  if (diffMinutes < 1) {
+                    return t("Played just now");
+                  } else if (diffMinutes < 60) {
+                    return t("Played {{n}} minutes ago", { n: diffMinutes });
+                  } else if (diffHours < 24) {
+                    return t("Played {{n}} hours ago", { n: diffHours });
+                  } else {
+                    return t("Played {{n}} days ago", { n: diffDays });
+                  }
+                })()}
+              </div>
+            </Chip>
           )}
           {uiOptions.resource?.displayResourceId && (
             <Tooltip content={t<string>("Resource ID")}>

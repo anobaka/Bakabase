@@ -1903,6 +1903,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   displayProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
   inlineDisplayName: boolean;
   autoSelectFirstPlayableFile: boolean;
+  displayOperations?: string[];
 }
 
 /**

@@ -1,0 +1,70 @@
+/* Minimal CSS for react-rnd resize handles - cannot be easily done with Tailwind */
+.windowed-media-player .react-resizable-handle {
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.windowed-media-player .react-resizable-handle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Resize handle positions */
+.windowed-media-player .react-resizable-handle-se {
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.windowed-media-player .react-resizable-handle-sw {
+  left: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.windowed-media-player .react-resizable-handle-nw {
+  left: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.windowed-media-player .react-resizable-handle-ne {
+  right: 2px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+}
+
+.windowed-media-player .react-resizable-handle-w,
+.windowed-media-player .react-resizable-handle-e {
+  width: 4px;
+  top: 0;
+  bottom: 0;
+}
+
+.windowed-media-player .react-resizable-handle-n,
+.windowed-media-player .react-resizable-handle-s {
+  height: 4px;
+  left: 0;
+  right: 0;
+}
+
+/* Override MediaPlayer's full-screen styles */
+.windowed-media-player .window-content > div {
+  position: absolute !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+

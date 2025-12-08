@@ -54,10 +54,23 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
             CancellationToken ct)
         {
             Logger.LogInformation("Building context for resource [{ResourceId}:{ResourcePath}]", resource.Id, resource.Path);
-            var context = await BuildContextInternal(resource, options, ct);
-            if (context == null)
+
+            TContext? context;
+            try
             {
-                return null;
+                context = await BuildContextInternal(resource, options, ct);
+                if (context == null)
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(
+                    $"Failed to build context for enhancer {GetType().Name}. This is usually caused by unreachable external data sources or sites, or by unsupported data returned from those sources.",
+                    ex
+                );
+
             }
 
             Logger.LogInformation($"Got context: {context.ToJson()}");

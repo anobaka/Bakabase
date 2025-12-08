@@ -1730,6 +1730,10 @@
   "Item": "项目",
   "Played at": "播放时间",
   "Last played at {{dt}}": "上次播放于 {{dt}}",
+  "Played just now": "刚刚看过",
+  "Played {{n}} minutes ago": "{{n}}分钟前看过",
+  "Played {{n}} hours ago": "{{n}}小时前看过",
+  "Played {{n}} days ago": "{{n}}天前看过",
   "Changing the playable file selector will clear all cached playable file information. The cache for these files will be rebuilt after the operation.": "变更可播放文件选择器将会清空所有已缓存的可播放文件信息。在执行变更后，可播放文件的缓存信息将会被重建。",
   "Play history": "播放历史",
   "Untitled": "未命名",
@@ -2528,5 +2532,14 @@
   "Attribute: Hidden file": "属性：隐藏文件",
   "You can search for and delete these files using your file manager or terminal.": "您可以使用文件管理器或终端搜索并删除这些文件。",
   "Auto-select first playable file has been enabled. You can change this in the resource page settings.": "自动选择第一个可播放文件已启用。您可以在资源页面设置中更改此设置。",
-  "Auto-select first file if multiple playable files exist": "自动选择第一个文件（如果存在多个可播放文件）"
+  "Auto-select first file if multiple playable files exist": "自动选择第一个文件（如果存在多个可播放文件）",
+  "Display operations": "显示操作",
+  "Aggregate button": "聚合按钮",
+  "Pin/Unpin": "置顶/取消置顶",
+  "Open in media player": "在媒体播放器中打开",
+  "Shortcuts": "快捷键",
+  "Previous": "上一个",
+  "Next": "下一个",
+  "or scroll up": "或向上滚动",
+  "or scroll down": "或向下滚动"
 }

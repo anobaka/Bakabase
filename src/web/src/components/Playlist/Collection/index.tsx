@@ -14,10 +14,11 @@ import {
 import { toast } from "@/components/bakaui";
 import PlaylistDetail from "@/components/Playlist/Detail/index";
 import { Button, Modal, Input } from "@/components/bakaui";
-import { PlaylistItemType } from "@/sdk/constants";
+import { PlaylistItemType, IwFsType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import MediaPlayer from "@/components/MediaPlayer";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
 
 type PlayList =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayList"];
@@ -29,7 +30,7 @@ const Collection = ({ addingResourceId }: Props) => {
   const [playlists, setPlaylists] = useState<PlayList[]>([]);
 
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
+  const { createPortal, createWindow } = useBakabaseContext();
 
   useEffect(() => {
     loadPlaylists();
@@ -69,7 +70,7 @@ const Collection = ({ addingResourceId }: Props) => {
                           title: t<string>("Details of {{name}}", {
                             name: pl.name,
                           }),
-                          size: "lg",
+                          size: "4xl",
                           children: (
                             <PlaylistDetail
                               id={pl.id}
@@ -127,36 +128,35 @@ const Collection = ({ addingResourceId }: Props) => {
                           BApi.playlist.getPlaylistFiles(pl.id).then((a) => {
                             if (a.data) {
                               if (a.data.length > 0) {
-                                const files: {
-                                  path: string;
-                                  startTime?: string;
-                                  endTime?: string;
-                                }[] = [];
+                                const entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[] = [];
 
                                 for (let x = 0; x < pl.items!.length; x++) {
                                   const item = pl.items![x];
                                   const currentItemFiles = a.data[x];
 
                                   if (currentItemFiles) {
-                                    for (const file of a.data[x]) {
-                                      files.push({
-                                        path: file,
-                                        startTime: item.startTime,
-                                        endTime: item.endTime,
+                                    for (const filePath of a.data[x]) {
+                                      const name = filePath.split(/[/\\]/).pop() || filePath;
+                                      const ext = name.includes(".") ? name.split(".").pop() : undefined;
+                                      entries.push({
+                                        path: filePath,
+                                        name: name,
+                                        meaningfulName: name,
+                                        ext: ext,
+                                        type: IwFsType.Unknown,
+                                        passwordsForDecompressing: [],
                                       });
                                     }
                                   }
                                 }
-                                const mpProps = {
-                                  files,
+                                createWindow(MediaPlayer, {
+                                  entries,
                                   interval: pl.interval,
                                   autoPlay: true,
-                                  style: {
-                                    zIndex: 1001,
-                                  },
-                                };
-
-                                MediaPlayer.show(mpProps);
+                                }, {
+                                  title: pl.name,
+                                  persistent: true,
+                                });
                               } else {
                                 toast.danger(t<string>("No playable contents"));
                               }

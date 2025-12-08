@@ -1,233 +1,76 @@
 "use client";
 
-import { Icon, Progress } from "@/components/bakaui";
+import React, {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+  forwardRef,
+} from "react";
+import { useUpdateEffect } from "react-use";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useUpdate, useUpdateEffect } from "react-use";
 import "./index.scss";
-import ReactPlayer from "react-player";
-import moment from "moment";
-import Queue from "queue";
-import { MdInventory } from "react-icons/md";
 
-import { IconType, IwFsType, MediaType } from "@/sdk/constants";
-import FileSystemEntryIcon from "@/components/FileSystemEntryIcon";
+import MediaPlayerLayout from "./components/MediaPlayerLayout";
 import {
-  buildLogger,
-  createPortalOfComponent,
-  forceFocus,
-  splitPathIntoSegments,
-  useTraceUpdate,
-} from "@/components/utils";
+  COMPRESSED_FILE_ROOT_SEPARATOR,
+  type MediaPlayerEntry,
+  type MediaPlayerProps,
+  type MediaPlayerRef,
+} from "./types";
+
+import { IwFsType, MediaType } from "@/sdk/constants";
+import { buildLogger, forceFocus, useTraceUpdate } from "@/components/utils";
 import BApi from "@/sdk/BApi";
-import BusinessConstants from "@/components/BusinessConstants";
-import envConfig from "@/config/env";
-import TextReader from "@/components/TextReader";
 
-const style = {
-  maxWidth: document.body.clientWidth * 0.9,
-  maxHeight: document.body.clientHeight * 0.9,
-  width: document.body.clientHeight * 0.9,
-  height: document.body.clientHeight * 0.9,
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
+
+export type { MediaPlayerEntry, MediaPlayerProps, MediaPlayerRef };
+
+// Helper to build play path for an entry
+const buildPlayPath = (
+  entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry,
+  compressedFilePath?: string,
+): string => {
+  if (compressedFilePath) {
+    // Entry is inside a compressed file, construct path with separator
+    return `${compressedFilePath}${COMPRESSED_FILE_ROOT_SEPARATOR}${entry.path}`;
+  }
+
+  return entry.path;
 };
 
-const compressedFileExtensions = ["rar", "zip", "7z"];
-
-interface IPropsFile {
-  path: string;
-  startTime?: string;
-  endTime?: string;
-}
-
-interface IProps extends React.HTMLAttributes<HTMLElement> {
-  defaultActiveIndex?: number;
-  files: IPropsFile[];
-  interval?: number;
-  afterClose?: () => void;
-  autoPlay?: boolean;
-  renderOperations?: (
-    filePath: string,
-    mediaType: MediaType,
-    playing: boolean,
-    reactPlayer: ReactPlayer | null,
-    image: HTMLImageElement | null,
-  ) => any;
-}
-
-class Node {
-  label: string;
-  children: Node[] = [];
-  key: string;
-  parent?: Node;
-
-  type: "directory" | "compressed-file" | "file" | "unknown";
-  isCompressedFileContent: boolean;
-  startSeconds?: number;
-  endSeconds?: number;
-  /**
-   * Compressed file contents will be scanned only once whether it is scanned successfully or not unless we cancelled it manually.
-   */
-  loadingInfoAsync?: AbortController;
-
-  get playable(): boolean {
-    return (
-      this.type == "file" ||
-      (this.type == "compressed-file" && !this.isCompressedFileContent)
-    );
-  }
-}
-
-function compressTree(node: Node) {
-  if (node.children.length == 1 && node.children[0].type == "directory") {
-    const child = node.children[0];
-
-    node.type =
-      child.children.length > 0 ? "directory" : getFileType(child.key);
-    node.label = node.label
-      ? `${node.label}${BusinessConstants.pathSeparator}${child.label}`
-      : child.label;
-    node.key = child.key;
-    node.children = child.children;
-    node.startSeconds = child.startSeconds;
-    node.endSeconds = child.endSeconds;
-    compressTree(node);
-  } else {
-    if (node.children.length > 1) {
-      for (const child of node.children) {
-        compressTree(child);
-      }
-    }
-  }
-}
-
-const buildNodeKey = (path: string, compressedFileKey?: string): string => {
-  return compressedFileKey ? `${compressedFileKey}!${path}` : path;
+// Helper to convert entries to MediaPlayerEntry with playPath
+const convertToMediaPlayerEntries = (
+  entries: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry[],
+  compressedFilePath?: string,
+): MediaPlayerEntry[] => {
+  return entries.map((entry) => ({
+    ...entry,
+    playPath: buildPlayPath(entry, compressedFilePath),
+  }));
 };
 
-function buildNodeMap(nodes: Node[]): Record<string, Node> {
-  const data: Record<string, Node> = {};
-
-  for (const node of nodes) {
-    data[node.key] = node;
-    if (node.children.length > 0) {
-      Object.assign(data, buildNodeMap(node.children));
-    }
-  }
-
-  return data;
-}
-
-function getFileType(path: string) {
-  const ext = path.split(".").pop();
-
-  if (ext) {
-    if (compressedFileExtensions.includes(ext)) {
-      return "compressed-file";
-    }
-  }
-
-  return "file";
-}
-
-function buildBranches(
-  propsEntries: IPropsFile[],
-  compressedFileNode?: Node,
-): Node[] {
-  const root = new Node();
-
-  for (const pe of propsEntries) {
-    const { path } = pe;
-    const segments = splitPathIntoSegments(path);
-    let node = root;
-    let currentPath = "";
-
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-
-      if (currentPath) {
-        currentPath += BusinessConstants.pathSeparator;
-      }
-      currentPath += segment;
-      let child = node.children.find((a) => a.label == segment);
-
-      if (!child) {
-        child = new Node();
-        const key = buildNodeKey(currentPath, compressedFileNode?.key);
-
-        child.label = segment;
-        child.key = key;
-        if (i == segments.length - 1) {
-          child.type = "unknown";
-          if (pe.startTime) {
-            child.startSeconds = moment.duration(pe.startTime).asSeconds();
-          }
-          if (pe.endTime) {
-            child.endSeconds = moment.duration(pe.endTime).asSeconds();
-          }
-        } else {
-          child.type = "directory";
-        }
-        child.isCompressedFileContent = !!compressedFileNode;
-        child.parent = node;
-        node.children.push(child);
-      }
-      node = child;
-    }
-  }
-
-  for (const node of root.children) {
-    compressTree(node);
-  }
-
-  return root.children;
-}
-
-function expandTreeToLeaves(node: Node): Node[] {
-  if (node.children.length == 0) {
-    return [node];
-  } else {
-    const result: Node[] = [];
-
-    for (const child of node.children) {
-      result.push(...expandTreeToLeaves(child));
-    }
-
-    return result;
-  }
-}
-
-const MediaPlayer = (props: IProps) => {
+const MediaPlayer = forwardRef<MediaPlayerRef, MediaPlayerProps>((props, ref) => {
   const {
     defaultActiveIndex = 0,
-    files: propFiles = [],
+    entries: propEntries = [],
     interval = 1000,
-    afterClose = () => {},
     renderOperations = (): any => {},
     autoPlay = false,
     ...otherProps
   } = props;
 
   useTraceUpdate(props, "[MediaPlayer]");
-  const { t } = useTranslation();
-  const forceUpdate = useUpdate();
   const log = buildLogger("MediaPlayer");
 
-  const [visible, setVisible] = useState(true);
+  log(props);
 
-  const imageRef = useRef<HTMLImageElement | null>(null);
-
-  const [fileTree, setFileTree] = useState<Node>();
-  const fileTreeRef = useRef<Node | undefined>(fileTree);
-
-  const nodeMapRef = useRef<Record<string, Node>>({});
-  const videoSizeRef = useRef<{ width: number; height: number }>();
-  const mediaContainerRef = useRef<HTMLDivElement | null>(null);
-  const [extensionsMediaTypes, setExtensionsMediaTypes] = useState<
-    Map<string | undefined, number>
-  >(new Map<string, number>());
+  const [extensionsMediaTypes, setExtensionsMediaTypes] = useState<Map<string | undefined, number>>(
+    new Map<string, number>(),
+  );
   const [playing, setPlaying] = useState(autoPlay);
-  const playerRef = useRef<ReactPlayer | null>(null);
 
   const [progress, setProgress] = useState(0);
   const progressRef = useRef(0);
@@ -235,53 +78,136 @@ const MediaPlayer = (props: IProps) => {
   const activeDtRef = useRef<Date | undefined>();
   const autoGoToNextHandleRef = useRef<any>();
 
-  const [fileListVisible, setFileListVisible] = useState(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
 
-  const [treeLeaves, setTreeLeaves] = useState<Node[]>([]);
-  const [activeIndex, setActiveIndex] = useState(defaultActiveIndex);
-  const activeNode = treeLeaves[activeIndex];
-
-  const compressedFileEntriesRequestQueueRef = useRef(
-    new Queue({
-      concurrency: 5,
-      autostart: true,
-    }),
+  // Current entries being displayed (may be expanded from a single directory/compressed file)
+  const [currentEntries, setCurrentEntries] = useState<MediaPlayerEntry[]>(() =>
+    convertToMediaPlayerEntries(propEntries),
   );
+  // Loading state for async operations
+  const [isLoading, setIsLoading] = useState(false);
 
-  useUpdateEffect(() => {
-    fileTreeRef.current = fileTree;
-    setTreeLeaves(fileTree ? expandTreeToLeaves(fileTree) : []);
-  }, [fileTree]);
+  // Filter to only playable entries (files, not directories or compressed files)
+  const playableEntries = currentEntries.filter(
+    (entry) =>
+      entry.type !== IwFsType.Directory &&
+      entry.type !== IwFsType.CompressedFileEntry &&
+      entry.type !== IwFsType.Drive,
+  );
+  const [activeIndex, setActiveIndex] = useState(
+    Math.min(defaultActiveIndex, Math.max(0, playableEntries.length - 1)),
+  );
+  const activeEntry = playableEntries[activeIndex];
 
-  useUpdateEffect(() => {
-    log("treeLeaves changed", treeLeaves);
-  }, [treeLeaves]);
+  // Preload following contents
+  const preloadRefs = useRef<Map<string, HTMLImageElement | HTMLVideoElement>>(new Map());
 
   const [currentInitialized, setCurrentInitialized] = useState(false);
+
+  // Check if we should auto-expand a single directory or compressed file entry
+  const checkAndAutoExpand = useCallback(async (entries: MediaPlayerEntry[]) => {
+    // Only auto-expand if there's exactly one entry and it's a directory or compressed file
+    if (entries.length !== 1) {
+      return { shouldExpand: false, entries };
+    }
+
+    const singleEntry = entries[0];
+
+    if (singleEntry.type === IwFsType.Directory) {
+      setIsLoading(true);
+      try {
+        const rsp = await BApi.file.getAllFiles({ path: singleEntry.path });
+
+        if (!rsp.code && rsp.data && rsp.data.length > 0) {
+          // Convert file paths to entries
+          const expandedEntries: MediaPlayerEntry[] = rsp.data.map((filePath) => {
+            const name = filePath.split(/[/\\]/).pop() || filePath;
+            const ext = name.includes(".") ? name.split(".").pop() : undefined;
+
+            return {
+              path: filePath,
+              name: name,
+              meaningfulName: name,
+              ext: ext,
+              type: IwFsType.Unknown,
+              passwordsForDecompressing: [],
+              playPath: filePath,
+            };
+          });
+
+          return { shouldExpand: true, entries: expandedEntries };
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (singleEntry.type === IwFsType.CompressedFileEntry) {
+      setIsLoading(true);
+      try {
+        const rsp = await BApi.file.getCompressedFileEntries({
+          compressedFilePath: singleEntry.path,
+        });
+
+        if (!rsp.code && rsp.data && rsp.data.length > 0) {
+          // Convert compressed file entries with proper play paths
+          const expandedEntries: MediaPlayerEntry[] = rsp.data.map((ce) => {
+            const path = ce.path || "";
+            const name = path.split(/[/\\]/).pop() || path;
+            const ext = name.includes(".") ? name.split(".").pop() : undefined;
+
+            return {
+              path: path,
+              name: name,
+              meaningfulName: name,
+              ext: ext,
+              type: IwFsType.Unknown,
+              passwordsForDecompressing: [],
+              playPath: `${singleEntry.path}${COMPRESSED_FILE_ROOT_SEPARATOR}${path}`,
+            };
+          });
+
+          return { shouldExpand: true, entries: expandedEntries };
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    return { shouldExpand: false, entries };
+  }, []);
+
+  // Initialize and auto-expand if needed
+  useEffect(() => {
+    const initEntries = async () => {
+      const initialEntries = convertToMediaPlayerEntries(propEntries);
+      const result = await checkAndAutoExpand(initialEntries);
+
+      if (result.shouldExpand) {
+        setCurrentEntries(result.entries);
+      } else {
+        setCurrentEntries(initialEntries);
+      }
+      setActiveIndex(0);
+    };
+
+    initEntries();
+  }, [propEntries, checkAndAutoExpand]);
 
   useUpdateEffect(() => {
     progressRef.current = progress;
   }, [progress]);
 
-  useEffect(() => {}, [fileListVisible]);
-
   useEffect(() => {
-    const branches = buildBranches(propFiles);
-    const tree = new Node();
-
-    tree.children = branches;
-    setFileTree(tree);
-    nodeMapRef.current = buildNodeMap(branches);
-
     BApi.api.getAllExtensionMediaTypes().then((t) => {
-      const map = Object.keys(t.data).reduce((s, ext) => {
-        s[ext] = t.data[ext];
+      if (t.data) {
+        const map = new Map<string | undefined, number>();
 
-        return s;
-      }, new Map<string, MediaType>());
+        Object.keys(t.data).forEach((ext) => {
+          map.set(ext, t.data![ext]);
+        });
 
-      setExtensionsMediaTypes(map);
-      console.log("[MediaPlayer]Extension-Media-Type initialized", map);
+        setExtensionsMediaTypes(map);
+        console.log("[MediaPlayer]Extension-Media-Type initialized", map);
+      }
     });
 
     return () => {
@@ -291,33 +217,87 @@ const MediaPlayer = (props: IProps) => {
   }, []);
 
   const getMediaType = useCallback(
-    (file: string): MediaType => {
-      const segments = file.split(".");
+    (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry): MediaType => {
+      // First try to get from IwFsType
+      if (entry.type === IwFsType.Image) return MediaType.Image;
+      if (entry.type === IwFsType.Video) return MediaType.Video;
+      if (entry.type === IwFsType.Audio) return MediaType.Audio;
 
-      // console.log(segments);
-      if (segments.length == 1) {
-        return MediaType.Unknown;
-      } else {
-        return (
-          extensionsMediaTypes[`.${segments[segments.length - 1]}`] ??
-          MediaType.Unknown
-        );
-      }
+      // Fallback to extension-based detection
+      const ext = entry.ext || entry.path.split(".").pop();
+
+      if (!ext) return MediaType.Unknown;
+
+      return extensionsMediaTypes.get(`.${ext}`) ?? MediaType.Unknown;
     },
     [extensionsMediaTypes],
   );
 
-  const gotoPrevNode = useCallback(() => {
+  const gotoPrevEntry = useCallback(() => {
     if (activeIndex > 0) {
       setActiveIndex(activeIndex - 1);
     }
-  }, [activeIndex, treeLeaves]);
+  }, [activeIndex]);
 
-  const gotoNextNode = useCallback(() => {
-    if (activeIndex < treeLeaves.length - 1) {
+  const gotoNextEntry = useCallback(() => {
+    if (activeIndex < playableEntries.length - 1) {
       setActiveIndex(activeIndex + 1);
     }
-  }, [activeIndex, treeLeaves]);
+  }, [activeIndex, playableEntries.length]);
+
+  const handleEntryClick = useCallback(
+    (entry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry) => {
+      // If it's a directory or compressed file, do nothing on single click
+      if (entry.type === IwFsType.Directory || entry.type === IwFsType.CompressedFileEntry) {
+        return;
+      }
+
+      const index = playableEntries.findIndex((e) => e.path === entry.path);
+
+      if (index >= 0) {
+        setActiveIndex(index);
+      }
+    },
+    [playableEntries],
+  );
+
+  // Preload following contents
+  useEffect(() => {
+    if (!activeEntry) return;
+
+    const preloadCount = 3; // Preload next 3 items
+
+    for (
+      let i = activeIndex + 1;
+      i < playableEntries.length && i < activeIndex + 1 + preloadCount;
+      i++
+    ) {
+      const entry = playableEntries[i] as MediaPlayerEntry;
+
+      if (entry && getMediaType(entry) === MediaType.Image) {
+        const img = new Image();
+        const playPath = entry.playPath || entry.path;
+
+        img.src = `${import.meta.env.VITE_API_ENDPOINT || ""}/file/play?fullname=${encodeURIComponent(playPath)}`;
+        preloadRefs.current.set(entry.path, img);
+      }
+    }
+
+    return () => {
+      // Cleanup old preloads
+      preloadRefs.current.forEach((_, key) => {
+        if (key !== activeEntry.path) {
+          const isInPreloadRange = playableEntries
+            .slice(activeIndex + 1, activeIndex + 1 + preloadCount)
+            .some((e) => e.path === key);
+
+          if (!isInPreloadRange) {
+            preloadRefs.current.delete(key);
+          }
+        }
+      });
+    };
+  }, [activeIndex, activeEntry, playableEntries, getMediaType]);
 
   const clearProgressHandler = () => {
     clearInterval(progressIntervalRef.current);
@@ -333,21 +313,24 @@ const MediaPlayer = (props: IProps) => {
     setProgress(0);
     setCurrentInitialized(false);
     clearProgressHandler();
-  }, [activeNode]);
+  }, [activeEntry]);
 
-  const close = () => {
-    setVisible(false);
-    afterClose();
-  };
+  // Expose methods to parent via ref
+  useImperativeHandle(
+    ref,
+    () => ({
+      gotoPrevEntry,
+      gotoNextEntry,
+    }),
+    [gotoPrevEntry, gotoNextEntry],
+  );
 
-  const tryAutoGotoNextNode = () => {
+  const tryAutoGotoNextEntry = () => {
     if (autoPlay) {
       clearProgressHandler();
       activeDtRef.current = new Date();
       progressIntervalRef.current = setInterval(() => {
-        const raw =
-          ((new Date().getTime() - activeDtRef.current!.getTime()) / interval) *
-          100;
+        const raw = ((new Date().getTime() - activeDtRef.current!.getTime()) / interval) * 100;
         const percentage = Math.floor(raw);
 
         if (percentage != progressRef.current) {
@@ -356,466 +339,120 @@ const MediaPlayer = (props: IProps) => {
       }, 100);
       autoGoToNextHandleRef.current = setTimeout(
         () => {
-          gotoNextNode();
+          gotoNextEntry();
         },
         Math.max(interval, 1000),
       );
     }
   };
 
-  const renderMedia = () => {
-    // console.log(activeNode);
-    if (!activeNode) {
-      return;
+  const handleLoad = () => {
+    setCurrentInitialized(true);
+    tryAutoGotoNextEntry();
+  };
+
+  const handleVideoPlay = () => {
+    log("Video play");
+    setPlaying(true);
+  };
+
+  const handleVideoPause = () => {
+    log("Video pause");
+    setPlaying(false);
+  };
+
+  const handleVideoEnded = () => {
+    tryAutoGotoNextEntry();
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    // Prevent default scrolling behavior
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Scroll up (negative deltaY) = previous, scroll down (positive deltaY) = next
+    if (e.deltaY < 0) {
+      gotoPrevEntry();
+    } else if (e.deltaY > 0) {
+      gotoNextEntry();
     }
-    const type = getMediaType(activeNode.key);
+  };
 
-    switch (type) {
-      case MediaType.Audio:
-      case MediaType.Video:
-        return (
-          <ReactPlayer
-            ref={(player) => {
-              playerRef.current = player;
-            }}
-            controls
-            className={"media"}
-            config={{
-              file: {
-                attributes: {
-                  crossOrigin: "anonymous",
-                },
-              },
-            }}
-            height={videoSizeRef.current?.height}
-            playing={playing}
-            url={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(activeNode.key)}`}
-            width={videoSizeRef.current?.width}
-            onDuration={(d) => {
-              // alert(d);
-            }}
-            onEnded={() => {
-              tryAutoGotoNextNode();
-            }}
-            onPause={() => {
-              log("Video pause");
-              setPlaying(false);
-            }}
-            onPlay={() => {
-              log("Video play");
-              setPlaying(true);
-            }}
-            onProgress={({ played, playedSeconds, loaded, loadedSeconds }) => {
-              // console.log(startSeconds, endSeconds, playedSeconds, activeIndex);
-              if (
-                activeNode.endSeconds &&
-                playedSeconds > activeNode.endSeconds
-              ) {
-                tryAutoGotoNextNode();
-              }
-            }}
-            onReady={(reactPlayer) => {
-              const internalPlayer = reactPlayer.getInternalPlayer();
-
-              const width = internalPlayer.videoWidth;
-              const height = internalPlayer.videoHeight;
-
-              if (width > 0 && height > 0) {
-                videoSizeRef.current = {
-                  width: Math.min(
-                    width,
-                    mediaContainerRef.current!.clientWidth,
-                  ),
-                  height: Math.min(
-                    height,
-                    mediaContainerRef.current!.clientHeight,
-                  ),
-                };
-              }
-              log("Video ready", reactPlayer, `${width}x${height}`);
-              setCurrentInitialized(true);
-            }}
-            onSeek={() => {
-              log("Video seek");
-            }}
-            onStart={() => {
-              log("Video start");
-              if (activeNode.startSeconds) {
-                playerRef.current!.seekTo(activeNode.startSeconds);
-              }
-            }}
-          />
-        );
-      case MediaType.Image:
-        return (
-          <img
-            ref={imageRef}
-            className={"media"}
-            crossOrigin={"anonymous"}
-            src={`${envConfig.apiEndpoint}/file/play?fullname=${encodeURIComponent(activeNode.key)}`}
-            onLoad={() => {
-              setCurrentInitialized(true);
-              tryAutoGotoNextNode();
-            }}
-          />
-        );
-      case MediaType.Text:
-        return (
-          <TextReader
-            className={"media"}
-            file={activeNode.key}
-            style={{ padding: "20px" }}
-            onLoad={() => {
-              setCurrentInitialized(true);
-              tryAutoGotoNextNode();
-            }}
-          />
-        );
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowLeft":
+        e.preventDefault();
+        gotoPrevEntry();
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        gotoNextEntry();
+        break;
+      case "Escape":
+        // Allow parent to handle Escape (e.g., close window)
+        break;
       default:
-        return (
-          <div
-            className={"unsupported media"}
-            onLoad={() => {
-              setCurrentInitialized(true);
-              tryAutoGotoNextNode();
-            }}
-          >
-            {t<string>("Unsupported")}
-          </div>
-        );
+        break;
     }
   };
 
-  const renderFile = (path: string) => {
-    const compressedFileInnerFileSeparator = "!";
-    const tmpSegments = path.split(compressedFileInnerFileSeparator);
-    const segments: string[] = [];
+  log("Rendering", playableEntries, activeIndex, activeEntry);
 
-    for (let i = 0; i < tmpSegments.length; i++) {
-      const s = tmpSegments[i];
-
-      if (!compressedFileExtensions.some((e) => s.endsWith(e))) {
-        const inner = tmpSegments[i + 1];
-
-        segments.push(
-          inner ? `${s}${compressedFileInnerFileSeparator}${inner}` : s,
-        );
-        i++;
-      } else {
-        segments.push(s);
-      }
-    }
-
-    let mainPath;
-    let subPath;
-
-    if (segments.length > 0) {
-      mainPath = segments[0];
-    }
-    if (segments.length > 1) {
-      subPath = segments[1];
-    }
-    if (segments.length > 2) {
-      return `Unsupported path: ${path}`;
-    }
-
+  if (isLoading) {
     return (
-      <div className={"file"}>
-        <div className="icon">
-          <FileSystemEntryIcon path={path} type={IconType.Dynamic} />
-        </div>
-        <div className="path">
-          {mainPath}
-          {subPath && (
-            <>
-              <MdInventory size={"small"} />
-              {subPath}
-            </>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  /**
-   * Fusion Design Tree will dirty data source with following properties, the behavior won't be stable unless we clear them manually.
-   */
-  const clearIceTreeMark = useCallback((node: Node) => {
-    delete node["pos"];
-    delete node["isLeaf"];
-    delete node["isLastChild"];
-    delete node["level"];
-    if (node.children.length > 0) {
-      node.children.forEach(clearIceTreeMark);
-    }
-  }, []);
-
-  const onNodeLoaded = useCallback(async (node: Node) => {
-    const skipCheckingContents =
-      node.loadingInfoAsync ||
-      node.isCompressedFileContent ||
-      node.children.length > 0;
-
-    if (node.type != "unknown" && skipCheckingContents) {
-      return;
-    } else {
-      compressedFileEntriesRequestQueueRef.current.push(async () => {
-        const cts = new AbortController();
-
-        node.loadingInfoAsync = cts;
-
-        if (node.type == "unknown") {
-          log("Loading info for", node.key);
-          const infoRsp = await BApi.file.getIwFsEntry({ path: node.key });
-          const info = infoRsp.data;
-
-          if (info) {
-            // @ts-ignore
-            if (info.type == IwFsType.Directory) {
-              node.type = "directory";
-            } else {
-              const ext = node.key.split(".").pop();
-
-              if (ext && compressedFileExtensions.includes(ext)) {
-                node.type = "compressed-file";
-              } else {
-                node.type = "file";
-              }
-            }
-          }
-        }
-
-        if (!skipCheckingContents && node.type == "compressed-file") {
-          log("Loading compressed file entries for", node.key);
-          const rsp = await BApi.file.getCompressedFileEntries(
-            { compressedFilePath: node.key },
-            { signal: cts.signal },
-          );
-          const files = rsp.data || [];
-
-          log("Compressed file entries loaded", node.key, files.length);
-          if (files.length > 0) {
-            // console.log(files, key, data.key);
-            const subTrees = buildBranches(
-              files.map((f) => ({ path: f.path! })),
-              node,
-            );
-            const newNodeMap = buildNodeMap(subTrees);
-
-            Object.assign(nodeMapRef.current, newNodeMap);
-
-            node.children = subTrees;
-            // log(subTrees);
-            clearIceTreeMark(fileTreeRef.current!);
-          }
-        }
-
-        forceUpdate();
-      });
-    }
-  }, []);
-
-  log("Rendering", treeLeaves, activeIndex, activeNode);
-
-  if (visible) {
-    return (
-      <div
-        className={"media-player"}
-        onClick={(e) => {}}
-        onDoubleClick={(e) => {
-          console.log("[MediaPlayer]Double clicked");
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-        onKeyDown={(e) => {
-          console.log(e, e.key);
-          switch (e.key) {
-            case "ArrowLeft":
-              gotoPrevNode();
-              break;
-            case "ArrowRight":
-              gotoNextNode();
-              break;
-            case "F5":
-            case "R": {
-              if (e.ctrlKey) {
-                return;
-              }
-              break;
-            }
-            case "Escape": {
-              close();
-
-              return;
-            }
-          }
-          e.stopPropagation();
-          e.preventDefault();
-        }}
-        {...otherProps}
-        ref={(r) => forceFocus(r)}
-      >
-        {
-          <>
-            {fileListVisible ? (
-              <Drawer
-                visible
-                placement={"left"}
-                style={{ zIndex: 1005 }}
-                width={400}
-                onClose={() => setFileListVisible(false)}
-              >
-                {fileTree && (
-                  <Tree
-                    isLabelBlock
-                    showLine
-                    useVirtual
-                    dataSource={fileTree.children}
-                    expandedKeys={Object.keys(nodeMapRef.current)}
-                    labelRender={(iceNode: any) => {
-                      const { label, key } = iceNode;
-                      const data = nodeMapRef.current[key];
-
-                      // if (!data) {
-                      //   console.error(key);
-                      // }
-                      // log(iceNode);
-                      // log('Rendering tree node', iceNode, 'node data', data);
-                      return (
-                        <div
-                          key={data.key}
-                          ref={(r) => {
-                            if (r) {
-                              onNodeLoaded(data);
-                            } else {
-                              log("Unloading", data.key);
-                              // stopLoadingCompressedFileEntries(data);
-                            }
-                          }}
-                          style={{
-                            width: 200,
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 5,
-                          }}
-                          title={label}
-                        >
-                          <FileSystemEntryIcon
-                            path={data.key}
-                            size={20}
-                            type={
-                              data.type == "directory"
-                                ? IconType.Directory
-                                : IconType.Dynamic
-                            }
-                          />
-                          <span
-                            style={{
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {label}
-                          </span>
-                        </div>
-                      );
-                    }}
-                    style={{
-                      maxHeight: "90vh",
-                      overflow: "auto",
-                    }}
-                  />
-                )}
-              </Drawer>
-            ) : (
-              <div
-                className={"file-list-portal"}
-                onClick={() => {
-                  setFileListVisible(true);
-                }}
-              >
-                <Icon size={"xl"} type={"list"} />
-              </div>
-            )}
-          </>
-        }
-
-        <div
-          ref={(r) => (mediaContainerRef.current = r)}
-          className="media-container"
-          tabIndex={0}
-          onClick={() => {
-            console.log("container clicked");
-          }}
-        >
-          <div
-            className="mask"
-            onClick={() => {
-              console.log("mask clicked");
-              if (fileListVisible) {
-                setFileListVisible(false);
-              } else {
-                close();
-              }
-            }}
-          />
-          {/* <div */}
-          {/*   className={'media'} */}
-          {/*   // ref={mediaRef} */}
-          {/*   onClick={() => { */}
-          {/*     console.log('media clicked'); */}
-          {/*   }} */}
-          {/* > */}
-          {renderMedia()}
-          {/* </div> */}
-        </div>
-        {activeNode && (
-          <div
-            className={"label"}
-            onClick={() => {
-              console.log("label clicked");
-            }}
-          >
-            {renderFile(activeNode.key)}
-            <span>
-              ({treeLeaves.indexOf(activeNode) + 1} / {treeLeaves.length})
-            </span>
-            {renderOperations &&
-              currentInitialized &&
-              renderOperations(
-                activeNode.key,
-                getMediaType(activeNode.key),
-                playing,
-                playerRef.current,
-                imageRef.current,
-              )}
-          </div>
-        )}
-        {autoPlay && progress && (
-          <Progress percent={progress} size="small" textRender={() => ""} />
-        )}
-        {activeIndex > 0 && (
-          <div className="left" onClick={gotoPrevNode}>
-            <Icon size={"xl"} type="arrow-left" />
-          </div>
-        )}
-        {activeIndex < treeLeaves.length - 1 && (
-          <div className="right" onClick={gotoNextNode}>
-            <Icon size={"xl"} type="arrow-right" />
-          </div>
-        )}
+      <div className="w-full h-full flex items-center justify-center bg-black/90">
+        <div className="text-white">Loading...</div>
       </div>
     );
   }
 
-  return null;
-};
+  // No playable entries - show message with thumbnail panel if there are non-playable entries (dirs/archives)
+  if (!activeEntry) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-black/90">
+        <div className="text-white/70 text-lg">No playable files</div>
+      </div>
+    );
+  }
 
-// MediaPlayer.show = createMediaPlayer;
-MediaPlayer.show = (props: IProps) =>
-  createPortalOfComponent(MediaPlayer, props);
+  return (
+    <div
+      ref={(r) => {
+        if (r) {
+          forceFocus(r);
+          r.focus();
+        }
+      }}
+      className="w-full h-full"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      {...otherProps}
+    >
+      <MediaPlayerLayout
+        activeEntry={activeEntry}
+        activeIndex={activeIndex}
+        autoPlay={autoPlay}
+        currentInitialized={currentInitialized}
+        entries={currentEntries}
+        getMediaType={getMediaType}
+        leftPanelCollapsed={leftPanelCollapsed}
+        playableEntries={playableEntries}
+        playing={playing}
+        progress={progress}
+        renderOperations={renderOperations}
+        onEntryClick={handleEntryClick}
+        onLoad={handleLoad}
+        onNextEntry={gotoNextEntry}
+        onPrevEntry={gotoPrevEntry}
+        onToggleCollapse={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
+        onVideoEnded={handleVideoEnded}
+        onVideoPause={handleVideoPause}
+        onVideoPlay={handleVideoPlay}
+        onWheel={handleWheel}
+      />
+    </div>
+  );
+});
+
+MediaPlayer.displayName = "MediaPlayer";
 export default MediaPlayer;

@@ -104,6 +104,21 @@ public interface IResourceService
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);
 
+    /// <summary>
+    /// Re-sync resources by the template of the target media library.
+    /// This method will:
+    /// 1. Clear PropertyValueScope.Synchronization values
+    /// 2. Re-extract property values from the new path using the template's ValueLocators
+    /// 3. Clear ParentId
+    /// 4. Update file metadata (IsFile, FileCreatedAt, FileModifiedAt)
+    /// 5. Clear resource cache (PlayableFiles, Covers)
+    /// 6. Recursively process child resources
+    /// </summary>
+    /// <param name="resourceIds">Resource IDs to re-sync</param>
+    /// <param name="mediaLibraryId">Target media library ID</param>
+    /// <returns></returns>
+    Task ReSyncResourcesByTemplate(int[] resourceIds, int mediaLibraryId);
+
     Task Pin(int id, bool pin);
 
     Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt,

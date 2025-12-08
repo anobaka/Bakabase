@@ -7,10 +7,16 @@ import {
   AppstoreAddOutlined,
   CloseOutlined,
   DatabaseOutlined,
+  FireOutlined,
+  FolderOpenOutlined,
   FullscreenOutlined,
   PlayCircleOutlined,
+  ProductOutlined,
+  PushpinOutlined,
+  VideoCameraAddOutlined,
   ZoomInOutlined,
 } from "@ant-design/icons";
+import { AiOutlinePicture } from "react-icons/ai";
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -83,8 +89,8 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
           visible={visible}
           onClose={() => setVisible(false)}
         >
-          <div className={"flex flex-col gap-3"}>
-            <div className={"flex items-center gap-2"}>
+          <div className={"flex flex-col gap-1"}>
+            <div className={"flex items-center gap-1"}>
               <div className={"text-sm"}>{t<string>("Column count")}</div>
               <div className={"flex flex-wrap gap-1"}>
                 <ButtonGroup>
@@ -107,6 +113,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             </div>
             <div>
               <Checkbox
+                size="sm"
                 isSelected={resourceUiOptions?.coverFit === CoverFit.Cover}
                 onValueChange={(checked) =>
                   patchOptions({ coverFit: checked ? CoverFit.Cover : CoverFit.Contain })
@@ -121,6 +128,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div>
               <Checkbox
+                size="sm"
                 isSelected={!!resourceUiOptions?.showBiggerCoverWhileHover}
                 onValueChange={(checked) => patchOptions({ showBiggerCoverWhileHover: checked })}
               >
@@ -133,6 +141,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div>
               <Checkbox
+                size="sm"
                 isSelected={!resourceUiOptions?.disableMediaPreviewer}
                 onValueChange={(checked) => patchOptions({ disableMediaPreviewer: !checked })}
               >
@@ -145,6 +154,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div>
               <Checkbox
+                size="sm"
                 isSelected={!!resourceUiOptions?.autoSelectFirstPlayableFile}
                 onValueChange={(checked) => patchOptions({ autoSelectFirstPlayableFile: checked })}
               >
@@ -157,6 +167,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div className={"flex flex-col gap-1"}>
               <Checkbox
+                size="sm"
                 isSelected={resourceUiOptions?.inlineDisplayName}
                 onValueChange={(checked) => patchOptions({ inlineDisplayName: checked })}
               >
@@ -174,6 +185,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div className={"flex flex-col gap-1"}>
               <Checkbox
+                size="sm"
                 isSelected={!resourceUiOptions?.disableCache}
                 onValueChange={(checked) => patchOptions({ disableCache: !checked })}
               >
@@ -203,6 +215,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div>
               <Checkbox
+                size="sm"
                 isSelected={!resourceUiOptions?.disableCoverCarousel}
                 onValueChange={(checked) => patchOptions({ disableCoverCarousel: !checked })}
               >
@@ -215,6 +228,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div>
               <Checkbox
+                size="sm"
                 isSelected={!!resourceUiOptions?.displayResourceId}
                 onValueChange={(checked) => patchOptions({ displayResourceId: checked })}
               >
@@ -223,6 +237,155 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   {t<string>("Display resource ID")}
                 </div>
               </Checkbox>
+            </div>
+
+            <Divider />
+
+            <div className={"flex flex-col gap-2"}>
+              <div className={"text-sm font-medium"}>
+                {t<string>("Display operations")}
+              </div>
+              <div className={"flex flex-wrap gap-2"}>
+                <Checkbox
+                  size="sm"
+                  isSelected={
+                    resourceUiOptions?.displayOperations?.includes("aggregate") ??
+                    (resourceUiOptions?.displayOperations === undefined ||
+                      resourceUiOptions?.displayOperations === null ||
+                      resourceUiOptions?.displayOperations.length === 0)
+                  }
+                  onValueChange={(checked) => {
+                    const current = resourceUiOptions?.displayOperations ?? [];
+                    if (checked) {
+                      if (!current.includes("aggregate")) {
+                        patchOptions({ displayOperations: [...current, "aggregate"] });
+                      }
+                    } else {
+                      patchOptions({
+                        displayOperations: current.filter((op: string) => op !== "aggregate"),
+                      });
+                    }
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <ProductOutlined className={"text-base"} />
+                    {t<string>("Aggregate button")}
+                  </div>
+                </Checkbox>
+                <Checkbox
+                  size="sm"
+                  isSelected={resourceUiOptions?.displayOperations?.includes("pin") ?? false}
+                  onValueChange={(checked) => {
+                    const current = resourceUiOptions?.displayOperations ?? [];
+                    if (checked) {
+                      if (!current.includes("pin")) {
+                        patchOptions({ displayOperations: [...current, "pin"] });
+                      }
+                    } else {
+                      patchOptions({
+                        displayOperations: current.filter((op: string) => op !== "pin"),
+                      });
+                    }
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <PushpinOutlined className={"text-base"} />
+                    {t<string>("Pin/Unpin")}
+                  </div>
+                </Checkbox>
+                <Checkbox
+                  size="sm"
+                  isSelected={
+                    resourceUiOptions?.displayOperations?.includes("openFolder") ?? false
+                  }
+                  onValueChange={(checked) => {
+                    const current = resourceUiOptions?.displayOperations ?? [];
+                    if (checked) {
+                      if (!current.includes("openFolder")) {
+                        patchOptions({ displayOperations: [...current, "openFolder"] });
+                      }
+                    } else {
+                      patchOptions({
+                        displayOperations: current.filter((op: string) => op !== "openFolder"),
+                      });
+                    }
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <FolderOpenOutlined className={"text-base"} />
+                    {t<string>("Open folder")}
+                  </div>
+                </Checkbox>
+                <Checkbox
+                  size="sm"
+                  isSelected={
+                    resourceUiOptions?.displayOperations?.includes("enhancements") ?? false
+                  }
+                  onValueChange={(checked) => {
+                    const current = resourceUiOptions?.displayOperations ?? [];
+                    if (checked) {
+                      if (!current.includes("enhancements")) {
+                        patchOptions({ displayOperations: [...current, "enhancements"] });
+                      }
+                    } else {
+                      patchOptions({
+                        displayOperations: current.filter((op: string) => op !== "enhancements"),
+                      });
+                    }
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <FireOutlined className={"text-base"} />
+                    {t<string>("Enhancements")}
+                  </div>
+                </Checkbox>
+                <Checkbox
+                  size="sm"
+                  isSelected={
+                    resourceUiOptions?.displayOperations?.includes("preview") ?? false
+                  }
+                  onValueChange={(checked) => {
+                    const current = resourceUiOptions?.displayOperations ?? [];
+                    if (checked) {
+                      if (!current.includes("preview")) {
+                        patchOptions({ displayOperations: [...current, "preview"] });
+                      }
+                    } else {
+                      patchOptions({
+                        displayOperations: current.filter((op: string) => op !== "preview"),
+                      });
+                    }
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <AiOutlinePicture className={"text-base"} />
+                    {t<string>("Preview")}
+                  </div>
+                </Checkbox>
+                <Checkbox
+                  size="sm"
+                  isSelected={
+                    resourceUiOptions?.displayOperations?.includes("addToPlaylist") ?? false
+                  }
+                  onValueChange={(checked) => {
+                    const current = resourceUiOptions?.displayOperations ?? [];
+                    if (checked) {
+                      if (!current.includes("addToPlaylist")) {
+                        patchOptions({ displayOperations: [...current, "addToPlaylist"] });
+                      }
+                    } else {
+                      patchOptions({
+                        displayOperations: current.filter((op: string) => op !== "addToPlaylist"),
+                      });
+                    }
+                  }}
+                >
+                  <div className={"flex items-center gap-1"}>
+                    <VideoCameraAddOutlined className={"text-base"} />
+                    {t<string>("Add to playlist")}
+                  </div>
+                </Checkbox>
+              </div>
             </div>
 
             <Divider />

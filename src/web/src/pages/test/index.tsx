@@ -34,11 +34,14 @@ import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 import FolderSelectorTest from "./cases/FolderSelectorTest";
+import MediaPlayerTest from "./cases/MediaPlayer";
+import WindowedMediaPlayerTest from "./cases/WindowedMediaPlayer";
 import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsModalTest";
 
 const components = {
   AfterFirstPlayOperationsModalTest: <AfterFirstPlayOperationsModalTest />,
   FolderSelectorTest: <FolderSelectorTest />,
+  WindowedMediaPlayer: <WindowedMediaPlayerTest />,
   ErrorBoundaryTest: <ErrorBoundaryTestPage />,
   FileNameModifierTest: <FileNameModifierTestPage />,
   PropertyMatcher: (
@@ -129,6 +132,7 @@ const components = {
   ),
   ReactPlayer: <ReactPlayer />,
   MediaPreviewer: <MediaPreviewerTest />,
+  MediaPlayer: <MediaPlayerTest />,
 };
 const TestPage = () => {
   const { t } = useTranslation();

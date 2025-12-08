@@ -5366,6 +5366,7 @@ export interface components {
             displayProperties: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
             inlineDisplayName: boolean;
             autoSelectFirstPlayableFile: boolean;
+            displayOperations?: string[];
         };
         /**
          * Format: int32

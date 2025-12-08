@@ -3,6 +3,7 @@
 import type { ComponentType, FC, ReactNode } from "react";
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseInfrastructuresComponentsConfigurationsAppAppOptions } from "@/sdk/Api";
+import type { WindowOptions } from "@/components/Window";
 
 import { HeroUIProvider, Spinner, ToastProvider } from "@heroui/react";
 import Clarity from "@microsoft/clarity";
@@ -18,6 +19,7 @@ import { useAppOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
 import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
+import Window from "@/components/Window";
 
 dayjs.extend(duration);
 
@@ -26,14 +28,22 @@ type CreatePortal = <P extends DestroyableProps>(
   props: P,
 ) => { destroy: () => void; key: string };
 
+type CreateWindow = <P extends {}>(
+  C: ComponentType<P>,
+  props: P,
+  options?: WindowOptions,
+) => { destroy: () => void; key: string };
+
 interface IContext {
   isDarkMode: boolean;
   createPortal: CreatePortal;
+  createWindow: CreateWindow;
   isDebugging?: boolean;
 }
 
 const BakabaseContext = createContext<IContext>({
   createPortal: (C, props) => ({ key: "", destroy: () => {} }),
+  createWindow: (C, props, options) => ({ key: "", destroy: () => {} }),
   isDarkMode: false,
   isDebugging: false,
 });
@@ -101,17 +111,46 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const currentTheme = useRef(getUiTheme(appOptions ? appOptions.uiTheme : getStoredTheme()));
   const isDarkMode = useMemo(() => currentTheme.current === UiTheme.Dark, [currentTheme]);
 
-  const [portals, setPortals] = useState<{ key: string; component: React.ReactNode }[]>([]);
+  const [portals, setPortals] = useState<{ key: string; component: React.ReactNode; persistent?: boolean }[]>([]);
 
   const mount = (C: ComponentType<any>, props: any) => {
     console.log("[createPortal] mount", C, props);
 
     const key = uuidv4();
 
-    setPortals((prev) => [...prev, { key, component: <C {...props} /> }]);
+    setPortals((prev) => [...prev, { key, component: <C {...props} />, persistent: false }]);
 
     const destroy = () => {
       console.log("[createPortal] destroy", key);
+      setPortals((prev) => prev.filter((p) => p.key !== key));
+    };
+
+    return { key, destroy };
+  };
+
+  const mountWindow = (C: ComponentType<any>, props: any, options?: WindowOptions) => {
+    console.log("[createWindow] mount", C, props, options);
+
+    const key = uuidv4();
+    const { title, persistent, renderHeaderActions, ...windowOptions } = options || {};
+
+    const windowComponent = (
+      <Window
+        title={title}
+        windowOptions={windowOptions}
+        renderHeaderActions={renderHeaderActions}
+        onDestroyed={() => {
+          destroy();
+        }}
+      >
+        <C {...props} />
+      </Window>
+    );
+
+    setPortals((prev) => [...prev, { key, component: windowComponent, persistent }]);
+
+    const destroy = () => {
+      console.log("[createWindow] destroy", key);
       setPortals((prev) => prev.filter((p) => p.key !== key));
     };
 
@@ -171,8 +210,10 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }
   }, [appOptions]);
 
+  // Clear non-persistent portals on route change
+  // Persistent windows (created with createWindow) will remain
   useEffect(() => {
-    setPortals([]); // 清空 portals 数组
+    setPortals((prev) => prev.filter((p) => p.persistent));
   }, [location.pathname]);
 
   console.log("current theme", UiTheme[currentTheme.current], "portals", portals);
@@ -191,6 +232,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
             value={{
               isDarkMode,
               createPortal: mount,
+              createWindow: mountWindow,
               isDebugging,
             }}
           >

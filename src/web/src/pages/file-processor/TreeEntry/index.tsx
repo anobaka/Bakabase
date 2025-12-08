@@ -1,6 +1,7 @@
 "use client";
 import type { IEntryFilter } from "@/core/models/FileExplorer/Entry";
 import type { Capability } from "../RootTreeEntry/models";
+import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from "@/sdk/Api";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -14,6 +15,7 @@ import { useUpdate, useUpdateEffect } from "react-use";
 import { diff } from "deep-diff";
 import { List } from "react-virtualized";
 import { AiOutlinePlayCircle } from "react-icons/ai";
+import { BsCollectionPlayFill } from "react-icons/bs";
 
 import OperationButton from "./components/OperationButton";
 import EditableFileName from "./components/EditableFileName";
@@ -80,7 +82,7 @@ const TreeEntry = (props: TreeEntryProps) => {
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
-  const { createPortal } = useBakabaseContext();
+  const { createPortal, createWindow } = useBakabaseContext();
 
   const [entry, setEntry] = useState(propsEntry);
   const entryRef = useRef(entry);
@@ -445,31 +447,31 @@ const TreeEntry = (props: TreeEntryProps) => {
     return;
   };
 
-  const play = useCallback((entry) => {
-    if (entry.type == IwFsType.Directory) {
-      BApi.file
-        .getAllFiles({
-          path: entry.path,
-        })
-        .then((x) => {
-          if (!x.code) {
-            if (!x.data || x.data.length == 0) {
-              return toast.default(t<string>("No files to preview"));
-            }
-            MediaPlayer.show({
-              files: x.data!.map((a) => ({
-                path: a,
-              })),
-              defaultActiveIndex: 0,
-            });
-          }
-        });
-    } else {
-      MediaPlayer.show({
-        files: [{ path: entry.path }],
+  const play = useCallback((entry: Entry) => {
+    // MediaPlayer now handles directories and compressed files internally
+    // by auto-expanding them when there's a single entry of that type
+    const mediaEntry: BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry = {
+      path: entry.path,
+      name: entry.name,
+      meaningfulName: entry.meaningfulName || entry.name,
+      ext: entry.ext,
+      type: entry.type,
+      passwordsForDecompressing: entry.passwordsForDecompressing || [],
+    };
+
+    log("Play", mediaEntry);
+
+    createWindow(
+      MediaPlayer,
+      {
+        entries: [mediaEntry],
         defaultActiveIndex: 0,
-      });
-    }
+      },
+      {
+        title: entry.meaningfulName || entry.name,
+        persistent: true,
+      },
+    );
   }, []);
 
   const playFirstFile = useCallback(async () => {
@@ -662,6 +664,17 @@ const TreeEntry = (props: TreeEntryProps) => {
                       </OperationButton>
                     </Tooltip>
                   )}
+                <Tooltip content={t<string>("Open in media player")}>
+                  <OperationButton
+                    isIconOnly
+                    color={"success"}
+                    onPress={(e) => {
+                      play(entryRef.current);
+                    }}
+                  >
+                    <BsCollectionPlayFill className={"text-base"} />
+                  </OperationButton>
+                </Tooltip>
                 <TailingOperations capabilities={capabilities} entry={entry} />
                 {renderFileSystemInfo()}
                 {renderTaskError()}

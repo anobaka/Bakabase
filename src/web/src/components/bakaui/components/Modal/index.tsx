@@ -24,7 +24,7 @@ interface ISimpleFooter {
   cancelProps?: ButtonProps & { ref?: LegacyRef<HTMLButtonElement> };
 }
 
-type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
 
 export interface ModalProps
   extends DestroyableProps,
@@ -70,6 +70,18 @@ const Modal = (props: ModalProps) => {
         break;
       case "lg":
         setSize("2xl");
+        break;
+      case "2xl":
+        setSize("2xl");
+        break;
+      case "3xl":
+        setSize("3xl");
+        break;
+      case "4xl":
+        setSize("4xl");
+        break;
+      case "5xl":
+        setSize("5xl");
         break;
       case "xl":
         setSize("5xl");

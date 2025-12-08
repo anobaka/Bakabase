@@ -166,6 +166,10 @@
   "Auto group internal items in {{count}} selected directories": "Auto group internal items in {{count}} selected directories",
   "Wrap {{count}} items using directory": "Wrap {{count}} items using directory",
   "Last played at {{dt}}": "Last played at {{dt}}",
+  "Played just now": "Played just now",
+  "Played {{n}} minutes ago": "Played {{n}}m ago",
+  "Played {{n}} hours ago": "Played {{n}}h ago",
+  "Played {{n}} days ago": "Played {{n}}d ago",
   "ResourceTag.IsParent": "Is parent",
   "ResourceTag.Pinned": "Pinned",
   "ResourceTag.PathDoesNotExist": "Path does not exist",
@@ -733,5 +737,14 @@
   "Failed to delete markers": "Failed to delete markers",
   "By default, when a folder path changes, the resource data will be created as a new resource.": "By default, when a folder path changes, the resource data will be created as a new resource.",
   "If you enable this feature, a hidden .bakabase.json file will be generated inside folder resources to store their resource IDs.": "If you enable this feature, a hidden .bakabase.json file will be generated inside folder resources to store their resource IDs.",
-  "Keep resources on path change": "Keep resources on path change"
+  "Keep resources on path change": "Keep resources on path change",
+  "Display operations": "Display operations",
+  "Aggregate button": "Aggregate button",
+  "Pin/Unpin": "Pin/Unpin",
+  "Open in media player": "Open in media player",
+  "Shortcuts": "Shortcuts",
+  "Previous": "Previous",
+  "Next": "Next",
+  "or scroll up": "or scroll up",
+  "or scroll down": "or scroll down"
 }

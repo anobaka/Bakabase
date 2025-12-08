@@ -3,7 +3,7 @@
 import type { components } from "@/sdk/BApi2";
 import type { ReactNode } from "react";
 
-import { SortableElement } from "react-sortable-hoc";
+import { SortableElement, SortableElementProps, SortableHandle } from "react-sortable-hoc";
 import React, { useCallback } from "react";
 import {
   MdVideoLibrary,
@@ -11,27 +11,29 @@ import {
   MdImage,
   MdAudiotrack,
 } from "react-icons/md";
-import { AiOutlineDelete } from "react-icons/ai";
+import { AiOutlineDelete, AiOutlineFolderOpen } from "react-icons/ai";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/bakaui";
 import { PlaylistItemType } from "@/sdk/constants";
 import DragHandle from "@/components/DragHandle";
 import BApi from "@/sdk/BApi";
+import { GrResources } from "react-icons/gr";
+import { IoFolderOpen } from "react-icons/io5";
 
 type PlayListItem =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.PlayList.Models.Domain.PlayListItem"];
 type Resource =
   components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource"];
 
-interface SortablePlaylistItemProps {
+interface SortablePlaylistItemProps extends SortableElementProps {
   item: PlayListItem;
   resource?: Resource;
   onRemove: (item: PlayListItem) => void;
 }
 
 const ItemTypeIcon = {
-  [PlaylistItemType.Resource]: MdVideoLibrary,
+  [PlaylistItemType.Resource]: GrResources,
   [PlaylistItemType.Video]: MdVideoFile,
   [PlaylistItemType.Image]: MdImage,
   [PlaylistItemType.Audio]: MdAudiotrack,
@@ -54,23 +56,17 @@ const renderDuration = (item: PlayListItem): string => {
   return "";
 };
 
+const SortableDragHandle = SortableHandle(() => <DragHandle />);
+
 export default SortableElement<SortablePlaylistItemProps>(
   ({ item, resource, onRemove }: SortablePlaylistItemProps) => {
     const { t } = useTranslation();
-    const renderName = useCallback((): ReactNode => {
-      switch (item.type as PlaylistItemType) {
-        case PlaylistItemType.Resource:
-          return (
-            <Button size={"sm"} variant={"light"}>
-              {resource?.displayName ?? t("Unknown Resource")}
-            </Button>
-          );
-        case PlaylistItemType.Video:
-        case PlaylistItemType.Image:
-        case PlaylistItemType.Audio:
-          return item.file;
+    const renderResourceName = useCallback((): ReactNode => {
+      if (resource?.displayName) {
+        return resource.displayName;
       }
-    }, [item.file, resource]);
+      return t("Unknown Resource");
+    }, [resource, t]);
 
     const handleOpenFile = useCallback(() => {
       if (resource) {
@@ -85,29 +81,41 @@ export default SortableElement<SortablePlaylistItemProps>(
       onRemove(item);
     }, [item, onRemove]);
 
-    const displayFilename = getDisplayFilename();
-
     return (
-      <div className="flex items-center gap-1">
-        <DragHandle />
-        <div className="flex items-center text-gray-400">
-          {React.createElement(ItemTypeIcon[item.type], { size: "small" })}
+      <div 
+        className="grid grid-cols-[auto_auto_1fr_auto_auto] gap-2 items-center px-2 border-b"
+        style={{
+          borderColor: 'var(--theme-border-color)',
+        }}
+      >
+        <div className="flex items-center justify-center w-8">
+          <SortableDragHandle />
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center justify-center text-gray-400 w-6">
+          {React.createElement(ItemTypeIcon[item.type], { className: "text-lg" })}
+        </div>
+        <div className="flex items-center min-w-0 gap-2 truncate">
+          <span className="text-sm">{renderResourceName()}</span>
           <Button
-            color={"primary"}
-            disabled={!resource}
+            // color={"primary"}
+            disabled={!resource && item.type === PlaylistItemType.Resource}
             variant={"light"}
+            size="sm"
             onPress={handleOpenFile}
+            isIconOnly
           >
-            {resource?.displayName || "Unknown Resource"}
+            <AiOutlineFolderOpen className="text-lg" />
           </Button>
+          {item.file && (
+            <span className="text-sm text-gray-600 truncate">
+              {item.file}
+            </span>
+          )}
         </div>
-        {renderName()}
-        <div className="flex items-center text-sm text-gray-500">
+        <div className="flex items-center justify-end text-sm text-gray-500 min-w-[120px]">
           {renderDuration(item)}
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center justify-center w-10">
           <Button
             isIconOnly
             color={"danger"}

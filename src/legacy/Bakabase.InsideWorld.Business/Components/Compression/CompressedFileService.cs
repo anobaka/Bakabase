@@ -86,7 +86,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             }
         }
 
-        public async Task<MemoryStream> ExtractOneEntry(string compressedFilePath, string entryPath,
+        public async Task<MemoryStream?> ExtractOneEntry(string compressedFilePath, string entryPath,
             CancellationToken ct)
         {
             var sevenZipExe = GetSevenZipExecutable();
@@ -97,24 +97,41 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
 
             var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
 
+            // Use 'e' command with -so to extract to stdout
+            // -y to assume yes on all queries
+            // The entry path should match exactly what's in the archive (as returned by GetCompressFileEntries)
             var arguments = new List<string>
             {
+                "e",                    // extract command
+                "-so",                  // write to stdout
+                "-y",                   // assume yes
                 password.IsNotEmpty() ? $"-p{password}" : null!,
-                "-so",
-                "e", compressedFilePath,
-                entryPath
+                compressedFilePath,
+                entryPath               // specific file to extract (use exact path from archive)
             }.Where(a => a.IsNotEmpty()).ToArray();
 
             var ms = new MemoryStream();
-            var command = Cli.Wrap(sevenZipExe).WithArguments(arguments, true)
-                .WithStandardOutputPipe(PipeTarget.ToStream(ms));
+            var stderrBuilder = new StringBuilder();
+            var command = Cli.Wrap(sevenZipExe)
+                .WithArguments(arguments, true)
+                .WithValidation(CommandResultValidation.None)
+                .WithStandardOutputPipe(PipeTarget.ToStream(ms))
+                .WithStandardErrorPipe(PipeTarget.ToStringBuilder(stderrBuilder));
+
+            _logger.LogDebug("Extracting entry '{EntryPath}' from '{CompressedFilePath}' with command: {Command}",
+                entryPath, compressedFilePath, command);
 
             var result = await command.ExecuteAsync(ct);
-            if (result.ExitCode == 0)
+            if (result.ExitCode == 0 && ms.Length > 0)
             {
                 ms.Seek(0, SeekOrigin.Begin);
                 return ms;
             }
+
+            // Log error for debugging
+            _logger.LogWarning(
+                "Failed to extract entry '{EntryPath}' from '{CompressedFilePath}'. Exit code: {ExitCode}, StdErr: {Stderr}, StreamLength: {Length}",
+                entryPath, compressedFilePath, result.ExitCode, stderrBuilder.ToString(), ms.Length);
 
             return null;
         }
@@ -134,10 +151,13 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 var password = compressFilePath.GetPasswordsFromPath().FirstOrDefault();
                 var sb = new StringBuilder();
 
+                // Use -slt for machine-readable "technical listing" format (consistent across 7z versions)
                 var arguments = new List<string>
                 {
                     password.IsNotEmpty() ? $"-p{password}" : null!,
-                    "l", compressFilePath
+                    "l",
+                    "-slt", // Technical listing format with key=value pairs
+                    compressFilePath
                 }.Where(a => a.IsNotEmpty()).ToArray();
 
                 var command = Cli.Wrap(sevenZipExe)
@@ -148,76 +168,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 if (result.ExitCode == 0)
                 {
                     var outputStr = sb.ToString();
-                    var lines = outputStr.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).ToList();
-                    var tableStartLineIndex = lines.FindIndex(a => a.StartsWith("--------"));
-                    var tableEndLineIndex = lines.FindLastIndex(a => a.StartsWith("--------"));
-                    var fileEntries = new List<CompressedFileEntry>();
-                    if (tableStartLineIndex > -1 && tableEndLineIndex > tableStartLineIndex)
-                    {
-                        var columnRanges = new List<Range>();
-                        {
-                            var tableStartLineStr = lines[tableStartLineIndex];
-                            var index = -1;
-                            for (var i = 0; i < tableStartLineStr.Length; i++)
-                            {
-                                var c = tableStartLineStr[i];
-                                if (c == '-' && index == -1)
-                                {
-                                    index = i;
-                                }
-
-                                if ((i < tableStartLineStr.Length - 1 && tableStartLineStr[i + 1] != '-' ||
-                                     i == tableStartLineStr.Length - 1) && index != -1)
-                                {
-                                    columnRanges.Add(new Range(index, i));
-                                    index = -1;
-                                }
-                            }
-                        }
-
-                        var titleLineStr = lines[tableStartLineIndex - 1];
-                        var columnTitles = columnRanges.Select(a =>
-                            titleLineStr.Substring(a.Start.Value,
-                                Math.Min(a.End.Value, titleLineStr.Length - 1) - a.Start.Value + 1).Trim()).ToArray();
-
-                        var attrColumn = columnTitles.IndexOf("Attr");
-                        var nameColumn = columnTitles.IndexOf("Name");
-                        var sizeColumn = columnTitles.IndexOf("Size");
-
-                        if (attrColumn > -1 && nameColumn > -1)
-                        {
-                            var dataLines = lines.Skip(tableStartLineIndex + 1)
-                                .Take(tableEndLineIndex - tableStartLineIndex - 1).ToArray();
-                            var attrRange = columnRanges[attrColumn];
-                            var nameRange = Range.StartAt(columnRanges[nameColumn].Start);
-                            foreach (var line in dataLines)
-                            {
-                                var attr = line.Substring(attrRange.Start.Value,
-                                    attrRange.End.Value - attrRange.Start.Value + 1).Trim();
-                                if (attr.EndsWith('A'))
-                                {
-                                    var path = line[nameRange.Start.Value..].Trim();
-                                    var fe = new CompressedFileEntry
-                                    {
-                                        Path = path.StandardizePath()!
-                                    };
-                                    if (sizeColumn > -1)
-                                    {
-                                        var sizeRange = columnRanges[sizeColumn];
-                                        var sizeStr = line.Substring(sizeRange.Start.Value,
-                                            sizeRange.End.Value - sizeRange.Start.Value + 1).Trim();
-                                        if (long.TryParse(sizeStr, out var size))
-                                        {
-                                            fe.Size = size;
-                                        }
-                                    }
-
-                                    fileEntries.Add(fe);
-                                }
-                            }
-                        }
-                    }
-
+                    var fileEntries = ParseTechnicalListingOutput(outputStr);
                     return new ListResponse<CompressedFileEntry>(fileEntries);
                 }
 
@@ -226,6 +177,89 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             }
 
             return ListResponseBuilder<CompressedFileEntry>.NotFound;
+        }
+
+        /// <summary>
+        /// Parses the technical listing output from 7z l -slt command.
+        /// The format is consistent across 7z versions and uses key = value pairs.
+        /// Each file entry is separated by blank lines.
+        /// </summary>
+        private static List<CompressedFileEntry> ParseTechnicalListingOutput(string output)
+        {
+            var fileEntries = new List<CompressedFileEntry>();
+            var lines = output.Split('\n');
+
+            string? currentPath = null;
+            long currentSize = 0;
+            string? currentAttributes = null;
+
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+
+                if (string.IsNullOrEmpty(line))
+                {
+                    // End of current entry block - save if it's a file (not a directory)
+                    if (currentPath != null && currentAttributes != null)
+                    {
+                        // Check if it's a file (not a directory)
+                        // In 7z technical listing, directories have 'D' in attributes, files have 'A'
+                        if (!currentAttributes.Contains('D'))
+                        {
+                            fileEntries.Add(new CompressedFileEntry
+                            {
+                                // Keep the original path from the archive - don't standardize
+                                // This ensures the path matches exactly what 7z expects for extraction
+                                Path = currentPath,
+                                Size = currentSize
+                            });
+                        }
+                    }
+
+                    // Reset for next entry
+                    currentPath = null;
+                    currentSize = 0;
+                    currentAttributes = null;
+                    continue;
+                }
+
+                // Parse key = value pairs
+                var separatorIndex = line.IndexOf(" = ", StringComparison.Ordinal);
+                if (separatorIndex > 0)
+                {
+                    var key = line[..separatorIndex].Trim();
+                    var value = line[(separatorIndex + 3)..].Trim();
+
+                    switch (key)
+                    {
+                        case "Path":
+                            currentPath = value;
+                            break;
+                        case "Size":
+                            if (long.TryParse(value, out var size))
+                            {
+                                currentSize = size;
+                            }
+                            break;
+                        case "Attributes":
+                            currentAttributes = value;
+                            break;
+                    }
+                }
+            }
+
+            // Handle last entry if output doesn't end with blank line
+            if (currentPath != null && currentAttributes != null && !currentAttributes.Contains('D'))
+            {
+                fileEntries.Add(new CompressedFileEntry
+                {
+                    // Keep the original path from the archive
+                    Path = currentPath,
+                    Size = currentSize
+                });
+            }
+
+            return fileEntries;
         }
 
         public class TestResult

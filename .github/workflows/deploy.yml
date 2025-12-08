@@ -101,6 +101,10 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     needs: [prepare, build-frontend]
+
+    env:
+      DOTNET_MULTILEVEL_LOOKUP: 0 
+    
     strategy:
       matrix:
         include:
@@ -129,7 +133,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '9.0.308'
+          dotnet-quality: ''
+      - name: Check dotnet info
+        run: dotnet --info
       - name: Cache NuGet packages
         uses: actions/cache@v4
         with:

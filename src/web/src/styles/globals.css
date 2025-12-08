@@ -52,4 +52,14 @@ pre {
 @import '../components/bakaui/index.dark.css';
 @import '../components/bakaui/index.light.css';
 
+/* ===== react-sortable-hoc helper styles ===== */
+.sortable-playlist-item-helper {
+  z-index: 9999 !important;
+  opacity: 0.9 !important;
+  background-color: var(--theme-body-background) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid var(--theme-border-color) !important;
+  pointer-events: none !important;
+}
+
 /* ===== END icejs 样式迁移 ===== */

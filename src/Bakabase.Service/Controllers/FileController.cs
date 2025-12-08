@@ -1062,34 +1062,27 @@ namespace Bakabase.Service.Controllers
             {
                 if (fullname.Contains(InternalOptions.CompressedFileRootSeparator))
                 {
-                    var tmpSegments = fullname.Split(InternalOptions.CompressedFileRootSeparator);
-                    var segments = new List<string>();
-                    for (var i = 0; i < tmpSegments.Length; i++)
-                    {
-                        var s = tmpSegments[i];
-                        if (InternalOptions.CompressedFileExtensions.Any(e =>
-                                s.EndsWith(e, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            segments.Add(s);
-                        }
-                        else
-                        {
-                            var combined = $"{s}{InternalOptions.CompressedFileRootSeparator}";
-                            if (i < tmpSegments.Length - 1)
-                            {
-                                combined += tmpSegments[i + 1];
-                            }
+                    // Find the separator position by looking for compressed file extension followed by '!'
+                    // E.g., "C:/path/archive.zip!folder/file.jpg" -> compressFilePath="C:/path/archive.zip", entryPath="folder/file.jpg"
+                    string? compressFilePath = null;
+                    string? entryPath = null;
 
-                            i++;
-                            segments.Add(combined);
+                    foreach (var compressedExt in InternalOptions.CompressedFileExtensions)
+                    {
+                        var pattern = $"{compressedExt}{InternalOptions.CompressedFileRootSeparator}";
+                        var idx = fullname.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+                        if (idx > 0)
+                        {
+                            // Found! Split at this position
+                            var separatorPos = idx + compressedExt.Length;
+                            compressFilePath = fullname[..separatorPos];
+                            entryPath = fullname[(separatorPos + 1)..]; // +1 to skip the '!' separator
+                            break;
                         }
                     }
 
-                    if (segments.Count == 2)
+                    if (compressFilePath != null && entryPath != null)
                     {
-                        var compressFilePath = segments[0];
-                        var entryPath = segments[1];
-
                         var stream = await _compressedFileService.ExtractOneEntry(compressFilePath, entryPath,
                             HttpContext.RequestAborted);
 
@@ -1098,11 +1091,6 @@ namespace Bakabase.Service.Controllers
                             return File(stream, MimeTypes.GetMimeType(fullname));
                         }
 
-                        return NotFound();
-                    }
-
-                    if (segments.Count == tmpSegments.Length)
-                    {
                         return NotFound();
                     }
                 }

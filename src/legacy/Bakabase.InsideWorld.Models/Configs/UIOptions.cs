@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -55,6 +55,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public List<PropertyKey> DisplayProperties { get; set; } = [];
             public bool InlineDisplayName { get; set; }
             public bool AutoSelectFirstPlayableFile { get; set; }
+            public List<string> DisplayOperations { get; set; } = [];
         }
     }
 }

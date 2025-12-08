@@ -386,6 +386,18 @@ namespace Bakabase.Service.Controllers
                             await resourceService.ChangePath([resource.Id],
                                 new Dictionary<int, string> { { resource.Id, targetPath } });
                         }
+
+                        // Re-sync resource properties based on the new media library template
+                        if (!model.IsLegacyMediaLibrary)
+                        {
+                            await resourceService.ReSyncResourcesByTemplate([resource.Id], model.MediaLibraryId);
+                        }
+                        else
+                        {
+                            // For legacy media libraries, just clear the playable file cache
+                            await resourceService.DeleteResourceCacheByResourceIdAndCacheType(resource.Id,
+                                ResourceCacheType.PlayableFiles);
+                        }
                     }
                 });
             }

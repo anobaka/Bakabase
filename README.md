@@ -13,6 +13,14 @@ Bakabase 是一款离线媒体管理库，用于本地媒体快速处理、搜�
 ![1-resource-filter.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/1-resource-filter.jpg)
 ![1-resource-detail.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/1-resource-detail.jpg)
 ![1-resource-multiple-scope-property-values.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/1-resource-multiple-scope-property-values.jpg)
+
+<details>
+  <summary>内置播放器（NSFW，谨慎点开）</summary>
+
+![1-resource-.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/1-resource-media-player.png)
+
+</details>
+
 ![2-media-library-list.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/2-media-library-list.jpg)
 ![2-media-library-player.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/2-media-library-player.jpg)
 ![3-media-library-template-detail-1.jpg](https://github.com/anobaka/Bakabase.Docs/blob/main/imgs/3-media-library-template-detail-1.jpg)

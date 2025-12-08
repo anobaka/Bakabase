@@ -52,6 +52,13 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                             {
                                 type = IwFsType.Audio;
                             }
+                            else
+                            {
+                                if (InternalOptions.CompressedFileExtensions.Contains(ext))
+                                {
+                                    type = IwFsType.CompressedFileEntry;
+                                }
+                            }
                         }
                     }
                 }

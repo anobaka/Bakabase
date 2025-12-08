@@ -1686,6 +1686,193 @@ namespace Bakabase.InsideWorld.Business.Services
             return BaseResponseBuilder.Ok;
         }
 
+        public async Task ReSyncResourcesByTemplate(int[] resourceIds, int mediaLibraryId)
+        {
+            if (resourceIds.Length == 0)
+            {
+                return;
+            }
+
+            // Get media library with template
+            var mediaLibrary = await MediaLibraryV2Service.Get(mediaLibraryId, MediaLibraryV2AdditionalItem.Template);
+            if (mediaLibrary?.Template == null)
+            {
+                _logger.LogWarning(
+                    $"Cannot re-sync resources: media library {mediaLibraryId} not found or has no template");
+                return;
+            }
+
+            var template = mediaLibrary.Template;
+
+            // Get all resources including children recursively
+            var allResourceIds = new HashSet<int>(resourceIds);
+            var pendingIds = new Queue<int>(resourceIds);
+            while (pendingIds.Count > 0)
+            {
+                var parentIds = pendingIds.ToArray();
+                pendingIds.Clear();
+                var children = await _orm.GetAll(r => parentIds.Contains(r.ParentId ?? 0));
+                foreach (var child in children)
+                {
+                    if (allResourceIds.Add(child.Id))
+                    {
+                        pendingIds.Enqueue(child.Id);
+                    }
+                }
+            }
+
+            var resources = await GetByKeys(allResourceIds.ToArray(), ResourceAdditionalItem.All);
+            if (resources.Count == 0)
+            {
+                return;
+            }
+
+            // Find the root path for resources (the media library path that contains this resource)
+            string? FindRootPath(string resourcePath)
+            {
+                foreach (var mlPath in mediaLibrary.Paths)
+                {
+                    if (resourcePath.StartsWith(mlPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return mlPath;
+                    }
+                }
+
+                return null;
+            }
+
+            var changedResources = new List<Resource>();
+            foreach (var resource in resources)
+            {
+                var rootPath = FindRootPath(resource.Path);
+                if (rootPath == null)
+                {
+                    _logger.LogWarning(
+                        $"Cannot find root path for resource {resource.Id} ({resource.Path}) in media library {mediaLibraryId}");
+                    continue;
+                }
+
+                // Update file metadata
+                var fi = new FileInfo(resource.Path);
+                if (fi.Exists || Directory.Exists(resource.Path))
+                {
+                    var isFile = fi.Exists && !fi.Attributes.HasFlag(FileAttributes.Directory);
+                    resource.IsFile = isFile;
+                    resource.FileCreatedAt = isFile ? fi.CreationTime : new DirectoryInfo(resource.Path).CreationTime;
+                    resource.FileModifiedAt = isFile ? fi.LastWriteTime : new DirectoryInfo(resource.Path).LastWriteTime;
+                }
+
+                // Clear ParentId
+                resource.ParentId = null;
+                resource.Parent = null;
+
+                // Clear Synchronization scope property values
+                if (resource.Properties != null)
+                {
+                    foreach (var (pool, properties) in resource.Properties)
+                    {
+                        foreach (var (propId, prop) in properties)
+                        {
+                            prop.Values?.RemoveAll(v => v.Scope == (int)PropertyValueScope.Synchronization);
+                        }
+                    }
+                }
+
+                // Re-extract property values from path using template
+                if (template.Properties != null)
+                {
+                    var rootPathDir = Path.GetDirectoryName(rootPath)!.StandardizePath()!;
+                    var relativePath = resource.Path.Replace(rootPathDir, "").TrimStart(InternalOptions.DirSeparator)
+                        .StandardizePath()!;
+                    var rootSegments = rootPath.Split(InternalOptions.DirSeparator,
+                        StringSplitOptions.RemoveEmptyEntries);
+                    var relativeSegments = relativePath.Split(InternalOptions.DirSeparator,
+                        StringSplitOptions.RemoveEmptyEntries);
+
+                    var rpi = new ResourcePathInfo(
+                        resource.Path,
+                        relativePath,
+                        rootSegments,
+                        relativeSegments,
+                        [], // InnerPaths not needed for property extraction
+                        resource.IsFile
+                    );
+
+                    foreach (var propertyDef in template.Properties)
+                    {
+                        if (propertyDef.ValueLocators == null || propertyDef.Property == null)
+                        {
+                            continue;
+                        }
+
+                        var property = propertyDef.Property;
+                        var listStr = propertyDef.ValueLocators
+                            .Select(v => v.ExtractValues(relativePath, rpi))
+                            .OfType<string[]>()
+                            .SelectMany(v => v).Distinct()
+                            .ToList();
+
+                        if (listStr.Count == 0)
+                        {
+                            continue;
+                        }
+
+                        var bizValue = StandardValueInternals.HandlerMap[StandardValueType.ListString]
+                            .Convert(listStr, property.Type.GetBizValueType());
+
+                        if (bizValue != null)
+                        {
+                            resource.Properties ??= [];
+                            var poolDict = resource.Properties.GetOrAdd((int)property.Pool, _ => []);
+                            if (!poolDict.TryGetValue(property.Id, out var existingProp))
+                            {
+                                existingProp = new Resource.Property(
+                                    property.Name,
+                                    property.Type,
+                                    property.Type.GetDbValueType(),
+                                    property.Type.GetBizValueType(),
+                                    []
+                                );
+                                poolDict[property.Id] = existingProp;
+                            }
+
+                            existingProp.Values ??= [];
+                            var syncValue =
+                                existingProp.Values.FirstOrDefault(v =>
+                                    v.Scope == (int)PropertyValueScope.Synchronization);
+                            if (syncValue == null)
+                            {
+                                existingProp.Values.Add(new Resource.Property.PropertyValue(
+                                    (int)PropertyValueScope.Synchronization,
+                                    null,
+                                    bizValue,
+                                    null
+                                ));
+                            }
+                            else
+                            {
+                                syncValue.BizValue = bizValue;
+                            }
+                        }
+                    }
+                }
+
+                resource.UpdatedAt = DateTime.Now;
+                changedResources.Add(resource);
+
+                // Clear resource cache
+                await _resourceCacheOrm.UpdateAll(c => c.ResourceId == resource.Id, x =>
+                {
+                    x.CachedTypes &= ~(ResourceCacheType.PlayableFiles | ResourceCacheType.Covers);
+                });
+            }
+
+            if (changedResources.Count > 0)
+            {
+                await AddOrPutRange(changedResources);
+            }
+        }
+
         public async Task Pin(int id, bool pin)
         {
             await _orm.UpdateByKey(id, r =>

@@ -6,6 +6,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
@@ -13,6 +14,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.Storage.Services;
+using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
@@ -30,7 +32,7 @@ using Image = SixLabors.ImageSharp.Image;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/tool")]
-    public class ToolController(ICoverDiscoverer coverDiscoverer, IResourceService resourceService) : Controller
+    public class ToolController(ICoverDiscoverer coverDiscoverer, IResourceService resourceService, CompressedFileService compressedFileService) : Controller
     {
         [HttpGet("open")]
         [SwaggerOperation(OperationId = "OpenFileOrDirectory")]
@@ -83,6 +85,34 @@ namespace Bakabase.Service.Controllers
         [ResponseCache(VaryByQueryKeys = [nameof(path), nameof(w), nameof(h)], Duration = 30 * 60)]
         public async Task<IActionResult> GetThumbnail(string path, int? w, int? h)
         {
+            // Check if path contains compressed file separator (e.g., "archive.zip!folder/image.jpg")
+            string? compressedFilePath = null;
+            string? entryPath = null;
+
+            if (path.Contains(InternalOptions.CompressedFileRootSeparator))
+            {
+                // Find the compressed file extension followed by the separator
+                foreach (var compressedExt in InternalOptions.CompressedFileExtensions)
+                {
+                    var pattern = $"{compressedExt}{InternalOptions.CompressedFileRootSeparator}";
+                    var idx = path.IndexOf(pattern, StringComparison.OrdinalIgnoreCase);
+                    if (idx > 0)
+                    {
+                        var separatorPos = idx + compressedExt.Length;
+                        compressedFilePath = path[..separatorPos];
+                        entryPath = path[(separatorPos + 1)..]; // +1 to skip '!'
+                        break;
+                    }
+                }
+            }
+
+            // Handle compressed file entry
+            if (compressedFilePath != null && entryPath != null)
+            {
+                return await GetThumbnailFromCompressedFile(compressedFilePath, entryPath, w, h);
+            }
+
+            // Regular file handling
             var isFile = System.IO.File.Exists(path);
             if (isFile)
             {
@@ -132,6 +162,68 @@ namespace Bakabase.Service.Controllers
             }
 
             return NotFound();
+        }
+
+        private async Task<IActionResult> GetThumbnailFromCompressedFile(string compressedFilePath, string entryPath, int? w, int? h)
+        {
+            // Check if the compressed file exists
+            if (!System.IO.File.Exists(compressedFilePath))
+            {
+                return NotFound();
+            }
+
+            // Check if the entry is an image
+            var ext = Path.GetExtension(entryPath);
+            if (!InternalOptions.ImageExtensions.Contains(ext))
+            {
+                // For non-image files in compressed archives, return the archive icon
+                var iconData = ImageHelpers.ExtractIconAsPng(compressedFilePath);
+                if (iconData != null)
+                {
+                    return File(iconData, MimeTypes.GetMimeType(".png"));
+                }
+                return NotFound();
+            }
+
+            // Extract the file from the archive
+            var extractedStream = await compressedFileService.ExtractOneEntry(compressedFilePath, entryPath, HttpContext.RequestAborted);
+            if (extractedStream == null || extractedStream.Length == 0)
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                // Load the image from the extracted stream
+                var img = await Image.LoadAsync<Argb32>(extractedStream, HttpContext.RequestAborted);
+
+                // Calculate scale if dimensions are specified
+                var scale = 1m;
+                if (w > 0 && img.Width > w)
+                {
+                    scale = Math.Min(scale, (decimal) w / img.Width);
+                }
+
+                if (h > 0 && img.Height > h)
+                {
+                    scale = Math.Min(scale, (decimal) h / img.Height);
+                }
+
+                var outputMs = new MemoryStream();
+
+                if (scale < 1)
+                {
+                    img.Mutate(x => x.Resize((int) (img.Width * scale), (int) (img.Height * scale)));
+                }
+
+                await img.SaveAsPngAsync(outputMs, HttpContext.RequestAborted);
+                outputMs.Seek(0, SeekOrigin.Begin);
+                return File(outputMs, MimeTypes.GetMimeType(".png"));
+            }
+            finally
+            {
+                await extractedStream.DisposeAsync();
+            }
         }
 
         [HttpPost("match-all")]
