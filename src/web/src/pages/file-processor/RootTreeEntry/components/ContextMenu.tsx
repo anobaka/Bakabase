@@ -13,6 +13,7 @@ import {
   GroupOutlined,
   MergeOutlined,
   SendOutlined,
+  SettingOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
@@ -31,6 +32,7 @@ import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
+import PathRuleConfigPanel from "@/pages/path-rule-config/components/PathRuleConfigPanel";
 import { AiOutlineFileZip } from "react-icons/ai";
 
 type Props = {
@@ -263,6 +265,21 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
         });
       },
     });
+
+    // Path rule configuration
+    if (capabilities?.includes("configure-path-rule")) {
+      items.push({
+        icon: <SettingOutlined className={"text-base"} />,
+        label: t<string>("Configure path rules for {{count}} path(s)", {
+          count: selectedEntries.length,
+        }),
+        onClick: () => {
+          createPortal(PathRuleConfigPanel, {
+            selectedEntries: selectedEntries,
+          });
+        },
+      });
+    }
   }
 
   return (

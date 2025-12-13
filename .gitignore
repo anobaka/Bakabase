@@ -272,3 +272,7 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 .claude
+
+# Changelog test files
+cliff.context.*.json
+CHANGELOG_TEST.md

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -12,7 +14,10 @@ namespace Bakabase.Service.Controllers;
 
 [ApiController]
 [Route("~/media-library-v2")]
-public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : ControllerBase
+public class MediaLibraryV2Controller(
+    IMediaLibraryV2Service service,
+    IMediaLibraryResourceMappingService mappingService,
+    IPathRuleService pathRuleService) : ControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryV2")]
@@ -102,4 +107,115 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
         var items = await service.GetAllSyncMayBeOutdated();
         return new ListResponse<MediaLibraryV2>(items);
     }
+
+    #region Multi-Library Resource Management
+
+    /// <summary>
+    /// Get all resource mappings for a media library
+    /// </summary>
+    [HttpGet("{id:int}/resources")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2Resources")]
+    public async Task<ListResponse<MediaLibraryResourceMapping>> GetResources(int id)
+    {
+        var mappings = await mappingService.GetByMediaLibraryId(id);
+        return new ListResponse<MediaLibraryResourceMapping>(mappings);
+    }
+
+    /// <summary>
+    /// Get resource count for a media library
+    /// </summary>
+    [HttpGet("{id:int}/resource-count")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2ResourceCount")]
+    public async Task<SingletonResponse<int>> GetResourceCount(int id)
+    {
+        var mappings = await mappingService.GetByMediaLibraryId(id);
+        return new SingletonResponse<int>(mappings.Count);
+    }
+
+    /// <summary>
+    /// Get all PathRules associated with this media library's paths
+    /// </summary>
+    [HttpGet("{id:int}/path-rules")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2PathRules")]
+    public async Task<ListResponse<PathRule>> GetPathRules(int id)
+    {
+        var mediaLibrary = await service.Get(id);
+        if (mediaLibrary == null)
+        {
+            return ListResponseBuilder<PathRule>.NotFound;
+        }
+
+        if (mediaLibrary.Paths == null || !mediaLibrary.Paths.Any())
+        {
+            return new ListResponse<PathRule>(new List<PathRule>());
+        }
+
+        var allRules = await pathRuleService.GetAll();
+        var matchingRules = allRules
+            .Where(r => mediaLibrary.Paths.Any(p =>
+                r.Path.StartsWith(p, System.StringComparison.OrdinalIgnoreCase) ||
+                p.StartsWith(r.Path, System.StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        return new ListResponse<PathRule>(matchingRules);
+    }
+
+    /// <summary>
+    /// Remove all resource mappings for a media library (does not delete resources)
+    /// </summary>
+    [HttpDelete("{id:int}/resources")]
+    [SwaggerOperation(OperationId = "RemoveAllMediaLibraryV2ResourceMappings")]
+    public async Task<BaseResponse> RemoveAllResourceMappings(int id)
+    {
+        await mappingService.DeleteByMediaLibraryId(id);
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
+    /// Get statistics for a media library including resource counts by source
+    /// </summary>
+    [HttpGet("{id:int}/statistics")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2Statistics")]
+    public async Task<SingletonResponse<MediaLibraryStatistics>> GetStatistics(int id)
+    {
+        var mediaLibrary = await service.Get(id);
+        if (mediaLibrary == null)
+        {
+            return SingletonResponseBuilder<MediaLibraryStatistics>.NotFound;
+        }
+
+        var mappings = await mappingService.GetByMediaLibraryId(id);
+
+        var stats = new MediaLibraryStatistics
+        {
+            TotalResourceCount = mappings.Count,
+            ManualMappingCount = mappings.Count(m => m.Source == MappingSource.Manual),
+            RuleMappingCount = mappings.Count(m => m.Source == MappingSource.Rule)
+        };
+
+        return new SingletonResponse<MediaLibraryStatistics>(stats);
+    }
+
+    #endregion
+}
+
+/// <summary>
+/// Statistics for a media library
+/// </summary>
+public class MediaLibraryStatistics
+{
+    /// <summary>
+    /// Total number of resources mapped to this library
+    /// </summary>
+    public int TotalResourceCount { get; set; }
+
+    /// <summary>
+    /// Number of resources manually mapped
+    /// </summary>
+    public int ManualMappingCount { get; set; }
+
+    /// <summary>
+    /// Number of resources mapped by rules
+    /// </summary>
+    public int RuleMappingCount { get; set; }
 }

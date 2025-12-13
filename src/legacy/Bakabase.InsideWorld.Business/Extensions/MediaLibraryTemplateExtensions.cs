@@ -43,6 +43,19 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryV2DbModel, int>>();
         services.AddScoped<IMediaLibraryV2Service, MediaLibraryV2Service<TDbContext>>();
 
+        // New services for media library refactoring
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, PathRuleDbModel, int>>();
+        services.AddScoped<IPathRuleService, PathRuleService<TDbContext>>();
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int>>();
+        services.AddScoped<IMediaLibraryResourceMappingService, MediaLibraryResourceMappingService<TDbContext>>();
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceProfileDbModel, int>>();
+        services.AddScoped<IResourceProfileService, ResourceProfileService<TDbContext>>();
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, PathRuleQueueItemDbModel, int>>();
+        services.AddScoped<IPathRuleQueueService, PathRuleQueueService<TDbContext>>();
+
         return services;
     }
 

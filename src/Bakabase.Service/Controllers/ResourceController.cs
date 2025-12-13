@@ -64,6 +64,7 @@ namespace Bakabase.Service.Controllers
         IPropertyLocalizer propertyLocalizer,
         IMediaLibraryService mediaLibraryService,
         IMediaLibraryV2Service mediaLibraryV2Service,
+        IMediaLibraryResourceMappingService mappingService,
         IBakabaseLocalizer localizer,
         BTaskManager taskManager,
         IBOptionsManager<FileSystemOptions> fsOptionsManager)
@@ -669,5 +670,144 @@ namespace Bakabase.Service.Controllers
 
             return new ListResponse<string>(keywords);
         }
+
+        #region Multi-Library Support
+
+        /// <summary>
+        /// Get all media library mappings for a resource
+        /// </summary>
+        [HttpGet("{id:int}/media-libraries")]
+        [SwaggerOperation(OperationId = "GetResourceMediaLibraries")]
+        public async Task<ListResponse<MediaLibraryResourceMapping>> GetResourceMediaLibraries(int id)
+        {
+            var mappings = await mappingService.GetByResourceId(id);
+            return new ListResponse<MediaLibraryResourceMapping>(mappings);
+        }
+
+        /// <summary>
+        /// Add a media library mapping to a resource
+        /// </summary>
+        [HttpPost("{id:int}/media-libraries/{mediaLibraryId:int}")]
+        [SwaggerOperation(OperationId = "AddResourceMediaLibraryMapping")]
+        public async Task<BaseResponse> AddResourceMediaLibraryMapping(int id, int mediaLibraryId, MappingSource source = MappingSource.Manual)
+        {
+            // Verify the resource exists
+            var resource = await service.Get(id, ResourceAdditionalItem.None);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            // Verify the media library exists
+            var mediaLibrary = await mediaLibraryV2Service.Get(mediaLibraryId);
+            if (mediaLibrary == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Media library {mediaLibraryId} not found");
+            }
+
+            await mappingService.EnsureMappings(id, new[] { mediaLibraryId }, source);
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Remove a media library mapping from a resource
+        /// </summary>
+        [HttpDelete("{id:int}/media-libraries/{mediaLibraryId:int}")]
+        [SwaggerOperation(OperationId = "RemoveResourceMediaLibraryMapping")]
+        public async Task<BaseResponse> RemoveResourceMediaLibraryMapping(int id, int mediaLibraryId)
+        {
+            var mappings = await mappingService.GetByResourceId(id);
+            var mapping = mappings.FirstOrDefault(m => m.MediaLibraryId == mediaLibraryId);
+            if (mapping == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            await mappingService.Delete(mapping.Id);
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Replace all media library mappings for a resource
+        /// </summary>
+        [HttpPut("{id:int}/media-libraries")]
+        [SwaggerOperation(OperationId = "ReplaceResourceMediaLibraryMappings")]
+        public async Task<BaseResponse> ReplaceResourceMediaLibraryMappings(int id, [FromBody] ResourceMediaLibraryMappingInputModel model)
+        {
+            // Verify the resource exists
+            var resource = await service.Get(id, ResourceAdditionalItem.None);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            // Verify all media libraries exist
+            var mediaLibraries = await mediaLibraryV2Service.GetByKeys(model.MediaLibraryIds.ToArray());
+            var foundIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+            var notFoundIds = model.MediaLibraryIds.Where(id => !foundIds.Contains(id)).ToList();
+            if (notFoundIds.Any())
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Media libraries not found: {string.Join(", ", notFoundIds)}");
+            }
+
+            await mappingService.ReplaceMappings(id, model.MediaLibraryIds, model.Source);
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Bulk add media library mappings to multiple resources
+        /// </summary>
+        [HttpPost("bulk/media-libraries")]
+        [SwaggerOperation(OperationId = "BulkAddResourceMediaLibraryMappings")]
+        public async Task<BaseResponse> BulkAddMediaLibraryMappings([FromBody] BulkResourceMediaLibraryMappingInputModel model)
+        {
+            // Verify all resources exist
+            var resources = await service.GetByKeys(model.ResourceIds.ToArray());
+            if (resources.Count != model.ResourceIds.Count)
+            {
+                var foundIds = resources.Select(r => r.Id).ToHashSet();
+                var notFoundIds = model.ResourceIds.Where(id => !foundIds.Contains(id)).ToList();
+                return BaseResponseBuilder.BuildBadRequest($"Resources not found: {string.Join(", ", notFoundIds)}");
+            }
+
+            // Verify all media libraries exist
+            var mediaLibraries = await mediaLibraryV2Service.GetByKeys(model.MediaLibraryIds.ToArray());
+            var foundMlIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+            var notFoundMlIds = model.MediaLibraryIds.Where(id => !foundMlIds.Contains(id)).ToList();
+            if (notFoundMlIds.Any())
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Media libraries not found: {string.Join(", ", notFoundMlIds)}");
+            }
+
+            foreach (var resourceId in model.ResourceIds)
+            {
+                await mappingService.EnsureMappings(resourceId, model.MediaLibraryIds, model.Source);
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        #endregion
     }
+}
+
+/// <summary>
+/// Input model for bulk resource media library mapping
+/// </summary>
+public class BulkResourceMediaLibraryMappingInputModel
+{
+    /// <summary>
+    /// Resource IDs to add mappings to
+    /// </summary>
+    public List<int> ResourceIds { get; set; } = new();
+
+    /// <summary>
+    /// Media library IDs to associate with the resources
+    /// </summary>
+    public List<int> MediaLibraryIds { get; set; } = new();
+
+    /// <summary>
+    /// Source of the mapping (Manual, Rule, etc.)
+    /// </summary>
+    public MappingSource Source { get; set; } = MappingSource.Manual;
 }

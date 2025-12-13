@@ -33,6 +33,7 @@ import envConfig from "@/config/env";
 import SyncStatus from "./components/SyncStatus";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
 import OutdatedModal from "./components/OutdatedModal";
+import PathRulesIndicator from "./components/PathRulesIndicator";
 
 import {
   Button,
@@ -531,6 +532,10 @@ const MediaLibraryPage = () => {
                       >
                         {ml.resourceCount}
                       </Chip>
+                    </Tooltip>
+                    {/* PathRules indicator - v2.2.0 */}
+                    <Tooltip content={t<string>("View associated path rules")} placement="top">
+                      <PathRulesIndicator mediaLibraryId={ml.id} />
                     </Tooltip>
                     {/* Unknown resources of type b (PathDoesNotExist) */}
                     {mediaLibraryUnknownResourcesCounts[ml.id] > 0 && (

@@ -83,6 +83,12 @@ namespace Bakabase.InsideWorld.Business
 
         public DbSet<PostParserTaskDbModel> PostParserTasks { get; set; }
 
+        // New tables for media library refactoring
+        public DbSet<PathRuleDbModel> PathRules { get; set; }
+        public DbSet<MediaLibraryResourceMappingDbModel> MediaLibraryResourceMappings { get; set; }
+        public DbSet<ResourceProfileDbModel> ResourceProfiles { get; set; }
+        public DbSet<PathRuleQueueItemDbModel> PathRuleQueueItems { get; set; }
+
         public InsideWorldDbContext()
         {
         }
@@ -236,6 +242,29 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<MediaLibraryV2DbModel>(t =>
             {
                 // t.Property(x => x.Color); // Optional: add for clarity
+            });
+
+            // New tables for media library refactoring
+            modelBuilder.Entity<PathRuleDbModel>(t =>
+            {
+                t.HasIndex(x => x.Path).IsUnique();
+            });
+
+            modelBuilder.Entity<MediaLibraryResourceMappingDbModel>(t =>
+            {
+                t.HasIndex(x => x.MediaLibraryId);
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.MediaLibraryId, x.ResourceId }).IsUnique();
+            });
+
+            modelBuilder.Entity<ResourceProfileDbModel>(t =>
+            {
+                t.HasIndex(x => x.Priority);
+            });
+
+            modelBuilder.Entity<PathRuleQueueItemDbModel>(t =>
+            {
+                t.HasIndex(x => x.Status);
             });
         }
     }

@@ -63,6 +63,10 @@ export type TreeEntryProps = {
   onLoadFail?: (rsp, entry: Entry) => void;
 
   afterPlayedFirstFile?: (entry: Entry) => any;
+
+  // Render props for custom decorations
+  renderAfterName?: (entry: Entry) => React.ReactNode;
+  renderBeforeRightOperations?: (entry: Entry) => React.ReactNode;
 };
 
 // todo: split this component into base components: simple, advance
@@ -79,6 +83,8 @@ const TreeEntry = (props: TreeEntryProps) => {
     onLoadFail = (rsp, entry) => {},
     expandable = true,
     afterPlayedFirstFile,
+    renderAfterName,
+    renderBeforeRightOperations,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -301,10 +307,12 @@ const TreeEntry = (props: TreeEntryProps) => {
           onContextMenu={onContextMenu}
           onDoubleClick={onDoubleClick}
           onLoadFail={onLoadFail}
+          renderAfterName={renderAfterName}
+          renderBeforeRightOperations={renderBeforeRightOperations}
         />
       );
     },
-    [entryRef.current.children, entryRef.current.expanded, onDoubleClick],
+    [entryRef.current.children, entryRef.current.expanded, onDoubleClick, renderAfterName, renderBeforeRightOperations],
   );
 
   const domCallback = useCallback((node?: HTMLElement | null) => {
@@ -637,6 +645,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                 name={entry.name}
                 path={entry.path}
               />
+              {renderAfterName && renderAfterName(entry)}
               <div className="flex items-center">
                 {actions.includes(IwFsEntryAction.Play) && capabilities?.includes("play") && (
                   <OperationButton
@@ -681,6 +690,7 @@ const TreeEntry = (props: TreeEntryProps) => {
               </div>
             </div>
             <div className="right">
+              {renderBeforeRightOperations && renderBeforeRightOperations(entry)}
               <RightOperations capabilities={capabilities} entry={entryRef.current} />
             </div>
           </div>

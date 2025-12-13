@@ -199,6 +199,21 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2'
 };
 
+export enum MappingSource {
+  Rule = 1,
+  Manual = 2
+}
+
+export const mappingSources = [
+  { label: 'Rule', value: MappingSource.Rule },
+  { label: 'Manual', value: MappingSource.Manual }
+] as const;
+
+export const MappingSourceLabel: Record<MappingSource, string> = {
+  [MappingSource.Rule]: 'Rule',
+  [MappingSource.Manual]: 'Manual'
+};
+
 export enum MediaLibraryTemplateAdditionalItem {
   None = 0,
   ChildTemplate = 1
@@ -242,6 +257,36 @@ export const pathFilterFsTypes = [
 export const PathFilterFsTypeLabel: Record<PathFilterFsType, string> = {
   [PathFilterFsType.File]: 'File',
   [PathFilterFsType.Directory]: 'Directory'
+};
+
+export enum PathMarkType {
+  Resource = 1,
+  Property = 2
+}
+
+export const pathMarkTypes = [
+  { label: 'Resource', value: PathMarkType.Resource },
+  { label: 'Property', value: PathMarkType.Property }
+] as const;
+
+export const PathMarkTypeLabel: Record<PathMarkType, string> = {
+  [PathMarkType.Resource]: 'Resource',
+  [PathMarkType.Property]: 'Property'
+};
+
+export enum PathMatchMode {
+  Layer = 1,
+  Regex = 2
+}
+
+export const pathMatchModes = [
+  { label: 'Layer', value: PathMatchMode.Layer },
+  { label: 'Regex', value: PathMatchMode.Regex }
+] as const;
+
+export const PathMatchModeLabel: Record<PathMatchMode, string> = {
+  [PathMatchMode.Layer]: 'Layer',
+  [PathMatchMode.Regex]: 'Regex'
 };
 
 export enum PathPositioner {
@@ -391,6 +436,21 @@ export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.AvEnhancer]: 'AvEnhancer'
 };
 
+export enum PropertyValueType {
+  Fixed = 1,
+  Dynamic = 2
+}
+
+export const propertyValueTypes = [
+  { label: 'Fixed', value: PropertyValueType.Fixed },
+  { label: 'Dynamic', value: PropertyValueType.Dynamic }
+] as const;
+
+export const PropertyValueTypeLabel: Record<PropertyValueType, string> = {
+  [PropertyValueType.Fixed]: 'Fixed',
+  [PropertyValueType.Dynamic]: 'Dynamic'
+};
+
 export enum ReservedProperty {
   Introduction = 12,
   Rating = 13,
@@ -446,6 +506,45 @@ export const ResourceTagLabel: Record<ResourceTag, string> = {
   [ResourceTag.Pinned]: 'Pinned',
   [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
   [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
+};
+
+export enum RuleQueueAction {
+  Apply = 1,
+  Reevaluate = 2,
+  FileSystemChange = 3
+}
+
+export const ruleQueueActions = [
+  { label: 'Apply', value: RuleQueueAction.Apply },
+  { label: 'Reevaluate', value: RuleQueueAction.Reevaluate },
+  { label: 'FileSystemChange', value: RuleQueueAction.FileSystemChange }
+] as const;
+
+export const RuleQueueActionLabel: Record<RuleQueueAction, string> = {
+  [RuleQueueAction.Apply]: 'Apply',
+  [RuleQueueAction.Reevaluate]: 'Reevaluate',
+  [RuleQueueAction.FileSystemChange]: 'FileSystemChange'
+};
+
+export enum RuleQueueStatus {
+  Pending = 0,
+  Processing = 1,
+  Completed = 2,
+  Failed = 3
+}
+
+export const ruleQueueStatuses = [
+  { label: 'Pending', value: RuleQueueStatus.Pending },
+  { label: 'Processing', value: RuleQueueStatus.Processing },
+  { label: 'Completed', value: RuleQueueStatus.Completed },
+  { label: 'Failed', value: RuleQueueStatus.Failed }
+] as const;
+
+export const RuleQueueStatusLabel: Record<RuleQueueStatus, string> = {
+  [RuleQueueStatus.Pending]: 'Pending',
+  [RuleQueueStatus.Processing]: 'Processing',
+  [RuleQueueStatus.Completed]: 'Completed',
+  [RuleQueueStatus.Failed]: 'Failed'
 };
 
 export enum SearchCombinator {

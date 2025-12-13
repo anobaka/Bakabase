@@ -48,7 +48,7 @@ type Props = {
   onInitialized?: (path?: string) => any;
   onDoubleClick?: (event: React.MouseEvent<any>, entry: Entry) => boolean;
   afterPlayedFirstFile?: (entry: Entry) => any;
-} & Pick<TreeEntryProps, "capabilities" | "expandable" | "filter">;
+} & Pick<TreeEntryProps, "capabilities" | "expandable" | "filter" | "renderAfterName" | "renderBeforeRightOperations">;
 
 const log = buildLogger("RootTreeEntry");
 
@@ -67,6 +67,8 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
       expandable = false,
       capabilities,
       afterPlayedFirstFile,
+      renderAfterName,
+      renderBeforeRightOperations,
     },
     ref,
   ) => {
@@ -458,6 +460,8 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
             filter={{
               keyword: filterInputValue,
             }}
+            renderAfterName={renderAfterName}
+            renderBeforeRightOperations={renderBeforeRightOperations}
             switchSelective={(e) => {
               if (selectable == "disabled") {
                 return false;

@@ -224,6 +224,39 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("MediaLibraries");
                 });
 
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.MediaLibraryResourceMappingDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("MediaLibraryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SourceRuleId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MediaLibraryId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("MediaLibraryId", "ResourceId")
+                        .IsUnique();
+
+                    b.ToTable("MediaLibraryResourceMappings");
+                });
+
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.MediaLibraryTemplateDbModel", b =>
                 {
                     b.Property<int>("Id")
@@ -304,6 +337,66 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MediaLibrariesV2");
+                });
+
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PathRuleDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MarksJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdateDt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Path")
+                        .IsUnique();
+
+                    b.ToTable("PathRules");
+                });
+
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PathRuleQueueItemDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("RuleId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("PathRuleQueueItems");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PlayHistoryDbModel", b =>
@@ -404,6 +497,48 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.HasIndex("Path");
 
                     b.ToTable("ResourcesV2");
+                });
+
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.ResourceProfileDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreateDt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EnhancerSettingsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("NameTemplate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayableFileSettingsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayerSettingsJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SearchCriteriaJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdateDt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Priority");
+
+                    b.ToTable("ResourceProfiles");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.SpecialText", b =>

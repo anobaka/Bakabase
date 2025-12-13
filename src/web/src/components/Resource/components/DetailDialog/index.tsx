@@ -21,6 +21,7 @@ import ChildrenModal from "../ChildrenModal";
 
 import BasicInfo from "./BasicInfo";
 import Properties from "./Properties";
+import MediaLibraryMappings from "./MediaLibraryMappings";
 
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 
@@ -297,6 +298,11 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                 </div>
               </div>
               {!hideTimeInfo && <BasicInfo resource={resource} />}
+              {/* Media Library Mappings - v2.2.0 multi-library support */}
+              <MediaLibraryMappings
+                resourceId={resource.id}
+                onMappingsChange={loadResource}
+              />
             </div>
             <div className="overflow-auto relative grow">
               <Properties
