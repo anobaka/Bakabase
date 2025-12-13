@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bakabase.InsideWorld.Business.Migrations
 {
-    [DbContext(typeof(InsideWorldDbContext))]
+    [DbContext(typeof(BakabaseDbContext))]
     [Migration("20241223032316_V191BetaAddCoverPathsToReservedPropertyValue")]
     partial class V191BetaAddCoverPathsToReservedPropertyValue
     {

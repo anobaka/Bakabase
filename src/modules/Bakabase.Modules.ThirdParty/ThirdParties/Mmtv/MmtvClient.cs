@@ -18,6 +18,7 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
         {
             var baseUrl = "https://www.7mmtv.sx"; // default domain used in python config
             string? realUrl = appointUrl;
+            string searchUrl = "";
 
             if (string.IsNullOrWhiteSpace(realUrl))
             {
@@ -27,7 +28,7 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 {
                     searchKeyword = Regex.Match(number, @"\d{3,}").Value;
                 }
-                var searchUrl = $"{baseUrl}/zh/searchform_search/all/index.html?search_keyword={Uri.EscapeDataString(searchKeyword)}&search_type=searchall&op=search";
+                searchUrl = $"{baseUrl}/zh/searchform_search/all/index.html?search_keyword={Uri.EscapeDataString(searchKeyword)}&search_type=searchall&op=search";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var cand = docSearch.Select("figure.video-preview a");
@@ -117,7 +118,8 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 PosterUrl = "",
                 Website = realUrl,
                 Source = "7mmtv",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
 
             return detail;

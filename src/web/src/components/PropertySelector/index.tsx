@@ -3,19 +3,21 @@
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { SearchOutlined } from "@ant-design/icons";
+import { AiOutlineCheckCircle } from "react-icons/ai";
 
 import PropertyModal from "../PropertyModal";
 
 import Property from "@/components/Property";
 import PropertyV2 from "@/components/Property/v2";
+import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import { buildLogger } from "@/components/utils";
-import { PropertyPool, PropertyType, StandardValueType } from "@/sdk/constants";
+import { PropertyPool, PropertyType, ResourceProperty, StandardValueType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
-import { Button, Chip, Divider, Modal, Spacer } from "@/components/bakaui";
+import { Button, Chip, Divider, Input, Modal, Spacer } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useUiOptionsStore } from "@/stores/options.ts";
 
 type Key = {
   id: number;
@@ -25,6 +27,8 @@ type Key = {
 interface IProps extends DestroyableProps {
   selection?: Key[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
+  /** Called when modal is closed without making a selection */
+  onCancel?: () => void;
   multiple?: boolean;
   pool: PropertyPool;
   valueTypes?: StandardValueType[];
@@ -39,6 +43,13 @@ interface IProps extends DestroyableProps {
 
 const log = buildLogger("PropertySelector");
 
+// Deprecated internal properties that should not be selectable
+const deprecatedInternalPropertyIds: number[] = [
+  ResourceProperty.Category,
+  ResourceProperty.MediaLibrary,
+  ResourceProperty.MediaLibraryV2,
+];
+
 const PropertySelector = (props: IProps) => {
   log("props", props);
   const { t } = useTranslation();
@@ -46,6 +57,7 @@ const PropertySelector = (props: IProps) => {
   const {
     selection: propsSelection,
     onSubmit: propsOnSubmit,
+    onCancel,
     multiple = true,
     pool,
     types,
@@ -62,13 +74,11 @@ const PropertySelector = (props: IProps) => {
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [selection, setSelection] = useState<Key[]>(propsSelection || []);
   const [visible, setVisible] = useState(true);
-  const uiOptionsStore = useUiOptionsStore();
-
-  // console.log('props selection', propsSelection, properties, addable, editable, removable);
+  const [keyword, setKeyword] = useState("");
+  const hasSubmittedRef = useRef(false);
 
   const loadProperties = async () => {
     const psr = (await BApi.property.getPropertiesByPool(pool)).data || [];
-
     // @ts-ignore
     setProperties(psr);
   };
@@ -77,126 +87,87 @@ const PropertySelector = (props: IProps) => {
     loadProperties();
   }, []);
 
-  const renderProperty = (property: IProperty) => {
-    const selected = selection.some((s) => s.id == property.id && s.pool == property.pool);
-
-    const disabled = isDisabled?.(property);
-
-    if (v2) {
-      return (
-        <PropertyV2
-          key={`${property.id}-${property.pool}`}
-          disabled={disabled}
-          editable={editable}
-          isSelected={selected}
-          property={property}
-          removable={removable}
-          onClick={async () => {
-            if (disabled) {
-              return;
-            }
-
-            if (multiple) {
-              if (selected) {
-                setSelection(
-                  selection.filter((s) => s.id != property.id || s.pool != property.pool),
-                );
-              } else {
-                setSelection([
-                  ...selection,
-                  {
-                    id: property.id,
-                    pool: property.pool,
-                  },
-                ]);
-              }
-            } else {
-              if (selected) {
-                setSelection([]);
-              } else {
-                const ns: Key[] = [
-                  {
-                    id: property.id,
-                    pool: property.pool,
-                  },
-                ];
-
-                setSelection(ns);
-                await onSubmit(ns);
-              }
-            }
-          }}
-          onSaved={loadProperties}
-        />
-      );
-    }
-
-    return (
-      <Property
-        key={`${property.id}-${property.pool}`}
-        disabled={isDisabled?.(property)}
-        editable={editable}
-        property={property}
-        removable={removable}
-        onClick={async () => {
-          if (multiple) {
-            if (selected) {
-              setSelection(selection.filter((s) => s.id != property.id || s.pool != property.pool));
-            } else {
-              setSelection([
-                ...selection,
-                {
-                  id: property.id,
-                  pool: property.pool,
-                },
-              ]);
-            }
-          } else {
-            if (selected) {
-              setSelection([]);
-            } else {
-              const ns: Key[] = [
-                {
-                  id: property.id,
-                  pool: property.pool,
-                },
-              ];
-
-              setSelection(ns);
-              await onSubmit(ns);
-            }
-          }
-        }}
-        onSaved={loadProperties}
-      />
-    );
+  const isSelected = (property: IProperty): boolean => {
+    return selection.some((s) => s.id === property.id && s.pool === property.pool);
   };
 
-  const onSubmit = async (selection: Key[]) => {
-    if (selection.length > 0) {
-      await BApi.options.addLatestUsedProperty(selection);
+  const toggleProperty = async (property: IProperty) => {
+    const isDeprecatedInternal = property.pool === PropertyPool.Internal &&
+      deprecatedInternalPropertyIds.includes(property.id);
+    if (isDeprecatedInternal || isDisabled?.(property)) {
+      return;
     }
 
-    // console.log(customProperties, selection);
+    const selected = isSelected(property);
+
+    if (multiple) {
+      if (selected) {
+        setSelection(selection.filter((s) => !(s.id === property.id && s.pool === property.pool)));
+      } else {
+        setSelection([...selection, { id: property.id, pool: property.pool }]);
+      }
+    } else {
+      if (selected) {
+        setSelection([]);
+      } else {
+        const ns: Key[] = [{ id: property.id, pool: property.pool }];
+        setSelection(ns);
+        await onSubmit(ns);
+      }
+    }
+  };
+
+  const onSubmit = async (sel: Key[]) => {
+    if (sel.length > 0) {
+      await BApi.options.addLatestUsedProperty(sel);
+    }
+
     if (propsOnSubmit) {
       await propsOnSubmit(
-        selection
-          .map((s) => properties.find((p) => p.id == s.id && p.pool == s.pool))
+        sel
+          .map((s) => properties.find((p) => p.id === s.id && p.pool === s.pool))
           .filter((x) => x != undefined) as IProperty[],
       );
     }
+    hasSubmittedRef.current = true;
     setVisible(false);
   };
 
-  // console.log('render', reservedProperties, customProperties);
+  // Filter by keyword, valueTypes, and types
+  const filteredProperties = properties.filter((p) => {
+    if (keyword && !p.name!.toLowerCase().includes(keyword.toLowerCase())) {
+      return false;
+    }
+    if (valueTypes && !valueTypes.includes(p.dbValueType)) {
+      return false;
+    }
+    if (types && !types.includes(p.type)) {
+      return false;
+    }
+    return true;
+  });
+
+  // Group properties by pool first, then by type
+  const reservedProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Reserved);
+  const customProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Custom);
+  const internalProperties = filteredProperties.filter((p) => p.pool === PropertyPool.Internal);
+
+  // Group custom properties by type
+  const groupedCustomProperties: { [key in PropertyType]?: IProperty[] } =
+    customProperties.reduce<{ [key in PropertyType]?: IProperty[] }>(
+      (s, t) => {
+        (s[t.type!] ??= []).push(t);
+        return s;
+      },
+      {},
+    );
 
   const renderFilter = () => {
     const filters: any[] = [];
 
-    if (pool != PropertyPool.All) {
+    if (pool !== PropertyPool.All) {
       Object.keys(PropertyPool).forEach((k) => {
         const v = parseInt(k, 10) as PropertyPool;
-
         if (Number.isNaN(v)) {
           return;
         }
@@ -206,7 +177,7 @@ const PropertySelector = (props: IProps) => {
             case PropertyPool.Reserved:
             case PropertyPool.Custom:
               filters.push(
-                <Chip key={"pool"} size={"sm"}>
+                <Chip key={`pool-${v}`} size="sm">
                   {t<string>(PropertyPool[v])}
                 </Chip>,
               );
@@ -217,10 +188,11 @@ const PropertySelector = (props: IProps) => {
         }
       });
     }
+
     if (valueTypes) {
       filters.push(
         ...valueTypes.map((vt) => (
-          <Chip key={vt} size={"sm"}>
+          <Chip key={`vt-${vt}`} size="sm">
             {t<string>(StandardValueType[vt])}
           </Chip>
         )),
@@ -230,7 +202,7 @@ const PropertySelector = (props: IProps) => {
     if (types) {
       filters.push(
         ...types.map((pt) => (
-          <Chip key={pt} size={"sm"}>
+          <Chip key={`pt-${pt}`} size="sm">
             {t<string>(PropertyType[pt])}
           </Chip>
         )),
@@ -239,134 +211,89 @@ const PropertySelector = (props: IProps) => {
 
     if (filters.length > 0) {
       return (
-        <div className={"flex gap-1 items-center flex-wrap"}>
-          {t<string>("Filtering")}
-          <Spacer />
+        <div className="flex gap-1 items-center flex-wrap">
+          <span className="text-default-500 text-sm">{t<string>("Filtering")}</span>
           {filters}
         </div>
       );
-    } else {
-      return null;
     }
+
+    return null;
   };
 
-  const filteredProperties = properties.filter((p) => {
-    if (valueTypes && !valueTypes.includes(p.dbValueType)) {
-      return false;
-    }
-
-    if (types && !types.includes(p.type)) {
-      return false;
-    }
-
-    return true;
-  });
-
-  // Sort properties with latest used properties having higher priority
-  const sortedFilteredProperties = filteredProperties.sort((a, b) => {
-    const latestUsedProperties = uiOptionsStore.data?.latestUsedProperties ?? [];
-    let aIndex = latestUsedProperties.findIndex((l) => l.id === a.id && l.pool === a.pool);
-
-    if (aIndex == -1) {
-      aIndex = Number.MAX_SAFE_INTEGER;
-    }
-
-    let bIndex = latestUsedProperties.findIndex((l) => l.id === b.id && l.pool === b.pool);
-
-    if (bIndex == -1) {
-      bIndex = Number.MAX_SAFE_INTEGER;
-    }
-
-    return aIndex - bIndex;
-  });
-
-  console.log(
-    filteredProperties,
-    uiOptionsStore.data?.latestUsedProperties,
-    sortedFilteredProperties,
-  );
-
-  const selectedProperties = selection
-    .map((s) => sortedFilteredProperties.find((p) => p.id == s.id && p.pool == s.pool))
-    .filter((x) => x)
-    .map((x) => x!);
-  const unselectedProperties = sortedFilteredProperties.filter(
-    (p) => !selection.some((s) => s.id == p.id && s.pool == p.pool),
-  );
-  const propertyCount = selectedProperties.length + unselectedProperties.length;
-
-  const renderProperties = () => {
-    if (propertyCount == 0) {
-      return (
-        <div className={"flex items-center justify-center gap-2 mt-6"}>
-          {t<string>("No properties available")}
-          {addable && (
-            <Button
-              color={"primary"}
-              size={"sm"}
-              onPress={() => {
-                createPortal(PropertyModal, {
-                  onSaved: loadProperties,
-                  validValueTypes: valueTypes?.map((v) => v as unknown as PropertyType),
-                });
-              }}
-            >
-              {t<string>("Add a property")}
-            </Button>
-          )}
-        </div>
-      );
-    }
-
-    // todo: make framer-motion up-to-date once https://github.com/heroui-inc/heroui/issues/4805 is resolved.
+  const renderPropertyItem = (property: IProperty, showTypeIcon?: boolean) => {
+    const selected = isSelected(property);
+    const isDeprecatedInternal = property.pool === PropertyPool.Internal &&
+      deprecatedInternalPropertyIds.includes(property.id);
+    const disabled = isDeprecatedInternal || isDisabled?.(property);
 
     return (
-      <div className={"flex flex-col gap-2"}>
-        <div className={"flex flex-col gap-2"}>
-          <div
-            className={"text-base"}
-          >{`${t<string>("Selected")}(${selectedProperties.length})`}</div>
-          <div className={"flex flex-wrap gap-2 items-start"}>
-            {selectedProperties.map((p) => renderProperty(p))}
+      <div
+        key={`${property.pool}-${property.id}`}
+        className={`relative cursor-pointer rounded-md transition-all ${
+          selected ? "ring-2 ring-success ring-offset-1" : ""
+        } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        {v2 ? (
+          <PropertyV2
+            disabled={disabled}
+            editable={editable}
+            hidePool
+            hideType={showTypeIcon}
+            property={property}
+            removable={removable}
+            onSaved={loadProperties}
+            onClick={() => toggleProperty(property)}
+          />
+        ) : (
+          <Property
+            disabled={disabled}
+            editable={editable}
+            property={property}
+            removable={removable}
+            onSaved={loadProperties}
+            onClick={() => toggleProperty(property)}
+          />
+        )}
+        {selected && (
+          <div className="absolute -top-1 -right-1 bg-success rounded-full p-0.5">
+            <AiOutlineCheckCircle className="text-white text-xs" />
           </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPropertyGroup = (groupTitle: string, props: IProperty[], showTypeIcon?: boolean) => {
+    if (props.length === 0) return null;
+
+    return (
+      <div className="rounded-lg border border-default-200 bg-content1 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200">
+          {showTypeIcon && props[0] && <PropertyTypeIcon textVariant="default" type={props[0].type} />}
+          {!showTypeIcon && <span className="font-medium">{groupTitle}</span>}
+          <span className="text-default-500 text-sm">({props.length})</span>
         </div>
-        <Divider />
-        <div className={"flex flex-col gap-2"}>
-          <div
-            className={"text-base"}
-          >{`${t<string>("Not selected")}(${unselectedProperties.length})`}</div>
-          <div className={"flex flex-wrap gap-2 items-start"}>
-            {unselectedProperties.map((p) => renderProperty(p))}
+        <div className="p-4">
+          <div className="flex flex-wrap gap-2">
+            {props.map((p) => renderPropertyItem(p, showTypeIcon))}
           </div>
         </div>
       </div>
     );
   };
 
-  return (
-    <Modal
-      footer={multiple && propertyCount > 0 ? true : <Spacer />}
-      size={"2xl"}
-      title={title ?? t<string>(multiple ? "Select properties" : "Select a property")}
-      visible={visible}
-      onClose={() => {
-        setVisible(false);
-      }}
-      onDestroyed={onDestroyed}
-      onOk={async () => {
-        await onSubmit(selection);
-      }}
-    >
-      <div className="flex flex-col gap-2">
-        {renderFilter()}
-        <Divider />
-        {renderProperties()}
-        <div>
+  const renderProperties = () => {
+    const totalCount = filteredProperties.length;
+
+    if (totalCount === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center gap-2 py-8">
+          <span className="text-default-400">{t<string>("No properties available")}</span>
           {addable && (
             <Button
-              className={"mt-2"}
-              color={"primary"}
-              size={"sm"}
+              color="primary"
+              size="sm"
               onPress={() => {
                 createPortal(PropertyModal, {
                   onSaved: loadProperties,
@@ -378,6 +305,94 @@ const PropertySelector = (props: IProps) => {
             </Button>
           )}
         </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+        {/* Internal Properties */}
+        {(pool & PropertyPool.Internal) !== 0 && internalProperties.length > 0 &&
+          renderPropertyGroup(t("Internal Properties"), internalProperties, false)}
+
+        {/* Reserved Properties */}
+        {(pool & PropertyPool.Reserved) !== 0 && reservedProperties.length > 0 &&
+          renderPropertyGroup(t("Reserved Properties"), reservedProperties, false)}
+
+        {/* Custom Properties grouped by type */}
+        {(pool & PropertyPool.Custom) !== 0 &&
+          (Object.keys(groupedCustomProperties) as unknown as PropertyType[]).map((k) => {
+            const ps = groupedCustomProperties[k]!;
+            return (
+              <div key={k}>
+                {renderPropertyGroup("", ps, true)}
+              </div>
+            );
+          })}
+      </div>
+    );
+  };
+
+  return (
+    <Modal
+      classNames={{ base: "max-w-[70vw]" }}
+      footer={multiple && filteredProperties.length > 0 ? true : <Spacer />}
+      size="3xl"
+      title={title ?? t<string>(multiple ? "Select properties" : "Select a property")}
+      visible={visible}
+      onClose={() => {
+        setVisible(false);
+      }}
+      onDestroyed={() => {
+        if (!hasSubmittedRef.current) {
+          onCancel?.();
+        }
+        onDestroyed?.();
+      }}
+      onOk={async () => {
+        await onSubmit(selection);
+      }}
+    >
+      <div className="flex flex-col gap-4">
+        {(() => {
+          const filter = renderFilter();
+          return filter && (
+            <>
+              {filter}
+              <Divider />
+            </>
+          );
+        })()}
+        <div className="flex items-center justify-between">
+          <Input
+            size="sm"
+            placeholder={t<string>("Search properties")}
+            startContent={<SearchOutlined className="text-small" />}
+            value={keyword}
+            onValueChange={setKeyword}
+            className="w-64"
+          />
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-default-500">
+              {t("Selected")}: {selection.length}
+            </div>
+            {addable && (
+              <Button
+                color="primary"
+                size="sm"
+                onPress={() => {
+                  createPortal(PropertyModal, {
+                    onSaved: loadProperties,
+                    validValueTypes: valueTypes?.map((v) => v as unknown as PropertyType),
+                  });
+                }}
+              >
+                {t<string>("Add a property")}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {renderProperties()}
       </div>
     </Modal>
   );

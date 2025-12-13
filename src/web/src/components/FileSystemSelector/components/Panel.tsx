@@ -1,7 +1,7 @@
 "use client";
 
 import type { Entry } from "@/core/models/FileExplorer/Entry";
-import type { RootTreeEntryRef } from "@/pages/file-processor/RootTreeEntry";
+import type { FileExplorerRef } from "@/components/FileExplorer";
 import type { FileSystemSelectorProps } from "@/components/FileSystemSelector/models";
 
 import { useEffect, useRef, useState } from "react";
@@ -13,7 +13,7 @@ import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { IwFsType } from "@/sdk/constants";
 import { Button, Chip } from "@/components/bakaui";
-import RootTreeEntry from "@/pages/file-processor/RootTreeEntry";
+import { FileExplorer } from "@/components/FileExplorer";
 
 const log = buildLogger("FileSystemSelector");
 const Panel = (props: FileSystemSelectorProps) => {
@@ -31,7 +31,7 @@ const Panel = (props: FileSystemSelectorProps) => {
 
   const [selected, setSelected] = useState<Entry>();
   const [currentDirPath, setCurrentDirPath] = useState<string>();
-  const rootRef = useRef<RootTreeEntryRef | null>(null);
+  const rootRef = useRef<FileExplorerRef | null>(null);
 
   useEffect(() => {
     // return () => {
@@ -93,7 +93,7 @@ const Panel = (props: FileSystemSelectorProps) => {
 
   return (
     <div className={"flex flex-col gap-2 grow max-h-full"}>
-      <RootTreeEntry
+      <FileExplorer
         ref={(r) => {
           rootRef.current = r;
           log("ref", r);

@@ -143,6 +143,24 @@ export type BakabaseAbstractionsModelsDomainConstantsMediaLibraryV2AdditionalIte
 export type BakabaseAbstractionsModelsDomainConstantsPathFilterFsType = 1 | 2;
 
 /**
+ * [0: None, 1: Property, 2: MediaLibrary]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem = 0 | 1 | 2;
+
+/**
+ * [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPathMarkSyncStatus = 0 | 1 | 2 | 3 | 4;
+
+/**
+ * [1: Resource, 2: Property, 3: MediaLibrary]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPathMarkType = 1 | 2 | 3;
+
+/**
  * [1: Layer, 2: Regex]
  * @format int32
  */
@@ -298,6 +316,29 @@ export interface BakabaseAbstractionsModelsDomainCustomPropertyValue {
   bizValue?: any;
 }
 
+export interface BakabaseAbstractionsModelsDomainEnhancerFullOptions {
+  /** @format int32 */
+  enhancerId: number;
+  targetOptions?: BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions[];
+  expressions?: string[];
+  requirements?: number[];
+  keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
+  pretreatKeyword?: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
+  /** @format int32 */
+  target: number;
+  dynamicTarget?: string;
+  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
+  coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  property?: BakabaseAbstractionsModelsDomainProperty;
+}
+
 export interface BakabaseAbstractionsModelsDomainExtensionGroup {
   /** @format int32 */
   id: number;
@@ -332,6 +373,17 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryPlayer {
   command: string;
 }
 
+export interface BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  mediaLibraryId: number;
+  /** @format int32 */
+  resourceId: number;
+  /** @format date-time */
+  createDt: string;
+}
+
 export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   /** @format int32 */
   id: number;
@@ -345,35 +397,12 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   resourceFilters?: BakabaseAbstractionsModelsDomainPathFilter[];
   properties?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateProperty[];
   playableFileLocator?: BakabaseAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator;
-  enhancers?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions[];
+  enhancers?: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
   displayNameTemplate?: string;
   samplePaths?: string[];
   /** @format int32 */
   childTemplateId?: number;
   child?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
-}
-
-export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerOptions {
-  /** @format int32 */
-  enhancerId: number;
-  targetOptions?: BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions[];
-  expressions?: string[];
-  requirements?: number[];
-  keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
-  pretreatKeyword?: boolean;
-}
-
-export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplateEnhancerTargetAllInOneOptions {
-  /** @format int32 */
-  target: number;
-  dynamicTarget?: string;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  propertyId: number;
-  property?: BakabaseAbstractionsModelsDomainProperty;
 }
 
 export interface BakabaseAbstractionsModelsDomainMediaLibraryTemplatePlayableFileLocator {
@@ -399,15 +428,22 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   /** @format int32 */
   id: number;
   name: string;
+  /** @deprecated */
   paths: string[];
-  /** @format int32 */
+  /**
+   * @deprecated
+   * @format int32
+   */
   templateId?: number;
   /** @format int32 */
   resourceCount: number;
   color?: string;
+  /** @deprecated */
   syncVersion?: string;
+  /** @deprecated */
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
   template?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
+  /** @deprecated */
   syncMayBeOutdated: boolean;
 }
 
@@ -460,6 +496,41 @@ export interface BakabaseAbstractionsModelsDomainPathFilter {
   extensionGroups?: BakabaseAbstractionsModelsDomainExtensionGroup[];
   /** @uniqueItems true */
   extensions?: string[];
+}
+
+export interface BakabaseAbstractionsModelsDomainPathMark {
+  /** @format int32 */
+  id: number;
+  path: string;
+  /** [1: Resource, 2: Property, 3: MediaLibrary] */
+  type: BakabaseAbstractionsModelsDomainConstantsPathMarkType;
+  /** @format int32 */
+  priority: number;
+  configJson: string;
+  /** [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete] */
+  syncStatus: BakabaseAbstractionsModelsDomainConstantsPathMarkSyncStatus;
+  /** @format date-time */
+  syncedAt?: string;
+  syncError?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  isDeleted: boolean;
+  /** @format date-time */
+  deletedAt?: string;
+  /** @format int32 */
+  expiresInSeconds?: number;
+  property?: BakabaseAbstractionsModelsDomainProperty;
+  mediaLibrary?: BakabaseAbstractionsModelsDomainMediaLibraryV2;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
+  path: string;
+  /** @format int32 */
+  resourceLayerIndex?: number;
+  resourceSegmentName?: string;
+  propertyValue?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
@@ -517,9 +588,15 @@ export interface BakabaseAbstractionsModelsDomainReservedPropertyValue {
 export interface BakabaseAbstractionsModelsDomainResource {
   /** @format int32 */
   id: number;
-  /** @format int32 */
+  /**
+   * @deprecated
+   * @format int32
+   */
   mediaLibraryId: number;
-  /** @format int32 */
+  /**
+   * @deprecated
+   * @format int32
+   */
   categoryId: number;
   fileName: string;
   directory: string;
@@ -538,7 +615,6 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @format date-time */
   fileModifiedAt: string;
   coverPaths?: string[];
-  /** @uniqueItems true */
   tags: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
@@ -546,10 +622,21 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @format date-time */
   playedAt?: string;
   cache?: BakabaseAbstractionsModelsDomainResourceCache;
+  /** @deprecated */
   isMediaLibraryV2: boolean;
   category?: BakabaseAbstractionsModelsDomainCategory;
+  /** @deprecated */
   mediaLibraryName?: string;
+  /** @deprecated */
   mediaLibraryColor?: string;
+  mediaLibraries?: BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
+  /** @format int32 */
+  id: number;
+  name: string;
+  color?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProperty {
@@ -580,6 +667,30 @@ export interface BakabaseAbstractionsModelsDomainResourceCache {
   hasMorePlayableFiles: boolean;
   playableFilePaths?: string[];
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions {
+  enhancers?: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions {
+  extensions?: string[];
+  fileNamePattern?: string;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
+  players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions {
+  properties?: BakabaseAbstractionsModelsDomainResourceProfilePropertyReference[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyReference {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -739,6 +850,13 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryV2PatchInputModel {
   templateId?: number;
 }
 
+export interface BakabaseAbstractionsModelsInputPathMarkPreviewRequest {
+  path: string;
+  /** [1: Resource, 2: Property, 3: MediaLibrary] */
+  type: BakabaseAbstractionsModelsDomainConstantsPathMarkType;
+  configJson: string;
+}
+
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
   /** @format int32 */
   propertyId: number;
@@ -827,23 +945,20 @@ export interface BakabaseAbstractionsModelsViewAppNotificationMessageViewModel {
 }
 
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModel {
-  categoryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel[];
   mediaLibraryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel[];
-}
-
-export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel {
-  /** @format int32 */
-  categoryId: number;
-  categoryName: string;
-  resourceCacheCountMap: Record<string, number>;
-  /** @format int32 */
-  resourceCount: number;
+  unassociatedCaches?: BakabaseAbstractionsModelsViewCacheOverviewViewModelUnassociatedCacheViewModel;
 }
 
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel {
   /** @format int32 */
   mediaLibraryId: number;
   mediaLibraryName: string;
+  resourceCacheCountMap: Record<string, number>;
+  /** @format int32 */
+  resourceCount: number;
+}
+
+export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelUnassociatedCacheViewModel {
   resourceCacheCountMap: Record<string, number>;
   /** @format int32 */
   resourceCount: number;
@@ -906,6 +1021,8 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   /** @format int32 */
   autoListeningPortCount?: number;
   listeningPorts?: number[];
+  /** @format int32 */
+  maxParallelism?: number;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -954,6 +1071,10 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   /** @format int32 */
   autoListeningPortCount?: number;
   listeningPorts?: number[];
+  /** @format int32 */
+  maxParallelism?: number;
+  /** @format int32 */
+  effectiveMaxParallelism: number;
 }
 
 /**
@@ -1210,6 +1331,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
     string,
     BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions
   >;
+  syncMarksImmediately?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions {
@@ -1696,6 +1818,7 @@ export interface BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFile
   /** @format int32 */
   alphabetCount: number;
   replaceEntire: boolean;
+  regex: boolean;
 }
 
 /**
@@ -1903,7 +2026,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   displayProperties: BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey[];
   inlineDisplayName: boolean;
   autoSelectFirstPlayableFile: boolean;
-  displayOperations?: string[];
+  displayOperations: string[];
 }
 
 /**
@@ -1951,19 +2074,19 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditio
   | 4;
 
 /**
- * [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
+ * [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
   | 0
+  | 32
   | 64
   | 128
-  | 160
-  | 416
+  | 288
   | 512
   | 2048
   | 4096
-  | 7136;
+  | 7008;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -2230,12 +2353,9 @@ export interface BakabaseInsideWorldModelsRequestModelsRemoveSameEntryInWorkingD
   entryPaths: string[];
 }
 
-export interface BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel {
+export interface BakabaseInsideWorldModelsRequestModelsResourceSetMediaLibrariesRequestModel {
   ids: number[];
-  /** @format int32 */
-  mediaLibraryId: number;
-  isLegacyMediaLibrary: boolean;
-  path?: string;
+  mediaLibraryIds: number[];
 }
 
 export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
@@ -2294,28 +2414,6 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
   | 0
   | 1;
 
-export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions {
-  targetOptions?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions[];
-  requirements?: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId[];
-  expressions?: string[];
-  keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
-  pretreatKeyword?: boolean;
-}
-
-export interface BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerTargetFullOptions {
-  /** @format int32 */
-  target: number;
-  dynamicTarget?: string;
-  /** @deprecated */
-  autoBindProperty?: boolean;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  propertyId?: number;
-}
-
 /**
  * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av]
  * @format int32
@@ -2329,19 +2427,8 @@ export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId = 1 | 2 | 3 |
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerTag = 1 | 2;
 
 export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerOptionsPatchInputModel {
-  options?: BakabaseModulesEnhancerAbstractionsModelsDomainEnhancerFullOptions;
+  options?: BakabaseAbstractionsModelsDomainEnhancerFullOptions;
   active?: boolean;
-}
-
-export interface BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel {
-  autoBindProperty?: boolean;
-  /** [1: FilenameAscending, 2: FileModifyDtDescending] */
-  coverSelectOrder?: BakabaseInsideWorldModelsConstantsCoverSelectOrder;
-  /** @format int32 */
-  propertyId?: number;
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool?: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  dynamicTarget?: string;
 }
 
 /**
@@ -2606,11 +2693,43 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   mediaCount: number;
 }
 
+export interface BakabaseServiceControllersDiscoverySubscribeRequest {
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
+  types: BakabaseAbstractionsModelsDomainConstantsResourceCacheType;
+}
+
+export interface BakabaseServiceControllersEnsureMappingsInput {
+  /** @format int32 */
+  resourceId: number;
+  mediaLibraryIds: number[];
+}
+
+export interface BakabaseServiceControllersMediaLibraryStatistics {
+  /** @format int32 */
+  totalResourceCount: number;
+}
+
+export interface BakabaseServiceControllersPathMarkSyncStatusResponse {
+  /** @format int32 */
+  pendingCount: number;
+  /** @format int32 */
+  syncingCount: number;
+  /** @format int32 */
+  failedCount: number;
+}
+
+export interface BakabaseServiceControllersPathMigrationRequest {
+  oldPath: string;
+  newPath: string;
+}
+
 export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   name?: string;
   isActive?: boolean;
   variables?: BakabaseServiceModelsInputBulkModificationVariableInputModel[];
-  filter?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
   processes?: BakabaseServiceModelsInputBulkModificationProcessInputModel[];
 }
 
@@ -2632,6 +2751,14 @@ export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   propertyId: number;
   name: string;
   preprocesses?: string;
+}
+
+export interface BakabaseServiceModelsInputBulkResourcePropertyValuePutInputModel {
+  resourceIds: number[];
+  /** @format int32 */
+  propertyId: number;
+  isCustomProperty: boolean;
+  value?: string;
 }
 
 export interface BakabaseServiceModelsInputCategoryCustomPropertySortInputModel {
@@ -2693,6 +2820,10 @@ export interface BakabaseServiceModelsInputResourceCoverSaveInputModel {
   saveMode: BakabaseInsideWorldModelsConstantsCoverSaveMode;
 }
 
+export interface BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel {
+  mediaLibraryIds: number[];
+}
+
 export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   additionalCoverDiscoveringSources?: BakabaseInsideWorldModelsConstantsAdditionalCoverDiscoveringSource[];
   coverOptions?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsCoverOptionsModel;
@@ -2702,6 +2833,18 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   recentFilters?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsResourceFilter[];
   keepResourcesOnPathChange?: boolean;
   deleteKeepResourceMarkers?: boolean;
+}
+
+export interface BakabaseServiceModelsInputResourceProfileInputModel {
+  name: string;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
+  nameTemplate?: string;
+  enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
+  playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
+  playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+  propertyOptions?: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
+  /** @format int32 */
+  priority: number;
 }
 
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
@@ -2785,7 +2928,7 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   /** @format date-time */
   createdAt: string;
   variables?: BakabaseServiceModelsViewBulkModificationVariableViewModel[];
-  filter?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel;
+  search?: BakabaseServiceModelsViewResourceSearchViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
   filteredResourceIds?: number[];
   /** @format date-time */
@@ -2944,6 +3087,14 @@ export interface BakabaseServiceModelsViewPropertyTypeForManuallySettingValueVie
   isAvailable: boolean;
 }
 
+export interface BakabaseServiceModelsViewResourceAncestorViewModel {
+  /** @format int32 */
+  id: number;
+  displayName: string;
+  /** @format int32 */
+  parentId?: number;
+}
+
 export interface BakabaseServiceModelsViewResourceDiffViewModel {
   property: BakabaseModulesPropertyModelsViewPropertyViewModel;
   value1?: string;
@@ -2960,6 +3111,9 @@ export interface BakabaseServiceModelsViewResourceEnhancements {
   status: BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus;
   targets: BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement[];
   dynamicTargets: BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhancements[];
+  logs?: BakabaseServiceModelsViewResourceEnhancementsEnhancementLogViewModel[];
+  optionsSnapshot?: BakabaseAbstractionsModelsDomainEnhancerFullOptions;
+  errorMessage?: string;
 }
 
 export interface BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhancements {
@@ -2969,6 +3123,15 @@ export interface BakabaseServiceModelsViewResourceEnhancementsDynamicTargetEnhan
   enhancements?: BakabaseServiceModelsViewEnhancementViewModel[];
 }
 
+export interface BakabaseServiceModelsViewResourceEnhancementsEnhancementLogViewModel {
+  /** @format date-time */
+  timestamp: string;
+  level: string;
+  event: string;
+  message: string;
+  data?: any;
+}
+
 export interface BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement {
   /** @format int32 */
   target: number;
@@ -2976,11 +3139,35 @@ export interface BakabaseServiceModelsViewResourceEnhancementsTargetEnhancement 
   enhancement?: BakabaseServiceModelsViewEnhancementViewModel;
 }
 
+export interface BakabaseServiceModelsViewResourceHierarchyContextViewModel {
+  ancestors: BakabaseServiceModelsViewResourceAncestorViewModel[];
+  /** @format int32 */
+  childrenCount?: number;
+}
+
 export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
   /** @format int32 */
   id: number;
   path: string;
   fileName: string;
+}
+
+export interface BakabaseServiceModelsViewResourceProfileViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  search?: BakabaseServiceModelsViewResourceSearchViewModel;
+  nameTemplate?: string;
+  enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
+  playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
+  playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+  propertyOptions?: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
+  /** @format int32 */
+  priority: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
 }
 
 export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
@@ -3023,12 +3210,6 @@ export interface BakabaseServiceModelsViewSavedSearchViewModel {
   name: string;
 }
 
-export interface BakabaseServiceModelsViewUnknownResourcesCountViewModel {
-  /** @format int32 */
-  unknownMediaLibraryCount: number;
-  unknownPathCountByMediaLibraryId: Record<string, number>;
-}
-
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
   /** @format int32 */
   id: number;
@@ -3069,6 +3250,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainExtensionGroup[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   /** @format int32 */
   code: number;
@@ -3088,6 +3276,20 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainMediaLibrary[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPathMarkPreviewResult[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPathMark[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource {
@@ -3244,6 +3446,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   data?: BakabaseServiceModelsViewResourcePathInfoViewModel[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileViewModel[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceSearchFilterViewModel {
   /** @format int32 */
   code: number;
@@ -3393,6 +3602,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainExtensionGroup;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate {
   /** @format int32 */
   code: number;
@@ -3419,6 +3635,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathConfigurationTestResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPathMark;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
@@ -3715,6 +3938,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesP
   data?: BakabaseModulesPropertyModelsViewPropertyViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersMediaLibraryStatistics {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersMediaLibraryStatistics;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersPathMarkSyncStatusResponse {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersPathMarkSyncStatusResponse;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewBulkModificationViewModel {
   /** @format int32 */
   code: number;
@@ -3736,6 +3973,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   data?: BakabaseServiceModelsViewCustomPropertyViewModel;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceHierarchyContextViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel {
   /** @format int32 */
   code: number;
@@ -3748,13 +3999,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewSavedSearchViewModel;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUnknownResourcesCountViewModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceModelsViewUnknownResourcesCountViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemBoolean {
@@ -3785,7 +4029,7 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   /** @format int32 */
   code: number;
   message?: string;
-  data?: Record<string, number>;
+  data?: Record<string, number[] | null>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringBakabaseInsideWorldModelsConstantsMediaType {
@@ -3793,6 +4037,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollection
   code: number;
   message?: string;
   data?: Record<string, BakabaseInsideWorldModelsConstantsMediaType>;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemBoolean {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: Record<string, boolean>;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemCollectionsGenericList1SystemString {
@@ -3822,6 +4073,11 @@ export interface BootstrapModelsResponseModelsSingletonResponse1SystemString {
   code: number;
   message?: string;
   data?: string;
+}
+
+export interface BulkResourceMediaLibraryMappingInputModel {
+  resourceIds: number[];
+  mediaLibraryIds: number[];
 }
 
 /**
@@ -5685,25 +5941,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Cache
-     * @name DeleteResourceCacheByCategoryIdAndCacheType
-     * @request DELETE:/cache/category/{categoryId}/type/{type}
-     */
-    deleteResourceCacheByCategoryIdAndCacheType: (
-      categoryId: number,
-      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/cache/category/${categoryId}/type/${type}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Cache
      * @name DeleteResourceCacheByMediaLibraryIdAndCacheType
      * @request DELETE:/cache/media-library/{mediaLibraryId}/type/{type}
      */
@@ -5714,6 +5951,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/cache/media-library/${mediaLibraryId}/type/${type}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name DeleteUnassociatedResourceCacheByCacheType
+     * @request DELETE:/cache/unassociated/type/{type}
+     */
+    deleteUnassociatedResourceCacheByCacheType: (
+      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/cache/unassociated/type/${type}`,
         method: "DELETE",
         format: "json",
         ...params,
@@ -6152,35 +6407,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Category
-     * @name PatchCategoryEnhancerTargetOptions
-     * @request PATCH:/category/{id}/enhancer/{enhancerId}/options/target
-     * @deprecated
-     */
-    patchCategoryEnhancerTargetOptions: (
-      id: number,
-      enhancerId: number,
-      query: {
-        /** @format int32 */
-        target: number;
-        dynamicTarget?: string;
-      },
-      data: BakabaseModulesEnhancerModelsInputCategoryEnhancerTargetOptionsPatchInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/category/${id}/enhancer/${enhancerId}/options/target`,
-        method: "PATCH",
-        query: query,
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Category
      * @name UnbindCategoryEnhancerTargetProperty
      * @request DELETE:/category/{id}/enhancer/{enhancerId}/options/target/property
      * @deprecated
@@ -6215,70 +6441,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${id}/synchronization`,
         method: "PUT",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name ApplyEnhancementContextDataByEnhancerAndCategory
-     * @request POST:/category/{categoryId}/enhancer/{enhancerId}/enhancement/apply
-     */
-    applyEnhancementContextDataByEnhancerAndCategory: (
-      categoryId: number,
-      enhancerId: number,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/category/${categoryId}/enhancer/${enhancerId}/enhancement/apply`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name DeleteEnhancementsByCategory
-     * @request DELETE:/category/{categoryId}/enhancement
-     */
-    deleteEnhancementsByCategory: (
-      categoryId: number,
-      query?: {
-        deleteEmptyOnly?: boolean;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/category/${categoryId}/enhancement`,
-        method: "DELETE",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name DeleteEnhancementsByCategoryAndEnhancer
-     * @request DELETE:/category/{categoryId}/enhancer/{enhancerId}/enhancements
-     */
-    deleteEnhancementsByCategoryAndEnhancer: (
-      categoryId: number,
-      enhancerId: number,
-      query?: {
-        deleteEmptyOnly?: boolean;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/category/${categoryId}/enhancer/${enhancerId}/enhancements`,
-        method: "DELETE",
-        query: query,
         format: "json",
         ...params,
       }),
@@ -7861,6 +8023,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         saveSearch?: boolean;
         searchId?: string;
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
@@ -7884,6 +8048,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchResourcesUrl: (query?: {
         saveSearch?: boolean;
         searchId?: string;
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search`;
@@ -7942,7 +8108,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -7964,7 +8130,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourcesByKeysUrl: (query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -7982,6 +8148,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceHierarchyContext
+     * @request GET:/resource/{id}/hierarchy-context
+     */
+    getResourceHierarchyContext: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel,
+        any
+      >({
+        path: `/resource/${id}/hierarchy-context`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description
@@ -8083,15 +8267,15 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
-     * @name MoveResources
-     * @request PUT:/resource/move
+     * @name SetResourceMediaLibraries
+     * @request PUT:/resource/media-libraries
      */
-    moveResources: (
-      data: BakabaseInsideWorldModelsRequestModelsResourceMoveRequestModel,
+    setResourceMediaLibraries: (
+      data: BakabaseInsideWorldModelsRequestModelsResourceSetMediaLibrariesRequestModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/move`,
+        path: `/resource/media-libraries`,
         method: "PUT",
         body: data,
         type: ContentType.Json,
@@ -8100,12 +8284,43 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for moveResources
-     * @name moveResourcesUrl
+     * @description Build URL for setResourceMediaLibraries
+     * @name setResourceMediaLibrariesUrl
      */
-    moveResourcesUrl: () => {
+    setResourceMediaLibrariesUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/resource/move`;
+      let path = `/resource/media-libraries`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceMediaLibraryMappings
+     * @request POST:/resource/media-library-mappings
+     */
+    getResourceMediaLibraryMappings: (data: number[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
+        any
+      >({
+        path: `/resource/media-library-mappings`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getResourceMediaLibraryMappings
+     * @name getResourceMediaLibraryMappingsUrl
+     */
+    getResourceMediaLibraryMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/media-library-mappings`;
       
       return baseUrl + path;
     },
@@ -8153,6 +8368,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name BulkPutResourcePropertyValue
+     * @request PUT:/resource/bulk/property-value
+     */
+    bulkPutResourcePropertyValue: (
+      data: BakabaseServiceModelsInputBulkResourcePropertyValuePutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/bulk/property-value`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for bulkPutResourcePropertyValue
+     * @name bulkPutResourcePropertyValueUrl
+     */
+    bulkPutResourcePropertyValueUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/bulk/property-value`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name PlayResourceFile
      * @request GET:/resource/{resourceId}/play
      */
@@ -8175,13 +8421,38 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name PlayRandomResource
+     * @request GET:/resource/play/random
+     */
+    playRandomResource: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/play/random`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for playRandomResource
+     * @name playRandomResourceUrl
+     */
+    playRandomResourceUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/play/random`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name DeleteResourcesByKeys
      * @request DELETE:/resource/ids
      */
     deleteResourcesByKeys: (
       query?: {
         ids?: number[];
-        deleteFiles?: boolean;
       },
       params: RequestParams = {},
     ) =>
@@ -8199,7 +8470,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     deleteResourcesByKeysUrl: (query?: {
         ids?: number[];
-        deleteFiles?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/ids`;
@@ -8213,130 +8483,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetUnknownResources
-     * @request GET:/resource/unknown
-     */
-    getUnknownResources: (
-      query?: {
-        /** @format int32 */
-        mediaLibraryId?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
-        any
-      >({
-        path: `/resource/unknown`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getUnknownResources
-     * @name getUnknownResourcesUrl
-     */
-    getUnknownResourcesUrl: (query?: {
-        /** @format int32 */
-        mediaLibraryId?: number;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/unknown`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-        
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name DeleteUnknownResources
-     * @request DELETE:/resource/unknown
-     */
-    deleteUnknownResources: (
-      query?: {
-        /** @format int32 */
-        mediaLibraryId?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource/unknown`,
-        method: "DELETE",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for deleteUnknownResources
-     * @name deleteUnknownResourcesUrl
-     */
-    deleteUnknownResourcesUrl: (query?: {
-        /** @format int32 */
-        mediaLibraryId?: number;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/unknown`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-        
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Resource
-     * @name GetUnknownResourcesCount
-     * @request GET:/resource/unknown/count
-     */
-    getUnknownResourcesCount: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewUnknownResourcesCountViewModel,
-        any
-      >({
-        path: `/resource/unknown/count`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getUnknownResourcesCount
-     * @name getUnknownResourcesCountUrl
-     */
-    getUnknownResourcesCountUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource/unknown/count`;
       
       return baseUrl + path;
     },
@@ -8509,6 +8655,201 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourceMediaLibraries
+     * @request GET:/resource/{id}/media-libraries
+     */
+    getResourceMediaLibraries: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/resource/${id}/media-libraries`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name ReplaceResourceMediaLibraryMappings
+     * @request PUT:/resource/{id}/media-libraries
+     */
+    replaceResourceMediaLibraryMappings: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceMediaLibraryMappingInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/media-libraries`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name AddResourceMediaLibraryMapping
+     * @request POST:/resource/{id}/media-libraries/{mediaLibraryId}
+     */
+    addResourceMediaLibraryMapping: (
+      id: number,
+      mediaLibraryId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/media-libraries/${mediaLibraryId}`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name RemoveResourceMediaLibraryMapping
+     * @request DELETE:/resource/{id}/media-libraries/{mediaLibraryId}
+     */
+    removeResourceMediaLibraryMapping: (
+      id: number,
+      mediaLibraryId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${id}/media-libraries/${mediaLibraryId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name BulkAddResourceMediaLibraryMappings
+     * @request POST:/resource/bulk/media-libraries
+     */
+    bulkAddResourceMediaLibraryMappings: (
+      data: BulkResourceMediaLibraryMappingInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/bulk/media-libraries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for bulkAddResourceMediaLibraryMappings
+     * @name bulkAddResourceMediaLibraryMappingsUrl
+     */
+    bulkAddResourceMediaLibraryMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/bulk/media-libraries`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name StreamResourceDiscovery
+     * @request GET:/resource/discovery/stream
+     */
+    streamResourceDiscovery: (params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/resource/discovery/stream`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for streamResourceDiscovery
+     * @name streamResourceDiscoveryUrl
+     */
+    streamResourceDiscoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/stream`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name SubscribeResourceDiscovery
+     * @request POST:/resource/discovery/subscribe
+     */
+    subscribeResourceDiscovery: (
+      data: BakabaseServiceControllersDiscoverySubscribeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/discovery/subscribe`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for subscribeResourceDiscovery
+     * @name subscribeResourceDiscoveryUrl
+     */
+    subscribeResourceDiscoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/subscribe`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name SubscribeResourceDiscoveryBatch
+     * @request POST:/resource/discovery/subscribe/batch
+     */
+    subscribeResourceDiscoveryBatch: (
+      data: BakabaseServiceControllersDiscoverySubscribeRequest[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/discovery/subscribe/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for subscribeResourceDiscoveryBatch
+     * @name subscribeResourceDiscoveryBatchUrl
+     */
+    subscribeResourceDiscoveryBatchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/subscribe/batch`;
+      
+      return baseUrl + path;
+    },
   };
   mediaLibrary = {
     /**
@@ -8552,24 +8893,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/media-library/${mediaLibraryId}/enhancer/${enhancerId}/enhancements`,
         method: "DELETE",
         query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name GetEnhancedResourceCountsByMediaLibrary
-     * @request GET:/media-library/{mediaLibraryId}/enhancer/enhanced-counts
-     */
-    getEnhancedResourceCountsByMediaLibrary: (mediaLibraryId: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemInt32SystemInt32,
-        any
-      >({
-        path: `/media-library/${mediaLibraryId}/enhancer/enhanced-counts`,
-        method: "GET",
         format: "json",
         ...params,
       }),
@@ -8919,375 +9242,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  mediaLibraryTemplate = {
-    /**
-     * No description
-     *
-     * @tags Enhancement
-     * @name DeleteEnhancementsByMediaLibraryTemplateAndEnhancer
-     * @request DELETE:/media-library-template/{mediaLibraryTemplateId}/enhancer/{enhancerId}/enhancements
-     */
-    deleteEnhancementsByMediaLibraryTemplateAndEnhancer: (
-      mediaLibraryTemplateId: number,
-      enhancerId: number,
-      query?: {
-        deleteEmptyOnly?: boolean;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${mediaLibraryTemplateId}/enhancer/${enhancerId}/enhancements`,
-        method: "DELETE",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetAllMediaLibraryTemplates
-     * @request GET:/media-library-template
-     */
-    getAllMediaLibraryTemplates: (
-      query?: {
-        /** [0: None, 1: ChildTemplate] */
-        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
-        any
-      >({
-        path: `/media-library-template`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getAllMediaLibraryTemplates
-     * @name getAllMediaLibraryTemplatesUrl
-     */
-    getAllMediaLibraryTemplatesUrl: (query?: {
-        /** [0: None, 1: ChildTemplate] */
-        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-        
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AddMediaLibraryTemplate
-     * @request POST:/media-library-template
-     */
-    addMediaLibraryTemplate: (
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library-template`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addMediaLibraryTemplate
-     * @name addMediaLibraryTemplateUrl
-     */
-    addMediaLibraryTemplateUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplate
-     * @request GET:/media-library-template/{id}
-     */
-    getMediaLibraryTemplate: (
-      id: number,
-      query?: {
-        /** [0: None, 1: ChildTemplate] */
-        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
-        any
-      >({
-        path: `/media-library-template/${id}`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name PutMediaLibraryTemplate
-     * @request PUT:/media-library-template/{id}
-     */
-    putMediaLibraryTemplate: (
-      id: number,
-      data: BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name DeleteMediaLibraryTemplate
-     * @request DELETE:/media-library-template/{id}
-     */
-    deleteMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplateShareCode
-     * @request GET:/media-library-template/{id}/share-text
-     */
-    getMediaLibraryTemplateShareCode: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
-        path: `/media-library-template/${id}/share-text`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplateImportConfiguration
-     * @request POST:/media-library-template/share-code/import-configuration
-     */
-    getMediaLibraryTemplateImportConfiguration: (data: string, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel,
-        any
-      >({
-        path: `/media-library-template/share-code/import-configuration`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getMediaLibraryTemplateImportConfiguration
-     * @name getMediaLibraryTemplateImportConfigurationUrl
-     */
-    getMediaLibraryTemplateImportConfigurationUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template/share-code/import-configuration`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name ImportMediaLibraryTemplate
-     * @request POST:/media-library-template/share-code/import
-     */
-    importMediaLibraryTemplate: (
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library-template/share-code/import`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for importMediaLibraryTemplate
-     * @name importMediaLibraryTemplateUrl
-     */
-    importMediaLibraryTemplateUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template/share-code/import`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AddMediaLibraryTemplateByMediaLibraryV1
-     * @request POST:/media-library-template/by-media-library-v1
-     */
-    addMediaLibraryTemplateByMediaLibraryV1: (
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLibraryV1InputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/by-media-library-v1`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addMediaLibraryTemplateByMediaLibraryV1
-     * @name addMediaLibraryTemplateByMediaLibraryV1Url
-     */
-    addMediaLibraryTemplateByMediaLibraryV1Url: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template/by-media-library-v1`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name DuplicateMediaLibraryTemplate
-     * @request POST:/media-library-template/{id}/duplicate
-     */
-    duplicateMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/media-library-template/${id}/duplicate`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name GetMediaLibraryTemplatePresetDataPool
-     * @request GET:/media-library-template/preset-data-pool
-     */
-    getMediaLibraryTemplatePresetDataPool: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool,
-        any
-      >({
-        path: `/media-library-template/preset-data-pool`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getMediaLibraryTemplatePresetDataPool
-     * @name getMediaLibraryTemplatePresetDataPoolUrl
-     */
-    getMediaLibraryTemplatePresetDataPoolUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template/preset-data-pool`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name AddMediaLibraryTemplateFromPresetBuilder
-     * @request POST:/media-library-template/from-preset-builder
-     */
-    addMediaLibraryTemplateFromPresetBuilder: (
-      data: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplateCompactBuilder,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/media-library-template/from-preset-builder`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addMediaLibraryTemplateFromPresetBuilder
-     * @name addMediaLibraryTemplateFromPresetBuilderUrl
-     */
-    addMediaLibraryTemplateFromPresetBuilderUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/media-library-template/from-preset-builder`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryTemplate
-     * @name ValidateMediaLibraryTemplate
-     * @request POST:/media-library-template/{id}/validate
-     */
-    validateMediaLibraryTemplate: (
-      id: number,
-      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateValidationInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<void, any>({
-        path: `/media-library-template/${id}/validate`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        ...params,
-      }),
-  };
   enhancer = {
     /**
      * No description
@@ -9339,6 +9293,187 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+  };
+  resourceProfile = {
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByResourceProfile
+     * @request DELETE:/resource-profile/{profileId}/enhancement
+     */
+    deleteEnhancementsByResourceProfile: (
+      profileId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${profileId}/enhancement`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByResourceProfileAndEnhancer
+     * @request DELETE:/resource-profile/{profileId}/enhancer/{enhancerId}/enhancement
+     */
+    deleteEnhancementsByResourceProfileAndEnhancer: (
+      profileId: number,
+      enhancerId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${profileId}/enhancer/${enhancerId}/enhancement`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name GetAllResourceProfiles
+     * @request GET:/resource-profile
+     */
+    getAllResourceProfiles: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllResourceProfiles
+     * @name getAllResourceProfilesUrl
+     */
+    getAllResourceProfilesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name AddResourceProfile
+     * @request POST:/resource-profile
+     */
+    addResourceProfile: (
+      data: BakabaseServiceModelsInputResourceProfileInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addResourceProfile
+     * @name addResourceProfileUrl
+     */
+    addResourceProfileUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name GetResourceProfile
+     * @request GET:/resource-profile/{id}
+     */
+    getResourceProfile: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name UpdateResourceProfile
+     * @request PUT:/resource-profile/{id}
+     */
+    updateResourceProfile: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceProfileInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name DeleteResourceProfile
+     * @request DELETE:/resource-profile/{id}
+     */
+    deleteResourceProfile: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name GetMatchingProfilesForResource
+     * @request GET:/resource-profile/by-resource/{resourceId}
+     */
+    getMatchingProfilesForResource: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile/by-resource/${resourceId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   extensionGroup = {
     /**
@@ -9981,6 +10116,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
+     * @name CopyEntries
+     * @request POST:/file/copy-entries
+     */
+    copyEntries: (
+      data: BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/copy-entries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for copyEntries
+     * @name copyEntriesUrl
+     */
+    copyEntriesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/copy-entries`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
      * @name GetSameNameEntriesInWorkingDirectory
      * @request POST:/file/same-name-entries-in-working-directory
      */
@@ -10487,6 +10653,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
+     * @name KeepAliveFileProcessorWatcher
+     * @request PUT:/file/file-processor-watcher/keep-alive
+     */
+    keepAliveFileProcessorWatcher: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/file-processor-watcher/keep-alive`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for keepAliveFileProcessorWatcher
+     * @name keepAliveFileProcessorWatcherUrl
+     */
+    keepAliveFileProcessorWatcherUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/file-processor-watcher/keep-alive`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
      * @name CheckPathIsFile
      * @request GET:/file/is-file
      */
@@ -10974,6 +11166,557 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  mediaLibraryResourceMapping = {
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name GetAllMediaLibraryResourceMappings
+     * @request GET:/media-library-resource-mapping
+     */
+    getAllMediaLibraryResourceMappings: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/media-library-resource-mapping`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllMediaLibraryResourceMappings
+     * @name getAllMediaLibraryResourceMappingsUrl
+     */
+    getAllMediaLibraryResourceMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-resource-mapping`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name AddMediaLibraryResourceMapping
+     * @request POST:/media-library-resource-mapping
+     */
+    addMediaLibraryResourceMapping: (
+      data: BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/media-library-resource-mapping`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addMediaLibraryResourceMapping
+     * @name addMediaLibraryResourceMappingUrl
+     */
+    addMediaLibraryResourceMappingUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-resource-mapping`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name GetMappingsByResourceId
+     * @request GET:/media-library-resource-mapping/by-resource/{resourceId}
+     */
+    getMappingsByResourceId: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/media-library-resource-mapping/by-resource/${resourceId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name DeleteMappingsByResourceId
+     * @request DELETE:/media-library-resource-mapping/by-resource/{resourceId}
+     */
+    deleteMappingsByResourceId: (resourceId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-resource-mapping/by-resource/${resourceId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name GetMappingsByMediaLibraryId
+     * @request GET:/media-library-resource-mapping/by-media-library/{mediaLibraryId}
+     */
+    getMappingsByMediaLibraryId: (mediaLibraryId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/media-library-resource-mapping/by-media-library/${mediaLibraryId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name DeleteMediaLibraryResourceMapping
+     * @request DELETE:/media-library-resource-mapping/{id}
+     */
+    deleteMediaLibraryResourceMapping: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-resource-mapping/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name EnsureMediaLibraryResourceMappings
+     * @request POST:/media-library-resource-mapping/ensure
+     */
+    ensureMediaLibraryResourceMappings: (
+      data: BakabaseServiceControllersEnsureMappingsInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-resource-mapping/ensure`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for ensureMediaLibraryResourceMappings
+     * @name ensureMediaLibraryResourceMappingsUrl
+     */
+    ensureMediaLibraryResourceMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-resource-mapping/ensure`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryResourceMapping
+     * @name ReplaceMediaLibraryResourceMappings
+     * @request POST:/media-library-resource-mapping/replace
+     */
+    replaceMediaLibraryResourceMappings: (
+      data: BakabaseServiceControllersEnsureMappingsInput,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-resource-mapping/replace`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for replaceMediaLibraryResourceMappings
+     * @name replaceMediaLibraryResourceMappingsUrl
+     */
+    replaceMediaLibraryResourceMappingsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-resource-mapping/replace`;
+      
+      return baseUrl + path;
+    },
+  };
+  mediaLibraryTemplate = {
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetAllMediaLibraryTemplates
+     * @request GET:/media-library-template
+     * @deprecated
+     */
+    getAllMediaLibraryTemplates: (
+      query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllMediaLibraryTemplates
+     * @name getAllMediaLibraryTemplatesUrl
+     */
+    getAllMediaLibraryTemplatesUrl: (query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplate
+     * @request POST:/media-library-template
+     * @deprecated
+     */
+    addMediaLibraryTemplate: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addMediaLibraryTemplate
+     * @name addMediaLibraryTemplateUrl
+     */
+    addMediaLibraryTemplateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplate
+     * @request GET:/media-library-template/{id}
+     * @deprecated
+     */
+    getMediaLibraryTemplate: (
+      id: number,
+      query?: {
+        /** [0: None, 1: ChildTemplate] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsMediaLibraryTemplateAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+        any
+      >({
+        path: `/media-library-template/${id}`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name PutMediaLibraryTemplate
+     * @request PUT:/media-library-template/{id}
+     * @deprecated
+     */
+    putMediaLibraryTemplate: (
+      id: number,
+      data: BakabaseAbstractionsModelsDomainMediaLibraryTemplate,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name DeleteMediaLibraryTemplate
+     * @request DELETE:/media-library-template/{id}
+     * @deprecated
+     */
+    deleteMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplateShareCode
+     * @request GET:/media-library-template/{id}/share-text
+     * @deprecated
+     */
+    getMediaLibraryTemplateShareCode: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/media-library-template/${id}/share-text`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplateImportConfiguration
+     * @request POST:/media-library-template/share-code/import-configuration
+     * @deprecated
+     */
+    getMediaLibraryTemplateImportConfiguration: (data: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsViewMediaLibraryTemplateImportConfigurationViewModel,
+        any
+      >({
+        path: `/media-library-template/share-code/import-configuration`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getMediaLibraryTemplateImportConfiguration
+     * @name getMediaLibraryTemplateImportConfigurationUrl
+     */
+    getMediaLibraryTemplateImportConfigurationUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template/share-code/import-configuration`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name ImportMediaLibraryTemplate
+     * @request POST:/media-library-template/share-code/import
+     * @deprecated
+     */
+    importMediaLibraryTemplate: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateImportInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template/share-code/import`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for importMediaLibraryTemplate
+     * @name importMediaLibraryTemplateUrl
+     */
+    importMediaLibraryTemplateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template/share-code/import`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplateByMediaLibraryV1
+     * @request POST:/media-library-template/by-media-library-v1
+     * @deprecated
+     */
+    addMediaLibraryTemplateByMediaLibraryV1: (
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateAddByMediaLibraryV1InputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/by-media-library-v1`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addMediaLibraryTemplateByMediaLibraryV1
+     * @name addMediaLibraryTemplateByMediaLibraryV1Url
+     */
+    addMediaLibraryTemplateByMediaLibraryV1Url: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template/by-media-library-v1`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name DuplicateMediaLibraryTemplate
+     * @request POST:/media-library-template/{id}/duplicate
+     * @deprecated
+     */
+    duplicateMediaLibraryTemplate: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-template/${id}/duplicate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name GetMediaLibraryTemplatePresetDataPool
+     * @request GET:/media-library-template/preset-data-pool
+     * @deprecated
+     */
+    getMediaLibraryTemplatePresetDataPool: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool,
+        any
+      >({
+        path: `/media-library-template/preset-data-pool`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getMediaLibraryTemplatePresetDataPool
+     * @name getMediaLibraryTemplatePresetDataPoolUrl
+     */
+    getMediaLibraryTemplatePresetDataPoolUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template/preset-data-pool`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name AddMediaLibraryTemplateFromPresetBuilder
+     * @request POST:/media-library-template/from-preset-builder
+     * @deprecated
+     */
+    addMediaLibraryTemplateFromPresetBuilder: (
+      data: BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplateCompactBuilder,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-template/from-preset-builder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addMediaLibraryTemplateFromPresetBuilder
+     * @name addMediaLibraryTemplateFromPresetBuilderUrl
+     */
+    addMediaLibraryTemplateFromPresetBuilderUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/media-library-template/from-preset-builder`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryTemplate
+     * @name ValidateMediaLibraryTemplate
+     * @request POST:/media-library-template/{id}/validate
+     * @deprecated
+     */
+    validateMediaLibraryTemplate: (
+      id: number,
+      data: BakabaseAbstractionsModelsInputMediaLibraryTemplateValidationInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<void, any>({
+        path: `/media-library-template/${id}/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        ...params,
+      }),
+  };
   mediaLibraryV2 = {
     /**
      * No description
@@ -11258,6 +12001,72 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name GetMediaLibraryV2Resources
+     * @request GET:/media-library-v2/{id}/resources
+     */
+    getMediaLibraryV2Resources: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
+        any
+      >({
+        path: `/media-library-v2/${id}/resources`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name RemoveAllMediaLibraryV2ResourceMappings
+     * @request DELETE:/media-library-v2/{id}/resources
+     */
+    removeAllMediaLibraryV2ResourceMappings: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/media-library-v2/${id}/resources`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name GetMediaLibraryV2ResourceCount
+     * @request GET:/media-library-v2/{id}/resource-count
+     */
+    getMediaLibraryV2ResourceCount: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/media-library-v2/${id}/resource-count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags MediaLibraryV2
+     * @name GetMediaLibraryV2Statistics
+     * @request GET:/media-library-v2/{id}/statistics
+     */
+    getMediaLibraryV2Statistics: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersMediaLibraryStatistics,
+        any
+      >({
+        path: `/media-library-v2/${id}/statistics`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   migration = {
     /**
@@ -12929,6 +13738,652 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
+  pathMark = {
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetAllPathMarks
+     * @request GET:/path-mark
+     */
+    getAllPathMarks: (
+      query?: {
+        /** [0: None, 1: Property, 2: MediaLibrary] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllPathMarks
+     * @name getAllPathMarksUrl
+     */
+    getAllPathMarksUrl: (query?: {
+        /** [0: None, 1: Property, 2: MediaLibrary] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name AddPathMark
+     * @request POST:/path-mark
+     */
+    addPathMark: (data: BakabaseAbstractionsModelsDomainPathMark, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addPathMark
+     * @name addPathMarkUrl
+     */
+    addPathMarkUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPathMark
+     * @request GET:/path-mark/{id}
+     */
+    getPathMark: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name UpdatePathMark
+     * @request PUT:/path-mark/{id}
+     */
+    updatePathMark: (
+      id: number,
+      data: BakabaseAbstractionsModelsDomainPathMark,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name SoftDeletePathMark
+     * @request DELETE:/path-mark/{id}
+     */
+    softDeletePathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPathMarksByPath
+     * @request GET:/path-mark/by-path
+     */
+    getPathMarksByPath: (
+      query?: {
+        path?: string;
+        /** @default false */
+        includeDeleted?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/by-path`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPathMarksByPath
+     * @name getPathMarksByPathUrl
+     */
+    getPathMarksByPathUrl: (query?: {
+        path?: string;
+        /** @default false */
+        includeDeleted?: boolean;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/by-path`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name SoftDeletePathMarksByPath
+     * @request DELETE:/path-mark/by-path
+     */
+    softDeletePathMarksByPath: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/by-path`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for softDeletePathMarksByPath
+     * @name softDeletePathMarksByPathUrl
+     */
+    softDeletePathMarksByPathUrl: (query?: {
+        path?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/by-path`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetAllPathMarkPaths
+     * @request GET:/path-mark/paths
+     */
+    getAllPathMarkPaths: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/path-mark/paths`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllPathMarkPaths
+     * @name getAllPathMarkPathsUrl
+     */
+    getAllPathMarkPathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/paths`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPendingPathMarks
+     * @request GET:/path-mark/pending
+     */
+    getPendingPathMarks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/pending`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPendingPathMarks
+     * @name getPendingPathMarksUrl
+     */
+    getPendingPathMarksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/pending`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPendingPathMarksCount
+     * @request GET:/path-mark/pending/count
+     */
+    getPendingPathMarksCount: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/path-mark/pending/count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPendingPathMarksCount
+     * @name getPendingPathMarksCountUrl
+     */
+    getPendingPathMarksCountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/pending/count`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPathMarksBySyncStatus
+     * @request GET:/path-mark/by-status/{status}
+     */
+    getPathMarksBySyncStatus: (
+      status: BakabaseAbstractionsModelsDomainConstantsPathMarkSyncStatus,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/by-status/${status}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name AddPathMarks
+     * @request POST:/path-mark/batch
+     */
+    addPathMarks: (data: BakabaseAbstractionsModelsDomainPathMark[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addPathMarks
+     * @name addPathMarksUrl
+     */
+    addPathMarksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/batch`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name HardDeletePathMark
+     * @request DELETE:/path-mark/{id}/hard
+     */
+    hardDeletePathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/hard`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartSyncPathMark
+     * @request POST:/path-mark/{id}/sync/start
+     */
+    startSyncPathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/sync/start`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name CompleteSyncPathMark
+     * @request POST:/path-mark/{id}/sync/complete
+     */
+    completeSyncPathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/sync/complete`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name FailSyncPathMark
+     * @request POST:/path-mark/{id}/sync/fail
+     */
+    failSyncPathMark: (id: number, data: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/sync/fail`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPathMarkSyncStatus
+     * @request GET:/path-mark/sync-status
+     */
+    getPathMarkSyncStatus: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersPathMarkSyncStatusResponse,
+        any
+      >({
+        path: `/path-mark/sync-status`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPathMarkSyncStatus
+     * @name getPathMarkSyncStatusUrl
+     */
+    getPathMarkSyncStatusUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync-status`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name PreviewPathMarkMatchedPaths
+     * @request POST:/path-mark/preview
+     */
+    previewPathMarkMatchedPaths: (
+      data: BakabaseAbstractionsModelsInputPathMarkPreviewRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMarkPreviewResult,
+        any
+      >({
+        path: `/path-mark/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewPathMarkMatchedPaths
+     * @name previewPathMarkMatchedPathsUrl
+     */
+    previewPathMarkMatchedPathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/preview`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name CheckPathMarkPathsExist
+     * @request GET:/path-mark/check-paths-exist
+     */
+    checkPathMarkPathsExist: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1SystemCollectionsGenericDictionary2SystemStringSystemBoolean,
+        any
+      >({
+        path: `/path-mark/check-paths-exist`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for checkPathMarkPathsExist
+     * @name checkPathMarkPathsExistUrl
+     */
+    checkPathMarkPathsExistUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/check-paths-exist`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name MigratePathMarkPath
+     * @request POST:/path-mark/migrate-path
+     */
+    migratePathMarkPath: (
+      data: BakabaseServiceControllersPathMigrationRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/migrate-path`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for migratePathMarkPath
+     * @name migratePathMarkPathUrl
+     */
+    migratePathMarkPathUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/migrate-path`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartPathMarkSyncAll
+     * @request POST:/path-mark/sync/start-all
+     */
+    startPathMarkSyncAll: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/start-all`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPathMarkSyncAll
+     * @name startPathMarkSyncAllUrl
+     */
+    startPathMarkSyncAllUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/start-all`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartPathMarkSync
+     * @request POST:/path-mark/sync/start
+     */
+    startPathMarkSync: (data: number[], params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/start`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPathMarkSync
+     * @name startPathMarkSyncUrl
+     */
+    startPathMarkSyncUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/start`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartPathMarkSyncByPath
+     * @request POST:/path-mark/sync/by-path
+     */
+    startPathMarkSyncByPath: (
+      query?: {
+        path?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/by-path`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPathMarkSyncByPath
+     * @name startPathMarkSyncByPathUrl
+     */
+    startPathMarkSyncByPathUrl: (query?: {
+        path?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/by-path`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+  };
   playHistory = {
     /**
      * No description
@@ -13284,6 +14739,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getPropertiesByPool: (
       pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool,
+      query?: {
+        /** @default false */
+        includeDeprecated?: boolean;
+      },
       params: RequestParams = {},
     ) =>
       this.request<
@@ -13292,6 +14751,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/property/pool/${pool}`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -13846,32 +15306,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags Tool
-     * @name TestList
-     * @summary Test
-     * @request GET:/tool/test
-     */
-    testList: (params: RequestParams = {}) =>
-      this.request<void, any>({
-        path: `/tool/test`,
-        method: "GET",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for testList
-     * @name testListUrl
-     */
-    testListUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/tool/test`;
       
       return baseUrl + path;
     },

@@ -97,7 +97,8 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
                 ImageDownload = false,
                 ImageCut = "center",
                 Mosaic = mosaic,
-                Wanted = ""
+                Wanted = "",
+                SearchUrl = realUrl
             };
 
             Logger.LogInformation("Successfully parsed FC2 video: {Number} - {Title}", processedNumber, title);

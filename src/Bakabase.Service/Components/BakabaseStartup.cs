@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.App.Upgrade.Adapters;
 using Bakabase.Infrastructures.Components.Orm;
@@ -15,8 +16,6 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Bakaba
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
-using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
-using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
@@ -25,12 +24,12 @@ using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
-using Bakabase.Modules.ThirdParty.Extensions;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Service.Components.Tasks;
 using Bakabase.Service.Extensions;
+using Bakabase.Service.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm.Extensions;
 using Bootstrap.Components.Storage.OneDrive;
@@ -38,7 +37,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -60,7 +58,7 @@ namespace Bakabase.Service.Components
             //services.TryAddSingleton<SimpleBiliBiliFavoritesCollector>();
             services.AddSingleton<OneDriveService>();
 
-            services.AddBootstrapServices<InsideWorldDbContext>(c =>
+            services.AddBootstrapServices<BakabaseDbContext>(c =>
                 c.UseBootstrapSqLite(AppDataPath, "bakabase_insideworld"));
 
             services.AddBakabaseHttpClient<BakabaseHttpClientHandler>(InternalOptions.HttpClientNames.Default);
@@ -106,12 +104,30 @@ namespace Bakabase.Service.Components
 
             services.AddBTask<BTaskEventHandler>();
             services.AddSingleton<DynamicTaskRegistry>();
-            services.AddSingleton<PredefinedTasksProvider>();
+            services.AddSingleton<IPrepareCacheTrigger, PrepareCacheTrigger>();
 
-            services.AddMediaLibraryTemplate<InsideWorldDbContext>();
+            services.AddMediaLibraryTemplate<BakabaseDbContext>();
 
             // Add version check job that runs 30 seconds after startup
             services.AddHostedService<VersionCheckJob>();
+
+            // Add path mark expiration check job that periodically checks for expired marks
+            services.AddHostedService<PathMarkExpirationCheckJob>();
+
+            // Add resource discovery service for SSE-based cover and playable files discovery
+            services.AddSingleton<ResourceDiscoveryService>();
+            services.AddHostedService(sp => sp.GetRequiredService<ResourceDiscoveryService>());
+
+            // Add MiniProfiler for performance tracking
+            services.AddMiniProfiler(options =>
+            {
+                // Route for profiler results: /profiler/results-index
+                options.RouteBasePath = "/profiler";
+                // Only profile in development or when explicitly enabled
+                options.ShouldProfile = _ => true;
+                // Track SQL if using EF
+                options.TrackConnectionOpenClose = true;
+            });
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)
@@ -128,6 +144,9 @@ namespace Bakabase.Service.Components
         {
             var logger = app.ApplicationServices.GetRequiredService<ILogger<BakabaseStartup>>();
             logger.LogInformation($"Using app data directory: {AppService.DefaultAppDataDirectory}");
+
+            // Enable MiniProfiler - should be early in the pipeline
+            app.UseMiniProfiler();
 
             _ = app.ConfigurePostParser();
 

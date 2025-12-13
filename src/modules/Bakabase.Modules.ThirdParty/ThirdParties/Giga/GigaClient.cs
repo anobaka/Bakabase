@@ -17,9 +17,10 @@ public class GigaClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
         try
         {
             string? realUrl = appointUrl;
+            string searchUrl = "";
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"https://www.giga-web.jp/search/?keyword={Uri.EscapeDataString(number)}";
+                searchUrl = $"https://www.giga-web.jp/search/?keyword={Uri.EscapeDataString(number)}";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 if (htmlSearch.Contains("/cookie_set.php"))
                 {
@@ -96,7 +97,8 @@ public class GigaClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 PosterUrl = poster,
                 Website = realUrl,
                 Source = "giga",
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
 
             return detail;

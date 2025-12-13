@@ -19,7 +19,7 @@ namespace Bakabase.Modules.Enhancer.Services
 {
     [Obsolete]
     public class AbstractCategoryEnhancerOptionsService<TDbContext>(
-        ResourceService<TDbContext, Bakabase.Abstractions.Models.Db.CategoryEnhancerOptions, int> orm,
+        ResourceService<TDbContext, CategoryEnhancerOptions, int> orm,
         IEnhancerDescriptors enhancerDescriptors)
         : ICategoryEnhancerOptionsService where TDbContext : DbContext
     {
@@ -110,15 +110,6 @@ namespace Bakabase.Modules.Enhancer.Services
                     new CategoryEnhancerOptionsPatchInputModel(null, true)))
                 .Data;
 
-            var targetOptions =
-                data.Options?.TargetOptions?.FirstOrDefault(x =>
-                    x.Target == target && x.DynamicTarget == dynamicTarget);
-            if (targetOptions != null)
-            {
-                targetOptions.PropertyId = null;
-                targetOptions.PropertyPool = null;
-            }
-
             await orm.Update(data.ToDbModel());
 
             return BaseResponseBuilder.Ok;
@@ -139,79 +130,6 @@ namespace Bakabase.Modules.Enhancer.Services
             {
                 data.Options!.TargetOptions!.Remove(targetOptions);
                 await orm.Update(data.ToDbModel());
-            }
-
-            return BaseResponseBuilder.Ok;
-        }
-
-        private void RemoveInvalidOptions(CategoryEnhancerFullOptions options)
-        {
-            var enhancerDescriptor = enhancerDescriptors.TryGet(options.EnhancerId);
-            if (enhancerDescriptor != null)
-            {
-                var targetDescriptorMap = enhancerDescriptor.Targets.ToDictionary(d => d.Id, d => d);
-                options.Options?.TargetOptions?.RemoveAll(x =>
-                    !targetDescriptorMap.ContainsKey(x.Target) ||
-                    (!targetDescriptorMap[x.Target].IsDynamic && !string.IsNullOrEmpty(x.DynamicTarget)));
-            }
-        }
-
-        public async Task<BaseResponse> PatchTarget(int categoryId, int enhancerId, int target, string? dynamicTarget,
-            CategoryEnhancerTargetOptionsPatchInputModel patches)
-        {
-            var targetDescriptor = enhancerDescriptors[enhancerId].Targets.FirstOrDefault(t => t.Id == target);
-            if (targetDescriptor == null)
-            {
-                return BaseResponseBuilder.BuildBadRequest(
-                    $"Target descriptor for target:{target} of enhancer:{enhancerId} is not found.");
-            }
-
-            if (!targetDescriptor.IsDynamic &&
-                (!string.IsNullOrEmpty(dynamicTarget) || !string.IsNullOrEmpty(patches.DynamicTarget)))
-            {
-                return BaseResponseBuilder.BuildBadRequest($"Can not set dynamic target for a non-dynamic target");
-            }
-
-            var data = await GetByCategoryAndEnhancer(categoryId, enhancerId) ?? (await Patch(categoryId, enhancerId,
-                    new CategoryEnhancerOptionsPatchInputModel(null, true)))
-                .Data;
-
-            var targetOptions =
-                data.Options?.TargetOptions?.FirstOrDefault(x =>
-                    x.Target == target && x.DynamicTarget == dynamicTarget);
-            if (targetOptions == null)
-            {
-                targetOptions = new EnhancerTargetFullOptions {Target = target};
-                data.Options ??= new EnhancerFullOptions();
-                data.Options.TargetOptions ??= [];
-                data.Options.TargetOptions.Add(targetOptions);
-            }
-
-            targetOptions.PropertyId = patches.PropertyId ?? targetOptions.PropertyId;
-            targetOptions.PropertyPool = patches.PropertyPool ?? targetOptions.PropertyPool;
-
-            if (patches.AutoBindProperty.HasValue)
-            {
-                if (patches.AutoBindProperty.Value != targetOptions.AutoBindProperty)
-                {
-                    targetOptions.AutoBindProperty = patches.AutoBindProperty.Value;
-                    targetOptions.PropertyPool = null;
-                    targetOptions.PropertyId = null;
-                }
-            }
-
-            targetOptions.CoverSelectOrder = patches.CoverSelectOrder ?? targetOptions.CoverSelectOrder;
-            // patch or create
-            targetOptions.DynamicTarget = patches.DynamicTarget ?? dynamicTarget;
-
-            var dbData = data.ToDbModel();
-            if (dbData.Id > 0)
-            {
-                await orm.Update(dbData);
-            }
-            else
-            {
-                await orm.Add(dbData);
             }
 
             return BaseResponseBuilder.Ok;

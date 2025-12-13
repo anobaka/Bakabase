@@ -18,11 +18,12 @@ public class MadouquClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             // Search on site (domain can vary; use default)
             string? realUrl = appointUrl;
             var searchBases = new[] { "https://madouqu.com" };
+            string searchUrl = "";
             if (string.IsNullOrWhiteSpace(realUrl))
             {
                 foreach (var baseUrl in searchBases)
                 {
-                    var searchUrl = $"{baseUrl}/?s={Uri.EscapeDataString(number)}";
+                    searchUrl = $"{baseUrl}/?s={Uri.EscapeDataString(number)}";
                     string html;
                     try { html = await HttpClient.GetStringAsync(searchUrl); } catch { continue; }
                     var doc = new CQ(html);
@@ -80,7 +81,8 @@ public class MadouquClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 PosterUrl = "",
                 Website = realUrl,
                 Source = "madouqu",
-                Mosaic = "国产"
+                Mosaic = "国产",
+                SearchUrl = searchUrl
             };
 
             return detail;

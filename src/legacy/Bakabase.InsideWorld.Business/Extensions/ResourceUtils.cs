@@ -4,16 +4,36 @@ using System.Collections.Generic;
 using System.Linq;
 using System;
 using System.Drawing.Text;
+using System.Text.RegularExpressions;
 using NPOI.SS.Formula.Functions;
 
 namespace Bakabase.InsideWorld.Business.Extensions
 {
     public class ResourceUtils
     {
+        private static readonly Regex PropertyPlaceholderRegex = new(@"\{[^{}]+\}", RegexOptions.Compiled);
+
         public static ResourceDisplayNameViewModel.Segment[] SplitDisplayNameTemplateIntoSegments(
             string template, Dictionary<string, string?> propertyReplacements, (string Left, string Right)[] wrappers)
         {
-            var matchers = propertyReplacements.Keys.ToArray();
+            // Find all {PropertyName} patterns in template, not just those in propertyReplacements
+            // This ensures properties without values are removed rather than displayed as literal text
+            var templateMatchers = PropertyPlaceholderRegex.Matches(template)
+                .Select(m => m.Value)
+                .Distinct()
+                .ToArray();
+
+            // Merge: template matchers take precedence, use null for missing properties
+            var allReplacements = new Dictionary<string, string?>(propertyReplacements);
+            foreach (var matcher in templateMatchers)
+            {
+                if (!allReplacements.ContainsKey(matcher))
+                {
+                    allReplacements[matcher] = null;
+                }
+            }
+
+            var matchers = allReplacements.Keys.ToArray();
             var findsRanges = new List<(string Find, int StartIdx, int EndIdx)>();
             foreach (var find in matchers)
             {
@@ -89,7 +109,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
             foreach (var segment in segments.Where(segment =>
                          segment.Type == CategoryResourceDisplayNameSegmentType.Property))
             {
-                segment.Text = propertyReplacements.GetValueOrDefault(segment.Text) ?? string.Empty;
+                segment.Text = allReplacements.GetValueOrDefault(segment.Text) ?? string.Empty;
             }
 
             // remove wrappers without inner content

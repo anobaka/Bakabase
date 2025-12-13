@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bakabase.InsideWorld.Business.Migrations
 {
-    [DbContext(typeof(InsideWorldDbContext))]
+    [DbContext(typeof(BakabaseDbContext))]
     [Migration("20250613025411_V192AddResourceCountToMediaLibraryV2")]
     partial class V192AddResourceCountToMediaLibraryV2
     {

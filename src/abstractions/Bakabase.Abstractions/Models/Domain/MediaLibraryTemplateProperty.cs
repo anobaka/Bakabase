@@ -1,9 +1,15 @@
-﻿using Bakabase.Abstractions.Components;
+﻿using System;
+using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Cryptography;
 
 namespace Bakabase.Abstractions.Models.Domain;
 
+/// <summary>
+/// Property configuration for MediaLibraryTemplate.
+/// This is read-only for backward compatibility. Use ResourceProfile.PropertyOptions for new configurations.
+/// </summary>
+[Obsolete("Use ResourceProfile.PropertyOptions instead. This is read-only for backward compatibility.")]
 public record MediaLibraryTemplateProperty : ISyncVersion
 {
     private PropertyPool _pool;

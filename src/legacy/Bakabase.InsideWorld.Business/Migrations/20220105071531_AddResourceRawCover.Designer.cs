@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bakabase.InsideWorld.Business.Migrations
 {
-    [DbContext(typeof(InsideWorldDbContext))]
+    [DbContext(typeof(BakabaseDbContext))]
     [Migration("20220105071531_AddResourceRawCover")]
     partial class AddResourceRawCover
     {

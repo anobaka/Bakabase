@@ -45,6 +45,7 @@ public class AvsexClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
             string realUrl;
             string posterUrl = "";
+            string? searchUrl = null;
 
             if (!string.IsNullOrEmpty(appointUrl))
             {
@@ -52,7 +53,7 @@ public class AvsexClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             }
             else
             {
-                var searchUrl = $"{actualBaseUrl}/tw/search?query={processedNumber.ToLower()}";
+                searchUrl = $"{actualBaseUrl}/tw/search?query={processedNumber.ToLower()}";
                 var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 var searchCq = new CQ(searchHtml);
 
@@ -90,7 +91,8 @@ public class AvsexClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 Runtime = GetRuntime(detailCq).ToString(),
                 ExtraFanart = GetExtraFanart(detailCq),
                 Website = Regex.Replace(realUrl, @"http[s]?://[^/]+", actualBaseUrl),
-                Source = "avsex"
+                Source = "avsex",
+                SearchUrl = searchUrl
             };
 
             detail.Year = GetYear(detail.Release);

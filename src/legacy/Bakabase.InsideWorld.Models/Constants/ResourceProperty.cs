@@ -25,6 +25,17 @@ namespace Bakabase.InsideWorld.Models.Constants
         MediaLibrary = 21,
         Cover = 22,
         PlayedAt = 23,
+        /// <summary>
+        /// DEPRECATED: Use MediaLibraryV2Multi instead.
+        /// This is a facade - all operations redirect to MediaLibraryV2Multi internally.
+        /// Returns SingleChoice format (first value only) for backward compatibility.
+        /// </summary>
+        [Obsolete("Use MediaLibraryV2Multi instead. Facade only - all operations redirect to MediaLibraryV2Multi.")]
         MediaLibraryV2 = 24,
+        /// <summary>
+        /// Media library binding with multiple choice support.
+        /// New code should use this instead of MediaLibraryV2.
+        /// </summary>
+        MediaLibraryV2Multi = 25,
     }
 }

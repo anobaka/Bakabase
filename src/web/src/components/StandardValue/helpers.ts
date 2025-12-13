@@ -1,6 +1,7 @@
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
 import type { LinkValue, MultilevelData, TagValue } from "./models";
+import type { StandardValueOf } from "@/components/Property/PropertySystem";
 
 import dayjs from "dayjs";
 
@@ -21,7 +22,7 @@ export const filterMultilevelData = <V>(
   const result: MultilevelData<V>[] = [];
 
   for (const d of data) {
-    if (d.label.toLowerCase().includes(keyword)) {
+    if (d.label?.toLowerCase().includes(keyword)) {
       result.push(d);
     } else {
       if (d.children && d.children.length > 0) {
@@ -63,6 +64,10 @@ export const findNodeChainInMultilevelData = <V>(
   return;
 };
 
+/**
+ * Convert API value to the correct runtime type.
+ * Use convertFromApiValueTyped for type-safe access.
+ */
 export const convertFromApiValue = (
   value: any | null,
   type: StandardValueType,
@@ -87,12 +92,27 @@ export const convertFromApiValue = (
   }
 };
 
+/**
+ * Type-safe version of convertFromApiValue.
+ * Returns correctly typed value based on StandardValueType.
+ */
+export function convertFromApiValueTyped<T extends StandardValueType>(
+  value: any | null,
+  type: T,
+): StandardValueOf<T> | undefined {
+  return convertFromApiValue(value, type) as StandardValueOf<T> | undefined;
+}
+
 const Serialization = {
   LowLevelSeparator: ",",
   HighLevelSeparator: ";",
   EscapeChar: "\\",
 };
 
+/**
+ * Deserialize a string to the correct runtime type.
+ * Use deserializeStandardValueTyped for type-safe access.
+ */
 export const deserializeStandardValue = (
   value: string | null,
   type: StandardValueType,
@@ -201,6 +221,21 @@ export const deserializeStandardValue = (
   }
 };
 
+/**
+ * Type-safe version of deserializeStandardValue.
+ * Returns correctly typed value based on StandardValueType.
+ */
+export function deserializeStandardValueTyped<T extends StandardValueType>(
+  value: string | null,
+  type: T,
+): StandardValueOf<T> | undefined {
+  return deserializeStandardValue(value, type) as StandardValueOf<T> | undefined;
+}
+
+/**
+ * Serialize a value to string representation.
+ * Use serializeStandardValueTyped for type-safe input.
+ */
 export const serializeStandardValue = (
   value: any | null,
   type: StandardValueType,
@@ -280,3 +315,14 @@ export const serializeStandardValue = (
     }
   }
 };
+
+/**
+ * Type-safe version of serializeStandardValue.
+ * Ensures type-safe input value based on StandardValueType.
+ */
+export function serializeStandardValueTyped<T extends StandardValueType>(
+  value: StandardValueOf<T> | null | undefined,
+  type: T,
+): string | undefined {
+  return serializeStandardValue(value, type);
+}

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -12,7 +14,9 @@ namespace Bakabase.Service.Controllers;
 
 [ApiController]
 [Route("~/media-library-v2")]
-public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : ControllerBase
+public class MediaLibraryV2Controller(
+    IMediaLibraryV2Service service,
+    IMediaLibraryResourceMappingService mappingService) : ControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryV2")]
@@ -102,4 +106,75 @@ public class MediaLibraryV2Controller(IMediaLibraryV2Service service) : Controll
         var items = await service.GetAllSyncMayBeOutdated();
         return new ListResponse<MediaLibraryV2>(items);
     }
+
+    #region Multi-Library Resource Management
+
+    /// <summary>
+    /// Get all resource mappings for a media library
+    /// </summary>
+    [HttpGet("{id:int}/resources")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2Resources")]
+    public async Task<ListResponse<MediaLibraryResourceMapping>> GetResources(int id)
+    {
+        var mappings = await mappingService.GetByMediaLibraryId(id);
+        return new ListResponse<MediaLibraryResourceMapping>(mappings);
+    }
+
+    /// <summary>
+    /// Get resource count for a media library
+    /// </summary>
+    [HttpGet("{id:int}/resource-count")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2ResourceCount")]
+    public async Task<SingletonResponse<int>> GetResourceCount(int id)
+    {
+        var mappings = await mappingService.GetByMediaLibraryId(id);
+        return new SingletonResponse<int>(mappings.Count);
+    }
+
+    /// <summary>
+    /// Remove all resource mappings for a media library (does not delete resources)
+    /// </summary>
+    [HttpDelete("{id:int}/resources")]
+    [SwaggerOperation(OperationId = "RemoveAllMediaLibraryV2ResourceMappings")]
+    public async Task<BaseResponse> RemoveAllResourceMappings(int id)
+    {
+        await mappingService.DeleteByMediaLibraryId(id);
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
+    /// Get statistics for a media library including resource counts
+    /// </summary>
+    [HttpGet("{id:int}/statistics")]
+    [SwaggerOperation(OperationId = "GetMediaLibraryV2Statistics")]
+    public async Task<SingletonResponse<MediaLibraryStatistics>> GetStatistics(int id)
+    {
+        var mediaLibrary = await service.Get(id);
+        if (mediaLibrary == null)
+        {
+            return SingletonResponseBuilder<MediaLibraryStatistics>.NotFound;
+        }
+
+        var mappings = await mappingService.GetByMediaLibraryId(id);
+
+        var stats = new MediaLibraryStatistics
+        {
+            TotalResourceCount = mappings.Count
+        };
+
+        return new SingletonResponse<MediaLibraryStatistics>(stats);
+    }
+
+    #endregion
+}
+
+/// <summary>
+/// Statistics for a media library
+/// </summary>
+public class MediaLibraryStatistics
+{
+    /// <summary>
+    /// Total number of resources mapped to this library
+    /// </summary>
+    public int TotalResourceCount { get; set; }
 }

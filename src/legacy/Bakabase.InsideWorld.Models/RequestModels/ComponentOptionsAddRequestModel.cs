@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
+    [Obsolete]
     public class ComponentOptionsAddRequestModel
     {
         [Required] public string Name { get; set; } = string.Empty;

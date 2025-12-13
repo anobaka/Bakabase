@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Services
 {
-    public class PasswordService : ResourceService<InsideWorldDbContext, Password, string>
+    public class PasswordService : ResourceService<BakabaseDbContext, Password, string>
     {
         public PasswordService(IServiceProvider serviceProvider) : base(serviceProvider)
         {

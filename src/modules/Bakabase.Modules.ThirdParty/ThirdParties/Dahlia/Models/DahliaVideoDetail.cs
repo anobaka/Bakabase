@@ -22,4 +22,5 @@ public record DahliaVideoDetail : Bakabase.Abstractions.Models.Domain.IAvDetail
     public string? Trailer { get; set; }
     public string? Website { get; set; }
     public string? Mosaic { get; set; }
+    public string? SearchUrl { get; set; }
 }

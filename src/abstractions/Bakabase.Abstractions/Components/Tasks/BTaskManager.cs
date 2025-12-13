@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.View;
@@ -23,6 +24,8 @@ public class BTaskManager : IAsyncDisposable
     private readonly IBTaskEventHandler _eventHandler;
     private readonly IDisposable _optionsChangeHandler;
     private readonly ILogger<BTaskManager> _logger;
+    private readonly CancellationTokenSource _daemonCts = new();
+    private Task? _daemonTask;
 
     public BTaskManager(IBakabaseLocalizer localizer, AspNetCoreOptionsManager<TaskOptions> options,
         IServiceProvider serviceProvider,
@@ -125,12 +128,7 @@ public class BTaskManager : IAsyncDisposable
             }
         }
 
-        var task = new BTask(builder.Id, builder.GetName, builder.GetDescription, builder.GetMessageOnInterruption,
-            builder.ConflictKeys, builder.Level, builder.IsPersistent, builder.Type, builder.ResourceType, builder.ResourceKeys)
-        {
-            EnableAfter = enableAfter,
-            Interval = dbModel?.Interval ?? builder.Interval
-        };
+        var task = builder.ToBTask(enableAfter, dbModel?.Interval);
 
         return new BTaskHandler(builder.Run, task, _serviceProvider,
             builder.OnStatusChange,
@@ -170,7 +168,7 @@ public class BTaskManager : IAsyncDisposable
         {
             if (newTaskBuilder != null)
             {
-                Enqueue(newTaskBuilder());
+                await Enqueue(newTaskBuilder());
                 await Start(id, null);
                 return;
             }
@@ -194,7 +192,8 @@ public class BTaskManager : IAsyncDisposable
             case BTaskStatus.Completed:
             case BTaskStatus.Cancelled:
             {
-                if (!_getConflictTasks(d).Any())
+                var (blockers, _) = GetDependencyStatus(d);
+                if (!_getConflictTasks(d).Any() && blockers.Length == 0)
                 {
                     await d.Start();
                 }
@@ -225,23 +224,78 @@ public class BTaskManager : IAsyncDisposable
             .ToArray();
     }
 
+    /// <summary>
+    /// Returns dependency status for a task.
+    /// </summary>
+    /// <param name="d">The task to check</param>
+    /// <returns>
+    /// blockers: Tasks that are blocking this task from starting
+    /// shouldFail: Whether this task should be marked as failed due to dependency failures
+    /// </returns>
+    private (BTaskHandler[] blockers, bool shouldFail) GetDependencyStatus(BTaskHandler d)
+    {
+        if (d.Task.DependsOn == null || d.Task.DependsOn.Count == 0)
+            return ([], false);
+
+        var blockers = new List<BTaskHandler>();
+        var hasFailedDep = false;
+
+        foreach (var depId in d.Task.DependsOn)
+        {
+            if (_taskMap.TryGetValue(depId, out var depTask))
+            {
+                if (depTask.Task.Status == BTaskStatus.Error)
+                {
+                    hasFailedDep = true;
+                    // If policy is Skip, don't add to blockers
+                    if (d.Task.DependencyFailurePolicy == BTaskDependencyFailurePolicy.Skip)
+                        continue;
+                }
+
+                if (depTask.Task.Status != BTaskStatus.Completed)
+                    blockers.Add(depTask);
+            }
+            else
+            {
+                _logger.LogWarning($"Task [{d.Id}] depends on [{depId}] which is not registered");
+            }
+        }
+
+        var shouldFail = hasFailedDep && d.Task.DependencyFailurePolicy == BTaskDependencyFailurePolicy.Fail;
+        return (blockers.ToArray(), shouldFail);
+    }
 
     private Task Daemon()
     {
-        Task.Run(async () =>
+        _daemonTask = Task.Run(async () =>
         {
-            while (true)
+            while (!_daemonCts.IsCancellationRequested)
             {
                 try
                 {
                     var now = DateTime.Now;
                     var activeTasks = _taskMap.Values
                         .Where(x => (x.NextTimeStartAt < now || x.Task.Status is BTaskStatus.NotStarted) &&
-                                    (!x.Task.EnableAfter.HasValue || x.Task.EnableAfter <= now))
+                                    (!x.Task.EnableAfter.HasValue || x.Task.EnableAfter <= now) &&
+                                    (!x.Task.NextRetryAt.HasValue || x.Task.NextRetryAt <= now))
                         .OrderBy(x => x.Task.LastFinishedAt).ThenBy(x => x.Task.CreatedAt).ToArray();
+
                     foreach (var at in activeTasks)
                     {
-                        if (!_getConflictTasks(at).Any())
+                        var (blockers, shouldFail) = GetDependencyStatus(at);
+
+                        if (shouldFail)
+                        {
+                            // Mark task as failed due to dependency failure
+                            await at.UpdateTask(t =>
+                            {
+                                t.SetError("Dependency failed", "One or more dependency tasks have failed");
+                                t.Status = BTaskStatus.Error;
+                            });
+                            continue;
+                        }
+
+                        if (!_getConflictTasks(at).Any() && blockers.Length == 0)
                         {
                             await at.TryStartAutomatically();
                         }
@@ -252,7 +306,14 @@ public class BTaskManager : IAsyncDisposable
                     _logger.LogError(e, "An error occurred during daemon");
                 }
 
-                await Task.Delay(1000);
+                try
+                {
+                    await Task.Delay(1000, _daemonCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
             }
         });
         return Task.CompletedTask;
@@ -321,11 +382,18 @@ public class BTaskManager : IAsyncDisposable
         if (handler.Task.Status is BTaskStatus.Completed or BTaskStatus.Error or BTaskStatus.NotStarted)
         {
             var conflictTasks = _getConflictTasks(handler);
+            var (dependencyBlockers, _) = GetDependencyStatus(handler);
             if (conflictTasks.Any())
             {
                 reasonForUnableToStart =
                     _localizer.BTask_FailedToRunTaskDueToConflict(handler.Task.Name,
                         conflictTasks.Select(c => c.Task.Name).ToArray());
+            }
+            else if (dependencyBlockers.Any())
+            {
+                reasonForUnableToStart =
+                    _localizer.BTask_FailedToRunTaskDueToDependency(handler.Task.Name,
+                        dependencyBlockers.Select(d => d.Task.Name).ToArray());
             }
         }
 
@@ -338,9 +406,54 @@ public class BTaskManager : IAsyncDisposable
     public BTaskViewModel? GetTaskViewModel(string id) =>
         _taskMap.TryGetValue(id, out var bt) ? BuildTaskViewModel(bt) : null;
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         _optionsChangeHandler.Dispose();
-        return ValueTask.CompletedTask;
+
+        // 1. Stop daemon
+        await _daemonCts.CancelAsync();
+        if (_daemonTask != null)
+        {
+            try
+            {
+                await _daemonTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+            }
+        }
+        _daemonCts.Dispose();
+
+        // 2. Stop non-Critical tasks
+        var nonCriticalTasks = _taskMap.Values
+            .Where(t => t.Task.Level != BTaskLevel.Critical &&
+                        t.Task.Status is BTaskStatus.Running or BTaskStatus.Paused)
+            .ToList();
+
+        foreach (var task in nonCriticalTasks)
+        {
+            _logger.LogInformation($"Stopping non-critical task: {task.Id}");
+            await task.Stop();
+        }
+
+        // 3. Wait for Critical tasks to complete
+        var criticalTasks = _taskMap.Values
+            .Where(t => t.Task.Level == BTaskLevel.Critical &&
+                        t.Task.Status is BTaskStatus.Running or BTaskStatus.Paused)
+            .ToList();
+
+        if (criticalTasks.Count > 0)
+        {
+            _logger.LogInformation($"Waiting for {criticalTasks.Count} critical task(s) to complete...");
+
+            // Wait for all Critical tasks to complete
+            while (criticalTasks.Any(t => t.Task.Status is BTaskStatus.Running or BTaskStatus.Paused))
+            {
+                await Task.Delay(100);
+            }
+
+            _logger.LogInformation("All critical tasks completed");
+        }
     }
 }

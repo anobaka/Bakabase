@@ -68,7 +68,8 @@ public class JavlibraryClient(IHttpClientFactory httpClientFactory, ILoggerFacto
                 CoverUrl = cover,
                 PosterUrl = string.Empty,
                 Website = realUrl,
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
         }
         catch

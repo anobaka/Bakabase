@@ -24,7 +24,7 @@ interface ISimpleFooter {
   cancelProps?: ButtonProps & { ref?: LegacyRef<HTMLButtonElement> };
 }
 
-type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "full";
+type Size = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl" | "7xl" | "full";
 
 export interface ModalProps
   extends DestroyableProps,
@@ -56,6 +56,26 @@ const Modal = (props: ModalProps) => {
 
   const autoFocused = useRef(false);
 
+  let classNameParts: string[] = [];
+  switch (props.size) {
+    case "5xl":
+      classNameParts.push("max-w-5xl");
+      break;
+    case "6xl":
+      classNameParts.push("max-w-6xl");
+      break;
+    case "7xl":
+      classNameParts.push("max-w-7xl");
+      break;
+    default:
+      break;
+  }
+
+  if (props.className) {
+    classNameParts.push(props.className);
+  }
+  const className = classNameParts.join(" ");
+
   useEffect(() => {
     // console.log('modal initialized');
   }, []);
@@ -81,6 +101,8 @@ const Modal = (props: ModalProps) => {
         setSize("4xl");
         break;
       case "5xl":
+      case "6xl":
+      case "7xl":
         setSize("5xl");
         break;
       case "xl":
@@ -212,7 +234,7 @@ const Modal = (props: ModalProps) => {
         }
         domRef.current = r;
       }}
-      className={props.className}
+      className={className}
       classNames={classNames}
       size={size}
       style={props.style}

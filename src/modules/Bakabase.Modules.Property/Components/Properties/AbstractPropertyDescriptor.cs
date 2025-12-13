@@ -4,7 +4,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
-using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
@@ -13,42 +13,14 @@ namespace Bakabase.Modules.Property.Components.Properties
 {
     public abstract class
         AbstractPropertyDescriptor<TDbValue, TBizValue> : IPropertyDescriptor,
-        IPropertySearchHandler
+        IPropertySearchHandler,
+        IPropertyIndexProvider,
+        IPropertyIndexSearcher
     {
-        public StandardValueType DbValueType => Type.GetDbValueType();
-        public StandardValueType BizValueType => Type.GetBizValueType();
+        public StandardValueType DbValueType => PropertySystem.Property.GetDbValueType(Type);
+        public StandardValueType BizValueType => PropertySystem.Property.GetBizValueType(Type);
 
         public abstract PropertyType Type { get; }
-        // public Bakabase.Abstractions.Models.Domain.Property ToDomainModel(CustomPropertyDbModel customProperty)
-        // {
-        //     return new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Custom, customProperty.Id, customProperty.Type, customProperty.Name, )
-        //     {
-        //         Categories = null,
-        //         CreatedAt = customProperty.CreatedAt,
-        //         Id = customProperty.Id,
-        //         Name = customProperty.Name,
-        //         Type = Type,
-        //         DbValueType = DbValueType,
-        //         BizValueType = BizValueType
-        //     };
-        // }
-        //
-        // public CustomPropertyValue ToDomainModel(CustomPropertyValueDbModel value)
-        // {
-        //     var innerValue = value.Value?.DeserializeAsStandardValue(DbValueType);
-        //
-        //     var dto = new TPropertyValue
-        //     {
-        //         Id = value.Id,
-        //         Property = null,
-        //         PropertyId = value.PropertyId,
-        //         ResourceId = value.ResourceId,
-        //         TypedValue = (TDbValue?) innerValue,
-        //         Scope = value.Scope
-        //     };
-        //
-        //     return dto;
-        // }
 
         protected virtual void EnsureOptionsType(object? options)
         {
@@ -79,31 +51,19 @@ namespace Bakabase.Modules.Property.Components.Properties
         public virtual object? InitializeOptions() => null;
         public virtual Type? OptionsType => null;
 
-        // public CustomPropertyValue InitializePropertyValue(object? dbValue, int resourceId, int propertyId, int scope)
-        // {
-        //     return new TPropertyValue
-        //     {
-        //         PropertyId = propertyId,
-        //         Scope = scope,
-        //         ResourceId = resourceId,
-        //         Value = dbValue is TDbValue? ? dbValue : default,
-        //     };
-        // }
-
         public bool IsMatch(object? dbValue, SearchOperation operation, object? filterValue)
         {
             // validate filter value
-            // todo: optimize filter value
-            var expectedFilterValueType = SearchOperations.GetValueOrDefault(operation)?.AsType.GetDbValueType();
-            if (expectedFilterValueType.HasValue)
+            var expectedFilterValueType = PropertySystem.Property.GetDbValueType(
+                SearchOperations.GetValueOrDefault(operation)?.AsType ?? Type);
+            if (!filterValue.IsStandardValueType(expectedFilterValueType))
             {
-                if (!filterValue.IsStandardValueType(expectedFilterValueType.Value))
-                {
-                    return false;
-                }
+                return false;
             }
 
-            if (dbValue is TDbValue tv)
+            var optValue = StandardValueSystem.GetHandler(expectedFilterValueType).Optimize(dbValue);
+
+            if (optValue is TDbValue tv)
             {
                 return operation switch
                 {
@@ -142,7 +102,8 @@ namespace Bakabase.Modules.Property.Components.Properties
                 return null;
             }
 
-            var dbValueType = SearchOperations.GetValueOrDefault(sf.Value.Operation)?.AsType.GetDbValueType();
+            var opAsType = SearchOperations.GetValueOrDefault(sf.Value.Operation)?.AsType;
+            var dbValueType = opAsType != null ? PropertySystem.Property.GetDbValueType(opAsType.Value) : (StandardValueType?)null;
             if (!dbValueType.HasValue)
             {
                 return null;
@@ -160,6 +121,376 @@ namespace Bakabase.Modules.Property.Components.Properties
 
         protected virtual (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(
             Bakabase.Abstractions.Models.Domain.Property property, string keyword) => null;
+
+        #region IPropertyIndexProvider
+
+        /// <summary>
+        /// 生成索引条目，默认实现将值转换为字符串作为索引键
+        /// 子类可以覆盖此方法提供特定的索引生成逻辑
+        /// </summary>
+        public virtual IEnumerable<PropertyIndexEntry> GenerateIndexEntries(
+            Bakabase.Abstractions.Models.Domain.Property property,
+            object? dbValue)
+        {
+            if (dbValue == null) yield break;
+
+            if (dbValue is TDbValue typedValue)
+            {
+                foreach (var entry in GenerateIndexEntriesInternal(property, typedValue))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 生成索引条目的内部实现，默认将值转换为单个字符串键
+        /// </summary>
+        protected virtual IEnumerable<PropertyIndexEntry> GenerateIndexEntriesInternal(
+            Bakabase.Abstractions.Models.Domain.Property property,
+            TDbValue dbValue)
+        {
+            var key = dbValue?.ToString();
+            if (!string.IsNullOrEmpty(key))
+            {
+                // 对于数值和日期类型，同时提供范围值
+                IComparable? rangeValue = dbValue is IComparable c && IsNumericOrDateTime(dbValue) ? c : null;
+                yield return new PropertyIndexEntry(key, rangeValue);
+            }
+        }
+
+        private static bool IsNumericOrDateTime(object value)
+        {
+            return value is int or long or float or double or decimal
+                or System.DateTime or System.DateTimeOffset or System.TimeSpan;
+        }
+
+        #endregion
+
+        #region IPropertyIndexSearcher
+
+        /// <summary>
+        /// 在索引上执行搜索操作
+        /// </summary>
+        public virtual HashSet<int>? SearchIndex(
+            SearchOperation operation,
+            object? filterDbValue,
+            IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+            IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex,
+            IReadOnlyCollection<int> allResourceIds)
+        {
+            // Handle null checks
+            return operation switch
+            {
+                SearchOperation.IsNull => SearchIsNull(valueIndex, rangeIndex, allResourceIds),
+                SearchOperation.IsNotNull => SearchIsNotNull(valueIndex, rangeIndex),
+                _ => filterDbValue is TDbValue typedValue
+                    ? SearchIndexInternal(operation, typedValue, valueIndex, rangeIndex, allResourceIds)
+                    : new HashSet<int>()
+            };
+        }
+
+        /// <summary>
+        /// 子类覆盖此方法以提供特定的索引搜索逻辑
+        /// </summary>
+        protected virtual HashSet<int>? SearchIndexInternal(
+            SearchOperation operation,
+            TDbValue filterDbValue,
+            IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+            IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex,
+            IReadOnlyCollection<int> allResourceIds)
+        {
+            // 尝试范围搜索（用于数值和日期类型）
+            if (filterDbValue is IComparable comparable && IsNumericOrDateTime(filterDbValue))
+            {
+                var rangeResult = SearchRangeIndex(operation, comparable, rangeIndex, allResourceIds);
+                if (rangeResult != null)
+                {
+                    return rangeResult;
+                }
+            }
+
+            // 默认：单值类型的基础实现
+            var normalizedKey = NormalizeForIndex(filterDbValue);
+            if (string.IsNullOrEmpty(normalizedKey))
+            {
+                return new HashSet<int>();
+            }
+
+            return operation switch
+            {
+                SearchOperation.Equals => GetExactMatch(normalizedKey, valueIndex),
+                SearchOperation.NotEquals => Negate(GetExactMatch(normalizedKey, valueIndex), allResourceIds),
+                SearchOperation.Contains => SearchContains(normalizedKey, valueIndex),
+                SearchOperation.NotContains => Negate(SearchContains(normalizedKey, valueIndex), allResourceIds),
+                SearchOperation.StartsWith => SearchStartsWith(normalizedKey, valueIndex),
+                SearchOperation.NotStartsWith => Negate(SearchStartsWith(normalizedKey, valueIndex), allResourceIds),
+                SearchOperation.EndsWith => SearchEndsWith(normalizedKey, valueIndex),
+                SearchOperation.NotEndsWith => Negate(SearchEndsWith(normalizedKey, valueIndex), allResourceIds),
+                SearchOperation.Matches => SearchMatches(normalizedKey, valueIndex),
+                SearchOperation.NotMatches => Negate(SearchMatches(normalizedKey, valueIndex), allResourceIds),
+                _ => null
+            };
+        }
+
+        /// <summary>
+        /// 将值规范化为索引键
+        /// </summary>
+        protected virtual string? NormalizeForIndex(TDbValue? value) =>
+            value?.ToString()?.Trim().ToLowerInvariant();
+
+        #region Index Search Helpers
+
+        /// <summary>
+        /// 精确匹配
+        /// </summary>
+        protected static HashSet<int> GetExactMatch(string key, IReadOnlyDictionary<string, HashSet<int>>? valueIndex)
+        {
+            if (valueIndex == null) return new HashSet<int>();
+            return valueIndex.TryGetValue(key, out var ids) ? new HashSet<int>(ids) : new HashSet<int>();
+        }
+
+        /// <summary>
+        /// 包含搜索（遍历所有索引键）
+        /// </summary>
+        protected static HashSet<int> SearchContains(string searchTerm, IReadOnlyDictionary<string, HashSet<int>>? valueIndex)
+        {
+            if (valueIndex == null) return new HashSet<int>();
+
+            var result = new HashSet<int>();
+            foreach (var (key, resourceIds) in valueIndex)
+            {
+                if (key.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.UnionWith(resourceIds);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 前缀搜索
+        /// </summary>
+        protected static HashSet<int> SearchStartsWith(string prefix, IReadOnlyDictionary<string, HashSet<int>>? valueIndex)
+        {
+            if (valueIndex == null) return new HashSet<int>();
+
+            var result = new HashSet<int>();
+            foreach (var (key, resourceIds) in valueIndex)
+            {
+                if (key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.UnionWith(resourceIds);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 后缀搜索
+        /// </summary>
+        protected static HashSet<int> SearchEndsWith(string suffix, IReadOnlyDictionary<string, HashSet<int>>? valueIndex)
+        {
+            if (valueIndex == null) return new HashSet<int>();
+
+            var result = new HashSet<int>();
+            foreach (var (key, resourceIds) in valueIndex)
+            {
+                if (key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    result.UnionWith(resourceIds);
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 正则匹配搜索
+        /// </summary>
+        protected static HashSet<int> SearchMatches(string pattern, IReadOnlyDictionary<string, HashSet<int>>? valueIndex)
+        {
+            if (valueIndex == null) return new HashSet<int>();
+
+            try
+            {
+                var regex = new System.Text.RegularExpressions.Regex(pattern,
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                    System.Text.RegularExpressions.RegexOptions.Compiled,
+                    TimeSpan.FromSeconds(1));
+
+                var result = new HashSet<int>();
+                foreach (var (key, resourceIds) in valueIndex)
+                {
+                    if (regex.IsMatch(key))
+                    {
+                        result.UnionWith(resourceIds);
+                    }
+                }
+                return result;
+            }
+            catch
+            {
+                return new HashSet<int>();
+            }
+        }
+
+        /// <summary>
+        /// 范围索引搜索
+        /// </summary>
+        protected static HashSet<int>? SearchRangeIndex(
+            SearchOperation operation,
+            IComparable filterValue,
+            IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex,
+            IReadOnlyCollection<int> allResourceIds)
+        {
+            if (rangeIndex == null) return null;
+
+            // 仅处理范围操作
+            if (operation is not (SearchOperation.Equals or SearchOperation.NotEquals or
+                SearchOperation.GreaterThan or SearchOperation.LessThan or
+                SearchOperation.GreaterThanOrEquals or SearchOperation.LessThanOrEquals))
+            {
+                return null;
+            }
+
+            var result = new HashSet<int>();
+            foreach (var (value, resourceIds) in rangeIndex)
+            {
+                try
+                {
+                    var matches = operation switch
+                    {
+                        SearchOperation.Equals => value.CompareTo(filterValue) == 0,
+                        SearchOperation.NotEquals => value.CompareTo(filterValue) != 0,
+                        SearchOperation.GreaterThan => value.CompareTo(filterValue) > 0,
+                        SearchOperation.LessThan => value.CompareTo(filterValue) < 0,
+                        SearchOperation.GreaterThanOrEquals => value.CompareTo(filterValue) >= 0,
+                        SearchOperation.LessThanOrEquals => value.CompareTo(filterValue) <= 0,
+                        _ => false
+                    };
+                    if (matches)
+                    {
+                        result.UnionWith(resourceIds);
+                    }
+                }
+                catch
+                {
+                    // Type mismatch, skip
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// IsNull: 所有资源减去有值的资源
+        /// </summary>
+        protected static HashSet<int> SearchIsNull(
+            IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+            IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex,
+            IReadOnlyCollection<int> allResourceIds)
+        {
+            var hasValueIds = GetAllResourceIdsWithValue(valueIndex, rangeIndex);
+            return Negate(hasValueIds, allResourceIds);
+        }
+
+        /// <summary>
+        /// IsNotNull: 有值的资源
+        /// </summary>
+        protected static HashSet<int> SearchIsNotNull(
+            IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+            IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex)
+        {
+            return GetAllResourceIdsWithValue(valueIndex, rangeIndex);
+        }
+
+        /// <summary>
+        /// 获取所有有值的资源ID
+        /// </summary>
+        protected static HashSet<int> GetAllResourceIdsWithValue(
+            IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+            IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex)
+        {
+            var result = new HashSet<int>();
+
+            if (valueIndex != null)
+            {
+                foreach (var ids in valueIndex.Values)
+                {
+                    result.UnionWith(ids);
+                }
+            }
+
+            if (rangeIndex != null)
+            {
+                foreach (var (_, ids) in rangeIndex)
+                {
+                    result.UnionWith(ids);
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// 取反：所有资源减去指定集合
+        /// </summary>
+        protected static HashSet<int> Negate(HashSet<int>? toExclude, IReadOnlyCollection<int> all)
+        {
+            var result = new HashSet<int>(all);
+            if (toExclude != null)
+            {
+                result.ExceptWith(toExclude);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 交集：资源必须在所有集合中
+        /// </summary>
+        protected static HashSet<int> IntersectAll(IEnumerable<HashSet<int>?> sets)
+        {
+            HashSet<int>? result = null;
+            foreach (var set in sets.Where(s => s != null))
+            {
+                if (result == null)
+                {
+                    result = new HashSet<int>(set!);
+                }
+                else
+                {
+                    result.IntersectWith(set!);
+                }
+
+                if (result.Count == 0)
+                {
+                    break;
+                }
+            }
+            return result ?? new HashSet<int>();
+        }
+
+        /// <summary>
+        /// 并集：资源在任一集合中
+        /// </summary>
+        protected static HashSet<int> UnionAll(IEnumerable<HashSet<int>?> sets)
+        {
+            var result = new HashSet<int>();
+            foreach (var set in sets.Where(s => s != null))
+            {
+                result.UnionWith(set!);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 规范化字符串（小写、去空格）
+        /// </summary>
+        protected static string Normalize(string? value) => value?.Trim().ToLowerInvariant() ?? "";
+
+        #endregion
+
+        #endregion
     }
 
     public abstract class
@@ -167,18 +498,6 @@ namespace Bakabase.Modules.Property.Components.Properties
         TBizValue>
         where TPropertyOptions : class, new()
     {
-        // public override CustomProperty ToDomainModel(CustomPropertyDbModel customProperty)
-        // {
-        //     var p = base.ToDomainModel(customProperty);
-        //     if (p is TProperty sp)
-        //     {
-        //         sp.Options = customProperty.Options?.DeserializeAsCustomPropertyOptions<TPropertyOptions>() ??
-        //                      InitializeOptionsInternal();
-        //     }
-        //
-        //     return p;
-        // }
-
         protected sealed override void EnsureOptionsType(object? options)
         {
             if (options != null && options is not TPropertyOptions)

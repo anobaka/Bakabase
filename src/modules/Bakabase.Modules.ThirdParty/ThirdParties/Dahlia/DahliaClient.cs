@@ -58,7 +58,8 @@ public class DahliaClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 ExtraFanart = GetExtraFanart(detailCq),
                 Trailer = GetTrailer(detailCq),
                 Website = realUrl,
-                Source = "dahlia"
+                Source = "dahlia",
+                SearchUrl = realUrl
             };
 
             detail.Year = GetYear(detail.Release);

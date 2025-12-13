@@ -1,4 +1,5 @@
 import type { BTask } from "@/core/models/BTask";
+import { BTaskResourceType, BTaskType } from "@/sdk/constants";
 
 const testTasks: BTask[] = [
   {
@@ -18,6 +19,9 @@ const testTasks: BTask[] = [
     reasonForUnableToStart: "conflict with aaa",
     isPersistent: true,
     nextTimeStartAt: "2025-03-26T15:22:18.4050482+08:00",
+    createdAt: "2025-03-26T15:19:27.697964+08:00",
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
   },
   {
     id: "Enhancement2",
@@ -36,6 +40,9 @@ const testTasks: BTask[] = [
     reasonForUnableToStart: "conflict with aaa",
     isPersistent: true,
     nextTimeStartAt: "2025-03-26T15:22:18.4050482+08:00",
+    createdAt: "2025-03-26T15:19:27.697964+08:00",
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
   },
   {
     id: "Enhancement3",
@@ -54,6 +61,9 @@ const testTasks: BTask[] = [
     reasonForUnableToStart: "conflict with aaa",
     isPersistent: true,
     nextTimeStartAt: "2025-03-26T15:22:18.4050482+08:00",
+    createdAt: "2025-03-26T15:19:27.697964+08:00",
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
   },
   {
     id: "Enhancement4",
@@ -72,6 +82,9 @@ const testTasks: BTask[] = [
     reasonForUnableToStart: "conflict with aaa",
     isPersistent: true,
     nextTimeStartAt: "2025-03-26T15:22:18.4050482+08:00",
+    createdAt: "2025-03-26T15:19:27.697964+08:00",
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
   },
   {
     id: "Enhancement5",
@@ -90,6 +103,9 @@ const testTasks: BTask[] = [
     reasonForUnableToStart: "conflict with aaa",
     isPersistent: true,
     nextTimeStartAt: "2025-03-26T15:22:18.4050482+08:00",
+    createdAt: "2025-03-26T15:19:27.697964+08:00",
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
   },
   {
     id: "Enhancement6",
@@ -108,6 +124,9 @@ const testTasks: BTask[] = [
     reasonForUnableToStart: "conflict with aaa",
     isPersistent: true,
     nextTimeStartAt: "2025-03-26T15:22:18.4050482+08:00",
+    createdAt: "2025-03-26T15:19:27.697964+08:00",
+    type: BTaskType.Any,
+    resourceType: BTaskResourceType.Any,
   },
 ];
 

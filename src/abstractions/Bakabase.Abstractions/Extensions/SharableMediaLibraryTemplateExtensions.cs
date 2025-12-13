@@ -74,7 +74,7 @@ public static class SharableMediaLibraryTemplateExtensions
     }
 
     public static SharableMediaLibraryTemplateEnhancerOptions ToSharable(
-        this MediaLibraryTemplateEnhancerOptions options)
+        this EnhancerFullOptions options)
     {
         return new SharableMediaLibraryTemplateEnhancerOptions
         {
@@ -86,7 +86,7 @@ public static class SharableMediaLibraryTemplateExtensions
     }
 
     public static SharableMediaLibraryTemplateEnhancerTargetAllInOneOptions ToSharable(
-        this MediaLibraryTemplateEnhancerTargetAllInOneOptions options)
+        this EnhancerTargetFullOptions options)
     {
         if (options.Property == null)
         {
@@ -184,13 +184,13 @@ public static class SharableMediaLibraryTemplateExtensions
         };
     }
 
-    public static MediaLibraryTemplateEnhancerOptions ToDomainModel(
+    public static EnhancerFullOptions ToDomainModel(
         this SharableMediaLibraryTemplateEnhancerOptions sharable, PropertyMap propertyMap)
     {
         var targetOptions = sharable.TargetOptions
             ?.Select(x => x.ToDomainModel(propertyMap)).ToList();
 
-        return new MediaLibraryTemplateEnhancerOptions
+        return new EnhancerFullOptions
         {
             EnhancerId = sharable.EnhancerId,
             TargetOptions = targetOptions,
@@ -199,12 +199,12 @@ public static class SharableMediaLibraryTemplateExtensions
         };
     }
 
-    public static MediaLibraryTemplateEnhancerTargetAllInOneOptions ToDomainModel(
+    public static EnhancerTargetFullOptions ToDomainModel(
         this SharableMediaLibraryTemplateEnhancerTargetAllInOneOptions options, PropertyMap propertyMap)
     {
         var p = options.Property;
 
-        return new MediaLibraryTemplateEnhancerTargetAllInOneOptions
+        return new EnhancerTargetFullOptions
         {
             PropertyPool = p.Pool,
             PropertyId = p.Id,

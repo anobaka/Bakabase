@@ -96,6 +96,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileMover
 
                         var progress = Progresses.GetOrAdd(s, _ => new());
                         progress.Moving = true;
+                        progress.Error = null;
                         var baseStPairPercentage = doneStPair * singleStPairPercentage;
 
                         var globalPercentage = 0;

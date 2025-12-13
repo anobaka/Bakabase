@@ -2,8 +2,10 @@
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 
 namespace Bakabase.InsideWorld.Business.Extensions;
@@ -19,14 +21,14 @@ public static class ResourceSearchExtensions
 
         var propertyType = filter.PropertyPool == PropertyPool.Custom
             ? filter.Property!.Type
-            : PropertyInternals.BuiltinPropertyMap.GetValueOrDefault((ResourceProperty)filter.PropertyId)?.Type;
+            : PropertySystem.Builtin.TryGet((ResourceProperty)filter.PropertyId)?.Type;
 
         if (!propertyType.HasValue)
         {
             return false;
         }
 
-        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(propertyType.Value);
+        var psh = PropertySystem.Property.TryGetSearchHandler(propertyType.Value);
         if (psh == null || psh.SearchOperations.TryGetValue(filter.Operation, out var psoo) != true)
         {
             return false;
@@ -40,7 +42,7 @@ public static class ResourceSearchExtensions
                 return false;
             }
 
-            var stdValueHandler = StandardValueInternals.HandlerMap.GetValueOrDefault(dbValueType.Value);
+            var stdValueHandler = StandardValueSystem.TryGetHandler(dbValueType.Value);
             if (stdValueHandler == null)
             {
                 return false;

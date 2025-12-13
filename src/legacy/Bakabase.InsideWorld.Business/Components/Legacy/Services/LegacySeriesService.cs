@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacySeriesService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, Series, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, Series, int>(serviceProvider)
     {
         // public async Task<List<SeriesDto>> GetAll()
         // {

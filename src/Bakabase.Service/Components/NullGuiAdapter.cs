@@ -7,7 +7,7 @@ namespace Bakabase.Service.Components;
 
 public class NullGuiAdapter : IGuiAdapter
 {
-    public void ShowTray(Func<Task> onExiting)
+    public void ShowTray(Func<Task>? onExiting)
     {
 
     }

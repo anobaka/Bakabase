@@ -35,7 +35,8 @@ public class IqqtvNewClient(IHttpClientFactory httpClientFactory, ILoggerFactory
             CoverUrl = result.CoverUrl,
             PosterUrl = result.PosterUrl,
             Website = result.Website,
-            Mosaic = result.Mosaic
+            Mosaic = result.Mosaic,
+            SearchUrl = result.SearchUrl
         };
     }
 }

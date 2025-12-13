@@ -27,6 +27,7 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             string actor = "";
             string studio = "";
             string series = "";
+            string searchUrl = "";
 
             if (!string.IsNullOrEmpty(appointUrl))
             {
@@ -97,7 +98,7 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                             continue;
                         }
 
-                        var searchUrl = $"{BaseUrl}/s0?q={HttpUtility.UrlEncode(searchTerm)}";
+                        searchUrl = $"{BaseUrl}/s0?q={HttpUtility.UrlEncode(searchTerm)}";
                         
                         try
                         {
@@ -161,7 +162,8 @@ public class CNMDBClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 ImageDownload = false,
                 ImageCut = "no",
                 Mosaic = "国产",
-                Wanted = ""
+                Wanted = "",
+                SearchUrl = searchUrl
             };
 
             return detail;

@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bakabase.InsideWorld.Business.Migrations
 {
-    [DbContext(typeof(InsideWorldDbContext))]
+    [DbContext(typeof(BakabaseDbContext))]
     [Migration("20241002133112_V190Beta7")]
     partial class V190Beta7
     {

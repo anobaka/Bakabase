@@ -9,7 +9,10 @@ public record BulkModification
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public List<BulkModificationVariable>? Variables { get; set; }
-    public ResourceSearchFilterGroup? Filter { get; set; }
+    /// <summary>
+    /// 搜索条件（复用 ResourceSearch 领域模型）
+    /// </summary>
+    public ResourceSearch? Search { get; set; }
     public List<BulkModificationProcess>? Processes { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
     public DateTime? AppliedAt { get; set; }

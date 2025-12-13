@@ -27,13 +27,20 @@ public class RegexEnhancer(
     : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, object?>(loggerFactory, fileManager, serviceProvider)
 {
     protected override async Task<RegexEnhancerContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+        EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var expressions = options.Expressions ?? enhancerOptions.Value.RegexEnhancer?.Expressions ?? [];
         if (!expressions.Any())
         {
+            logCollector.LogWarning(EnhancementLogEvent.Configuration,
+                "No regex expressions configured",
+                new { Source = options.Expressions != null ? "Options" : "GlobalConfig" });
             return null;
         }
+
+        logCollector.LogInfo(EnhancementLogEvent.Configuration,
+            $"Using {expressions.Count} regex expressions",
+            new { ExpressionCount = expressions.Count, Expressions = expressions });
 
         var ctx = new RegexEnhancerContext();
 
@@ -41,6 +48,13 @@ public class RegexEnhancer(
         {
             var regex = new System.Text.RegularExpressions.Regex(exp, RegexOptions.IgnoreCase);
             var mergedNamedGroups = regex.MatchAllAndMergeByNamedGroups(resource.FileName);
+            if (mergedNamedGroups.Any())
+            {
+                logCollector.LogInfo(EnhancementLogEvent.RegexMatched,
+                    $"Pattern matched with {mergedNamedGroups.Count} groups",
+                    new { Pattern = exp, MatchedGroups = mergedNamedGroups.Keys.ToList() });
+            }
+
             foreach (var (gn, values) in mergedNamedGroups)
             {
                 ctx.CaptureGroupsAndValues ??= [];
@@ -53,6 +67,13 @@ public class RegexEnhancer(
             }
         }
 
+        if (ctx.CaptureGroupsAndValues?.Any() == true)
+        {
+            logCollector.LogInfo(EnhancementLogEvent.ContextBuilt,
+                $"Captured {ctx.CaptureGroupsAndValues.Count} groups",
+                new { Groups = ctx.CaptureGroupsAndValues });
+        }
+
         return ctx;
     }
 
@@ -60,7 +81,7 @@ public class RegexEnhancer(
     protected override EnhancerId TypedId => EnhancerId.Regex;
 
     protected override async Task<List<EnhancementTargetValue<RegexEnhancerTarget>>> ConvertContextByTargets(
-        RegexEnhancerContext context, CancellationToken ct)
+        RegexEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<RegexEnhancerTarget>>();
 

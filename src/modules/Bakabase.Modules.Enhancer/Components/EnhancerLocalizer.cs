@@ -88,6 +88,11 @@ internal class EnhancerLocalizer(IStringLocalizer<EnhancerResource> localizer) :
         return this[nameof(Enhancer_KeywordPropertyIsEmpty), poolName, propertyName, scopeName];
     }
 
+    public string Enhancer_KeywordIsEmpty()
+    {
+        return this[nameof(Enhancer_KeywordIsEmpty)];
+    }
+
     public string Enhancer_UsePropertyAsKeyword(string poolName, string propertyName, string scopeName)
     {
         return this[nameof(Enhancer_UsePropertyAsKeyword), poolName, propertyName, scopeName];

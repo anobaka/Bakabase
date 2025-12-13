@@ -25,9 +25,18 @@ public class BangumiEnhancer(
         standardValueService, specialTextService, serviceProvider)
 {
     protected override async Task<BangumiEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
-        EnhancerFullOptions options, CancellationToken ct)
+        EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
     {
+        var searchUrl = BangumiUrlBuilder.Search(keyword).ToString();
+        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+            $"Searching Bangumi",
+            new { Url = searchUrl, Keyword = keyword });
+
         var detail = await client.SearchAndParseFirst(keyword);
+
+        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+            detail != null ? $"Found Bangumi entry: {detail.Name}" : "No Bangumi entry found",
+            new { Url = searchUrl, Found = detail != null, Name = detail?.Name });
 
         if (detail != null)
         {
@@ -42,10 +51,22 @@ public class BangumiEnhancer(
 
             if (!string.IsNullOrEmpty(detail.CoverUrl))
             {
+                logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                    "Downloading cover image",
+                    new { Url = detail.CoverUrl });
+
                 var imageData = await client.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
+
+                logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                    $"Cover image downloaded ({imageData.Length} bytes)",
+                    new { Url = detail.CoverUrl, Size = imageData.Length });
+
                 var queryIdx = detail.CoverUrl.IndexOf('?');
                 var coverUrl = queryIdx == -1 ? detail.CoverUrl : detail.CoverUrl[..queryIdx];
                 ctx.CoverPath = await SaveFile(resource, $"cover{Path.GetExtension(coverUrl)}", imageData);
+                logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                    $"Cover saved: {ctx.CoverPath}",
+                    new { CoverPath = ctx.CoverPath });
             }
 
             return ctx;
@@ -57,7 +78,7 @@ public class BangumiEnhancer(
     protected override EnhancerId TypedId => EnhancerId.Bangumi;
 
     protected override async Task<List<EnhancementTargetValue<BangumiEnhancerTarget>>> ConvertContextByTargets(
-        BangumiEnhancerContext context, CancellationToken ct)
+        BangumiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<BangumiEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<BangumiEnhancerTarget>.Values)

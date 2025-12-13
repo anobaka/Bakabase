@@ -18,15 +18,16 @@ public class JavdayClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var site = baseUrl ?? "https://javday.tv";
             var realUrl = appointUrl;
             string? html = null;
+            string? searchUrl = null;
             if (string.IsNullOrEmpty(realUrl))
             {
-                var testUrl = site + $"/videos/{number}/";
-                html = await HttpClient.GetStringAsync(testUrl);
+                searchUrl = site + $"/videos/{number}/";
+                html = await HttpClient.GetStringAsync(searchUrl);
                 if (string.IsNullOrEmpty(html) || html.Contains("你似乎來到了沒有視頻存在的荒原"))
                 {
                     return null;
                 }
-                realUrl = testUrl;
+                realUrl = searchUrl;
             }
             else
             {
@@ -61,7 +62,8 @@ public class JavdayClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 CoverUrl = cover,
                 PosterUrl = string.Empty,
                 Website = realUrl,
-                Mosaic = "国产"
+                Mosaic = "国产",
+                SearchUrl = searchUrl
             };
         }
         catch

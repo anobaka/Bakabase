@@ -1,10 +1,11 @@
-﻿using Bakabase.Abstractions.Components.FileSystem;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
@@ -42,43 +43,69 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         }
 
         public async Task<object?> BuildContext(Resource resource, EnhancerFullOptions options,
-            CancellationToken ct) => await BuildContextInternal(resource, options, ct);
-        
+            EnhancementLogCollector logCollector, CancellationToken ct) =>
+            await BuildContextInternal(resource, options, logCollector, ct);
+
         protected abstract Task<TContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
-            CancellationToken ct);
+            EnhancementLogCollector logCollector, CancellationToken ct);
 
         public int Id => (int) TypedId;
         protected abstract EnhancerId TypedId { get; }
 
-        public async Task<List<EnhancementRawValue>?> CreateEnhancements(Resource resource, EnhancerFullOptions options,
-            CancellationToken ct)
+        public async Task<EnhancementResult?> CreateEnhancements(Resource resource, EnhancerFullOptions options,
+            EnhancementLogCollector logCollector, CancellationToken ct)
         {
+            logCollector.LogInfo(EnhancementLogEvent.Started,
+                $"Starting enhancement for resource [{resource.Id}:{resource.Path}]",
+                new { ResourceId = resource.Id, ResourcePath = resource.Path });
+
+            logCollector.LogInfo(EnhancementLogEvent.Configuration,
+                "Using enhancement options",
+                new
+                {
+                    EnhancerId = options.EnhancerId,
+                    KeywordProperty = options.KeywordProperty,
+                    PretreatKeyword = options.PretreatKeyword,
+                    TargetOptionsCount = options.TargetOptions?.Count ?? 0,
+                    ExpressionsCount = options.Expressions?.Count ?? 0
+                });
+
             Logger.LogInformation("Building context for resource [{ResourceId}:{ResourcePath}]", resource.Id, resource.Path);
 
             TContext? context;
             try
             {
-                context = await BuildContextInternal(resource, options, ct);
+                context = await BuildContextInternal(resource, options, logCollector, ct);
                 if (context == null)
                 {
-                    return null;
+                    logCollector.LogWarning(EnhancementLogEvent.ContextBuilt,
+                        "No context built - no data found or empty result");
+                    return new EnhancementResult { Logs = logCollector.GetLogs() };
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception(
-                    $"Failed to build context for enhancer {GetType().Name}. This is usually caused by unreachable external data sources or sites, or by unsupported data returned from those sources.",
-                    ex
-                );
+                var errorMessage =
+                    $"Failed to build context for enhancer {GetType().Name}. This is usually caused by unreachable external data sources or sites, or by unsupported data returned from those sources.";
+                logCollector.LogError(EnhancementLogEvent.Error, errorMessage,
+                    new { ExceptionType = ex.GetType().Name, ex.Message, ex.StackTrace });
 
+                return new EnhancementResult
+                {
+                    Logs = logCollector.GetLogs(),
+                    ErrorMessage = $"{errorMessage} Details: {ex.Message}"
+                };
             }
 
+            logCollector.LogInfo(EnhancementLogEvent.ContextBuilt, "Context built successfully");
             Logger.LogInformation($"Got context: {context.ToJson()}");
 
-            var targetValues = await ConvertContextByTargets(context, ct);
+            var targetValues = await ConvertContextByTargets(context, logCollector, ct);
             if (targetValues?.Any(x => x.ValueBuilder != null) != true)
             {
-                return null;
+                logCollector.LogWarning(EnhancementLogEvent.TargetConverted,
+                    "No target values converted");
+                return new EnhancementResult { Logs = logCollector.GetLogs() };
             }
 
             var enhancements = new List<EnhancementRawValue>();
@@ -88,7 +115,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
                 if (value != null)
                 {
                     var targetAttr = tv.Target.GetAttribute<EnhancerTargetAttribute>();
-                    var intTarget = (int) (object) tv.Target;
+                    var intTarget = (int)(object)tv.Target;
                     var vt = targetAttr.ValueType;
                     var e = new EnhancementRawValue
                     {
@@ -102,7 +129,15 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
                 }
             }
 
-            return enhancements;
+            logCollector.LogInfo(EnhancementLogEvent.Completed,
+                $"Enhancement completed with {enhancements.Count} values",
+                new { ValueCount = enhancements.Count });
+
+            return new EnhancementResult
+            {
+                Values = enhancements,
+                Logs = logCollector.GetLogs()
+            };
         }
 
         /// <summary>
@@ -142,14 +177,15 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
         }
 
         /// <summary>
-        /// 
+        /// Converts the context to target values.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="ct"></param>
+        /// <param name="context">The context built from external data.</param>
+        /// <param name="logCollector">The log collector for recording conversion steps.</param>
+        /// <param name="ct">Cancellation token.</param>
         /// <returns>
         /// The value of the dictionary MUST be the standard value, which can be generated safely via <see cref="IStandardValueBuilder{TValue}"/>
         /// </returns>
         protected abstract Task<List<EnhancementTargetValue<TEnumTarget>>> ConvertContextByTargets(TContext context,
-            CancellationToken ct);
+            EnhancementLogCollector logCollector, CancellationToken ct);
     }
 }

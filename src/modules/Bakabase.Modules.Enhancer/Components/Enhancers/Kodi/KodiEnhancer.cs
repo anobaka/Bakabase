@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
@@ -14,7 +15,7 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
     : AbstractEnhancer<KodiEnhancerTarget, KodiEnhancerContext, object?>(loggerFactory, fileManager, serviceProvider)
 {
     protected override async Task<KodiEnhancerContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+        EnhancementLogCollector logCollector, CancellationToken ct)
     {
         try
         {
@@ -23,28 +24,45 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
             if (string.IsNullOrEmpty(directory))
             {
                 Logger.LogWarning($"Cannot determine directory for resource: {resource.Path}");
+                logCollector.LogWarning(EnhancementLogEvent.Error,
+                    $"Cannot determine directory for resource: {resource.Path}");
                 return null;
             }
+
+            logCollector.LogInfo(EnhancementLogEvent.DataFetching,
+                $"Searching for NFO files in: {directory}",
+                new { Directory = directory });
 
             var nfoFiles = Directory.GetFiles(directory, "*.nfo", SearchOption.TopDirectoryOnly);
             if (!nfoFiles.Any())
             {
                 Logger.LogInformation($"No .nfo files found in directory: {directory}");
+                logCollector.LogWarning(EnhancementLogEvent.DataFetched,
+                    $"No .nfo files found in directory: {directory}");
                 return null;
             }
 
+            logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                $"Found {nfoFiles.Length} NFO file(s)",
+                new { Files = nfoFiles.Select(Path.GetFileName).ToList() });
+
             // Try to find the most relevant .nfo file (same name as resource or generic)
             var resourceName = Path.GetFileNameWithoutExtension(resource.FileName);
-            var targetNfoFile = nfoFiles.FirstOrDefault(f => 
-                Path.GetFileNameWithoutExtension(f).Equals(resourceName, StringComparison.OrdinalIgnoreCase)) 
+            var targetNfoFile = nfoFiles.FirstOrDefault(f =>
+                Path.GetFileNameWithoutExtension(f).Equals(resourceName, StringComparison.OrdinalIgnoreCase))
                 ?? nfoFiles.First();
 
             Logger.LogInformation($"Using NFO file: {targetNfoFile}");
+            logCollector.LogInfo(EnhancementLogEvent.DataFetching,
+                $"Reading NFO file: {Path.GetFileName(targetNfoFile)}",
+                new { FilePath = targetNfoFile });
 
             var xmlContent = await File.ReadAllTextAsync(targetNfoFile, ct);
             if (string.IsNullOrEmpty(xmlContent))
             {
                 Logger.LogWarning($"NFO file is empty: {targetNfoFile}");
+                logCollector.LogWarning(EnhancementLogEvent.Error,
+                    $"NFO file is empty: {targetNfoFile}");
                 return null;
             }
 
@@ -56,15 +74,40 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
             if (context == null)
             {
                 Logger.LogWarning($"Failed to deserialize NFO file: {targetNfoFile}");
+                logCollector.LogWarning(EnhancementLogEvent.Error,
+                    $"Failed to deserialize NFO file: {targetNfoFile}");
                 return null;
             }
 
+            var contentTypes = new List<string>();
+            if (context.Movie != null) contentTypes.Add("Movie");
+            if (context.TvShow != null) contentTypes.Add("TvShow");
+            if (context.MusicVideo != null) contentTypes.Add("MusicVideo");
+            if (context.Album != null) contentTypes.Add("Album");
+            if (context.Artist != null) contentTypes.Add("Artist");
+            if (context.Episodes?.Any() == true) contentTypes.Add($"Episodes({context.Episodes.Count})");
+
             Logger.LogInformation($"Successfully parsed NFO file with content: Movie={context.Movie != null}, TvShow={context.TvShow != null}, MusicVideo={context.MusicVideo != null}, Album={context.Album != null}, Artist={context.Artist != null}");
+            logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                $"NFO parsed successfully with content types: {string.Join(", ", contentTypes)}",
+                new
+                {
+                    HasMovie = context.Movie != null,
+                    HasTvShow = context.TvShow != null,
+                    HasMusicVideo = context.MusicVideo != null,
+                    HasAlbum = context.Album != null,
+                    HasArtist = context.Artist != null,
+                    EpisodeCount = context.Episodes?.Count ?? 0
+                });
+
             return context;
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, $"Error building Kodi context for resource: {resource.Path}");
+            logCollector.LogError(EnhancementLogEvent.Error,
+                $"Error parsing NFO file: {ex.Message}",
+                new { ExceptionType = ex.GetType().Name, ex.Message });
             return null;
         }
     }
@@ -72,7 +115,7 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
     protected override EnhancerId TypedId => EnhancerId.Kodi;
 
     protected override async Task<List<EnhancementTargetValue<KodiEnhancerTarget>>> ConvertContextByTargets(
-        KodiEnhancerContext context, CancellationToken ct)
+        KodiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<KodiEnhancerTarget>>();
 

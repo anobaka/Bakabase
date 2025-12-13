@@ -17,10 +17,11 @@ public class HscangkuClient(IHttpClientFactory httpClientFactory, ILoggerFactory
         {
             string? realUrl = appointUrl;
             var baseUrl = "http://hsck.net";
+            string searchUrl = "";
 
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"{baseUrl}/vodsearch/-------------.html?wd={Uri.EscapeDataString(number)}&submit=";
+                searchUrl = $"{baseUrl}/vodsearch/-------------.html?wd={Uri.EscapeDataString(number)}&submit=";
                 string htmlSearch;
                 try { htmlSearch = await HttpClient.GetStringAsync(searchUrl); } catch { return null; }
                 var docSearch = new CQ(htmlSearch);
@@ -65,7 +66,8 @@ public class HscangkuClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 PosterUrl = string.Empty,
                 Website = realUrl,
                 Source = "hscangku",
-                Mosaic = "国产"
+                Mosaic = "国产",
+                SearchUrl = searchUrl
             };
 
             return detail;

@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
@@ -38,13 +39,18 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         private readonly IBakabaseLocalizer _localizer = localizer;
 
         protected override async Task<BakabaseEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
-            EnhancerFullOptions options, CancellationToken ct)
+            EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var name = keyword;
             if (name.IsNullOrEmpty())
             {
+                logCollector.LogWarning(EnhancementLogEvent.Error, "Keyword is empty");
                 throw new ArgumentNullException(nameof(name));
             }
+
+            logCollector.LogInfo(EnhancementLogEvent.DataFetching,
+                $"Parsing filename: {name}",
+                new { Input = name });
 
             var ctx = new BakabaseEnhancerContext();
 
@@ -71,11 +77,15 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                 if (releaseDt.HasValue)
                 {
                     ctx.ReleaseDt = releaseDt.Value;
+                    logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                        $"Extracted release date: {releaseDt.Value:yyyy-MM-dd}");
                 }
 
                 if (!string.IsNullOrEmpty(language))
                 {
                     ctx.Language = language;
+                    logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                        $"Extracted language: {language}");
                 }
 
                 if (!string.IsNullOrEmpty(name))
@@ -86,18 +96,29 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                 if (originals?.Any() == true)
                 {
                     ctx.Originals = originals;
+                    logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                        $"Extracted originals: {string.Join(", ", originals)}");
                 }
 
                 if (publishers?.Any() == true)
                 {
                     ctx.Publishers = publishers;
+                    logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                        $"Extracted publishers: {string.Join(", ", publishers)}");
                 }
 
                 if (volume != null)
                 {
                     ctx.VolumeName = volume.Value.VolumeName;
                     ctx.VolumeTitle = volume.Value.VolumeTitle;
+                    logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                        $"Extracted volume: {volume.Value.VolumeName} - {volume.Value.VolumeTitle}");
                 }
+            }
+            else
+            {
+                logCollector.LogWarning(EnhancementLogEvent.DataFetched,
+                    "Name failed validation (unbalanced wrappers)");
             }
 
             ctx.Name = name;
@@ -105,6 +126,11 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
             var coverSelectionOrder =
                 options.TargetOptions?.FirstOrDefault(to => to.Target == (int) BakabaseEnhancerTarget.Cover)
                     ?.CoverSelectOrder ?? CoverSelectOrder.FilenameAscending;
+
+            logCollector.LogInfo(EnhancementLogEvent.DataFetching,
+                $"Discovering cover with order: {coverSelectionOrder}",
+                new { CoverSelectOrder = coverSelectionOrder.ToString() });
+
             try
             {
                 var cover = await coverDiscoverer.Discover(resource.Path, coverSelectionOrder, false, ct);
@@ -114,23 +140,47 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
                     {
                         ctx.CoverPath = await cover.SaveTo(BuildFilePath(resource, "cover"), true,
                             CancellationToken.None);
+                        logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                            $"Cover saved to: {ctx.CoverPath}");
                     }
                     else
                     {
                         ctx.CoverPath = cover.Path;
+                        logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                            $"Found existing cover: {ctx.CoverPath}");
                     }
+                }
+                else
+                {
+                    logCollector.LogInfo(EnhancementLogEvent.DataFetched, "No cover found");
                 }
             }
             catch (Exception e)
             {
                 Logger.LogError(e, $"An error occurred during discovering cover for resource {resource.Id} at {resource.Path}");
+                logCollector.LogError(EnhancementLogEvent.Error,
+                    $"Failed to discover cover: {e.Message}");
             }
-            
+
+            logCollector.LogInfo(EnhancementLogEvent.ContextBuilt,
+                "Parsed filename successfully",
+                new
+                {
+                    Name = ctx.Name,
+                    Language = ctx.Language,
+                    ReleaseDt = ctx.ReleaseDt,
+                    Publishers = ctx.Publishers,
+                    Originals = ctx.Originals,
+                    VolumeName = ctx.VolumeName,
+                    VolumeTitle = ctx.VolumeTitle,
+                    HasCover = !string.IsNullOrEmpty(ctx.CoverPath)
+                });
+
             return ctx;
         }
 
         protected override async Task<List<EnhancementTargetValue<BakabaseEnhancerTarget>>> ConvertContextByTargets(
-            BakabaseEnhancerContext context, CancellationToken ct)
+            BakabaseEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var dict = new Dictionary<BakabaseEnhancerTarget, IStandardValueBuilder>();
             foreach (var target in SpecificEnumUtils<BakabaseEnhancerTarget>.Values)

@@ -384,6 +384,9 @@
   <data name="BTask_FailedToRunTaskDueToConflict" xml:space="preserve">
     <value>发现任务冲突，任务[{0}]不能和任务[{1}]同时运行</value>
   </data>
+  <data name="BTask_FailedToRunTaskDueToDependency" xml:space="preserve">
+    <value>任务[{0}]正在等待依赖任务完成：{1}</value>
+  </data>
   <data name="BTask_FailedToRunTaskDueToUnknownTaskId" xml:space="preserve">
     <value>无法运行任务：任务id [{0}]不存在</value>
   </data>
@@ -558,10 +561,67 @@
   <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
     <value>生成资源标记</value>
   </data>
+  <data name="BTask_Name_ResourceProfileIndex" xml:space="preserve">
+    <value>构建资源配置索引</value>
+  </data>
+  <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
+    <value>构建资源与配置的匹配索引</value>
+  </data>
+  <data name="BTask_Name_SearchIndex" xml:space="preserve">
+    <value>构建搜索索引</value>
+  </data>
+  <data name="BTask_Description_SearchIndex" xml:space="preserve">
+    <value>构建用于快速资源搜索的倒排索引</value>
+  </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>发现新版本</value>
   </data>
   <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
     <value>新版本 ({0}) 可供更新。</value>
+  </data>
+  <data name="SyncPathMark_Collecting" xml:space="preserve">
+    <value>收集路径标记中</value>
+  </data>
+  <data name="SyncPathMark_Collected" xml:space="preserve">
+    <value>已收集 {0} 个路径标记</value>
+  </data>
+  <data name="SyncPathMark_ProcessingResource" xml:space="preserve">
+    <value>处理资源: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingProperty" xml:space="preserve">
+    <value>处理属性: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingMediaLibrary" xml:space="preserve">
+    <value>处理媒体库: {0}</value>
+  </data>
+  <data name="SyncPathMark_FindingRelated" xml:space="preserve">
+    <value>查找关联标记中</value>
+  </data>
+  <data name="SyncPathMark_FoundRelated" xml:space="preserve">
+    <value>已找到 {0} 个关联标记</value>
+  </data>
+  <data name="SyncPathMark_EstablishingRelationships" xml:space="preserve">
+    <value>建立父子关系中</value>
+  </data>
+  <data name="SyncPathMark_Complete" xml:space="preserve">
+    <value>路径标记同步完成</value>
+  </data>
+  <data name="BTask_Name_SyncPathMarks" xml:space="preserve">
+    <value>同步路径标记</value>
+  </data>
+  <data name="BTask_Description_SyncPathMarks" xml:space="preserve">
+    <value>同步所有路径标记</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMarks" xml:space="preserve">
+    <value>路径标记同步正在进行中；强制中断可能导致同步不完整。</value>
+  </data>
+  <data name="BTask_Name_SyncPathMark_Single" xml:space="preserve">
+    <value>同步路径标记</value>
+  </data>
+  <data name="BTask_Description_SyncPathMark_Single" xml:space="preserve">
+    <value>同步选中的路径标记</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
+    <value>路径标记同步正在进行中；强制中断可能导致同步不完整。</value>
   </data>
 </root>

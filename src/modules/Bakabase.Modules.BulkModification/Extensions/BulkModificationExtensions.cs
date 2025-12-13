@@ -31,8 +31,8 @@ public static class BulkModificationExtensions
         this List<BulkModificationDbModel> dbModels,
         IPropertyService propertyService, Dictionary<int, int>? resourceDiffCountMap = null)
     {
-        var filterGroupDbModels = dbModels
-            .Select(d => d.Filter.JsonDeserializeOrDefault<ResourceSearchFilterGroupDbModel>()).ToList();
+        var searchDbModels = dbModels
+            .Select(d => d.SearchJson.JsonDeserializeOrDefault<ResourceSearchDbModel>()).ToList();
         var processesDbModels = dbModels
             .Select(d => d.Processes.JsonDeserializeOrDefault<List<BulkModificationProcessDbModel>>()).ToList();
         var variablesDbModels =
@@ -41,19 +41,35 @@ public static class BulkModificationExtensions
 
         var propertyMap = (await propertyService.GetProperties(PropertyPool.All)).ToMap();
 
-        return dbModels.Select((dbModel, i) => new Abstractions.Models.BulkModification
+        var results = new List<Abstractions.Models.BulkModification>();
+        for (var i = 0; i < dbModels.Count; i++)
         {
-            CreatedAt = dbModel.CreatedAt,
-            Id = dbModel.Id,
-            Name = dbModel.Name,
-            IsActive = dbModel.IsActive,
-            FilteredResourceIds = dbModel.FilteredResourceIds.JsonDeserializeOrDefault<List<int>>(),
-            Filter = filterGroupDbModels[i]?.ToDomainModel(propertyMap),
-            Processes = processesDbModels[i]?.Select(p => p.ToDomainModel(propertyMap)).ToList(),
-            Variables = variablesDbModels[i]?.Select(v => v.ToDomainModel(propertyMap)).ToList(),
-            AppliedAt = dbModel.AppliedAt,
-            ResourceDiffCount = resourceDiffCountMap?.GetValueOrDefault(dbModel.Id) ?? 0
-        }).ToList();
+            var dbModel = dbModels[i];
+            var searchDbModel = searchDbModels[i];
+
+            // Convert ResourceSearchDbModel to ResourceSearch domain model
+            ResourceSearch? search = null;
+            if (searchDbModel != null)
+            {
+                search = await searchDbModel.ToDomainModel(propertyService);
+            }
+
+            results.Add(new Abstractions.Models.BulkModification
+            {
+                CreatedAt = dbModel.CreatedAt,
+                Id = dbModel.Id,
+                Name = dbModel.Name,
+                IsActive = dbModel.IsActive,
+                FilteredResourceIds = dbModel.FilteredResourceIds.JsonDeserializeOrDefault<List<int>>(),
+                Search = search,
+                Processes = processesDbModels[i]?.Select(p => p.ToDomainModel(propertyMap)).ToList(),
+                Variables = variablesDbModels[i]?.Select(v => v.ToDomainModel(propertyMap)).ToList(),
+                AppliedAt = dbModel.AppliedAt,
+                ResourceDiffCount = resourceDiffCountMap?.GetValueOrDefault(dbModel.Id) ?? 0
+            });
+        }
+
+        return results;
     }
 
     public static async Task<Abstractions.Models.BulkModification> ToDomainModel(this BulkModificationDbModel dbModel,
@@ -152,7 +168,7 @@ public static class BulkModificationExtensions
             Id = domainModel.Id,
             Name = domainModel.Name,
             IsActive = domainModel.IsActive,
-            Filter = domainModel.Filter?.ToDbModel().ToJson(),
+            SearchJson = domainModel.Search?.ToDbModel().ToJson(),
             Processes = domainModel.Processes?.Select(p => p.ToDbModel()).ToJson(),
             Variables = domainModel.Variables?.Select(v => v.ToDbModel()).ToJson(),
             CreatedAt = domainModel.CreatedAt,

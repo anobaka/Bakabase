@@ -1,14 +1,5 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Models.Db
 {
@@ -21,7 +12,9 @@ namespace Bakabase.Abstractions.Models.Db
         public DateTime UpdateDt { get; set; } = DateTime.Now;
         public DateTime FileCreateDt { get; set; }
         public DateTime FileModifyDt { get; set; }
+        [Obsolete]
         public int MediaLibraryId { get; set; }
+        [Obsolete]
         public int CategoryId { get; set; }
         public int? ParentId { get; set; }
         public ResourceTag Tags { get; set; }

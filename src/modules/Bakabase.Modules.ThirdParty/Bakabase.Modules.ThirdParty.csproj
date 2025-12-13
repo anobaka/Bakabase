@@ -14,10 +14,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CsQuery.NETStandard" Version="1.3.6.1" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\abstractions\Bakabase.Abstractions\Bakabase.Abstractions.csproj" />
     <ProjectReference Include="..\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
   </ItemGroup>

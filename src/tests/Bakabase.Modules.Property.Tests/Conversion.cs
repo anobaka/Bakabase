@@ -5,10 +5,11 @@ using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.ReservedProperty;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Tests.Components;
 using Bootstrap.Components.Orm.Extensions;
@@ -34,13 +35,13 @@ namespace Bakabase.Modules.Property.Tests
             sc.AddSingleton<NoneCustomDateTimeParser>();
             sc.AddStandardValue<NoneCustomDateTimeParser>();
             sc.AddReservedProperty();
-            sc.AddBootstrapServices<InsideWorldDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
-            sc.AddProperty<InsideWorldDbContext>();
+            sc.AddBootstrapServices<BakabaseDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
+            sc.AddProperty<BakabaseDbContext>();
             sc.AddTransient<BakabaseLocalizer>();
             var sp = sc.BuildServiceProvider();
             var scope = sp.CreateAsyncScope();
             var scopeSp = scope.ServiceProvider;
-            var ctx = scopeSp.GetRequiredService<InsideWorldDbContext>();
+            var ctx = scopeSp.GetRequiredService<BakabaseDbContext>();
             await ctx.Database.MigrateAsync();
 
             return scopeSp;
@@ -51,7 +52,7 @@ namespace Bakabase.Modules.Property.Tests
         {
             var scopeSp = await PrepareScopedServiceProvider();
 
-            var dataSets = StandardValueInternals.ExpectedConversions;
+            var dataSets = StandardValueSystem.GetExpectedConversions();
 
             var customPropertyService = scopeSp.GetRequiredService<ICustomPropertyService>();
             var customPropertyValueService = scopeSp.GetRequiredService<ICustomPropertyValueService>();
@@ -67,7 +68,7 @@ namespace Bakabase.Modules.Property.Tests
 
                 var fromPropertiesAddModels = new List<CustomPropertyAddOrPutDto>();
                 var fromPropertiesValues = new List<Bakabase.Abstractions.Models.Domain.CustomPropertyValue>();
-                var fromCpd = PropertyInternals.DescriptorMap[fromType];
+                var fromCpd = PropertySystem.Property.GetDescriptor(fromType);
 
                 foreach (var toType in customPropertyTypes)
                 {
@@ -98,7 +99,7 @@ namespace Bakabase.Modules.Property.Tests
                     var toType = customPropertyTypes[i];
                     var cp = customProperties[i];
                     var property = properties[i];
-                    var data = dataSets[fromCpd.BizValueType][PropertyInternals.DescriptorMap[toType].BizValueType];
+                    var data = dataSets[fromCpd.BizValueType][PropertySystem.Property.GetBizValueType(toType)];
                     var @case = cases.GetOrAdd(cp.Id, k => (toType, []));
 
                     foreach (var (fromValue, expectedValue) in data)
@@ -137,10 +138,9 @@ namespace Bakabase.Modules.Property.Tests
                     {
                         var actualPropertyValue = actualPropertyValues.FirstOrDefault(c => c.ResourceId == resourceId);
                         var act = actualPropertyValue?.BizValue?.SerializeAsStandardValue(
-                            PropertyInternals.DescriptorMap[@case.ToType].BizValueType);
+                            PropertySystem.Property.GetBizValueType(@case.ToType));
                         var expect =
-                            expectedValue?.SerializeAsStandardValue(PropertyInternals.DescriptorMap[@case.ToType]
-                                .BizValueType);
+                            expectedValue?.SerializeAsStandardValue(PropertySystem.Property.GetBizValueType(@case.ToType));
                         try
                         {
                             act.Should().Be(expect);
@@ -148,7 +148,7 @@ namespace Bakabase.Modules.Property.Tests
                         catch (Exception e)
                         {
                             Console.WriteLine(
-                                $@"Converting [{fromType}]{fromValue?.SerializeAsStandardValue(PropertyInternals.DescriptorMap[cp.Type].BizValueType)} to [{@case.ToType}], expected:{expect}, actual:{act}");
+                                $@"Converting [{fromType}]{fromValue?.SerializeAsStandardValue(PropertySystem.Property.GetBizValueType(cp.Type))} to [{@case.ToType}], expected:{expect}, actual:{act}");
                             throw;
                         }
                     }

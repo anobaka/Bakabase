@@ -225,15 +225,6 @@ namespace Bakabase.Service.Controllers
             return await categoryEnhancerOptionsService.DeleteTarget(id, enhancerId, target, dynamicTarget);
         }
 
-        [HttpPatch("{id:int}/enhancer/{enhancerId:int}/options/target")]
-        [SwaggerOperation(OperationId = "PatchCategoryEnhancerTargetOptions")]
-        public async Task<BaseResponse> PatchEnhancerTargetOptions(int id, int enhancerId, [Required] int target,
-            string? dynamicTarget,
-            [FromBody] CategoryEnhancerTargetOptionsPatchInputModel patches)
-        {
-            return await categoryEnhancerOptionsService.PatchTarget(id, enhancerId, target, dynamicTarget, patches);
-        }
-
         [HttpDelete("{id:int}/enhancer/{enhancerId:int}/options/target/property")]
         [SwaggerOperation(OperationId = "UnbindCategoryEnhancerTargetProperty")]
         public async Task<BaseResponse> UnbindEnhancerTargetProperty(int id, int enhancerId, [Required] int target,

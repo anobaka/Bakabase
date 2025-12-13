@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.Tracing;
+﻿using Bakabase.Abstractions.Components.Events;
+using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -24,6 +25,8 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileS
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.InsideWorld.Business.Components.Search;
+using Bakabase.InsideWorld.Business.Components.Search.Index;
 using Bakabase.InsideWorld.Business.Components.Tampermonkey;
 using Bakabase.InsideWorld.Business.Components.ThirdParty;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -111,25 +114,26 @@ namespace Bakabase.Service.Extensions
 
             services.AddLegacies();
 
-            services.AddAlias<InsideWorldDbContext>();
-            services.AddProperty<InsideWorldDbContext>();
-            services.AddEnhancers<InsideWorldDbContext>();
+            services.AddAlias<BakabaseDbContext>();
+            services.AddProperty<BakabaseDbContext>();
+            services.AddEnhancers<BakabaseDbContext>();
             services.AddStandardValue<SpecialTextService>();
             services.AddReservedProperty();
 
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceDbModel, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
+            services.AddScoped<IResourceLegacySearchService, ResourceLegacySearchService>();
             services.AddScoped<IResourceService, ResourceService>();
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, SpecialText, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();
             services.AddScoped<ISpecialTextService>(sp => sp.GetRequiredService<SpecialTextService>());
-            services.AddScoped<ResourceService<InsideWorldDbContext, MediaLibraryDbModel, int>>();
+            services.AddScoped<ResourceService<BakabaseDbContext, MediaLibraryDbModel, int>>();
             services.AddScoped<IMediaLibraryService, MediaLibraryService>();
-            services.AddScoped<ResourceService<InsideWorldDbContext, CategoryDbModel, int>>();
+            services.AddScoped<ResourceService<BakabaseDbContext, CategoryDbModel, int>>();
             services.AddScoped<ICategoryService, CategoryService>();
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, PlayHistoryDbModel, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int>>();
             services.AddScoped<IPlayHistoryService, PlayHistoryService>();
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ThirdPartyContentTrackerDbModel, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ThirdPartyContentTrackerDbModel, int>>();
             services.AddScoped<IThirdPartyContentTrackerService, ThirdPartyContentTrackerService>();
 
             // todo: this can be moved into abstraction layer.
@@ -143,14 +147,14 @@ namespace Bakabase.Service.Extensions
 
             services.AddDownloaders();
 
-            services.AddBulkModification<InsideWorldDbContext>();
+            services.AddBulkModification<BakabaseDbContext>();
 
-            services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, ExtensionGroupDbModel, int>>();
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
 
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
 
-            services.AddPostParser<InsideWorldDbContext>();
+            services.AddPostParser<BakabaseDbContext>();
             services.AddSingleton<OllamaApiClientAccessor>();
             services.AddSingleton<TampermonkeyService>();
 
@@ -161,6 +165,25 @@ namespace Bakabase.Service.Extensions
             services.AddPlayList();
 
             services.AddBakaTracing();
+
+            // ResourceProfile index service (singleton for in-memory caching)
+            services.AddSingleton<ResourceProfileIndexService>();
+            services.AddSingleton<IResourceProfileIndexService>(sp => sp.GetRequiredService<ResourceProfileIndexService>());
+
+            // Resource data change event hub (singleton for event pub/sub)
+            services.AddSingleton<ResourceDataChangeEventHub>();
+            services.AddSingleton<IResourceDataChangeEvent>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+            services.AddSingleton<IResourceDataChangeEventPublisher>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+
+            // Resource search index service (singleton for in-memory caching)
+            // Note: Index is built via BTask "SearchIndex" task, not IHostedService
+            // Note: Depends on IResourceDataChangeEvent for event-driven index updates
+            services.AddSingleton<ResourceSearchIndexService>();
+            services.AddSingleton<IResourceSearchIndexService>(sp => sp.GetRequiredService<ResourceSearchIndexService>());
+
+            // Temporary: Resource index notification service (notifies frontend about index updates)
+            // TODO: Remove when no longer needed
+            services.AddHostedService<ResourceIndexNotificationService>();
 
             #endregion
 

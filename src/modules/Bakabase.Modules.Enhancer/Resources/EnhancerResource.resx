@@ -632,6 +632,9 @@
   <data name="Enhancer_KeywordPropertyIsEmpty" xml:space="preserve">
     <value>Keyword property has been set to [{0}]{1} from scope [{2}] but got empty value, use file/folder name as fallback</value>
   </data>
+  <data name="Enhancer_KeywordIsEmpty" xml:space="preserve">
+    <value>Keyword is empty, skipping enhancement for this resource</value>
+  </data>
   <data name="Enhancer_UsePropertyAsKeyword" xml:space="preserve">
     <value>Use property [{0}]{1} from scope [{2}] as keyword</value>
   </data>

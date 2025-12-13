@@ -1,0 +1,43 @@
+/* Resource component styles - migrated from SCSS to plain CSS + Tailwind */
+
+/* Limited content with line clamp and hover expand */
+.resource-limited-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  position: relative;
+}
+
+.resource-limited-content:hover {
+  overflow: unset;
+  text-overflow: unset;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  -webkit-box-orient: unset;
+  background-color: var(--bakaui-background);
+  word-break: break-all;
+  z-index: 1;
+}
+
+/* Selection mode styles - parent attribute is global */
+[data-selection-mode] .resource {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-selection-mode] .resource::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: transparent;
+}
+
+[data-selection-mode] .resource:hover {
+  border-color: hsl(var(--heroui-primary));
+  background-color: hsl(var(--heroui-primary) / 0.05);
+}

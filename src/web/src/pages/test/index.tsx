@@ -18,6 +18,11 @@ import LongTabsPage from "./cases/LongTabs";
 import ReactPlayer from "./cases/ReactPlayer";
 import HlsPlayerPage from "./cases/HlsPlayer";
 import FileNameModifierTestPage from "./cases/FileNameModifierTest";
+import FolderSelectorTest from "./cases/FolderSelectorTest";
+import MediaPlayerTest from "./cases/MediaPlayer";
+import WindowedMediaPlayerTest from "./cases/WindowedMediaPlayer";
+import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsModalTest";
+import PathMarksInvalidPathsTest from "./cases/PathMarksInvalidPathsTest";
 
 import ErrorBoundaryTestPage from "@/pages/test/cases/ErrorBoundaryTest";
 import { Listbox } from "@/components/bakaui";
@@ -27,40 +32,29 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import OrderSelector from "@/pages/resource/components/FilterPanel/OrderSelector";
 import VirtualListPage from "@/pages/test/cases/VirtualList";
 import ResourceTransferPage from "@/pages/test/cases/ResourceTransfer";
-import { ProcessValueEditor } from "@/pages/bulk-modification2/components/BulkModification/ProcessValue";
+import { ProcessValueEditor } from "@/pages/bulk-modification/components/BulkModification/ProcessValue";
 import { PropertyType, StandardValueType } from "@/sdk/constants";
 import PropertyMatcher from "@/components/PropertyMatcher";
 import BetaChip from "@/components/Chips/BetaChip";
 import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
-import FolderSelectorTest from "./cases/FolderSelectorTest";
-import MediaPlayerTest from "./cases/MediaPlayer";
-import WindowedMediaPlayerTest from "./cases/WindowedMediaPlayer";
-import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsModalTest";
 
 const components = {
+  PathMarksInvalidPaths: <PathMarksInvalidPathsTest />,
   AfterFirstPlayOperationsModalTest: <AfterFirstPlayOperationsModalTest />,
   FolderSelectorTest: <FolderSelectorTest />,
   WindowedMediaPlayer: <WindowedMediaPlayerTest />,
   ErrorBoundaryTest: <ErrorBoundaryTestPage />,
   FileNameModifierTest: <FileNameModifierTestPage />,
   PropertyMatcher: (
-    <PropertyMatcher
-      name={"封面3"}
-      type={PropertyType.Attachment}
-      onValueChanged={console.log}
-    />
+    <PropertyMatcher name={"封面3"} type={PropertyType.Attachment} onValueChanged={console.log} />
   ),
   BetaChip: (
     <div className={"flex flex-wrap gap-2 items-center"}>
       <BetaChip />
       <BetaChip color="primary" size="md" />
       <BetaChip color="success" size="lg" variant="solid" />
-      <BetaChip
-        color="danger"
-        tooltipContent="Custom tooltip content"
-        variant="bordered"
-      />
+      <BetaChip color="danger" tooltipContent="Custom tooltip content" variant="bordered" />
       <BetaChip showTooltip={false} />
     </div>
   ),
@@ -79,9 +73,7 @@ const components = {
   ),
   PresetMediaLibraryTemplateBuilder: <PresetMediaLibraryTemplateBuilderTest />,
   Properties: <PropertiesPage />,
-  BulkModification: (
-    <ProcessValueEditor valueType={StandardValueType.Boolean} />
-  ),
+  BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransferPage />,
   Filter: <ResourceFilterPage />,
   VirtualList: <VirtualListPage />,
@@ -94,17 +86,14 @@ const components = {
   LongTabs: <LongTabsPage />,
   FileSelector: (
     <FileSystemSelectorButton
-      defaultLabel={"File Selector"}
-      defaultSelectedPath={"I:\\Test\\updater\\AppData\\configs\\updater.json"}
-      startPath={"I:\\Test\\updater\\AppData\\configs\\updater.json"}
-      targetType={"file"}
+      fileSystemSelectorProps={{
+        targetType: "file",
+        defaultSelectedPath: "I:\\Test",
+      }}
     />
   ),
   FolderSelector: (
-    <FileSystemSelectorButton
-      defaultSelectedPath={"I:\\Test"}
-      targetType={"folder"}
-    />
+    <FileSystemSelectorButton defaultSelectedPath={"I:\\Test"} targetType={"folder"} />
   ),
   SimpleLabel: ["dark", "light"].map((t) => {
     return (
@@ -115,11 +104,9 @@ const components = {
           padding: 10,
         }}
       >
-        {["default", "primary", "success", "warning", "info", "danger"].map(
-          (s) => {
-            return <SimpleLabel status={s}>{s}</SimpleLabel>;
-          },
-        )}
+        {["default", "primary", "success", "warning", "info", "danger"].map((s) => {
+          return <SimpleLabel status={s}>{s}</SimpleLabel>;
+        })}
       </div>
     );
   }),
@@ -162,14 +149,12 @@ const TestPage = () => {
               setTestingKey(k as string);
             }}
           >
-            {Object.keys(components).map((c) => {
+            {Object.keys(components).sort().map((c) => {
               return <ListboxItem key={c}>{c}</ListboxItem>;
             })}
           </Listbox>
         </div>
-        <div
-          className={"flex flex-col gap-2 grow max-h-full h-full overflow-auto"}
-        >
+        <div className={"flex flex-col gap-2 grow max-h-full h-full overflow-auto"}>
           {/* {Object.keys(components).map(c => { */}
           {/*   return ( */}
           {/*     <> */}

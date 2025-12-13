@@ -33,8 +33,4 @@
     </EmbeddedResource>
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Abstractions\Models\Domain\" />
-  </ItemGroup>
-
 </Project>

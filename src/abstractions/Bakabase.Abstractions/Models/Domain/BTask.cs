@@ -1,8 +1,5 @@
-﻿using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bootstrap.Components.Tasks;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 
 namespace Bakabase.Abstractions.Models.Domain;
 
@@ -17,6 +14,7 @@ public record BTask
     public string? MessageOnInterruption => _getMessageOnInterruption?.Invoke();
     public DateTime CreatedAt { get; } = DateTime.Now;
     public HashSet<string>? ConflictKeys { get; }
+    public HashSet<string>? DependsOn { get; }
     public BTaskLevel Level { get; }
     public string? Error { get; set; }
     public string? BriefError { get; set; }
@@ -34,6 +32,10 @@ public record BTask
     public BTaskResourceType ResourceType { get; set; }
     public object[]? ResourceKeys { get; set; }
     public object? Data { get; set; }
+    public BTaskRetryPolicy? RetryPolicy { get; }
+    public BTaskDependencyFailurePolicy DependencyFailurePolicy { get; }
+    public int RetryCount { get; set; }
+    public DateTime? NextRetryAt { get; set; }
 
     public void ClearError()
     {
@@ -51,11 +53,14 @@ public record BTask
         Func<string> getName, Func<string?>? getDescription = null,
         Func<string?>? getMessageOnInterruption = null,
         HashSet<string>? conflictKeys = null,
+        HashSet<string>? dependsOn = null,
         BTaskLevel level = BTaskLevel.Default,
         bool isPersistent = false,
         BTaskType type = BTaskType.Any,
         BTaskResourceType resourceType = BTaskResourceType.Any,
-        object[]? resourceKeys = null)
+        object[]? resourceKeys = null,
+        BTaskRetryPolicy? retryPolicy = null,
+        BTaskDependencyFailurePolicy dependencyFailurePolicy = BTaskDependencyFailurePolicy.Wait)
     {
         Id = id;
         _getName = getName;
@@ -63,11 +68,15 @@ public record BTask
         _getMessageOnInterruption = getMessageOnInterruption;
 
         ConflictKeys = conflictKeys;
+        DependsOn = dependsOn;
         Level = level;
         IsPersistent = isPersistent;
 
         Type = type;
         ResourceType = resourceType;
         ResourceKeys = resourceKeys;
+
+        RetryPolicy = retryPolicy;
+        DependencyFailurePolicy = dependencyFailurePolicy;
     }
 }

@@ -8,6 +8,11 @@
 /* ===== reactour 覆盖 ===== */
 @import './global.reactour.overrides.css';
 
+/* ===== react-menu 基础样式 + HeroUI-style 覆盖 ===== */
+@import '@szhsin/react-menu/dist/index.css';
+@import '@szhsin/react-menu/dist/transitions/slide.css';
+@import './global.react-menu.overrides.css';
+
 @import "tailwindcss";
 
 @config "../../tailwind.config.js";
@@ -27,10 +32,36 @@ body {
   width: 100vw;
   overflow: hidden;
   user-select: none;
-  --scrollbar-size: 7px;
+  --scrollbar-size: 4px;
   --path-separator-color: #ff8400;
   font-family: Microsoft YaHei UI,  Arial, sans-serif;
 }
+
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-scrollbar-track-background);
+  border-radius: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb-background);
+  border-radius: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-scrollbar-thumb-hover-background);
+}
+
+/* Firefox scrollbar */
+/* * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-scrollbar-thumb-background) var(--theme-scrollbar-track-background);
+} */
 
 *,
 *:focus,

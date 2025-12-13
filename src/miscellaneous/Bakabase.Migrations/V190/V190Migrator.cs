@@ -53,7 +53,7 @@ namespace Bakabase.Migrations.V190
         private readonly AppService _appService;
         private readonly IFileManager _fileManager;
 
-        private readonly InsideWorldDbContext _dbCtx;
+        private readonly BakabaseDbContext _dbCtx;
 
         protected override string ApplyOnVersionEqualsOrBeforeString => "1.9.0-beta";
 
@@ -68,7 +68,7 @@ namespace Bakabase.Migrations.V190
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IServiceProvider serviceProvider, V190MigrationLocalizer localizer,
             IReservedPropertyValueService reservedPropertyValueService, IResourceService resourceService,
-            IAliasService aliasService, LegacyAliasService legacyAliasService, InsideWorldDbContext dbCtx,
+            IAliasService aliasService, LegacyAliasService legacyAliasService, BakabaseDbContext dbCtx,
             ICategoryCustomPropertyMappingService categoryCustomPropertyMappingService,
             ICategoryService categoryService, AppService appService, IFileManager fileManager) : base(serviceProvider)
         {

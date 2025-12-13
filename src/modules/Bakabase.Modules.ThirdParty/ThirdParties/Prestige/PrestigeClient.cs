@@ -17,9 +17,10 @@ public class PrestigeClient(IHttpClientFactory httpClientFactory, ILoggerFactory
         try
         {
             var realUrl = string.IsNullOrEmpty(appointUrl) ? string.Empty : appointUrl.Replace("goods", "api/product");
+            string searchUrl = "";
             if (string.IsNullOrEmpty(realUrl))
             {
-                var searchUrl = $"https://www.prestige-av.com/api/search?isEnabledQuery=true&searchText={Uri.EscapeDataString(number)}&isEnableAggregation=false&release=false&reservation=false&soldOut=false&from=0&aggregationTermsSize=0&size=20";
+                searchUrl = $"https://www.prestige-av.com/api/search?isEnabledQuery=true&searchText={Uri.EscapeDataString(number)}&isEnableAggregation=false&release=false&reservation=false&soldOut=false&from=0&aggregationTermsSize=0&size=20";
                 var json = await HttpClient.GetStringAsync(searchUrl);
                 var productApi = ExtractProductApi(json, number);
                 if (string.IsNullOrEmpty(productApi)) return null;
@@ -67,7 +68,8 @@ public class PrestigeClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 CoverUrl = cover,
                 PosterUrl = poster,
                 Website = realUrl.Replace("api/product", "goods"),
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
         }
         catch

@@ -27,7 +27,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Services
     /// <summary>
     /// todo: extract interface
     /// </summary>
-    public class DownloadTaskService : ResourceService<InsideWorldDbContext, DownloadTaskDbModel, int>
+    public class DownloadTaskService : ResourceService<BakabaseDbContext, DownloadTaskDbModel, int>
     {
         protected DownloaderManager DownloaderManager => GetRequiredService<DownloaderManager>();
 

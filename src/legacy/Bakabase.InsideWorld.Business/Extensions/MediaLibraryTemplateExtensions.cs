@@ -11,6 +11,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
@@ -18,9 +19,11 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
@@ -43,10 +46,31 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryV2DbModel, int>>();
         services.AddScoped<IMediaLibraryV2Service, MediaLibraryV2Service<TDbContext>>();
 
+        // New services for media library refactoring
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, PathMarkDbModel, int>>();
+        services.AddScoped<IPathMarkService, PathMarkService<TDbContext>>();
+
+        // PathMark effect tracking services
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceMarkEffectDbModel, int>>();
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, PropertyMarkEffectDbModel, int>>();
+        services.AddScoped<IPathMarkEffectService, PathMarkEffectService<TDbContext>>();
+
+        services.AddScoped<PathMarkSyncService>();
+        services.AddSingleton<PathSyncManager>();
+        services.AddHostedService(sp => sp.GetRequiredService<PathSyncManager>());
+        services.AddSingleton<IPathMarkSyncService>(sp => sp.GetRequiredService<PathSyncManager>());
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int>>();
+        services.AddSingleton<MediaLibraryResourceMappingIndexService>();
+        services.AddScoped<IMediaLibraryResourceMappingService, MediaLibraryResourceMappingService<TDbContext>>();
+
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceProfileDbModel, int>>();
+        services.AddScoped<IResourceProfileService, ResourceProfileService<TDbContext>>();
+
         return services;
     }
 
-    public static EnhancerFullOptions ToEnhancerFullOptions(this MediaLibraryTemplateEnhancerOptions options)
+    public static EnhancerFullOptions ToEnhancerFullOptions(this EnhancerFullOptions options)
     {
         return new EnhancerFullOptions
         {
@@ -55,7 +79,7 @@ public static class MediaLibraryTemplateExtensions
     }
 
     public static EnhancerTargetFullOptions ToEnhancerTargetFullOptions(
-        this MediaLibraryTemplateEnhancerTargetAllInOneOptions options)
+        this EnhancerTargetFullOptions options)
     {
         return new EnhancerTargetFullOptions
         {
@@ -114,14 +138,14 @@ public static class MediaLibraryTemplateExtensions
                             .OfType<string[]>()
                             .SelectMany(v => v).Distinct()
                             .ToList();
-                        bizValue = StandardValueInternals.HandlerMap[StandardValueType.ListString]
+                        bizValue = StandardValueSystem.GetHandler(StandardValueType.ListString)
                             .Convert(listStr, property!.Type.GetBizValueType());
                     }
 
                     if (bizValue == null)
                     {
                         var dbValue = (property!.Options as IDefaultValue)?.DefaultValue;
-                        bizValue = PropertyInternals.DescriptorMap[property.Type].GetBizValue(property, dbValue);
+                        bizValue = PropertySystem.Property.GetDescriptor(property.Type).GetBizValue(property, dbValue);
                     }
 
                     if (bizValue != null)
@@ -216,22 +240,22 @@ public static class MediaLibraryTemplateExtensions
 
             var isRegexEnhancer = eo.EnhancerId == (int) EnhancerId.Regex;
 
-            return new MediaLibraryTemplateEnhancerOptions
+            return new EnhancerFullOptions()
             {
                 EnhancerId = eo.EnhancerId,
                 TargetOptions = ceo?.Options?.TargetOptions
-                    ?.Where(to => to is {PropertyPool: not null, PropertyId: not null}).Select(to =>
-                        new MediaLibraryTemplateEnhancerTargetAllInOneOptions
+                    ?.Select(to =>
+                        new EnhancerTargetFullOptions()
                         {
                             CoverSelectOrder = to.CoverSelectOrder,
                             Target = to.Target,
                             DynamicTarget = to.DynamicTarget,
-                            PropertyId = to.PropertyId!.Value,
-                            PropertyPool = to.PropertyPool!.Value,
+                            PropertyId = to.PropertyId,
+                            PropertyPool = to.PropertyPool,
                         }).ToList(),
                 Expressions = isRegexEnhancer ? enhancerOptions.Value.RegexEnhancer?.Expressions : null
             };
-        }).OfType<MediaLibraryTemplateEnhancerOptions>().ToList();
+        }).OfType<EnhancerFullOptions>().ToList();
         template.DisplayNameTemplate = category.ResourceDisplayNameTemplate;
     }
 }

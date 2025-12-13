@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bootstrap.Extensions;
@@ -27,11 +28,20 @@ public abstract class
     where TContext : class?
 {
     protected override async Task<TContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+        EnhancementLogCollector logCollector, CancellationToken ct)
     {
         string? keyword = null;
         if (options.KeywordProperty != null)
         {
+            logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+                "Attempting to use property as keyword",
+                new
+                {
+                    Pool = options.KeywordProperty.Pool.ToString(),
+                    PropertyId = options.KeywordProperty.Id,
+                    Scope = options.KeywordProperty.Scope.ToString()
+                });
+
             if (options.KeywordProperty.Pool == PropertyPool.Internal)
             {
                 switch ((InternalProperty)options.KeywordProperty.Id)
@@ -62,6 +72,12 @@ public abstract class
                     var val =
                         await standardValueService.Convert(bv, hit.BizValueType, StandardValueType.String) as string;
                     keyword = val;
+                    if (!keyword.IsNullOrEmpty())
+                    {
+                        logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+                            $"Keyword from property: {keyword}",
+                            new { Keyword = keyword, Source = "Property" });
+                    }
                 }
             }
 
@@ -76,6 +92,8 @@ public abstract class
                     options.KeywordProperty.Id.ToString(), options.KeywordProperty.Scope.ToString());
                 TracingContext?.AddTrace(LogLevel.Warning, Localizer.Enhance(), msg);
                 Logger.LogWarning(msg);
+                logCollector.LogWarning(EnhancementLogEvent.KeywordResolved,
+                    "Keyword property value is empty, will fall back to filename");
             }
         }
 
@@ -83,6 +101,18 @@ public abstract class
         {
             keyword = resource.IsFile ? Path.GetFileNameWithoutExtension(resource.FileName) : resource.FileName;
             TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(), Localizer.Enhancer_UseFilenameAsKeyword(keyword));
+            logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+                $"Using filename as keyword: {keyword}",
+                new { Keyword = keyword, Source = "Filename" });
+        }
+
+        if (keyword.IsNullOrEmpty())
+        {
+            var msg = Localizer.Enhancer_KeywordIsEmpty();
+            TracingContext?.AddTrace(LogLevel.Warning, Localizer.Enhance(), msg);
+            Logger.LogWarning(msg);
+            logCollector.LogWarning(EnhancementLogEvent.KeywordResolved, "Keyword is empty, cannot proceed");
+            return default;
         }
 
         TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(),
@@ -90,15 +120,23 @@ public abstract class
 
         if (options.PretreatKeyword == true)
         {
+            var originalKeyword = keyword;
             keyword = await specialTextService.Pretreatment(keyword);
             TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(),
                 Localizer.Enhancer_KeywordAfterPretreatment(keyword));
+            logCollector.LogInfo(EnhancementLogEvent.KeywordPretreated,
+                $"Keyword pretreated: '{originalKeyword}' -> '{keyword}'",
+                new { Original = originalKeyword, Pretreated = keyword });
         }
 
-        return await BuildContextInternal(keyword, resource, options, ct);
+        logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+            $"Final keyword: {keyword}",
+            new { FinalKeyword = keyword });
+
+        return await BuildContextInternal(keyword, resource, options, logCollector, ct);
     }
 
     protected abstract Task<TContext?> BuildContextInternal(string keyword, Resource resource,
-        EnhancerFullOptions options,
+        EnhancerFullOptions options, EnhancementLogCollector logCollector,
         CancellationToken ct);
 }

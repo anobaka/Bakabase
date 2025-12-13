@@ -12,12 +12,11 @@ import { buildLogger, splitPathIntoSegments, standardizePath } from "@/component
 import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
 import { useUiOptionsStore } from "@/stores/options";
-import { ResourceCacheType } from "@/sdk/constants.ts";
+import { usePlayableFilesDiscovery } from "@/hooks/useResourceDiscovery";
 
 type Props = {
   resource: ResourceModel;
   PortalComponent: React.FC<{ onClick: () => any }>;
-  autoInitialize?: boolean;
   afterPlaying?: () => any;
 };
 
@@ -35,11 +34,6 @@ type Group = {
 type File = {
   name: string;
   path: string;
-};
-
-type PlayableFilesCtx = {
-  files: string[];
-  hasMore: boolean;
 };
 
 const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
@@ -62,7 +56,6 @@ const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
       };
       groups.push(dir);
     }
-    console.log(paths, path, stdPrefix, relativePath, segments);
     const extension = segments[segments.length - 1]!.split(".").pop()!;
     let group = dir.groups.find((g) => g.extension == extension);
 
@@ -85,60 +78,45 @@ const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
 const DefaultVisibleFileCount = 5;
 
 export type PlayableFilesRef = {
-  initialize: () => Promise<void>;
+  // No longer needed - discovery happens automatically
 };
 
 const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles(
-  { autoInitialize, resource, PortalComponent, afterPlaying },
+  { resource, PortalComponent, afterPlaying },
   ref,
 ) {
   const { t } = useTranslation();
   const log = buildLogger(`ResourcePlayableFiles:${resource.id}|${resource.path}`);
   const uiOptionsStore = useUiOptionsStore();
   const resourceUiOptions = uiOptionsStore.data?.resource;
-  const useCache = !resourceUiOptions?.disableCache;
 
-  const [portalCtx, setPortalCtx] = useState<PlayableFilesCtx>();
+  // Use SSE-based discovery for playable files
+  const discoveryState = usePlayableFilesDiscovery(resource);
+
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
 
-  const initialize = useCallback(async () => {
-    if (useCache) {
-      if (resource.cache?.cachedTypes?.includes(ResourceCacheType.PlayableFiles)) {
-        log("Set playable files via cache");
-        setPortalCtx({
-          files: resource.cache?.playableFilePaths ?? [],
-          hasMore: resource.cache?.hasMorePlayableFiles ?? false,
-        });
-
-        return;
+  // Compute playable files context from discovery state
+  const portalCtx = discoveryState.status === "ready"
+    ? {
+        files: discoveryState.playableFilePaths ?? [],
+        hasMore: discoveryState.hasMorePlayableFiles ?? false,
       }
-    }
-    log("Set playable files via api");
-    await BApi.resource.getResourcePlayableFiles(resource.id).then((a) => {
-      setPortalCtx({
-        files: a.data || [],
-        hasMore: false,
-      });
-      if (!resource.isFile) {
-        setDirs(splitIntoDirs(a.data || [], resource.path));
-      }
-    });
-  }, [useCache]);
+    : null;
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      initialize,
-    }),
-    [initialize],
-  );
-
+  // Update dirs when discovery completes
   useEffect(() => {
-    if (autoInitialize) {
-      initialize();
+    if (discoveryState.status === "ready" && discoveryState.playableFilePaths?.length && !resource.isFile) {
+      setDirs(splitIntoDirs(discoveryState.playableFilePaths, resource.path));
     }
-  }, []);
+  }, [discoveryState.status, discoveryState.playableFilePaths, resource.isFile, resource.path]);
+
+  // Reset dirs when resource changes
+  useEffect(() => {
+    setDirs(undefined);
+  }, [resource.id]);
+
+  useImperativeHandle(ref, () => ({}), []);
 
   const play = (file: string) =>
     BApi.resource
@@ -152,131 +130,143 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
         }
       });
 
-  if (portalCtx?.files && portalCtx.files.length > 0) {
-    return (
-      <>
-        <PortalComponent
-          onClick={() => {
-            if (portalCtx.files.length == 1 && !portalCtx.hasMore) {
-              play(portalCtx.files[0]!);
-            } else if (
-              resourceUiOptions?.autoSelectFirstPlayableFile &&
-              portalCtx.files.length > 0
-            ) {
-              play(portalCtx.files[0]!);
-            } else {
-              if (dirs) {
-                setModalVisible(true);
-              }
-            }
-          }}
-        />
-        <Modal
-          footer={false}
-          size={"lg"}
-          title={t<string>("Please select a file to play")}
-          visible={modalVisible}
-          onClose={() => {
-            setModalVisible(false);
-          }}
-        >
-          <div className={"flex flex-col gap-2 pb-2"}>
-            {dirs?.map((d) => {
-              return (
-                <div key={d.relativePath}>
-                  {dirs.length > 1 && (
-                    <div className={"flex items-center"}>
-                      <FolderOutlined className={"text-base"} />
-                      <Chip radius={"sm"} size={"sm"} variant={"light"}>
-                        {d.relativePath}
-                      </Chip>
-                    </div>
-                  )}
-                  <div className={"flex gap-1 flex-col"}>
-                    {d.groups.map((g) => {
-                      const showCount = g.showAll
-                        ? g.files.length
-                        : Math.min(DefaultVisibleFileCount, g.files.length);
-
-                      return (
-                        <div key={g.extension} className={"flex flex-wrap items-center gap-1"}>
-                          {d.groups.length > 1 && (
-                            <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                              {g.extension}
-                            </Chip>
-                          )}
-                          {g.files.slice(0, showCount).map((file) => {
-                            return (
-                              <Button
-                                key={file.path}
-                                className={"whitespace-break-spaces py-2 h-auto text-left"}
-                                radius={"sm"}
-                                size={"sm"}
-                                onPress={() => {
-                                  play(file.path);
-                                }}
-                              >
-                                <PlayCircleOutlined className={"text-base"} />
-                                <span className={"break-all overflow-hidden text-ellipsis"}>
-                                  {file.name}
-                                </span>
-                              </Button>
-                            );
-                          })}
-                          {g.files.length > DefaultVisibleFileCount && !g.showAll && (
-                            <Button
-                              color={"primary"}
-                              size={"sm"}
-                              variant={"light"}
-                              onPress={() => {
-                                g.showAll = true;
-                                setDirs([...dirs]);
-                              }}
-                            >
-                              {t<string>("Show all {{count}} files", {
-                                count: g.files.length,
-                              })}
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx?.files.length > 1 && (
-            <div className={"pt-3 border-t mt-3"}>
-              <Button
-                color={"primary"}
-                size={"sm"}
-                variant={"flat"}
-                onPress={async () => {
-                  await uiOptionsStore.patch({
-                    resource: {
-                      ...resourceUiOptions,
-                      autoSelectFirstPlayableFile: true,
-                    },
-                  });
-                  setModalVisible(false);
-                  toast.success(
-                    t<string>(
-                      "Auto-select first playable file has been enabled. You can change this in the resource page settings.",
-                    ),
-                  );
-                }}
-              >
-                {t<string>("Auto-select first file if multiple playable files exist")}
-              </Button>
-            </div>
-          )}
-        </Modal>
-      </>
-    );
+  // Loading state
+  if (discoveryState.status === "loading") {
+    return null;
   }
 
-  return null;
+  // Error state
+  if (discoveryState.status === "error") {
+    log("Discovery error:", discoveryState.error);
+    return null;
+  }
+
+  // No playable files
+  if (!portalCtx?.files || portalCtx.files.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <PortalComponent
+        onClick={() => {
+          if (portalCtx.files.length === 1 && !portalCtx.hasMore) {
+            play(portalCtx.files[0]!);
+          } else if (
+            resourceUiOptions?.autoSelectFirstPlayableFile &&
+            portalCtx.files.length > 0
+          ) {
+            play(portalCtx.files[0]!);
+          } else {
+            if (dirs) {
+              setModalVisible(true);
+            }
+          }
+        }}
+      />
+      <Modal
+        footer={false}
+        size={"lg"}
+        title={t<string>("Please select a file to play")}
+        visible={modalVisible}
+        onClose={() => {
+          setModalVisible(false);
+        }}
+      >
+        <div className={"flex flex-col gap-2 pb-2"}>
+          {dirs?.map((d) => {
+            return (
+              <div key={d.relativePath}>
+                {dirs.length > 1 && (
+                  <div className={"flex items-center"}>
+                    <FolderOutlined className={"text-base"} />
+                    <Chip radius={"sm"} size={"sm"} variant={"light"}>
+                      {d.relativePath}
+                    </Chip>
+                  </div>
+                )}
+                <div className={"flex gap-1 flex-col"}>
+                  {d.groups.map((g) => {
+                    const showCount = g.showAll
+                      ? g.files.length
+                      : Math.min(DefaultVisibleFileCount, g.files.length);
+
+                    return (
+                      <div key={g.extension} className={"flex flex-wrap items-center gap-1"}>
+                        {d.groups.length > 1 && (
+                          <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                            {g.extension}
+                          </Chip>
+                        )}
+                        {g.files.slice(0, showCount).map((file) => {
+                          return (
+                            <Button
+                              key={file.path}
+                              className={"whitespace-break-spaces py-2 h-auto text-left"}
+                              radius={"sm"}
+                              size={"sm"}
+                              onPress={() => {
+                                play(file.path);
+                              }}
+                            >
+                              <PlayCircleOutlined className={"text-base"} />
+                              <span className={"break-all overflow-hidden text-ellipsis"}>
+                                {file.name}
+                              </span>
+                            </Button>
+                          );
+                        })}
+                        {g.files.length > DefaultVisibleFileCount && !g.showAll && (
+                          <Button
+                            color={"primary"}
+                            size={"sm"}
+                            variant={"light"}
+                            onPress={() => {
+                              g.showAll = true;
+                              setDirs([...dirs]);
+                            }}
+                          >
+                            {t<string>("Show all {{count}} files", {
+                              count: g.files.length,
+                            })}
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx?.files.length > 1 && (
+          <div className={"pt-3 border-t mt-3"}>
+            <Button
+              color={"primary"}
+              size={"sm"}
+              variant={"flat"}
+              onPress={async () => {
+                await uiOptionsStore.patch({
+                  resource: {
+                    ...resourceUiOptions,
+                    autoSelectFirstPlayableFile: true,
+                  },
+                });
+                setModalVisible(false);
+                toast.success(
+                  t<string>(
+                    "Auto-select first playable file has been enabled. You can change this in the resource page settings.",
+                  ),
+                );
+              }}
+            >
+              {t<string>("Auto-select first file if multiple playable files exist")}
+            </Button>
+          </div>
+        )}
+      </Modal>
+    </>
+  );
 });
 
 PlayableFiles.displayName = "PlayableFiles";

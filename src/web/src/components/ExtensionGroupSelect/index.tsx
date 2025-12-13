@@ -14,8 +14,10 @@ type ExtensionGroup = {
 type Props = {
   value?: number[];
   onSelectionChange?: (ids: number[]) => void;
+  size?: "sm" | "md" | "lg";
+  className?: string;
 };
-const ExtensionGroupSelect = ({ value = [], onSelectionChange }: Props) => {
+const ExtensionGroupSelect = ({ value = [], onSelectionChange, size, className }: Props) => {
   const { t } = useTranslation();
   const [extensionGroups, setExtensionGroups] = useState<ExtensionGroup[]>([]);
 
@@ -37,6 +39,8 @@ const ExtensionGroupSelect = ({ value = [], onSelectionChange }: Props) => {
       placeholder={t<string>("Select from extension groups")}
       selectedKeys={(value ?? []).map((x) => x.toString())}
       selectionMode={"multiple"}
+      size={size}
+      className={className}
       onSelectionChange={(keys) => {
         onSelectionChange?.(
           Array.from(keys).map((k) => parseInt(k as string, 10)),

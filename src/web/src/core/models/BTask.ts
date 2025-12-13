@@ -22,6 +22,6 @@ export type BTask = {
   elapsed?: string;
   type: BTaskType;
   resourceType: BTaskResourceType;
-  resourceKeys?: any[];
-  data?: any;
+  resourceKeys?: (string | number)[];
+  data?: unknown;
 };

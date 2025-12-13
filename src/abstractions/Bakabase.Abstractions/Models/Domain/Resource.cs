@@ -1,6 +1,7 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Frozen;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -11,7 +12,9 @@ public record Resource
 {
     public int Id { get; set; }
 
+    [Obsolete]
     public int MediaLibraryId { get; set; }
+    [Obsolete]
     public int CategoryId { get; set; }
 
     private string _fileName = null!;
@@ -101,7 +104,7 @@ public record Resource
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
     public List<string>? CoverPaths { get; set; }
-    public HashSet<ResourceTag> Tags { get; set; } = [];
+    public IReadOnlySet<ResourceTag> Tags { get; set; } = FrozenSet<ResourceTag>.Empty;
     public Resource? Parent { get; set; }
     /// <summary>
     /// ResourcePropertyType - PropertyId - Property
@@ -112,6 +115,7 @@ public record Resource
     public DateTime? PlayedAt { get; set; }
 
     public ResourceCache? Cache { get; set; }
+    [Obsolete]
     public bool IsMediaLibraryV2 => CategoryId == 0;
 
     public record Property(
@@ -146,10 +150,17 @@ public record Resource
         }
     }
 
+    [Obsolete]
     public Category? Category { get; set; }
 
+    [Obsolete]
     public string? MediaLibraryName { get; set; }
+    [Obsolete]
     public string? MediaLibraryColor { get; set; }
+
+    public List<MediaLibraryInfo>? MediaLibraries { get; set; }
+
+    public record MediaLibraryInfo(int Id, string Name, string? Color);
 
     private void RebuildPath()
     {

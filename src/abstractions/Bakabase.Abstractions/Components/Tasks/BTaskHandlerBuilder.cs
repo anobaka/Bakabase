@@ -1,5 +1,4 @@
-﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using System.Collections.Concurrent;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Domain;
 
 namespace Bakabase.Abstractions.Components.Tasks;
@@ -13,6 +12,7 @@ public record BTaskHandlerBuilder
     public string Id { get; init; } = Guid.NewGuid().ToString();
     public required Func<BTaskArgs, Task> Run { get; init; }
     public HashSet<string>? ConflictKeys { get; init; }
+    public HashSet<string>? DependsOn { get; init; }
     public BTaskLevel Level { get; init; } = BTaskLevel.Default;
     public TimeSpan? Interval { get; init; }
     public bool IsPersistent { get; init; }
@@ -24,4 +24,6 @@ public record BTaskHandlerBuilder
     public object[]? ResourceKeys { get; set; }
     public bool StartNow { get; set; }
     public BTaskDuplicateIdHandling DuplicateIdHandling { get; set; } = BTaskDuplicateIdHandling.Reject;
+    public BTaskRetryPolicy? RetryPolicy { get; init; }
+    public BTaskDependencyFailurePolicy DependencyFailurePolicy { get; init; } = BTaskDependencyFailurePolicy.Wait;
 }

@@ -119,7 +119,8 @@ public class HdoubanClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 PosterUrl = poster,
                 Website = appointUrl ?? $"https://ormtgu.com/moviedetail/{detailId}",
                 Source = "hdouban",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
 
             return detail;

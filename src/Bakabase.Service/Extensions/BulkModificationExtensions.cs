@@ -36,7 +36,7 @@ public static class BulkModificationExtensions
             FilteredResourceIds = domainModel.FilteredResourceIds,
             IsActive = domainModel.IsActive,
             Name = domainModel.Name,
-            Filter = domainModel.Filter?.ToViewModel(propertyLocalizer),
+            Search = domainModel.Search?.ToViewModel(propertyLocalizer),
             Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             AppliedAt = domainModel.AppliedAt,
@@ -90,7 +90,7 @@ public static class BulkModificationExtensions
                 .OfType<BulkModificationProcess>().ToList(),
             Variables = inputModel.Variables?.Select(p => p.ToDomainModel(propertyMap))
                 .OfType<BulkModificationVariable>().ToList(),
-            Filter = inputModel.Filter?.ToDomainModel(propertyMap)
+            Search = inputModel.Search != null ? await inputModel.Search.ToDomainModel(propertyService) : null
         };
     }
 

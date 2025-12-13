@@ -6,14 +6,13 @@ import type { IResourceCoverRef } from "@/components/Resource/components/Resourc
 import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
 import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
-import type { PlayableFilesRef } from "@/components/Resource/components/PlayableFiles";
-import type { BTask } from "@/core/models/BTask";
 
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, { useCallback, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 import {
   ApartmentOutlined,
+  CheckCircleFilled,
   DisconnectOutlined,
   FileUnknownOutlined,
   HistoryOutlined,
@@ -26,18 +25,16 @@ import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
 
-import styles from "./index.module.scss";
+import "./index.css";
 
 import { buildLogger, useTraceUpdate } from "@/components/utils";
-import ResourceDetailDialog from "@/components/Resource/components/DetailDialog";
+import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
-import TaskCover from "@/components/Resource/components/TaskCover";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Chip, Link, Tooltip } from "@/components/bakaui";
 import {
-  BTaskStatus,
   PropertyPool,
   ResourceAdditionalItem,
   ResourceProperty,
@@ -79,11 +76,14 @@ type Props = {
   style?: any;
   className?: string;
   selected?: boolean;
-  mode?: "default" | "select";
-  onSelected?: (id: number) => any;
+  selectionModeRef?: React.RefObject<boolean>;
+  onSelected?: (id: number, shiftKey?: boolean) => any;
   selectedResourceIds?: number[];
+  selectedResources?: ResourceModel[];
   onSelectedResourcesChanged?: (ids: number[]) => any;
   debug?: boolean;
+  /** Disable cover click to prevent opening DetailModal */
+  disableCoverClick?: boolean;
 };
 
 const Resource = React.forwardRef((props: Props, ref) => {
@@ -95,11 +95,13 @@ const Resource = React.forwardRef((props: Props, ref) => {
     biggerCoverPlacement,
     style: propStyle = {},
     selected = false,
-    mode = "default",
-    onSelected = (id: number) => {},
+    selectionModeRef,
+    onSelected = (id: number, shiftKey?: boolean) => {},
     selectedResourceIds: propsSelectedResourceIds,
+    selectedResources,
     onSelectedResourcesChanged,
     debug,
+    disableCoverClick = false,
   } = props;
 
   // useTraceUpdate(props, props`Resource:${resource.id}|${resource.path}`);
@@ -111,24 +113,16 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const renderedTimes = useRef(0);
 
   renderedTimes.current += 1;
-  const tasksRef = useRef<BTask[] | undefined>();
 
   const uiOptions = useUiOptionsStore((state) => state.data);
 
   const forceUpdate = useUpdate();
-
-  const playableFilesRef = useRef<PlayableFilesRef>(null);
 
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
     x: 0,
     y: 0,
   });
-
-  const hasActiveTask =
-    tasksRef.current?.some(
-      (x) => x.status == BTaskStatus.Paused || x.status == BTaskStatus.Running,
-    ) == true;
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -142,20 +136,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const displayPropertyKeys = uiOptions.resource?.displayProperties ?? [];
 
-  const initialize = useCallback(async (ct: AbortSignal) => {
-    if (playableFilesRef.current) {
-      await playableFilesRef.current.initialize();
-    }
-    // log('Initialized');
-  }, []);
-
-  useEffect(() => {
-    if (queue) {
-      queue.push(async () => await initialize(ct));
-    } else {
-      initialize(ct);
-    }
-  }, []);
+  // Discovery happens automatically via SSE now
 
   const reload = useCallback(async (ct?: AbortSignal) => {
     const newResourceRsp = await BApi.resource.getResourcesByKeys({
@@ -170,8 +151,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         Object.keys(nr).forEach((k) => {
           resource[k] = nr[k];
         });
-        coverRef.current?.load(true);
-        playableFilesRef.current?.initialize();
+        coverRef.current?.reload();
         forceUpdate();
       }
     } else {
@@ -182,20 +162,25 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const coverRef = useRef<IResourceCoverRef>();
 
   const onCoverClick = useCallback(() => {
-    createPortal(ResourceDetailDialog, {
+    if (disableCoverClick) return;
+    createPortal(ResourceDetailModal, {
       id: resource.id,
+      initialResource: resource,
       onDestroyed: () => {
         reload();
       },
     });
-  }, []);
+  }, [resource, disableCoverClick]);
 
   const renderCover = () => {
     const elementId = `resource-${resource.id}`;
 
     return (
-      <div className={styles.coverRectangle} id={elementId}>
-        <div className={styles.absoluteRectangle}>
+      <div
+        className="resource-cover-rectangle w-full max-w-full min-w-full pb-[100%] relative rounded group/cover"
+        id={elementId}
+      >
+        <div className="absolute inset-0">
           <ResourceCover
             ref={coverRef}
             biggerCoverPlacement={biggerCoverPlacement}
@@ -204,7 +189,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
             disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
             resource={resource}
             showBiggerOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
-            useCache={!uiOptions?.resource?.disableCache}
             onClick={onCoverClick}
           />
         </div>
@@ -272,7 +256,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               "inline-flex flex-col gap-1 absolute bottom-0 right-0 items-end max-w-full max-h-full w-fit"
             }
           >
-            {displayPropertyKeys.map((dpk) => {
+            {displayPropertyKeys.flatMap((dpk) => {
               const style: CSSProperties = {};
 
               let bizValue: any | undefined;
@@ -284,6 +268,36 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     switch (dpk.id) {
                       case ResourceProperty.MediaLibrary:
                       case ResourceProperty.MediaLibraryV2:
+                      case ResourceProperty.MediaLibraryV2Multi:
+                        // Render multiple chips for multiple media libraries
+                        if (resource.mediaLibraries && resource.mediaLibraries.length > 0) {
+                          return resource.mediaLibraries.map((ml) => {
+                            const mlStyle: CSSProperties = {};
+
+                            if (ml.color) {
+                              mlStyle.color = ml.color;
+                              mlStyle.backgroundColor = autoBackgroundColor(ml.color);
+                            }
+
+                            return (
+                              <Chip
+                                key={`${dpk.pool}-${dpk.id}-${ml.id}`}
+                                className={"h-auto w-fit"}
+                                radius={"sm"}
+                                size={"sm"}
+                                style={mlStyle}
+                                variant={"flat"}
+                              >
+                                <StandardValueRenderer
+                                  type={StandardValueType.String}
+                                  value={ml.name}
+                                  variant="light"
+                                />
+                              </Chip>
+                            );
+                          });
+                        }
+                        // Fallback to legacy single value
                         if (resource.mediaLibraryColor) {
                           style.color = resource.mediaLibraryColor;
                           style.backgroundColor = autoBackgroundColor(resource.mediaLibraryColor);
@@ -328,10 +342,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
               }
 
               if (bizValue == undefined || bizValueType == undefined) {
-                return null;
+                return [];
               }
 
-              return (
+              return [
                 <Chip
                   key={`${dpk.pool}-${dpk.id}`}
                   className={"h-auto w-fit"}
@@ -341,16 +355,15 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   variant={"flat"}
                 >
                   <StandardValueRenderer type={bizValueType} value={bizValue} variant="light" />
-                </Chip>
-              );
+                </Chip>,
+              ];
             })}
             {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
           </div>
         )}
         <PlayableFiles
-          ref={playableFilesRef}
           PortalComponent={({ onClick }) => (
-            <div className={`${styles.play} z-1`}>
+            <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
               <Tooltip content={t<string>("Play")}>
                 <Button
                   onPress={onClick}
@@ -409,11 +422,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     ...propStyle,
   };
 
-  if (selected) {
-    style.borderWidth = 2;
-    style.borderColor = "var(--bakaui-success)";
-  }
-
   const selectedResourceIds = (propsSelectedResourceIds ?? []).slice();
 
   if (!selectedResourceIds.includes(resource.id)) {
@@ -421,18 +429,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }
 
   const renderDisplayNameAndTags = (highContrastBackground: boolean = false) => {
+    // inline 模式下 (highContrastBackground=true) 父元素是 w-fit，不能用 container queries
+    // 非 inline 模式下可以用 container queries 实现字体随容器缩放
     return (
       <div
-        className={`${highContrastBackground ? "bg-default/70 text-default-700" : ""} px-1 rounded`}
+        className={`rounded text-right ${highContrastBackground ? "" : "[container-type:inline-size]"}`}
       >
-        <div className={styles.info}>
-          <div className={`select-text ${styles.limitedContent}`}>{resource.displayName}</div>
+        <div
+          className={`${highContrastBackground ? "bg-default/70 backdrop-blur-sm text-default-700 px-1.5 py-0.5 rounded-md text-xs" : "mt-1 text-[clamp(11px,5cqw,22px)]"}`}
+        >
+          <div className="select-text resource-limited-content">{resource.displayName}</div>
         </div>
         {firstTagsValue && firstTagsValue.length > 0 && (
-          <div className={styles.info}>
-            <div
-              className={`select-text ${styles.limitedContent} flex flex-wrap opacity-70 leading-3 gap-px`}
-            >
+          <div
+            className={`${highContrastBackground ? "bg-default/70 backdrop-blur-sm text-default-700 px-1.5 py-0.5 rounded-md mt-1 text-xs" : "mt-1 text-[clamp(11px,5cqw,22px)]"}`}
+          >
+            <div className="select-text resource-limited-content flex flex-wrap opacity-70 leading-3 gap-px">
               {firstTagsValue.map((v) => {
                 return (
                   <Link
@@ -464,21 +476,27 @@ const Resource = React.forwardRef((props: Props, ref) => {
   return (
     <div
       key={resource.id}
-      className={`flex flex-col p-1 rounded relative border-1 border-default-200 group/resource ${styles.resource} ${props.className}`}
+      className={`flex flex-col p-1 rounded relative border-2 group/resource resource ${props.className} ${
+        selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-default-200"
+      }`}
       data-id={resource.id}
       role={"resource"}
       style={style}
+      onClickCapture={(e) => {
+        if (selectionModeRef?.current || e.shiftKey) {
+          onSelected(resource.id, e.shiftKey);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
+      {selected && (
+        <div className="absolute top-2 right-2 z-20">
+          <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
+        </div>
+      )}
       <Operations coverRef={coverRef.current} reload={reload} resource={resource} />
-      <TaskCover
-        reload={reload}
-        resource={resource}
-        onTasksChange={(tasks) => (tasksRef.current = tasks)}
-      />
       <div
-        onClick={() => {
-          log("outer", "click");
-        }}
         onContextMenu={(e) => {
           if (typeof document.hasFocus === "function" && !document.hasFocus()) return;
 
@@ -503,20 +521,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
         >
           <ContextMenuItems
             selectedResourceIds={selectedResourceIds}
+            selectedResources={selectedResources}
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         </ControlledMenu>
-        <div
-          className="relative"
-          onClickCapture={(e) => {
-            log("outer", "click capture");
-            if (mode == "select" && !hasActiveTask) {
-              onSelected(resource.id);
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
-        >
+        <div className="relative">
           {renderCover()}
           {!uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(false)}
         </div>

@@ -14,8 +14,8 @@ namespace Bakabase.InsideWorld.Business.Services;
 /// 第三方内容追踪服务实现
 /// </summary>
 public class ThirdPartyContentTrackerService(
-    FullMemoryCacheResourceService<InsideWorldDbContext, ThirdPartyContentTrackerDbModel, int> orm,
-    InsideWorldDbContext dbContext)
+    FullMemoryCacheResourceService<BakabaseDbContext, ThirdPartyContentTrackerDbModel, int> orm,
+    BakabaseDbContext dbContext)
     : IThirdPartyContentTrackerService
 {
     public async Task<List<ThirdPartyContentTrackerStatusViewModel>> QueryContentStatus(

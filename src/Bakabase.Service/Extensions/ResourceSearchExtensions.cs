@@ -4,12 +4,18 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
+using Bakabase.Modules.Property.Components.Properties.Choice;
+using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Search.Models.Db;
+using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
@@ -19,6 +25,79 @@ namespace Bakabase.Service.Extensions;
 
 public static class ResourceSearchExtensions
 {
+    /// <summary>
+    /// Simple filter data for ParentResource population
+    /// </summary>
+    public record FilterData(PropertyPool PropertyPool, int PropertyId, string? DbValue, SearchOperation? Operation);
+
+    /// <summary>
+    /// Builds a ParentResource property with choices based on resource IDs found in filters.
+    /// Returns null if no ParentResource filters found or no valid resource IDs.
+    /// </summary>
+    public static async Task<Property?> BuildParentResourcePropertyWithChoices(
+        this IEnumerable<FilterData> filters,
+        Property parentResourceProperty,
+        IResourceService resourceService)
+    {
+        var parentResourceFilters = filters
+            .Where(f => f.PropertyPool == PropertyPool.Internal &&
+                       f.PropertyId == (int)InternalProperty.ParentResource &&
+                       !string.IsNullOrEmpty(f.DbValue) &&
+                       f.Operation.HasValue)
+            .ToList();
+
+        if (!parentResourceFilters.Any())
+        {
+            return null;
+        }
+
+        var resourceIds = new HashSet<int>();
+        foreach (var filter in parentResourceFilters)
+        {
+            // Get value property type dynamically based on operation
+            var valueProperty = parentResourceProperty.ConvertPropertyIfNecessary(filter.Operation!.Value);
+            var dbValueType = valueProperty.Type.GetDbValueType();
+
+            // Deserialize based on the actual value type
+            var dbValue = filter.DbValue.DeserializeAsStandardValue(dbValueType);
+
+            if (dbValue is List<string> idList)
+            {
+                foreach (var id in idList)
+                {
+                    if (int.TryParse(id, out var resourceId))
+                    {
+                        resourceIds.Add(resourceId);
+                    }
+                }
+            }
+            else if (dbValue is string idStr)
+            {
+                if (int.TryParse(idStr, out var resourceId))
+                {
+                    resourceIds.Add(resourceId);
+                }
+            }
+        }
+
+        if (!resourceIds.Any())
+        {
+            return null;
+        }
+
+        var resources = await resourceService.GetByKeys(resourceIds.ToArray(), ResourceAdditionalItem.DisplayName);
+        var choices = resources.Select(r => new ChoiceOptions
+        {
+            Value = r.Id.ToString(),
+            Label = r.DisplayName ?? r.FileName ?? $"Resource {r.Id}"
+        }).ToList();
+
+        return parentResourceProperty with
+        {
+            Options = new SingleChoicePropertyOptions { Choices = choices }
+        };
+    }
+
     public static ResourceSearchFilterDbModel ToDbModel(this ResourceSearchFilterInputModel model)
     {
         return new ResourceSearchFilterDbModel
@@ -79,8 +158,8 @@ public static class ResourceSearchExtensions
 
             // The value may use a different property type than the property itself
             var valueProperty = property;
-            var ph = PropertyInternals.PropertySearchHandlerMap[property.Type];
-            var conversion = ph.SearchOperations[f.Operation!.Value];
+            var ph = PropertySystem.Property.GetSearchHandler(property.Type);
+            var conversion = ph.SearchOperations.GetValueOrDefault(f.Operation!.Value);
             if (conversion?.ConvertProperty != null)
             {
                 valueProperty = conversion.ConvertProperty(property);
@@ -159,7 +238,8 @@ public static class ResourceSearchExtensions
 
             foreach (var (pId, p) in propertyMap[PropertyPool.Custom])
             {
-                if (PropertyInternals.PropertySearchHandlerMap.TryGetValue(p.Type, out var pd))
+                var pd = PropertySystem.Property.TryGetSearchHandler(p.Type);
+                if (pd != null)
                 {
                     var filter = pd.BuildSearchFilterByKeyword(p, model.Keyword);
                     if (filter != null)
@@ -200,7 +280,7 @@ public static class ResourceSearchExtensions
 
         if (property != null)
         {
-            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(property.Type);
+            var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
             if (psh != null)
             {
                 filter.AvailableOperations = psh.SearchOperations.Keys.ToList();
@@ -220,7 +300,7 @@ public static class ResourceSearchExtensions
                     if (asType.HasValue)
                     {
                         var dbValue = model.Value?.DeserializeAsStandardValue(asType.Value.GetDbValueType());
-                        var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type);
+                        var pd = PropertySystem.Property.TryGetDescriptor(valueProperty.Type);
                         filter.BizValue = pd?.GetBizValue(valueProperty, dbValue)
                             ?.SerializeAsStandardValue(asType.Value.GetBizValueType());
                     }
@@ -254,7 +334,7 @@ public static class ResourceSearchExtensions
     }
 
     public static async Task<List<ResourceSearchViewModel>> ToViewModels(this IEnumerable<ResourceSearchDbModel> models,
-        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer)
+        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService? resourceService = null)
     {
         var modelsArray = models.ToArray();
         var validFilters = modelsArray.SelectMany(m => m.Group?.ExtractFilters() ?? []).ToList();
@@ -264,6 +344,27 @@ public static class ResourceSearchExtensions
 
         var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
             .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+
+        // Build ParentResource property with choices if needed
+        Property? parentResourcePropertyWithChoices = null;
+        if (resourceService != null &&
+            propertyMap.TryGetValue(PropertyPool.Internal, out var internalProps) &&
+            internalProps.TryGetValue((int)InternalProperty.ParentResource, out var parentResourceProperty))
+        {
+            var filterData = validFilters
+                .Where(f => f.PropertyPool.HasValue && f.PropertyId.HasValue)
+                .Select(f => new FilterData(f.PropertyPool!.Value, f.PropertyId!.Value, f.Value, f.Operation));
+
+            parentResourcePropertyWithChoices = await filterData.BuildParentResourcePropertyWithChoices(
+                parentResourceProperty, resourceService);
+
+            // Update the local property map copy (safe because propertyMap is a new dictionary)
+            if (parentResourcePropertyWithChoices != null)
+            {
+                internalProps[(int)InternalProperty.ParentResource] = parentResourcePropertyWithChoices;
+            }
+        }
+
         var viewModels = new List<ResourceSearchViewModel>();
         foreach (var model in modelsArray)
         {
@@ -308,9 +409,9 @@ public static class ResourceSearchExtensions
             DbValue = domainModel.DbValue?.SerializeAsStandardValue(valueProperty.Type.GetDbValueType()),
             ValueProperty = valueProperty.ToViewModel(propertyLocalizer),
             Property = domainModel.Property.ToViewModel(propertyLocalizer),
-            BizValue = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type)?.GetBizValue(valueProperty, domainModel.DbValue)
+            BizValue = PropertySystem.Property.TryGetDescriptor(valueProperty.Type)?.GetBizValue(valueProperty, domainModel.DbValue)
                 ?.SerializeAsStandardValue(valueProperty.Type.GetBizValueType()),
-            AvailableOperations = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(domainModel.Property.Type)?.SearchOperations.Keys.ToList()
+            AvailableOperations = PropertySystem.Property.TryGetSearchHandler(domainModel.Property.Type)?.SearchOperations.Keys.ToList()
         };
         
         return filter;
@@ -318,7 +419,7 @@ public static class ResourceSearchExtensions
     
     public static Property ConvertPropertyIfNecessary(this Property property, SearchOperation operation)
     {
-        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(property.Type);
+        var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
         if (psh != null && psh.SearchOperations.TryGetValue(operation, out var conversion) && conversion is
             {
                 ConvertProperty: not null
@@ -328,5 +429,38 @@ public static class ResourceSearchExtensions
         }
 
         return property;
+    }
+
+    public static ResourceSearchViewModel ToViewModel(this ResourceSearch domainModel,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceSearchViewModel
+        {
+            Group = domainModel.Group?.ToViewModel(propertyLocalizer),
+            Keyword = null,
+            Orders = domainModel.Orders,
+            Page = domainModel.PageIndex,
+            PageSize = domainModel.PageSize,
+            Tags = domainModel.Tags
+        };
+    }
+
+    public static ResourceProfileViewModel ToViewModel(this ResourceProfile profile,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceProfileViewModel
+        {
+            Id = profile.Id,
+            Name = profile.Name,
+            Search = profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
+            NameTemplate = profile.NameTemplate,
+            EnhancerOptions = profile.EnhancerOptions,
+            PlayableFileOptions = profile.PlayableFileOptions,
+            PlayerOptions = profile.PlayerOptions,
+            PropertyOptions = profile.PropertyOptions,
+            Priority = profile.Priority,
+            CreatedAt = profile.CreatedAt,
+            UpdatedAt = profile.UpdatedAt
+        };
     }
 }

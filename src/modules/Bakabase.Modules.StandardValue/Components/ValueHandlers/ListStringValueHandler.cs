@@ -9,7 +9,6 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -46,7 +45,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public override string? ConvertToString(List<string> optimizedValue)
         {
             return optimizedValue.Any()
-                ? string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue)
+                ? string.Join(StandardValueSystem.CommonListItemSeparator, optimizedValue)
                 : null;
         }
 
@@ -70,7 +69,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                 }
             }
 
-            return new LinkValue(string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue), null);
+            return new LinkValue(string.Join(StandardValueSystem.CommonListItemSeparator, optimizedValue), null);
         }
 
         protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(List<string> optimizedValue) =>
@@ -86,5 +85,24 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
             optimizedValue.Select(TagValue.TryParse).OfType<TagValue>().ToList().ToNullIfEmpty();
 
         protected override bool CompareInternal(List<string> a, List<string> b) => a.SequenceEqual(b);
+
+        /// <summary>
+        /// Aggregates multiple list values into one by union (distinct).
+        /// </summary>
+        public override object? Combine(IEnumerable<object?> values)
+        {
+            var result = new HashSet<string>();
+            foreach (var value in values)
+            {
+                if (ConvertToOptimizedTypedValue(value, out var optimized) && optimized != null)
+                {
+                    foreach (var item in optimized)
+                    {
+                        result.Add(item);
+                    }
+                }
+            }
+            return result.Count > 0 ? result.ToList() : null;
+        }
     }
 }

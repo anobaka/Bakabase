@@ -105,10 +105,14 @@ public class AvEnhancer(
     protected override EnhancerId TypedId => EnhancerId.Av;
 
     protected override async Task<AvEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+        EnhancementLogCollector logCollector, CancellationToken ct)
     {
         try
         {
+            logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                $"Searching AV with keyword: {keyword} using 38 data sources",
+                new { Keyword = keyword, SourceCount = 38, Sources = new[] { "airav", "airavcc", "avsex", "avsox", "cableav", "cnmdb", "dmm", "dahlia", "fc2", "faleno", "fantastica", "fc2club", "fc2hub", "fc2ppvdb", "freejavbt", "getchu", "getchudl", "giga", "guochan", "hdouban", "hscangku", "iqqtv", "iqqtvnew", "jav321", "javbus", "javday", "javdb", "javlibrary", "kin8", "love6", "lulubar", "madouqu", "mdtv", "mgstage", "mmtv", "mywife", "official", "prestige", "theporndb", "theporndbmovies", "xcity" } });
+
             var context = new AvEnhancerContext();
 
             // Define all clients that implement SearchAndParseVideo returning IAvDetail
@@ -158,6 +162,8 @@ public class AvEnhancer(
             };
 
             // Try each client and collect results
+            var successfulSources = new List<string>();
+            var failedSources = new List<string>();
             var tasks = clients.Select(async kvp =>
             {
                 try
@@ -165,12 +171,20 @@ public class AvEnhancer(
                     var result = await kvp.Value(keyword, null);
                     if (result != null)
                     {
+                        lock (successfulSources)
+                        {
+                            successfulSources.Add(kvp.Key);
+                        }
                         Logger.LogInformation($"Found result from {kvp.Key}: {result.Source}");
                         return result;
                     }
                 }
                 catch (Exception ex)
                 {
+                    lock (failedSources)
+                    {
+                        failedSources.Add(kvp.Key);
+                    }
                     Logger.LogDebug($"Client {kvp.Key} failed: {ex.Message}");
                 }
                 return null;
@@ -178,6 +192,15 @@ public class AvEnhancer(
 
             var results = await Task.WhenAll(tasks);
             context.Details = results.Where(r => r != null).ToList()!;
+
+            logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                $"Found {context.Details.Count} results from different sources",
+                new {
+                    ResultCount = context.Details.Count,
+                    SuccessfulSources = successfulSources,
+                    FailedSourceCount = failedSources.Count,
+                    Sources = context.Details.Select(d => new { Source = d.Source, SearchUrl = d.SearchUrl }).ToList()
+                });
 
             if (!context.Details.Any())
             {
@@ -198,24 +221,51 @@ public class AvEnhancer(
                 {
                     if (!coverSaved && !string.IsNullOrEmpty(detail.CoverUrl))
                     {
+                        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                            $"Downloading cover from {detail.Source}",
+                            new { Url = detail.CoverUrl, Source = detail.Source });
+
                         var imageData = await airavClient.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
+
+                        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                            $"Cover downloaded from {detail.Source} ({imageData.Length} bytes)",
+                            new { Url = detail.CoverUrl, Source = detail.Source, Size = imageData.Length });
+
                         var extension = Path.GetExtension(detail.CoverUrl.Split('?')[0]) ?? ".jpg";
                         var coverPath = await SaveFile(resource, $"cover_{detail.Source}{extension}", imageData);
                         context.CoverPaths[detail.Source!] = coverPath;
+                        logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                            $"Cover saved: {coverPath}",
+                            new { CoverPath = coverPath, Source = detail.Source });
                         coverSaved = true;
                     }
 
                     if (!posterSaved && !string.IsNullOrEmpty(detail.PosterUrl))
                     {
+                        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                            $"Downloading poster from {detail.Source}",
+                            new { Url = detail.PosterUrl, Source = detail.Source });
+
                         var imageData = await airavClient.HttpClient.GetByteArrayAsync(detail.PosterUrl, ct);
+
+                        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                            $"Poster downloaded from {detail.Source} ({imageData.Length} bytes)",
+                            new { Url = detail.PosterUrl, Source = detail.Source, Size = imageData.Length });
+
                         var extension = Path.GetExtension(detail.PosterUrl.Split('?')[0]) ?? ".jpg";
                         var posterPath = await SaveFile(resource, $"poster_{detail.Source}{extension}", imageData);
                         context.PosterPaths[detail.Source!] = posterPath;
+                        logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                            $"Poster saved: {posterPath}",
+                            new { PosterPath = posterPath, Source = detail.Source });
                         posterSaved = true;
                     }
                 }
                 catch (Exception ex)
                 {
+                    logCollector.LogWarning(EnhancementLogEvent.Error,
+                        $"Failed to download images from {detail.Source}: {ex.Message}",
+                        new { Source = detail.Source, Error = ex.Message });
                     Logger.LogDebug($"Failed to download images from {detail.Source}: {ex.Message}");
                 }
             }
@@ -230,7 +280,7 @@ public class AvEnhancer(
     }
 
     protected override async Task<List<EnhancementTargetValue<AvEnhancerTarget>>> ConvertContextByTargets(
-        AvEnhancerContext context, CancellationToken ct)
+        AvEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<AvEnhancerTarget>>();
 

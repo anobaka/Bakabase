@@ -23,11 +23,12 @@ public class ThePornDBMoviesClient(IHttpClientFactory httpClientFactory, ILogger
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
             string? detailUrl = appointUrl?.Replace("//theporndb", "//api.theporndb");
+            string searchUrl = "";
 
             if (string.IsNullOrEmpty(detailUrl))
             {
                 var keyword = GuessSearchKeyword(number);
-                var searchUrl = $"https://api.theporndb.net/movies?q={Uri.EscapeDataString(keyword)}&per_page=50";
+                searchUrl = $"https://api.theporndb.net/movies?q={Uri.EscapeDataString(keyword)}&per_page=50";
                 var searchJson = await client.GetStringAsync(searchUrl);
                 using var searchDoc = JsonDocument.Parse(searchJson);
                 var movies = searchDoc.RootElement.GetProperty("data");
@@ -76,7 +77,8 @@ public class ThePornDBMoviesClient(IHttpClientFactory httpClientFactory, ILogger
                 CoverUrl = cover,
                 PosterUrl = poster,
                 Website = detailUrl,
-                Mosaic = "无码"
+                Mosaic = "无码",
+                SearchUrl = searchUrl
             };
         }
         catch

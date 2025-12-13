@@ -1,10 +1,23 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import "./index.scss";
+import type { BakabaseInsideWorldModelsModelsDtosDashboardStatistics } from "@/sdk/Api";
+import type { Resource as ResourceModel } from "@/core/models/Resource";
+
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { AiOutlineArrowRight, AiOutlinePlusCircle } from "react-icons/ai";
+import {
+  AiOutlineArrowRight,
+  AiOutlineClockCircle,
+  AiOutlineDatabase,
+  AiOutlineEdit,
+  AiOutlineFolderOpen,
+  AiOutlinePlayCircle,
+  AiOutlinePushpin,
+  AiOutlineRise,
+  AiOutlineSearch,
+  AiOutlineThunderbolt,
+} from "react-icons/ai";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,21 +27,31 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { Bar } from "react-chartjs-2";
 
 import BApi from "@/sdk/BApi";
-
-import type { BakabaseInsideWorldModelsModelsDtosDashboardStatistics } from "@/sdk/Api";
-
 import {
-  downloadTaskStatuses,
+  InternalProperty,
   PropertyPool,
-  ThirdPartyId,
+  ResourceSearchSortableProperty,
+  ResourceTag,
+  SearchOperation,
+  StandardValueType,
 } from "@/sdk/constants";
-import { Button, Chip, Spinner } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { progressiveSearch } from "@/hooks/useResourceSearch";
+import {
+  Button,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Spinner,
+} from "@/components/bakaui";
+import Resource from "@/components/Resource";
+import { serializeStandardValue } from "@/components/StandardValue";
+import { OnboardingModal, useOnboarding } from "@/components/Onboarding";
 
 // Register Chart.js components
 ChartJS.register(
@@ -39,409 +62,462 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
+  Filler,
 );
+
+type ResourceTab = "added" | "played" | "pinned";
+
 const DashboardPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [data, setData] =
-    useState<BakabaseInsideWorldModelsModelsDtosDashboardStatistics>(
-      {} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
-    );
+  const { showOnboarding, completeOnboarding } = useOnboarding();
+
+  const [data, setData] = useState<BakabaseInsideWorldModelsModelsDtosDashboardStatistics>(
+    {} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics,
+  );
   const [property, setProperty] = useState<any>();
+  const [activeTab, setActiveTab] = useState<ResourceTab>("added");
+  const [recentlyAdded, setRecentlyAdded] = useState<ResourceModel[]>([]);
+  const [recentlyPlayed, setRecentlyPlayed] = useState<ResourceModel[]>([]);
+  const [pinnedResources, setPinnedResources] = useState<ResourceModel[]>([]);
+  const [mediaLibraries, setMediaLibraries] = useState<Array<{ id: number; name: string }>>([]);
   const initializedRef = useRef(false);
 
   useEffect(() => {
     BApi.dashboard.getStatistics().then((res) => {
       initializedRef.current = true;
-      setData(
-        res.data ||
-          ({} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics),
-      );
+      setData(res.data || ({} as BakabaseInsideWorldModelsModelsDtosDashboardStatistics));
     });
 
     BApi.dashboard.getPropertyStatistics().then((r) => {
       setProperty(r.data);
     });
+
+    // Fetch recently added with progressive loading
+    progressiveSearch(
+      {
+        page: 1,
+        pageSize: 20,
+        orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
+      },
+      setRecentlyAdded,
+    );
+
+    // Fetch recently played with progressive loading
+    progressiveSearch(
+      {
+        page: 1,
+        pageSize: 20,
+        orders: [{ property: ResourceSearchSortableProperty.PlayedAt, asc: false }],
+      },
+      setRecentlyPlayed,
+      (resources) => resources.filter((r) => r.playedAt),
+    );
+
+    // Fetch pinned resources with progressive loading
+    progressiveSearch(
+      {
+        page: 1,
+        pageSize: 20,
+        tags: [ResourceTag.Pinned],
+        orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
+      },
+      setPinnedResources,
+    );
+
+    // Fetch media libraries for Browse Libraries dropdown
+    BApi.mediaLibraryV2.getAllMediaLibraryV2().then((res) => {
+      const libs = (res.data ?? []).map((lib) => ({
+        id: lib.id!,
+        name: lib.name ?? "",
+      }));
+
+      setMediaLibraries(libs);
+    });
   }, []);
 
-  const renderTrending = () => {
-    if (data && data.resourceTrending) {
-      const chartData =
-        data.resourceTrending.map((r) => ({
-          week:
-            r.offset == 0
-              ? t<string>("This week")
-              : r.offset == -1
-                ? t<string>("Last week")
-                : `${t<string>("{{count}} weeks ago", { count: -r.offset! })}`,
-          count: r.count,
-        })) ?? [];
+  // Calculate stats
+  const totalResources = (data.mediaLibraryResourceCounts ?? []).reduce(
+    (sum, item) => sum + item.count,
+    0,
+  );
+  const libraryCount = (data.mediaLibraryResourceCounts ?? []).length;
+  const thisWeekCount = data.resourceTrending?.find((r) => r.offset === 0)?.count ?? 0;
+  const lastWeekCount = data.resourceTrending?.find((r) => r.offset === -1)?.count ?? 0;
+  const weekGrowth =
+    lastWeekCount > 0 ? (((thisWeekCount - lastWeekCount) / lastWeekCount) * 100).toFixed(0) : 0;
+  const propertyCoverage =
+    property?.totalExpectedPropertyValueCount > 0
+      ? (
+          (property.totalFilledPropertyValueCount / property.totalExpectedPropertyValueCount) *
+          100
+        ).toFixed(1)
+      : 0;
 
-      // console.log(chartData);
-      return <ChartComponent chartData={chartData} />;
+  const resourceScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleWheelScroll = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (resourceScrollRef.current && e.deltaY !== 0) {
+      e.preventDefault();
+      resourceScrollRef.current.scrollLeft += e.deltaY;
     }
+  }, []);
 
-    return null;
+  // Get current tab resources
+  const getCurrentResources = () => {
+    switch (activeTab) {
+      case "added":
+        return recentlyAdded;
+      case "played":
+        return recentlyPlayed;
+      case "pinned":
+        return pinnedResources;
+      default:
+        return [];
+    }
   };
 
-  const renderResourceCounts = () => {
-    const list = data.mediaLibraryResourceCounts ?? [];
+  const currentResources = getCurrentResources();
 
-    if (list.length == 0) {
-      return (
-        <Button
-          color="primary"
-          variant="flat"
-          onPress={() => navigate("/media-library")}
-        >
-          <AiOutlinePlusCircle className="text-base" />
-          {t<string>("Add your resources")}
-        </Button>
-      );
-    }
+  // Stat Card Component
+  const StatCard = ({
+    icon,
+    label,
+    value,
+    subValue,
+    color = "primary",
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    value: string | number;
+    subValue?: string;
+    color?: "primary" | "success" | "warning" | "secondary";
+  }) => {
+    const colorClasses = {
+      primary: "text-primary bg-primary/10",
+      success: "text-success bg-success/10",
+      warning: "text-warning bg-warning/10",
+      secondary: "text-secondary bg-secondary/10",
+    };
 
-    // 统一主题色获取
+    return (
+      <div className="flex items-center gap-4 p-5 bg-[var(--theme-block-background)] rounded-xl">
+        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>{icon}</div>
+        <div className="flex flex-col">
+          <span className="text-sm text-[var(--theme-text-subtle)]">{label}</span>
+          <span className="text-2xl font-semibold">{value}</span>
+          {subValue && <span className="text-xs text-[var(--theme-text-subtle)]">{subValue}</span>}
+        </div>
+      </div>
+    );
+  };
+
+  // Mini Trend Chart
+  const TrendChart = () => {
     const getCssVariable = (variableName: string) => {
       if (typeof document === "undefined") return "";
 
-      return getComputedStyle(document.documentElement).getPropertyValue(
-        variableName,
-      );
+      return getComputedStyle(document.documentElement).getPropertyValue(variableName);
     };
-    const primaryColor =
-      getCssVariable("--theme-text-primary") || "rgba(59,130,246,1)";
-    const textColor = getCssVariable("--theme-text") || "#222";
-    const subtleColor = getCssVariable("--theme-text-subtle") || "#888";
-    const borderColor = getCssVariable("--theme-border-color") || "#eee";
-    const blockBg = getCssVariable("--theme-block-background") || "#fff";
 
-    // 统一 options
+    const chartData = data.resourceTrending?.slice().reverse() ?? [];
+
+    if (chartData.length === 0) return null;
+
+    const primaryColor = getCssVariable("--theme-text-primary") || "#6366f1";
+
+    const chartConfig = {
+      labels: chartData.map((_, i) => i.toString()),
+      datasets: [
+        {
+          data: chartData.map((item) => item.count),
+          borderColor: primaryColor,
+          backgroundColor: `${primaryColor}20`,
+          borderWidth: 2,
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+        },
+      ],
+    };
+
     const options = {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          backgroundColor: blockBg,
-          titleColor: textColor,
-          bodyColor: textColor,
-          borderColor: primaryColor,
-          borderWidth: 1,
-        },
+        tooltip: { enabled: false },
       },
       scales: {
-        y: {
-          beginAtZero: true,
-          grid: { color: borderColor },
-          ticks: { color: subtleColor },
-        },
-        x: {
-          grid: { display: false },
-          ticks: { color: subtleColor },
-        },
+        y: { display: false },
+        x: { display: false },
       },
     };
 
-    const chartData = {
-      labels: list.map((item) => item.name),
-      datasets: [
-        {
-          label: t<string>("Resource count"),
-          data: list.map((item) => item.count),
-          backgroundColor: `${primaryColor}33`,
-          borderColor: primaryColor,
-          borderWidth: 2,
-          borderRadius: 8, // 圆角
-          maxBarThickness: 32, // 柱子最大宽度
-        },
-      ],
-    };
-
-    const total = (data.mediaLibraryResourceCounts ?? []).reduce(
-      (s, t) => s + t.count,
-      0,
-    );
-
     return (
-      <div className="w-full h-44 flex gap-2 items-start">
-        <div>
-          <div className={"text-lg"}>{t<string>("Count of resources")}</div>
-          <div className={"text-3xl"}>{total}</div>
-        </div>
-        <div className={"grow"}>
-          <Bar data={chartData} options={options} />
-        </div>
+      <div className="h-12 w-24">
+        <Line data={chartConfig} options={options} />
       </div>
     );
   };
 
-  return (
-    <div className={"dashboard-page"}>
-      {initializedRef.current ? (
-        <>
-          <section className={"h-1/3 max-h-1/3"}>
-            <div className="block w-2/3">
-              <div className={"title"}>{t<string>("Overview")}</div>
-              <div className={"content min-h-0"}>{renderResourceCounts()}</div>
-            </div>
-            <div className="block trending" style={{ flex: 1 }}>
-              <div className="title">{t<string>("Trending")}</div>
-              <div className="content">{renderTrending()}</div>
-            </div>
-          </section>
-          <section style={{ maxHeight: "40%" }}>
-            <div className="block" style={{ flex: 2.5 }}>
-              <div className={"title flex items-center gap-2"}>
-                {t<string>("Property value coverage")}
-                <div className={"text-sm opacity-60"}>
-                  {t<string>(
-                    "As more data is filled in, property value coverage increases",
-                  )}
-                </div>
-              </div>
-              {property ? (
-                <div className={"flex items-start gap-8 min-h-0"}>
-                  <div className={"w-[200px]"}>
-                    <div className={"text-lg"}>{t<string>("Overall")}</div>
-                    <div className={"text-3xl"}>
-                      {property.totalExpectedPropertyValueCount > 0
-                        ? (
-                            (property.totalFilledPropertyValueCount /
-                              property.totalExpectedPropertyValueCount) *
-                            100
-                          ).toFixed(2)
-                        : 0}
-                      %
-                    </div>
-                    <div className={"opacity-60 text-xs"}>
-                      {property.totalExpectedPropertyValueCount > 0
-                        ? property.totalFilledPropertyValueCount /
-                          property.totalExpectedPropertyValueCount
-                        : 0}
-                    </div>
-                  </div>
-                  <div className={"flex flex-col min-h-0 max-h-full"}>
-                    <div className={"text-lg"}>{t<string>("Details")}</div>
-                    <div
-                      className={"flex flex-wrap gap-2 min-h-0 overflow-auto"}
-                    >
-                      {property.propertyValueCoverages?.map((x: any) => {
-                        return (
-                          <div>
-                            <div className={"flex items-center gap-1"}>
-                              <Chip
-                                color={
-                                  x.pool == PropertyPool.Reserved
-                                    ? "secondary"
-                                    : "success"
-                                }
-                                radius={"sm"}
-                                size={"sm"}
-                                variant={"flat"}
-                              >
-                                {x.name}
-                              </Chip>
-                              <div>
-                                {(
-                                  (x.filledCount / x.expectedCount) *
-                                  100
-                                ).toFixed(2)}
-                                %
-                              </div>
-                            </div>
-                            <div className={"opacity-60 text-xs text-center"}>
-                              {x.filledCount} / {x.expectedCount}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className={"flex justify-center py-4"}>
-                  <Spinner />
-                </div>
-              )}
-            </div>
-          </section>
-          <section>
-            <div className="block" style={{ flex: 1.5 }}>
-              <div className={"title"}>{t<string>("Downloader")}</div>
-              <div className="content">
-                {data.downloaderDataCounts &&
-                data.downloaderDataCounts.length > 0 ? (
-                  <>
-                    <div className={"downloader-item"}>
-                      <div>{t<string>("Third party")}</div>
-                      {downloadTaskStatuses.map((s, i) => {
-                        return <div key={i}>{t<string>(s.label)}</div>;
-                      })}
-                    </div>
-                    {data.downloaderDataCounts?.map((c) => {
-                      return (
-                        <div className={"downloader-item"}>
-                          <div>{t<string>(ThirdPartyId[c.id]!)}</div>
-                          {downloadTaskStatuses.map((s, i) => {
-                            return (
-                              <div key={i}>
-                                {c.statusAndCounts?.[s.value] ?? 0}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </>
-                ) : (
-                  t<string>("No content")
-                )}
-              </div>
-            </div>
-            <div className="blocks">
-              {data.otherCounts?.map((list, r) => {
-                return (
-                  <section key={r}>
-                    {list.map((c, j) => {
-                      return (
-                        <div key={j} className="block">
-                          <div className="content">
-                            <div key={j} className="flex items-center gap-1">
-                              <Chip radius={"sm"} size={"sm"}>
-                                {t<string>(c.name)}
-                              </Chip>
-                              {c.count}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </section>
-                );
-              })}
-              <section>
-                <div className="block">
-                  <div className="content">
-                    <div className="t-t-c file-mover">
-                      <div className="left">
-                        <div className="text">{t<string>("File mover")}</div>
-                      </div>
-                      <div className="right">
-                        <div className="count flex items-center gap-1">
-                          {data.fileMover?.sourceCount ?? 0}
-                          <AiOutlineArrowRight />
-                          {data.fileMover?.targetCount ?? 0}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-            <div className="block hidden" style={{ flex: 1.5 }} />
-          </section>
-        </>
-      ) : (
-        <div className={"w-full h-full flex items-center justify-center"}>
-          <Spinner size={"lg"} />
-        </div>
+  // Tab Button Component
+  const TabButton = ({
+    tab,
+    icon,
+    label,
+    count,
+  }: {
+    tab: ResourceTab;
+    icon: React.ReactNode;
+    label: string;
+    count: number;
+  }) => (
+    <button
+      className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+        activeTab === tab
+          ? "bg-primary text-primary-foreground"
+          : "hover:bg-[var(--theme-block-background-accent)]"
+      }`}
+      onClick={() => setActiveTab(tab)}
+    >
+      {icon}
+      <span>{label}</span>
+      {count > 0 && (
+        <span
+          className={`text-xs px-1.5 py-0.5 rounded-full ${
+            activeTab === tab ? "bg-primary-foreground/20" : "bg-default-200"
+          }`}
+        >
+          {count}
+        </span>
       )}
+    </button>
+  );
+
+  // Handle random play
+  const handleRandomPlay = async () => {
+    await BApi.resource.playRandomResource();
+  };
+
+  // Handle browse library navigation
+  const handleBrowseLibrary = (libraryId: number, libraryName: string) => {
+    const searchForm = {
+      group: {
+        combinator: 1,
+        disabled: false,
+        filters: [
+          {
+            propertyPool: PropertyPool.Internal,
+            propertyId: InternalProperty.MediaLibraryV2Multi,
+            operation: SearchOperation.In,
+            dbValue: serializeStandardValue([libraryId.toString()], StandardValueType.ListString),
+            bizValue: serializeStandardValue([libraryName], StandardValueType.ListString),
+            disabled: false,
+          },
+        ],
+      },
+      page: 1,
+      pageSize: 100,
+    };
+
+    navigate(`/resource?query=${encodeURIComponent(JSON.stringify(searchForm))}`);
+  };
+
+  if (!initializedRef.current) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col gap-5 p-5 overflow-auto">
+      <OnboardingModal visible={showOnboarding} onComplete={completeOnboarding} />
+
+      {/* Stats Row */}
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          color="primary"
+          icon={<AiOutlineDatabase className="text-2xl" />}
+          label={t<string>("Total Resources")}
+          subValue={t<string>("{{count}} libraries", { count: libraryCount })}
+          value={totalResources.toLocaleString()}
+        />
+        <StatCard
+          color="success"
+          icon={<AiOutlineFolderOpen className="text-2xl" />}
+          label={t<string>("This Week")}
+          subValue={
+            Number(weekGrowth) >= 0 ? `↑ ${weekGrowth}%` : `↓ ${Math.abs(Number(weekGrowth))}%`
+          }
+          value={`+${thisWeekCount}`}
+        />
+        <div className="flex items-center gap-4 p-5 bg-[var(--theme-block-background)] rounded-xl">
+          <div className="p-3 rounded-lg text-warning bg-warning/10">
+            <AiOutlineRise className="text-2xl" />
+          </div>
+          <div className="flex flex-col flex-1">
+            <span className="text-sm text-[var(--theme-text-subtle)]">{t<string>("Trend")}</span>
+            <div className="flex items-center justify-between">
+              <span className="text-lg font-semibold">{t<string>("12 weeks")}</span>
+              <TrendChart />
+            </div>
+          </div>
+        </div>
+        <StatCard
+          color="secondary"
+          icon={<div className="text-xl font-bold">{propertyCoverage}%</div>}
+          label={t<string>("Data Completeness")}
+          value={`${property?.totalFilledPropertyValueCount ?? 0} / ${property?.totalExpectedPropertyValueCount ?? 0}`}
+        />
+      </section>
+
+      {/* Quick Actions */}
+      <section className="flex gap-3">
+        <Button className="flex-1" variant="flat" onPress={() => navigate("/resource")}>
+          <AiOutlineSearch className="text-lg" />
+          {t<string>("Search")}
+        </Button>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button className="flex-1" variant="flat">
+              <AiOutlineFolderOpen className="text-lg" />
+              {t<string>("Browse Libraries")}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Library selection"
+            onAction={(key) => {
+              const lib = mediaLibraries.find((l) => l.id === Number(key));
+
+              if (lib) {
+                handleBrowseLibrary(lib.id, lib.name);
+              }
+            }}
+          >
+            {mediaLibraries.map((lib) => {
+              const count =
+                data.mediaLibraryResourceCounts?.find((c) => c.name === lib.name)?.count ?? 0;
+
+              return (
+                <DropdownItem key={lib.id}>
+                  {lib.name} ({count})
+                </DropdownItem>
+              );
+            })}
+          </DropdownMenu>
+        </Dropdown>
+        <Button className="flex-1" variant="flat" onPress={() => navigate("/bulk-modification")}>
+          <AiOutlineEdit className="text-lg" />
+          {t<string>("Bulk Operations")}
+        </Button>
+        <Button
+          className="flex-1"
+          color="primary"
+          isDisabled={totalResources === 0}
+          variant="flat"
+          onPress={handleRandomPlay}
+        >
+          <AiOutlineThunderbolt className="text-lg" />
+          {t<string>("Random Pick")}
+        </Button>
+      </section>
+
+      {/* Resources Section with Tabs */}
+      <section className="bg-[var(--theme-block-background)] rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <TabButton
+              count={recentlyAdded.length}
+              icon={<AiOutlineClockCircle />}
+              label={t<string>("Recently Added")}
+              tab="added"
+            />
+            <TabButton
+              count={recentlyPlayed.length}
+              icon={<AiOutlinePlayCircle />}
+              label={t<string>("Recently Played")}
+              tab="played"
+            />
+            <TabButton
+              count={pinnedResources.length}
+              icon={<AiOutlinePushpin />}
+              label={t<string>("Pinned")}
+              tab="pinned"
+            />
+          </div>
+          <Button size="sm" variant="light" onPress={() => navigate("/resource")}>
+            {t<string>("View all")}
+            <AiOutlineArrowRight className="ml-1" />
+          </Button>
+        </div>
+
+        {currentResources.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-4 py-8 opacity-60">
+            {activeTab === "added" && <AiOutlineClockCircle className="text-5xl" />}
+            {activeTab === "played" && <AiOutlinePlayCircle className="text-5xl" />}
+            {activeTab === "pinned" && <AiOutlinePushpin className="text-5xl" />}
+            <p>
+              {activeTab === "added" && t<string>("No resources yet")}
+              {activeTab === "played" && t<string>("No play history")}
+              {activeTab === "pinned" && t<string>("No pinned resources")}
+            </p>
+            {activeTab === "added" && (
+              <Button color="primary" variant="flat" onPress={() => navigate("/media-library")}>
+                {t<string>("Add your resources")}
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div
+            ref={resourceScrollRef}
+            className="flex items-start gap-3 overflow-x-auto pb-2"
+            style={{
+              scrollbarWidth: "thin",
+              scrollbarColor: "transparent transparent",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.scrollbarColor = "var(--theme-text-subtle) transparent";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.scrollbarColor = "transparent transparent";
+            }}
+            onWheel={handleWheelScroll}
+          >
+            {currentResources.map((resource) => (
+              <Resource key={resource.id} className="flex-shrink-0 w-36" resource={resource} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Bottom Row: Needs Attention + Library Distribution */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Library Distribution */}
+        {(data.mediaLibraryResourceCounts ?? []).length > 0 && (
+          <div className="bg-[var(--theme-block-background)] rounded-xl p-5">
+            <h3 className="text-lg font-semibold mb-3">{t<string>("Library Distribution")}</h3>
+            <div className="flex flex-wrap gap-2">
+              {data.mediaLibraryResourceCounts?.map((lib) => (
+                <div
+                  key={lib.name}
+                  className="flex items-center gap-2 px-3 py-2 bg-[var(--theme-block-background-accent)] rounded-lg"
+                >
+                  <span className="text-sm">{lib.name}</span>
+                  <span className="text-sm font-semibold text-primary">{lib.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 };
 
 DashboardPage.displayName = "DashboardPage";
-
-// Chart component using Chart.js
-const ChartComponent = ({ chartData }: { chartData: any }) => {
-  const { isDarkMode } = useBakabaseContext();
-
-  // Get CSS variables for theme colors
-  const getCssVariable = (variableName: string) => {
-    // Check if we're in browser environment
-    if (typeof document === "undefined") {
-      return "";
-    }
-
-    return getComputedStyle(document.documentElement).getPropertyValue(
-      variableName,
-    );
-  };
-
-  // Ensure chartData is an array and has data
-  if (!Array.isArray(chartData) || chartData.length === 0) {
-    return (
-      <div className="flex justify-center py-4 text-gray-500">
-        No data available
-      </div>
-    );
-  }
-
-  const primaryColor = getCssVariable("--theme-text-primary");
-  const textColor = getCssVariable("--theme-text");
-  const subtleColor = getCssVariable("--theme-text-subtle");
-  const borderColor = getCssVariable("--theme-border-color");
-  const blockBg = getCssVariable("--theme-block-background");
-
-  const data = {
-    labels: chartData.map((item) => item.week),
-    datasets: [
-      {
-        label: "Count",
-        data: chartData.map((item) => item.count),
-        borderColor: primaryColor,
-        backgroundColor: `${primaryColor}33`, // 20ity
-        borderWidth: 2,
-        fill: true,
-        tension: 0.4,
-        pointBackgroundColor: primaryColor,
-        pointBorderColor: textColor,
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-      },
-    ],
-  };
-
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: blockBg,
-        titleColor: textColor,
-        bodyColor: textColor,
-        borderColor: primaryColor,
-        borderWidth: 1,
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: borderColor,
-        },
-        ticks: {
-          color: subtleColor,
-        },
-      },
-      x: {
-        display: false, // 隐藏X轴标签
-        grid: {
-          display: false,
-        },
-      },
-    },
-  };
-
-  return (
-    <div className="w-full h-44">
-      <Line data={data} options={options} />
-    </div>
-  );
-};
 
 export default DashboardPage;

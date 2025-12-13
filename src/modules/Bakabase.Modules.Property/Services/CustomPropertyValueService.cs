@@ -1,15 +1,14 @@
 ﻿using System.Linq.Expressions;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -27,7 +26,9 @@ namespace Bakabase.Modules.Property.Services
             IServiceProvider serviceProvider,
             IPropertyLocalizer localizer,
             IStandardValueLocalizer standardValueLocalizer,
-            IStandardValueService standardValueService)
+            IStandardValueService standardValueService,
+            IResourceDataChangeEventPublisher eventPublisher,
+            ILogger<CustomPropertyValueService<TDbContext>> logger)
         : FullMemoryCacheResourceService<TDbContext, CustomPropertyValueDbModel, int>(
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
     {
@@ -46,6 +47,17 @@ namespace Bakabase.Modules.Property.Services
             Expression<Func<CustomPropertyValueDbModel, bool>>? selector = null,
             bool returnCopy = true) =>
             base.GetAll(selector, returnCopy);
+
+        /// <summary>
+        /// Efficiently count values by property IDs using in-memory cache
+        /// </summary>
+        public async Task<Dictionary<int, int>> GetCountByPropertyIds(IEnumerable<int> propertyIds)
+        {
+            var propertyIdSet = propertyIds.ToHashSet();
+            var allValues = await GetAllDbModels(v => propertyIdSet.Contains(v.PropertyId), false);
+            return allValues.GroupBy(v => v.PropertyId)
+                .ToDictionary(g => g.Key, g => g.Count());
+        }
 
         protected async Task<List<CustomPropertyValue>> ToDomainModels(
             List<CustomPropertyValueDbModel> values,
@@ -82,7 +94,8 @@ namespace Bakabase.Modules.Property.Services
                             {
                                 if (propertyMap.TryGetValue(dto.PropertyId, out var p))
                                 {
-                                    if (PropertyInternals.DescriptorMap.TryGetValue(p.Type, out var cpd))
+                                    var cpd = PropertySystem.Property.TryGetDescriptor(p.Type);
+                                    if (cpd != null)
                                     {
                                         dto.BizValue = cpd.GetBizValue(p.ToProperty(), dto.Value);
                                     }
@@ -114,11 +127,7 @@ namespace Bakabase.Modules.Property.Services
                 customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].Type.GetDbValueType())!,
                     v => v);
             await AddRange(dbModelsMap.Keys.ToList());
-            // foreach (var (k, v) in dbModelsMap)
-            // {
-            //     v.Id = k.Id;
-            //     DbValueCache[v.Id] = v.Value;
-            // }
+            eventPublisher.PublishResourcesChanged(customPropertyValues.Select(v => v.ResourceId));
 
             return BaseResponseBuilder.Ok;
         }
@@ -132,10 +141,7 @@ namespace Bakabase.Modules.Property.Services
                 .Select(v => v.ToDbModel(propertyMap[v.PropertyId].Type.GetDbValueType())!)
                 .ToList();
             await UpdateRange(dbModels);
-            // foreach (var v in customPropertyValues)
-            // {
-            //     DbValueCache[v.Id] = v.Value;
-            // }
+            eventPublisher.PublishResourcesChanged(customPropertyValues.Select(v => v.ResourceId));
 
             return BaseResponseBuilder.Ok;
         }
@@ -149,8 +155,7 @@ namespace Bakabase.Modules.Property.Services
                 return rsp;
             }
 
-            // var property = await CustomPropertyService.GetByKey(resource.PropertyId);
-            // DbValueCache[rsp.Data!.Id] = rsp.Data.Value?.DeserializeAsStandardValue(property.DbValueType);
+            eventPublisher.PublishResourceChanged(resource.ResourceId);
 
             return rsp;
         }
@@ -163,10 +168,54 @@ namespace Bakabase.Modules.Property.Services
                 return rsp;
             }
 
-            // var property = await CustomPropertyService.GetByKey(resource.PropertyId);
-            // DbValueCache[resource.Id] = resource.Value?.DeserializeAsStandardValue(property.DbValueType);
+            eventPublisher.PublishResourceChanged(resource.ResourceId);
 
             return rsp;
+        }
+
+        public async Task<BaseResponse> AddDbModelRange(IEnumerable<CustomPropertyValueDbModel> resources)
+        {
+            var list = resources.ToList();
+            if (list.Count == 0) return BaseResponseBuilder.Ok;
+
+            await AddRange(list);
+            eventPublisher.PublishResourcesChanged(list.Select(r => r.ResourceId).Distinct());
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> UpdateDbModelRange(IEnumerable<CustomPropertyValueDbModel> resources)
+        {
+            var list = resources.ToList();
+            if (list.Count == 0) return BaseResponseBuilder.Ok;
+
+            // Optimization: Only update records that actually changed
+            // Reading from cache is lock-free, writing has lock - so minimize writes
+            var ids = list.Select(r => r.Id).ToList();
+            var existingValues = await GetByKeys(ids, asNoTracking: true);
+            var existingMap = existingValues.ToDictionary(e => e.Id, e => e);
+
+            var changedList = list.Where(newVal =>
+            {
+                if (!existingMap.TryGetValue(newVal.Id, out var existing))
+                    return true; // Not found in cache, should update (shouldn't happen but safe)
+                // Compare the Value field - if same, skip update
+                return existing.Value != newVal.Value;
+            }).ToList();
+
+            var skippedCount = list.Count - changedList.Count;
+            if (skippedCount > 0)
+            {
+                logger.LogInformation("[PropertyValue] Skipped {SkippedCount}/{TotalCount} unchanged updates",
+                    skippedCount, list.Count);
+            }
+
+            if (changedList.Count == 0) return BaseResponseBuilder.Ok;
+
+            await UpdateRange(changedList);
+            eventPublisher.PublishResourcesChanged(changedList.Select(r => r.ResourceId).Distinct());
+
+            return BaseResponseBuilder.Ok;
         }
 
         /// <summary>
@@ -206,7 +255,8 @@ namespace Bakabase.Modules.Property.Services
                     var cp = propertyMap.GetValueOrDefault(propertyId);
                     if (cp != null)
                     {
-                        if (!PropertyInternals.DescriptorMap.TryGetValue(cp.Type, out var pd))
+                        var pd = PropertySystem.Property.TryGetDescriptor(cp.Type);
+                        if (pd == null)
                         {
                             Logger.LogError(localizer.DescriptorNotDefined(cp.Type));
                             continue;
@@ -218,8 +268,8 @@ namespace Bakabase.Modules.Property.Services
                         {
                             foreach (var v in propertyValue.Values)
                             {
-                                var optimizedBizValue = StandardValueInternals
-                                    .HandlerMap[cp.Type.GetBizValueType()].Optimize(v.BizValue);
+                                var optimizedBizValue = StandardValueSystem
+                                    .GetHandler(cp.Type.GetBizValueType()).Optimize(v.BizValue);
                                 var (rawDbValue, propertyChanged) = pd.PrepareDbValue(p, optimizedBizValue);
 
                                 var dbPv = dbValueMap.GetValueOrDefault(resourceId)?.GetValueOrDefault(propertyId)
@@ -254,25 +304,22 @@ namespace Bakabase.Modules.Property.Services
             var added = await AddRange(valuesToAdd);
             await UpdateRange(valuesToUpdate);
 
-            // if (added.Data != null)
-            // {
-            //     for (var i = 0; i < added.Data.Count; i++)
-            //     {
-            //         DbValueCache[added.Data[i].Id] = newValuesDbValuesMap[valuesToAdd[i]];
-            //     }
-            // }
-            //
-            // foreach (var t in valuesToUpdate)
-            // {
-            //     DbValueCache[t.Id] = existedValuesDbValuesMap[t];
-            // }
+            var changedResourceIds = valuesToAdd.Select(v => v.ResourceId)
+                .Concat(valuesToUpdate.Select(v => v.ResourceId))
+                .Distinct()
+                .ToList();
+            if (changedResourceIds.Count > 0)
+            {
+                eventPublisher.PublishResourcesChanged(changedResourceIds);
+            }
         }
 
         public async Task<(CustomPropertyValue Value, bool PropertyChanged)?> CreateTransient(object? bizValue,
             StandardValueType bizValueType, CustomProperty customProperty, int resourceId,
             int scope)
         {
-            if (!PropertyInternals.DescriptorMap.TryGetValue(customProperty.Type, out var pd))
+            var pd = PropertySystem.Property.TryGetDescriptor(customProperty.Type);
+            if (pd == null)
             {
                 Logger.LogError(localizer.DescriptorNotDefined(customProperty.Type));
                 return null;

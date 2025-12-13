@@ -5,26 +5,21 @@ import type { SearchForm } from "@/pages/resource/models";
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
-import {
-  QuestionCircleOutlined,
-  SearchOutlined,
-  SnippetsOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
+import { HistoryOutlined } from "@ant-design/icons";
 
 import styles from "./index.module.scss";
-import FilterGroupsPanel from "./FilterGroupsPanel";
 import OrderSelector from "./OrderSelector";
-import FilterPortal from "./FilterPortal";
 
 import BApi from "@/sdk/BApi";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ShortcutsButton from "./ShortcutsButton";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
-import { ResourceTag } from "@/sdk/constants";
 import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
+import { ResourceSearchPanel } from "@/components/ResourceFilter";
 import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
 interface IProps {
@@ -33,11 +28,11 @@ interface IProps {
   searchForm?: SearchForm;
   onSearch?: (form: Partial<SearchForm>, newTab: boolean) => Promise<any>;
   reloadResources: (ids: number[]) => any;
-  multiSelection?: boolean;
   rearrangeResources?: () => any;
   onSelectAllChange: (selected: boolean, includeNotLoaded?: boolean) => any;
   resourceCount?: number;
   totalFilteredResourceCount?: number;
+  onOpenRecentlyPlayed?: () => void;
 }
 
 const MinResourceColCount = 3;
@@ -58,11 +53,11 @@ const FilterPanel = (props: IProps) => {
     selectedResourceIds,
     onSearch,
     searchForm: propsSearchForm,
-    multiSelection = false,
     rearrangeResources,
     onSelectAllChange,
     resourceCount,
     totalFilteredResourceCount,
+    onOpenRecentlyPlayed,
   } = props;
 
   useTraceUpdate(props, "FilterPanel");
@@ -79,9 +74,6 @@ const FilterPanel = (props: IProps) => {
   });
 
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
-
-  
 
   const [selectedAll, setSelectedAll] = useState(false);
 
@@ -142,47 +134,24 @@ const FilterPanel = (props: IProps) => {
             });
           }}
         />
-        <FilterPortal
-          searchForm={searchForm}
-          onChange={() => {
+        <ResourceSearchPanel
+          criteria={{
+            group: searchForm.group,
+            keyword: searchForm.keyword,
+            tags: searchForm.tags,
+          }}
+          onChange={(criteria) => {
             setSearchForm({
               ...searchForm,
+              group: criteria.group,
+              keyword: criteria.keyword,
+              tags: criteria.tags,
             });
           }}
-        />{" "}
-      </div>
-      {searchForm.group && (searchForm.group.filters && searchForm.group.filters.length > 0 || searchForm.group.groups && searchForm.group.groups.length > 0) && (
-        <FilterGroupsPanel
-          group={searchForm.group}
-          onChange={(v) => {
-            setSearchForm({
-              ...searchForm,
-              group: v,
-            });
-          }}
+          showKeyword={false}
+          showFilterGroupPreview
         />
-      )}
-      {searchForm.tags && searchForm.tags.length > 0 && (
-        <div className={"flex flex-wrap gap-1 mb-2"}>
-          {searchForm.tags.map((tag, i) => {
-            return (
-              <Chip
-                key={i}
-                isCloseable
-                size={"sm"}
-                onClose={() => {
-                  setSearchForm({
-                    ...searchForm,
-                    tags: searchForm.tags?.filter((t) => t != tag),
-                  });
-                }}
-              >
-                {t<string>(`ResourceTag.${ResourceTag[tag]}`)}
-              </Chip>
-            );
-          })}
-        </div>
-      )}
+      </div>
       <div className={"flex items-center justify-between"}>
         <div className={"flex items-center gap-4"}>
           <Button
@@ -216,60 +185,9 @@ const FilterPanel = (props: IProps) => {
             <AiOutlineExport className={"text-base"} />
             {t<string>("View in new tab")}
           </Button>
-          {/* <Button
-            isIconOnly
-            size={"sm"}
-            onPress={() => {
-              let name = `${t<string>("Untitled search")}1`;
-
-              createPortal(Modal, {
-                defaultVisible: true,
-                size: "lg",
-                title: t<string>("Save current search"),
-                children: (
-                  <Input
-                    isRequired
-                    defaultValue={name}
-                    label={t<string>("Name")}
-                    placeholder={t<string>(
-                      "Please set a name for current search",
-                    )}
-                    onValueChange={(v) => (name = v?.trim())}
-                  />
-                ),
-                onOk: async () => {
-                  if (name != undefined && name.length > 0) {
-                    // @ts-ignore
-                    await BApi.resource.saveNewResourceSearch({
-                      search: searchForm,
-                      name,
-                    });
-                    savedSearchesRef.current?.reload();
-                  } else {
-                    toast.error(t<string>("Name is required"));
-                    throw new Error("Name is required");
-                  }
-                },
-              });
-            }}
-          >
-            <SaveOutlined className={"text-base"} />
-          </Button> */}
         </div>
         <div className={"flex items-center gap-2"}>
-          {multiSelection && (
-            <Chip color={"success"} variant={"light"}>
-              <SnippetsOutlined className={"text-base"} />
-            </Chip>
-          )}
-          <Popover color={"success"} trigger={<QuestionCircleOutlined className={"text-base"} />}>
-            <div className={"flex flex-col gap-1"}>
-              <div>{t<string>("Hold down Ctrl to select multiple resources.")}</div>
-              <div>
-                {t<string>("You can perform more actions by right-clicking on the resource.")}
-              </div>
-            </div>
-          </Popover>
+          <ShortcutsButton />
           <Tooltip
             content={
               <div className={"flex items-center gap-1"}>
@@ -363,6 +281,16 @@ const FilterPanel = (props: IProps) => {
           >
             <PlaylistCollection />
           </Popover>
+          <Tooltip content={t<string>("Recently played")}>
+            <Button
+              isIconOnly
+              color={"default"}
+              size={"sm"}
+              onPress={onOpenRecentlyPlayed}
+            >
+              <HistoryOutlined className={"text-base"} />
+            </Button>
+          </Tooltip>
           <MiscellaneousOptions rearrangeResources={rearrangeResources} />
         </div>
       </div>

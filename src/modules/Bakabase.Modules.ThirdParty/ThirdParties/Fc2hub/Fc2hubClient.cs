@@ -25,9 +25,10 @@ public class Fc2hubClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 .Trim();
 
             string? realUrl = appointUrl;
+            string? searchUrl = null;
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"{rootUrl}/search?kw={normalized}";
+                searchUrl = $"{rootUrl}/search?kw={normalized}";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var candidates = docSearch.Select("link[href*='id" + normalized + "']");
@@ -77,7 +78,8 @@ public class Fc2hubClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 PosterUrl = "",
                 Website = realUrl,
                 Source = "fc2hub",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
 
             return detail;

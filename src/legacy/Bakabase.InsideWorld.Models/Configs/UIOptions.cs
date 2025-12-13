@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Models.Configs
     [Options]
     public class UIOptions
     {
-        public UIResourceOptions Resource { get; set; }
+        public UIResourceOptions Resource { get; set; } = new UIResourceOptions();
         public StartupPage StartupPage { get; set; }
         
         public bool IsMenuCollapsed { get; set; }

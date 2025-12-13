@@ -1,34 +1,34 @@
-@reference "../../../../styles/globals.css";
-
-.filterPanel {
-  border: 1px solid var(--theme-border-color);
-  border-radius: 4px;
-  padding: 5px;
-  position: relative;
-
-  .right {
-    .bulkOperations {
-      margin-left: 20px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
-
-      .disabled {
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-    }
-  }
-}
-
-.switch {
-  @apply opacity-20;
-  @apply text-base;
-  color: var(--bakaui-foreground);
-  cursor: pointer;
-
-  &.on {
-    @apply opacity-80;
-    color: var(--bakaui-primary);
-  }
-}
+//@reference "../../../../styles/globals.css";
+//
+//.filterPanel {
+//  border: 1px solid var(--theme-border-color);
+//  border-radius: 4px;
+//  padding: 5px;
+//  position: relative;
+//
+//  .right {
+//    .bulkOperations {
+//      margin-left: 20px;
+//      display: flex;
+//      align-items: center;
+//      gap: 5px;
+//
+//      .disabled {
+//        cursor: not-allowed;
+//        opacity: 0.5;
+//      }
+//    }
+//  }
+//}
+//
+//.switch {
+//  @apply opacity-20;
+//  @apply text-base;
+//  color: var(--bakaui-foreground);
+//  cursor: pointer;
+//
+//  &.on {
+//    @apply opacity-80;
+//    color: var(--bakaui-primary);
+//  }
+//}

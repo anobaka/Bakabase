@@ -34,7 +34,7 @@ const FileNameModifierModal: React.FC<FileNameModifierModalProps> = ({
     <Modal
       defaultVisible
       footer={null}
-      size="xl"
+      size="7xl"
       title={
         <div className="flex items-center gap-1">
           {t<string>("FileNameModifier.Title")}

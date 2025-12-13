@@ -12,7 +12,12 @@ public enum InternalProperty
     CreatedAt = 17,
     FileCreatedAt = 18,
     FileModifiedAt = 19,
+    [Obsolete]
     Category = 20,
+    [Obsolete]
     MediaLibrary = 21,
-    MediaLibraryV2 = ResourceProperty.MediaLibraryV2
+    [Obsolete]
+    MediaLibraryV2 = ResourceProperty.MediaLibraryV2,
+    MediaLibraryV2Multi = ResourceProperty.MediaLibraryV2Multi,
+    PlayedAt = ResourceProperty.PlayedAt
 }

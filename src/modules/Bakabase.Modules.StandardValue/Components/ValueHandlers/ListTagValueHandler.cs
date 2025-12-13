@@ -4,7 +4,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -37,7 +36,7 @@ public class ListTagValueHandler : AbstractStandardValueHandler<List<TagValue>>
     }
 
     public override string? ConvertToString(List<TagValue> optimizedValue) =>
-        string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue.Select(t => t.ToString()));
+        string.Join(StandardValueSystem.CommonListItemSeparator, optimizedValue.Select(t => t.ToString()));
 
     public override List<string>? ConvertToListString(List<TagValue> optimizedValue) =>
         optimizedValue.Select(t => t.ToString()).ToList();
@@ -79,4 +78,27 @@ public class ListTagValueHandler : AbstractStandardValueHandler<List<TagValue>>
         optimizedValue.Select(t => t.Name).ToList();
 
     protected override bool CompareInternal(List<TagValue> a, List<TagValue> b) => a.SequenceEqual(b, TagValue.GroupNameComparer);
+
+    /// <summary>
+    /// Aggregates multiple tag lists into one by union (using Group+Name as key).
+    /// </summary>
+    public override object? Combine(IEnumerable<object?> values)
+    {
+        var seen = new HashSet<(string? Group, string Name)>();
+        var result = new List<TagValue>();
+        foreach (var value in values)
+        {
+            if (ConvertToOptimizedTypedValue(value, out var optimized) && optimized != null)
+            {
+                foreach (var tag in optimized)
+                {
+                    if (seen.Add((tag.Group, tag.Name)))
+                    {
+                        result.Add(tag);
+                    }
+                }
+            }
+        }
+        return result.Count > 0 ? result : null;
+    }
 }

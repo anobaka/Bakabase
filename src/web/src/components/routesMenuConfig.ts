@@ -24,36 +24,40 @@ import {
   AiOutlineSwap,
   AiOutlineEdit,
   AiOutlineBug,
+  AiOutlineTags,
+  AiOutlineFilter,
 } from "react-icons/ai";
 import { lazy } from "react";
-import { MdOutlineArticle } from "react-icons/md";
+import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
 import { TbToolsKitchen } from "react-icons/tb";
 
 import DashboardPage from "@/pages/dashboard";
 import ResourcePage from "@/pages/resource";
-import ResourcePage2 from "@/pages/resource2";
+import LegacyMediaLibraryPage from "@/pages/deprecated/media-library";
 import MediaLibraryPage from "@/pages/media-library";
-import MediaLibraryTemplatePage from "@/pages/media-library-template";
-import CustomComponentPage from "@/pages/custom-component";
+import MediaLibraryTemplatePage from "@/pages/deprecated/media-library-template";
 import CustomPropertyPage from "@/pages/custom-property";
 import ExtensionGroup from "@/pages/extension-group";
-import BulkModification2Page from "@/pages/bulk-modification2";
+import BulkModification2Page from "@/pages/bulk-modification";
 import CachePage from "@/pages/cache";
 import AliasPage from "@/pages/alias";
 import TextPage from "@/pages/text";
 import PlayHistoryPage from "@/pages/play-history";
-import SynchronizationOptionsPage from "@/pages/synchronization-options";
+import SynchronizationOptionsPage from "@/pages/deprecated/synchronization-options";
 import Configuration from "@/pages/configuration";
 import ThirdPartyConfiguration from "@/pages/third-party-configuration";
 import BackgroundTaskPage from "@/pages/background-task";
 import Log from "@/pages/log";
-import CategoryPage from "@/pages/category";
 import FileProcessorPage from "@/pages/file-processor";
 import DownloaderPage from "@/pages/downloader";
 import FileMoverPage from "@/pages/file-mover";
 import FileNameModifier from "@/pages/file-name-modifier";
 import ThirdPartyIntegrationPage from "@/pages/third-party-integration";
 import PostParserPage from "@/pages/post-parser";
+import ResourceProfilePage from "@/pages/resource-profile";
+import PathRuleConfigPage from "@/pages/path-mark-config";
+import PathMarksPage from "@/pages/path-marks";
+import ProfilerPage from "@/pages/profiler";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -79,18 +83,10 @@ export const routesMenuConfig: RouteMenuItem[] = [
     layout: "basic",
     menu: false, // 首页不在菜单中
   },
-  // {
-  //   name: "Resource",
-  //   path: "/resource",
-  //   component: ResourcePage,
-  //   icon: AiOutlinePicture,
-  //   layout: "basic",
-  //   menu: true,
-  // },
   {
     name: "Resource",
-    path: "/resource2",
-    component: ResourcePage2,
+    path: "/resource",
+    component: ResourcePage,
     icon: AiOutlinePicture,
     layout: "basic",
     menu: true,
@@ -99,31 +95,42 @@ export const routesMenuConfig: RouteMenuItem[] = [
     name: "Media library",
     path: "/media-library",
     component: MediaLibraryPage,
-    icon: AiOutlineProduct,
+    icon: MdVideoLibrary,
     layout: "basic",
     menu: true,
   },
   {
-    name: "Media library template",
-    path: "/media-library-template",
-    component: MediaLibraryTemplatePage,
-    icon: AiOutlineAppstoreAdd,
+    name: "Media library configuration",
+    path: "/path-mark-config",
+    component: PathRuleConfigPage,
+    icon: AiOutlineControl,
     layout: "basic",
     menu: true,
+    isBeta: true,
+  },
+  {
+    name: "Path marks",
+    path: "/path-marks",
+    component: PathMarksPage,
+    icon: AiOutlineTags,
+    layout: "basic",
+    menu: true,
+    isBeta: true,
+  },
+  {
+    name: "Resource Profile",
+    path: "/resource-profile",
+    component: ResourceProfilePage,
+    icon: AiOutlineFilter,
+    layout: "basic",
+    menu: true,
+    isBeta: true,
   },
   {
     name: "Data",
     icon: AiOutlineDatabase,
     menu: true,
     children: [
-      {
-        name: "Synchronization options",
-        path: "/synchronization-options",
-        component: SynchronizationOptionsPage,
-        icon: AiOutlineSync,
-        layout: "basic",
-        menu: true,
-      },
       {
         name: "Custom property",
         path: "/customproperty",
@@ -174,7 +181,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       },
       {
         name: "Bulk modification",
-        path: "/bulk-modification2",
+        path: "/bulk-modification",
         component: BulkModification2Page,
         icon: AiOutlineForm,
         layout: "basic",
@@ -182,22 +189,31 @@ export const routesMenuConfig: RouteMenuItem[] = [
         isBeta: true,
       },
       {
-        name: "Custom component",
-        path: "/customcomponent",
+        name: "Media library",
+        path: "/media-library",
         isDeprecated: true,
-        component: CustomComponentPage,
-        icon: AiOutlineControl,
+        component: LegacyMediaLibraryPage,
+        icon: AiOutlineProduct,
         layout: "basic",
         menu: true,
       },
       {
-        name: "Media library",
-        path: "/category",
-        isDeprecated: true,
-        component: CategoryPage,
-        icon: AiOutlineProduct,
+        name: "Media library template",
+        path: "/media-library-template",
+        component: MediaLibraryTemplatePage,
+        icon: AiOutlineAppstoreAdd,
         layout: "basic",
         menu: true,
+        isDeprecated: true,
+      },
+      {
+        name: "Synchronization options",
+        path: "/synchronization-options",
+        component: SynchronizationOptionsPage,
+        icon: AiOutlineSync,
+        layout: "basic",
+        menu: true,
+        isDeprecated: true,
       },
     ],
   },
@@ -298,6 +314,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/background-task",
         component: BackgroundTaskPage,
         icon: AiOutlineInteraction,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "Performance Profiler",
+        path: "/profiler",
+        component: ProfilerPage,
+        icon: AiOutlineRadarChart,
         layout: "basic",
         menu: true,
       },

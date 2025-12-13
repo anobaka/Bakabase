@@ -29,6 +29,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
+using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Extensions;
@@ -509,7 +510,7 @@ namespace Bakabase.Service.Controllers
 
             var cacheOrm = HttpContext.RequestServices
                 .GetRequiredService<
-                    FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
+                    FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             List<ResourceCacheDbModel> cache = null;
 
             try
@@ -682,6 +683,19 @@ namespace Bakabase.Service.Controllers
             var dbModels = recentFilters.ToList();
             var propertyPool = (PropertyPool)dbModels.Select(x => x.PropertyPool).Cast<int>().Distinct().Sum();
             var propertyMap = (await _propertyService.GetProperties(propertyPool)).ToMap();
+
+            // Build ParentResource property with choices if needed
+            Property? parentResourcePropertyWithChoices = null;
+            if (propertyMap.TryGetValue(PropertyPool.Internal, out var internalProps) &&
+                internalProps.TryGetValue((int)InternalProperty.ParentResource, out var parentResourceProperty))
+            {
+                var filterData = dbModels.Select(f =>
+                    new Extensions.ResourceSearchExtensions.FilterData(f.PropertyPool, f.PropertyId, f.DbValue, f.Operation));
+
+                parentResourcePropertyWithChoices = await filterData.BuildParentResourcePropertyWithChoices(
+                    parentResourceProperty, _resourceService);
+            }
+
             var viewModels = dbModels.Select(d =>
             {
                 var p = propertyMap.GetValueOrDefault(d.PropertyPool)?.GetValueOrDefault(d.PropertyId);
@@ -689,9 +703,17 @@ namespace Bakabase.Service.Controllers
                 {
                     return null;
                 }
-                
+
+                // Use the updated ParentResource property with choices if available
+                if (parentResourcePropertyWithChoices != null &&
+                    d.PropertyPool == PropertyPool.Internal &&
+                    d.PropertyId == (int)InternalProperty.ParentResource)
+                {
+                    p = parentResourcePropertyWithChoices;
+                }
+
                 p = p.ConvertPropertyIfNecessary(d.Operation);
-                
+
                 var filter = new ResourceSearchFilter
                 {
                     PropertyPool = d.PropertyPool,

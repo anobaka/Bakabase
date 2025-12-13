@@ -17,9 +17,10 @@ public class XcityClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
         try
         {
             var realUrl = appointUrl;
+            string searchUrl = "";
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = "https://xcity.jp/result_published/?q=" + Uri.EscapeDataString(number.Replace("-", string.Empty));
+                searchUrl = "https://xcity.jp/result_published/?q=" + Uri.EscapeDataString(number.Replace("-", string.Empty));
                 var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 if (searchHtml.Contains("該当する作品はみつかりませんでした"))
                 {
@@ -114,7 +115,8 @@ public class XcityClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 CoverUrl = cover,
                 PosterUrl = poster,
                 Website = realUrl,
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
 
             return detail;

@@ -22,6 +22,7 @@ public class AvsoxClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             string realUrl;
             string posterUrl = "";
             bool imageDownload = false;
+            string? searchUrl = null;
 
             if (!string.IsNullOrEmpty(appointUrl))
             {
@@ -29,7 +30,7 @@ public class AvsoxClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             }
             else
             {
-                var searchUrl = $"{actualBaseUrl}/cn/search/{number}";
+                searchUrl = $"{actualBaseUrl}/cn/search/{number}";
                 var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 var searchCq = new CQ(searchHtml);
 
@@ -79,7 +80,8 @@ public class AvsoxClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 Source = "avsox",
                 Mosaic = "无码",
                 ImageDownload = imageDownload,
-                ImageCut = "center"
+                ImageCut = "center",
+                SearchUrl = searchUrl
             };
 
             detail.Year = GetYear(detail.Release);

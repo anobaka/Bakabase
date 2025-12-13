@@ -11,6 +11,7 @@ using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -79,7 +80,7 @@ namespace Bakabase.Modules.BulkModification.Services
             {
                 bm.IsActive = model.IsActive ?? bm.IsActive;
                 bm.Name = model.Name ?? bm.Name;
-                bm.Filter = model.Filter ?? bm.Filter;
+                bm.Search = model.Search ?? bm.Search;
                 bm.Variables = model.Variables ?? bm.Variables;
                 bm.Processes = model.Processes ?? bm.Processes;
                 await Put(bm);
@@ -103,12 +104,9 @@ namespace Bakabase.Modules.BulkModification.Services
             var bm = await Get(id);
             if (bm != null)
             {
-                var filter = bm.Filter;
-                var resources = await ResourceService.Search(new ResourceSearch
-                {
-                    Group = filter,
-                    PageSize = int.MaxValue
-                });
+                var search = bm.Search ?? new ResourceSearch();
+                search.PageSize = int.MaxValue;
+                var resources = await ResourceService.Search(search);
                 var resourceIds = resources.Data?.Select(r => r.Id).ToList() ?? [];
                 bm.FilteredResourceIds = resourceIds;
                 await Put(bm);
@@ -281,7 +279,7 @@ namespace Bakabase.Modules.BulkModification.Services
 
                         var expectedValue = apply ? rDiff.Value1 : rDiff.Value2;
 
-                        var stdHandler = StandardValueInternals.HandlerMap[property.Type.GetBizValueType()];
+                        var stdHandler = StandardValueSystem.GetHandler(property.Type.GetBizValueType());
                         if (!stdHandler.Compare(currentValue, expectedValue))
                         {
                             throw new Exception(

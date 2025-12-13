@@ -24,10 +24,11 @@ public class OfficialClient(IHttpClientFactory httpClientFactory, ILoggerFactory
 
             var realUrl = appointUrl;
             string poster = string.Empty;
+            string? searchUrl = null;
             if (string.IsNullOrEmpty(realUrl))
             {
-                var urlSearch = officialBaseUrl.TrimEnd('/') + "/search/list?keyword=" + number.Replace("-", "");
-                var searchHtml = await HttpClient.GetStringAsync(urlSearch);
+                searchUrl = officialBaseUrl.TrimEnd('/') + "/search/list?keyword=" + number.Replace("-", "");
+                var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 var (u, p) = GetRealUrl(new CQ(searchHtml), number);
                 if (string.IsNullOrEmpty(u)) return null;
                 realUrl = u;
@@ -66,7 +67,8 @@ public class OfficialClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 CoverUrl = coverUrl,
                 PosterUrl = string.IsNullOrEmpty(poster) ? coverUrl : poster,
                 Website = realUrl,
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
         }
         catch

@@ -44,7 +44,13 @@
   --theme-text-placeholder: #bbb;
   --theme-file-processor-entry-background-color: transparent;
   --theme-file-processor-entry-background-color-hover: #e5f3ff;
-  --theme-file-processor-entry-background-color-selected: #e5f3ff;
+  --theme-file-processor-entry-background-color-selected: #cce5ff;
+  --theme-file-processor-entry-border-left-selected: #0078d4;
+  --theme-file-processor-entry-shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --theme-file-processor-entry-shadow-selected: 0 1px 4px rgba(0, 120, 212, 0.15);
+  --theme-file-processor-entry-divider: rgba(0, 0, 0, 0.06);
+  --theme-file-processor-entry-icon-background: rgba(0, 0, 0, 0.04);
+  --theme-file-processor-entry-icon-background-hover: rgba(0, 0, 0, 0.08);
   --theme-dialog-background-color: var(--theme-body-background);
   --theme-menu-background-color: white;
   --theme-component-card-background-color: white;

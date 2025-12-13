@@ -27,7 +27,7 @@ public class MigrationHelper(
     IMediaLibraryV2Service mediaLibraryV2Service,
     IOptions<EnhancerOptions> enhancerOptions,
     IResourceService resourceService,
-    InsideWorldDbContext dbCtx,
+    BakabaseDbContext dbCtx,
     ILogger<MigrationHelper> logger)
 {
     public async Task MigrateCategoriesMediaLibrariesAndResources()
@@ -168,13 +168,17 @@ public class MigrationHelper(
                     mlIdResourceIdsMap.GetOrAdd(tuple.MlV2Id, i => []).Add(r.Id);
                     changed++;
                 }
+
+                r.CategoryId = 0;
             }
+
+            await resourceService.AddOrPutRange(legacyResources);
 
             if (changed > 0)
             {
                 foreach (var (mlId, rIds) in mlIdResourceIdsMap)
                 {
-                    await resourceService.ChangeMediaLibrary(rIds.ToArray(), mlId, false);
+                    await resourceService.ChangeMediaLibrary(rIds.ToArray(), mlId);
                 }
 
                 logger.LogInformation($"Reassigned {changed} resources to new MediaLibraryV2 instances.");

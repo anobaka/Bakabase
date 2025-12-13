@@ -127,10 +127,11 @@ public class FileNameModifierTests
         // Delete 需要 DeleteCount>0, DeleteStartPosition>=0
         Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Delete, DeleteCount = 0, DeleteStartPosition = 0 }));
         Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Delete, DeleteCount = 1, DeleteStartPosition = 0 }));
-        // Replace 需要 Text 或 TargetText
-        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = null }));
-        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = "a", TargetText = null }));
+        // Replace 需要 ReplaceEntire 或 TargetText
+        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = null, ReplaceEntire = false }));
+        Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = "a", TargetText = null, ReplaceEntire = false })); // Text 不足以使 Replace 有效
         Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, Text = null, TargetText = "b" }));
+        Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = true }));
         // AddAlphabetSequence 需要 AlphabetCount>0
         Assert.False(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddAlphabetSequence, AlphabetCount = 0 }));
         Assert.True(_modifier.ValidateOperation(new FileNameModifierOperation { Operation = FileNameModifierOperationType.AddAlphabetSequence, AlphabetCount = 2 }));
@@ -185,6 +186,86 @@ public class FileNameModifierTests
         op = new FileNameModifierOperation { Operation = FileNameModifierOperationType.Replace, ReplaceEntire = false, Text = "X", TargetText = "notfound", Target = FileNameModifierFileNameTarget.FileName };
         result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
         Assert.Equal("abc.txt", result[0]);
+    }
+
+    [Fact]
+    public void Test_Replace_WithRegex()
+    {
+        // 简单正则替换
+        var fileName = "abc123def456.txt";
+        var op = new FileNameModifierOperation
+        {
+            Operation = FileNameModifierOperationType.Replace,
+            TargetText = @"\d+",
+            Text = "X",
+            Regex = true,
+            Target = FileNameModifierFileNameTarget.FileName
+        };
+        var result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
+        Assert.Equal("abcXdefX.txt", result[0]);
+
+        // 正则替换删除匹配内容（替换为空）
+        op = new FileNameModifierOperation
+        {
+            Operation = FileNameModifierOperationType.Replace,
+            TargetText = @"\d+",
+            Text = "",
+            Regex = true,
+            Target = FileNameModifierFileNameTarget.FileName
+        };
+        result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
+        Assert.Equal("abcdef.txt", result[0]);
+
+        // 使用捕获组
+        fileName = "file_2024_01_15.txt";
+        op = new FileNameModifierOperation
+        {
+            Operation = FileNameModifierOperationType.Replace,
+            TargetText = @"(\d{4})_(\d{2})_(\d{2})",
+            Text = "$1-$2-$3",
+            Regex = true,
+            Target = FileNameModifierFileNameTarget.FileName
+        };
+        result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
+        Assert.Equal("file_2024-01-15.txt", result[0]);
+
+        // 无效正则表达式应返回原文本
+        fileName = "abc.txt";
+        op = new FileNameModifierOperation
+        {
+            Operation = FileNameModifierOperationType.Replace,
+            TargetText = @"[invalid(regex",
+            Text = "X",
+            Regex = true,
+            Target = FileNameModifierFileNameTarget.FileName
+        };
+        result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
+        Assert.Equal("abc.txt", result[0]);
+
+        // Regex = false 时应使用普通字符串替换
+        fileName = "a.b.c.txt";
+        op = new FileNameModifierOperation
+        {
+            Operation = FileNameModifierOperationType.Replace,
+            TargetText = ".",
+            Text = "_",
+            Regex = false,
+            Target = FileNameModifierFileNameTarget.FileName
+        };
+        result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
+        Assert.Equal("a_b_c_txt", result[0]);
+
+        // Regex = true 时 "." 匹配任意字符
+        op = new FileNameModifierOperation
+        {
+            Operation = FileNameModifierOperationType.Replace,
+            TargetText = ".",
+            Text = "_",
+            Regex = true,
+            Target = FileNameModifierFileNameTarget.FileName
+        };
+        result = _modifier.ModifyFileNames(new List<string> { fileName }, new List<FileNameModifierOperation> { op });
+        Assert.Equal("_________", result[0]);
     }
 
     [Fact]

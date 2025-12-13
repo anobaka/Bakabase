@@ -42,6 +42,55 @@ public class SingleChoicePropertyDescriptor : AbstractPropertyDescriptor<SingleC
         }
     }
 
+    /// <summary>
+    /// 重写索引搜索以处理 In/NotIn 操作（filter 值为 List&lt;string&gt;）
+    /// </summary>
+    public override HashSet<int>? SearchIndex(
+        SearchOperation operation,
+        object? filterDbValue,
+        IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+        IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex,
+        IReadOnlyCollection<int> allResourceIds)
+    {
+        // In/NotIn 操作的 filter 值是 List<string>
+        if (operation is SearchOperation.In or SearchOperation.NotIn && filterDbValue is List<string> list)
+        {
+            return SearchWithList(operation, list, valueIndex, allResourceIds);
+        }
+
+        // 其他操作使用默认实现
+        return base.SearchIndex(operation, filterDbValue, valueIndex, rangeIndex, allResourceIds);
+    }
+
+    private static HashSet<int> SearchWithList(
+        SearchOperation operation,
+        List<string> filterValues,
+        IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+        IReadOnlyCollection<int> allResourceIds)
+    {
+        if (valueIndex == null || filterValues.Count == 0)
+        {
+            return operation == SearchOperation.NotIn
+                ? new HashSet<int>(allResourceIds)
+                : new HashSet<int>();
+        }
+
+        var matchingSets = filterValues
+            .Select(v => valueIndex.GetValueOrDefault(Normalize(v)))
+            .ToList();
+
+        return operation switch
+        {
+            // In: 资源的值在 filter 列表中 → 并集
+            SearchOperation.In => UnionAll(matchingSets),
+
+            // NotIn: 资源的值不在 filter 列表中 → 取反
+            SearchOperation.NotIn => Negate(UnionAll(matchingSets), allResourceIds),
+
+            _ => new HashSet<int>()
+        };
+    }
+
     public override Dictionary<SearchOperation, PropertySearchOperationOptions?>
         SearchOperations { get; } = new()
     {

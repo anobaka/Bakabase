@@ -17,7 +17,7 @@ import {
 import { AiOutlinePicture } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import ResourceEnhancementsDialog from "@/components/Resource/components/ResourceEnhancementsDialog";
+import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -159,7 +159,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
               })
               .then((t) => {
-                createPortal(ResourceEnhancementsDialog, {
+                createPortal(ResourceEnhancementsModal, {
                   resourceId: resource.id,
                   // @ts-ignore
                   enhancements: t.data || [],
@@ -250,7 +250,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
               })
               .then((t) => {
-                createPortal(ResourceEnhancementsDialog, {
+                createPortal(ResourceEnhancementsModal, {
                   resourceId: resource.id,
                   // @ts-ignore
                   enhancements: t.data || [],
@@ -313,17 +313,17 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
 
   // Show individual buttons for selected operations
   const individualButtons = [];
-  let buttonIndex = 0;
+
+  const buttonClassName = "min-w-6 w-6 h-6 bg-transparent hover:bg-white/20";
+  const iconClassName = "text-sm";
 
   if (showPin) {
     individualButtons.push(
       <Button
         key="pin"
         isIconOnly
-        className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
+        className={buttonClassName}
         color={resource.pinned ? "warning" : "default"}
-        size={"sm"}
-        style={{ right: `${buttonIndex * 2.5}rem` }}
         title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
         onClick={() => {
           BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
@@ -331,19 +331,16 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           });
         }}
       >
-        <PushpinOutlined className={"text-lg"} />
+        <PushpinOutlined className={iconClassName} />
       </Button>,
     );
-    buttonIndex++;
   }
   if (showOpenFolder) {
     individualButtons.push(
       <Button
         key="openFolder"
         isIconOnly
-        className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
-        size={"sm"}
-        style={{ right: `${buttonIndex * 2.5}rem` }}
+        className={buttonClassName}
         title={t<string>("Open folder")}
         onClick={() =>
           BApi.tool.openFileOrDirectory({
@@ -352,19 +349,16 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           })
         }
       >
-        <FolderOpenOutlined className={"text-lg"} />
+        <FolderOpenOutlined className={iconClassName} />
       </Button>,
     );
-    buttonIndex++;
   }
   if (showEnhancements) {
     individualButtons.push(
       <Button
         key="enhancements"
         isIconOnly
-        className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
-        size={"sm"}
-        style={{ right: `${buttonIndex * 2.5}rem` }}
+        className={buttonClassName}
         title={t<string>("Enhancements")}
         onClick={() => {
           BApi.resource
@@ -372,7 +366,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
               additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
             })
             .then((t) => {
-              createPortal(ResourceEnhancementsDialog, {
+              createPortal(ResourceEnhancementsModal, {
                 resourceId: resource.id,
                 // @ts-ignore
                 enhancements: t.data || [],
@@ -380,35 +374,29 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
             });
         }}
       >
-        <FireOutlined className={"text-lg"} />
+        <FireOutlined className={iconClassName} />
       </Button>,
     );
-    buttonIndex++;
   }
   if (showPreview) {
     individualButtons.push(
       <Button
         key="preview"
         isIconOnly
-        className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
-        size={"sm"}
-        style={{ right: `${buttonIndex * 2.5}rem` }}
+        className={buttonClassName}
         title={t<string>("Preview")}
         onClick={showResourceMediaPlayer}
       >
-        <AiOutlinePicture className={"text-lg"} />
+        <AiOutlinePicture className={iconClassName} />
       </Button>,
     );
-    buttonIndex++;
   }
   if (showAddToPlaylist) {
     individualButtons.push(
       <Button
         key="addToPlaylist"
         isIconOnly
-        className={"absolute top-1 right-1 z-10 opacity-0 group-hover/resource:opacity-100"}
-        size={"sm"}
-        style={{ right: `${buttonIndex * 2.5}rem` }}
+        className={buttonClassName}
         title={t<string>("Add to playlist")}
         onClick={() => {
           createPortal(Modal, {
@@ -422,12 +410,20 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           });
         }}
       >
-        <VideoCameraAddOutlined className={"text-lg"} />
+        <VideoCameraAddOutlined className={iconClassName} />
       </Button>,
     );
   }
 
-  return <>{individualButtons}</>;
+  return (
+    <div
+      className="absolute top-1 right-1 z-10 flex gap-0.5 p-0.5
+                 rounded-md bg-black/40 backdrop-blur-sm
+                 opacity-0 group-hover/resource:opacity-100 transition-opacity"
+    >
+      {individualButtons}
+    </div>
+  );
 };
 
 Operations.displayName = "Operations";

@@ -118,6 +118,10 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string MoveResource() => this[nameof(MoveResource)];
 
+        public string CopyFiles() => this[nameof(CopyFiles)];
+        public string CopyFile(string src, string dest) => this[nameof(CopyFile), src, dest];
+        public string? MessageOnInterruption_CopyFiles() => BTask_MessageOnInterruption("CopyFiles");
+
         public string BTask_Name(string key) => this[$"{nameof(BTask_Name)}_{key}"];
 
         public string? BTask_Description(string key)
@@ -136,6 +140,9 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames) =>
             this[nameof(BTask_FailedToRunTaskDueToConflict), incomingTaskName, string.Join(',', conflictTaskNames)];
+
+        public string BTask_FailedToRunTaskDueToDependency(string incomingTaskName, params string[] dependencyTaskNames) =>
+            this[nameof(BTask_FailedToRunTaskDueToDependency), incomingTaskName, string.Join(", ", dependencyTaskNames)];
 
         public string BTask_FailedToRunTaskDueToUnknownTaskId(string id) =>
             this[nameof(BTask_FailedToRunTaskDueToUnknownTaskId), id];
@@ -405,5 +412,16 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(VersionCheck_NewVersionAvailableMessage), version];
         }
+
+        // PathMark Sync
+        public string SyncPathMark_Collecting() => this[nameof(SyncPathMark_Collecting)];
+        public string SyncPathMark_Collected(int count) => this[nameof(SyncPathMark_Collected), count];
+        public string SyncPathMark_ProcessingResource(string path) => this[nameof(SyncPathMark_ProcessingResource), path];
+        public string SyncPathMark_ProcessingProperty(string path) => this[nameof(SyncPathMark_ProcessingProperty), path];
+        public string SyncPathMark_ProcessingMediaLibrary(string path) => this[nameof(SyncPathMark_ProcessingMediaLibrary), path];
+        public string SyncPathMark_FindingRelated() => this[nameof(SyncPathMark_FindingRelated)];
+        public string SyncPathMark_FoundRelated(int count) => this[nameof(SyncPathMark_FoundRelated), count];
+        public string SyncPathMark_EstablishingRelationships() => this[nameof(SyncPathMark_EstablishingRelationships)];
+        public string SyncPathMark_Complete() => this[nameof(SyncPathMark_Complete)];
     }
 }

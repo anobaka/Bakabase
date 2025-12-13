@@ -10,6 +10,8 @@ type ExtensionsInputProps = {
   onValueChange?: (extensions: string[]) => void;
   label?: string;
   placeholder?: string;
+  minRows?: number;
+  size?: "sm" | "md" | "lg";
 };
 
 function extractExtensions(text: string): string[] {
@@ -44,6 +46,8 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
   placeholder,
   defaultValue,
   onValueChange,
+  minRows = 4,
+  size,
 }) => {
   const { t } = useTranslation();
   const [text, setText] = useState(defaultValue?.join(" "));
@@ -58,7 +62,8 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
         isClearable
         isMultiline
         label={label ?? t<string>("Extensions")}
-        minRows={4}
+        minRows={minRows}
+        size={size}
         placeholder={placeholder ?? t<string>("Separate by space or newline")}
         value={text}
         onValueChange={(v) => {

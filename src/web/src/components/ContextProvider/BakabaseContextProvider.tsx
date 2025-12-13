@@ -20,6 +20,7 @@ import { UiTheme } from "@/sdk/constants";
 import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
 import Window from "@/components/Window";
+import { ErrorBoundary } from "@/components/Error";
 
 dayjs.extend(duration);
 
@@ -38,12 +39,15 @@ interface IContext {
   isDarkMode: boolean;
   createPortal: CreatePortal;
   createWindow: CreateWindow;
+  /** Close all non-persistent modals/portals */
+  closeAllModals: () => void;
   isDebugging?: boolean;
 }
 
 const BakabaseContext = createContext<IContext>({
   createPortal: (C, props) => ({ key: "", destroy: () => {} }),
   createWindow: (C, props, options) => ({ key: "", destroy: () => {} }),
+  closeAllModals: () => {},
   isDarkMode: false,
   isDebugging: false,
 });
@@ -157,6 +161,11 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
     return { key, destroy };
   };
 
+  const closeAllModals = () => {
+    console.log("[closeAllModals] closing all non-persistent modals");
+    setPortals((prev) => prev.filter((p) => p.persistent));
+  };
+
   const appOptionsStore = useAppOptionsStore();
   const isDebugging = false;
   const firstTimeGotAppOptionsRef = useRef(false);
@@ -233,11 +242,14 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
               isDarkMode,
               createPortal: mount,
               createWindow: mountWindow,
+              closeAllModals,
               isDebugging,
             }}
           >
             {portals.map(({ key, component }) => (
-              <Fragment key={key}>{component}</Fragment>
+              <ErrorBoundary key={key}>
+                <Fragment>{component}</Fragment>
+              </ErrorBoundary>
             ))}
             <div
               className={`${isDarkMode ? "dark" : "light"} h-[100vh] w-[100vw] text-foreground bg-background`}

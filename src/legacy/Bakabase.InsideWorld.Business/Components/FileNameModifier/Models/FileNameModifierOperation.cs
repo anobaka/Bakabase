@@ -57,5 +57,9 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Models
         /// 是否替换整个内容
         /// </summary>
         public bool ReplaceEntire { get; set; }
+        /// <summary>
+        /// 是否使用正则表达式匹配（用于Replace操作）
+        /// </summary>
+        public bool Regex { get; set; }
     }
 } 

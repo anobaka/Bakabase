@@ -24,7 +24,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyAliasService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, LegacyAlias, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, LegacyAlias, int>(serviceProvider)
     {
         // public async Task<int> GetMaxGroupIdAsync()
         // {
