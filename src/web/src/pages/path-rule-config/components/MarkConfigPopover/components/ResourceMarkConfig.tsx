@@ -14,46 +14,60 @@ type Props = {
   updateConfig: (updates: Partial<MarkConfig>) => void;
   rootPath?: string;
   t: (key: string) => string;
+  priority: number;
+  onPriorityChange: (priority: number) => void;
 };
 
-const ResourceMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
+const ResourceMarkConfig = ({ config, updateConfig, rootPath, t, priority, onPriorityChange }: Props) => {
   const preview = usePreview(rootPath, PathMarkType.Resource, config);
 
   return (
     <>
-      <MatchModeSelector config={config} updateConfig={updateConfig} t={t} />
+      <MatchModeSelector
+        config={config}
+        updateConfig={updateConfig}
+        t={t}
+        priority={priority}
+        onPriorityChange={onPriorityChange}
+      />
 
-      <div className="border-t border-default-200 pt-3">
+      <div className="border-t border-default-200 pt-2">
         <span className="text-sm font-medium text-default-600">{t("Resource Filters (Optional)")}</span>
       </div>
 
-      <Select
-        label={t("File Type Filter")}
-        description={t("Filter by file system type")}
-        size="sm"
-        dataSource={[
-          { label: t("All"), value: "" },
-          ...pathFilterFsTypes.map(t => ({ label: t.label, value: String(t.value) })),
-        ]}
-        selectedKeys={config.fsTypeFilter ? [String(config.fsTypeFilter)] : [""]}
-        onSelectionChange={(keys) => {
-          const key = Array.from(keys)[0] as string;
-          updateConfig({ fsTypeFilter: key ? parseInt(key, 10) as PathFilterFsType : undefined });
-        }}
-      />
-
-      {(config.fsTypeFilter === undefined || config.fsTypeFilter === PathFilterFsType.File) && (
-        <>
+      <div className="flex gap-2">
+        <Select
+          label={t("File Type Filter")}
+          size="sm"
+          className="flex-1"
+          dataSource={[
+            { label: t("All"), value: "" },
+            ...pathFilterFsTypes.map(t => ({ label: t.label, value: String(t.value) })),
+          ]}
+          selectedKeys={config.fsTypeFilter ? [String(config.fsTypeFilter)] : [""]}
+          onSelectionChange={(keys) => {
+            const key = Array.from(keys)[0] as string;
+            updateConfig({ fsTypeFilter: key ? parseInt(key, 10) as PathFilterFsType : undefined });
+          }}
+        />
+        {(config.fsTypeFilter === undefined || config.fsTypeFilter === PathFilterFsType.File) && (
           <ExtensionGroupSelect
             value={config.extensionGroupIds}
             onSelectionChange={(ids) => updateConfig({ extensionGroupIds: ids })}
+            size="sm"
+            className="flex-1"
           />
-          <ExtensionsInput
-            defaultValue={config.extensions}
-            label={t("Limit file extensions")}
-            onValueChange={(v) => updateConfig({ extensions: v })}
-          />
-        </>
+        )}
+      </div>
+
+      {(config.fsTypeFilter === undefined || config.fsTypeFilter === PathFilterFsType.File) && (
+        <ExtensionsInput
+          defaultValue={config.extensions}
+          label={t("Limit file extensions")}
+          onValueChange={(v) => updateConfig({ extensions: v })}
+          minRows={1}
+          size="sm"
+        />
       )}
 
       <PreviewResults

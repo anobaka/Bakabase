@@ -26,15 +26,19 @@ const PreviewResults = ({ loading, results, error, t }: Props) => {
   }
 
   if (results.length === 0) {
-    return null;
+    return (
+      <div className="bg-warning-50 text-warning-600 rounded p-2 text-xs">
+        {t("No matches found. Please check your configuration.")}
+      </div>
+    );
   }
 
   return (
-    <div className="bg-default-100 rounded p-2 mt-2">
+    <div className="bg-default-100 rounded p-2">
       <div className="text-xs text-default-500 mb-1">{t("Preview matches")}:</div>
-      <div className="flex flex-col gap-1 max-h-24 overflow-y-auto">
+      <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
         {results.map((path, idx) => (
-          <div key={idx} className="text-xs text-default-600 truncate" title={path}>
+          <div key={idx} className="text-xs text-default-600 break-all">
             {path}
           </div>
         ))}

@@ -5,12 +5,12 @@ import type { BakabaseAbstractionsModelsDomainPathRule, BakabaseAbstractionsMode
 
 import React, { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { SettingOutlined } from "@ant-design/icons";
-import { AiOutlineAim } from "react-icons/ai";
+import { AiOutlineAim, AiOutlineEye } from "react-icons/ai";
 
-import { Chip, Button, Tooltip } from "@/components/bakaui";
+import { Chip, Button, Tooltip, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
 import { PathMarkType } from "@/sdk/constants";
 import MarkConfigModal from "./MarkConfigPopover";
+import MarkDescription from "./MarkDescription";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {
@@ -19,81 +19,6 @@ type Props = {
   onSaveMark?: (entry: Entry, pathRule: BakabaseAbstractionsModelsDomainPathRule | undefined, mark: BakabaseAbstractionsModelsDomainPathMark, oldMark?: BakabaseAbstractionsModelsDomainPathMark) => void;
   onDeleteMark?: (pathRule: BakabaseAbstractionsModelsDomainPathRule, mark: BakabaseAbstractionsModelsDomainPathMark) => void;
   onOpenAdvancedConfig?: (entry: Entry) => void;
-};
-
-/**
- * Parse and render a human-readable description of a path mark
- */
-const getMarkDescription = (mark: BakabaseAbstractionsModelsDomainPathMark, t: (key: string, params?: any) => string): string => {
-  try {
-    const config = JSON.parse(mark.configJson || "{}");
-    const isResource = mark.type === PathMarkType.Resource;
-    const matchMode = config.MatchMode || config.matchMode;
-
-    let description = "";
-
-    if (matchMode === "Layer" || matchMode === 1) {
-      const layer = config.Layer ?? config.layer ?? 0;
-      if (layer === 0) {
-        description = isResource
-          ? t("Current item is resource")
-          : t("Current item is property");
-      } else {
-        description = isResource
-          ? t("{{layer}} level(s) down is resource", { layer })
-          : t("{{layer}} level(s) down is property", { layer });
-      }
-    } else if (matchMode === "Regex" || matchMode === 2) {
-      const regex = config.Regex ?? config.regex ?? "";
-      description = isResource
-        ? t("Regex '{{regex}}' matches resource", { regex })
-        : t("Regex '{{regex}}' matches property", { regex });
-    }
-
-    // For property marks, add value information
-    if (!isResource) {
-      const valueType = config.ValueType ?? config.valueType;
-      if (valueType === "Fixed" || valueType === 1) {
-        const fixedValue = config.FixedValue ?? config.fixedValue;
-        if (fixedValue) {
-          description += ` = "${fixedValue}"`;
-        }
-      } else if (valueType === "Dynamic" || valueType === 2) {
-        const valueLayer = config.ValueLayer ?? config.valueLayer;
-        const valueRegex = config.ValueRegex ?? config.valueRegex;
-        if (valueLayer !== undefined) {
-          description += t(", value from {{layer}} level(s)", { layer: valueLayer });
-        }
-        if (valueRegex) {
-          description += t(", regex: {{regex}}", { regex: valueRegex });
-        }
-      }
-
-      // Add property ID if available
-      const propertyId = config.PropertyId ?? config.propertyId;
-      if (propertyId) {
-        description += t(" (Property #{{id}})", { id: propertyId });
-      }
-    }
-
-    // Add file type filter for resource marks
-    if (isResource) {
-      const fsTypeFilter = config.FsTypeFilter ?? config.fsTypeFilter;
-      if (fsTypeFilter) {
-        description += t(", type: {{type}}", { type: fsTypeFilter });
-      }
-
-      const extensions = config.Extensions ?? config.extensions;
-      if (extensions && extensions.length > 0) {
-        description += t(", ext: {{ext}}", { ext: extensions.join(", ") });
-      }
-    }
-
-    return description;
-  } catch (error) {
-    console.error("Failed to parse mark config:", error);
-    return t("Invalid mark configuration");
-  }
 };
 
 const PathRuleMarks = ({ entry, pathRule, onSaveMark, onDeleteMark, onOpenAdvancedConfig }: Props) => {
@@ -141,38 +66,43 @@ const PathRuleMarks = ({ entry, pathRule, onSaveMark, onDeleteMark, onOpenAdvanc
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* Add Mark Buttons */}
+      {/* Add Mark Dropdown */}
       <div className="flex items-center gap-1">
-        <Button
-          size="sm"
-          color="success"
-          variant="light"
-          startContent={<AiOutlineAim className="text-lg" />}
-          onPress={() => handleAddMark(PathMarkType.Resource)}
-        >
-          {t("Mark as Resource")}
-        </Button>
+        <Dropdown>
+          <DropdownTrigger>
+            <Button
+              size="sm"
+              variant="light"
+              className="min-w-0 px-2 text-default-400 hover:text-primary transition-colors"
+              startContent={<AiOutlineAim className="text-lg" />}
+            >
+              {t("Add Mark")}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Mark type selection"
+            onAction={(key) => handleAddMark(Number(key) as PathMarkType)}
+          >
+            <DropdownItem key={PathMarkType.Resource} className="text-success">
+              {t("Resource")}
+            </DropdownItem>
+            <DropdownItem key={PathMarkType.Property} className="text-primary">
+              {t("Property")}
+            </DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
 
-        <Button
-          size="sm"
-          color="primary"
-          variant="light"
-          startContent={<AiOutlineAim className="text-lg" />}
-          onPress={() => handleAddMark(PathMarkType.Property)}
-        >
-          {t("Mark as Property")}
-        </Button>
-
-        {/* Advanced Config Button */}
-        {onOpenAdvancedConfig && (
+        {/* All Marks Button - only show when there are marks */}
+        {onOpenAdvancedConfig && marks.length > 0 && (
           <Button
             size="sm"
             color="default"
             variant="light"
-            isIconOnly
+            className="min-w-0 px-2 text-default-400 hover:text-primary transition-colors"
             onPress={() => onOpenAdvancedConfig(entry)}
           >
-            <SettingOutlined />
+            <AiOutlineEye className="text-lg" />
+            {t("All Marks")}
           </Button>
         )}
       </div>
@@ -193,8 +123,8 @@ const PathRuleMarks = ({ entry, pathRule, onSaveMark, onDeleteMark, onOpenAdvanc
               }}
             >
               <div className="flex items-center gap-1 text-xs">
-                <span className="font-medium">R{mark.priority}:</span>
-                <span>{getMarkDescription(mark, t)}</span>
+                <span className="font-medium">[{t("Resource")}#{mark.priority}]</span>
+                <MarkDescription mark={mark} />
               </div>
             </Chip>
           </Tooltip>
@@ -214,8 +144,8 @@ const PathRuleMarks = ({ entry, pathRule, onSaveMark, onDeleteMark, onOpenAdvanc
               }}
             >
               <div className="flex items-center gap-1 text-xs">
-                <span className="font-medium">P{mark.priority}:</span>
-                <span>{getMarkDescription(mark, t)}</span>
+                <span className="font-medium">[{t("Property")}#{mark.priority}]</span>
+                <MarkDescription mark={mark} />
               </div>
             </Chip>
           </Tooltip>

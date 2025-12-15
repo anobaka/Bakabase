@@ -269,7 +269,7 @@ public class PathRuleService<TDbContext>(
             // Ignore access errors
         }
 
-        return entries;
+        return entries.Select(x => x.StandardizePath()!).ToList();
     }
 
     private List<string> GetEntriesAtLayer(string rootPath, int layer, PathFilterFsType? fsTypeFilter, List<string>? extensions)
@@ -325,6 +325,6 @@ public class PathRuleService<TDbContext>(
             // Ignore access errors
         }
 
-        return entries;
+        return entries.Select(x => x.StandardizePath()!).ToList(); ;
     }
 }

@@ -6,18 +6,18 @@ export const parseMarkConfig = (configJson?: string): MarkConfig => {
     const config = JSON.parse(configJson || "{}");
     return {
       matchMode: config.MatchMode === "Regex" ? PathMatchMode.Regex : PathMatchMode.Layer,
-      layer: config.Layer ?? config.layer ?? 0,
-      regex: config.Regex ?? config.regex ?? "",
-      propertyPool: config.Pool ?? config.propertyPool,
-      propertyId: config.PropertyId ?? config.propertyId,
+      layer: config.Layer ?? 0,
+      regex: config.Regex ?? "",
+      propertyPool: config.Pool,
+      propertyId: config.PropertyId,
       valueType: config.ValueType === "Dynamic" ? PropertyValueType.Dynamic : PropertyValueType.Fixed,
-      fixedValue: config.FixedValue ?? config.fixedValue ?? "",
+      fixedValue: config.FixedValue ?? "",
       valueMatchMode: config.ValueRegex ? PathMatchMode.Regex : PathMatchMode.Layer,
-      valueLayer: config.ValueLayer ?? config.valueLayer ?? 0,
-      valueRegex: config.ValueRegex ?? config.valueRegex ?? "",
-      fsTypeFilter: config.FsTypeFilter ?? config.fsTypeFilter,
-      extensions: config.Extensions ?? config.extensions ?? [],
-      extensionGroupIds: config.ExtensionGroupIds ?? config.extensionGroupIds ?? [],
+      valueLayer: config.ValueLayer ?? 0,
+      valueRegex: config.ValueRegex ?? "",
+      fsTypeFilter: config.FsTypeFilter,
+      extensions: config.Extensions ?? [],
+      extensionGroupIds: config.ExtensionGroupIds ?? [],
     };
   } catch {
     return {

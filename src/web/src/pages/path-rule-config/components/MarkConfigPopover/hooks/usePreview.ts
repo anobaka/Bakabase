@@ -37,10 +37,9 @@ export const usePreview = (
       clearTimeout(timeoutRef.current);
     }
 
-    setLoading(true);
-    setError(null);
-
     timeoutRef.current = setTimeout(async () => {
+      setLoading(true);
+      setError(null);
       try {
         const rsp = await BApi.pathRule.previewPathRuleMatchedPaths({
           id: 0,

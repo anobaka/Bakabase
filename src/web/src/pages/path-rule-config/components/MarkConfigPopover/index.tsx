@@ -4,14 +4,15 @@ import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import type { MarkConfigModalProps } from "./types";
 
 import React, { useState, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { Input, Modal } from "@/components/bakaui";
+import { Trans, useTranslation } from "react-i18next";
+import { Modal } from "@/components/bakaui";
 import { PathMarkType } from "@/sdk/constants";
 import { SaveOutlined } from "@ant-design/icons";
 
 import { parseMarkConfig, buildConfigJson } from "./utils";
 import ResourceMarkConfig from "./components/ResourceMarkConfig";
 import PropertyMarkConfig from "./components/PropertyMarkConfig";
+import { ResourceTerm } from "@/components/Chips/Terms";
 
 const MarkConfigModal = ({ mark, markType, rootPath, onSave, onDestroyed }: MarkConfigModalProps) => {
   const { t } = useTranslation();
@@ -38,7 +39,16 @@ const MarkConfigModal = ({ mark, markType, rootPath, onSave, onDestroyed }: Mark
     <Modal
       defaultVisible
       size="lg"
-      title={`${mark ? t("Edit Mark") : t("Add Mark")} - ${markType === PathMarkType.Resource ? t("Resource") : t("Property")}`}
+      title={
+        <span className="flex items-center gap-1 whitespace-nowrap">
+          <Trans
+            i18nKey={mark ? "Edit <type></type> Mark" : "Add <type></type> Mark"}
+            components={{
+              type: markType === PathMarkType.Resource ? <ResourceTerm size="xl" /> : <span>{t("Property")}</span>,
+            }}
+          />
+        </span>
+      }
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
@@ -49,7 +59,7 @@ const MarkConfigModal = ({ mark, markType, rootPath, onSave, onDestroyed }: Mark
       onOk={handleSave}
       onDestroyed={onDestroyed}
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
         {/* Type-specific configuration */}
         {markType === PathMarkType.Resource ? (
           <ResourceMarkConfig
@@ -57,6 +67,8 @@ const MarkConfigModal = ({ mark, markType, rootPath, onSave, onDestroyed }: Mark
             updateConfig={updateConfig}
             rootPath={rootPath}
             t={t}
+            priority={priority}
+            onPriorityChange={setPriority}
           />
         ) : (
           <PropertyMarkConfig
@@ -64,20 +76,10 @@ const MarkConfigModal = ({ mark, markType, rootPath, onSave, onDestroyed }: Mark
             updateConfig={updateConfig}
             rootPath={rootPath}
             t={t}
+            priority={priority}
+            onPriorityChange={setPriority}
           />
         )}
-
-        {/* Priority - Shared */}
-        <div className="border-t border-default-200 pt-3">
-          <Input
-            label={t("Priority")}
-            description={t("Higher priority marks are applied first when multiple marks match")}
-            type="number"
-            size="sm"
-            value={String(priority)}
-            onValueChange={(v) => setPriority(parseInt(v) || 10)}
-          />
-        </div>
       </div>
     </Modal>
   );

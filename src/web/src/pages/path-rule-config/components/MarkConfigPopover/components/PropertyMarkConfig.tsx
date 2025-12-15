@@ -19,9 +19,11 @@ type Props = {
   updateConfig: (updates: Partial<MarkConfig>) => void;
   rootPath?: string;
   t: (key: string) => string;
+  priority: number;
+  onPriorityChange: (priority: number) => void;
 };
 
-const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
+const PropertyMarkConfig = ({ config, updateConfig, rootPath, t, priority, onPriorityChange }: Props) => {
   const preview = usePreview(rootPath, PathMarkType.Property, config);
   const { createPortal } = useBakabaseContext();
   const [selectedProperty, setSelectedProperty] = useState<IProperty | null>(null);
@@ -63,7 +65,13 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
 
   return (
     <>
-      <MatchModeSelector config={config} updateConfig={updateConfig} t={t} />
+      <MatchModeSelector
+        config={config}
+        updateConfig={updateConfig}
+        t={t}
+        priority={priority}
+        onPriorityChange={onPriorityChange}
+      />
 
       <PreviewResults
         loading={preview.loading}
@@ -72,12 +80,12 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
         t={t}
       />
 
-      <div className="border-t border-default-200 pt-3">
+      <div className="border-t border-default-200 pt-2">
         <span className="text-sm font-medium text-default-600">{t("Property Settings")}</span>
       </div>
 
       {/* Property Selector */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
         <span className="text-sm">{t("Target Property")}</span>
         <div className="flex items-center gap-2">
           {selectedProperty ? (
@@ -106,7 +114,7 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
       </div>
 
       {/* Value Type - Radio Group */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1">
         <span className="text-sm font-medium">{t("Value Type")}</span>
         <RadioGroup
           value={String(config.valueType ?? PropertyValueType.Fixed)}
@@ -114,10 +122,10 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
           size="sm"
           orientation="horizontal"
         >
-          <Radio value={String(PropertyValueType.Fixed)} description={t("Use a fixed value for all matched items")}>
+          <Radio value={String(PropertyValueType.Fixed)}>
             {t("Fixed")}
           </Radio>
-          <Radio value={String(PropertyValueType.Dynamic)} description={t("Extract value dynamically from file/folder name at a specific layer or using regex")}>
+          <Radio value={String(PropertyValueType.Dynamic)}>
             {t("Dynamic")}
           </Radio>
         </RadioGroup>
@@ -133,7 +141,7 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
       ) : (
         <>
           {/* Value Match Mode - Radio Group */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             <span className="text-sm font-medium">{t("Value Extraction Mode")}</span>
             <RadioGroup
               value={String(config.valueMatchMode ?? PathMatchMode.Layer)}
@@ -141,10 +149,10 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
               size="sm"
               orientation="horizontal"
             >
-              <Radio value={String(PathMatchMode.Layer)} description={t("Use the folder/file name at a specific level as the value")}>
+              <Radio value={String(PathMatchMode.Layer)}>
                 {t("Layer")}
               </Radio>
-              <Radio value={String(PathMatchMode.Regex)} description={t("Extract value using a regex capture group from the path")}>
+              <Radio value={String(PathMatchMode.Regex)}>
                 {t("Regex")}
               </Radio>
             </RadioGroup>
@@ -153,7 +161,7 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
           {config.valueMatchMode === PathMatchMode.Layer ? (
             <Input
               label={t("Value Layer")}
-              description={t("The folder level from which to extract the value (0 = matched item)")}
+              placeholder={t("0 = matched item")}
               type="number"
               size="sm"
               value={String(config.valueLayer ?? 0)}
@@ -162,7 +170,7 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, t }: Props) => {
           ) : (
             <Input
               label={t("Value Regex")}
-              description={t("Regex with capture group to extract value, e.g., '\\[(.+?)\\]' to capture text in brackets")}
+              placeholder={t("e.g., \\[(.+?)\\]")}
               size="sm"
               value={config.valueRegex ?? ""}
               onValueChange={(v) => updateConfig({ valueRegex: v })}
