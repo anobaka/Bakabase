@@ -33,4 +33,10 @@ public class ResourceMarkConfig
     /// 扩展名过滤（仅当 FsTypeFilter = File 时有效）
     /// </summary>
     public List<string>? Extensions { get; set; }
+
+    /// <summary>
+    /// 扩展名组ID列表（仅当 FsTypeFilter = File 时有效）
+    /// 会与 Extensions 合并使用
+    /// </summary>
+    public List<int>? ExtensionGroupIds { get; set; }
 }

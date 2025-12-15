@@ -82,6 +82,12 @@
   --theme-file-processor-entry-background-color: transparent;
   --theme-file-processor-entry-background-color-hover: var(--theme-button-normal-background-hover);
   --theme-file-processor-entry-background-color-selected: #003059;
+  --theme-file-processor-entry-border-left-selected: #58a6ff;
+  --theme-file-processor-entry-shadow-hover: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --theme-file-processor-entry-shadow-selected: 0 1px 4px rgba(88, 166, 255, 0.2);
+  --theme-file-processor-entry-divider: rgba(255, 255, 255, 0.06);
+  --theme-file-processor-entry-icon-background: rgba(255, 255, 255, 0.06);
+  --theme-file-processor-entry-icon-background-hover: rgba(255, 255, 255, 0.1);
   --theme-dialog-background-color: var(--theme-block-background);
   --theme-menu-background-color: var(--theme-block-background);
   --theme-component-card-background-color: var(--theme-block-background);

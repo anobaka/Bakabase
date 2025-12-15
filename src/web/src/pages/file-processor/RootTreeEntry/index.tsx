@@ -48,7 +48,10 @@ type Props = {
   onInitialized?: (path?: string) => any;
   onDoubleClick?: (event: React.MouseEvent<any>, entry: Entry) => boolean;
   afterPlayedFirstFile?: (entry: Entry) => any;
-} & Pick<TreeEntryProps, "capabilities" | "expandable" | "filter" | "renderAfterName" | "renderBeforeRightOperations">;
+} & Pick<
+  TreeEntryProps,
+  "capabilities" | "expandable" | "filter" | "renderAfterName" | "renderBeforeRightOperations"
+>;
 
 const log = buildLogger("RootTreeEntry");
 
@@ -374,7 +377,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
             radius={"none"}
             size={"sm"}
             variant={"light"}
-            onClick={() => {
+            onPress={() => {
               if (root) {
                 const newRootPath = getStandardParentPath(root.path);
 
@@ -408,7 +411,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
                 isDisabled={!root?.path}
                 radius={"none"}
                 size={"sm"}
-                onClick={() => {
+                onPress={() => {
                   BApi.tool.openFileOrDirectory({ path: root?.path });
                 }}
               >

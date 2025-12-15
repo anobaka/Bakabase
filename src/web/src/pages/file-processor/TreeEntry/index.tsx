@@ -288,8 +288,7 @@ const TreeEntry = (props: TreeEntryProps) => {
 
       if (differences) {
         // log(`[VirtualList]Applying new style: ${e.path}`, differences, prevStyle, style);
-        childrenStylesRef.current[e.path] = style;
-        style.id = uuidv4();
+        childrenStylesRef.current[e.path] = { ...style, id: uuidv4() };
       }
 
       const s = childrenStylesRef.current[e.path];
@@ -645,7 +644,16 @@ const TreeEntry = (props: TreeEntryProps) => {
                 name={entry.name}
                 path={entry.path}
               />
-              {renderAfterName && renderAfterName(entry)}
+              {renderAfterName && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  {renderAfterName(entry)}
+                </div>
+              )}
               <div className="flex items-center">
                 {actions.includes(IwFsEntryAction.Play) && capabilities?.includes("play") && (
                   <OperationButton
@@ -690,7 +698,16 @@ const TreeEntry = (props: TreeEntryProps) => {
               </div>
             </div>
             <div className="right">
-              {renderBeforeRightOperations && renderBeforeRightOperations(entry)}
+              {renderBeforeRightOperations && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  {renderBeforeRightOperations(entry)}
+                </div>
+              )}
               <RightOperations capabilities={capabilities} entry={entryRef.current} />
             </div>
           </div>

@@ -33,7 +33,10 @@ import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
 import PathRuleConfigPanel from "@/pages/path-rule-config/components/PathRuleConfigPanel";
+import MarkConfigModal from "@/pages/path-rule-config/components/MarkConfigPopover";
 import { AiOutlineFileZip } from "react-icons/ai";
+import { RiRulerLine } from "react-icons/ri";
+import { PathMarkType } from "@/sdk/constants";
 
 type Props = {
   selectedEntries: Entry[];
@@ -276,6 +279,52 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
         onClick: () => {
           createPortal(PathRuleConfigPanel, {
             selectedEntries: selectedEntries,
+          });
+        },
+      });
+
+      // Quick mark as Resource
+      items.push({
+        icon: <RiRulerLine className={"text-base"} />,
+        label: t<string>("Mark as Resource"),
+        onClick: () => {
+          createPortal(MarkConfigModal, {
+            markType: PathMarkType.Resource,
+            rootPath: selectedEntries[0]?.path,
+            onSave: async (mark) => {
+              // Apply the mark to all selected entries
+              const marksJson = JSON.stringify([mark]);
+              await BApi.pathRule.applyPathRuleConfig({
+                marksJson,
+                targetPaths: selectedEntries.map(e => e.path),
+              });
+              toast.success(t<string>("Successfully applied resource mark to {{count}} path(s)", {
+                count: selectedEntries.length,
+              }));
+            },
+          });
+        },
+      });
+
+      // Quick mark as Property
+      items.push({
+        icon: <RiRulerLine className={"text-base"} />,
+        label: t<string>("Mark as Property"),
+        onClick: () => {
+          createPortal(MarkConfigModal, {
+            markType: PathMarkType.Property,
+            rootPath: selectedEntries[0]?.path,
+            onSave: async (mark) => {
+              // Apply the mark to all selected entries
+              const marksJson = JSON.stringify([mark]);
+              await BApi.pathRule.applyPathRuleConfig({
+                marksJson,
+                targetPaths: selectedEntries.map(e => e.path),
+              });
+              toast.success(t<string>("Successfully applied property mark to {{count}} path(s)", {
+                count: selectedEntries.length,
+              }));
+            },
           });
         },
       });

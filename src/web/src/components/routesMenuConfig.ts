@@ -101,19 +101,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
   },
   {
     name: "Media library",
-    path: "/media-library",
-    component: MediaLibraryPage,
-    icon: AiOutlineProduct,
+    path: "/path-rule-config",
+    component: PathRuleConfigPage,
+    icon: AiOutlineNodeIndex,
     layout: "basic",
     menu: true,
-  },
-  {
-    name: "Media library template",
-    path: "/media-library-template",
-    component: MediaLibraryTemplatePage,
-    icon: AiOutlineAppstoreAdd,
-    layout: "basic",
-    menu: true,
+    isBeta: true,
   },
   {
     name: "Data",
@@ -121,13 +114,21 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
     children: [
       {
-        name: "Path Rule Config",
-        path: "/path-rule-config",
-        component: PathRuleConfigPage,
-        icon: AiOutlineNodeIndex,
+        name: "Media library",
+        path: "/media-library",
+        component: MediaLibraryPage,
+        icon: AiOutlineProduct,
         layout: "basic",
         menu: true,
-        isBeta: true,
+      },
+      {
+        name: "Media library template",
+        path: "/media-library-template",
+        component: MediaLibraryTemplatePage,
+        icon: AiOutlineAppstoreAdd,
+        layout: "basic",
+        menu: true,
+        isDeprecated: true
       },
       {
         name: "Path Rule",

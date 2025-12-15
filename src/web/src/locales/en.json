@@ -215,6 +215,8 @@
   "Failed to load children": "Failed to load children",
   "Found {{count}} children": "Found {{count}} children",
   "Mark as not played": "Mark as not played",
+  "Mark as Resource": "Mark as Resource",
+  "Mark as Property": "Mark as Property",
   "StandardValueConversionLoss.ValuesWillBeMerged": "Data will be merged",
   "StandardValueConversionLoss.OnlyFirstValueWillBeRemained": "Only the first value will be retained",
   "StandardValueConversionLoss.NonZeroValueWillBeConvertedToTrue": "Non-zero value will be converted to 'true'",

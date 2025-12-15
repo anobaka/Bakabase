@@ -67,12 +67,13 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 </div>
                 <Snippet
                   hideSymbol
-                  className={"bg-red-50 border border-red-200"}
+                  // className={"bg-red-50 border border-red-200"}
                   radius="none"
                   size={"sm"}
+                  color="danger"
                 >
                   <span
-                    className={"text-red-700 break-all whitespace-break-spaces"}
+                    className={"reak-all whitespace-break-spaces"}
                   >
                     {error.message || t<string>("Unknown error")}
                   </span>
@@ -85,13 +86,13 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                   </div>
                   <Snippet
                     hideSymbol
-                    className={"bg-gray-50 border border-gray-200"}
                     radius="none"
                     size={"sm"}
+                    color="warning"
                   >
                     <pre
                       className={
-                        "text-xs text-gray-700 whitespace-pre-wrap break-all font-mono"
+                        "text-xs whitespace-pre-wrap break-all font-mono"
                       }
                     >
                       {error.stack}
@@ -106,13 +107,13 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                   </div>
                   <Snippet
                     hideSymbol
-                    className={"bg-blue-50 border border-blue-200"}
+                    color="warning"
                     radius="none"
                     size={"sm"}
                   >
                     <pre
                       className={
-                        "text-xs text-blue-700 whitespace-pre-wrap break-all font-mono"
+                        "text-xs whitespace-pre-wrap break-all font-mono"
                       }
                     >
                       {errorInfo.componentStack}

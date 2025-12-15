@@ -22,6 +22,7 @@ namespace Bakabase.InsideWorld.Business.Services;
 
 public class PathRuleService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, PathRuleDbModel, int> orm,
+    IExtensionGroupService extensionGroupService,
     IServiceProvider serviceProvider
 ) : ScopedService(serviceProvider), IPathRuleService where TDbContext : DbContext
 {
@@ -149,19 +150,57 @@ public class PathRuleService<TDbContext>(
             var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
             if (config == null) continue;
 
-            var paths = GetMatchingPathsForResourceMark(rule.Path, config);
+            var paths = await GetMatchingPathsForResourceMark(rule.Path, config);
             matchedPaths.AddRange(paths);
         }
 
         return matchedPaths.Distinct().ToList();
     }
 
-    private List<string> GetMatchingPathsForResourceMark(string rootPath, ResourceMarkConfig config)
+    private async Task<List<string>> GetAllExtensionsFromConfig(ResourceMarkConfig config)
+    {
+        var allExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Add direct extensions
+        if (config.Extensions != null)
+        {
+            foreach (var ext in config.Extensions)
+            {
+                allExtensions.Add(ext);
+            }
+        }
+
+        // Add extensions from extension groups
+        if (config.ExtensionGroupIds != null && config.ExtensionGroupIds.Count > 0)
+        {
+            var allGroups = await extensionGroupService.GetAll();
+            var matchingGroups = allGroups.Where(g => config.ExtensionGroupIds.Contains(g.Id));
+
+            foreach (var group in matchingGroups)
+            {
+                if (group.Extensions != null)
+                {
+                    foreach (var ext in group.Extensions)
+                    {
+                        allExtensions.Add(ext);
+                    }
+                }
+            }
+        }
+
+        return allExtensions.ToList();
+    }
+
+    private async Task<List<string>> GetMatchingPathsForResourceMark(string rootPath, ResourceMarkConfig config)
     {
         var matchedPaths = new List<string>();
 
         try
         {
+            // Get all extensions (direct + from groups)
+            var allExtensions = await GetAllExtensionsFromConfig(config);
+            var extensionsToUse = allExtensions.Count > 0 ? allExtensions : null;
+
             if (config.MatchMode == PathMatchMode.Layer)
             {
                 if (config.Layer == null) return matchedPaths;
@@ -170,20 +209,20 @@ public class PathRuleService<TDbContext>(
                 if (layer == -1)
                 {
                     // All layers - recursively get all directories/files
-                    var entries = GetAllEntries(rootPath, config.FsTypeFilter, config.Extensions);
+                    var entries = GetAllEntries(rootPath, config.FsTypeFilter, extensionsToUse);
                     matchedPaths.AddRange(entries);
                 }
                 else
                 {
                     // Specific layer
-                    var entries = GetEntriesAtLayer(rootPath, layer, config.FsTypeFilter, config.Extensions);
+                    var entries = GetEntriesAtLayer(rootPath, layer, config.FsTypeFilter, extensionsToUse);
                     matchedPaths.AddRange(entries);
                 }
             }
             else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
             {
                 var regex = new Regex(config.Regex, RegexOptions.IgnoreCase);
-                var entries = GetAllEntries(rootPath, config.FsTypeFilter, config.Extensions);
+                var entries = GetAllEntries(rootPath, config.FsTypeFilter, extensionsToUse);
 
                 foreach (var entry in entries)
                 {
