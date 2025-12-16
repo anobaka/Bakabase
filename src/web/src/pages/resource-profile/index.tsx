@@ -47,10 +47,8 @@ const ResourceProfilePage = () => {
   const loadProfiles = async () => {
     setLoading(true);
     try {
-      // @ts-ignore - API will be available after SDK regeneration
       const rsp = await BApi.resourceProfile.getAllResourceProfiles();
-      // @ts-ignore
-      setProfiles((rsp.data || []).sort((a, b) => b.priority - a.priority));
+      setProfiles(((rsp.data || []) as ResourceProfile[]).sort((a, b) => b.priority - a.priority));
     } catch (e) {
       console.error("Failed to load resource profiles", e);
     } finally {
@@ -73,7 +71,6 @@ const ResourceProfilePage = () => {
       return;
     }
     try {
-      // @ts-ignore
       await BApi.resourceProfile.deleteResourceProfile(id);
       loadProfiles();
     } catch (e) {
@@ -88,8 +85,7 @@ const ResourceProfilePage = () => {
         id: undefined,
         name: `${profile.name} (Copy)`,
       };
-      // @ts-ignore
-      await BApi.resourceProfile.addResourceProfile(newProfile);
+      await BApi.resourceProfile.addResourceProfile(newProfile as any);
       loadProfiles();
     } catch (e) {
       console.error("Failed to duplicate resource profile", e);

@@ -61,6 +61,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly ISpecialTextService _specialTextService;
         private readonly IMediaLibraryService _mediaLibraryService;
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
+        private IResourceProfileService ResourceProfileService => GetRequiredService<IResourceProfileService>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
@@ -593,17 +594,10 @@ namespace Bakabase.InsideWorld.Business.Services
                             var wrappers = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
                                 .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
 
-                            var mlV2Ids = doList.Where(d => d.CategoryId == 0).Select(d => d.MediaLibraryId).Distinct()
-                                .ToArray();
-                            var mlV2TemplateMap =
-                                (await MediaLibraryV2Service.GetByKeys(mlV2Ids, MediaLibraryV2AdditionalItem.Template))
-                                .ToDictionary(d => d.Id, d => d.Template?.DisplayNameTemplate);
-
+                            // Use ResourceProfile to get effective name templates
                             foreach (var resource in doList)
                             {
-                                var tpl = resource.IsMediaLibraryV2
-                                    ? mlV2TemplateMap.GetValueOrDefault(resource.MediaLibraryId)
-                                    : resource.Category?.ResourceDisplayNameTemplate;
+                                var tpl = await ResourceProfileService.GetEffectiveNameTemplate(resource);
                                 if (!string.IsNullOrEmpty(tpl))
                                 {
                                     resource.DisplayName = BuildDisplayNameForResource(resource, tpl, wrappers);
@@ -616,29 +610,25 @@ namespace Bakabase.InsideWorld.Business.Services
                             break;
                         case ResourceAdditionalItem.MediaLibraryName:
                         {
-                            var mediaLibraryIds = doList.Where(d => d.CategoryId > 0).Select(d => d.MediaLibraryId)
-                                .ToHashSet();
-                            var mediaLibraryMap =
-                                (await _mediaLibraryService.GetAll(x => mediaLibraryIds.Contains(x.Id))).ToDictionary(
-                                    d => d.Id, d => d);
-                            var mediaLibraryV2Ids = doList.Where(d => d.CategoryId == 0).Select(d => d.MediaLibraryId)
-                                .ToHashSet();
-                            Dictionary<int, MediaLibraryV2>? mediaLibraryV2Map = null;
-                            if (mediaLibraryV2Ids.Any())
-                            {
-                                mediaLibraryV2Map =
-                                    (await MediaLibraryV2Service.GetByKeys(mediaLibraryV2Ids.ToArray())).ToDictionary(
-                                        d => d.Id, d => d);
-                            }
+                            // Use MediaLibraryResourceMapping to get associated media libraries
+                            var mlResourceIds = doList.Select(d => d.Id).ToArray();
+                            var mappings = await GetRequiredService<IMediaLibraryResourceMappingService>().GetByResourceIds(mlResourceIds);
+                            var resourceMediaLibraryMap = mappings
+                                .GroupBy(m => m.ResourceId)
+                                .ToDictionary(g => g.Key, g => g.First().MediaLibraryId); // Use first mapping
+
+                            var allMediaLibraryIds = mappings.Select(m => m.MediaLibraryId).Distinct().ToHashSet();
+                            var mediaLibraryV2Map = allMediaLibraryIds.Count > 0
+                                ? (await MediaLibraryV2Service.GetByKeys(allMediaLibraryIds.ToArray())).ToDictionary(
+                                    d => d.Id, d => d)
+                                : new Dictionary<int, MediaLibraryV2>();
 
                             foreach (var resource in doList)
                             {
-                                resource.MediaLibraryName = resource.CategoryId > 0
-                                    ? mediaLibraryMap.GetValueOrDefault(resource.MediaLibraryId)?.Name
-                                    : mediaLibraryV2Map?.GetValueOrDefault(resource.MediaLibraryId)?.Name;
-                                resource.MediaLibraryColor = resource.CategoryId > 0
-                                    ? null
-                                    : mediaLibraryV2Map?.GetValueOrDefault(resource.MediaLibraryId)?.Color;
+                                var mlId = resourceMediaLibraryMap.GetValueOrDefault(resource.Id);
+                                var ml = mlId > 0 ? mediaLibraryV2Map.GetValueOrDefault(mlId) : null;
+                                resource.MediaLibraryName = ml?.Name;
+                                resource.MediaLibraryColor = ml?.Color;
                             }
 
                             break;
@@ -909,32 +899,36 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<string[]> GetPlayableFiles(int id, CancellationToken ct)
         {
             var r = await Get(id, ResourceAdditionalItem.None);
-            if (r != null)
+            if (r == null)
             {
-                if (r.IsMediaLibraryV2)
-                {
-                    var pfl = (await MediaLibraryV2Service.Get(r.MediaLibraryId, MediaLibraryV2AdditionalItem.Template)).Template?.PlayableFileLocator;
-                    if (pfl != null)
-                    {
-                        var extensions = (pfl.Extensions ?? [])
-                            .Concat(pfl.ExtensionGroups?.SelectMany(g => g.Extensions ?? []) ?? []).ToHashSet();
-                        var files = r.IsFile ? new List<string> { r.Path } : Directory.EnumerateFiles(r.Path, "*", SearchOption.AllDirectories);
+                return null;
+            }
 
-                        return files.Where(f => extensions.Contains(Path.GetExtension(f)))
-                            .Take(Math.Min(pfl.MaxFileCount ?? int.MaxValue, int.MaxValue))
-                            .Select(f => f.StandardizePath()!).ToArray();
-                    }
-                }
-                else
+            // Use ResourceProfile to get effective playable file options
+            var playableFileOptions = await ResourceProfileService.GetEffectivePlayableFileOptions(r);
+            if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
+            {
+                var extensions = playableFileOptions.Extensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var files = r.IsFile ? new List<string> { r.Path } : Directory.EnumerateFiles(r.Path, "*", SearchOption.AllDirectories);
+
+                var result = files.Where(f => extensions.Contains(Path.GetExtension(f)));
+
+                // Apply file name pattern filter if configured
+                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
                 {
-                    var selector = await _categoryService.GetFirstComponent<IPlayableFileSelector>(r.CategoryId,
-                        ComponentType.PlayableFileSelector);
-                    if (selector.Data != null)
+                    try
                     {
-                        var files = await selector.Data.GetPlayableFiles(r.Path, ct);
-                        return files.Select(f => f.StandardizePath()!).ToArray();
+                        var regex = new System.Text.RegularExpressions.Regex(playableFileOptions.FileNamePattern,
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f)));
+                    }
+                    catch
+                    {
+                        // Invalid regex, ignore the filter
                     }
                 }
+
+                return result.Select(f => f.StandardizePath()!).ToArray();
             }
 
             return null;
@@ -1007,52 +1001,40 @@ namespace Bakabase.InsideWorld.Business.Services
                                         {
                                             string[]? playableFiles = null;
 
-                                            if (resource.IsMediaLibraryV2)
+                                            // Use ResourceProfile to get effective playable file options
+                                            var playableFileOptions = await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
+                                            if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
                                             {
-                                                var mediaLibrary =
-                                                    await MediaLibraryV2Service.Get(resource.MediaLibraryId,
-                                                        MediaLibraryV2AdditionalItem.Template);
-                                                var ps = mediaLibrary.Template?.PlayableFileLocator;
-                                                if (ps != null)
+                                                var extensions = playableFileOptions.Extensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                                                var files = resource.IsFile
+                                                    ? new List<string> { resource.Path }
+                                                    : Directory.EnumerateFiles(resource.Path, "*",
+                                                        SearchOption.AllDirectories);
+
+                                                IEnumerable<string> result = files.Where(f =>
+                                                    extensions.Contains(Path.GetExtension(f)));
+
+                                                // Apply file name pattern filter if configured
+                                                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
                                                 {
-                                                    var extensions =
-                                                        (ps.Extensions ?? []).Concat(
-                                                            ps.ExtensionGroups?.SelectMany(g =>
-                                                                g.Extensions ?? []) ??
-                                                            []).ToHashSet();
-                                                    if (extensions.Any())
+                                                    try
                                                     {
-                                                        var files = resource.IsFile
-                                                            ? new List<string> { resource.Path }
-                                                            : Directory.EnumerateFiles(resource.Path, "*",
-                                                                SearchOption.AllDirectories);
-                                                        playableFiles = files.Where(f =>
-                                                                extensions.Contains(Path.GetExtension(f)))
-                                                            .Take(Math.Min(ps.MaxFileCount ?? int.MaxValue,
-                                                                int.MaxValue))
-                                                            .Select(f => f.StandardizePath()!).ToArray().ToArray();
+                                                        var regex = new System.Text.RegularExpressions.Regex(
+                                                            playableFileOptions.FileNamePattern,
+                                                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f)));
+                                                    }
+                                                    catch
+                                                    {
+                                                        // Invalid regex, ignore the filter
                                                     }
                                                 }
-                                            }
-                                            else
-                                            {
-                                                var pfs = (await _categoryService
-                                                        .GetFirstComponent<IPlayableFileSelector>(
-                                                            resource.CategoryId,
-                                                            ComponentType.PlayableFileSelector))
-                                                    .Data;
-                                                if (pfs != null)
-                                                {
-                                                    playableFiles =
-                                                        (await pfs.GetPlayableFiles(resource.Path,
-                                                            CancellationToken.None)).ToArray();
-                                                }
+
+                                                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
                                             }
 
                                             if (playableFiles?.Any() == true)
                                             {
-                                                playableFiles = playableFiles.Select(p => p.StandardizePath()!)
-                                                    .ToArray();
                                                 var trimmedPlayableFiles = playableFiles
                                                     .GroupBy(d =>
                                                         $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
@@ -1504,41 +1486,29 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<BaseResponse> Play(int resourceId, string file)
         {
-            var resource = await _orm.GetByKey(resourceId);
+            var resource = await Get(resourceId, ResourceAdditionalItem.None);
             if (resource == null)
             {
                 return BaseResponseBuilder.NotFound;
             }
 
-            var categoryId = resource.CategoryId;
-
             var playedByCustomPlayer = false;
-            if (categoryId > 0)
+
+            // Use ResourceProfile to get effective player options
+            var playerOptions = await ResourceProfileService.GetEffectivePlayerOptions(resource);
+            if (playerOptions?.Players != null && playerOptions.Players.Count > 0)
             {
-                var playerRsp =
-                    await _categoryService.GetFirstComponent<IPlayer>(categoryId, ComponentType.Player);
-                if (playerRsp.Data != null)
+                var fileExtension = Path.GetExtension(file);
+                var player =
+                    playerOptions.Players.FirstOrDefault(p => p.Extensions?.Contains(fileExtension, StringComparer.OrdinalIgnoreCase) == true) ??
+                    playerOptions.Players.FirstOrDefault(x => x.Extensions?.Any() != true);
+                if (player != null)
                 {
-                    await playerRsp.Data.Play(file);
+                    var cmd = player.Command;
+                    var args = cmd.Replace("{0}", file);
+                    _ = Task.Run(async () =>
+                        await Cli.Wrap(player.ExecutablePath).WithArguments(args).ExecuteAsync());
                     playedByCustomPlayer = true;
-                }
-            }
-            else
-            {
-                var ml = await MediaLibraryV2Service.Get(resource.MediaLibraryId);
-                if (ml.Players != null)
-                {
-                    var player =
-                        ml.Players.FirstOrDefault(p => p.Extensions?.Contains(Path.GetExtension(file)) == true) ??
-                        ml.Players.FirstOrDefault(x => x.Extensions?.Any() != true);
-                    if (player != null)
-                    {
-                        var cmd = player.Command;
-                        var args = cmd.Replace("{0}", file);
-                        _ = Task.Run(async () =>
-                            await Cli.Wrap(player.ExecutablePath).WithArguments(args).ExecuteAsync());
-                        playedByCustomPlayer = true;
-                    }
                 }
             }
 
@@ -1546,48 +1516,13 @@ namespace Bakabase.InsideWorld.Business.Services
             {
                 await _systemPlayer.Play(file);
             }
-            
+
             var now = DateTime.Now;
             await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
             await _playHistoryService.Add(new PlayHistoryDbModel
                 {ResourceId = resourceId, Item = file, PlayedAt = now});
-            
+
             return BaseResponseBuilder.Ok;
-        }
-
-        public async Task<List<Resource>> GetUnknownResources()
-        {
-            var dbModels = await GetUnknownResourceDbModels();
-            var domainModels = await ToDomainModel(dbModels.ToArray(), ResourceAdditionalItem.All);
-            return domainModels;
-        }
-
-        private async Task<List<ResourceDbModel>> GetUnknownResourceDbModels()
-        {
-            var categories = await _categoryService.GetAll();
-            var mediaLibraries = await _mediaLibraryService.GetAll();
-
-            var categoryIds = categories.Select(c => c.Id).ToHashSet();
-            var mediaLibraryIds = mediaLibraries.Select(m => m.Id).ToHashSet();
-            var mediaLibraryV2Ids = (await MediaLibraryV2Service.GetAll()).Select(d => d.Id).ToHashSet();
-
-            var unknownResources = await GetAllDbModels(x =>
-                (x.CategoryId > 0
-                    ? !categoryIds.Contains(x.CategoryId) || !mediaLibraryIds.Contains(x.MediaLibraryId)
-                    : !mediaLibraryV2Ids.Contains(x.MediaLibraryId)) || (x.Tags & ResourceTag.PathDoesNotExist) > 0);
-            return unknownResources;
-        }
-
-        public async Task<int> GetUnknownCount()
-        {
-            var unknownResources = await GetUnknownResourceDbModels();
-            return unknownResources.Count;
-        }
-
-        public async Task DeleteUnknown()
-        {
-            var unknownResources = await GetUnknownResourceDbModels();
-            await DeleteByKeys(unknownResources.Select(x => x.Id).ToArray(), false);
         }
 
         public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false,

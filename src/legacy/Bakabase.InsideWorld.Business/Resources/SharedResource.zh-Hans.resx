@@ -564,4 +564,31 @@
   <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
     <value>新版本 ({0}) 可供更新。</value>
   </data>
+  <data name="SyncPathMark_Collecting" xml:space="preserve">
+    <value>收集路径标记中</value>
+  </data>
+  <data name="SyncPathMark_Collected" xml:space="preserve">
+    <value>已收集 {0} 个路径标记</value>
+  </data>
+  <data name="SyncPathMark_ProcessingResource" xml:space="preserve">
+    <value>处理资源: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingProperty" xml:space="preserve">
+    <value>处理属性: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingMediaLibrary" xml:space="preserve">
+    <value>处理媒体库: {0}</value>
+  </data>
+  <data name="SyncPathMark_FindingRelated" xml:space="preserve">
+    <value>查找关联标记中</value>
+  </data>
+  <data name="SyncPathMark_FoundRelated" xml:space="preserve">
+    <value>已找到 {0} 个关联标记</value>
+  </data>
+  <data name="SyncPathMark_EstablishingRelationships" xml:space="preserve">
+    <value>建立父子关系中</value>
+  </data>
+  <data name="SyncPathMark_Complete" xml:space="preserve">
+    <value>路径标记同步完成</value>
+  </data>
 </root>

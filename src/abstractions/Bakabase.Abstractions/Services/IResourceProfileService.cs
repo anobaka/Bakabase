@@ -27,19 +27,25 @@ public interface IResourceProfileService
     Task<string?> GetEffectiveNameTemplate(Resource resource);
 
     /// <summary>
-    /// Get effective enhancer settings for a resource
+    /// Get effective enhancer options for a resource
     /// </summary>
-    Task<EnhancerSettings?> GetEffectiveEnhancerSettings(Resource resource);
+    Task<ResourceProfileEnhancerOptions?> GetEffectiveEnhancerOptions(Resource resource);
 
     /// <summary>
-    /// Get effective playable file settings for a resource
+    /// Get effective enhancer options for multiple resources (batch operation for performance)
+    /// Returns a dictionary mapping resource ID to its enhancer options
     /// </summary>
-    Task<PlayableFileSettings?> GetEffectivePlayableFileSettings(Resource resource);
+    Task<Dictionary<int, ResourceProfileEnhancerOptions>> GetEffectiveEnhancerOptionsForResources(IEnumerable<Resource> resources);
 
     /// <summary>
-    /// Get effective player settings for a resource
+    /// Get effective playable file options for a resource
     /// </summary>
-    Task<PlayerSettings?> GetEffectivePlayerSettings(Resource resource);
+    Task<ResourceProfilePlayableFileOptions?> GetEffectivePlayableFileOptions(Resource resource);
+
+    /// <summary>
+    /// Get effective player options for a resource
+    /// </summary>
+    Task<ResourceProfilePlayerOptions?> GetEffectivePlayerOptions(Resource resource);
 
     /// <summary>
     /// Add a new resource profile

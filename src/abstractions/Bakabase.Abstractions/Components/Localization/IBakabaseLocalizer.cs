@@ -88,4 +88,15 @@ public interface IBakabaseLocalizer
     string Complete();
     string PlayableFiles();
     string BuildingData();
+
+    // PathMark Sync
+    string SyncPathMark_Collecting();
+    string SyncPathMark_Collected(int count);
+    string SyncPathMark_ProcessingResource(string path);
+    string SyncPathMark_ProcessingProperty(string path);
+    string SyncPathMark_ProcessingMediaLibrary(string path);
+    string SyncPathMark_FindingRelated();
+    string SyncPathMark_FoundRelated(int count);
+    string SyncPathMark_EstablishingRelationships();
+    string SyncPathMark_Complete();
 }

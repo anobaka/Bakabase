@@ -16,8 +16,7 @@ namespace Bakabase.Service.Controllers;
 [Route("~/media-library-v2")]
 public class MediaLibraryV2Controller(
     IMediaLibraryV2Service service,
-    IMediaLibraryResourceMappingService mappingService,
-    IPathRuleService pathRuleService) : ControllerBase
+    IMediaLibraryResourceMappingService mappingService) : ControllerBase
 {
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllMediaLibraryV2")]
@@ -130,34 +129,6 @@ public class MediaLibraryV2Controller(
     {
         var mappings = await mappingService.GetByMediaLibraryId(id);
         return new SingletonResponse<int>(mappings.Count);
-    }
-
-    /// <summary>
-    /// Get all PathRules associated with this media library's paths
-    /// </summary>
-    [HttpGet("{id:int}/path-rules")]
-    [SwaggerOperation(OperationId = "GetMediaLibraryV2PathRules")]
-    public async Task<ListResponse<PathRule>> GetPathRules(int id)
-    {
-        var mediaLibrary = await service.Get(id);
-        if (mediaLibrary == null)
-        {
-            return ListResponseBuilder<PathRule>.NotFound;
-        }
-
-        if (mediaLibrary.Paths == null || !mediaLibrary.Paths.Any())
-        {
-            return new ListResponse<PathRule>(new List<PathRule>());
-        }
-
-        var allRules = await pathRuleService.GetAll();
-        var matchingRules = allRules
-            .Where(r => mediaLibrary.Paths.Any(p =>
-                r.Path.StartsWith(p, System.StringComparison.OrdinalIgnoreCase) ||
-                p.StartsWith(r.Path, System.StringComparison.OrdinalIgnoreCase)))
-            .ToList();
-
-        return new ListResponse<PathRule>(matchingRules);
     }
 
     /// <summary>

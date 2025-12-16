@@ -149,10 +149,16 @@ export type BakabaseAbstractionsModelsDomainConstantsMediaLibraryV2AdditionalIte
 export type BakabaseAbstractionsModelsDomainConstantsPathFilterFsType = 1 | 2;
 
 /**
- * [1: Resource, 2: Property]
+ * [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete]
  * @format int32
  */
-export type BakabaseAbstractionsModelsDomainConstantsPathMarkType = 1 | 2;
+export type BakabaseAbstractionsModelsDomainConstantsPathMarkSyncStatus = 0 | 1 | 2 | 3 | 4;
+
+/**
+ * [1: Resource, 2: Property, 3: MediaLibrary]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPathMarkType = 1 | 2 | 3;
 
 /**
  * [1: Layer, 2: Regex]
@@ -507,11 +513,34 @@ export interface BakabaseAbstractionsModelsDomainPathFilter {
 }
 
 export interface BakabaseAbstractionsModelsDomainPathMark {
-  /** [1: Resource, 2: Property] */
+  /** @format int32 */
+  id: number;
+  path: string;
+  /** [1: Resource, 2: Property, 3: MediaLibrary] */
   type: BakabaseAbstractionsModelsDomainConstantsPathMarkType;
   /** @format int32 */
   priority: number;
   configJson: string;
+  /** [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete] */
+  syncStatus: BakabaseAbstractionsModelsDomainConstantsPathMarkSyncStatus;
+  /** @format date-time */
+  syncedAt?: string;
+  syncError?: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+  isDeleted: boolean;
+  /** @format date-time */
+  deletedAt?: string;
+}
+
+export interface BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
+  path: string;
+  /** @format int32 */
+  resourceLayerIndex?: number;
+  resourceSegmentName?: string;
+  propertyValue?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
@@ -522,17 +551,6 @@ export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
   /** @format int32 */
   layer?: number;
   regex?: string;
-}
-
-export interface BakabaseAbstractionsModelsDomainPathRule {
-  /** @format int32 */
-  id: number;
-  path: string;
-  marks: BakabaseAbstractionsModelsDomainPathMark[];
-  /** @format date-time */
-  createDt: string;
-  /** @format date-time */
-  updateDt: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathRuleQueueItem {
@@ -859,6 +877,13 @@ export interface BakabaseAbstractionsModelsInputMediaLibraryV2PatchInputModel {
   syncVersion?: string;
   /** @format int32 */
   templateId?: number;
+}
+
+export interface BakabaseAbstractionsModelsInputPathMarkPreviewRequest {
+  path: string;
+  /** [1: Resource, 2: Property, 3: MediaLibrary] */
+  type: BakabaseAbstractionsModelsDomainConstantsPathMarkType;
+  configJson: string;
 }
 
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
@@ -1345,6 +1370,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
     string,
     BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationMediaLibraryOptions
   >;
+  syncMarksImmediately?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions {
@@ -2741,11 +2767,6 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   mediaCount: number;
 }
 
-export interface BakabaseServiceControllersApplyPathRuleConfigInput {
-  marksJson: string;
-  targetPaths: string[];
-}
-
 export interface BakabaseServiceControllersEnsureMappingsInput {
   /** @format int32 */
   resourceId: number;
@@ -2763,6 +2784,15 @@ export interface BakabaseServiceControllersMediaLibraryStatistics {
   manualMappingCount: number;
   /** @format int32 */
   ruleMappingCount: number;
+}
+
+export interface BakabaseServiceControllersPathMarkSyncStatusResponse {
+  /** @format int32 */
+  pendingCount: number;
+  /** @format int32 */
+  syncingCount: number;
+  /** @format int32 */
+  failedCount: number;
 }
 
 export interface BakabaseServiceControllersUpdateStatusInput {
@@ -3268,18 +3298,25 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   data?: BakabaseAbstractionsModelsDomainMediaLibrary[];
 }
 
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPathMarkPreviewResult[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPathMark[];
+}
+
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathRuleQueueItem {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathRuleQueueItem[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathRule {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainPathRule[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceProfile {
@@ -3627,18 +3664,18 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsModelsDomainPathConfigurationTestResult;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPathMark;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathRuleQueueItem {
   /** @format int32 */
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathRuleQueueItem;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathRule {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainPathRule;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfile {
@@ -3954,6 +3991,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceC
   code: number;
   message?: string;
   data?: BakabaseServiceControllersMediaLibraryStatistics;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersPathMarkSyncStatusResponse {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceControllersPathMarkSyncStatusResponse;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewBulkModificationViewModel {
@@ -11864,24 +11908,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags MediaLibraryV2
-     * @name GetMediaLibraryV2PathRules
-     * @request GET:/media-library-v2/{id}/path-rules
-     */
-    getMediaLibraryV2PathRules: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathRule,
-        any
-      >({
-        path: `/media-library-v2/${id}/path-rules`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags MediaLibraryV2
      * @name GetMediaLibraryV2Statistics
      * @request GET:/media-library-v2/{id}/statistics
      */
@@ -13566,32 +13592,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         ...params,
       }),
   };
-  pathRule = {
+  pathMark = {
     /**
      * No description
      *
-     * @tags PathRule
-     * @name GetAllPathRules
-     * @request GET:/path-rule
+     * @tags PathMark
+     * @name GetAllPathMarks
+     * @request GET:/path-mark
      */
-    getAllPathRules: (params: RequestParams = {}) =>
+    getAllPathMarks: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathRule,
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
         any
       >({
-        path: `/path-rule`,
+        path: `/path-mark`,
         method: "GET",
         format: "json",
         ...params,
       }),
 
     /**
-     * @description Build URL for getAllPathRules
-     * @name getAllPathRulesUrl
+     * @description Build URL for getAllPathMarks
+     * @name getAllPathMarksUrl
      */
-    getAllPathRulesUrl: () => {
+    getAllPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/path-rule`;
+      let path = `/path-mark`;
       
       return baseUrl + path;
     },
@@ -13599,16 +13625,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name AddPathRule
-     * @request POST:/path-rule
+     * @tags PathMark
+     * @name AddPathMark
+     * @request POST:/path-mark
      */
-    addPathRule: (data: BakabaseAbstractionsModelsDomainPathRule, params: RequestParams = {}) =>
+    addPathMark: (data: BakabaseAbstractionsModelsDomainPathMark, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathRule,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark,
         any
       >({
-        path: `/path-rule`,
+        path: `/path-mark`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -13617,12 +13643,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for addPathRule
-     * @name addPathRuleUrl
+     * @description Build URL for addPathMark
+     * @name addPathMarkUrl
      */
-    addPathRuleUrl: () => {
+    addPathMarkUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/path-rule`;
+      let path = `/path-mark`;
       
       return baseUrl + path;
     },
@@ -13630,16 +13656,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name GetPathRule
-     * @request GET:/path-rule/{id}
+     * @tags PathMark
+     * @name GetPathMark
+     * @request GET:/path-mark/{id}
      */
-    getPathRule: (id: number, params: RequestParams = {}) =>
+    getPathMark: (id: number, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathRule,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark,
         any
       >({
-        path: `/path-rule/${id}`,
+        path: `/path-mark/${id}`,
         method: "GET",
         format: "json",
         ...params,
@@ -13648,17 +13674,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name UpdatePathRule
-     * @request PUT:/path-rule/{id}
+     * @tags PathMark
+     * @name UpdatePathMark
+     * @request PUT:/path-mark/{id}
      */
-    updatePathRule: (
+    updatePathMark: (
       id: number,
-      data: BakabaseAbstractionsModelsDomainPathRule,
+      data: BakabaseAbstractionsModelsDomainPathMark,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/path-rule/${id}`,
+        path: `/path-mark/${id}`,
         method: "PUT",
         body: data,
         type: ContentType.Json,
@@ -13669,13 +13695,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name DeletePathRule
-     * @request DELETE:/path-rule/{id}
+     * @tags PathMark
+     * @name SoftDeletePathMark
+     * @request DELETE:/path-mark/{id}
      */
-    deletePathRule: (id: number, params: RequestParams = {}) =>
+    softDeletePathMark: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/path-rule/${id}`,
+        path: `/path-mark/${id}`,
         method: "DELETE",
         format: "json",
         ...params,
@@ -13684,21 +13710,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name GetPathRuleByPath
-     * @request GET:/path-rule/by-path
+     * @tags PathMark
+     * @name GetPathMarksByPath
+     * @request GET:/path-mark/by-path
      */
-    getPathRuleByPath: (
+    getPathMarksByPath: (
       query?: {
         path?: string;
+        /** @default false */
+        includeDeleted?: boolean;
       },
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathRule,
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
         any
       >({
-        path: `/path-rule/by-path`,
+        path: `/path-mark/by-path`,
         method: "GET",
         query: query,
         format: "json",
@@ -13706,14 +13734,16 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for getPathRuleByPath
-     * @name getPathRuleByPathUrl
+     * @description Build URL for getPathMarksByPath
+     * @name getPathMarksByPathUrl
      */
-    getPathRuleByPathUrl: (query?: {
+    getPathMarksByPathUrl: (query?: {
         path?: string;
+        /** @default false */
+        includeDeleted?: boolean;
       }) => {
       const baseUrl = this.baseUrl || "";
-      let path = `/path-rule/by-path`;
+      let path = `/path-mark/by-path`;
       
       // Build query string
       if (query) {
@@ -13731,105 +13761,43 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name GetApplicablePathRules
-     * @request GET:/path-rule/applicable
+     * @tags PathMark
+     * @name SoftDeletePathMarksByPath
+     * @request DELETE:/path-mark/by-path
      */
-    getApplicablePathRules: (
+    softDeletePathMarksByPath: (
       query?: {
         path?: string;
       },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathRule,
-        any
-      >({
-        path: `/path-rule/applicable`,
-        method: "GET",
-        query: query,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getApplicablePathRules
-     * @name getApplicablePathRulesUrl
-     */
-    getApplicablePathRulesUrl: (query?: {
-        path?: string;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/path-rule/applicable`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-        
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags PathRule
-     * @name CopyPathRuleConfig
-     * @request POST:/path-rule/copy-config
-     */
-    copyPathRuleConfig: (data: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
-        path: `/path-rule/copy-config`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for copyPathRuleConfig
-     * @name copyPathRuleConfigUrl
-     */
-    copyPathRuleConfigUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/path-rule/copy-config`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags PathRule
-     * @name ApplyPathRuleConfig
-     * @request POST:/path-rule/apply-config
-     */
-    applyPathRuleConfig: (
-      data: BakabaseServiceControllersApplyPathRuleConfigInput,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/path-rule/apply-config`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
+        path: `/path-mark/by-path`,
+        method: "DELETE",
+        query: query,
         format: "json",
         ...params,
       }),
 
     /**
-     * @description Build URL for applyPathRuleConfig
-     * @name applyPathRuleConfigUrl
+     * @description Build URL for softDeletePathMarksByPath
+     * @name softDeletePathMarksByPathUrl
      */
-    applyPathRuleConfigUrl: () => {
+    softDeletePathMarksByPathUrl: (query?: {
+        path?: string;
+      }) => {
       const baseUrl = this.baseUrl || "";
-      let path = `/path-rule/apply-config`;
+      let path = `/path-mark/by-path`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -13837,16 +13805,118 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags PathRule
-     * @name PreviewPathRuleMatchedPaths
-     * @request POST:/path-rule/preview
+     * @tags PathMark
+     * @name GetAllPathMarkPaths
+     * @request GET:/path-mark/paths
      */
-    previewPathRuleMatchedPaths: (
-      data: BakabaseAbstractionsModelsDomainPathRule,
+    getAllPathMarkPaths: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/path-mark/paths`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllPathMarkPaths
+     * @name getAllPathMarkPathsUrl
+     */
+    getAllPathMarkPathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/paths`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPendingPathMarks
+     * @request GET:/path-mark/pending
+     */
+    getPendingPathMarks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/pending`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPendingPathMarks
+     * @name getPendingPathMarksUrl
+     */
+    getPendingPathMarksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/pending`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPendingPathMarksCount
+     * @request GET:/path-mark/pending/count
+     */
+    getPendingPathMarksCount: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
+        path: `/path-mark/pending/count`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPendingPathMarksCount
+     * @name getPendingPathMarksCountUrl
+     */
+    getPendingPathMarksCountUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/pending/count`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPathMarksBySyncStatus
+     * @request GET:/path-mark/by-status/{status}
+     */
+    getPathMarksBySyncStatus: (
+      status: BakabaseAbstractionsModelsDomainConstantsPathMarkSyncStatus,
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
-        path: `/path-rule/preview`,
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/by-status/${status}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name AddPathMarks
+     * @request POST:/path-mark/batch
+     */
+    addPathMarks: (data: BakabaseAbstractionsModelsDomainPathMark[], params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
+        any
+      >({
+        path: `/path-mark/batch`,
         method: "POST",
         body: data,
         type: ContentType.Json,
@@ -13855,12 +13925,217 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * @description Build URL for previewPathRuleMatchedPaths
-     * @name previewPathRuleMatchedPathsUrl
+     * @description Build URL for addPathMarks
+     * @name addPathMarksUrl
      */
-    previewPathRuleMatchedPathsUrl: () => {
+    addPathMarksUrl: () => {
       const baseUrl = this.baseUrl || "";
-      let path = `/path-rule/preview`;
+      let path = `/path-mark/batch`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name HardDeletePathMark
+     * @request DELETE:/path-mark/{id}/hard
+     */
+    hardDeletePathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/hard`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartSyncPathMark
+     * @request POST:/path-mark/{id}/sync/start
+     */
+    startSyncPathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/sync/start`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name CompleteSyncPathMark
+     * @request POST:/path-mark/{id}/sync/complete
+     */
+    completeSyncPathMark: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/sync/complete`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name FailSyncPathMark
+     * @request POST:/path-mark/{id}/sync/fail
+     */
+    failSyncPathMark: (id: number, data: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/${id}/sync/fail`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name GetPathMarkSyncStatus
+     * @request GET:/path-mark/sync-status
+     */
+    getPathMarkSyncStatus: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceControllersPathMarkSyncStatusResponse,
+        any
+      >({
+        path: `/path-mark/sync-status`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getPathMarkSyncStatus
+     * @name getPathMarkSyncStatusUrl
+     */
+    getPathMarkSyncStatusUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync-status`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name PreviewPathMarkMatchedPaths
+     * @request POST:/path-mark/preview
+     */
+    previewPathMarkMatchedPaths: (
+      data: BakabaseAbstractionsModelsInputPathMarkPreviewRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMarkPreviewResult,
+        any
+      >({
+        path: `/path-mark/preview`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for previewPathMarkMatchedPaths
+     * @name previewPathMarkMatchedPathsUrl
+     */
+    previewPathMarkMatchedPathsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/preview`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartPathMarkSyncAll
+     * @request POST:/path-mark/sync/start-all
+     */
+    startPathMarkSyncAll: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/start-all`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPathMarkSyncAll
+     * @name startPathMarkSyncAllUrl
+     */
+    startPathMarkSyncAllUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/start-all`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartPathMarkSync
+     * @request POST:/path-mark/sync/start
+     */
+    startPathMarkSync: (data: number[], params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/start`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startPathMarkSync
+     * @name startPathMarkSyncUrl
+     */
+    startPathMarkSyncUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/start`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StopPathMarkSync
+     * @request POST:/path-mark/sync/stop
+     */
+    stopPathMarkSync: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/stop`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for stopPathMarkSync
+     * @name stopPathMarkSyncUrl
+     */
+    stopPathMarkSyncUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/stop`;
       
       return baseUrl + path;
     },

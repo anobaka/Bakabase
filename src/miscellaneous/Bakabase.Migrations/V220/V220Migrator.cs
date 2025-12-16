@@ -9,6 +9,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.Migration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -17,8 +18,10 @@ namespace Bakabase.Migrations.V220;
 
 /// <summary>
 /// Migrator for V2.2.0: Media Library Refactoring
-/// - Migrates Resource.MediaLibraryId to MediaLibraryResourceMapping table
-/// - Converts MediaLibraryV2 + MediaLibraryTemplate to PathRule
+/// Migration flow:
+/// 0) First migrate early version Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate
+/// 1) Migrate Resource.MediaLibraryId to MediaLibraryResourceMapping table
+/// 2) Convert MediaLibraryV2 + MediaLibraryTemplate to PathMark + ResourceProfile (marked as synced)
 /// </summary>
 public class V220Migrator : AbstractMigrator
 {
@@ -32,11 +35,47 @@ public class V220Migrator : AbstractMigrator
     {
         var dbCtx = GetRequiredService<InsideWorldDbContext>();
 
+        // 0) First migrate early version Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate
+        await MigrateLegacyCategoryMediaLibrary();
+
         // 1) Migrate Resource.MediaLibraryId to MediaLibraryResourceMapping
         await MigrateResourceMediaLibraryMappings(dbCtx);
 
-        // 2) Convert MediaLibraryV2 + Template to PathRule
-        await MigrateMediaLibraryTemplateToPathRule(dbCtx);
+        // 2) Convert MediaLibraryV2 + Template to PathMark + ResourceProfile (marked as synced)
+        await MigrateMediaLibraryTemplateToPathMarkAndResourceProfile(dbCtx);
+    }
+
+    /// <summary>
+    /// Migrate early version Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate.
+    /// This step is for users upgrading from versions before MediaLibraryV2 was introduced.
+    /// Skips if MediaLibraryV2 or MediaLibraryTemplate already exist to prevent duplicate data.
+    /// </summary>
+    private async Task MigrateLegacyCategoryMediaLibrary()
+    {
+        try
+        {
+            var dbCtx = GetRequiredService<InsideWorldDbContext>();
+
+            // Skip if MediaLibraryV2 or MediaLibraryTemplate already exist to prevent duplicate data
+            var hasMediaLibraryV2 = await dbCtx.MediaLibrariesV2.AnyAsync();
+            var hasMediaLibraryTemplate = await dbCtx.MediaLibraryTemplates.AnyAsync();
+
+            if (hasMediaLibraryV2 || hasMediaLibraryTemplate)
+            {
+                Logger.LogInformation(
+                    "MediaLibraryV2 ({HasV2}) or MediaLibraryTemplate ({HasTemplate}) already exist, skipping legacy migration.",
+                    hasMediaLibraryV2, hasMediaLibraryTemplate);
+                return;
+            }
+
+            var migrationHelper = GetRequiredService<MigrationHelper>();
+            await migrationHelper.MigrateCategoriesMediaLibrariesAndResources();
+            Logger.LogInformation("Completed migration from Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "MigrationHelper failed or is not available. This is expected if the codebase no longer supports legacy Category+MediaLibrary. Continuing with V220 migration.");
+        }
     }
 
     /// <summary>
@@ -99,16 +138,17 @@ public class V220Migrator : AbstractMigrator
     }
 
     /// <summary>
-    /// Convert MediaLibraryV2 + MediaLibraryTemplate to PathRule.
-    /// Each MediaLibraryV2.Path becomes a PathRule with marks derived from the template.
+    /// Convert MediaLibraryV2 + MediaLibraryTemplate to PathMark and ResourceProfile.
+    /// Each MediaLibraryV2.Path gets PathMarks derived from the template.
+    /// PathMarks are marked as Synced since the data is already synchronized.
     /// </summary>
-    private async Task MigrateMediaLibraryTemplateToPathRule(InsideWorldDbContext dbCtx)
+    private async Task MigrateMediaLibraryTemplateToPathMarkAndResourceProfile(InsideWorldDbContext dbCtx)
     {
-        // Check if we already have PathRules (skip if already migrated)
-        var existingPathRulesCount = await dbCtx.PathRules.CountAsync();
-        if (existingPathRulesCount > 0)
+        // Check if we already have PathMarks (skip if already migrated)
+        var existingPathMarksCount = await dbCtx.PathMarks.CountAsync();
+        if (existingPathMarksCount > 0)
         {
-            Logger.LogInformation("PathRules already exist ({Count}), skipping migration.", existingPathRulesCount);
+            Logger.LogInformation("PathMarks already exist ({Count}), skipping migration.", existingPathMarksCount);
             return;
         }
 
@@ -118,7 +158,8 @@ public class V220Migrator : AbstractMigrator
         var templateMap = templates.ToDictionary(t => t.Id);
 
         var now = DateTime.UtcNow;
-        var pathRules = new List<PathRuleDbModel>();
+        var pathMarks = new List<PathMarkDbModel>();
+        var processedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var library in mediaLibraries)
         {
@@ -137,7 +178,7 @@ public class V220Migrator : AbstractMigrator
                 template = t;
             }
 
-            // Create PathRule for each path
+            // Create PathMarks for each path
             foreach (var path in paths)
             {
                 var normalizedPath = path.StandardizePath();
@@ -146,30 +187,235 @@ public class V220Migrator : AbstractMigrator
                     continue;
                 }
 
-                // Check if path already exists
-                if (pathRules.Any(r => r.Path.Equals(normalizedPath, StringComparison.OrdinalIgnoreCase)))
+                // Check if path already processed
+                if (processedPaths.Contains(normalizedPath))
                 {
                     Logger.LogWarning("Duplicate path found, skipping: {Path}", normalizedPath);
                     continue;
                 }
+                processedPaths.Add(normalizedPath);
 
                 var marks = ConvertTemplateToMarks(template);
-                var pathRule = new PathRuleDbModel
+                foreach (var mark in marks)
                 {
-                    Path = normalizedPath,
-                    MarksJson = JsonConvert.SerializeObject(marks),
-                    CreateDt = now,
-                    UpdateDt = now
-                };
-                pathRules.Add(pathRule);
+                    var pathMark = new PathMarkDbModel
+                    {
+                        Path = normalizedPath,
+                        Type = mark.Type,
+                        Priority = mark.Priority,
+                        ConfigJson = mark.ConfigJson,
+                        SyncStatus = PathMarkSyncStatus.Synced, // Mark as Synced since data is already synchronized
+                        CreatedAt = now,
+                        UpdatedAt = now,
+                        IsDeleted = false
+                    };
+                    pathMarks.Add(pathMark);
+                }
             }
         }
 
-        if (pathRules.Any())
+        if (pathMarks.Any())
         {
-            await dbCtx.PathRules.AddRangeAsync(pathRules);
+            await dbCtx.PathMarks.AddRangeAsync(pathMarks);
             await dbCtx.SaveChangesAsync();
-            Logger.LogInformation("Created {Count} PathRules from MediaLibraryV2.", pathRules.Count);
+            Logger.LogInformation("Created {Count} PathMarks from MediaLibraryV2 (marked as Synced).", pathMarks.Count);
+        }
+
+        // Create ResourceProfiles from MediaLibraryV2 + templates
+        var mediaLibraryDbModels = await dbCtx.MediaLibrariesV2.ToListAsync();
+        var mediaLibraryDbMap = mediaLibraryDbModels.ToDictionary(m => m.Id);
+        await MigrateToResourceProfiles(dbCtx, mediaLibraries, templateMap, mediaLibraryDbMap);
+    }
+
+    /// <summary>
+    /// Create ResourceProfiles from MediaLibraryV2 + templates.
+    /// ResourceProfiles contain enhancer settings, name template, playable file settings, and player settings.
+    /// </summary>
+    private async Task MigrateToResourceProfiles(InsideWorldDbContext dbCtx, MediaLibraryV2[] mediaLibraries,
+        Dictionary<int, MediaLibraryTemplateDbModel> templateMap, Dictionary<int, MediaLibraryV2DbModel> mediaLibraryDbMap)
+    {
+        // Check if we already have ResourceProfiles (skip if already migrated)
+        var existingProfilesCount = await dbCtx.ResourceProfiles.CountAsync();
+        if (existingProfilesCount > 0)
+        {
+            Logger.LogInformation("ResourceProfiles already exist ({Count}), skipping migration.", existingProfilesCount);
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        var profiles = new List<ResourceProfileDbModel>();
+
+        foreach (var library in mediaLibraries)
+        {
+            MediaLibraryTemplateDbModel? template = null;
+            if (library.TemplateId.HasValue && templateMap.TryGetValue(library.TemplateId.Value, out var t))
+            {
+                template = t;
+            }
+
+            // Get raw DB model to access Players field
+            mediaLibraryDbMap.TryGetValue(library.Id, out var libraryDbModel);
+
+            // Extract all settings
+            var enhancerOptions = template != null ? ExtractEnhancerOptions(template) : null;
+            var nameTemplate = template?.DisplayNameTemplate;
+            var playableFileOptions = template != null ? ExtractPlayableFileOptions(template) : null;
+            var playerOptions = libraryDbModel != null ? ExtractPlayerOptions(libraryDbModel) : null;
+
+            // Skip if no settings to migrate
+            if (enhancerOptions == null && string.IsNullOrEmpty(nameTemplate) &&
+                playableFileOptions == null && playerOptions == null)
+            {
+                continue;
+            }
+
+            // Create search criteria based on MediaLibraryId
+            var searchCriteria = new ResourceProfileSearchCriteria
+            {
+                MediaLibraryIds = [library.Id]
+            };
+
+            var profile = new ResourceProfileDbModel
+            {
+                Name = $"Profile from {library.Name}",
+                Priority = 0,
+                SearchCriteriaJson = JsonConvert.SerializeObject(searchCriteria),
+                NameTemplate = nameTemplate,
+                EnhancerSettingsJson = enhancerOptions != null ? JsonConvert.SerializeObject(enhancerOptions) : null,
+                PlayableFileSettingsJson = playableFileOptions != null ? JsonConvert.SerializeObject(playableFileOptions) : null,
+                PlayerSettingsJson = playerOptions != null ? JsonConvert.SerializeObject(playerOptions) : null,
+                CreatedAt = now,
+                UpdatedAt = now,
+            };
+            profiles.Add(profile);
+        }
+
+        if (profiles.Any())
+        {
+            await dbCtx.ResourceProfiles.AddRangeAsync(profiles);
+            await dbCtx.SaveChangesAsync();
+            Logger.LogInformation("Created {Count} ResourceProfiles from MediaLibraryV2.", profiles.Count);
+        }
+    }
+
+    /// <summary>
+    /// Extract ResourceProfileEnhancerOptions from MediaLibraryTemplate.
+    /// </summary>
+    private ResourceProfileEnhancerOptions? ExtractEnhancerOptions(MediaLibraryTemplateDbModel template)
+    {
+        if (string.IsNullOrEmpty(template.Enhancers))
+        {
+            return null;
+        }
+
+        try
+        {
+            var enhancers = JsonConvert.DeserializeObject<List<MediaLibraryTemplateEnhancerOptions>>(template.Enhancers);
+            if (enhancers == null || !enhancers.Any())
+            {
+                return null;
+            }
+
+            return new ResourceProfileEnhancerOptions
+            {
+                Enhancers = enhancers
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse Enhancers from template {Id}", template.Id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extract ResourceProfilePlayableFileOptions from MediaLibraryTemplate.
+    /// Converts MediaLibraryTemplatePlayableFileLocator to ResourceProfilePlayableFileOptions.
+    /// </summary>
+    private ResourceProfilePlayableFileOptions? ExtractPlayableFileOptions(MediaLibraryTemplateDbModel template)
+    {
+        if (string.IsNullOrEmpty(template.PlayableFileLocator))
+        {
+            return null;
+        }
+
+        try
+        {
+            var locator = JsonConvert.DeserializeObject<MediaLibraryTemplatePlayableFileLocator>(template.PlayableFileLocator);
+            if (locator == null)
+            {
+                return null;
+            }
+
+            // Collect all extensions from ExtensionGroups and Extensions
+            var allExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (locator.Extensions != null)
+            {
+                foreach (var ext in locator.Extensions)
+                {
+                    allExtensions.Add(ext);
+                }
+            }
+
+            if (locator.ExtensionGroups != null)
+            {
+                foreach (var group in locator.ExtensionGroups)
+                {
+                    if (group.Extensions != null)
+                    {
+                        foreach (var ext in group.Extensions)
+                        {
+                            allExtensions.Add(ext);
+                        }
+                    }
+                }
+            }
+
+            if (!allExtensions.Any())
+            {
+                return null;
+            }
+
+            return new ResourceProfilePlayableFileOptions
+            {
+                Extensions = allExtensions.ToList()
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse PlayableFileLocator from template {Id}", template.Id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extract ResourceProfilePlayerOptions from MediaLibraryV2.
+    /// </summary>
+    private ResourceProfilePlayerOptions? ExtractPlayerOptions(MediaLibraryV2DbModel library)
+    {
+        if (string.IsNullOrEmpty(library.Players))
+        {
+            return null;
+        }
+
+        try
+        {
+            var players = JsonConvert.DeserializeObject<List<MediaLibraryPlayer>>(library.Players);
+            if (players == null || !players.Any())
+            {
+                return null;
+            }
+
+            return new ResourceProfilePlayerOptions
+            {
+                Players = players
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse Players from MediaLibraryV2 {Id}", library.Id);
+            return null;
         }
     }
 

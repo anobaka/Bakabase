@@ -405,5 +405,16 @@ namespace Bakabase.InsideWorld.Business.Components
         {
             return this[nameof(VersionCheck_NewVersionAvailableMessage), version];
         }
+
+        // PathMark Sync
+        public string SyncPathMark_Collecting() => this[nameof(SyncPathMark_Collecting)];
+        public string SyncPathMark_Collected(int count) => this[nameof(SyncPathMark_Collected), count];
+        public string SyncPathMark_ProcessingResource(string path) => this[nameof(SyncPathMark_ProcessingResource), path];
+        public string SyncPathMark_ProcessingProperty(string path) => this[nameof(SyncPathMark_ProcessingProperty), path];
+        public string SyncPathMark_ProcessingMediaLibrary(string path) => this[nameof(SyncPathMark_ProcessingMediaLibrary), path];
+        public string SyncPathMark_FindingRelated() => this[nameof(SyncPathMark_FindingRelated)];
+        public string SyncPathMark_FoundRelated(int count) => this[nameof(SyncPathMark_FoundRelated), count];
+        public string SyncPathMark_EstablishingRelationships() => this[nameof(SyncPathMark_EstablishingRelationships)];
+        public string SyncPathMark_Complete() => this[nameof(SyncPathMark_Complete)];
     }
 }

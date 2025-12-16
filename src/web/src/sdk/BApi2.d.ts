@@ -2546,22 +2546,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/media-library-v2/{id}/path-rules": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetMediaLibraryV2PathRules"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/media-library-v2/{id}/statistics": {
         parameters: {
             query?: never;
@@ -3042,46 +3026,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/path-rule": {
+    "/path-mark": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetAllPathRules"];
+        get: operations["GetAllPathMarks"];
         put?: never;
-        post: operations["AddPathRule"];
+        post: operations["AddPathMark"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/path-rule/{id}": {
+    "/path-mark/{id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetPathRule"];
-        put: operations["UpdatePathRule"];
+        get: operations["GetPathMark"];
+        put: operations["UpdatePathMark"];
         post?: never;
-        delete: operations["DeletePathRule"];
+        delete: operations["SoftDeletePathMark"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/path-rule/by-path": {
+    "/path-mark/by-path": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetPathRuleByPath"];
+        get: operations["GetPathMarksByPath"];
+        put?: never;
+        post?: never;
+        delete: operations["SoftDeletePathMarksByPath"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllPathMarkPaths"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3090,14 +3090,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/path-rule/applicable": {
+    "/path-mark/pending": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["GetApplicablePathRules"];
+        get: operations["GetPendingPathMarks"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3106,7 +3106,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/path-rule/copy-config": {
+    "/path-mark/pending/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPendingPathMarksCount"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/by-status/{status}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPathMarksBySyncStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/batch": {
         parameters: {
             query?: never;
             header?: never;
@@ -3115,14 +3147,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["CopyPathRuleConfig"];
+        post: operations["AddPathMarks"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/path-rule/apply-config": {
+    "/path-mark/{id}/hard": {
         parameters: {
             query?: never;
             header?: never;
@@ -3131,14 +3163,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["ApplyPathRuleConfig"];
-        delete?: never;
+        post?: never;
+        delete: operations["HardDeletePathMark"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/path-rule/preview": {
+    "/path-mark/{id}/sync/start": {
         parameters: {
             query?: never;
             header?: never;
@@ -3147,7 +3179,119 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["PreviewPathRuleMatchedPaths"];
+        post: operations["StartSyncPathMark"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/{id}/sync/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CompleteSyncPathMark"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/{id}/sync/fail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["FailSyncPathMark"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/sync-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetPathMarkSyncStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["PreviewPathMarkMatchedPaths"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/sync/start-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartPathMarkSyncAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/sync/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StartPathMarkSync"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/path-mark/sync/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["StopPathMarkSync"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4373,10 +4517,16 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PathFilterFsType": 1 | 2;
         /**
          * Format: int32
-         * @description [1: Resource, 2: Property]
+         * @description [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.PathMarkType": 1 | 2;
+        "Bakabase.Abstractions.Models.Domain.Constants.PathMarkSyncStatus": 0 | 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [1: Resource, 2: Property, 3: MediaLibrary]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.PathMarkType": 1 | 2 | 3;
         /**
          * Format: int32
          * @description [1: Layer, 2: Regex]
@@ -4647,10 +4797,31 @@ export interface components {
             extensions?: string[];
         };
         "Bakabase.Abstractions.Models.Domain.PathMark": {
+            /** Format: int32 */
+            id: number;
+            path: string;
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkType"];
             /** Format: int32 */
             priority: number;
             configJson: string;
+            syncStatus: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkSyncStatus"];
+            /** Format: date-time */
+            syncedAt?: string;
+            syncError?: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            isDeleted: boolean;
+            /** Format: date-time */
+            deletedAt?: string;
+        };
+        "Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult": {
+            path: string;
+            /** Format: int32 */
+            resourceLayerIndex?: number;
+            resourceSegmentName?: string;
+            propertyValue?: string;
         };
         "Bakabase.Abstractions.Models.Domain.PathPropertyExtractor": {
             basePathType: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathPropertyExtractorBasePathType"];
@@ -4658,16 +4829,6 @@ export interface components {
             /** Format: int32 */
             layer?: number;
             regex?: string;
-        };
-        "Bakabase.Abstractions.Models.Domain.PathRule": {
-            /** Format: int32 */
-            id: number;
-            path: string;
-            marks: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
-            /** Format: date-time */
-            createDt: string;
-            /** Format: date-time */
-            updateDt: string;
         };
         "Bakabase.Abstractions.Models.Domain.PathRuleQueueItem": {
             /** Format: int32 */
@@ -4939,6 +5100,11 @@ export interface components {
             syncVersion?: string;
             /** Format: int32 */
             templateId?: number;
+        };
+        "Bakabase.Abstractions.Models.Input.PathMarkPreviewRequest": {
+            path: string;
+            type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkType"];
+            configJson: string;
         };
         "Bakabase.Abstractions.Models.Input.ResourcePropertyValuePutInputModel": {
             /** Format: int32 */
@@ -5359,6 +5525,7 @@ export interface components {
             mediaLibraryOptionsMap?: {
                 [key: string]: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationMediaLibraryOptions"];
             };
+            syncMarksImmediately?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SoulPlusOptions": {
             /** Format: int32 */
@@ -6431,10 +6598,6 @@ export interface components {
             /** Format: int32 */
             mediaCount: number;
         };
-        "Bakabase.Service.Controllers.ApplyPathRuleConfigInput": {
-            marksJson: string;
-            targetPaths: string[];
-        };
         "Bakabase.Service.Controllers.EnsureMappingsInput": {
             /** Format: int32 */
             resourceId: number;
@@ -6450,6 +6613,14 @@ export interface components {
             manualMappingCount: number;
             /** Format: int32 */
             ruleMappingCount: number;
+        };
+        "Bakabase.Service.Controllers.PathMarkSyncStatusResponse": {
+            /** Format: int32 */
+            pendingCount: number;
+            /** Format: int32 */
+            syncingCount: number;
+            /** Format: int32 */
+            failedCount: number;
         };
         "Bakabase.Service.Controllers.UpdateStatusInput": {
             status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.RuleQueueStatus"];
@@ -6866,17 +7037,23 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibrary"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRuleQueueItem]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRuleQueueItem"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]": {
             /** Format: int32 */
@@ -7178,17 +7355,17 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathConfigurationTestResult"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRuleQueueItem]": {
             /** Format: int32 */
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRuleQueueItem"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]": {
             /** Format: int32 */
@@ -7459,6 +7636,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Controllers.MediaLibraryStatistics"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.PathMarkSyncStatusResponse]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Controllers.PathMarkSyncStatusResponse"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.BulkModificationViewModel]": {
             /** Format: int32 */
@@ -13296,30 +13479,6 @@ export interface operations {
             };
         };
     };
-    GetMediaLibraryV2PathRules: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                };
-            };
-        };
-    };
     GetMediaLibraryV2Statistics: {
         parameters: {
             query?: never;
@@ -14754,7 +14913,7 @@ export interface operations {
             };
         };
     };
-    GetAllPathRules: {
+    GetAllPathMarks: {
         parameters: {
             query?: never;
             header?: never;
@@ -14769,14 +14928,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
                 };
             };
         };
     };
-    AddPathRule: {
+    AddPathMark: {
         parameters: {
             query?: never;
             header?: never;
@@ -14785,10 +14944,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
             };
         };
         responses: {
@@ -14798,14 +14957,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
                 };
             };
         };
     };
-    GetPathRule: {
+    GetPathMark: {
         parameters: {
             query?: never;
             header?: never;
@@ -14822,14 +14981,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
                 };
             };
         };
     };
-    UpdatePathRule: {
+    UpdatePathMark: {
         parameters: {
             query?: never;
             header?: never;
@@ -14840,10 +14999,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
             };
         };
         responses: {
@@ -14860,7 +15019,7 @@ export interface operations {
             };
         };
     };
-    DeletePathRule: {
+    SoftDeletePathMark: {
         parameters: {
             query?: never;
             header?: never;
@@ -14884,7 +15043,32 @@ export interface operations {
             };
         };
     };
-    GetPathRuleByPath: {
+    GetPathMarksByPath: {
+        parameters: {
+            query?: {
+                path?: string;
+                includeDeleted?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                };
+            };
+        };
+    };
+    SoftDeletePathMarksByPath: {
         parameters: {
             query?: {
                 path?: string;
@@ -14901,42 +15085,212 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
     };
-    GetApplicablePathRules: {
-        parameters: {
-            query?: {
-                path?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathRule]"];
-                };
-            };
-        };
-    };
-    CopyPathRuleConfig: {
+    GetAllPathMarkPaths: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    GetPendingPathMarks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                };
+            };
+        };
+    };
+    GetPendingPathMarksCount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    GetPathMarksBySyncStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete] */
+                status: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkSyncStatus"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                };
+            };
+        };
+    };
+    AddPathMarks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMark]"];
+                };
+            };
+        };
+    };
+    HardDeletePathMark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    StartSyncPathMark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CompleteSyncPathMark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    FailSyncPathMark: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
             cookie?: never;
         };
         requestBody?: {
@@ -14954,14 +15308,36 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };
     };
-    ApplyPathRuleConfig: {
+    GetPathMarkSyncStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.PathMarkSyncStatusResponse]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.PathMarkSyncStatusResponse]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Controllers.PathMarkSyncStatusResponse]"];
+                };
+            };
+        };
+    };
+    PreviewPathMarkMatchedPaths: {
         parameters: {
             query?: never;
             header?: never;
@@ -14970,10 +15346,61 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.ApplyPathRuleConfigInput"];
-                "application/json": components["schemas"]["Bakabase.Service.Controllers.ApplyPathRuleConfigInput"];
-                "text/json": components["schemas"]["Bakabase.Service.Controllers.ApplyPathRuleConfigInput"];
-                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.ApplyPathRuleConfigInput"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Input.PathMarkPreviewRequest"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Input.PathMarkPreviewRequest"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Input.PathMarkPreviewRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Input.PathMarkPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult]"];
+                };
+            };
+        };
+    };
+    StartPathMarkSyncAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    StartPathMarkSync: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": number[];
+                "application/json": number[];
+                "text/json": number[];
+                "application/*+json": number[];
             };
         };
         responses: {
@@ -14990,21 +15417,14 @@ export interface operations {
             };
         };
     };
-    PreviewPathRuleMatchedPaths: {
+    StopPathMarkSync: {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.PathRule"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -15012,9 +15432,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                 };
             };
         };

@@ -55,9 +55,8 @@ import FileMoverPage from "@/pages/file-mover";
 import FileNameModifier from "@/pages/file-name-modifier";
 import ThirdPartyIntegrationPage from "@/pages/third-party-integration";
 import PostParserPage from "@/pages/post-parser";
-import PathRulePage from "@/pages/path-rule";
 import ResourceProfilePage from "@/pages/resource-profile";
-import PathRuleConfigPage from "@/pages/path-rule-config";
+import PathRuleConfigPage from "@/pages/path-mark-config";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -101,7 +100,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
   },
   {
     name: "Media library",
-    path: "/path-rule-config",
+    path: "/path-mark-config",
     component: PathRuleConfigPage,
     icon: AiOutlineNodeIndex,
     layout: "basic",
@@ -129,15 +128,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
         isDeprecated: true
-      },
-      {
-        name: "Path Rule",
-        path: "/path-rule",
-        component: PathRulePage,
-        icon: AiOutlineNodeIndex,
-        layout: "basic",
-        menu: true,
-        isBeta: true,
       },
       {
         name: "Resource Profile",

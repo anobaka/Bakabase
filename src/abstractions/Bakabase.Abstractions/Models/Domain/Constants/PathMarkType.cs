@@ -11,7 +11,12 @@ public enum PathMarkType
     Resource = 1,
 
     /// <summary>
-    /// 属性配置 - 为资源设置属性值（包括媒体库）
+    /// 属性配置 - 为资源设置属性值
     /// </summary>
-    Property = 2
+    Property = 2,
+
+    /// <summary>
+    /// 媒体库关联 - 将资源关联到媒体库
+    /// </summary>
+    MediaLibrary = 3
 }

@@ -42,6 +42,6 @@ public record ResourceProfileDbModel
     /// </summary>
     public int Priority { get; set; }
 
-    public DateTime CreateDt { get; set; }
-    public DateTime UpdateDt { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

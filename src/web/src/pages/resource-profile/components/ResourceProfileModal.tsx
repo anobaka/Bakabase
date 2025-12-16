@@ -97,11 +97,9 @@ const ResourceProfileModal = ({ profile, onSaved, onDestroyed }: Props) => {
     setSaving(true);
     try {
       if (isEdit && formData.id) {
-        // @ts-ignore - API will be available after SDK regeneration
-        await BApi.resourceProfile.updateResourceProfile(formData.id, formData);
+        await BApi.resourceProfile.updateResourceProfile(formData.id, formData as any);
       } else {
-        // @ts-ignore
-        await BApi.resourceProfile.addResourceProfile(formData);
+        await BApi.resourceProfile.addResourceProfile(formData as any);
       }
       onSaved?.();
       onDestroyed?.();

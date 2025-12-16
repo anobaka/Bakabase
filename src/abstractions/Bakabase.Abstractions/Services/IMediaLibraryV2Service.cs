@@ -30,19 +30,24 @@ public interface IMediaLibraryV2Service
 
     Task Delete(int id);
 
+    [Obsolete]
     Task<MediaLibrarySyncResultViewModel> Sync(int id, Func<int, Task>? onProgressChange,
         Func<string?, Task>? onProcessChange, PauseToken pt,
         CancellationToken ct);
 
+    [Obsolete]
     Task<MediaLibrarySyncResultViewModel> SyncAll(int[]? ids, Func<int, Task>? onProgressChange,
         Func<string?, Task>? onProcessChange, PauseToken pt,
         CancellationToken ct);
 
+    [Obsolete]
     Task StartSyncAll(int[]? ids = null);
 
+    [Obsolete]
     Task MarkAsSynced(int[] ids);
+    [Obsolete]
     Task MarkAsSynced(int id, int resourceCount, string? syncVersion);
-
+    [Obsolete]
     Task<IEnumerable<MediaLibraryV2>> GetAllSyncMayBeOutdated();
     
     Task RefreshResourceCount(int id);

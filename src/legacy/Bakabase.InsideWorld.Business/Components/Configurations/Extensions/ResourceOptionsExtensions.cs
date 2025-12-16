@@ -94,7 +94,8 @@ public static class ResourceOptionsExtensions
                options.DeleteResourcesWithUnknownMediaLibrary.HasValue ||
                options.CategoryOptionsMap?.Any(x => x.Value.IsSet()) == true ||
                options.EnhancerOptionsMap?.Any(x => x.Value.IsSet()) == true ||
-               options.MediaLibraryOptionsMap?.Any(x => x.Value.IsSet()) == true;
+               options.MediaLibraryOptionsMap?.Any(x => x.Value.IsSet()) == true ||
+               options.SyncMarksImmediately.HasValue;
     }
 
     public static SynchronizationOptionsModel? Optimize(this SynchronizationOptionsModel options)
@@ -158,11 +159,9 @@ public static class ResourceOptionsExtensions
             return false;
         }
 
-        var co = options.CategoryOptionsMap?.GetValueOrDefault(fileNotFoundResource.CategoryId);
-        var mo = (fileNotFoundResource.IsMediaLibraryV2 ? options.MediaLibraryOptionsMap : co?.MediaLibraryOptionsMap)
-            ?.GetValueOrDefault(fileNotFoundResource.MediaLibraryId);
-        return mo?.DeleteResourcesWithUnknownPath ??
-               co?.DeleteResourcesWithUnknownPath ?? options.DeleteResourcesWithUnknownPath ?? false;
+        // Use MediaLibraryOptionsMap directly since data has been migrated to new schema
+        var mo = options.MediaLibraryOptionsMap?.GetValueOrDefault(fileNotFoundResource.MediaLibraryId);
+        return mo?.DeleteResourcesWithUnknownPath ?? options.DeleteResourcesWithUnknownPath ?? false;
     }
 
     public static bool ShouldBeDeletedSinceUnknownMediaLibrary(this Abstractions.Models.Domain.Resource fileNotFoundResource,
@@ -179,12 +178,11 @@ public static class ResourceOptionsExtensions
             return null;
         }
 
-        var co = options.CategoryOptionsMap?.GetValueOrDefault(resource.CategoryId);
-        var mo = (resource.IsMediaLibraryV2 ? options.MediaLibraryOptionsMap : co?.MediaLibraryOptionsMap)
-            ?.GetValueOrDefault(resource.MediaLibraryId);
+        // Use MediaLibraryOptionsMap directly since data has been migrated to new schema
+        var mo = options.MediaLibraryOptionsMap?.GetValueOrDefault(resource.MediaLibraryId);
 
         Dictionary<int, SynchronizationEnhancerOptions>?[] priority =
-            [mo?.EnhancerOptionsMap, co?.EnhancerOptionsMap, options.EnhancerOptionsMap];
+            [mo?.EnhancerOptionsMap, options.EnhancerOptionsMap];
 
         return SpecificEnumUtils<EnhancerId>.Values.Cast<int>().Where(id =>
             priority.Select(a => a?.GetValueOrDefault(id)?.ReApply).OfType<bool>().FirstOrDefault()).ToArray();
@@ -198,12 +196,11 @@ public static class ResourceOptionsExtensions
             return null;
         }
 
-        var co = options.CategoryOptionsMap?.GetValueOrDefault(resource.CategoryId);
-        var mo = (resource.IsMediaLibraryV2 ? options.MediaLibraryOptionsMap : co?.MediaLibraryOptionsMap)
-            ?.GetValueOrDefault(resource.MediaLibraryId);
+        // Use MediaLibraryOptionsMap directly since data has been migrated to new schema
+        var mo = options.MediaLibraryOptionsMap?.GetValueOrDefault(resource.MediaLibraryId);
 
         Dictionary<int, SynchronizationEnhancerOptions>?[] priority =
-            [mo?.EnhancerOptionsMap, co?.EnhancerOptionsMap, options.EnhancerOptionsMap];
+            [mo?.EnhancerOptionsMap, options.EnhancerOptionsMap];
 
         return SpecificEnumUtils<EnhancerId>.Values.Cast<int>().Where(id =>
             priority.Select(a => a?.GetValueOrDefault(id)?.ReEnhance).OfType<bool>().FirstOrDefault()).ToArray();

@@ -13,11 +13,11 @@ import {
   GroupOutlined,
   MergeOutlined,
   SendOutlined,
-  SettingOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { MdDriveFileRenameOutline } from "react-icons/md";
+import { AiOutlineFileZip } from "react-icons/ai";
 
 import { IwFsEntryAction } from "@/core/models/FileExplorer/Entry";
 import BApi from "@/sdk/BApi";
@@ -32,16 +32,12 @@ import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
-import PathRuleConfigPanel from "@/pages/path-rule-config/components/PathRuleConfigPanel";
-import MarkConfigModal from "@/pages/path-rule-config/components/MarkConfigPopover";
-import { AiOutlineFileZip } from "react-icons/ai";
-import { RiRulerLine } from "react-icons/ri";
-import { PathMarkType } from "@/sdk/constants";
 
 type Props = {
   selectedEntries: Entry[];
   contextMenuEntry?: Entry;
   root?: Entry;
+  renderExtraContextMenuItems?: (entries: Entry[]) => React.ReactNode;
 } & Pick<TreeEntryProps, "capabilities">;
 
 type Item = {
@@ -49,7 +45,7 @@ type Item = {
   label: string;
   onClick: () => any;
 };
-const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
+const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMenuItems }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -217,11 +213,11 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
         icon: <AiOutlineFileZip className={"text-base"} />,
         label: t<string>("Use bulk decompression tool"),
         onClick: () => {
-          createPortal(BulkDecompressionToolModal, { paths: selectedEntries.map(e => e.path) });
+          createPortal(BulkDecompressionToolModal, { paths: selectedEntries.map((e) => e.path) });
         },
       });
     }
- 
+
     items.push({
       icon: <CopyOutlined className={"text-base"} />,
       label: t<string>("Copy {{count}} names", {
@@ -269,66 +265,6 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
       },
     });
 
-    // Path rule configuration
-    if (capabilities?.includes("configure-path-rule")) {
-      items.push({
-        icon: <SettingOutlined className={"text-base"} />,
-        label: t<string>("Configure path rules for {{count}} path(s)", {
-          count: selectedEntries.length,
-        }),
-        onClick: () => {
-          createPortal(PathRuleConfigPanel, {
-            selectedEntries: selectedEntries,
-          });
-        },
-      });
-
-      // Quick mark as Resource
-      items.push({
-        icon: <RiRulerLine className={"text-base"} />,
-        label: t<string>("Mark as Resource"),
-        onClick: () => {
-          createPortal(MarkConfigModal, {
-            markType: PathMarkType.Resource,
-            rootPath: selectedEntries[0]?.path,
-            onSave: async (mark) => {
-              // Apply the mark to all selected entries
-              const marksJson = JSON.stringify([mark]);
-              await BApi.pathRule.applyPathRuleConfig({
-                marksJson,
-                targetPaths: selectedEntries.map(e => e.path),
-              });
-              toast.success(t<string>("Successfully applied resource mark to {{count}} path(s)", {
-                count: selectedEntries.length,
-              }));
-            },
-          });
-        },
-      });
-
-      // Quick mark as Property
-      items.push({
-        icon: <RiRulerLine className={"text-base"} />,
-        label: t<string>("Mark as Property"),
-        onClick: () => {
-          createPortal(MarkConfigModal, {
-            markType: PathMarkType.Property,
-            rootPath: selectedEntries[0]?.path,
-            onSave: async (mark) => {
-              // Apply the mark to all selected entries
-              const marksJson = JSON.stringify([mark]);
-              await BApi.pathRule.applyPathRuleConfig({
-                marksJson,
-                targetPaths: selectedEntries.map(e => e.path),
-              });
-              toast.success(t<string>("Successfully applied property mark to {{count}} path(s)", {
-                count: selectedEntries.length,
-              }));
-            },
-          });
-        },
-      });
-    }
   }
 
   return (
@@ -343,6 +279,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root }: Props) => {
           </MenuItem>
         );
       })}
+      {renderExtraContextMenuItems?.(selectedEntries)}
     </>
   );
 };

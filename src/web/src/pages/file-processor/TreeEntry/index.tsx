@@ -650,6 +650,7 @@ const TreeEntry = (props: TreeEntryProps) => {
                   onDoubleClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
+                  onContextMenu={(e) => e.stopPropagation()}
                 >
                   {renderAfterName(entry)}
                 </div>

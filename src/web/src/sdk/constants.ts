@@ -259,19 +259,46 @@ export const PathFilterFsTypeLabel: Record<PathFilterFsType, string> = {
   [PathFilterFsType.Directory]: 'Directory'
 };
 
+export enum PathMarkSyncStatus {
+  Pending = 0,
+  Syncing = 1,
+  Synced = 2,
+  Failed = 3,
+  PendingDelete = 4
+}
+
+export const pathMarkSyncStatuses = [
+  { label: 'Pending', value: PathMarkSyncStatus.Pending },
+  { label: 'Syncing', value: PathMarkSyncStatus.Syncing },
+  { label: 'Synced', value: PathMarkSyncStatus.Synced },
+  { label: 'Failed', value: PathMarkSyncStatus.Failed },
+  { label: 'PendingDelete', value: PathMarkSyncStatus.PendingDelete }
+] as const;
+
+export const PathMarkSyncStatusLabel: Record<PathMarkSyncStatus, string> = {
+  [PathMarkSyncStatus.Pending]: 'Pending',
+  [PathMarkSyncStatus.Syncing]: 'Syncing',
+  [PathMarkSyncStatus.Synced]: 'Synced',
+  [PathMarkSyncStatus.Failed]: 'Failed',
+  [PathMarkSyncStatus.PendingDelete]: 'PendingDelete'
+};
+
 export enum PathMarkType {
   Resource = 1,
-  Property = 2
+  Property = 2,
+  MediaLibrary = 3
 }
 
 export const pathMarkTypes = [
   { label: 'Resource', value: PathMarkType.Resource },
-  { label: 'Property', value: PathMarkType.Property }
+  { label: 'Property', value: PathMarkType.Property },
+  { label: 'MediaLibrary', value: PathMarkType.MediaLibrary }
 ] as const;
 
 export const PathMarkTypeLabel: Record<PathMarkType, string> = {
   [PathMarkType.Resource]: 'Resource',
-  [PathMarkType.Property]: 'Property'
+  [PathMarkType.Property]: 'Property',
+  [PathMarkType.MediaLibrary]: 'MediaLibrary'
 };
 
 export enum PathMatchMode {

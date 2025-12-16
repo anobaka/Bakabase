@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 
 namespace Bakabase.Abstractions.Extensions;
 
+[Obsolete]
 public static class MediaLibraryTemplateExtensions
 {
 

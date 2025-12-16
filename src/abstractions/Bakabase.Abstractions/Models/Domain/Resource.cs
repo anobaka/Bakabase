@@ -11,7 +11,9 @@ public record Resource
 {
     public int Id { get; set; }
 
+    [Obsolete]
     public int MediaLibraryId { get; set; }
+    [Obsolete]
     public int CategoryId { get; set; }
 
     private string _fileName = null!;
@@ -112,6 +114,7 @@ public record Resource
     public DateTime? PlayedAt { get; set; }
 
     public ResourceCache? Cache { get; set; }
+    [Obsolete]
     public bool IsMediaLibraryV2 => CategoryId == 0;
 
     public record Property(
@@ -146,9 +149,12 @@ public record Resource
         }
     }
 
+    [Obsolete]
     public Category? Category { get; set; }
 
+    [Obsolete]
     public string? MediaLibraryName { get; set; }
+    [Obsolete]
     public string? MediaLibraryColor { get; set; }
 
     private void RebuildPath()

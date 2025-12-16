@@ -4,6 +4,7 @@ using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Models.Domain;
 
+[Obsolete]
 public record MediaLibraryTemplate : ISyncVersion
 {
     public int Id { get; set; }

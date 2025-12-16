@@ -68,28 +68,60 @@ public class ResourceProfileService<TDbContext>(
         return profiles.FirstOrDefault(p => !string.IsNullOrEmpty(p.NameTemplate))?.NameTemplate;
     }
 
-    public async Task<EnhancerSettings?> GetEffectiveEnhancerSettings(Resource resource)
+    public async Task<ResourceProfileEnhancerOptions?> GetEffectiveEnhancerOptions(Resource resource)
     {
         var profiles = await GetMatchingProfiles(resource);
-        return profiles.FirstOrDefault(p => p.EnhancerSettings != null)?.EnhancerSettings;
+        return profiles.FirstOrDefault(p => p.EnhancerOptions != null)?.EnhancerOptions;
     }
 
-    public async Task<PlayableFileSettings?> GetEffectivePlayableFileSettings(Resource resource)
+    public async Task<Dictionary<int, ResourceProfileEnhancerOptions>> GetEffectiveEnhancerOptionsForResources(IEnumerable<Resource> resources)
     {
-        var profiles = await GetMatchingProfiles(resource);
-        return profiles.FirstOrDefault(p => p.PlayableFileSettings != null)?.PlayableFileSettings;
+        var result = new Dictionary<int, ResourceProfileEnhancerOptions>();
+        var allProfiles = await GetAll();
+
+        // Get all mappings for efficient lookup
+        var resourceIds = resources.Select(r => r.Id).ToArray();
+        var allMappings = await MappingService.GetByResourceIds(resourceIds);
+        var resourceMediaLibraryMap = allMappings
+            .GroupBy(m => m.ResourceId)
+            .ToDictionary(g => g.Key, g => g.Select(m => m.MediaLibraryId).ToHashSet());
+
+        foreach (var resource in resources)
+        {
+            var resourceMediaLibraryIds = resourceMediaLibraryMap.TryGetValue(resource.Id, out var ids)
+                ? ids
+                : new HashSet<int>();
+
+            foreach (var profile in allProfiles)
+            {
+                if (MatchesCriteria(resource, profile.SearchCriteria, resourceMediaLibraryIds) &&
+                    profile.EnhancerOptions != null)
+                {
+                    result[resource.Id] = profile.EnhancerOptions;
+                    break; // Use first matching profile with enhancer options
+                }
+            }
+        }
+
+        return result;
     }
 
-    public async Task<PlayerSettings?> GetEffectivePlayerSettings(Resource resource)
+    public async Task<ResourceProfilePlayableFileOptions?> GetEffectivePlayableFileOptions(Resource resource)
     {
         var profiles = await GetMatchingProfiles(resource);
-        return profiles.FirstOrDefault(p => p.PlayerSettings != null)?.PlayerSettings;
+        return profiles.FirstOrDefault(p => p.PlayableFileOptions != null)?.PlayableFileOptions;
+    }
+
+    public async Task<ResourceProfilePlayerOptions?> GetEffectivePlayerOptions(Resource resource)
+    {
+        var profiles = await GetMatchingProfiles(resource);
+        return profiles.FirstOrDefault(p => p.PlayerOptions != null)?.PlayerOptions;
     }
 
     public async Task<ResourceProfile> Add(ResourceProfile profile)
     {
-        profile.CreateDt = DateTime.UtcNow;
-        profile.UpdateDt = DateTime.UtcNow;
+        profile.CreatedAt = DateTime.UtcNow;
+        profile.UpdatedAt = DateTime.UtcNow;
 
         var dbModel = profile.ToDbModel();
         await orm.Add(dbModel);
@@ -100,7 +132,7 @@ public class ResourceProfileService<TDbContext>(
 
     public async Task Update(ResourceProfile profile)
     {
-        profile.UpdateDt = DateTime.UtcNow;
+        profile.UpdatedAt = DateTime.UtcNow;
         await orm.Update(profile.ToDbModel());
     }
 

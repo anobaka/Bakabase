@@ -48,6 +48,7 @@ type Props = {
   onInitialized?: (path?: string) => any;
   onDoubleClick?: (event: React.MouseEvent<any>, entry: Entry) => boolean;
   afterPlayedFirstFile?: (entry: Entry) => any;
+  renderExtraContextMenuItems?: (entries: Entry[]) => React.ReactNode;
 } & Pick<
   TreeEntryProps,
   "capabilities" | "expandable" | "filter" | "renderAfterName" | "renderBeforeRightOperations"
@@ -72,6 +73,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
       afterPlayedFirstFile,
       renderAfterName,
       renderBeforeRightOperations,
+      renderExtraContextMenuItems,
     },
     ref,
   ) => {
@@ -230,6 +232,7 @@ const RootTreeEntry = forwardRef<RootTreeEntryRef, Props>(
             contextMenuEntry={contextMenuEntryRef.current}
             root={root}
             selectedEntries={selectedEntries}
+            renderExtraContextMenuItems={renderExtraContextMenuItems}
           />
         </ControlledMenu>
         <EventListener

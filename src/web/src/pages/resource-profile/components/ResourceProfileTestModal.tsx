@@ -52,15 +52,11 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
     const loadMatchingResources = async () => {
       setLoading(true);
       try {
-        // @ts-ignore - API will be available after SDK regeneration
-        const countRsp = await BApi.resourceProfile.testResourceProfileCriteria(profile.searchCriteria);
-        // @ts-ignore
+        const countRsp = await BApi.resourceProfile.testResourceProfileCriteria(profile.searchCriteria as any);
         setMatchCount(countRsp.data ?? 0);
 
-        // @ts-ignore
-        const rsp = await BApi.resourceProfile.getMatchingResources(profile.searchCriteria, limit);
-        // @ts-ignore
-        setMatchingResources(rsp.data || []);
+        const rsp = await BApi.resourceProfile.getMatchingResources(profile.searchCriteria as any, { limit });
+        setMatchingResources((rsp.data || []) as Resource[]);
       } catch (e) {
         console.error("Failed to test criteria", e);
       } finally {

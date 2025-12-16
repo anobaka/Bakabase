@@ -14,18 +14,18 @@ public static class ResourceProfileExtensions
             Name = model.Name,
             SearchCriteriaJson = JsonConvert.SerializeObject(model.SearchCriteria),
             NameTemplate = model.NameTemplate,
-            EnhancerSettingsJson = model.EnhancerSettings != null
-                ? JsonConvert.SerializeObject(model.EnhancerSettings)
+            EnhancerSettingsJson = model.EnhancerOptions != null
+                ? JsonConvert.SerializeObject(model.EnhancerOptions)
                 : null,
-            PlayableFileSettingsJson = model.PlayableFileSettings != null
-                ? JsonConvert.SerializeObject(model.PlayableFileSettings)
+            PlayableFileSettingsJson = model.PlayableFileOptions != null
+                ? JsonConvert.SerializeObject(model.PlayableFileOptions)
                 : null,
-            PlayerSettingsJson = model.PlayerSettings != null
-                ? JsonConvert.SerializeObject(model.PlayerSettings)
+            PlayerSettingsJson = model.PlayerOptions != null
+                ? JsonConvert.SerializeObject(model.PlayerOptions)
                 : null,
             Priority = model.Priority,
-            CreateDt = model.CreateDt,
-            UpdateDt = model.UpdateDt
+            CreatedAt = model.CreatedAt,
+            UpdatedAt = model.UpdatedAt
         };
     }
 
@@ -37,8 +37,8 @@ public static class ResourceProfileExtensions
             Name = dbModel.Name,
             NameTemplate = dbModel.NameTemplate,
             Priority = dbModel.Priority,
-            CreateDt = dbModel.CreateDt,
-            UpdateDt = dbModel.UpdateDt,
+            CreatedAt = dbModel.CreatedAt,
+            UpdatedAt = dbModel.UpdatedAt,
             SearchCriteria = new SearchCriteria()
         };
 
@@ -59,8 +59,8 @@ public static class ResourceProfileExtensions
         {
             try
             {
-                domain.EnhancerSettings =
-                    JsonConvert.DeserializeObject<EnhancerSettings>(dbModel.EnhancerSettingsJson);
+                domain.EnhancerOptions =
+                    JsonConvert.DeserializeObject<ResourceProfileEnhancerOptions>(dbModel.EnhancerSettingsJson);
             }
             catch (Exception)
             {
@@ -72,8 +72,8 @@ public static class ResourceProfileExtensions
         {
             try
             {
-                domain.PlayableFileSettings =
-                    JsonConvert.DeserializeObject<PlayableFileSettings>(dbModel.PlayableFileSettingsJson);
+                domain.PlayableFileOptions =
+                    JsonConvert.DeserializeObject<ResourceProfilePlayableFileOptions>(dbModel.PlayableFileSettingsJson);
             }
             catch (Exception)
             {
@@ -85,8 +85,8 @@ public static class ResourceProfileExtensions
         {
             try
             {
-                domain.PlayerSettings =
-                    JsonConvert.DeserializeObject<PlayerSettings>(dbModel.PlayerSettingsJson);
+                domain.PlayerOptions =
+                    JsonConvert.DeserializeObject<ResourceProfilePlayerOptions>(dbModel.PlayerSettingsJson);
             }
             catch (Exception)
             {

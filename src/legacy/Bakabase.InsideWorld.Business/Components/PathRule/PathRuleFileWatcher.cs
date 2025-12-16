@@ -74,19 +74,19 @@ public class PathRuleFileWatcher : BackgroundService
     private async Task RefreshWatchers(CancellationToken ct)
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var pathRuleService = scope.ServiceProvider.GetRequiredService<IPathRuleService>();
+        var pathMarkService = scope.ServiceProvider.GetRequiredService<IPathMarkService>();
 
-        var rules = await pathRuleService.GetAll();
+        var paths = await pathMarkService.GetAllPaths();
         var activePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var rule in rules)
+        foreach (var path in paths)
         {
-            if (string.IsNullOrEmpty(rule.Path) || !Directory.Exists(rule.Path))
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
             {
                 continue;
             }
 
-            var normalizedPath = rule.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var normalizedPath = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             activePaths.Add(normalizedPath);
 
             if (!_watchers.ContainsKey(normalizedPath))

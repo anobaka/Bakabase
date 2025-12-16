@@ -18,15 +18,10 @@ type Props = {
     | "danger";
 };
 
-const ResourceTerm = ({
-  className,
-  size = "sm",
-  variant = "light",
-  color = "success",
-}: Props) => {
+export const ResourceDescription = () => {
   const { t } = useTranslation();
 
-  const description = (
+  return (
     <div className="space-y-2">
       <p>{t("Term.Resource.Description")}</p>
       <p>{t("Term.Resource.Usage")}</p>
@@ -35,12 +30,23 @@ const ResourceTerm = ({
       </p>
     </div>
   );
+};
+
+ResourceDescription.displayName = "ResourceDescription";
+
+const ResourceTerm = ({
+  className,
+  size = "sm",
+  variant = "light",
+  color = "success",
+}: Props) => {
+  const { t } = useTranslation();
 
   return (
     <TermChip
       className={className}
       color={color}
-      description={description}
+      description={<ResourceDescription />}
       label={t("Resource")}
       size={size}
       variant={variant}

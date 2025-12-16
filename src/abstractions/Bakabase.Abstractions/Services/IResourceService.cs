@@ -97,9 +97,6 @@ public interface IResourceService
     Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
-    Task<List<Resource>> GetUnknownResources();
-    Task<int> GetUnknownCount();
-    Task DeleteUnknown();
 
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);

@@ -564,4 +564,31 @@ The version of lux is not limited.</value>
   <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
     <value>A new version ({0}) is available for update.</value>
   </data>
+  <data name="SyncPathMark_Collecting" xml:space="preserve">
+    <value>Collecting path marks</value>
+  </data>
+  <data name="SyncPathMark_Collected" xml:space="preserve">
+    <value>Collected {0} path marks</value>
+  </data>
+  <data name="SyncPathMark_ProcessingResource" xml:space="preserve">
+    <value>Processing resource: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingProperty" xml:space="preserve">
+    <value>Processing property: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingMediaLibrary" xml:space="preserve">
+    <value>Processing media library: {0}</value>
+  </data>
+  <data name="SyncPathMark_FindingRelated" xml:space="preserve">
+    <value>Finding related marks</value>
+  </data>
+  <data name="SyncPathMark_FoundRelated" xml:space="preserve">
+    <value>Found {0} related marks</value>
+  </data>
+  <data name="SyncPathMark_EstablishingRelationships" xml:space="preserve">
+    <value>Establishing parent-child relationships</value>
+  </data>
+  <data name="SyncPathMark_Complete" xml:space="preserve">
+    <value>Path mark synchronization complete</value>
+  </data>
 </root>

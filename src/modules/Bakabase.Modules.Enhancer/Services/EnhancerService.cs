@@ -51,7 +51,7 @@ namespace Bakabase.Modules.Enhancer.Services
         private readonly IEnhancementRecordService _enhancementRecordService;
         private readonly IServiceProvider _serviceProvider;
         private readonly IPropertyService _propertyService;
-        private readonly IMediaLibraryV2Service _mediaLibraryV2Service;
+        private readonly IResourceProfileService _resourceProfileService;
         private readonly BakaTracingContext _tracingContext;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
@@ -60,7 +60,8 @@ namespace Bakabase.Modules.Enhancer.Services
             IStandardValueService standardValueService, IEnhancerLocalizer enhancerLocalizer,
             IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger,
             ICategoryService categoryService, IEnhancementRecordService enhancementRecordService, IReservedPropertyValueService reservedPropertyValueService,
-            IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider, IPropertyService propertyService, IMediaLibraryV2Service mediaLibraryV2Service, BakaTracingContext tracingContext)
+            IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider, IPropertyService propertyService,
+            IResourceProfileService resourceProfileService, BakaTracingContext tracingContext)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -77,7 +78,7 @@ namespace Bakabase.Modules.Enhancer.Services
             _propertyLocalizer = propertyLocalizer;
             _serviceProvider = serviceProvider;
             _propertyService = propertyService;
-            _mediaLibraryV2Service = mediaLibraryV2Service;
+            _resourceProfileService = resourceProfileService;
             _tracingContext = tracingContext;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
@@ -86,19 +87,17 @@ namespace Bakabase.Modules.Enhancer.Services
             List<Enhancement> enhancements, Dictionary<int, Resource> resourceMap,
             Dictionary<int, CustomProperty> propertyMap)
         {
-            var categoryIds = resourceMap.Values.Where(r => r.CategoryId > 0).Select(v => v.CategoryId).ToHashSet();
             var enhancerIds = enhancements.Select(s => s.EnhancerId).ToHashSet();
-            var enhancerOptions = await _categoryEnhancerService.GetAll(x =>
-                enhancerIds.Contains(x.EnhancerId) && categoryIds.Contains(x.CategoryId));
 
-            var mediaLibraryV2Ids =
-                resourceMap.Values.Where(r => r.CategoryId == 0).Select(r => r.MediaLibraryId).ToHashSet();
-            var mediaLibraryV2List =
-                await _mediaLibraryV2Service.GetByKeys(mediaLibraryV2Ids.ToArray(),
-                    MediaLibraryV2AdditionalItem.Template);
-            var mediaLibraryV2IdEnhancerOptionsMap = mediaLibraryV2List.Where(d => d.Template != null)
-                .ToDictionary(d => d.Id, d => d.Template!.Enhancers?.ToDictionary(x => x.EnhancerId, x =>
-                    new EnhancerFullOptions
+            // Use ResourceProfileService to get enhancer options for all resources
+            var resourceEnhancerOptionsMap = await _resourceProfileService.GetEffectiveEnhancerOptionsForResources(resourceMap.Values);
+
+            // Build a map from resource ID to enhancer options map
+            var resourceIdEnhancerOptionsMap = resourceEnhancerOptionsMap.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Enhancers?.ToDictionary(
+                    x => x.EnhancerId,
+                    x => new EnhancerFullOptions
                     {
                         TargetOptions = x.TargetOptions?.Select(t => new EnhancerTargetFullOptions
                         {
@@ -110,13 +109,11 @@ namespace Bakabase.Modules.Enhancer.Services
                         }).ToList(),
                         Expressions = x.Expressions,
                         Requirements = x.Requirements?.Select(r => (EnhancerId)r).ToList(),
-                        KeywordProperty = x.KeywordProperty
-                    }));
-            // CategoryId - EnhancerId - Options
-            var categoryEnhancerOptionsMap = enhancerOptions.GroupBy(d => d.CategoryId)
-                .ToDictionary(d => d.Key, d => d.ToDictionary(c => c.EnhancerId, c => c));
+                        KeywordProperty = x.KeywordProperty,
+                        PretreatKeyword = x.PretreatKeyword
+                    }) ?? new Dictionary<int, EnhancerFullOptions>());
+
             var enhancementTargetOptionsMap = new Dictionary<Enhancement, EnhancerTargetFullOptions>();
-            var changedCategoryEnhancerOptions = new HashSet<CategoryEnhancerFullOptions>();
             var newPropertyAddModels =
                 new List<(CustomPropertyAddOrPutDto PropertyAddModel, List<Enhancement> Enhancements)>();
             foreach (var enhancement in enhancements)
@@ -127,14 +124,12 @@ namespace Bakabase.Modules.Enhancer.Services
                     continue;
                 }
 
-                var efo = resource.IsMediaLibraryV2
-                    ? mediaLibraryV2IdEnhancerOptionsMap.GetValueOrDefault(resource.MediaLibraryId)
-                        ?.GetValueOrDefault(enhancement.EnhancerId)
-                    : categoryEnhancerOptionsMap.GetValueOrDefault(resource.CategoryId)
-                        ?.GetValueOrDefault(enhancement.EnhancerId)?.Options;
-
-                var categoryOptions = categoryEnhancerOptionsMap.GetValueOrDefault(resource.CategoryId)
-                    ?.GetValueOrDefault(enhancement.EnhancerId);
+                // Get enhancer options from ResourceProfile
+                EnhancerFullOptions? efo = null;
+                if (resourceIdEnhancerOptionsMap.TryGetValue(resource.Id, out var enhancerOptionsMap))
+                {
+                    efo = enhancerOptionsMap.GetValueOrDefault(enhancement.EnhancerId);
+                }
 
                 var targetOptionsGroup = efo?.TargetOptions
                     ?.Where(x => x.Target == enhancement.Target).ToArray();
@@ -154,7 +149,7 @@ namespace Bakabase.Modules.Enhancer.Services
                             targetOptionsGroup.FirstOrDefault(x => x.DynamicTarget == enhancement.DynamicTarget);
                         if (dynamicTargetOptions == null)
                         {
-                            // Options for media library template will never enter this branch
+                            // For dynamic targets, create new options if AutoBindProperty is enabled
                             if (targetOptions?.AutoBindProperty == true)
                             {
                                 dynamicTargetOptions = new EnhancerTargetFullOptions
@@ -163,8 +158,7 @@ namespace Bakabase.Modules.Enhancer.Services
                                     DynamicTarget = enhancement.DynamicTarget,
                                     Target = enhancement.Target
                                 };
-                                efo.TargetOptions!.Add(dynamicTargetOptions);
-                                changedCategoryEnhancerOptions.Add(categoryOptions);
+                                efo?.TargetOptions?.Add(dynamicTargetOptions);
                             }
                         }
 
@@ -243,7 +237,7 @@ namespace Bakabase.Modules.Enhancer.Services
                     // }
                     // else
                     // {
-                    // Options for media library template will never enter this branch
+                    // Auto-bind property if enabled
                     if (targetOptions.AutoBindProperty == true)
                     {
                         if (targetDescriptor.ReservedPropertyCandidate.HasValue)
@@ -251,7 +245,6 @@ namespace Bakabase.Modules.Enhancer.Services
                             targetOptions.PropertyId =
                                 (int)targetDescriptor.ReservedPropertyCandidate.Value;
                             targetOptions.PropertyPool = PropertyPool.Reserved;
-                            changedCategoryEnhancerOptions.Add(categoryOptions!);
                         }
                         else
                         {
@@ -315,8 +308,6 @@ namespace Bakabase.Modules.Enhancer.Services
                                     targetOptions.PropertyId = propertyCandidate.Id;
                                     targetOptions.PropertyPool = PropertyPool.Custom;
                                 }
-
-                                changedCategoryEnhancerOptions.Add(categoryOptions!);
                             }
                         }
                     }
@@ -348,11 +339,6 @@ namespace Bakabase.Modules.Enhancer.Services
 
                     propertyMap[property.Id] = property;
                 }
-            }
-
-            if (changedCategoryEnhancerOptions.Any())
-            {
-                await _categoryEnhancerService.PutAll(changedCategoryEnhancerOptions.ToArray());
             }
 
             return enhancementTargetOptionsMap;
@@ -601,14 +587,17 @@ namespace Bakabase.Modules.Enhancer.Services
             var categoryIdEnhancerOptionsMap =
                 (await _categoryService.GetByKeys(categoryIds, CategoryAdditionalItem.EnhancerOptions)).ToDictionary(
                     d => d.Id, d => d.EnhancerOptions);
-            var mediaLibraryV2Ids =
-                targetResources.Where(r => r.CategoryId == 0).Select(r => r.MediaLibraryId).ToHashSet();
-            var mediaLibraryV2List =
-                await _mediaLibraryV2Service.GetByKeys(mediaLibraryV2Ids.ToArray(),
-                    MediaLibraryV2AdditionalItem.Template);
-            var mediaLibraryV2IdEnhancerOptionsMap = mediaLibraryV2List.Where(d => d.Template != null)
-                .ToDictionary(d => d.Id, d => d.Template!.Enhancers?.ToDictionary(x => x.EnhancerId, x =>
-                    new EnhancerFullOptions
+
+            // Use ResourceProfileService to get enhancer options for non-category resources
+            var nonCategoryResources = targetResources.Where(r => r.CategoryId == 0).ToList();
+            var resourceEnhancerOptionsMap = await _resourceProfileService.GetEffectiveEnhancerOptionsForResources(nonCategoryResources);
+
+            // Build resource ID to enhancer options map
+            var resourceIdEnhancerOptionsMap = resourceEnhancerOptionsMap.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Enhancers?.ToDictionary(
+                    x => x.EnhancerId,
+                    x => new EnhancerFullOptions
                     {
                         TargetOptions = x.TargetOptions?.Select(t => new EnhancerTargetFullOptions
                         {
@@ -620,8 +609,9 @@ namespace Bakabase.Modules.Enhancer.Services
                         }).ToList(),
                         Expressions = x.Expressions,
                         Requirements = x.Requirements?.Select(r => (EnhancerId)r).ToList(),
-                        KeywordProperty = x.KeywordProperty
-                    }));
+                        KeywordProperty = x.KeywordProperty,
+                        PretreatKeyword = x.PretreatKeyword
+                    }) ?? new Dictionary<int, EnhancerFullOptions>());
 
             var prevTasks =
                 new Dictionary<IEnhancer,
@@ -675,11 +665,17 @@ namespace Bakabase.Modules.Enhancer.Services
                 }
                 else
                 {
-                    var eosMap = mediaLibraryV2IdEnhancerOptionsMap.GetValueOrDefault(tr.MediaLibraryId);
+                    // Use resource-specific enhancer options from ResourceProfile
+                    var eosMap = resourceIdEnhancerOptionsMap.GetValueOrDefault(tr.Id);
                     if (eosMap != null)
                     {
                         foreach (var (eId, eos) in eosMap)
                         {
+                            if (restrictedEnhancerIds != null && !restrictedEnhancerIds.Contains(eId))
+                            {
+                                continue;
+                            }
+
                             var enhancer = _enhancers.GetValueOrDefault(eId);
                             if (enhancer != null)
                             {

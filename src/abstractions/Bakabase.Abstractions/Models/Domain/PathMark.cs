@@ -7,6 +7,13 @@ namespace Bakabase.Abstractions.Models.Domain;
 /// </summary>
 public class PathMark
 {
+    public int Id { get; set; }
+
+    /// <summary>
+    /// 根路径（规范化后的路径）
+    /// </summary>
+    public string Path { get; set; } = null!;
+
     /// <summary>
     /// 标记类型
     /// </summary>
@@ -21,4 +28,39 @@ public class PathMark
     /// 配置内容 JSON（根据 Type 解析为对应的 Config 类）
     /// </summary>
     public string ConfigJson { get; set; } = null!;
+
+    /// <summary>
+    /// 同步状态
+    /// </summary>
+    public PathMarkSyncStatus SyncStatus { get; set; } = PathMarkSyncStatus.Pending;
+
+    /// <summary>
+    /// 最后同步时间
+    /// </summary>
+    public DateTime? SyncedAt { get; set; }
+
+    /// <summary>
+    /// 同步错误信息
+    /// </summary>
+    public string? SyncError { get; set; }
+
+    /// <summary>
+    /// 创建时间
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>
+    /// 更新时间
+    /// </summary>
+    public DateTime UpdatedAt { get; set; }
+
+    /// <summary>
+    /// 是否已删除（软删除）
+    /// </summary>
+    public bool IsDeleted { get; set; }
+
+    /// <summary>
+    /// 删除时间
+    /// </summary>
+    public DateTime? DeletedAt { get; set; }
 }

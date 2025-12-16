@@ -339,32 +339,58 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("MediaLibrariesV2");
                 });
 
-            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PathRuleDbModel", b =>
+            modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PathMarkDbModel", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("CreateDt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("MarksJson")
+                    b.Property<string>("ConfigJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime>("UpdateDt")
+                    b.Property<int>("Priority")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SyncError")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SyncStatus")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Path")
-                        .IsUnique();
+                    b.HasIndex("IsDeleted");
 
-                    b.ToTable("PathRules");
+                    b.HasIndex("Path");
+
+                    b.HasIndex("SyncStatus");
+
+                    b.HasIndex("Path", "Type", "Priority");
+
+                    b.ToTable("PathMarks");
                 });
 
             modelBuilder.Entity("Bakabase.Abstractions.Models.Db.PathRuleQueueItemDbModel", b =>
