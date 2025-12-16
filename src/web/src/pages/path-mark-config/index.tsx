@@ -9,7 +9,7 @@ import { useSearchParams } from "react-router-dom";
 import { AiOutlineClockCircle, AiOutlineAim } from "react-icons/ai";
 import { MenuItem } from "@szhsin/react-menu";
 
-import PathRuleMarks from "./components/PathRuleMarks";
+import PathMarks from "./components/PathMarks.tsx";
 import PendingSyncListModal from "./components/PendingSyncListModal";
 import MarkConfigModal from "./components/MarkConfigModal";
 import usePathMarks from "./hooks/usePathMarks";
@@ -26,12 +26,7 @@ const PathRuleConfigPage = () => {
   const [searchParams] = useSearchParams();
 
   const [selectedEntries, setSelectedEntries] = useState<Entry[]>([]);
-  const {
-    allMarks,
-    loading: pathMarksLoading,
-    loadAllMarks,
-    getMarksForPath,
-  } = usePathMarks();
+  const { allMarks, loading: pathMarksLoading, loadAllMarks, getMarksForPath } = usePathMarks();
 
   const optionsStore = useFileSystemOptionsStore((state) => state);
   const resourceOptionsStore = useResourceOptionsStore((state) => state);
@@ -45,12 +40,14 @@ const PathRuleConfigPage = () => {
   const { createPortal } = useBakabaseContext();
 
   // Get sync immediately option from resource options
-  const syncMarksImmediately = resourceOptionsStore.data?.synchronizationOptions?.syncMarksImmediately ?? false;
+  const syncMarksImmediately =
+    resourceOptionsStore.data?.synchronizationOptions?.syncMarksImmediately ?? false;
 
   // Load pending sync count
   const loadPendingSyncCount = useCallback(async () => {
     try {
       const response = await BApi.pathMark.getPendingPathMarksCount();
+
       setPendingSyncCount(response?.data ?? 0);
     } catch (error) {
       console.error("Failed to load pending sync count", error);
@@ -58,52 +55,57 @@ const PathRuleConfigPage = () => {
   }, []);
 
   // Toggle sync immediately option
-  const handleToggleSyncImmediately = useCallback(async (checked: boolean) => {
-    // Show confirmation dialog when enabling
-    if (checked) {
-      const confirmed = await new Promise<boolean>((resolve) => {
-        const modal = createPortal(Modal, {
-          defaultVisible: true,
-          title: t("Enable Sync Immediately"),
-          children: (
-            <div className="flex flex-col gap-2">
-              <p>{t("When enabled, marks will be synced immediately after being set.")}</p>
-              <p className="text-warning">{t("Note: If there is a lot of data, synchronization may take several minutes.")}</p>
-            </div>
-          ),
-          footer: {
-            actions: ["cancel", "ok"],
-            okProps: {
-              children: t("Enable"),
+  const handleToggleSyncImmediately = useCallback(
+    async (checked: boolean) => {
+      // Show confirmation dialog when enabling
+      if (checked) {
+        const confirmed = await new Promise<boolean>((resolve) => {
+          const modal = createPortal(Modal, {
+            defaultVisible: true,
+            title: t("Enable Sync Immediately"),
+            children: (
+              <div className="flex flex-col gap-2">
+                <p>{t("When enabled, marks will be synced immediately after being set.")}</p>
+                <p className="text-warning">
+                  {t("Note: If there is a lot of data, synchronization may take several minutes.")}
+                </p>
+              </div>
+            ),
+            footer: {
+              actions: ["cancel", "ok"],
+              okProps: {
+                children: t("Enable"),
+              },
             },
-          },
-          onOk: () => {
-            resolve(true);
-            modal.destroy();
-          },
-          onDestroyed: () => {
-            resolve(false);
+            onOk: () => {
+              resolve(true);
+              modal.destroy();
+            },
+            onDestroyed: () => {
+              resolve(false);
+            },
+          });
+        });
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      try {
+        await BApi.options.patchResourceOptions({
+          synchronizationOptions: {
+            ...resourceOptionsStore.data?.synchronizationOptions,
+            syncMarksImmediately: checked,
           },
         });
-      });
-
-      if (!confirmed) {
-        return;
+      } catch (error) {
+        console.error("Failed to update sync option", error);
+        toast.danger(t("Failed to update option"));
       }
-    }
-
-    try {
-      await BApi.options.patchResourceOptions({
-        synchronizationOptions: {
-          ...resourceOptionsStore.data?.synchronizationOptions,
-          syncMarksImmediately: checked,
-        },
-      });
-    } catch (error) {
-      console.error("Failed to update sync option", error);
-      toast.danger(t("Failed to update option"));
-    }
-  }, [createPortal, resourceOptionsStore.data?.synchronizationOptions, t]);
+    },
+    [createPortal, resourceOptionsStore.data?.synchronizationOptions, t],
+  );
 
   useEffect(() => {
     loadPendingSyncCount();
@@ -166,13 +168,12 @@ const PathRuleConfigPage = () => {
   );
 
   const handleDeleteMark = useCallback(
-    async (
-      entry: Entry,
-      mark: BakabaseAbstractionsModelsDomainPathMark,
-    ) => {
+    async (entry: Entry, mark: BakabaseAbstractionsModelsDomainPathMark) => {
       const markId = mark?.id;
+
       if (!markId) {
         console.error("Mark has no id, cannot delete");
+
         return;
       }
 
@@ -231,24 +232,24 @@ const PathRuleConfigPage = () => {
       const marks = getMarksForPath(entry.path);
 
       return (
-        <PathRuleMarks
+        <PathMarks
           entry={entry}
           marks={marks}
           onDeleteMark={handleDeleteMark}
           onSaveMark={handleSaveMark}
-          onTaskComplete={loadAllMarks}
+          onTaskComplete={() => {
+            loadAllMarks();
+            loadPendingSyncCount();
+          }}
         />
       );
     },
-    [getMarksForPath, handleSaveMark, handleDeleteMark, loadAllMarks],
+    [getMarksForPath, handleSaveMark, handleDeleteMark, loadAllMarks, loadPendingSyncCount],
   );
 
   // Handle adding marks from context menu (for multiple paths)
   const handleAddMarksFromContextMenu = useCallback(
-    async (
-      entries: Entry[],
-      newMark: BakabaseAbstractionsModelsDomainPathMark,
-    ) => {
+    async (entries: Entry[], newMark: BakabaseAbstractionsModelsDomainPathMark) => {
       try {
         // Create marks for each selected entry
         for (const entry of entries) {
@@ -258,9 +259,7 @@ const PathRuleConfigPage = () => {
           });
         }
 
-        toast.success(
-          t("Mark added successfully to {{count}} paths", { count: entries.length }),
-        );
+        toast.success(t("Mark added successfully to {{count}} paths", { count: entries.length }));
         loadAllMarks();
         loadPendingSyncCount();
       } catch (error) {
@@ -331,8 +330,8 @@ const PathRuleConfigPage = () => {
           <div className="flex items-center gap-4">
             {/* Sync immediately checkbox */}
             <Checkbox
-              size="sm"
               isSelected={syncMarksImmediately}
+              size="sm"
               onValueChange={handleToggleSyncImmediately}
             >
               {t("Sync immediately")}
@@ -340,16 +339,16 @@ const PathRuleConfigPage = () => {
 
             {/* Pending sync button */}
             <Badge
-              content={pendingSyncCount}
               color="warning"
+              content={pendingSyncCount}
               isInvisible={pendingSyncCount === 0}
               size="sm"
             >
               <Button
-                size="sm"
-                variant="flat"
                 color={pendingSyncCount > 0 ? "warning" : "default"}
+                size="sm"
                 startContent={<AiOutlineClockCircle />}
+                variant="flat"
                 onPress={() => setShowPendingSyncModal(true)}
               >
                 {t("Pending Sync")}
@@ -370,9 +369,7 @@ const PathRuleConfigPage = () => {
           />
         )}
 
-        <div className="text-sm text-default-500">
-          {t("PathRuleConfig.Description")}
-        </div>
+        <div className="text-sm text-default-500">{t("PathRuleConfig.Description")}</div>
 
         <div className="overflow-hidden flex-1 min-h-0 flex">
           {rootPathInitialized && (

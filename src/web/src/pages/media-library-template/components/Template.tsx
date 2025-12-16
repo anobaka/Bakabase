@@ -569,11 +569,11 @@ const Template = ({
                               "Enhancement.DeleteAllByEnhancerForTemplate.ScopeWarning",
                             ),
                             onOk: async (deleteEmptyOnly: boolean) => {
-                              await BApi.mediaLibraryTemplate.deleteEnhancementsByMediaLibraryTemplateAndEnhancer(
-                                template.id,
-                                e.enhancerId,
-                                { deleteEmptyOnly },
-                              );
+                              // await BApi.mediaLibraryTemplate.deleteEnhancementsByMediaLibraryTemplateAndEnhancer(
+                              //   template.id,
+                              //   e.enhancerId,
+                              //   { deleteEmptyOnly },
+                              // );
                               toast.success(t<string>("Saved"));
                             },
                           });

@@ -6,9 +6,12 @@ import { useState, useEffect } from "react";
 import { usePreview } from "../hooks/usePreview";
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
-import { Chip, Input, Select, Spinner, RadioGroup, Radio } from "@/components/bakaui";
+import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
 import { PathMarkType, PropertyValueType } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import MediaLibrarySelectorV2 from "@/components/MediaLibrarySelectorV2";
+import { EditOutlined } from "@ant-design/icons";
 
 type Props = {
   config: MarkConfig;
@@ -27,43 +30,44 @@ interface MediaLibrary {
 
 const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, priority, onPriorityChange }: Props) => {
   const preview = usePreview(rootPath, PathMarkType.MediaLibrary, config, 500, rootPaths);
-  const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { createPortal } = useBakabaseContext();
   const [selectedLibrary, setSelectedLibrary] = useState<MediaLibrary | null>(null);
 
-  // Load all media libraries on mount
+  // Load selected library info on mount if we have mediaLibraryId
   useEffect(() => {
-    const loadMediaLibraries = async () => {
-      try {
-        const response = await BApi.mediaLibraryV2.getAllMediaLibrariesV2();
-        const libraries = (response?.data || []).map((lib) => ({
-          id: lib.id!,
-          name: lib.name || `Library ${lib.id}`,
-        }));
-        setMediaLibraries(libraries);
-
-        // If we have a mediaLibraryId in config, find and set the selected library
-        if (config.mediaLibraryId) {
+    const loadLibrary = async () => {
+      if (config.mediaLibraryId) {
+        try {
+          const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
+          const libraries = response?.data || [];
           const lib = libraries.find((l) => l.id === config.mediaLibraryId);
           if (lib) {
-            setSelectedLibrary(lib);
+            setSelectedLibrary({ id: lib.id!, name: lib.name || `Library ${lib.id}` });
           }
+        } catch (e) {
+          console.error("Failed to load media library", e);
         }
-      } catch (e) {
-        console.error("Failed to load media libraries", e);
-      } finally {
-        setLoading(false);
       }
     };
-    loadMediaLibraries();
+    loadLibrary();
   }, []);
 
-  const handleSelectLibrary = (libraryId: number) => {
-    const lib = mediaLibraries.find((l) => l.id === libraryId);
-    if (lib) {
-      setSelectedLibrary(lib);
-      updateConfig({ mediaLibraryId: lib.id });
-    }
+  const handleSelectLibrary = () => {
+    createPortal(MediaLibrarySelectorV2, {
+      onSelect: async (id: number, isLegacyMediaLibrary: boolean) => {
+        // Only support V2 media libraries
+        if (isLegacyMediaLibrary) {
+          return;
+        }
+        // Load the library name
+        const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
+        const lib = response?.data?.find((l) => l.id === id);
+        if (lib) {
+          setSelectedLibrary({ id: lib.id!, name: lib.name || `Library ${lib.id}` });
+          updateConfig({ mediaLibraryId: lib.id });
+        }
+      },
+    });
   };
 
   const valueType = config.mediaLibraryValueType ?? PropertyValueType.Fixed;
@@ -84,6 +88,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
         resultsByPath={preview.resultsByPath}
         isMultiplePaths={preview.isMultiplePaths}
         error={preview.error}
+        markType={PathMarkType.MediaLibrary}
         t={t}
       />
 
@@ -111,52 +116,34 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
 
       {valueType === PropertyValueType.Fixed ? (
         <>
-          {/* Fixed Mode: Media Library Selector */}
+          {/* Fixed Mode: Media Library Selector using MediaLibrarySelectorV2 */}
           <div className="flex flex-col gap-1">
             <span className="text-sm">{t("Target Media Library")}</span>
-            {loading ? (
-              <div className="flex items-center gap-2">
-                <Spinner size="sm" />
-                <span className="text-sm text-default-400">{t("Loading media libraries...")}</span>
-              </div>
-            ) : mediaLibraries.length === 0 ? (
-              <span className="text-sm text-warning">{t("No media libraries available. Please create one first.")}</span>
-            ) : (
-              <Select
-                label={t("Select Media Library")}
-                placeholder={t("Choose a media library")}
-                selectedKeys={selectedLibrary ? [String(selectedLibrary.id)] : []}
-                onSelectionChange={(keys) => {
-                  const selectedKey = Array.from(keys)[0];
-                  if (selectedKey) {
-                    handleSelectLibrary(Number(selectedKey));
-                  }
-                }}
+            <div className="flex items-center gap-2">
+              {selectedLibrary ? (
+                <Chip
+                  color="secondary"
+                  variant="flat"
+                  onClose={() => {
+                    setSelectedLibrary(null);
+                    updateConfig({ mediaLibraryId: undefined });
+                  }}
+                >
+                  {selectedLibrary.name}
+                </Chip>
+              ) : (
+                <span className="text-sm text-default-400">{t("No media library selected")}</span>
+              )}
+              <Button
                 size="sm"
-                dataSource={mediaLibraries.map((lib) => ({
-                  value: String(lib.id),
-                  label: lib.name,
-                }))}
-              />
-            )}
-          </div>
-
-          {/* Selected library display */}
-          {selectedLibrary && (
-            <div className="flex items-center gap-2 mt-2">
-              <span className="text-sm text-default-500">{t("Selected")}:</span>
-              <Chip
-                color="secondary"
                 variant="flat"
-                onClose={() => {
-                  setSelectedLibrary(null);
-                  updateConfig({ mediaLibraryId: undefined });
-                }}
+                startContent={<EditOutlined />}
+                onPress={handleSelectLibrary}
               >
-                {selectedLibrary.name}
-              </Chip>
+                {selectedLibrary ? t("Change") : t("Select Media Library")}
+              </Button>
             </div>
-          )}
+          </div>
 
           {/* Description for Fixed mode */}
           <div className="text-xs text-default-400 mt-2">
@@ -170,13 +157,12 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
             {t("Extract the media library name from the path. If the media library does not exist, it will be created automatically.")}
           </div>
 
-          <Input
+          <NumberInput
             label={t("Layer to Media Library")}
             description={t("Which layer's directory name to use as media library name. 0 = matched item, 1 = parent, etc.")}
-            type="number"
             size="sm"
-            value={String(config.layerToMediaLibrary ?? 0)}
-            onValueChange={(v) => updateConfig({ layerToMediaLibrary: parseInt(v) || 0 })}
+            value={config.layerToMediaLibrary ?? 0}
+            onValueChange={(v) => updateConfig({ layerToMediaLibrary: v })}
           />
 
           <Input

@@ -236,42 +236,144 @@ public class PathMarkService<TDbContext>(
 
     public Task<List<PathMarkPreviewResult>> PreviewMatchedPaths(PathMarkPreviewRequest request)
     {
-        return PreviewMatchedPathsDetailed(request);
+        var rootPath = request.Path.StandardizePath()!;
+        var results = new List<PathMarkPreviewResult>();
+
+        if (!Directory.Exists(rootPath))
+        {
+            return Task.FromResult(results);
+        }
+
+        // Step 1: Parse base match config (common to all mark types)
+        PathMatchMode matchMode;
+        int? layer = null;
+        string? regex = null;
+
+        // Step 2: Parse type-specific filter/value config
+        PathFilterFsType? fsTypeFilter = null;
+        List<string>? extensions = null;
+
+        PropertyValueType? valueType = null;
+        object? fixedValue = null;
+        int? valueLayer = null;
+        string? valueRegex = null;
+
+        switch (request.Type)
+        {
+            case PathMarkType.Resource:
+            {
+                var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(request.ConfigJson);
+                if (config == null) return Task.FromResult(results);
+
+                matchMode = config.MatchMode;
+                layer = config.Layer;
+                regex = config.Regex;
+                fsTypeFilter = config.FsTypeFilter;
+                extensions = config.Extensions;
+                // Note: ExtensionGroupIds would need to be resolved to actual extensions here if needed
+                break;
+            }
+            case PathMarkType.Property:
+            {
+                var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(request.ConfigJson);
+                if (config == null) return Task.FromResult(results);
+
+                matchMode = config.MatchMode;
+                layer = config.Layer;
+                regex = config.Regex;
+                valueType = config.ValueType;
+                fixedValue = config.FixedValue;
+                valueLayer = config.ValueLayer;
+                valueRegex = config.ValueRegex;
+                break;
+            }
+            case PathMarkType.MediaLibrary:
+            {
+                var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(request.ConfigJson);
+                if (config == null) return Task.FromResult(results);
+
+                matchMode = config.MatchMode;
+                layer = config.Layer;
+                regex = config.Regex;
+                valueType = config.ValueType;
+                fixedValue = config.MediaLibraryId; // For Fixed, the value is MediaLibraryId
+                valueLayer = config.LayerToMediaLibrary;
+                valueRegex = config.RegexToMediaLibrary;
+                break;
+            }
+            default:
+                return Task.FromResult(results);
+        }
+
+        // Step 3: Get matched paths using common logic
+        var matchedPaths = GetMatchingPaths(rootPath, matchMode, layer, regex, fsTypeFilter, extensions);
+
+        var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+            StringSplitOptions.RemoveEmptyEntries);
+
+        // Step 4: Build results based on mark type
+        foreach (var matchedPath in matchedPaths)
+        {
+            var matchedSegments = matchedPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            var result = new PathMarkPreviewResult { Path = matchedPath };
+
+            if (request.Type == PathMarkType.Resource)
+            {
+                // For Resource: calculate resource layer index
+                (result.ResourceLayerIndex, result.ResourceSegmentName) = CalculateResourceLayerInfo(
+                    rootPath, matchedPath, rootSegments, matchedSegments, matchMode, layer, regex);
+            }
+            else if (request.Type == PathMarkType.Property || request.Type == PathMarkType.MediaLibrary)
+            {
+                // For Property and MediaLibrary: calculate value
+                result.PropertyValue = CalculatePropertyValue(
+                    rootPath, matchedPath, rootSegments, matchedSegments,
+                    valueType, fixedValue, valueLayer, valueRegex);
+            }
+
+            results.Add(result);
+        }
+
+        return Task.FromResult(results);
     }
 
-    private List<string> GetMatchingPathsForResourceMark(string rootPath, ResourceMarkConfig config)
+    /// <summary>
+    /// Common path matching logic for all mark types
+    /// </summary>
+    private List<string> GetMatchingPaths(string rootPath, PathMatchMode matchMode, int? layer, string? regex,
+        PathFilterFsType? fsTypeFilter = null, List<string>? extensions = null)
     {
         var matchedPaths = new List<string>();
 
         try
         {
-            if (config.MatchMode == PathMatchMode.Layer)
+            if (matchMode == PathMatchMode.Layer)
             {
-                if (config.Layer == null) return matchedPaths;
+                if (layer == null) return matchedPaths;
 
-                var layer = config.Layer.Value;
                 if (layer == -1)
                 {
                     // All layers - recursively get all directories/files
-                    var entries = GetAllEntries(rootPath, config.FsTypeFilter, config.Extensions);
-                    matchedPaths.AddRange(entries);
+                    matchedPaths.AddRange(GetAllEntries(rootPath, fsTypeFilter, extensions));
                 }
                 else
                 {
                     // Specific layer
-                    var entries = GetEntriesAtLayer(rootPath, layer, config.FsTypeFilter, config.Extensions);
-                    matchedPaths.AddRange(entries);
+                    matchedPaths.AddRange(GetEntriesAtLayer(rootPath, layer.Value, fsTypeFilter, extensions));
                 }
             }
-            else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
+            else if (matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(regex))
             {
-                var regex = new Regex(config.Regex, RegexOptions.IgnoreCase);
-                var entries = GetAllEntries(rootPath, config.FsTypeFilter, config.Extensions);
+                var regexObj = new Regex(regex, RegexOptions.IgnoreCase);
+                var entries = GetAllEntries(rootPath, fsTypeFilter, extensions);
 
                 foreach (var entry in entries)
                 {
-                    var relativePath = entry.Substring(rootPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    if (regex.IsMatch(relativePath))
+                    var relativePath = entry.Substring(rootPath.Length)
+                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    if (regexObj.IsMatch(relativePath))
                     {
                         matchedPaths.Add(entry);
                     }
@@ -285,6 +387,129 @@ public class PathMarkService<TDbContext>(
 
         return matchedPaths;
     }
+
+    /// <summary>
+    /// Calculate resource layer info for Resource mark type
+    /// </summary>
+    private (int? layerIndex, string? segmentName) CalculateResourceLayerInfo(
+        string rootPath, string matchedPath, string[] rootSegments, string[] matchedSegments,
+        PathMatchMode matchMode, int? layer, string? regex)
+    {
+        int? resourceLayerIndex = null;
+        string? resourceSegmentName = null;
+
+        if (matchMode == PathMatchMode.Layer && layer.HasValue)
+        {
+            if (layer > 0)
+            {
+                // Layer is 1-based (1 = first level subdirectory)
+                var targetIndex = rootSegments.Length + layer.Value - 1;
+                if (targetIndex < matchedSegments.Length)
+                {
+                    resourceLayerIndex = targetIndex;
+                    resourceSegmentName = matchedSegments[targetIndex];
+                }
+            }
+            else if (layer == -1)
+            {
+                // All layers - the resource is the matched path itself
+                resourceLayerIndex = matchedSegments.Length - 1;
+                resourceSegmentName = matchedSegments[matchedSegments.Length - 1];
+            }
+        }
+        else if (matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(regex))
+        {
+            // For regex, find which segment matches
+            var relativePath = matchedPath.Substring(rootPath.Length)
+                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var relativeSegments = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                StringSplitOptions.RemoveEmptyEntries);
+
+            var regexObj = new Regex(regex, RegexOptions.IgnoreCase);
+            for (int i = 0; i < relativeSegments.Length; i++)
+            {
+                if (regexObj.IsMatch(relativeSegments[i]))
+                {
+                    resourceLayerIndex = rootSegments.Length + i;
+                    resourceSegmentName = relativeSegments[i];
+                    break;
+                }
+            }
+
+            // If no segment matches, use the last segment
+            if (!resourceLayerIndex.HasValue && relativeSegments.Length > 0)
+            {
+                resourceLayerIndex = rootSegments.Length + relativeSegments.Length - 1;
+                resourceSegmentName = relativeSegments[relativeSegments.Length - 1];
+            }
+        }
+
+        return (resourceLayerIndex, resourceSegmentName);
+    }
+
+    /// <summary>
+    /// Calculate property value for Property and MediaLibrary mark types
+    /// </summary>
+    private string? CalculatePropertyValue(
+        string rootPath, string matchedPath, string[] rootSegments, string[] matchedSegments,
+        PropertyValueType? valueType, object? fixedValue, int? valueLayer, string? valueRegex)
+    {
+        if (valueType == PropertyValueType.Fixed)
+        {
+            return fixedValue?.ToString();
+        }
+
+        if (valueType != PropertyValueType.Dynamic)
+        {
+            return null;
+        }
+
+        // Dynamic value extraction
+        if (valueLayer.HasValue)
+        {
+            var layer = valueLayer.Value;
+            // 0 = matched item itself
+            if (layer == 0)
+            {
+                var relativePath = matchedPath.Substring(rootPath.Length)
+                    .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var fileName = Path.GetFileName(relativePath);
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    return fileName;
+                }
+                return relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                    StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+            }
+            else
+            {
+                // Positive = forward from root, negative = backward
+                var targetIndex = rootSegments.Length + layer - 1;
+                if (targetIndex >= 0 && targetIndex < matchedSegments.Length)
+                {
+                    return matchedSegments[targetIndex];
+                }
+            }
+        }
+        else if (!string.IsNullOrEmpty(valueRegex))
+        {
+            var relativePath = matchedPath.Substring(rootPath.Length)
+                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var regex = new Regex(valueRegex, RegexOptions.IgnoreCase);
+            var match = regex.Match(relativePath);
+            if (match.Success && match.Groups.Count > 1)
+            {
+                return match.Groups[1].Value;
+            }
+            if (match.Success)
+            {
+                return match.Value;
+            }
+        }
+
+        return null;
+    }
+
 
     private List<string> GetAllEntries(string rootPath, PathFilterFsType? fsTypeFilter, List<string>? extensions)
     {
@@ -372,217 +597,6 @@ public class PathMarkService<TDbContext>(
         return entries.Select(x => x.StandardizePath()!).ToList();
     }
 
-    public Task<List<PathMarkPreviewResult>> PreviewMatchedPathsDetailed(PathMarkPreviewRequest request)
-    {
-        var rootPath = request.Path.StandardizePath()!;
-        var results = new List<PathMarkPreviewResult>();
-
-        if (!Directory.Exists(rootPath))
-        {
-            return Task.FromResult(results);
-        }
-
-        if (request.Type == PathMarkType.Resource)
-        {
-            var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(request.ConfigJson);
-            if (config == null)
-            {
-                return Task.FromResult(results);
-            }
-
-            var matchedPaths = GetMatchingPathsForResourceMark(rootPath, config);
-            var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                StringSplitOptions.RemoveEmptyEntries);
-
-            foreach (var matchedPath in matchedPaths)
-            {
-                var matchedSegments = matchedPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                    StringSplitOptions.RemoveEmptyEntries);
-
-                // Calculate resource layer index (0-based from root)
-                int? resourceLayerIndex = null;
-                string? resourceSegmentName = null;
-
-                if (config.MatchMode == PathMatchMode.Layer && config.Layer.HasValue)
-                {
-                    var layer = config.Layer.Value;
-                    if (layer > 0)
-                    {
-                        // Layer is 1-based (1 = first level subdirectory)
-                        var targetIndex = rootSegments.Length + layer - 1;
-                        if (targetIndex < matchedSegments.Length)
-                        {
-                            resourceLayerIndex = targetIndex;
-                            resourceSegmentName = matchedSegments[targetIndex];
-                        }
-                    }
-                    else if (layer == -1)
-                    {
-                        // All layers - the resource is the matched path itself
-                        resourceLayerIndex = matchedSegments.Length - 1;
-                        resourceSegmentName = matchedSegments[matchedSegments.Length - 1];
-                    }
-                }
-                else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
-                {
-                    // For regex, find which segment matches
-                    var relativePath = matchedPath.Substring(rootPath.Length)
-                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    var relativeSegments = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                        StringSplitOptions.RemoveEmptyEntries);
-
-                    var regex = new Regex(config.Regex, RegexOptions.IgnoreCase);
-                    for (int i = 0; i < relativeSegments.Length; i++)
-                    {
-                        if (regex.IsMatch(relativeSegments[i]))
-                        {
-                            resourceLayerIndex = rootSegments.Length + i;
-                            resourceSegmentName = relativeSegments[i];
-                            break;
-                        }
-                    }
-
-                    // If no segment matches, use the last segment
-                    if (!resourceLayerIndex.HasValue && relativeSegments.Length > 0)
-                    {
-                        resourceLayerIndex = rootSegments.Length + relativeSegments.Length - 1;
-                        resourceSegmentName = relativeSegments[relativeSegments.Length - 1];
-                    }
-                }
-
-                results.Add(new PathMarkPreviewResult
-                {
-                    Path = matchedPath,
-                    ResourceLayerIndex = resourceLayerIndex,
-                    ResourceSegmentName = resourceSegmentName
-                });
-            }
-        }
-        else if (request.Type == PathMarkType.Property)
-        {
-            var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(request.ConfigJson);
-            if (config == null)
-            {
-                return Task.FromResult(results);
-            }
-
-            // Get matched paths (same logic as Resource, but we need to find paths that match the property mark's match mode)
-            var matchedPaths = GetMatchingPathsForPropertyMark(rootPath, config);
-
-            foreach (var matchedPath in matchedPaths)
-            {
-                string? propertyValue = null;
-
-                if (config.ValueType == PropertyValueType.Fixed)
-                {
-                    propertyValue = config.FixedValue?.ToString();
-                }
-                else if (config.ValueType == PropertyValueType.Dynamic)
-                {
-                    var matchedSegments = matchedPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                        StringSplitOptions.RemoveEmptyEntries);
-                    var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                        StringSplitOptions.RemoveEmptyEntries);
-
-                    if (config.MatchMode == PathMatchMode.Layer && config.ValueLayer.HasValue)
-                    {
-                        var valueLayer = config.ValueLayer.Value;
-                        // 0 = matched item itself
-                        if (valueLayer == 0)
-                        {
-                            var relativePath = matchedPath.Substring(rootPath.Length)
-                                .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                            propertyValue = Path.GetFileName(relativePath);
-                            if (string.IsNullOrEmpty(propertyValue))
-                            {
-                                propertyValue = relativePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                                    StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-                            }
-                        }
-                        else
-                        {
-                            // Positive = forward, negative = backward
-                            var targetIndex = rootSegments.Length + valueLayer - 1;
-                            if (targetIndex >= 0 && targetIndex < matchedSegments.Length)
-                            {
-                                propertyValue = matchedSegments[targetIndex];
-                            }
-                        }
-                    }
-                    else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.ValueRegex))
-                    {
-                        var relativePath = matchedPath.Substring(rootPath.Length)
-                            .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                        var regex = new Regex(config.ValueRegex, RegexOptions.IgnoreCase);
-                        var match = regex.Match(relativePath);
-                        if (match.Success && match.Groups.Count > 1)
-                        {
-                            propertyValue = match.Groups[1].Value;
-                        }
-                        else if (match.Success)
-                        {
-                            propertyValue = match.Value;
-                        }
-                    }
-                }
-
-                results.Add(new PathMarkPreviewResult
-                {
-                    Path = matchedPath,
-                    PropertyValue = propertyValue
-                });
-            }
-        }
-
-        return Task.FromResult(results);
-    }
-
-    private List<string> GetMatchingPathsForPropertyMark(string rootPath, PropertyMarkConfig config)
-    {
-        var matchedPaths = new List<string>();
-
-        try
-        {
-            if (config.MatchMode == PathMatchMode.Layer)
-            {
-                if (config.Layer == null) return matchedPaths;
-
-                var layer = config.Layer.Value;
-                if (layer == -1)
-                {
-                    // All layers - recursively get all directories/files
-                    var entries = GetAllEntries(rootPath, null, null);
-                    matchedPaths.AddRange(entries);
-                }
-                else
-                {
-                    // Specific layer
-                    var entries = GetEntriesAtLayer(rootPath, layer, null, null);
-                    matchedPaths.AddRange(entries);
-                }
-            }
-            else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
-            {
-                var regex = new Regex(config.Regex, RegexOptions.IgnoreCase);
-                var entries = GetAllEntries(rootPath, null, null);
-
-                foreach (var entry in entries)
-                {
-                    var relativePath = entry.Substring(rootPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    if (regex.IsMatch(relativePath))
-                    {
-                        matchedPaths.Add(entry);
-                    }
-                }
-            }
-        }
-        catch (Exception)
-        {
-            // Ignore access errors
-        }
-
-        return matchedPaths;
-    }
 
     public async Task MigratePath(string oldPath, string newPath)
     {

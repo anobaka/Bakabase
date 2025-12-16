@@ -20,7 +20,6 @@ using Bakabase.InsideWorld.Business.Components.Downloader.Components;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Bakabase.InsideWorld.Business.Components.Gui.Extensions;
-using Bakabase.InsideWorld.Business.Components.PathRule;
 using Bakabase.InsideWorld.Business.Components.PostParser.Extensions;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.Migrations;
@@ -113,12 +112,6 @@ namespace Bakabase.Service.Components
 
             // Add version check job that runs 30 seconds after startup
             services.AddHostedService<VersionCheckJob>();
-
-            // Add PathRule queue processor
-            services.AddHostedService<PathRuleQueueProcessor>();
-
-            // Add PathRule file watcher for file system monitoring
-            services.AddHostedService<PathRuleFileWatcher>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

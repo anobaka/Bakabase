@@ -2,6 +2,7 @@
 
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
+import type { BTask } from "@/core/models/BTask";
 
 import React, { useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -29,9 +30,12 @@ import {
 } from "@/components/bakaui";
 import { PathMarkType, PathMarkSyncStatus, BTaskStatus } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { ResourceDescription, PropertyDescription, MediaLibraryDescription } from "@/components/Chips/Terms";
+import {
+  ResourceDescription,
+  PropertyDescription,
+  MediaLibraryDescription,
+} from "@/components/Chips/Terms";
 import { useBTasksStore } from "@/stores/bTasks";
-import type { BTask } from "@/core/models/BTask";
 
 type Props = {
   entry: Entry;
@@ -39,12 +43,9 @@ type Props = {
   onSaveMark?: (
     entry: Entry,
     mark: BakabaseAbstractionsModelsDomainPathMark,
-    oldMark?: BakabaseAbstractionsModelsDomainPathMark
+    oldMark?: BakabaseAbstractionsModelsDomainPathMark,
   ) => void;
-  onDeleteMark?: (
-    entry: Entry,
-    mark: BakabaseAbstractionsModelsDomainPathMark
-  ) => void;
+  onDeleteMark?: (entry: Entry, mark: BakabaseAbstractionsModelsDomainPathMark) => void;
   onTaskComplete?: () => void;
 };
 
@@ -56,7 +57,7 @@ const getSyncStatusIcon = (status?: number) => {
     case PathMarkSyncStatus.Pending:
       return <AiOutlineClockCircle className="text-warning" />;
     case PathMarkSyncStatus.Syncing:
-      return <Spinner size="sm" className="w-3 h-3" />;
+      return <Spinner className="w-3 h-3" size="sm" />;
     case PathMarkSyncStatus.Synced:
       return <AiOutlineCheck className="text-success" />;
     case PathMarkSyncStatus.Failed:
@@ -70,6 +71,7 @@ const getSyncStatusIcon = (status?: number) => {
 
 const getSyncStatusTooltip = (status?: number, t?: (key: string) => string) => {
   const translate = t || ((key: string) => key);
+
   switch (status) {
     case PathMarkSyncStatus.Pending:
       return translate("Pending Sync");
@@ -88,6 +90,7 @@ const getSyncStatusTooltip = (status?: number, t?: (key: string) => string) => {
 
 const getMarkTypeLabel = (type?: number, t?: (key: string) => string) => {
   const translate = t || ((key: string) => key);
+
   switch (type) {
     case PathMarkType.Resource:
       return translate("Resource");
@@ -113,7 +116,7 @@ const getMarkTypeColor = (type?: number) => {
   }
 };
 
-const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete }: Props) => {
+const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
@@ -157,13 +160,14 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
   }, [bTasks, marks, onTaskComplete]);
 
   const resourceMarks = marks.filter(
-    (m) => m.type === PathMarkType.Resource && m.syncStatus !== PathMarkSyncStatus.PendingDelete
+    (m) => m.type === PathMarkType.Resource && m.syncStatus !== PathMarkSyncStatus.PendingDelete,
   );
   const propertyMarks = marks.filter(
-    (m) => m.type === PathMarkType.Property && m.syncStatus !== PathMarkSyncStatus.PendingDelete
+    (m) => m.type === PathMarkType.Property && m.syncStatus !== PathMarkSyncStatus.PendingDelete,
   );
   const mediaLibraryMarks = marks.filter(
-    (m) => m.type === PathMarkType.MediaLibrary && m.syncStatus !== PathMarkSyncStatus.PendingDelete
+    (m) =>
+      m.type === PathMarkType.MediaLibrary && m.syncStatus !== PathMarkSyncStatus.PendingDelete,
   );
 
   const handleAddMark = useCallback(
@@ -178,7 +182,7 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
         },
       });
     },
-    [createPortal, entry, onSaveMark]
+    [createPortal, entry, onSaveMark],
   );
 
   const handleEditMark = useCallback(
@@ -194,7 +198,7 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
         },
       });
     },
-    [createPortal, entry, onSaveMark]
+    [createPortal, entry, onSaveMark],
   );
 
   const handleDeleteMark = useCallback(
@@ -203,7 +207,7 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
         onDeleteMark(entry, mark);
       }
     },
-    [entry, onDeleteMark]
+    [entry, onDeleteMark],
   );
 
   // Get task for a specific mark
@@ -214,7 +218,7 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
   const renderMarkChip = (
     mark: BakabaseAbstractionsModelsDomainPathMark,
     idx: number,
-    type: "resource" | "property" | "mediaLibrary"
+    type: "resource" | "property" | "mediaLibrary",
   ) => {
     const color = getMarkTypeColor(mark.type);
     const label = getMarkTypeLabel(mark.type, t);
@@ -222,7 +226,8 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
 
     // Check if there's an active task for this mark
     const markTask = getMarkTask(mark.id!);
-    const isTaskRunning = markTask?.status === BTaskStatus.Running || markTask?.status === BTaskStatus.NotStarted;
+    const isTaskRunning =
+      markTask?.status === BTaskStatus.Running || markTask?.status === BTaskStatus.NotStarted;
     const taskProgress = markTask?.percentage || 0;
 
     return (
@@ -261,11 +266,7 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
           <div className="flex items-center gap-1 text-xs">
             {/* Show task progress or sync status icon */}
             {isTaskRunning ? (
-              <CircularProgress
-                size="sm"
-                value={taskProgress}
-                className="w-3 h-3"
-              />
+              <CircularProgress className="w-3 h-3" size="sm" value={taskProgress} />
             ) : (
               getSyncStatusIcon(mark.syncStatus)
             )}
@@ -299,8 +300,8 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
             </Button>
           </DropdownTrigger>
           <DropdownMenu
-            className="max-w-[600px]"
             aria-label="Mark type selection"
+            className="max-w-[600px]"
             onAction={(key) => handleAddMark(Number(key) as PathMarkType)}
           >
             <DropdownItem
@@ -338,6 +339,6 @@ const PathRuleMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComp
   );
 };
 
-PathRuleMarks.displayName = "PathRuleMarks";
+PathMarks.displayName = "PathRuleMarks";
 
-export default PathRuleMarks;
+export default PathMarks;

@@ -55,17 +55,17 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
                   <span key={segIdx} className="flex items-center gap-0.5">
                     {segIdx > 0 && <span className="text-default-400">{separator}</span>}
                     {isResourceLayer ? (
+                    <span className="flex items-center gap-1">
                       <Chip
                         size="sm"
                         color="success"
                         variant="flat"
                         className="font-semibold"
                       >
-                        <span className="flex items-center gap-1">
-                          <ResourceTerm size="sm" />
-                          <span>{segment}</span>
-                        </span>
+                        <ResourceTerm size="sm" />
                       </Chip>
+                      <span>{segment}</span>
+                    </span>
                     ) : (
                       <span>{segment}</span>
                     )}
@@ -98,7 +98,28 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
         </div>
       );
     }
-    
+
+    // For MediaLibrary type: show path and media library value
+    if (markType === PathMarkType.MediaLibrary) {
+      return (
+        <div key={idx} className="text-xs text-default-600 break-all">
+          <div className="flex items-start gap-2 flex-col">
+            <span className="break-all">{result.path}</span>
+            {result.propertyValue !== null && result.propertyValue !== undefined && (
+              <Chip
+                size="sm"
+                color="secondary"
+                variant="flat"
+                className="flex-shrink-0"
+              >
+                <span className="font-semibold">{t("Media Library")}: <span className="font-bold">{result.propertyValue}</span></span>
+              </Chip>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     // Fallback: show path only
     return (
       <div key={idx} className="text-xs text-default-600 break-all">

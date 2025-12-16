@@ -400,16 +400,7 @@ const MediaLibraryPage = () => {
                         onSelectionChange={(keys) => {
                           const key = Array.from(keys ?? [])[0] as string;
 
-                          if (key === "deleteEnhancements") {
-                            createPortal(DeleteEnhancementsByEnhancerSelectorModal, {
-                              mediaLibraryId: ml.id,
-                              mediaLibraryName: ml.name,
-                              template: template,
-                              onCompleted: async () => {
-                                toast.success(t<string>("Saved"));
-                              },
-                            });
-                          } else if (key === "moveResourcesToOtherMediaLibrary") {
+                          if (key === "moveResourcesToOtherMediaLibrary") {
                             createPortal(MediaLibrarySelectorV2, {
                               confirmation: true,
                               onSelect: async (toId: number, isLegacy: boolean) => {
@@ -515,13 +506,6 @@ const MediaLibraryPage = () => {
                           }
                         }}
                       >
-                        <DropdownItem
-                          key="deleteEnhancements"
-                          className="text-warning"
-                          startContent={<MdOutlineDelete className={"text-lg"} />}
-                        >
-                          {t<string>("MediaLibrary.DeleteEnhancements")}
-                        </DropdownItem>
                         <DropdownItem
                           key="moveResourcesToOtherMediaLibrary"
                           className="text-primary"

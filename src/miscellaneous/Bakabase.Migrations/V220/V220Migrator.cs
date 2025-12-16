@@ -270,7 +270,7 @@ public class V220Migrator : AbstractMigrator
             }
 
             // Create search criteria based on MediaLibraryId
-            var searchCriteria = new ResourceProfileSearchCriteria
+            var searchCriteria = new SearchCriteria
             {
                 MediaLibraryIds = [library.Id]
             };

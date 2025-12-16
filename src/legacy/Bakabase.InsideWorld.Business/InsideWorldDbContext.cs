@@ -256,11 +256,6 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.Priority);
             });
 
-            modelBuilder.Entity<PathRuleQueueItemDbModel>(t =>
-            {
-                t.HasIndex(x => x.Status);
-            });
-
             modelBuilder.Entity<PathMarkDbModel>(t =>
             {
                 t.HasIndex(x => x.Path);

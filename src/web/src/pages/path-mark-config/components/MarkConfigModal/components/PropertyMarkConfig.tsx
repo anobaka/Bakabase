@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { usePreview } from "../hooks/usePreview";
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
-import { Input, RadioGroup, Radio, Button, Chip } from "@/components/bakaui";
+import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
 import { PathMarkType, PathMatchMode, PropertyValueType, PropertyPool } from "@/sdk/constants";
 import { EditOutlined } from "@ant-design/icons";
 import PropertySelector from "@/components/PropertySelector";
@@ -162,13 +162,12 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, prio
           </div>
 
           {config.valueMatchMode === PathMatchMode.Layer ? (
-            <Input
+            <NumberInput
               label={t("Value Layer")}
-              placeholder={t("0 = matched item")}
-              type="number"
+              description={t("0 = matched item")}
               size="sm"
-              value={String(config.valueLayer ?? 0)}
-              onValueChange={(v) => updateConfig({ valueLayer: parseInt(v) || 0 })}
+              value={config.valueLayer ?? 0}
+              onValueChange={(v) => updateConfig({ valueLayer: v })}
             />
           ) : (
             <Input
