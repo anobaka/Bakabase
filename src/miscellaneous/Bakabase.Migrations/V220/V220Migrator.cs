@@ -10,6 +10,9 @@ using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Migration;
+using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Property.Components.Properties.Choice;
+using Bakabase.Modules.Search.Models.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -268,17 +271,34 @@ public class V220Migrator : AbstractMigrator
                 continue;
             }
 
-            // Create search criteria based on MediaLibraryId
-            var searchCriteria = new SearchCriteria
+            // Create search using ResourceSearchDbModel structure
+            var searchDbModel = new ResourceSearchDbModel
             {
-                MediaLibraryIds = [library.Id]
+                Group = new ResourceSearchFilterGroupDbModel
+                {
+                    Combinator = SearchCombinator.And,
+                    Disabled = false,
+                    Filters =
+                    [
+                        new ResourceSearchFilterDbModel
+                        {
+                            PropertyPool = PropertyPool.Internal,
+                            PropertyId = (int)ResourceProperty.MediaLibraryV2,
+                            Operation = SearchOperation.Equals,
+                            Value =  library.Id.ToString(),
+                            Disabled = false
+                        }
+                    ]
+                },
+                Page = 1,
+                PageSize = int.MaxValue
             };
 
             var profile = new ResourceProfileDbModel
             {
                 Name = $"Profile from {library.Name}",
                 Priority = 0,
-                SearchCriteriaJson = JsonConvert.SerializeObject(searchCriteria),
+                SearchJson = JsonConvert.SerializeObject(searchDbModel),
                 NameTemplate = nameTemplate,
                 EnhancerSettingsJson = enhancerOptions != null ? JsonConvert.SerializeObject(enhancerOptions) : null,
                 PlayableFileSettingsJson = playableFileOptions != null ? JsonConvert.SerializeObject(playableFileOptions) : null,

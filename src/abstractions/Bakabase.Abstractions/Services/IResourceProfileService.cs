@@ -61,14 +61,4 @@ public interface IResourceProfileService
     /// Delete a resource profile by ID
     /// </summary>
     Task Delete(int id);
-
-    /// <summary>
-    /// Test search criteria and return count of matching resources
-    /// </summary>
-    Task<int> TestSearchCriteria(SearchCriteria criteria);
-
-    /// <summary>
-    /// Get resources matching search criteria
-    /// </summary>
-    Task<List<Resource>> GetMatchingResources(SearchCriteria criteria, int? limit = null);
 }

@@ -54,19 +54,6 @@ public class ResourceProfileController(IResourceProfileService service) : Contro
         return BaseResponseBuilder.Ok;
     }
 
-    [HttpPost("test-criteria")]
-    [SwaggerOperation(OperationId = "TestResourceProfileCriteria")]
-    public async Task<SingletonResponse<int>> TestCriteria([FromBody] SearchCriteria criteria)
-    {
-        var count = await service.TestSearchCriteria(criteria);
-        return new SingletonResponse<int>(count);
-    }
-
-    [HttpPost("matching-resources")]
-    [SwaggerOperation(OperationId = "GetMatchingResources")]
-    public async Task<ListResponse<Resource>> GetMatchingResources([FromBody] SearchCriteria criteria, [FromQuery] int? limit = null)
-    {
-        var resources = await service.GetMatchingResources(criteria, limit);
-        return new ListResponse<Resource>(resources);
-    }
+    // Note: For testing search criteria, use ResourceController.Search directly
+    // with the same search parameters (group, keyword, tags)
 }

@@ -6,13 +6,16 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.Search.Extensions;
+using Bakabase.Modules.Search.Models.Db;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
@@ -22,7 +25,7 @@ public class ResourceProfileService<TDbContext>(
 ) : ScopedService(serviceProvider), IResourceProfileService where TDbContext : DbContext
 {
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
-    protected IMediaLibraryResourceMappingService MappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
+    protected IPropertyService PropertyService => GetRequiredService<IPropertyService>();
 
     public async Task<List<ResourceProfile>> GetAll(Expression<Func<ResourceProfileDbModel, bool>>? filter = null)
     {
@@ -30,16 +33,23 @@ public class ResourceProfileService<TDbContext>(
             ? await orm.GetAll(filter)
             : await orm.GetAll();
 
-        return dbModels
-            .Select(d => d.ToDomainModel())
-            .OrderByDescending(p => p.Priority)
-            .ToList();
+        var profiles = new List<ResourceProfile>();
+        foreach (var dbModel in dbModels)
+        {
+            var search = await ParseSearchFromDbModel(dbModel);
+            profiles.Add(dbModel.ToDomainModel(search));
+        }
+
+        return profiles.OrderByDescending(p => p.Priority).ToList();
     }
 
     public async Task<ResourceProfile?> Get(int id)
     {
         var dbModel = await orm.GetByKey(id);
-        return dbModel?.ToDomainModel();
+        if (dbModel == null) return null;
+
+        var search = await ParseSearchFromDbModel(dbModel);
+        return dbModel.ToDomainModel(search);
     }
 
     public async Task<List<ResourceProfile>> GetMatchingProfiles(Resource resource)
@@ -47,13 +57,10 @@ public class ResourceProfileService<TDbContext>(
         var allProfiles = await GetAll();
         var matchingProfiles = new List<ResourceProfile>();
 
-        // Get resource's media library IDs
-        var mappings = await MappingService.GetByResourceId(resource.Id);
-        var resourceMediaLibraryIds = mappings.Select(m => m.MediaLibraryId).ToHashSet();
-
         foreach (var profile in allProfiles)
         {
-            if (MatchesCriteria(resource, profile.SearchCriteria, resourceMediaLibraryIds))
+            var matchingResources = await GetMatchingResources(profile.Search, limit: null);
+            if (matchingResources.Any(r => r.Id == resource.Id))
             {
                 matchingProfiles.Add(profile);
             }
@@ -74,31 +81,25 @@ public class ResourceProfileService<TDbContext>(
         return profiles.FirstOrDefault(p => p.EnhancerOptions != null)?.EnhancerOptions;
     }
 
-    public async Task<Dictionary<int, ResourceProfileEnhancerOptions>> GetEffectiveEnhancerOptionsForResources(IEnumerable<Resource> resources)
+    public async Task<Dictionary<int, ResourceProfileEnhancerOptions>> GetEffectiveEnhancerOptionsForResources(
+        IEnumerable<Resource> resources)
     {
         var result = new Dictionary<int, ResourceProfileEnhancerOptions>();
         var allProfiles = await GetAll();
+        var resourcesList = resources.ToList();
 
-        // Get all mappings for efficient lookup
-        var resourceIds = resources.Select(r => r.Id).ToArray();
-        var allMappings = await MappingService.GetByResourceIds(resourceIds);
-        var resourceMediaLibraryMap = allMappings
-            .GroupBy(m => m.ResourceId)
-            .ToDictionary(g => g.Key, g => g.Select(m => m.MediaLibraryId).ToHashSet());
-
-        foreach (var resource in resources)
+        // For each profile, get matching resources and map enhancer options
+        foreach (var profile in allProfiles.Where(p => p.EnhancerOptions != null))
         {
-            var resourceMediaLibraryIds = resourceMediaLibraryMap.TryGetValue(resource.Id, out var ids)
-                ? ids
-                : new HashSet<int>();
+            var matchingResources = await GetMatchingResources(profile.Search, limit: null);
+            var matchingIds = matchingResources.Select(r => r.Id).ToHashSet();
 
-            foreach (var profile in allProfiles)
+            foreach (var resource in resourcesList)
             {
-                if (MatchesCriteria(resource, profile.SearchCriteria, resourceMediaLibraryIds) &&
-                    profile.EnhancerOptions != null)
+                // Only set if not already set (higher priority profiles take precedence)
+                if (!result.ContainsKey(resource.Id) && matchingIds.Contains(resource.Id))
                 {
-                    result[resource.Id] = profile.EnhancerOptions;
-                    break; // Use first matching profile with enhancer options
+                    result[resource.Id] = profile.EnhancerOptions!;
                 }
             }
         }
@@ -123,7 +124,8 @@ public class ResourceProfileService<TDbContext>(
         profile.CreatedAt = DateTime.UtcNow;
         profile.UpdatedAt = DateTime.UtcNow;
 
-        var dbModel = profile.ToDbModel();
+        var searchJson = SerializeSearchToJson(profile.Search);
+        var dbModel = profile.ToDbModel(searchJson);
         await orm.Add(dbModel);
         orm.DbContext.Detach(dbModel);
         profile.Id = dbModel.Id;
@@ -133,7 +135,8 @@ public class ResourceProfileService<TDbContext>(
     public async Task Update(ResourceProfile profile)
     {
         profile.UpdatedAt = DateTime.UtcNow;
-        await orm.Update(profile.ToDbModel());
+        var searchJson = SerializeSearchToJson(profile.Search);
+        await orm.Update(profile.ToDbModel(searchJson));
     }
 
     public async Task Delete(int id)
@@ -141,84 +144,52 @@ public class ResourceProfileService<TDbContext>(
         await orm.RemoveByKey(id);
     }
 
-    public async Task<int> TestSearchCriteria(SearchCriteria criteria)
+    private async Task<List<Resource>> GetMatchingResources(ResourceSearch search, int? limit = null)
     {
-        var resources = await GetMatchingResources(criteria);
-        return resources.Count;
+        // Ensure we don't use pagination/ordering for profile matching
+        var searchForMatching = new ResourceSearch
+        {
+            Group = search.Group,
+            Tags = search.Tags,
+            PageIndex = 1,
+            PageSize = limit ?? int.MaxValue
+        };
+
+        var searchResult = await ResourceService.Search(searchForMatching);
+        return searchResult.Data?.ToList() ?? new List<Resource>();
     }
 
-    public async Task<List<Resource>> GetMatchingResources(SearchCriteria criteria, int? limit = null)
+    private async Task<ResourceSearch?> ParseSearchFromDbModel(ResourceProfileDbModel dbModel)
     {
-        // This is a simplified implementation
-        // In a real scenario, you would build a more complex query
-        var allResources = await ResourceService.GetAll();
-
-        // Get all mappings for efficient lookup
-        var allMappings = await MappingService.GetAll();
-        var resourceMediaLibraryMap = allMappings
-            .GroupBy(m => m.ResourceId)
-            .ToDictionary(g => g.Key, g => g.Select(m => m.MediaLibraryId).ToHashSet());
-
-        var matchingResources = allResources
-            .Where(r =>
-            {
-                var resourceLibraryIds = resourceMediaLibraryMap.TryGetValue(r.Id, out var ids)
-                    ? ids
-                    : new HashSet<int>();
-                return MatchesCriteria(r, criteria, resourceLibraryIds);
-            })
-            .ToList();
-
-        if (limit.HasValue)
+        if (string.IsNullOrEmpty(dbModel.SearchJson))
         {
-            matchingResources = matchingResources.Take(limit.Value).ToList();
+            return null;
         }
 
-        return matchingResources;
+        try
+        {
+            var searchDbModel = JsonConvert.DeserializeObject<ResourceSearchDbModel>(dbModel.SearchJson);
+            if (searchDbModel == null)
+            {
+                return null;
+            }
+
+            return await searchDbModel.ToDomainModel(PropertyService);
+        }
+        catch
+        {
+            return null;
+        }
     }
 
-    private bool MatchesCriteria(Resource resource, SearchCriteria criteria, HashSet<int> resourceMediaLibraryIds)
+    private string? SerializeSearchToJson(ResourceSearch? search)
     {
-        // Check media library filter
-        if (criteria.MediaLibraryIds != null && criteria.MediaLibraryIds.Count > 0)
+        if (search?.Group == null && search?.Tags == null)
         {
-            if (!criteria.MediaLibraryIds.Any(id => resourceMediaLibraryIds.Contains(id)))
-            {
-                return false;
-            }
+            return null;
         }
 
-        // Check path pattern
-        if (!string.IsNullOrEmpty(criteria.PathPattern))
-        {
-            try
-            {
-                var regex = new System.Text.RegularExpressions.Regex(criteria.PathPattern,
-                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                if (!regex.IsMatch(resource.Path))
-                {
-                    return false;
-                }
-            }
-            catch
-            {
-                // Invalid regex, skip this filter
-            }
-        }
-
-        // Check tag filter
-        if (criteria.TagFilter.HasValue)
-        {
-            if (!resource.Tags.Contains(criteria.TagFilter.Value))
-            {
-                return false;
-            }
-        }
-
-        // Property filters would require more complex logic with property values
-        // This is a simplified implementation
-        // In a real scenario, you would join with property value tables
-
-        return true;
+        var dbModel = search.ToDbModel();
+        return JsonConvert.SerializeObject(dbModel);
     }
 }

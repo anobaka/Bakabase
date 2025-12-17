@@ -22,6 +22,8 @@ export { default as Filter } from "./components/Filter";
 export { default as FilterGroup } from "./components/FilterGroup";
 export { default as FilterModal } from "./components/FilterModal";
 export { default as RecentFilters } from "./components/RecentFilters";
+export { default as ResourceSearchPanel } from "./components/ResourceSearchPanel";
+export type { SearchCriteria } from "./components/ResourceSearchPanel";
 
 // Presets
 export { createDefaultFilterConfig } from "./presets/DefaultFilterPreset";

@@ -1,6 +1,6 @@
 "use client";
 
-import type { SearchFilter } from "@/components/Filter";
+import type { SearchFilter } from "@/components/ResourceFilter";
 
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -17,8 +17,8 @@ const PropertySelectorTest = () => {
 
   return (
     <Button
-      size={"sm"}
       color={"primary"}
+      size={"sm"}
       variant={"light"}
       onClick={() => {
         createPortal(PropertySelector, {
@@ -29,6 +29,7 @@ const PropertySelectorTest = () => {
               : [{ id: filter.propertyId, pool: filter.propertyPool! }],
           onSubmit: async (selectedProperties) => {
             const property = selectedProperties[0];
+
             if (property) {
               setFilter({
                 ...filter,

@@ -1,11 +1,11 @@
 "use client";
 
-import type { SearchFilterGroup } from "@/components/Filter";
+import type { SearchFilterGroup } from "@/components/ResourceFilter";
 
 import React, { useState } from "react";
 import ReactJson from "react-json-view";
 
-import { GroupCombinator } from "@/components/Filter";
+import { GroupCombinator } from "@/components/ResourceFilter";
 import FilterGroupsPanel from "@/pages/resource/components/FilterPanel/FilterGroupsPanel";
 
 const ResourceFilterPage = () => {

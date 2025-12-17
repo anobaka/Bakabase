@@ -6,13 +6,13 @@ namespace Bakabase.Abstractions.Extensions;
 
 public static class ResourceProfileExtensions
 {
-    public static ResourceProfileDbModel ToDbModel(this ResourceProfile model)
+    public static ResourceProfileDbModel ToDbModel(this ResourceProfile model, string? searchJson)
     {
         return new ResourceProfileDbModel
         {
             Id = model.Id,
             Name = model.Name,
-            SearchCriteriaJson = JsonConvert.SerializeObject(model.SearchCriteria),
+            SearchJson = searchJson,
             NameTemplate = model.NameTemplate,
             EnhancerSettingsJson = model.EnhancerOptions != null
                 ? JsonConvert.SerializeObject(model.EnhancerOptions)
@@ -29,7 +29,7 @@ public static class ResourceProfileExtensions
         };
     }
 
-    public static ResourceProfile ToDomainModel(this ResourceProfileDbModel dbModel)
+    public static ResourceProfile ToDomainModel(this ResourceProfileDbModel dbModel, ResourceSearch? search)
     {
         var domain = new ResourceProfile
         {
@@ -39,21 +39,8 @@ public static class ResourceProfileExtensions
             Priority = dbModel.Priority,
             CreatedAt = dbModel.CreatedAt,
             UpdatedAt = dbModel.UpdatedAt,
-            SearchCriteria = new SearchCriteria()
+            Search = search ?? new ResourceSearch()
         };
-
-        if (!string.IsNullOrEmpty(dbModel.SearchCriteriaJson))
-        {
-            try
-            {
-                domain.SearchCriteria =
-                    JsonConvert.DeserializeObject<SearchCriteria>(dbModel.SearchCriteriaJson) ?? new SearchCriteria();
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
-        }
 
         if (!string.IsNullOrEmpty(dbModel.EnhancerSettingsJson))
         {

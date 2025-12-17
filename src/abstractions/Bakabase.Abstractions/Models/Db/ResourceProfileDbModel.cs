@@ -13,9 +13,9 @@ public record ResourceProfileDbModel
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// 搜索条件 JSON
+    /// 搜索条件 JSON（存储 ResourceSearchDbModel）
     /// </summary>
-    public string SearchCriteriaJson { get; set; } = null!;
+    public string? SearchJson { get; set; }
 
     /// <summary>
     /// 名称模板（可选），支持变量如 {Name}, {Layer1}, {Layer2} 等

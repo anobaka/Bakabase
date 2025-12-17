@@ -11,7 +11,7 @@ public record BulkModificationViewModel
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<BulkModificationVariableViewModel>? Variables { get; set; }
-    public ResourceSearchFilterGroupViewModel? Filter { get; set; }
+    public ResourceSearchViewModel? Search { get; set; }
     public List<BulkModificationProcessViewModel>? Processes { get; set; }
     public List<int>? FilteredResourceIds { get; set; }
     public DateTime? AppliedAt { get; set; }

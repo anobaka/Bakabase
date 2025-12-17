@@ -11,20 +11,14 @@ import { useTranslation } from "react-i18next";
 import QuickFilter from "./FilterGroupsPanel/QuickFilter";
 import { addFilter, addFilterGroup } from "./utils";
 
-import {
-  Button,
-  Checkbox,
-  CheckboxGroup,
-  Divider,
-  Popover,
-} from "@/components/bakaui";
+import { Button, Checkbox, CheckboxGroup, Divider, Popover } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
 import {
   FilterModal,
   FilterProvider,
   RecentFilters,
   createDefaultFilterConfig,
-} from "@/components/Filter";
+} from "@/components/ResourceFilter";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface FilterPortalProps {
@@ -32,17 +26,11 @@ interface FilterPortalProps {
   onChange: () => void;
 }
 
-export default function FilterPortal({
-  searchForm,
-  onChange,
-}: FilterPortalProps) {
+export default function FilterPortal({ searchForm, onChange }: FilterPortalProps) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const filterConfig = useMemo(
-    () => createDefaultFilterConfig(createPortal),
-    [createPortal],
-  );
+  const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
 
   return (
     <Popover
@@ -63,6 +51,7 @@ export default function FilterPortal({
           <QuickFilter
             onAdded={(newFilter) => {
               const filter = newFilter;
+
               createPortal(FilterModal, {
                 filter,
                 onSubmit: (filter) => {

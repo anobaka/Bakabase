@@ -79,7 +79,7 @@ namespace Bakabase.Modules.BulkModification.Services
             {
                 bm.IsActive = model.IsActive ?? bm.IsActive;
                 bm.Name = model.Name ?? bm.Name;
-                bm.Filter = model.Filter ?? bm.Filter;
+                bm.Search = model.Search ?? bm.Search;
                 bm.Variables = model.Variables ?? bm.Variables;
                 bm.Processes = model.Processes ?? bm.Processes;
                 await Put(bm);
@@ -103,12 +103,9 @@ namespace Bakabase.Modules.BulkModification.Services
             var bm = await Get(id);
             if (bm != null)
             {
-                var filter = bm.Filter;
-                var resources = await ResourceService.Search(new ResourceSearch
-                {
-                    Group = filter,
-                    PageSize = int.MaxValue
-                });
+                var search = bm.Search ?? new ResourceSearch();
+                search.PageSize = int.MaxValue;
+                var resources = await ResourceService.Search(search);
                 var resourceIds = resources.Data?.Select(r => r.Id).ToList() ?? [];
                 bm.FilteredResourceIds = resourceIds;
                 await Put(bm);

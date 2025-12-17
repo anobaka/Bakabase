@@ -9,6 +9,6 @@ public record BulkModificationPatchInputModel
     public string? Name { get; set; }
     public bool? IsActive { get; set; }
     public List<BulkModificationVariableInputModel>? Variables { get; set; }
-    public ResourceSearchFilterGroupInputModel? Filter { get; set; }
+    public ResourceSearchInputModel? Search { get; set; }
     public List<BulkModificationProcessInputModel>? Processes { get; set; }
 }

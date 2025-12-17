@@ -25,6 +25,7 @@ namespace Bakabase.InsideWorld.Models.Constants
         MediaLibrary = 21,
         Cover = 22,
         PlayedAt = 23,
+        [Obsolete("create a new property with multiple choice property type", true)]
         MediaLibraryV2 = 24,
     }
 }

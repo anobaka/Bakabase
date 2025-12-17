@@ -8,6 +8,6 @@ public record PatchBulkModification
     public string? Name { get; set; }
     public bool? IsActive { get; set; }
     public List<BulkModificationVariable>? Variables { get; set; }
-    public ResourceSearchFilterGroup? Filter { get; set; }
+    public ResourceSearch? Search { get; set; }
     public List<BulkModificationProcess>? Processes { get; set; }
 }

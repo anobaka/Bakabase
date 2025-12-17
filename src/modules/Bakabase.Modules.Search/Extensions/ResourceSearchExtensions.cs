@@ -12,6 +12,56 @@ namespace Bakabase.Modules.Search.Extensions;
 
 public static class ResourceSearchExtensions
 {
+    /// <summary>
+    /// Convert ResourceSearch domain model to ResourceSearchDbModel
+    /// </summary>
+    public static ResourceSearchDbModel ToDbModel(this ResourceSearch model)
+    {
+        return new ResourceSearchDbModel
+        {
+            Group = model.Group?.ToDbModel(),
+            Keyword = null, // Keyword is handled separately during search
+            Tags = model.Tags,
+            Page = model.PageIndex,
+            PageSize = model.PageSize,
+            Orders = null // Orders are not stored
+        };
+    }
+
+    /// <summary>
+    /// Convert ResourceSearchDbModel to ResourceSearch domain model
+    /// </summary>
+    public static async Task<ResourceSearch> ToDomainModel(
+        this ResourceSearchDbModel dbModel,
+        IPropertyService propertyService)
+    {
+        ResourceSearchFilterGroup? group = null;
+
+        if (dbModel.Group != null)
+        {
+            var validFilters = dbModel.Group.ExtractFilters().Where(f => f.IsValid()).ToList();
+            var propertyPools = validFilters.Aggregate<ResourceSearchFilterDbModel, PropertyPool>(
+                default, (current, f) => current | f.PropertyPool!.Value);
+
+            if (propertyPools != default)
+            {
+                var propertyMap = (await propertyService.GetProperties(propertyPools))
+                    .GroupBy(d => d.Pool)
+                    .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+
+                group = dbModel.Group.ToDomainModel(propertyMap);
+            }
+        }
+
+        return new ResourceSearch
+        {
+            Group = group,
+            Tags = dbModel.Tags,
+            PageIndex = dbModel.Page,
+            PageSize = dbModel.PageSize
+        };
+    }
+
     public static ResourceSearchFilterDbModel ToDbModel(this ResourceSearchFilter model)
     {
         return new ResourceSearchFilterDbModel

@@ -1,31 +1,28 @@
 "use client";
 
-import type { SearchFilter } from "@/components/ResourceFilter";
+import type { SearchFilter } from "../../models";
 import type { IProperty } from "@/components/Property/models";
 
 import { SearchOutlined } from "@ant-design/icons";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { PropertyPool, ResourceProperty, SearchOperation } from "@/sdk/constants";
 import { Button, Spinner } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
-const quickFilterMap = {
-  // [ResourceProperty.MediaLibrary]: SearchOperation.In,
+const quickFilterMap: Record<number, SearchOperation> = {
   [ResourceProperty.Filename]: SearchOperation.Contains,
   [ResourceProperty.MediaLibraryV2]: SearchOperation.In,
 };
 
-type Props = {
-  onAdded: (filter: SearchFilter) => any;
-};
-const QuickFilter = ({ onAdded }: Props) => {
-  const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
-  const [loading, setLoading] = useState(true);
+interface QuickFiltersProps {
+  onAdded: (filter: SearchFilter) => void;
+}
 
+const QuickFilters = ({ onAdded }: QuickFiltersProps) => {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<IProperty[]>([]);
 
   useEffect(() => {
@@ -33,9 +30,7 @@ const QuickFilter = ({ onAdded }: Props) => {
       setProperties(
         (r.data || [])
           .filter((x) => x.id in quickFilterMap)
-          .sort((a, b) => {
-            return b.id - a.id;
-          }),
+          .sort((a, b) => b.id - a.id),
       );
       setLoading(false);
     });
@@ -44,7 +39,7 @@ const QuickFilter = ({ onAdded }: Props) => {
   return (
     <>
       <div>{t<string>("Quick filter")}</div>
-      <div className={"flex items-center gap-2 flex-wrap"}>
+      <div className="flex items-center gap-2 flex-wrap">
         {loading ? (
           <Spinner size="sm" />
         ) : (
@@ -54,7 +49,8 @@ const QuickFilter = ({ onAdded }: Props) => {
 
             return (
               <Button
-                size={"sm"}
+                key={p.id}
+                size="sm"
                 onClick={async () => {
                   const vp = (
                     await BApi.resource.getFilterValueProperty({
@@ -83,7 +79,7 @@ const QuickFilter = ({ onAdded }: Props) => {
                   onAdded(newFilter);
                 }}
               >
-                <SearchOutlined className={"text-base"} />
+                <SearchOutlined className="text-base" />
                 {p.name}
               </Button>
             );
@@ -94,6 +90,6 @@ const QuickFilter = ({ onAdded }: Props) => {
   );
 };
 
-QuickFilter.displayName = "QuickFilter";
+QuickFilters.displayName = "QuickFilters";
 
-export default QuickFilter;
+export default QuickFilters;

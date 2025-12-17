@@ -1,6 +1,5 @@
 "use client";
 
-import type { SearchFilterGroup } from "@/components/Filter";
 import type {
   BulkModificationProcess,
   BulkModificationVariable,
@@ -15,7 +14,7 @@ import Variables from "./Variables";
 import Processes from "./Processes";
 
 import { Button, Chip, Divider, Modal, Tooltip } from "@/components/bakaui";
-import FilterGroupsPanel from "@/pages/resource/components/FilterPanel/FilterGroupsPanel";
+import ResourceSearchPanel, { type SearchCriteria } from "@/components/ResourceFilter/components/ResourceSearchPanel";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import DiffsModal from "@/pages/bulk-modification2/components/BulkModification/DiffsModal";
@@ -27,7 +26,7 @@ export type BulkModification = {
   isActive: boolean;
   createdAt: string;
   variables?: BulkModificationVariable[];
-  filter?: SearchFilterGroup;
+  search?: SearchCriteria;
   processes?: BulkModificationProcess[];
   filteredResourceIds?: number[];
   appliedAt?: string;
@@ -40,21 +39,14 @@ type Props = {
 };
 
 type BlockKey = "Filters" | "Variables" | "Processes" | "Changes" | "FinalStep";
-const Blocks: BlockKey[] = [
-  "Filters",
-  "Variables",
-  "Processes",
-  "Changes",
-  "FinalStep",
-];
+const Blocks: BlockKey[] = ["Filters", "Variables", "Processes", "Changes", "FinalStep"];
 
 const log = buildLogger("BulkModification");
 const BulkModification = ({ bm, onChange }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
-  const { isOpen, currentStep, steps, setIsOpen, setCurrentStep, setSteps } =
-    useTour();
+  const { isOpen, currentStep, steps, setIsOpen, setCurrentStep, setSteps } = useTour();
 
   const [calculatingDiffs, setCalculatingDiffs] = useState(false);
 
@@ -75,33 +67,35 @@ const BulkModification = ({ bm, onChange }: Props) => {
 
           switch (bk) {
             case "Filters":
-              blockTip = (
-                <div>{t<string>("Select resources to be modified.")}</div>
-              );
+              blockTip = <div>{t<string>("Select resources to be modified.")}</div>;
               blockInner = (
-                <div>
-                  <div>
-                    <FilterGroupsPanel
-                      group={bm.filter}
-                      onChange={(g) => {
-                        bm.filter = g;
-                        BApi.bulkModification.patchBulkModification(bm.id, {
-                          filter: g,
-                        });
-                      }}
-                    />
-                  </div>
+                <div className={"flex flex-col gap-2"}>
+                  <ResourceSearchPanel
+                    compact
+                    criteria={bm.search ?? {}}
+                    showKeyword={false}
+                    showQuickFilters
+                    showRecentFilters
+                    showTags
+                    onChange={(criteria) => {
+                      bm.search = criteria;
+                      BApi.bulkModification.patchBulkModification(bm.id, {
+                        search: {
+                          group: criteria.group,
+                          tags: criteria.tags,
+                        },
+                      });
+                    }}
+                  />
                   <div className={"flex items-center gap-2"}>
                     <Button
                       color={"primary"}
                       size={"sm"}
                       variant={"ghost"}
                       onClick={() => {
-                        BApi.bulkModification
-                          .filterResourcesInBulkModification(bm.id)
-                          .then((r) => {
-                            reload();
-                          });
+                        BApi.bulkModification.filterResourcesInBulkModification(bm.id).then((r) => {
+                          reload();
+                        });
                       }}
                     >
                       {t<string>("Filter(Verb)")}
@@ -111,21 +105,6 @@ const BulkModification = ({ bm, onChange }: Props) => {
                         count: bm.filteredResourceIds?.length || 0,
                       })}
                     </div>
-                    {/* {bm.filteredAt && ( */}
-                    {/* <div className={'filtered-at'}>{t<string>('Filtered at {{datetime}}', { datetime: bm.filteredAt })}</div> */}
-                    {/* )} */}
-                    {/* {bm.filteredResourceIds && bm.filteredResourceIds.length > 0 && ( */}
-                    {/* <Button */}
-                    {/*   color={'primary'} */}
-                    {/*   variant={'light'} */}
-                    {/*   size={'sm'} */}
-                    {/*   onClick={() => { */}
-                    {/*     FilteredResourcesDialog.show({ */}
-                    {/*       bmId: bm.id!, */}
-                    {/*     }); */}
-                    {/*   }} */}
-                    {/* >{t<string>('Check all the resources that have been filtered out')}</Button> */}
-                    {/* )} */}
                   </div>
                 </div>
               );
@@ -239,9 +218,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
                   <Button
                     color={"primary"}
                     isDisabled={
-                      !bm.processes ||
-                      bm.processes.length === 0 ||
-                      bm.resourceDiffCount == 0
+                      !bm.processes || bm.processes.length === 0 || bm.resourceDiffCount == 0
                     }
                     size={"sm"}
                     onClick={() => {
@@ -252,9 +229,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
                           "Please check diffs before applying, and changed value may not be reverted perfectly in some situations,  are you sure to apply?",
                         ),
                         onOk: async () => {
-                          await BApi.bulkModification.applyBulkModification(
-                            bm.id,
-                          );
+                          await BApi.bulkModification.applyBulkModification(bm.id);
                           reload();
                         },
                       });
@@ -271,13 +246,9 @@ const BulkModification = ({ bm, onChange }: Props) => {
                         createPortal(Modal, {
                           defaultVisible: true,
                           title: t<string>("Revert bulk modification"),
-                          children: t<string>(
-                            "Are you sure to revert the bulk modification?",
-                          ),
+                          children: t<string>("Are you sure to revert the bulk modification?"),
                           onOk: async () => {
-                            await BApi.bulkModification.revertBulkModification(
-                              bm.id,
-                            );
+                            await BApi.bulkModification.revertBulkModification(bm.id);
                             reload();
                           },
                         });

@@ -329,4 +329,18 @@ public static class ResourceSearchExtensions
 
         return property;
     }
+
+    public static ResourceSearchViewModel ToViewModel(this ResourceSearch domainModel,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceSearchViewModel
+        {
+            Group = domainModel.Group?.ToViewModel(propertyLocalizer),
+            Keyword = null,
+            Orders = domainModel.Orders,
+            Page = domainModel.PageIndex,
+            PageSize = domainModel.PageSize,
+            Tags = domainModel.Tags
+        };
+    }
 }

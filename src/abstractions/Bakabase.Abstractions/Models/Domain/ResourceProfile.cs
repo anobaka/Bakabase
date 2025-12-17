@@ -13,9 +13,9 @@ public class ResourceProfile
     public string Name { get; set; } = null!;
 
     /// <summary>
-    /// 搜索条件
+    /// 搜索条件（复用 ResourceSearch 领域模型）
     /// </summary>
-    public SearchCriteria SearchCriteria { get; set; } = new();
+    public ResourceSearch Search { get; set; } = new();
 
     /// <summary>
     /// 名称模板（可选），支持变量如 {Name}, {Layer1}, {Layer2} 等

@@ -154,7 +154,6 @@ const FilterGroup = ({
           <Popover
             showArrow
             placement={"bottom"}
-            style={{ zIndex: 10 }}
             trigger={
               <Button isIconOnly size={"sm"}>
                 <TbFilterPlus className={"text-lg"} />

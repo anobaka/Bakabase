@@ -2,7 +2,7 @@
 
 "use strict";
 
-import type { SearchFilterGroup } from "@/components/Filter";
+import type { SearchFilterGroup } from "@/components/ResourceFilter";
 
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,7 +13,7 @@ import {
   FilterProvider,
   FilterGroup,
   createDefaultFilterConfig,
-} from "@/components/Filter";
+} from "@/components/ResourceFilter";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
@@ -37,10 +37,7 @@ function FilterGroupsPanel({ group: propsGroup, onChange }: IProps) {
     },
   );
 
-  const filterConfig = useMemo(
-    () => createDefaultFilterConfig(createPortal),
-    [createPortal],
-  );
+  const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
 
   useUpdateEffect(() => {
     setGroup(
