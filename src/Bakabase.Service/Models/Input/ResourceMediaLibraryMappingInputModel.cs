@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Service.Models.Input;
 
@@ -12,9 +11,4 @@ public class ResourceMediaLibraryMappingInputModel
     /// Media library IDs to associate with the resource
     /// </summary>
     public List<int> MediaLibraryIds { get; set; } = new();
-
-    /// <summary>
-    /// Source of the mapping (Manual, Rule, etc.)
-    /// </summary>
-    public MappingSource Source { get; set; } = MappingSource.Manual;
 }

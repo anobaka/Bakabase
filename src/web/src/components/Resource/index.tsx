@@ -7,13 +7,13 @@ import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
 import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
 import type { PlayableFilesRef } from "@/components/Resource/components/PlayableFiles";
-import type { BTask } from "@/core/models/BTask";
 
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 import {
   ApartmentOutlined,
+  CheckCircleFilled,
   DisconnectOutlined,
   FileUnknownOutlined,
   HistoryOutlined,
@@ -33,11 +33,9 @@ import ResourceDetailDialog from "@/components/Resource/components/DetailDialog"
 import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
-import TaskCover from "@/components/Resource/components/TaskCover";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Chip, Link, Tooltip } from "@/components/bakaui";
 import {
-  BTaskStatus,
   PropertyPool,
   ResourceAdditionalItem,
   ResourceProperty,
@@ -79,7 +77,7 @@ type Props = {
   style?: any;
   className?: string;
   selected?: boolean;
-  mode?: "default" | "select";
+  selectionModeRef?: React.RefObject<boolean>;
   onSelected?: (id: number) => any;
   selectedResourceIds?: number[];
   onSelectedResourcesChanged?: (ids: number[]) => any;
@@ -95,7 +93,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     biggerCoverPlacement,
     style: propStyle = {},
     selected = false,
-    mode = "default",
+    selectionModeRef,
     onSelected = (id: number) => {},
     selectedResourceIds: propsSelectedResourceIds,
     onSelectedResourcesChanged,
@@ -111,7 +109,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const renderedTimes = useRef(0);
 
   renderedTimes.current += 1;
-  const tasksRef = useRef<BTask[] | undefined>();
 
   const uiOptions = useUiOptionsStore((state) => state.data);
 
@@ -124,11 +121,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     x: 0,
     y: 0,
   });
-
-  const hasActiveTask =
-    tasksRef.current?.some(
-      (x) => x.status == BTaskStatus.Paused || x.status == BTaskStatus.Running,
-    ) == true;
 
   useImperativeHandle(ref, (): IResourceHandler => {
     return {
@@ -409,11 +401,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
     ...propStyle,
   };
 
-  if (selected) {
-    style.borderWidth = 2;
-    style.borderColor = "var(--bakaui-success)";
-  }
-
   const selectedResourceIds = (propsSelectedResourceIds ?? []).slice();
 
   if (!selectedResourceIds.includes(resource.id)) {
@@ -464,21 +451,29 @@ const Resource = React.forwardRef((props: Props, ref) => {
   return (
     <div
       key={resource.id}
-      className={`flex flex-col p-1 rounded relative border-1 border-default-200 group/resource ${styles.resource} ${props.className}`}
+      className={`flex flex-col p-1 rounded relative border-2 group/resource ${styles.resource} ${props.className} ${
+        selected
+          ? "border-primary ring-2 ring-primary/30 bg-primary/5"
+          : "border-default-200"
+      }`}
       data-id={resource.id}
       role={"resource"}
       style={style}
+      onClickCapture={(e) => {
+        if (selectionModeRef?.current) {
+          onSelected(resource.id);
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
+      {selected && (
+        <div className="absolute top-2 right-2 z-20">
+          <CheckCircleFilled className="text-primary text-xl drop-shadow-md" />
+        </div>
+      )}
       <Operations coverRef={coverRef.current} reload={reload} resource={resource} />
-      <TaskCover
-        reload={reload}
-        resource={resource}
-        onTasksChange={(tasks) => (tasksRef.current = tasks)}
-      />
       <div
-        onClick={() => {
-          log("outer", "click");
-        }}
         onContextMenu={(e) => {
           if (typeof document.hasFocus === "function" && !document.hasFocus()) return;
 
@@ -506,17 +501,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             onSelectedResourcesChanged={onSelectedResourcesChanged}
           />
         </ControlledMenu>
-        <div
-          className="relative"
-          onClickCapture={(e) => {
-            log("outer", "click capture");
-            if (mode == "select" && !hasActiveTask) {
-              onSelected(resource.id);
-              e.preventDefault();
-              e.stopPropagation();
-            }
-          }}
-        >
+        <div className="relative">
           {renderCover()}
           {!uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(false)}
         </div>

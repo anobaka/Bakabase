@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
@@ -66,7 +65,7 @@ public class MediaLibraryResourceMappingController(IMediaLibraryResourceMappingS
     [SwaggerOperation(OperationId = "EnsureMediaLibraryResourceMappings")]
     public async Task<BaseResponse> EnsureMappings([FromBody] EnsureMappingsInput input)
     {
-        await service.EnsureMappings(input.ResourceId, input.MediaLibraryIds, input.Source, input.SourceRuleId);
+        await service.EnsureMappings(input.ResourceId, input.MediaLibraryIds);
         return BaseResponseBuilder.Ok;
     }
 
@@ -74,7 +73,7 @@ public class MediaLibraryResourceMappingController(IMediaLibraryResourceMappingS
     [SwaggerOperation(OperationId = "ReplaceMediaLibraryResourceMappings")]
     public async Task<BaseResponse> ReplaceMappings([FromBody] EnsureMappingsInput input)
     {
-        await service.ReplaceMappings(input.ResourceId, input.MediaLibraryIds, input.Source, input.SourceRuleId);
+        await service.ReplaceMappings(input.ResourceId, input.MediaLibraryIds);
         return BaseResponseBuilder.Ok;
     }
 }
@@ -83,6 +82,4 @@ public class EnsureMappingsInput
 {
     public int ResourceId { get; set; }
     public List<int> MediaLibraryIds { get; set; } = new();
-    public MappingSource Source { get; set; }
-    public int? SourceRuleId { get; set; }
 }

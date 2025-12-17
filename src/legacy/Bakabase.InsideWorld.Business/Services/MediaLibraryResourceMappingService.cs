@@ -6,13 +6,11 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
@@ -94,17 +92,7 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         }
     }
 
-    public async Task DeleteBySourceRuleId(int ruleId)
-    {
-        var dbModels = await orm.GetAll(m => m.SourceRuleId == ruleId);
-        if (dbModels.Any())
-        {
-            await orm.RemoveRange(dbModels);
-        }
-    }
-
-    public async Task EnsureMappings(int resourceId, IEnumerable<int> mediaLibraryIds, MappingSource source,
-        int? sourceRuleId = null)
+    public async Task EnsureMappings(int resourceId, IEnumerable<int> mediaLibraryIds)
     {
         var existingMappings = await GetByResourceId(resourceId);
         var existingLibraryIds = existingMappings.Select(m => m.MediaLibraryId).ToHashSet();
@@ -118,8 +106,6 @@ public class MediaLibraryResourceMappingService<TDbContext>(
             {
                 ResourceId = resourceId,
                 MediaLibraryId = libraryId,
-                Source = source,
-                SourceRuleId = sourceRuleId,
                 CreateDt = DateTime.UtcNow
             });
 
@@ -127,8 +113,7 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         }
     }
 
-    public async Task ReplaceMappings(int resourceId, IEnumerable<int> mediaLibraryIds, MappingSource source,
-        int? sourceRuleId = null)
+    public async Task ReplaceMappings(int resourceId, IEnumerable<int> mediaLibraryIds)
     {
         // Delete existing mappings
         await DeleteByResourceId(resourceId);
@@ -138,8 +123,6 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         {
             ResourceId = resourceId,
             MediaLibraryId = libraryId,
-            Source = source,
-            SourceRuleId = sourceRuleId,
             CreateDt = DateTime.UtcNow
         });
 

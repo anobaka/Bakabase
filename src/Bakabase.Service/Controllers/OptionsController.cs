@@ -509,7 +509,7 @@ namespace Bakabase.Service.Controllers
 
             var cacheOrm = HttpContext.RequestServices
                 .GetRequiredService<
-                    FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>>();
+                    FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>>();
             List<ResourceCacheDbModel> cache = null;
 
             try

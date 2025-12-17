@@ -7,13 +7,11 @@ import {
   ApiOutlined,
   DeleteOutlined,
   ExportOutlined,
-  FileSyncOutlined,
   SendOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 
-import MediaLibraryPathSelectorV2 from "@/components/MediaLibraryPathSelectorV2";
-import MediaLibrarySelectorV2 from "@/components/MediaLibrarySelectorV2";
+import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import { ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
 import { Checkbox, Modal } from "@/components/bakaui";
@@ -39,56 +37,10 @@ const ContextMenuItems = ({
       <MenuItem
         onClick={() => {
           log("inner", "click");
-          createPortal(MediaLibraryPathSelectorV2, {
-            confirmation: true,
-            onSelect: (id, path, isLegacyMediaLibrary) => {
-              if (selectedResourceIds.length > 0) {
-                BApi.resource
-                  .moveResources({
-                    ids: selectedResourceIds,
-                    path,
-                    mediaLibraryId: id,
-                    isLegacyMediaLibrary,
-                  })
-                  .then((r) => {
-                    // todo: moving files is a asynchronized operation, we need some way to update other resources after moving
-                    // onSelectedResourcesChanged?.(selectedResourceIds);
-                  });
-              }
-            },
-          });
-        }}
-        onClickCapture={() => {
-          log("inner", "click capture");
-        }}
-      >
-        <div className={"flex items-center gap-2"}>
-          <FileSyncOutlined className={"text-base"} />
-          {selectedResourceIds.length > 1
-            ? t<string>(
-                "Move {{count}} resources to media library (Including file system entries)",
-                { count: selectedResourceIds.length },
-              )
-            : t<string>(
-                "Move to media library (Including file system entries)",
-              )}
-        </div>
-      </MenuItem>
-      <MenuItem
-        onClick={() => {
-          log("inner", "click");
-          createPortal(MediaLibrarySelectorV2, {
-            confirmation: true,
-            onSelect: async (id, isLegacyMediaLibrary) => {
-              await BApi.resource
-                .moveResources({
-                  ids: selectedResourceIds,
-                  mediaLibraryId: id,
-                  isLegacyMediaLibrary,
-                })
-                .then((r) => {
-                  onSelectedResourcesChanged?.(selectedResourceIds);
-                });
+          createPortal(MediaLibraryMultiSelector, {
+            resourceIds: selectedResourceIds,
+            onSubmit: () => {
+              onSelectedResourcesChanged?.(selectedResourceIds);
             },
           });
         }}
@@ -99,11 +51,10 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2"}>
           <ApiOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>(
-                "Move {{count}} resources to media library (Data only)",
-                { count: selectedResourceIds.length },
-              )
-            : t<string>("Move to media library (Data only)")}
+            ? t<string>("Set media libraries for {{count}} resources", {
+                count: selectedResourceIds.length,
+              })
+            : t<string>("Set media libraries")}
         </div>
       </MenuItem>
       <MenuItem

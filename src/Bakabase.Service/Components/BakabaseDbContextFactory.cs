@@ -6,14 +6,14 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace Bakabase.Service.Components
 {
-    public class BakabaseDbContextFactory : IDesignTimeDbContextFactory<InsideWorldDbContext>
+    public class BakabaseDbContextFactory : IDesignTimeDbContextFactory<BakabaseDbContext>
     {
-        public InsideWorldDbContext CreateDbContext(string[] args)
+        public BakabaseDbContext CreateDbContext(string[] args)
         {
-            var optionsBuilder = new DbContextOptionsBuilder<InsideWorldDbContext>();
+            var optionsBuilder = new DbContextOptionsBuilder<BakabaseDbContext>();
             var appDataPath = AppService.DefaultAppDataDirectory;
             optionsBuilder.UseBootstrapSqLite(appDataPath, "bakabase_insideworld");
-            return new InsideWorldDbContext(optionsBuilder.Options);
+            return new BakabaseDbContext(optionsBuilder.Options);
         }
     }
 }

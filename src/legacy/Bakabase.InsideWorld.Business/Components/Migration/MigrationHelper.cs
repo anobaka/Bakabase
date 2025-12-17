@@ -27,7 +27,7 @@ public class MigrationHelper(
     IMediaLibraryV2Service mediaLibraryV2Service,
     IOptions<EnhancerOptions> enhancerOptions,
     IResourceService resourceService,
-    InsideWorldDbContext dbCtx,
+    BakabaseDbContext dbCtx,
     ILogger<MigrationHelper> logger)
 {
     public async Task MigrateCategoriesMediaLibrariesAndResources()

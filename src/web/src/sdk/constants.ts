@@ -199,21 +199,6 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2'
 };
 
-export enum MappingSource {
-  Rule = 1,
-  Manual = 2
-}
-
-export const mappingSources = [
-  { label: 'Rule', value: MappingSource.Rule },
-  { label: 'Manual', value: MappingSource.Manual }
-] as const;
-
-export const MappingSourceLabel: Record<MappingSource, string> = {
-  [MappingSource.Rule]: 'Rule',
-  [MappingSource.Manual]: 'Manual'
-};
-
 export enum MediaLibraryTemplateAdditionalItem {
   None = 0,
   ChildTemplate = 1

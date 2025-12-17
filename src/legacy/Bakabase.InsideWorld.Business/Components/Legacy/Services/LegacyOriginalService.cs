@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyOriginalService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, Original, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, Original, int>(serviceProvider)
     {
         // public async Task<string[]> GetNamesByIds(int[] ids)
         // {

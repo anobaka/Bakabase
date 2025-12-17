@@ -22,7 +22,7 @@ using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedProper
 namespace Bakabase.InsideWorld.Business.Components.ReservedProperty;
 
 public class ReservedPropertyValueService(
-    FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ReservedPropertyValue, int> orm,
+    FullMemoryCacheResourceService<BakabaseDbContext, Abstractions.Models.Db.ReservedPropertyValue, int> orm,
     IStandardValueService standardValueService,
     ILogger<ReservedPropertyValueService> logger)
     : IReservedPropertyValueService

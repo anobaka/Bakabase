@@ -84,6 +84,11 @@ public interface IPathMarkService
     Task MarkAsFailed(int id, string? error);
 
     /// <summary>
+    /// Mark a path mark as pending (for re-sync after expiration)
+    /// </summary>
+    Task MarkAsPending(int id);
+
+    /// <summary>
     /// Get pending marks count
     /// </summary>
     Task<int> GetPendingCount();

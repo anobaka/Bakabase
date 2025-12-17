@@ -137,7 +137,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
             /// When enabled, path marks will be synced immediately when created or modified.
             /// When disabled, marks will be collected and synced manually or during the next sync operation.
             /// </summary>
-            public bool? SyncMarksImmediately { get; set; }
+            public bool? SyncMarksImmediately { get; set; } = true;
         }
 
         public record SynchronizationCategoryOptions

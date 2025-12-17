@@ -143,7 +143,7 @@ public class MediaLibraryV2Controller(
     }
 
     /// <summary>
-    /// Get statistics for a media library including resource counts by source
+    /// Get statistics for a media library including resource counts
     /// </summary>
     [HttpGet("{id:int}/statistics")]
     [SwaggerOperation(OperationId = "GetMediaLibraryV2Statistics")]
@@ -159,9 +159,7 @@ public class MediaLibraryV2Controller(
 
         var stats = new MediaLibraryStatistics
         {
-            TotalResourceCount = mappings.Count,
-            ManualMappingCount = mappings.Count(m => m.Source == MappingSource.Manual),
-            RuleMappingCount = mappings.Count(m => m.Source == MappingSource.Rule)
+            TotalResourceCount = mappings.Count
         };
 
         return new SingletonResponse<MediaLibraryStatistics>(stats);
@@ -179,14 +177,4 @@ public class MediaLibraryStatistics
     /// Total number of resources mapped to this library
     /// </summary>
     public int TotalResourceCount { get; set; }
-
-    /// <summary>
-    /// Number of resources manually mapped
-    /// </summary>
-    public int ManualMappingCount { get; set; }
-
-    /// <summary>
-    /// Number of resources mapped by rules
-    /// </summary>
-    public int RuleMappingCount { get; set; }
 }

@@ -591,4 +591,22 @@
   <data name="SyncPathMark_Complete" xml:space="preserve">
     <value>路径标记同步完成</value>
   </data>
+  <data name="BTask_Name_SyncPathMarks" xml:space="preserve">
+    <value>同步路径标记</value>
+  </data>
+  <data name="BTask_Description_SyncPathMarks" xml:space="preserve">
+    <value>同步所有路径标记</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMarks" xml:space="preserve">
+    <value>路径标记同步正在进行中；强制中断可能导致同步不完整。</value>
+  </data>
+  <data name="BTask_Name_SyncPathMark_Single" xml:space="preserve">
+    <value>同步路径标记</value>
+  </data>
+  <data name="BTask_Description_SyncPathMark_Single" xml:space="preserve">
+    <value>同步选中的路径标记</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
+    <value>路径标记同步正在进行中；强制中断可能导致同步不完整。</value>
+  </data>
 </root>

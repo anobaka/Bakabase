@@ -622,9 +622,7 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
                 await _mappingService.EnsureMappings(
                     resource.Id,
-                    new[] { mediaLibraryId },
-                    MappingSource.Rule,
-                    mark.Id);
+                    new[] { mediaLibraryId });
                 createdCount++;
             }
             catch
@@ -694,9 +692,34 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
     private async Task<int> ProcessMediaLibraryMarkDelete(PathMark mark, CancellationToken ct)
     {
-        // Delete all mappings created by this rule
-        await _mappingService.DeleteBySourceRuleId(mark.Id);
-        return 1;
+        var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
+        if (config == null) return 0;
+
+        // Get all resources under the mark's path
+        var allResources = await _resourceService.GetAll();
+        var matchedResources = allResources
+            .Where(r => IsPathUnderParent(r.Path, mark.Path))
+            .ToList();
+
+        var filteredResources = FilterResourcesByMediaLibraryMarkConfig(matchedResources, mark.Path, config);
+        var deletedCount = 0;
+
+        foreach (var resource in filteredResources)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            try
+            {
+                await _mappingService.DeleteByResourceId(resource.Id);
+                deletedCount++;
+            }
+            catch
+            {
+                // Skip individual deletion errors
+            }
+        }
+
+        return deletedCount;
     }
 
     private async Task<List<PathMark>> FindRelatedMarks(List<string> resourcePaths, PathMarkType type, List<PathMark> excludeMarks)
@@ -707,7 +730,7 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         // Find marks whose Path is a parent directory of any resource path
         var relatedMarks = allMarks
             .Where(m => resourcePaths.Any(rp => IsPathUnderParent(rp, m.Path)))
-            .Where(m => m.SyncStatus == PathMarkSyncStatus.Pending || m.SyncStatus == PathMarkSyncStatus.PendingDelete)
+            .Where(m => m.SyncStatus is PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete)
             .ToList();
 
         return relatedMarks;

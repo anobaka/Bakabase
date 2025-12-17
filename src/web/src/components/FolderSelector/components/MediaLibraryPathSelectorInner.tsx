@@ -1,4 +1,4 @@
-import type { MediaLibrary } from "@/pages/media-library/models";
+import type { MediaLibrary } from "@/pages/deprecated/media-library/models";
 
 import { useEffect, useState } from "react";
 

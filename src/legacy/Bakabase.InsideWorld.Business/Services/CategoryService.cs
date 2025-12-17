@@ -51,8 +51,8 @@ namespace Bakabase.InsideWorld.Business.Services
     [Obsolete]
     public class CategoryService(
         IServiceProvider serviceProvider,
-        ResourceService<InsideWorldDbContext, Bakabase.Abstractions.Models.Db.CategoryDbModel, int> orm,
-        FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm)
+        ResourceService<BakabaseDbContext, Bakabase.Abstractions.Models.Db.CategoryDbModel, int> orm,
+        FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm)
         : BootstrapService(serviceProvider), ICategoryService
     {
         protected IMediaLibraryService MediaLibraryService => GetRequiredService<IMediaLibraryService>();
@@ -73,7 +73,7 @@ namespace Bakabase.InsideWorld.Business.Services
         protected IPropertyLocalizer PropertyLocalizer => GetRequiredService<IPropertyLocalizer>();
 
         protected ISpecialTextService SpecialTextService => GetRequiredService<ISpecialTextService>();
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int>
+        private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int>
             _resourceCacheOrm = resourceCacheOrm;
 
         #region Infrastructures

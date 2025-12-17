@@ -20,7 +20,8 @@ public static class PathMarkExtensions
             CreatedAt = model.CreatedAt,
             UpdatedAt = model.UpdatedAt,
             IsDeleted = model.IsDeleted,
-            DeletedAt = model.DeletedAt
+            DeletedAt = model.DeletedAt,
+            ExpiresInSeconds = model.ExpiresInSeconds
         };
     }
 
@@ -39,7 +40,8 @@ public static class PathMarkExtensions
             CreatedAt = dbModel.CreatedAt,
             UpdatedAt = dbModel.UpdatedAt,
             IsDeleted = dbModel.IsDeleted,
-            DeletedAt = dbModel.DeletedAt
+            DeletedAt = dbModel.DeletedAt,
+            ExpiresInSeconds = dbModel.ExpiresInSeconds
         };
     }
 

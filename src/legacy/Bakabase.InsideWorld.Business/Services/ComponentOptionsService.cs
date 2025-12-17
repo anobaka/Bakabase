@@ -9,7 +9,7 @@ using Bootstrap.Models.ResponseModels;
 namespace Bakabase.InsideWorld.Business.Services
 {
     [Obsolete]
-    public class ComponentOptionsService : ResourceService<InsideWorldDbContext, ComponentOptions, int>
+    public class ComponentOptionsService : ResourceService<BakabaseDbContext, ComponentOptions, int>
     {
         protected ComponentService ComponentService => GetRequiredService<ComponentService>();
 

@@ -8,6 +8,11 @@
 /* ===== reactour 覆盖 ===== */
 @import './global.reactour.overrides.css';
 
+/* ===== react-menu 基础样式 + HeroUI-style 覆盖 ===== */
+@import '@szhsin/react-menu/dist/index.css';
+@import '@szhsin/react-menu/dist/transitions/slide.css';
+@import './global.react-menu.overrides.css';
+
 @import "tailwindcss";
 
 @config "../../tailwind.config.js";

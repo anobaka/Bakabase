@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bakabase.InsideWorld.Business.Migrations
 {
-    [DbContext(typeof(InsideWorldDbContext))]
+    [DbContext(typeof(BakabaseDbContext))]
     partial class InsideWorldDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
@@ -239,12 +239,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("ResourceId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("Source")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("SourceRuleId")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
                     b.HasIndex("MediaLibraryId");
@@ -354,6 +348,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("ExpiresInSeconds")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("INTEGER");

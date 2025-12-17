@@ -14,7 +14,6 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Dtos;
 using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Extensions;
@@ -29,46 +28,28 @@ namespace Bakabase.Service.Controllers
     public class DashboardController : Controller
     {
         private readonly IResourceService _resourceService;
-        private readonly ICategoryService _categoryService;
-        private readonly IMediaLibraryService _mediaLibraryService;
         private readonly DownloadTaskService _downloadTaskService;
-        private readonly ThirdPartyHttpRequestLogger _thirdPartyHttpRequestLogger;
         private readonly IThirdPartyService _thirdPartyService;
         private readonly IBOptions<FileSystemOptions> _fsOptions;
         private readonly IAliasService _aliasService;
         private readonly ISpecialTextService _specialTextService;
-        private readonly ComponentService _componentService;
-        private readonly ComponentOptionsService _componentOptionsService;
         private readonly PasswordService _passwordService;
-        private readonly ICustomPropertyService _customPropertyService;
-        private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IPropertyService _propertyService;
         private readonly IBakabaseLocalizer _localizer;
         private readonly IMediaLibraryV2Service _mediaLibraryV2Service;
 
-        public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService,
-            ThirdPartyHttpRequestLogger thirdPartyHttpRequestLogger, IThirdPartyService thirdPartyService,
-            IBOptions<FileSystemOptions> fsOptions, IAliasService aliasService, ISpecialTextService specialTextService,
-            ComponentService componentService, PasswordService passwordService,
-            ComponentOptionsService componentOptionsService, ICategoryService categoryService,
-            ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
-            IPropertyService propertyService, IMediaLibraryService mediaLibraryService, IBakabaseLocalizer localizer, IMediaLibraryV2Service mediaLibraryV2Service)
+        public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService, IThirdPartyService thirdPartyService,
+            IBOptions<FileSystemOptions> fsOptions, IAliasService aliasService, ISpecialTextService specialTextService, PasswordService passwordService,
+            IPropertyService propertyService, IBakabaseLocalizer localizer, IMediaLibraryV2Service mediaLibraryV2Service)
         {
             _resourceService = resourceService;
             _downloadTaskService = downloadTaskService;
-            _thirdPartyHttpRequestLogger = thirdPartyHttpRequestLogger;
             _thirdPartyService = thirdPartyService;
             _fsOptions = fsOptions;
             _aliasService = aliasService;
             _specialTextService = specialTextService;
-            _componentService = componentService;
             _passwordService = passwordService;
-            _componentOptionsService = componentOptionsService;
-            _categoryService = categoryService;
-            _customPropertyService = customPropertyService;
-            _customPropertyValueService = customPropertyValueService;
             _propertyService = propertyService;
-            _mediaLibraryService = mediaLibraryService;
             _localizer = localizer;
             _mediaLibraryV2Service = mediaLibraryV2Service;
         }
@@ -139,10 +120,7 @@ namespace Bakabase.Service.Controllers
                 new("Aliases", aliasCount),
                 new("SpecialTexts", stCount)
             ]);
-            // Players, PlayableFileSelectors, Enhancers
-            var descriptors = await _componentOptionsService.GetAll();
-            ds.OtherCounts.Add(descriptors.GroupBy(a => a.ComponentType)
-                .Select(d => new DashboardStatistics.TextAndCount(d.Key.ToString(), d.Count())).ToList());
+            
             // Passwords
             ds.OtherCounts.Add(new List<DashboardStatistics.TextAndCount>
             {

@@ -16,7 +16,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyPublisherService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, Publisher, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, Publisher, int>(serviceProvider)
     {
         // public async Task<Dictionary<int, List<PublisherDto>>> GetByResources()
         // {

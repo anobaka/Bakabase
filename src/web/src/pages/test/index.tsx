@@ -37,8 +37,10 @@ import FolderSelectorTest from "./cases/FolderSelectorTest";
 import MediaPlayerTest from "./cases/MediaPlayer";
 import WindowedMediaPlayerTest from "./cases/WindowedMediaPlayer";
 import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsModalTest";
+import PathMarksInvalidPathsTest from "./cases/PathMarksInvalidPathsTest";
 
 const components = {
+  PathMarksInvalidPaths: <PathMarksInvalidPathsTest />,
   AfterFirstPlayOperationsModalTest: <AfterFirstPlayOperationsModalTest />,
   FolderSelectorTest: <FolderSelectorTest />,
   WindowedMediaPlayer: <WindowedMediaPlayerTest />,

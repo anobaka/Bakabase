@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import "./index.scss";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -82,6 +82,30 @@ const ActionsFilter: Record<TaskAction, (task: BTask) => boolean> = {
 };
 
 const log = buildLogger("FloatingAssistant");
+
+const POSITION_STORAGE_KEY = "floating-assistant-position";
+const DEFAULT_POSITION = { x: 10, y: typeof window !== "undefined" ? window.innerHeight - 68 : 100 };
+
+const getInitialPosition = () => {
+  if (typeof window === "undefined") return DEFAULT_POSITION;
+  try {
+    const saved = localStorage.getItem(POSITION_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Ensure position is within viewport bounds
+      const maxX = window.innerWidth - 48;
+      const maxY = window.innerHeight - 48;
+      return {
+        x: Math.max(0, Math.min(parsed.x ?? DEFAULT_POSITION.x, maxX)),
+        y: Math.max(0, Math.min(parsed.y ?? DEFAULT_POSITION.y, maxY)),
+      };
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return DEFAULT_POSITION;
+};
+
 const FloatingAssistant = () => {
   const [allDoneCircleDrawn, setAllDoneCircleDrawn] = useState("");
   const [status, setStatus] = useState(AssistantStatus.Working);
@@ -93,6 +117,67 @@ const FloatingAssistant = () => {
   const { t } = useTranslation();
   const portalRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+  const [position, setPosition] = useState(getInitialPosition);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: position.x,
+      posY: position.y,
+    };
+    isDraggingRef.current = false;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = moveEvent.clientX - dragStartRef.current.x;
+      const dy = moveEvent.clientY - dragStartRef.current.y;
+
+      // Mark as dragging if moved more than 5px
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        isDraggingRef.current = true;
+      }
+
+      const newX = Math.max(0, Math.min(dragStartRef.current.posX + dx, window.innerWidth - 48));
+      const newY = Math.max(0, Math.min(dragStartRef.current.posY + dy, window.innerHeight - 48));
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+
+      if (dragStartRef.current) {
+        const newPosition = position;
+        try {
+          localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(newPosition));
+        } catch {
+          // Ignore storage errors
+        }
+      }
+      dragStartRef.current = null;
+
+      // Delay resetting drag flag so click/onOpenChange can check it first
+      if (isDraggingRef.current) {
+        setTimeout(() => {
+          isDraggingRef.current = false;
+        }, 100);
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, [position]);
+
+  const handleClick = useCallback(() => {
+    // Only toggle popover if we didn't drag
+    if (!isDraggingRef.current) {
+      setTasksVisible(v => !v);
+    }
+  }, []);
 
   const bTasks = useBTasksStore((state) => state.tasks);
 
@@ -667,86 +752,94 @@ const FloatingAssistant = () => {
   // log(tasks);
 
   return (
-    <>
-      <Popover
-        trigger={
-          <div
-            ref={portalRef}
-            className={`portal ${Object.keys(AssistantStatus)[status]} floating-assistant ${tasksVisible ? "" : "hide"}`}
-          >
-            {/* Working */}
-            <div className="loader">
-              <span />
-            </div>
-            {/* AllDone */}
-            <div className="tick">
-              <svg
-                version="1.1"
-                viewBox="0 0 37 37"
-                x="0px"
-                y="0px"
-                enableBackground={'new 0 0 37 37'}
-                // style="enable-background:new 0 0 37 37;"
-                className={allDoneCircleDrawn}
-              >
-                <path
-                  className="circ path"
-                  d="M30.5,6.5L30.5,6.5c6.6,6.6,6.6,17.4,0,24l0,0c-6.6,6.6-17.4,6.6-24,0l0,0c-6.6-6.6-6.6-17.4,0-24l0,0C13.1-0.2,23.9-0.2,30.5,6.5z"
-                  fill={"none"}
-                  stroke={"#08c29e"}
-                  strokeLinejoin={"round"}
-                  strokeMiterlimit={10}
-                  strokeWidth={3}
-                />
-                <polyline
-                  className="tick path"
-                  fill={"none"}
-                  points="11.6,20 15.9,24.2 26.4,13.8"
-                  stroke={"#08c29e"}
-                  strokeLinejoin={"round"}
-                  strokeMiterlimit={10}
-                  strokeWidth={3}
-                />
-              </svg>
-            </div>
-            {/* Failed */}
-            <div
-              className={
-                "failed flex items-center justify-center w-[48px] h-[48px] "
-              }
-            >
-              <CloseCircleOutlined className={"text-5xl"} />
-            </div>
-          </div>
+    <Popover
+      visible={tasksVisible}
+      onOpenChange={(visible) => {
+        // Only handle closing from outside click/esc, opening is handled by handleClick
+        if (!visible) {
+          setTasksVisible(false);
         }
-        onOpenChange={(visible) => {
-          setTasksVisible(visible);
-        }}
-      >
-        <div className={"flex flex-col gap-2 p-2 min-w-[300px]"}>
-          {/* <div className={'font-bold'}>{t<string>('Task list')}</div> */}
-          {/* <Divider orientation={'horizontal'} /> */}
-          <div className="flex flex-col gap-1 max-h-[600px] mt-2 overflow-auto">
-            {renderTasks()}
+      }}
+      trigger={
+        <div
+          ref={portalRef}
+          className={`portal ${Object.keys(AssistantStatus)[status]} floating-assistant ${tasksVisible ? "" : "hide"}`}
+          style={{
+            left: position.x,
+            top: position.y,
+          }}
+          onMouseDown={handleMouseDown}
+          onClick={handleClick}
+        >
+          {/* Working */}
+          <div className="loader">
+            <span />
           </div>
-          <Divider orientation={"horizontal"} />
-          <div className="flex items-center gap-2">
-            {clearableTasks.length > 0 && (
-              <Button
-                size={"sm"}
-                variant={"ghost"}
-                onPress={() =>
-                  BApi.backgroundTask.cleanInactiveBackgroundTasks()
-                }
-              >
-                <ClearOutlined className={"text-base"} />
-                {t<string>("Clear inactive tasks")}
-              </Button>
-            )}
+          {/* AllDone */}
+          <div className="tick">
+            <svg
+              version="1.1"
+              viewBox="0 0 37 37"
+              x="0px"
+              y="0px"
+              enableBackground={'new 0 0 37 37'}
+              // style="enable-background:new 0 0 37 37;"
+              className={allDoneCircleDrawn}
+            >
+              <path
+                className="circ path"
+                d="M30.5,6.5L30.5,6.5c6.6,6.6,6.6,17.4,0,24l0,0c-6.6,6.6-17.4,6.6-24,0l0,0c-6.6-6.6-6.6-17.4,0-24l0,0C13.1-0.2,23.9-0.2,30.5,6.5z"
+                fill={"none"}
+                stroke={"#08c29e"}
+                strokeLinejoin={"round"}
+                strokeMiterlimit={10}
+                strokeWidth={3}
+              />
+              <polyline
+                className="tick path"
+                fill={"none"}
+                points="11.6,20 15.9,24.2 26.4,13.8"
+                stroke={"#08c29e"}
+                strokeLinejoin={"round"}
+                strokeMiterlimit={10}
+                strokeWidth={3}
+              />
+            </svg>
+          </div>
+          {/* Failed */}
+          <div
+            className={
+              "failed flex items-center justify-center w-[48px] h-[48px] "
+            }
+          >
+            <CloseCircleOutlined className={"text-5xl"} />
           </div>
         </div>
-      </Popover>
-    </>
+      }
+    >
+      <div className={"flex flex-col gap-2 p-2 min-w-[300px]"}>
+        {/* <div className={'font-bold'}>{t<string>('Task list')}</div> */}
+        {/* <Divider orientation={'horizontal'} /> */}
+        <div className="flex flex-col gap-1 max-h-[600px] mt-2 overflow-auto">
+          {renderTasks()}
+        </div>
+        <Divider orientation={"horizontal"} />
+        <div className="flex items-center gap-2">
+          {clearableTasks.length > 0 && (
+            <Button
+              size={"sm"}
+              variant={"ghost"}
+              onPress={() =>
+                BApi.backgroundTask.cleanInactiveBackgroundTasks()
+              }
+            >
+              <ClearOutlined className={"text-base"} />
+              {t<string>("Clear inactive tasks")}
+            </Button>
+          )}
+        </div>
+      </div>
+    </Popover>
   );
 };
 

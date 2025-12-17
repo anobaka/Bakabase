@@ -12,8 +12,6 @@ public static class MediaLibraryResourceMappingExtensions
             Id = model.Id,
             MediaLibraryId = model.MediaLibraryId,
             ResourceId = model.ResourceId,
-            Source = model.Source,
-            SourceRuleId = model.SourceRuleId,
             CreateDt = model.CreateDt
         };
     }
@@ -25,8 +23,6 @@ public static class MediaLibraryResourceMappingExtensions
             Id = dbModel.Id,
             MediaLibraryId = dbModel.MediaLibraryId,
             ResourceId = dbModel.ResourceId,
-            Source = dbModel.Source,
-            SourceRuleId = dbModel.SourceRuleId,
             CreateDt = dbModel.CreateDt
         };
     }

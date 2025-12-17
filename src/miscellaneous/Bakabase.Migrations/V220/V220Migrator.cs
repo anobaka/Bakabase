@@ -33,7 +33,7 @@ public class V220Migrator : AbstractMigrator
 
     protected override async Task MigrateAfterDbMigrationInternal(object? context)
     {
-        var dbCtx = GetRequiredService<InsideWorldDbContext>();
+        var dbCtx = GetRequiredService<BakabaseDbContext>();
 
         // 0) First migrate early version Category+MediaLibrary(v1) to MediaLibraryV2+MediaLibraryTemplate
         await MigrateLegacyCategoryMediaLibrary();
@@ -54,7 +54,7 @@ public class V220Migrator : AbstractMigrator
     {
         try
         {
-            var dbCtx = GetRequiredService<InsideWorldDbContext>();
+            var dbCtx = GetRequiredService<BakabaseDbContext>();
 
             // Skip if MediaLibraryV2 or MediaLibraryTemplate already exist to prevent duplicate data
             var hasMediaLibraryV2 = await dbCtx.MediaLibrariesV2.AnyAsync();
@@ -82,7 +82,7 @@ public class V220Migrator : AbstractMigrator
     /// Migrate existing Resource.MediaLibraryId to MediaLibraryResourceMapping table.
     /// This preserves the original relationship while allowing resources to belong to multiple media libraries.
     /// </summary>
-    private async Task MigrateResourceMediaLibraryMappings(InsideWorldDbContext dbCtx)
+    private async Task MigrateResourceMediaLibraryMappings(BakabaseDbContext dbCtx)
     {
         // Check if we already have mappings (skip if already migrated)
         var existingMappingsCount = await dbCtx.MediaLibraryResourceMappings.CountAsync();
@@ -116,7 +116,6 @@ public class V220Migrator : AbstractMigrator
             {
                 MediaLibraryId = r.MediaLibraryId,
                 ResourceId = r.Id,
-                Source = MappingSource.Rule, // Mark as Rule since they were auto-assigned
                 CreateDt = now
             })
             .ToList();
@@ -142,7 +141,7 @@ public class V220Migrator : AbstractMigrator
     /// Each MediaLibraryV2.Path gets PathMarks derived from the template.
     /// PathMarks are marked as Synced since the data is already synchronized.
     /// </summary>
-    private async Task MigrateMediaLibraryTemplateToPathMarkAndResourceProfile(InsideWorldDbContext dbCtx)
+    private async Task MigrateMediaLibraryTemplateToPathMarkAndResourceProfile(BakabaseDbContext dbCtx)
     {
         // Check if we already have PathMarks (skip if already migrated)
         var existingPathMarksCount = await dbCtx.PathMarks.CountAsync();
@@ -231,7 +230,7 @@ public class V220Migrator : AbstractMigrator
     /// Create ResourceProfiles from MediaLibraryV2 + templates.
     /// ResourceProfiles contain enhancer settings, name template, playable file settings, and player settings.
     /// </summary>
-    private async Task MigrateToResourceProfiles(InsideWorldDbContext dbCtx, MediaLibraryV2[] mediaLibraries,
+    private async Task MigrateToResourceProfiles(BakabaseDbContext dbCtx, MediaLibraryV2[] mediaLibraries,
         Dictionary<int, MediaLibraryTemplateDbModel> templateMap, Dictionary<int, MediaLibraryV2DbModel> mediaLibraryDbMap)
     {
         // Check if we already have ResourceProfiles (skip if already migrated)
@@ -310,7 +309,7 @@ public class V220Migrator : AbstractMigrator
 
         try
         {
-            var enhancers = JsonConvert.DeserializeObject<List<MediaLibraryTemplateEnhancerOptions>>(template.Enhancers);
+            var enhancers = JsonConvert.DeserializeObject<List<EnhancerFullOptions>>(template.Enhancers);
             if (enhancers == null || !enhancers.Any())
             {
                 return null;
@@ -318,7 +317,7 @@ public class V220Migrator : AbstractMigrator
 
             return new ResourceProfileEnhancerOptions
             {
-                Enhancers = enhancers
+                Enhancers = enhancers.Select(e => e).ToList()
             };
         }
         catch (Exception ex)

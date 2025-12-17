@@ -12,7 +12,6 @@ import type {
   BakabaseAbstractionsModelsDomainMediaLibraryResourceMapping,
   BakabaseAbstractionsModelsDomainMediaLibraryV2,
 } from "@/sdk/Api";
-import { MappingSource } from "@/sdk/constants";
 import {
   Button,
   Chip,
@@ -75,7 +74,6 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
           id: 0,
           mediaLibraryId,
           resourceId,
-          source: MappingSource.Manual,
           createDt: new Date().toISOString(),
         });
         toast.success(t("Media library added"));
@@ -202,20 +200,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
                 </Tooltip>
               }
             >
-              <Tooltip
-                content={
-                  <div className="text-xs">
-                    <div>
-                      {t("Source")}: {mapping.source === MappingSource.Rule ? t("Rule") : t("Manual")}
-                    </div>
-                    {mapping.sourceRuleId && (
-                      <div>{t("Rule ID")}: {mapping.sourceRuleId}</div>
-                    )}
-                  </div>
-                }
-              >
-                <span>{mapping.mediaLibrary?.name || t("Unknown")}</span>
-              </Tooltip>
+              <span>{mapping.mediaLibrary?.name || t("Unknown")}</span>
             </Chip>
           ))}
         </div>

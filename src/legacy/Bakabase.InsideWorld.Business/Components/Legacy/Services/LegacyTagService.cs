@@ -6,7 +6,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyTagService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, Tag, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, Tag, int>(serviceProvider)
     {
         // public async Task<Tag[]> GetEntitiesByKeys(IEnumerable<int> ids) => await _orm.GetByKeys(ids);
         //

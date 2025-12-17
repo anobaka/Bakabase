@@ -14,7 +14,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyResourceTagMappingService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext,
+        : FullMemoryCacheResourceService<BakabaseDbContext,
             ResourceTagMapping, int>(serviceProvider)
     {
         // /// <summary>

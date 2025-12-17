@@ -25,11 +25,11 @@ public static class LegacyExtensions
         services.AddScoped<LegacyResourcePropertyService>();
         services.AddScoped<LegacyFavoritesService>();
 
-        services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, TagGroup, int>>();
-        services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Publisher, int>>();
-        services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Series, int>>();
-        services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Original, int>>();
-        services.AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Tag, int>>();
+        services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, TagGroup, int>>();
+        services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, Publisher, int>>();
+        services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, Series, int>>();
+        services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, Original, int>>();
+        services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, Tag, int>>();
 
         return services;
     }

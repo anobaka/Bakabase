@@ -110,7 +110,6 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
               {children.map((child) => (
                 <Resource
                   key={child.id}
-                  mode="default"
                   resource={child}
                   selected={false}
                   selectedResourceIds={[]}

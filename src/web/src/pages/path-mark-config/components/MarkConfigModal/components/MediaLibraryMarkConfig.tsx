@@ -54,11 +54,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
 
   const handleSelectLibrary = () => {
     createPortal(MediaLibrarySelectorV2, {
-      onSelect: async (id: number, isLegacyMediaLibrary: boolean) => {
-        // Only support V2 media libraries
-        if (isLegacyMediaLibrary) {
-          return;
-        }
+      onSelect: async (id: number) => {
         // Load the library name
         const response = await BApi.mediaLibraryV2.getAllMediaLibraryV2();
         const lib = response?.data?.find((l) => l.id === id);

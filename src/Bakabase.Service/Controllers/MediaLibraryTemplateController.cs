@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
@@ -18,6 +19,7 @@ namespace Bakabase.Service.Controllers;
 
 [ApiController]
 [Route("~/media-library-template")]
+[Obsolete]
 public class MediaLibraryTemplateController(
     IMediaLibraryTemplateService service,
     IPresetsService presetsService) : ControllerBase

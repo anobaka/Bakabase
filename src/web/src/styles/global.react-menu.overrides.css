@@ -1,0 +1,229 @@
+/* ===== @szhsin/react-menu HeroUI-style overrides ===== */
+
+/* Menu container - HeroUI dropdown style */
+.szh-menu {
+  padding: 4px;
+  min-width: 200px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border-color);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15),
+              0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: var(--theme-menu-background-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: szh-menu-appear 0.15s ease-out;
+}
+
+@keyframes szh-menu-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Dark theme enhancements */
+.iw-theme-dark .szh-menu {
+  background-color: rgba(24, 24, 27, 0.95);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4),
+              0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Light theme enhancements */
+.iw-theme-light .szh-menu {
+  background-color: rgba(255, 255, 255, 0.98);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1),
+              0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Menu item - HeroUI list item style */
+.szh-menu__item {
+  padding: 8px 12px;
+  margin: 2px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--theme-text);
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.szh-menu__item:first-child {
+  margin-top: 0;
+}
+
+.szh-menu__item:last-child {
+  margin-bottom: 0;
+}
+
+/* Hover state */
+.szh-menu__item:hover,
+.szh-menu__item--hover {
+  background-color: var(--theme-hover-base);
+  color: var(--theme-text);
+}
+
+/* Dark theme hover */
+.iw-theme-dark .szh-menu__item:hover,
+.iw-theme-dark .szh-menu__item--hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Light theme hover */
+.iw-theme-light .szh-menu__item:hover,
+.iw-theme-light .szh-menu__item--hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Active/pressed state */
+.szh-menu__item:active,
+.szh-menu__item--active {
+  transform: scale(0.98);
+  background-color: var(--theme-button-normal-background-active);
+}
+
+/* Focused state (keyboard navigation) */
+.szh-menu__item:focus,
+.szh-menu__item--focused {
+  outline: none;
+  background-color: var(--theme-hover-base);
+}
+
+/* Disabled state */
+.szh-menu__item--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Divider */
+.szh-menu__divider {
+  height: 1px;
+  margin: 6px 12px;
+  background-color: var(--theme-border-color);
+}
+
+.iw-theme-dark .szh-menu__divider {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.iw-theme-light .szh-menu__divider {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Header */
+.szh-menu__header {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--theme-text-subtle);
+}
+
+/* Submenu arrow */
+.szh-menu__item--submenu::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 4px 0 4px 6px;
+  border-color: transparent transparent transparent currentColor;
+  margin-left: auto;
+  opacity: 0.6;
+}
+
+/* Submenu positioning */
+.szh-menu__submenu {
+  padding: 4px;
+  border-radius: 12px;
+}
+
+/* Radio/Checkbox items */
+.szh-menu__item--type-radio,
+.szh-menu__item--type-checkbox {
+  padding-left: 32px;
+  position: relative;
+}
+
+.szh-menu__item--type-radio::before,
+.szh-menu__item--type-checkbox::before {
+  position: absolute;
+  left: 10px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.szh-menu__item--type-radio.szh-menu__item--checked::before,
+.szh-menu__item--type-checkbox.szh-menu__item--checked::before {
+  content: '✓';
+  opacity: 1;
+  color: hsl(var(--nextui-primary, 212 100% 47%));
+  font-weight: bold;
+}
+
+/* Group wrapper */
+.szh-menu__group {
+  padding: 4px 0;
+}
+
+/* Animation for opening */
+.szh-menu--state-opening {
+  animation: szh-menu-appear 0.15s ease-out;
+}
+
+/* Animation for closing */
+.szh-menu--state-closing {
+  animation: szh-menu-disappear 0.1s ease-in forwards;
+}
+
+@keyframes szh-menu-disappear {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+/* Menu button trigger styling (optional) */
+.szh-menu-button {
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+/* Anchor positioning fix */
+.szh-menu-container {
+  z-index: 1000;
+}
+
+/* Custom danger item styling (for delete actions) */
+.szh-menu__item .text-danger,
+.szh-menu__item.szh-menu__item--danger {
+  color: hsl(var(--nextui-danger, 0 84% 60%));
+}
+
+.szh-menu__item:hover .text-danger,
+.szh-menu__item.szh-menu__item--danger:hover {
+  background-color: hsl(var(--nextui-danger, 0 84% 60%) / 0.15);
+  color: hsl(var(--nextui-danger, 0 84% 60%));
+}
+
+/* Custom secondary item styling */
+.szh-menu__item .text-secondary {
+  color: var(--theme-text-secondary);
+}
+
+.szh-menu__item:hover .text-secondary {
+  color: var(--theme-text-secondary);
+}

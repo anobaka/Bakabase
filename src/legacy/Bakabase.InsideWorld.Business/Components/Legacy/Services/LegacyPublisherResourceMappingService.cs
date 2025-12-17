@@ -13,7 +13,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
     [Obsolete]
     public class LegacyPublisherResourceMappingService(IServiceProvider serviceProvider)
         : FullMemoryCacheResourceService<
-            InsideWorldDbContext, PublisherResourceMapping, int>(serviceProvider)
+            BakabaseDbContext, PublisherResourceMapping, int>(serviceProvider)
     {
         // [Obsolete($"Use {nameof(PutRange)} instead")]
         // public override async Task<ListResponse<PublisherResourceMapping>> AddRange(

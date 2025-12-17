@@ -56,8 +56,8 @@ namespace Bakabase.InsideWorld.Business.Services
 {
     public class ResourceService : ScopedService, IResourceService
     {
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceDbModel, int> _orm;
-        private readonly FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
+        private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int> _orm;
+        private readonly FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> _resourceCacheOrm;
         private readonly ISpecialTextService _specialTextService;
         private readonly IMediaLibraryService _mediaLibraryService;
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
@@ -85,8 +85,8 @@ namespace Bakabase.InsideWorld.Business.Services
             IReservedPropertyValueService reservedPropertyValueService,
             ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
             IPropertyService propertyService,
-            FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
-            FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ResourceDbModel, int> orm,
+            FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
+            FullMemoryCacheResourceService<BakabaseDbContext, Abstractions.Models.Db.ResourceDbModel, int> orm,
             IFileManager fileManager, IPlayHistoryService playHistoryService,
             ISystemPlayer systemPlayer, IPropertyLocalizer propertyLocalizer, LogService logService) : base(serviceProvider)
         {
@@ -110,7 +110,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _orm = orm;
         }
 
-        public InsideWorldDbContext DbContext => _orm.DbContext;
+        public BakabaseDbContext DbContext => _orm.DbContext;
 
         public async Task DeleteByKeys(int[] ids, bool deleteFiles)
         {
@@ -1273,6 +1273,20 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             return (await GetAll(exp, additionalItems)).ToArray();
+        }
+
+        public async Task<List<Resource>> GetByMediaLibraryId(int mediaLibraryId, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
+        {
+            var mappingService = GetRequiredService<IMediaLibraryResourceMappingService>();
+            var mappings = await mappingService.GetByMediaLibraryId(mediaLibraryId);
+            var resourceIds = mappings.Select(m => m.ResourceId).Distinct().ToArray();
+
+            if (resourceIds.Length == 0)
+            {
+                return [];
+            }
+
+            return await GetByKeys(resourceIds, additionalItems);
         }
 
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)

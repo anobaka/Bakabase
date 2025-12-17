@@ -60,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Services
     [Obsolete]
     public class MediaLibraryService : BootstrapService, IMediaLibraryService
     {
-        private readonly ResourceService<InsideWorldDbContext,
+        private readonly ResourceService<BakabaseDbContext,
             Abstractions.Models.Db.MediaLibraryDbModel, int> _orm;
 
         private readonly IPropertyService _propertyService;
@@ -85,7 +85,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IEnhancerLocalizer _enhancerLocalizer;
 
         public MediaLibraryService(IServiceProvider serviceProvider,
-            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibraryDbModel, int> orm,
+            ResourceService<BakabaseDbContext, Abstractions.Models.Db.MediaLibraryDbModel, int> orm,
             IPropertyService propertyService, IPropertyLocalizer propertyLocalizer,
             IBOptionsManager<ResourceOptions> resourceOptions, IEnhancerLocalizer enhancerLocalizer,
             IBakabaseLocalizer localizer) : base(serviceProvider)

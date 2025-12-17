@@ -26,7 +26,7 @@ public class V191Migrator : AbstractMigrator
 
     protected override async Task MigrateAfterDbMigrationInternal(object context)
     {
-        var dbCtx = GetRequiredService<InsideWorldDbContext>();
+        var dbCtx = GetRequiredService<BakabaseDbContext>();
         var reservedPropertyValues = await dbCtx.ReservedPropertyValues.ToListAsync();
         var optimizedValues = new List<ReservedPropertyValue>();
 

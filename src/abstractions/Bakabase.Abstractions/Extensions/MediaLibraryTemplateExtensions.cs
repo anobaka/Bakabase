@@ -43,7 +43,7 @@ public static class MediaLibraryTemplateExtensions
         };
     }
 
-    public static MediaLibraryTemplateEnhancerOptionsDbModel ToDbModel(this MediaLibraryTemplateEnhancerOptions options)
+    public static MediaLibraryTemplateEnhancerOptionsDbModel ToDbModel(this EnhancerFullOptions options)
     {
         return new MediaLibraryTemplateEnhancerOptionsDbModel
         {
@@ -57,7 +57,7 @@ public static class MediaLibraryTemplateExtensions
     }
 
     public static MediaLibraryTemplateEnhancerTargetAllInOneOptionsDbModel ToDbModel(
-        this MediaLibraryTemplateEnhancerTargetAllInOneOptions target)
+        this EnhancerTargetFullOptions target)
     {
         return new MediaLibraryTemplateEnhancerTargetAllInOneOptionsDbModel
         {
@@ -133,10 +133,10 @@ public static class MediaLibraryTemplateExtensions
         };
     }
 
-    public static MediaLibraryTemplateEnhancerOptions ToDomainModel(
+    public static EnhancerFullOptions ToDomainModel(
         this MediaLibraryTemplateEnhancerOptionsDbModel dbModel)
     {
-        return new MediaLibraryTemplateEnhancerOptions
+        return new EnhancerFullOptions
         {
             EnhancerId = dbModel.EnhancerId,
             TargetOptions = dbModel.TargetOptions?.Select(t => t.ToDomainModel()).ToList(),
@@ -149,10 +149,10 @@ public static class MediaLibraryTemplateExtensions
         };
     }
 
-    public static MediaLibraryTemplateEnhancerTargetAllInOneOptions ToDomainModel(
+    public static EnhancerTargetFullOptions ToDomainModel(
         this MediaLibraryTemplateEnhancerTargetAllInOneOptionsDbModel dbModel)
     {
-        return new MediaLibraryTemplateEnhancerTargetAllInOneOptions
+        return new EnhancerTargetFullOptions
         {
             PropertyPool = dbModel.PropertyPool,
             PropertyId = dbModel.PropertyId,

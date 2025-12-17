@@ -155,3 +155,25 @@
   width: 1000px;
   padding: 0 25px;
 }
+
+// Selection mode styles - parent class is global
+:global(.selection-mode) {
+  .resource {
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    // Transparent overlay to block all internal interactions
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: transparent;
+    }
+
+    &:hover {
+      border-color: hsl(var(--heroui-primary));
+      background-color: hsl(var(--heroui-primary) / 0.05);
+    }
+  }
+}

@@ -10,7 +10,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services;
 
 [Obsolete]
 public class LegacyResourceService(IServiceProvider serviceProvider)
-    : ResourceService<InsideWorldDbContext, LegacyDbResource, int>(serviceProvider)
+    : ResourceService<BakabaseDbContext, LegacyDbResource, int>(serviceProvider)
 {
     // public async Task BatchUpdateTags(ResourceTagUpdateRequestModel model)
     // {

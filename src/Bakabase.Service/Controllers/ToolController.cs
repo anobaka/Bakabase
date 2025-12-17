@@ -9,7 +9,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
-using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.Abstractions.Services;
@@ -32,7 +31,7 @@ using Image = SixLabors.ImageSharp.Image;
 namespace Bakabase.Service.Controllers
 {
     [Route("~/tool")]
-    public class ToolController(ICoverDiscoverer coverDiscoverer, IResourceService resourceService, CompressedFileService compressedFileService) : Controller
+    public class ToolController(IResourceService resourceService, CompressedFileService compressedFileService) : Controller
     {
         [HttpGet("open")]
         [SwaggerOperation(OperationId = "OpenFileOrDirectory")]
@@ -40,20 +39,6 @@ namespace Bakabase.Service.Controllers
         {
             FileService.Open(path, openInDirectory);
             return BaseResponseBuilder.Ok;
-        }
-
-        [HttpGet("test")]
-        [SwaggerOperation("Test")]
-        public async Task<IActionResult> Test()
-        {
-            var im = Icon.ExtractAssociatedIcon(@"C:\Users\anoba\Downloads\WeChat Image_20220708164438.jpg");
-            var ms = new MemoryStream();
-            im.ToBitmap().Save(@"C:\Users\anoba\Downloads\myicon.png", ImageFormat.Png);
-            im.ToBitmap().Save(ms, ImageFormat.Png);
-            im.Dispose();
-            ms.Seek(0, SeekOrigin.Begin);
-            var type = MimeTypes.GetMimeType(".ico");
-            return File(ms, type);
         }
 
         [HttpGet("cookie-validation")]

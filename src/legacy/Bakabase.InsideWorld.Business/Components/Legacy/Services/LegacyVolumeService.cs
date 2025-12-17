@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyVolumeService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, Volume, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, Volume, int>(serviceProvider)
     {
         // public async Task<Dictionary<int, VolumeDto>> GetByResourceKeys(List<int> resourceIds)
         // {

@@ -25,6 +25,9 @@ export const MediaLibraryDescription = () => {
     <div className="space-y-2">
       <p>{t("Associate matched resources with a media library")}</p>
       <p>{t("Resources will be linked to the selected media library for organization")}</p>
+      <p className="text-secondary text-xs pt-1 border-t border-default-200">
+        {t("MediaLibrary.Term.Suggestion")}
+      </p>
     </div>
   );
 };

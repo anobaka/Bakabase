@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/bakaui";
-import PresetTemplateBuilder from "@/pages/media-library-template/components/PresetTemplateBuilder";
+import PresetTemplateBuilder from "@/pages/deprecated/media-library-template/components/PresetTemplateBuilder";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 const PresetMediaLibraryTemplateBuilderTest = () => {
   const { createPortal } = useBakabaseContext();
@@ -17,7 +17,6 @@ const PresetMediaLibraryTemplateBuilderTest = () => {
   );
 };
 
-PresetMediaLibraryTemplateBuilderTest.displayName =
-  "PresetMediaLibraryTemplateBuilderTest";
+PresetMediaLibraryTemplateBuilderTest.displayName = "PresetMediaLibraryTemplateBuilderTest";
 
 export default PresetMediaLibraryTemplateBuilderTest;

@@ -226,6 +226,18 @@ public class PathMarkService<TDbContext>(
         }
     }
 
+    public async Task MarkAsPending(int id)
+    {
+        var dbModel = await orm.GetByKey(id);
+        if (dbModel != null)
+        {
+            dbModel.SyncStatus = PathMarkSyncStatus.Pending;
+            dbModel.SyncError = null;
+            dbModel.UpdatedAt = DateTime.UtcNow;
+            await orm.Update(dbModel);
+        }
+    }
+
     public async Task<int> GetPendingCount()
     {
         var allMarks = await orm.GetAll(m =>

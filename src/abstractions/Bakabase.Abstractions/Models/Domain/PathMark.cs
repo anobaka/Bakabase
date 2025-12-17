@@ -63,4 +63,10 @@ public class PathMark
     /// 删除时间
     /// </summary>
     public DateTime? DeletedAt { get; set; }
+
+    /// <summary>
+    /// 过期时间（秒），null 表示永不过期
+    /// 同步完成后经过此时间，mark 会被标记为 Pending 状态重新同步
+    /// </summary>
+    public int? ExpiresInSeconds { get; set; }
 }

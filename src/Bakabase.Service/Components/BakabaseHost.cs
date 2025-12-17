@@ -88,7 +88,7 @@ namespace Bakabase.Service.Components
 
         protected override async Task MigrateDb(IServiceProvider serviceProvider)
         {
-            await serviceProvider.MigrateSqliteDbContexts<InsideWorldDbContext>();
+            await serviceProvider.MigrateSqliteDbContexts<BakabaseDbContext>();
             await base.MigrateDb(serviceProvider);
         }
 

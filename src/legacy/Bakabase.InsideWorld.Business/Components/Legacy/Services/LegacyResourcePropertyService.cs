@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
     [Obsolete]
     public class
         LegacyResourcePropertyService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, CustomResourceProperty,
+        : FullMemoryCacheResourceService<BakabaseDbContext, CustomResourceProperty,
             int>(serviceProvider)
     {
         // public async Task<int[]> SearchResourceIds(Dictionary<string, string> properties)

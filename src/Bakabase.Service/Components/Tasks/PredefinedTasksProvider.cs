@@ -62,7 +62,7 @@ public class PredefinedTasksProvider
 
                     var resourceService = sp.GetRequiredService<IResourceService>();
                     var cacheOrm =
-                        sp.GetRequiredService<FullMemoryCacheResourceService<InsideWorldDbContext, ResourceCacheDbModel,
+                        sp.GetRequiredService<FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel,
                             int>>();
 
                     // Get all folder resources

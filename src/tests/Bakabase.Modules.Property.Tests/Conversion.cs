@@ -34,13 +34,13 @@ namespace Bakabase.Modules.Property.Tests
             sc.AddSingleton<NoneCustomDateTimeParser>();
             sc.AddStandardValue<NoneCustomDateTimeParser>();
             sc.AddReservedProperty();
-            sc.AddBootstrapServices<InsideWorldDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
-            sc.AddProperty<InsideWorldDbContext>();
+            sc.AddBootstrapServices<BakabaseDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
+            sc.AddProperty<BakabaseDbContext>();
             sc.AddTransient<BakabaseLocalizer>();
             var sp = sc.BuildServiceProvider();
             var scope = sp.CreateAsyncScope();
             var scopeSp = scope.ServiceProvider;
-            var ctx = scopeSp.GetRequiredService<InsideWorldDbContext>();
+            var ctx = scopeSp.GetRequiredService<BakabaseDbContext>();
             await ctx.Database.MigrateAsync();
 
             return scopeSp;

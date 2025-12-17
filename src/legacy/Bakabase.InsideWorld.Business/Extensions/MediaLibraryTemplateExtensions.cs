@@ -57,7 +57,7 @@ public static class MediaLibraryTemplateExtensions
         return services;
     }
 
-    public static EnhancerFullOptions ToEnhancerFullOptions(this MediaLibraryTemplateEnhancerOptions options)
+    public static EnhancerFullOptions ToEnhancerFullOptions(this EnhancerFullOptions options)
     {
         return new EnhancerFullOptions
         {
@@ -66,7 +66,7 @@ public static class MediaLibraryTemplateExtensions
     }
 
     public static EnhancerTargetFullOptions ToEnhancerTargetFullOptions(
-        this MediaLibraryTemplateEnhancerTargetAllInOneOptions options)
+        this EnhancerTargetFullOptions options)
     {
         return new EnhancerTargetFullOptions
         {
@@ -227,22 +227,22 @@ public static class MediaLibraryTemplateExtensions
 
             var isRegexEnhancer = eo.EnhancerId == (int) EnhancerId.Regex;
 
-            return new MediaLibraryTemplateEnhancerOptions
+            return new EnhancerFullOptions()
             {
                 EnhancerId = eo.EnhancerId,
                 TargetOptions = ceo?.Options?.TargetOptions
-                    ?.Where(to => to is {PropertyPool: not null, PropertyId: not null}).Select(to =>
-                        new MediaLibraryTemplateEnhancerTargetAllInOneOptions
+                    ?.Select(to =>
+                        new EnhancerTargetFullOptions()
                         {
                             CoverSelectOrder = to.CoverSelectOrder,
                             Target = to.Target,
                             DynamicTarget = to.DynamicTarget,
-                            PropertyId = to.PropertyId!.Value,
-                            PropertyPool = to.PropertyPool!.Value,
+                            PropertyId = to.PropertyId,
+                            PropertyPool = to.PropertyPool,
                         }).ToList(),
                 Expressions = isRegexEnhancer ? enhancerOptions.Value.RegexEnhancer?.Expressions : null
             };
-        }).OfType<MediaLibraryTemplateEnhancerOptions>().ToList();
+        }).OfType<EnhancerFullOptions>().ToList();
         template.DisplayNameTemplate = category.ResourceDisplayNameTemplate;
     }
 }

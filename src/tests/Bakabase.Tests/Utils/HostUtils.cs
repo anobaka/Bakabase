@@ -30,7 +30,7 @@ public class HostUtils
         var sc = new ServiceCollection();
         sc.AddLogging();
         sc.AddLocalization();
-        sc.AddBootstrapServices<InsideWorldDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
+        sc.AddBootstrapServices<BakabaseDbContext>(c => c.UseBootstrapSqLite(Path.GetDirectoryName(dbFilePath), Path.GetFileNameWithoutExtension(dbFilePath)));
         sc.AddSingleton<LogService, SqliteLogService>();
         sc.AddBootstrapLogService<LogDbContext>(c =>
             c.UseBootstrapSqLite(Directory.GetCurrentDirectory(), "bootstrap_log"));
@@ -43,11 +43,11 @@ public class HostUtils
                 sp.GetRequiredService<IOptionsMonitor<FileSystemOptions>>(),
                 sp.GetRequiredService<ILogger<AspNetCoreOptionsManager<FileSystemOptions>>>()));
         sc.AddSingleton<TestFileMover>();
-        sc.AddAlias<InsideWorldDbContext>();
+        sc.AddAlias<BakabaseDbContext>();
         var sp = sc.BuildServiceProvider();
         var scope = sp.CreateAsyncScope();
         var scopeSp = scope.ServiceProvider;
-        var ctx = scopeSp.GetRequiredService<InsideWorldDbContext>();
+        var ctx = scopeSp.GetRequiredService<BakabaseDbContext>();
         await ctx.Database.MigrateAsync();
 
         return scopeSp;

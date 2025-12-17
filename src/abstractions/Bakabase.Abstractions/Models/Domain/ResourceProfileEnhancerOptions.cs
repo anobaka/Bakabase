@@ -8,5 +8,5 @@ public class ResourceProfileEnhancerOptions
     /// <summary>
     /// 各增强器的配置
     /// </summary>
-    public List<MediaLibraryTemplateEnhancerOptions>? Enhancers { get; set; }
+    public List<EnhancerFullOptions>? Enhancers { get; set; }
 }

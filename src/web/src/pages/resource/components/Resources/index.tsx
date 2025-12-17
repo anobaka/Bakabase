@@ -151,7 +151,6 @@ const Resources = forwardRef<ResourcesRef, Props>(
           }}
           className={"grow min-h-[0] overflow-hidden"}
           onWheel={(e) => {
-            log("onWheel", e);
             if (e.deltaY < 0 && scrollTopRef.current == 0) {
               onScrollToTop?.();
             }

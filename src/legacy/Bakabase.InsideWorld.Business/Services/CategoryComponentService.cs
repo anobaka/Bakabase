@@ -11,7 +11,7 @@ using Microsoft.Extensions.Localization;
 namespace Bakabase.InsideWorld.Business.Services
 {
     [Obsolete]
-    public class CategoryComponentService : ResourceService<InsideWorldDbContext, CategoryComponent, int>
+    public class CategoryComponentService : ResourceService<BakabaseDbContext, CategoryComponent, int>
     {
         protected ComponentService ComponentService => GetRequiredService<ComponentService>();
         protected IStringLocalizer<SharedResource> Localizer => GetRequiredService<IStringLocalizer<SharedResource>>();

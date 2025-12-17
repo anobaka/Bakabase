@@ -138,6 +138,14 @@ public interface IResourceService
 
     Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
+    /// <summary>
+    /// Get resources by media library ID using MediaLibraryResourceMapping
+    /// </summary>
+    /// <param name="mediaLibraryId">Media library ID</param>
+    /// <param name="additionalItems">Additional items to include</param>
+    /// <returns>List of resources associated with the media library</returns>
+    Task<List<Resource>> GetByMediaLibraryId(int mediaLibraryId, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+
     Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
         (string Left, string Right)[] wrappers);
 

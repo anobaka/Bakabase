@@ -591,4 +591,22 @@ The version of lux is not limited.</value>
   <data name="SyncPathMark_Complete" xml:space="preserve">
     <value>Path mark synchronization complete</value>
   </data>
+  <data name="BTask_Name_SyncPathMarks" xml:space="preserve">
+    <value>Sync path marks</value>
+  </data>
+  <data name="BTask_Description_SyncPathMarks" xml:space="preserve">
+    <value>Synchronize all path marks</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMarks" xml:space="preserve">
+    <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
+  </data>
+  <data name="BTask_Name_SyncPathMark_Single" xml:space="preserve">
+    <value>Sync path mark</value>
+  </data>
+  <data name="BTask_Description_SyncPathMark_Single" xml:space="preserve">
+    <value>Synchronize selected path marks</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
+    <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
+  </data>
 </root>

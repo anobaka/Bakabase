@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import BApi from "@/sdk/BApi";
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
-import { PathMarkSyncStatus } from "@/sdk/constants";
+import { IwFsType, PathMarkSyncStatus } from "@/sdk/constants";
 
 // Group marks by path
 export interface PathMarkGroup {
   path: string;
   marks: BakabaseAbstractionsModelsDomainPathMark[];
+  exists?: boolean; // undefined means not checked yet
 }
 
 /**
@@ -16,6 +17,8 @@ export function usePathMarks() {
   const [allMarks, setAllMarks] = useState<BakabaseAbstractionsModelsDomainPathMark[]>([]);
   const [allPaths, setAllPaths] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [pathExistsMap, setPathExistsMap] = useState<Map<string, boolean>>(new Map());
+  const [checkingPaths, setCheckingPaths] = useState(false);
 
   // Load all path marks on mount
   useEffect(() => {
@@ -39,6 +42,53 @@ export function usePathMarks() {
       setLoading(false);
     }
   }, []);
+
+  // Check if paths exist on file system
+  const checkPathsExistence = useCallback(async () => {
+    if (allPaths.length === 0) return;
+
+    setCheckingPaths(true);
+    const newPathExistsMap = new Map<string, boolean>();
+
+    // Check all paths in parallel
+    const results = await Promise.all(
+      allPaths.map(async (path) => {
+        try {
+          const rsp = await BApi.file.getIwFsEntry({ path });
+          // Path exists if we get a valid response with data and type is not Invalid
+          const exists = !rsp.code && rsp.data != null && rsp.data.type !== IwFsType.Invalid;
+          return { path, exists };
+        } catch {
+          return { path, exists: false };
+        }
+      })
+    );
+
+    for (const { path, exists } of results) {
+      newPathExistsMap.set(path, exists);
+    }
+
+    setPathExistsMap(newPathExistsMap);
+    setCheckingPaths(false);
+  }, [allPaths]);
+
+  // Check paths existence when allPaths changes
+  useEffect(() => {
+    if (allPaths.length > 0) {
+      checkPathsExistence();
+    }
+  }, [allPaths, checkPathsExistence]);
+
+  // Get count of invalid paths
+  const getInvalidPathsCount = useCallback((): number => {
+    let count = 0;
+    for (const path of allPaths) {
+      if (pathExistsMap.has(path) && !pathExistsMap.get(path)) {
+        count++;
+      }
+    }
+    return count;
+  }, [allPaths, pathExistsMap]);
 
   /**
    * Get marks for a specific path (exact match only)
@@ -119,18 +169,32 @@ export function usePathMarks() {
     return Array.from(groups.entries()).map(([path, marks]) => ({
       path,
       marks: marks.sort((a, b) => (a.priority || 0) - (b.priority || 0)),
+      exists: pathExistsMap.get(path),
     }));
-  }, [allMarks]);
+  }, [allMarks, pathExistsMap]);
+
+  /**
+   * Get marks grouped by path, filtered by existence
+   */
+  const getGroupedMarksFiltered = useCallback((showOnlyInvalid: boolean): PathMarkGroup[] => {
+    const groups = getGroupedMarks();
+    if (!showOnlyInvalid) return groups;
+    return groups.filter(group => group.exists === false);
+  }, [getGroupedMarks]);
 
   return {
     allMarks,
     allPaths,
     loading,
+    checkingPaths,
+    pathExistsMap,
     loadAllMarks,
     getMarksForPath,
     getApplicableMarksGroup,
     hasMarks,
     getGroupedMarks,
+    getGroupedMarksFiltered,
+    getInvalidPathsCount,
   };
 }
 

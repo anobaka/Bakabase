@@ -9,7 +9,7 @@ public static class ReservedPropertyExtensions
     public static IServiceCollection AddReservedProperty(this IServiceCollection services)
     {
         services
-            .AddScoped<FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ReservedPropertyValue,
+            .AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, Abstractions.Models.Db.ReservedPropertyValue,
                 int>>();
         services.AddScoped<IReservedPropertyValueService, ReservedPropertyValueService>();
         return services;

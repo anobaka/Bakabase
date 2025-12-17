@@ -644,17 +644,6 @@ const TreeEntry = (props: TreeEntryProps) => {
                 name={entry.name}
                 path={entry.path}
               />
-              {renderAfterName && (
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  onDoubleClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onKeyDown={(e) => e.stopPropagation()}
-                  onContextMenu={(e) => e.stopPropagation()}
-                >
-                  {renderAfterName(entry)}
-                </div>
-              )}
               <div className="flex items-center">
                 {actions.includes(IwFsEntryAction.Play) && capabilities?.includes("play") && (
                   <OperationButton
@@ -696,6 +685,17 @@ const TreeEntry = (props: TreeEntryProps) => {
                 <TailingOperations capabilities={capabilities} entry={entry} />
                 {renderFileSystemInfo()}
                 {renderTaskError()}
+                {renderAfterName && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.stopPropagation()}
+                  >
+                    {renderAfterName(entry)}
+                  </div>
+                )}
               </div>
             </div>
             <div className="right">

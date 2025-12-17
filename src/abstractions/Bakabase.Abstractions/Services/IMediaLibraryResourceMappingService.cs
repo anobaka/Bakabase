@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
-using Bakabase.Abstractions.Models.Domain.Constants;
 
 namespace Bakabase.Abstractions.Services;
 
@@ -54,17 +53,12 @@ public interface IMediaLibraryResourceMappingService
     Task DeleteByMediaLibraryId(int mediaLibraryId);
 
     /// <summary>
-    /// Delete mappings by source rule ID
-    /// </summary>
-    Task DeleteBySourceRuleId(int ruleId);
-
-    /// <summary>
     /// Ensure mappings exist for a resource (add missing, preserve existing)
     /// </summary>
-    Task EnsureMappings(int resourceId, IEnumerable<int> mediaLibraryIds, MappingSource source, int? sourceRuleId = null);
+    Task EnsureMappings(int resourceId, IEnumerable<int> mediaLibraryIds);
 
     /// <summary>
     /// Replace all mappings for a resource
     /// </summary>
-    Task ReplaceMappings(int resourceId, IEnumerable<int> mediaLibraryIds, MappingSource source, int? sourceRuleId = null);
+    Task ReplaceMappings(int resourceId, IEnumerable<int> mediaLibraryIds);
 }

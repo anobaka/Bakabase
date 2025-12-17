@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -227,6 +228,24 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
     public async Task<BaseResponse> StopSync()
     {
         await syncService.StopSync();
+        return BaseResponseBuilder.Ok;
+    }
+
+    /// <summary>
+    /// Start synchronization of all path marks on a specific path
+    /// </summary>
+    [HttpPost("sync/by-path")]
+    [SwaggerOperation(OperationId = "StartPathMarkSyncByPath")]
+    public async Task<BaseResponse> StartSyncByPath([FromQuery] string path)
+    {
+        var marks = await service.GetByPath(path);
+        if (marks.Count == 0)
+        {
+            return BaseResponseBuilder.Ok;
+        }
+
+        var markIds = marks.Select(m => m.Id).ToArray();
+        await syncService.StartSyncImmediate(markIds);
         return BaseResponseBuilder.Ok;
     }
 }

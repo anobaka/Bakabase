@@ -17,7 +17,7 @@ public record MediaLibraryTemplate : ISyncVersion
     public List<PathFilter>? ResourceFilters { get; set; }
     public List<MediaLibraryTemplateProperty>? Properties { get; set; }
     public MediaLibraryTemplatePlayableFileLocator? PlayableFileLocator { get; set; }
-    public List<MediaLibraryTemplateEnhancerOptions>? Enhancers { get; set; }
+    public List<EnhancerFullOptions>? Enhancers { get; set; }
     public string? DisplayNameTemplate { get; set; }
     public List<string>? SamplePaths { get; set; }
     public int? ChildTemplateId { get; set; }

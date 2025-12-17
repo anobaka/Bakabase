@@ -60,7 +60,7 @@ namespace Bakabase.Service.Components
             //services.TryAddSingleton<SimpleBiliBiliFavoritesCollector>();
             services.AddSingleton<OneDriveService>();
 
-            services.AddBootstrapServices<InsideWorldDbContext>(c =>
+            services.AddBootstrapServices<BakabaseDbContext>(c =>
                 c.UseBootstrapSqLite(AppDataPath, "bakabase_insideworld"));
 
             services.AddBakabaseHttpClient<BakabaseHttpClientHandler>(InternalOptions.HttpClientNames.Default);
@@ -108,10 +108,13 @@ namespace Bakabase.Service.Components
             services.AddSingleton<DynamicTaskRegistry>();
             services.AddSingleton<PredefinedTasksProvider>();
 
-            services.AddMediaLibraryTemplate<InsideWorldDbContext>();
+            services.AddMediaLibraryTemplate<BakabaseDbContext>();
 
             // Add version check job that runs 30 seconds after startup
             services.AddHostedService<VersionCheckJob>();
+
+            // Add path mark expiration check job that periodically checks for expired marks
+            services.AddHostedService<PathMarkExpirationCheckJob>();
         }
 
         protected override void ConfigureEndpointsAtFirst(IEndpointRouteBuilder routeBuilder)

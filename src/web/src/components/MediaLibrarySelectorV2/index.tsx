@@ -4,21 +4,16 @@ import type { DestroyableProps } from "@/components/bakaui/types";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  DoubleRightOutlined,
-  HistoryOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { HistoryOutlined, SearchOutlined } from "@ant-design/icons";
 
 import { buildLogger } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import { useResourceOptionsStore } from "@/stores/options";
-import { MediaLibraryAdditionalItem } from "@/sdk/constants";
 import { Button, Chip, Divider, Input, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {
-  onSelect: (id: number, isLegacyMediaLibrary: boolean) => Promise<any> | any;
+  onSelect: (id: number) => Promise<any> | any;
   confirmation?: boolean;
 } & DestroyableProps;
 
@@ -45,50 +40,20 @@ const MediaLibrarySelectorV2 = (props: Props) => {
   const resourceOptions = useResourceOptionsStore((state) => state.data);
 
   const init = async () => {
-    const mls =
-      (
-        await BApi.mediaLibrary.getAllMediaLibraries({
-          additionalItems: MediaLibraryAdditionalItem.Category,
-        })
-      ).data ?? [];
-    const data: Record<number, Category> = {};
-
-    for (const ml of mls) {
-      const paths: string[] | undefined = ml.pathConfigurations
-        ?.map((pc) => pc.path)
-        .filter((x): x is string => x != null);
-
-      if (paths && paths.length > 0) {
-        if (!(ml.categoryId in data)) {
-          data[ml.categoryId] = {
-            id: ml.categoryId,
-            name: ml.category!.name,
-            libraries: [],
-          };
-        }
-        const { libraries } = data[ml.categoryId]!;
-
-        libraries.push({
-          id: ml.id,
-          name: ml.name,
-          paths: paths,
-        });
-      }
-    }
     const mlv2s = (await BApi.mediaLibraryV2.getAllMediaLibraryV2()).data ?? [];
+    const data: Category[] = [];
 
     if (mlv2s.length > 0) {
-      data[0] = {
+      data.push({
         id: 0,
-        name: t<string>("/"),
+        name: t<string>("Media Libraries"),
         libraries: mlv2s.map((ml) => ({
           id: ml.id,
           name: ml.name,
-          paths: [ml.path],
         })),
-      };
+      });
     }
-    setCategories(Object.values(data));
+    setCategories(data);
   };
 
   useEffect(() => {
@@ -148,14 +113,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
                   className={"grid gap-12 items-center"}
                   style={{ gridTemplateColumns: "30% auto" }}
                 >
-                  <div>
-                    {c.name}
-                    {c.id != 0 && (
-                      <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                        {t<string>("Deprecated")}
-                      </Chip>
-                    )}
-                  </div>
+                  <div>{c.name}</div>
                   <div>
                     {c.libraries.map((l, il) => {
                       const selectedRecently = recentlySelectedIds.includes(
@@ -176,22 +134,16 @@ const MediaLibrarySelectorV2 = (props: Props) => {
                                 ),
                                 children: (
                                   <div className={"flex items-center gap-2"}>
-                                    <Chip color={"primary"} radius={"sm"}>
-                                      {c.name}
-                                    </Chip>
-                                    <DoubleRightOutlined
-                                      className={"text-base"}
-                                    />
                                     <Chip radius={"sm"}>{l.name}</Chip>
                                   </div>
                                 ),
                                 onOk: async () => {
-                                  onSelect?.(l.id, c.id != 0);
+                                  onSelect?.(l.id);
                                   setVisible(false);
                                 },
                               });
                             } else {
-                              onSelect?.(l.id, c.id != 0);
+                              onSelect?.(l.id);
                               setVisible(false);
                             }
                           }}
