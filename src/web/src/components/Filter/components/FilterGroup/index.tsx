@@ -2,11 +2,11 @@
 
 "use strict";
 
-import type { ResourceSearchFilterGroup } from "../models";
+import type { SearchFilterGroup } from "../../models";
 
 import { useTranslation } from "react-i18next";
-import React, { useCallback, useEffect, useRef } from "react";
-import { useUpdate, useUpdateEffect } from "react-use";
+import React, { useCallback, useRef } from "react";
+import { useUpdateEffect } from "react-use";
 import {
   AppstoreOutlined,
   DeleteOutlined,
@@ -15,21 +15,21 @@ import {
 import { TbFilterPlus } from "react-icons/tb";
 import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
 
-import { GroupCombinator } from "../models";
+import { GroupCombinator } from "../../models";
+import Filter from "../Filter";
+import FilterModal from "../FilterModal";
+import RecentFilters from "../RecentFilters";
 
 import styles from "./index.module.scss";
-import Filter from "./Filter";
 
 import { Button, Popover, Tooltip } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import RecentFilters from "@/pages/resource/components/FilterPanel/RecentFilters";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import FilterModal from "../../FilterModal";
 
 type Props = {
-  group: ResourceSearchFilterGroup;
+  group: SearchFilterGroup;
   onRemove?: () => void;
-  onChange?: (group: ResourceSearchFilterGroup) => void;
+  onChange?: (group: SearchFilterGroup) => void;
   isRoot?: boolean;
 };
 
@@ -42,17 +42,13 @@ const FilterGroup = ({
   isRoot = false,
 }: Props) => {
   const { t } = useTranslation();
-  const forceUpdate = useUpdate();
   const { createPortal } = useBakabaseContext();
 
-  const [group, setGroup] =
-    React.useState<ResourceSearchFilterGroup>(propsGroup);
+  const [group, setGroup] = React.useState<SearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
 
-  useEffect(() => {}, []);
-
   const changeGroup = useCallback(
-    (newGroup: ResourceSearchFilterGroup) => {
+    (newGroup: SearchFilterGroup) => {
       setGroup(newGroup);
       onChange?.(newGroup);
     },
@@ -137,8 +133,6 @@ const FilterGroup = ({
     return acc;
   }, []);
 
-  // log('tags ', tags?.map(t => t.toString()));
-
   const renderGroup = () => {
     log("render group");
 
@@ -172,18 +166,16 @@ const FilterGroup = ({
                 <Button
                   size={"sm"}
                   onPress={() => {
-                    createPortal(
-                      FilterModal, {
-                        isNew: true,
-                        filter: { disabled: false },
-                        onSubmit: (filter) => {
-                          changeGroup({
-                            ...groupRef.current,
-                            filters: [...(groupRef.current.filters || []), filter],
-                          });
-                        }
-                      }
-                    )
+                    createPortal(FilterModal, {
+                      isNew: true,
+                      filter: { disabled: false },
+                      onSubmit: (filter) => {
+                        changeGroup({
+                          ...groupRef.current,
+                          filters: [...(groupRef.current.filters || []), filter],
+                        });
+                      },
+                    });
                   }}
                 >
                   <FilterOutlined className={"text-base"} />

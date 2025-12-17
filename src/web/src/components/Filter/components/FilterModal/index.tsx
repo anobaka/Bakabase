@@ -1,20 +1,18 @@
-import type { DestroyableProps } from "@/components/bakaui/types";
-import type { ResourceSearchFilter } from "../FilterGroupsPanel/models";
+"use client";
 
-import { useEffect, useRef } from "react";
+import type { DestroyableProps } from "@/components/bakaui/types";
+import type { SearchFilter } from "../../models";
+
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import Filter from "../FilterGroupsPanel/FilterGroup/Filter";
+import Filter from "../Filter";
 
 import { Modal } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import PropertySelector from "@/components/PropertySelector";
-import { PropertyPool, SearchOperation } from "@/sdk/constants";
-import { useUpdate } from "react-use";
 
 type Props = {
-  filter: ResourceSearchFilter;
-  onSubmit: (filter: ResourceSearchFilter) => void;
+  filter: SearchFilter;
+  onSubmit: (filter: SearchFilter) => void;
   isNew?: boolean;
 } & DestroyableProps;
 

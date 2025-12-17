@@ -1,20 +1,25 @@
 "use client";
 
 "use strict";
-import type { ResourceSearchFilterGroup } from "./models";
 
-import { useEffect, useState } from "react";
+import type { SearchFilterGroup } from "@/components/Filter";
+
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import { GroupCombinator } from "./models";
-import FilterGroup from "./FilterGroup";
-
+import {
+  GroupCombinator,
+  FilterProvider,
+  FilterGroup,
+  createDefaultFilterConfig,
+} from "@/components/Filter";
 import { buildLogger } from "@/components/utils";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
-  group?: ResourceSearchFilterGroup;
-  onChange?: (group: ResourceSearchFilterGroup) => any;
+  group?: SearchFilterGroup;
+  onChange?: (group: SearchFilterGroup) => any;
 }
 
 const log = buildLogger("FilterGroupsPanel");
@@ -23,15 +28,19 @@ export default FilterGroupsPanel;
 
 function FilterGroupsPanel({ group: propsGroup, onChange }: IProps) {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
-  const [group, setGroup] = useState<ResourceSearchFilterGroup>(
+  const [group, setGroup] = useState<SearchFilterGroup>(
     propsGroup ?? {
       combinator: GroupCombinator.And,
       disabled: false,
     },
   );
 
-  useEffect(() => {}, []);
+  const filterConfig = useMemo(
+    () => createDefaultFilterConfig(createPortal),
+    [createPortal],
+  );
 
   useUpdateEffect(() => {
     setGroup(
@@ -43,15 +52,17 @@ function FilterGroupsPanel({ group: propsGroup, onChange }: IProps) {
   }, [propsGroup]);
 
   return (
-    <div className={"group flex flex-wrap gap-2 item-center"}>
-      <FilterGroup
-        isRoot
-        group={group}
-        onChange={(group) => {
-          setGroup(group);
-          onChange?.(group);
-        }}
-      />
-    </div>
+    <FilterProvider config={filterConfig}>
+      <div className={"group flex flex-wrap gap-2 item-center"}>
+        <FilterGroup
+          isRoot
+          group={group}
+          onChange={(group) => {
+            setGroup(group);
+            onChange?.(group);
+          }}
+        />
+      </div>
+    </FilterProvider>
   );
 }

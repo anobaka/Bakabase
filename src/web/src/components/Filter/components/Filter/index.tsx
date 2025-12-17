@@ -2,7 +2,7 @@
 
 "use strict";
 
-import type { ResourceSearchFilter } from "../../models";
+import type { SearchFilter } from "../../models";
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
@@ -10,8 +10,9 @@ import { useUpdateEffect } from "react-use";
 import { AiOutlineClose } from "react-icons/ai";
 import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
 
-import PropertySelector from "@/components/PropertySelector";
-import { PropertyPool, SearchOperation } from "@/sdk/constants";
+import { useFilterConfig } from "../../context/FilterContext";
+
+import { SearchOperation } from "@/sdk/constants";
 import {
   Button,
   Dropdown,
@@ -22,14 +23,11 @@ import {
   Chip,
 } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import BApi from "@/sdk/BApi";
-import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface IProps {
-  filter: ResourceSearchFilter;
+  filter: SearchFilter;
   onRemove?: () => any;
-  onChange?: (filter: ResourceSearchFilter) => any;
+  onChange?: (filter: SearchFilter) => any;
   isReadonly?: boolean;
   isNew?: boolean;
   disableTooltipOperations?: boolean;
@@ -37,6 +35,7 @@ interface IProps {
 }
 
 const log = buildLogger("Filter");
+
 const Filter = ({
   filter: propsFilter,
   onRemove,
@@ -47,8 +46,8 @@ const Filter = ({
   removeBackground,
 }: IProps) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
-  const [filter, setFilter] = useState<ResourceSearchFilter>(propsFilter);
+  const config = useFilterConfig();
+  const [filter, setFilter] = useState<SearchFilter>(propsFilter);
 
   useEffect(() => {
     if (isNew) {
@@ -60,43 +59,26 @@ const Filter = ({
     setFilter(propsFilter);
   }, [propsFilter]);
 
-  const changeFilter = (newFilter: ResourceSearchFilter) => {
+  const changeFilter = (newFilter: SearchFilter) => {
     setFilter(newFilter);
     onChange?.(newFilter);
     if (newFilter.propertyPool && newFilter.propertyId && newFilter.operation) {
-      BApi.options.addRecentResourceFilter({
-        propertyPool: newFilter.propertyPool,
-        propertyId: newFilter.propertyId,
-        operation: newFilter.operation,
-        dbValue: newFilter.dbValue,
-      });
+      config.api.saveRecentFilter(newFilter);
     }
   };
 
   log(propsFilter, filter);
 
   const changeProperty = () => {
-    createPortal(PropertySelector, {
-      v2: true,
-      selection:
-        filter.propertyId == undefined
-          ? undefined
-          : [
-              {
-                id: filter.propertyId,
-                pool: filter.propertyPool!,
-              },
-            ],
-      onSubmit: async (selectedProperties) => {
-        const property = selectedProperties[0]!;
-        const availableOperations =
-          (
-            await BApi.resource.getSearchOperationsForProperty({
-              propertyPool: property.pool,
-              propertyId: property.id,
-            })
-          ).data || [];
-        const nf: ResourceSearchFilter = {
+    config.renderers.openPropertySelector(
+      filter.propertyId == undefined
+        ? undefined
+        : {
+            id: filter.propertyId,
+            pool: filter.propertyPool!,
+          },
+      (property, availableOperations) => {
+        const nf: SearchFilter = {
           ...filter,
           propertyId: property.id,
           propertyPool: property.pool,
@@ -108,12 +90,8 @@ const Filter = ({
         };
 
         refreshValue(nf);
-      },
-      multiple: false,
-      pool: PropertyPool.All,
-      addable: false,
-      editable: false,
-    });
+      }
+    );
   };
 
   const renderOperations = () => {
@@ -205,7 +183,7 @@ const Filter = ({
 
   log("rendering filter", filter);
 
-  const refreshValue = (filter: ResourceSearchFilter) => {
+  const refreshValue = (filter: SearchFilter) => {
     if (!filter.propertyPool || !filter.propertyId || !filter.operation) {
       filter.valueProperty = undefined;
       filter.dbValue = undefined;
@@ -214,9 +192,7 @@ const Filter = ({
         ...filter,
       });
     } else {
-      BApi.resource.getFilterValueProperty(filter).then((r) => {
-        const p = r.data;
-
+      config.api.getValueProperty(filter).then((p) => {
         filter.valueProperty = p;
         changeFilter({
           ...filter,
@@ -237,27 +213,23 @@ const Filter = ({
       return null;
     }
 
-    return (
-      <PropertyValueRenderer
-        bizValue={filter.bizValue}
-        dbValue={filter.dbValue}
-        defaultEditing={filter.dbValue == undefined}
-        property={filter.valueProperty}
-        size="sm"
-        variant={"light"}
-        onValueChange={
-          isReadonly
-            ? undefined
-            : (dbValue, bizValue) => {
-                // console.log("123", dbValue, bizValue);
-                changeFilter({
-                  ...filter,
-                  dbValue: dbValue,
-                  bizValue: bizValue,
-                });
-              }
-        }
-      />
+    return config.renderers.renderValueInput(
+      filter.valueProperty,
+      filter.dbValue,
+      filter.bizValue,
+      (dbValue, bizValue) => {
+        changeFilter({
+          ...filter,
+          dbValue: dbValue,
+          bizValue: bizValue,
+        });
+      },
+      {
+        defaultEditing: filter.dbValue == undefined,
+        size: "sm",
+        variant: "light",
+        isReadonly,
+      }
     );
   };
 
@@ -290,7 +262,6 @@ const Filter = ({
               <Button
                 className={"min-w-fit pl-2 pr-2"}
                 color={"success"}
-                // isDisabled={isReadonly}
                 size={"sm"}
                 variant={"light"}
                 onPress={isReadonly ? undefined : changeProperty}
@@ -323,7 +294,6 @@ const Filter = ({
               color={filter.disabled ? "success" : "warning"}
               size={"sm"}
               variant={"light"}
-              // className={'w-auto min-w-fit px-1'}
               onPress={() => {
                 changeFilter({
                   ...filter,
@@ -347,7 +317,6 @@ const Filter = ({
               color={"danger"}
               size={"sm"}
               variant={"light"}
-              // className={'w-auto min-w-fit px-1'}
               onPress={onRemove}
             >
               <AiOutlineClose className={"text-base"} />

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ResourceSearchFilter } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import type { SearchFilter } from "@/components/Filter";
 
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,42 +9,41 @@ import PropertySelector from "@/components/PropertySelector";
 import { Button } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
+
 const PropertySelectorTest = () => {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<ResourceSearchFilter>({});
+  const [filter, setFilter] = useState<SearchFilter>({ disabled: false });
   const { createPortal } = useBakabaseContext();
 
   return (
     <Button
-      text
-      size={"small"}
-      type={"primary"}
+      size={"sm"}
+      color={"primary"}
+      variant={"light"}
       onClick={() => {
         createPortal(PropertySelector, {
-          selection: {
-            [filter.propertyPool == PropertyPool.Custom
-              ? "reservedPropertyIds"
-              : "customPropertyIds"]:
-              filter.propertyId == undefined ? undefined : [filter.propertyId],
-          },
+          v2: true,
+          selection:
+            filter.propertyId == undefined
+              ? undefined
+              : [{ id: filter.propertyId, pool: filter.propertyPool! }],
           onSubmit: async (selectedProperties) => {
-            const property = (selectedProperties.reservedProperties?.[0] ??
-              selectedProperties.customProperties?.[0])!;
-            const cp = property as ICustomProperty;
-
-            setFilter({
-              ...filter,
-              propertyId: property.id,
-              propertyName: property.name,
-              propertyPool: cp == undefined,
-            });
+            const property = selectedProperties[0];
+            if (property) {
+              setFilter({
+                ...filter,
+                propertyId: property.id,
+                propertyPool: property.pool,
+                property,
+              });
+            }
           },
           multiple: false,
-          pool: "all",
+          pool: PropertyPool.All,
         });
       }}
     >
-      {filter.propertyId ? filter.propertyName : t<string>("Property")}
+      {filter.property?.name ?? t<string>("Property")}
     </Button>
   );
 };

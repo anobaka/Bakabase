@@ -1,14 +1,11 @@
 import type { SearchForm } from "@/pages/resource/models.ts";
+import type { SearchFilter, SearchFilterGroup } from "@/components/Filter";
 
-import {
-  GroupCombinator,
-  type ResourceSearchFilter,
-  type ResourceSearchFilterGroup,
-} from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models.ts";
+import { GroupCombinator } from "@/components/Filter";
 
 export const addFilterGroup = (
   form: SearchForm,
-  group?: ResourceSearchFilterGroup,
+  group?: SearchFilterGroup,
 ) => {
   if (!group) {
     // Create a new default filter group if none provided
@@ -34,7 +31,7 @@ export const addFilterGroup = (
   return form;
 };
 
-export const addFilter = (form: SearchForm, filter?: ResourceSearchFilter) => {
+export const addFilter = (form: SearchForm, filter?: SearchFilter) => {
   if (!filter) {
     // Create a new default filter if none provided
     filter = {

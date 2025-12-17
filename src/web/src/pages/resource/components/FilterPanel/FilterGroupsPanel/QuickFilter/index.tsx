@@ -1,6 +1,6 @@
 "use client";
 
-import type { ResourceSearchFilter } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import type { SearchFilter } from "@/components/Filter";
 import type { IProperty } from "@/components/Property/models";
 
 import { SearchOutlined } from "@ant-design/icons";
@@ -23,7 +23,7 @@ const quickFilterMap = {
 };
 
 type Props = {
-  onAdded: (filter: ResourceSearchFilter) => any;
+  onAdded: (filter: SearchFilter) => any;
 };
 const QuickFilter = ({ onAdded }: Props) => {
   const { t } = useTranslation();
@@ -74,7 +74,7 @@ const QuickFilter = ({ onAdded }: Props) => {
                         propertyId: p.id,
                       })
                     ).data ?? [];
-                  const newFilter: ResourceSearchFilter = {
+                  const newFilter: SearchFilter = {
                     propertyId: p.id,
                     operation: operation,
                     propertyPool: p.pool,

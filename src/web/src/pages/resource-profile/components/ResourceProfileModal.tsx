@@ -1,26 +1,26 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { SearchFilterGroup } from "@/components/Filter";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 
-import { Modal, Input, Button, Textarea, Chip, Select } from "@/components/bakaui";
+import { Modal, Input, Chip } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
+import {
+  FilterProvider,
+  FilterGroup,
+  GroupCombinator,
+  createDefaultFilterConfig,
+} from "@/components/Filter";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 interface SearchCriteria {
   mediaLibraryIds?: number[];
-  propertyFilters?: PropertyFilter[];
+  filterGroup?: SearchFilterGroup;
   pathPattern?: string;
   tagFilter?: any;
-}
-
-interface PropertyFilter {
-  pool: number;
-  propertyId: number;
-  operation: number;
-  value?: any;
 }
 
 interface ResourceProfile {
@@ -41,6 +41,7 @@ type Props = {
 
 const ResourceProfileModal = ({ profile, onSaved, onDestroyed }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const isEdit = !!profile?.id;
 
   const [formData, setFormData] = useState<ResourceProfile>({
@@ -56,6 +57,11 @@ const ResourceProfileModal = ({ profile, onSaved, onDestroyed }: Props) => {
 
   const [saving, setSaving] = useState(false);
 
+  const filterConfig = useMemo(
+    () => createDefaultFilterConfig(createPortal),
+    [createPortal],
+  );
+
   const updateField = <K extends keyof ResourceProfile>(field: K, value: ResourceProfile[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
@@ -65,28 +71,6 @@ const ResourceProfileModal = ({ profile, onSaved, onDestroyed }: Props) => {
       ...prev,
       searchCriteria: { ...prev.searchCriteria, [field]: value },
     }));
-  };
-
-  const addPropertyFilter = () => {
-    const newFilter: PropertyFilter = {
-      pool: 1, // Custom property pool
-      propertyId: 0,
-      operation: 1, // Equals
-      value: null,
-    };
-    updateCriteria("propertyFilters", [...(formData.searchCriteria.propertyFilters || []), newFilter]);
-  };
-
-  const removePropertyFilter = (index: number) => {
-    const filters = [...(formData.searchCriteria.propertyFilters || [])];
-    filters.splice(index, 1);
-    updateCriteria("propertyFilters", filters);
-  };
-
-  const updatePropertyFilter = (index: number, updates: Partial<PropertyFilter>) => {
-    const filters = [...(formData.searchCriteria.propertyFilters || [])];
-    filters[index] = { ...filters[index], ...updates };
-    updateCriteria("propertyFilters", filters);
   };
 
   const handleSubmit = async () => {
@@ -111,6 +95,14 @@ const ResourceProfileModal = ({ profile, onSaved, onDestroyed }: Props) => {
   };
 
   const isValid = formData.name.trim() !== "";
+
+  // Initialize filter group if not present
+  const filterGroup: SearchFilterGroup = formData.searchCriteria.filterGroup ?? {
+    combinator: GroupCombinator.And,
+    disabled: false,
+    filters: [],
+    groups: [],
+  };
 
   return (
     <Modal
@@ -166,92 +158,18 @@ const ResourceProfileModal = ({ profile, onSaved, onDestroyed }: Props) => {
               onValueChange={(v) => updateCriteria("pathPattern", v || undefined)}
             />
 
-            {/* Property Filters */}
+            {/* Property Filters using FilterGroup */}
             <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">{t("Property Filters")}</span>
-                <Button
-                  size="sm"
-                  variant="flat"
-                  startContent={<PlusOutlined />}
-                  onPress={addPropertyFilter}
-                >
-                  {t("Add Filter")}
-                </Button>
-              </div>
-
-              {(!formData.searchCriteria.propertyFilters || formData.searchCriteria.propertyFilters.length === 0) ? (
-                <div className="text-center text-default-400 py-3 border rounded-lg border-dashed text-sm">
-                  {t("No property filters. Click 'Add Filter' to add one.")}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {formData.searchCriteria.propertyFilters.map((filter, index) => (
-                    <div
-                      key={index}
-                      className="border rounded-lg p-2 flex items-center gap-2"
-                    >
-                      <Select
-                        size="sm"
-                        label={t("Pool")}
-                        selectedKeys={[String(filter.pool)]}
-                        onSelectionChange={(keys) => {
-                          const value = Array.from(keys)[0];
-                          updatePropertyFilter(index, { pool: parseInt(value as string) || 1 });
-                        }}
-                        className="w-32"
-                        dataSource={[
-                          { value: "1", label: t("Custom") },
-                          { value: "2", label: t("Reserved") },
-                          { value: "3", label: t("Internal") },
-                        ]}
-                      />
-                      <Input
-                        size="sm"
-                        label={t("Property ID")}
-                        type="number"
-                        value={String(filter.propertyId)}
-                        onValueChange={(v) => updatePropertyFilter(index, { propertyId: parseInt(v) || 0 })}
-                        className="w-32"
-                      />
-                      <Select
-                        size="sm"
-                        label={t("Operation")}
-                        selectedKeys={[String(filter.operation)]}
-                        onSelectionChange={(keys) => {
-                          const value = Array.from(keys)[0];
-                          updatePropertyFilter(index, { operation: parseInt(value as string) || 1 });
-                        }}
-                        className="w-32"
-                        dataSource={[
-                          { value: "1", label: t("Equals") },
-                          { value: "2", label: t("Contains") },
-                          { value: "3", label: t("StartsWith") },
-                          { value: "4", label: t("EndsWith") },
-                          { value: "5", label: t("IsEmpty") },
-                          { value: "6", label: t("IsNotEmpty") },
-                        ]}
-                      />
-                      <Input
-                        size="sm"
-                        label={t("Value")}
-                        value={filter.value ? String(filter.value) : ""}
-                        onValueChange={(v) => updatePropertyFilter(index, { value: v || null })}
-                        className="flex-1"
-                      />
-                      <Button
-                        isIconOnly
-                        size="sm"
-                        color="danger"
-                        variant="light"
-                        onPress={() => removePropertyFilter(index)}
-                      >
-                        <DeleteOutlined />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <span className="text-sm font-medium mb-2 block">{t("Property Filters")}</span>
+              <FilterProvider config={filterConfig}>
+                <FilterGroup
+                  isRoot
+                  group={filterGroup}
+                  onChange={(group) => {
+                    updateCriteria("filterGroup", group);
+                  }}
+                />
+              </FilterProvider>
             </div>
           </div>
         </div>

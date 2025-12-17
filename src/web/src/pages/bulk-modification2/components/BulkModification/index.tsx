@@ -1,6 +1,6 @@
 "use client";
 
-import type { ResourceSearchFilterGroup } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import type { SearchFilterGroup } from "@/components/Filter";
 import type {
   BulkModificationProcess,
   BulkModificationVariable,
@@ -27,7 +27,7 @@ export type BulkModification = {
   isActive: boolean;
   createdAt: string;
   variables?: BulkModificationVariable[];
-  filter?: ResourceSearchFilterGroup;
+  filter?: SearchFilterGroup;
   processes?: BulkModificationProcess[];
   filteredResourceIds?: number[];
   appliedAt?: string;

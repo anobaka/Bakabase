@@ -3,6 +3,7 @@
 import type { ResourceTag } from "@/sdk/constants";
 import type { SearchForm } from "@/pages/resource/models.ts";
 
+import { useMemo } from "react";
 import { AppstoreOutlined, FilterOutlined } from "@ant-design/icons";
 import { TbFilterPlus } from "react-icons/tb";
 import { useTranslation } from "react-i18next";
@@ -18,9 +19,13 @@ import {
   Popover,
 } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
-import RecentFilters from "@/pages/resource/components/FilterPanel/RecentFilters";
+import {
+  FilterModal,
+  FilterProvider,
+  RecentFilters,
+  createDefaultFilterConfig,
+} from "@/components/Filter";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import FilterModal from "./FilterModal";
 
 interface FilterPortalProps {
   searchForm: SearchForm;
@@ -34,6 +39,11 @@ export default function FilterPortal({
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
+  const filterConfig = useMemo(
+    () => createDefaultFilterConfig(createPortal),
+    [createPortal],
+  );
+
   return (
     <Popover
       showArrow
@@ -45,90 +55,88 @@ export default function FilterPortal({
         </Button>
       }
     >
-      <div
-        className={"grid items-center gap-2 my-3 mx-1"}
-        style={{ gridTemplateColumns: "auto auto" }}
-      >
-        <QuickFilter
-          onAdded={(newFilter) => {
-            const filter = newFilter;
-            createPortal(
-              FilterModal, {
+      <FilterProvider config={filterConfig}>
+        <div
+          className={"grid items-center gap-2 my-3 mx-1"}
+          style={{ gridTemplateColumns: "auto auto" }}
+        >
+          <QuickFilter
+            onAdded={(newFilter) => {
+              const filter = newFilter;
+              createPortal(FilterModal, {
                 filter,
                 onSubmit: (filter) => {
                   addFilter(searchForm, filter);
                   onChange();
-                }
-              }
-            )
-          }}
-        />
-        <div />
-        <Divider orientation={"horizontal"} />
-        <div>{t<string>("Advance filter")}</div>
-        <div className={"flex items-center gap-2"}>
-          <Button
-            size={"sm"}
-            onPress={() => {
-              createPortal(
-                FilterModal, {
+                },
+              });
+            }}
+          />
+          <div />
+          <Divider orientation={"horizontal"} />
+          <div>{t<string>("Advance filter")}</div>
+          <div className={"flex items-center gap-2"}>
+            <Button
+              size={"sm"}
+              onPress={() => {
+                createPortal(FilterModal, {
                   isNew: true,
                   filter: { disabled: false },
                   onSubmit: (filter) => {
-                    addFilter(searchForm, filter)
+                    addFilter(searchForm, filter);
                     onChange();
-                  }
-                }
-              )
-            }}
-          >
-            <FilterOutlined className={"text-base"} />
-            {t<string>("Filter")}
-          </Button>
-          <Button
-            size={"sm"}
-            onPress={() => {
-              addFilterGroup(searchForm);
-              onChange();
-            }}
-          >
-            <AppstoreOutlined className={"text-base"} />
-            {t<string>("Filter group")}
-          </Button>
+                  },
+                });
+              }}
+            >
+              <FilterOutlined className={"text-base"} />
+              {t<string>("Filter")}
+            </Button>
+            <Button
+              size={"sm"}
+              onPress={() => {
+                addFilterGroup(searchForm);
+                onChange();
+              }}
+            >
+              <AppstoreOutlined className={"text-base"} />
+              {t<string>("Filter group")}
+            </Button>
+          </div>
+          <div />
+          <Divider orientation={"horizontal"} />
+          <div>{t<string>("Special filters")}</div>
+          <div>
+            <CheckboxGroup
+              size={"sm"}
+              value={searchForm.tags?.map((t) => t.toString())}
+              onChange={(ts) => {
+                searchForm.tags = ts.map((t) => parseInt(t, 10) as ResourceTag);
+                onChange();
+              }}
+            >
+              {resourceTags.map((rt) => {
+                return (
+                  <Checkbox key={rt.value} value={rt.value.toString()}>
+                    {t<string>(`ResourceTag.${rt.label}`)}
+                  </Checkbox>
+                );
+              })}
+            </CheckboxGroup>
+          </div>
+          <div />
+          <Divider />
+          <div>{t<string>("Recent filters")}</div>
+          <div>
+            <RecentFilters
+              onSelectFilter={(newFilter) => {
+                addFilter(searchForm, newFilter);
+                onChange();
+              }}
+            />
+          </div>
         </div>
-        <div />
-        <Divider orientation={"horizontal"} />
-        <div>{t<string>("Special filters")}</div>
-        <div>
-          <CheckboxGroup
-            size={"sm"}
-            value={searchForm.tags?.map((t) => t.toString())}
-            onChange={(ts) => {
-              searchForm.tags = ts.map((t) => parseInt(t, 10) as ResourceTag);
-              onChange();
-            }}
-          >
-            {resourceTags.map((rt) => {
-              return (
-                <Checkbox key={rt.value} value={rt.value.toString()}>
-                  {t<string>(`ResourceTag.${rt.label}`)}
-                </Checkbox>
-              );
-            })}
-          </CheckboxGroup>
-        </div>
-        <div />
-        <Divider />
-        <div>{t<string>("Recent filters")}</div>
-        <div>
-          <RecentFilters
-            onSelectFilter={(newFilter) => {
-              addFilter(searchForm, newFilter);
-              onChange();
-            }}
-          />
-        </div>
-      </div>
-    </Popover >
+      </FilterProvider>
+    </Popover>
   );
 }

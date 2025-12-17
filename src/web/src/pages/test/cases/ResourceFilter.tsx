@@ -1,15 +1,17 @@
 "use client";
 
-import type { ResourceSearchFilterGroup } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import type { SearchFilterGroup } from "@/components/Filter";
 
 import React, { useState } from "react";
 import ReactJson from "react-json-view";
 
-import { GroupCombinator } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import { GroupCombinator } from "@/components/Filter";
 import FilterGroupsPanel from "@/pages/resource/components/FilterPanel/FilterGroupsPanel";
+
 const ResourceFilterPage = () => {
-  const [group, setGroup] = useState<ResourceSearchFilterGroup>({
+  const [group, setGroup] = useState<SearchFilterGroup>({
     combinator: GroupCombinator.And,
+    disabled: false,
   });
 
   return (
