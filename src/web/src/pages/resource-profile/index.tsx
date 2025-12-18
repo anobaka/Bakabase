@@ -98,7 +98,8 @@ const ResourceProfilePage = () => {
     });
   };
 
-  const getCriteriaDescription = (criteria: SearchCriteria): string => {
+  const getCriteriaDescription = (criteria?: SearchCriteria): string => {
+    if (!criteria) return t("No criteria");
     const parts: string[] = [];
     if (criteria.mediaLibraryIds?.length) {
       parts.push(`${criteria.mediaLibraryIds.length} ${t("libraries")}`);
@@ -259,6 +260,7 @@ const ResourceProfilePage = () => {
       <Table
         aria-label="Resource Profiles Table"
         isHeaderSticky
+        removeWrapper
         classNames={{
           wrapper: "max-h-[calc(100vh-200px)]",
         }}

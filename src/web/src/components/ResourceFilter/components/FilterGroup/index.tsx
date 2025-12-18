@@ -20,8 +20,6 @@ import Filter from "../Filter";
 import FilterModal from "../FilterModal";
 import RecentFilters from "../RecentFilters";
 
-import styles from "./index.module.scss";
-
 import { Button, Popover, Tooltip } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -138,7 +136,7 @@ const FilterGroup = ({
 
     return (
       <div
-        className={`${styles.filterGroup} p-1 ${isRoot ? styles.root : ""} ${styles.removable} relative`}
+        className={`flex items-center flex-wrap gap-[5px] rounded text-sm px-1 relative ${isRoot ? "" : "bg-[var(--bakaui-overlap-background)]"}`}
       >
         {group.disabled && (
           <div

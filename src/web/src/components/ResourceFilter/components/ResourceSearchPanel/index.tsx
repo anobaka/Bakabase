@@ -12,7 +12,7 @@ import FilterModal from "../FilterModal";
 import RecentFilters from "../RecentFilters";
 import FilterGroup from "../FilterGroup";
 import QuickFilters from "./QuickFilters";
-import { FilterProvider, useFilterConfig } from "../../context/FilterContext";
+import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
 
@@ -110,7 +110,7 @@ const ResourceSearchPanelInner = ({
       (criteria.group.groups && criteria.group.groups.length > 0));
 
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-3 flex-wrap">
       {/* 关键词搜索 */}
       {showKeyword && (
         <Input
@@ -232,7 +232,7 @@ const ResourceSearchPanelInner = ({
 
       {/* 筛选器分组预览 */}
       {showFilterGroupPreview && hasFilters && criteria.group && (
-        <div className="border rounded p-2">
+        <div className="border border-default-200 rounded px-1 py-1">
           <FilterGroup
             isRoot
             group={criteria.group}

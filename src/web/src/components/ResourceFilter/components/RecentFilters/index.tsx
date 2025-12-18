@@ -42,7 +42,7 @@ const RecentFilters = ({ onSelectFilter }: IProps) => {
   }
 
   return (
-    <div className={"grid-cols-2 gap-1"}>
+    <div className={"grid-cols-2 gap-1 max-h-[400px] overflow-y-auto"}>
       {recentFilters.map((filter, index) => (
         <Tooltip
           key={index}

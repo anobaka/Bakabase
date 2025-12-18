@@ -14,17 +14,15 @@ import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
 
 import styles from "./index.module.scss";
-import FilterGroupsPanel from "./FilterGroupsPanel";
 import OrderSelector from "./OrderSelector";
-import FilterPortal from "./FilterPortal";
 
 import BApi from "@/sdk/BApi";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
-import { ResourceTag } from "@/sdk/constants";
 import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
+import { ResourceSearchPanel } from "@/components/ResourceFilter";
 import { buildLogger, useTraceUpdate } from "@/components/utils.tsx";
 
 interface IProps {
@@ -142,47 +140,24 @@ const FilterPanel = (props: IProps) => {
             });
           }}
         />
-        <FilterPortal
-          searchForm={searchForm}
-          onChange={() => {
+        <ResourceSearchPanel
+          criteria={{
+            group: searchForm.group,
+            keyword: searchForm.keyword,
+            tags: searchForm.tags,
+          }}
+          onChange={(criteria) => {
             setSearchForm({
               ...searchForm,
+              group: criteria.group,
+              keyword: criteria.keyword,
+              tags: criteria.tags,
             });
           }}
-        />{" "}
-      </div>
-      {searchForm.group && (searchForm.group.filters && searchForm.group.filters.length > 0 || searchForm.group.groups && searchForm.group.groups.length > 0) && (
-        <FilterGroupsPanel
-          group={searchForm.group}
-          onChange={(v) => {
-            setSearchForm({
-              ...searchForm,
-              group: v,
-            });
-          }}
+          showKeyword={false}
+          showFilterGroupPreview
         />
-      )}
-      {searchForm.tags && searchForm.tags.length > 0 && (
-        <div className={"flex flex-wrap gap-1 mb-2"}>
-          {searchForm.tags.map((tag, i) => {
-            return (
-              <Chip
-                key={i}
-                isCloseable
-                size={"sm"}
-                onClose={() => {
-                  setSearchForm({
-                    ...searchForm,
-                    tags: searchForm.tags?.filter((t) => t != tag),
-                  });
-                }}
-              >
-                {t<string>(`ResourceTag.${ResourceTag[tag]}`)}
-              </Chip>
-            );
-          })}
-        </div>
-      )}
+      </div>
       <div className={"flex items-center justify-between"}>
         <div className={"flex items-center gap-4"}>
           <Button

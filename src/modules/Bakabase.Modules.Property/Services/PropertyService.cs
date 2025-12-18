@@ -216,6 +216,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                                     tmpProperty.Options = BuildOptionsForMediaLibraryV2(mediaLibrariesV2);
                                     break;
                                 }
+                                case InternalProperty.MediaLibraryV2Multi:
+                                {
+                                    tmpProperty.Options = BuildOptionsForMediaLibraryV2Multi(mediaLibrariesV2);
+                                    break;
+                                }
                                 case InternalProperty.ParentResource:
                                 case InternalProperty.RootPath:
                                 case InternalProperty.Resource:
