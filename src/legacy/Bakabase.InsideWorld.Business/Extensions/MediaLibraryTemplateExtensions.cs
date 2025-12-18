@@ -18,9 +18,11 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Tasks;
@@ -125,14 +127,14 @@ public static class MediaLibraryTemplateExtensions
                             .OfType<string[]>()
                             .SelectMany(v => v).Distinct()
                             .ToList();
-                        bizValue = StandardValueInternals.HandlerMap[StandardValueType.ListString]
+                        bizValue = StandardValueSystem.GetHandler(StandardValueType.ListString)
                             .Convert(listStr, property!.Type.GetBizValueType());
                     }
 
                     if (bizValue == null)
                     {
                         var dbValue = (property!.Options as IDefaultValue)?.DefaultValue;
-                        bizValue = PropertyInternals.DescriptorMap[property.Type].GetBizValue(property, dbValue);
+                        bizValue = PropertySystem.Property.GetDescriptor(property.Type).GetBizValue(property, dbValue);
                     }
 
                     if (bizValue != null)

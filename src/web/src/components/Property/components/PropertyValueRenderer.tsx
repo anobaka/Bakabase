@@ -4,14 +4,16 @@
 
 import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
-import type { IChoice, IProperty } from "@/components/Property/models";
+import type { IProperty, ChoiceOption, TagOption } from "@/components/Property/models";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
+import type { StandardValueOf } from "@/components/Property/PropertySystem";
 
 import { useTranslation } from "react-i18next";
 import React from "react";
 import _ from "lodash";
 
 import { PropertyType, StandardValueType } from "@/sdk/constants";
+import { getDbValueType, getBizValueType } from "@/components/Property/PropertySystem";
 import {
   AttachmentValueRenderer,
   BooleanValueRenderer,
@@ -25,12 +27,10 @@ import {
   StringValueRenderer,
   TagsValueRenderer,
   TimeValueRenderer,
-} from "@/components/StandardValue";
-import {
   deserializeStandardValue,
   findNodeChainInMultilevelData,
   serializeStandardValue,
-} from "@/components/StandardValue/helpers";
+} from "@/components/StandardValue";
 import { buildLogger } from "@/components/utils";
 
 export type DataPool = {};
@@ -67,8 +67,12 @@ const PropertyValueRenderer = (props: Props) => {
   } = props;
   const { t } = useTranslation();
 
-  let bv = deserializeStandardValue(bizValue ?? null, property.bizValueType);
-  const dv = deserializeStandardValue(dbValue ?? null, property.dbValueType);
+  // Use PropertySystem for type-safe value type access
+  const dbValueType = getDbValueType(property.type);
+  const bizValueType = getBizValueType(property.type);
+
+  let bv = deserializeStandardValue(bizValue ?? null, bizValueType);
+  const dv = deserializeStandardValue(dbValue ?? null, dbValueType);
 
   log(props, bv, dv);
 
@@ -76,8 +80,8 @@ const PropertyValueRenderer = (props: Props) => {
     | ((dbValue?: any, bizValue?: any) => any)
     | undefined = onValueChange
     ? (dv, bv) => {
-        const sdv = serializeStandardValue(dv ?? null, property.dbValueType);
-        const sbv = serializeStandardValue(bv ?? null, property.bizValueType);
+        const sdv = serializeStandardValue(dv ?? null, dbValueType);
+        const sbv = serializeStandardValue(bv ?? null, bizValueType);
 
         log("OnValueChange:Serialization:dv", dv, sdv);
         log("OnValueChange:Serialization:bv", bv, sbv);
@@ -156,11 +160,11 @@ const PropertyValueRenderer = (props: Props) => {
 
       const typedBv =
         (bv as string) ??
-        (property.options?.choices ?? []).find((x) => x.value == typedDv)
+        (property.options?.choices ?? []).find((x: ChoiceOption) => x.value == typedDv)
           ?.label;
-      const vas: IChoice[] = _.sortBy(
-        property.options?.choices?.filter((o) => dv?.includes(o.value)) ?? [],
-        (x) => x.value == typedDv,
+      const vas: ChoiceOption[] = _.sortBy(
+        property.options?.choices?.filter((o: ChoiceOption) => dv?.includes(o.value)) ?? [],
+        (x: ChoiceOption) => x.value == typedDv,
       );
 
       return (
@@ -182,11 +186,11 @@ const PropertyValueRenderer = (props: Props) => {
       const typedBv =
         (bv as string[]) ??
         (property.options?.choices ?? [])
-          .filter((x) => typedDv?.includes(x.value))
-          .map((x) => x.label);
-      const vas: IChoice[] = _.sortBy(
-        property.options?.choices?.filter((o) => dv?.includes(o.value)) ?? [],
-        (x) => typedDv?.findIndex((d) => d == x.value),
+          .filter((x: ChoiceOption) => typedDv?.includes(x.value))
+          .map((x: ChoiceOption) => x.label);
+      const vas: ChoiceOption[] = _.sortBy(
+        property.options?.choices?.filter((o: ChoiceOption) => dv?.includes(o.value)) ?? [],
+        (x: ChoiceOption) => typedDv?.findIndex((d) => d == x.value),
       );
 
       return (
@@ -364,18 +368,19 @@ const PropertyValueRenderer = (props: Props) => {
     }
     case PropertyType.Tags: {
       const typedDv = dv as string[];
+      const tags = (property.options?.tags || []) as TagOption[];
 
       const typedBv =
         (bv as TagValue[]) ??
-        (property.options?.tags || [])
-          .filter((x) => dv?.includes(x.value))
-          .map((x) => ({
+        tags
+          .filter((x: TagOption) => dv?.includes(x.value))
+          .map((x: TagOption) => ({
             group: x.group,
             name: x.name,
           }));
       const vas = _.sortBy(
-        property.options?.tags?.filter((o) => typedDv?.includes(o.value)) ?? [],
-        (x) => typedDv?.findIndex((d) => d == x.value),
+        tags.filter((o: TagOption) => typedDv?.includes(o.value)),
+        (x: TagOption) => typedDv?.findIndex((d) => d == x.value),
       );
 
       return (

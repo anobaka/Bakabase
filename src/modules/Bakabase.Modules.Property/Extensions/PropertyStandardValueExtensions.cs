@@ -1,19 +1,19 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.StandardValue;
 
 namespace Bakabase.Modules.Property.Extensions;
 
 public static class PropertyStandardValueExtensions
 {
     public static string? SerializeDbValueAsStandardValue(this object? value, PropertyType type) =>
-        value?.SerializeAsStandardValue(type.GetDbValueType());
+        StandardValueSystem.Serialize(value, PropertySystem.Property.GetDbValueType(type));
 
     public static object? DeserializeDbValueAsStandardValue(this string? value, PropertyType type) =>
-        value?.DeserializeAsStandardValue(type.GetDbValueType());
+        StandardValueSystem.Deserialize(value, PropertySystem.Property.GetDbValueType(type));
 
     public static TValue? DeserializeDbValueAsStandardValue<TValue>(this string? value, PropertyType type)
     {
-        var v = value?.DeserializeAsStandardValue(type.GetDbValueType());
+        var v = StandardValueSystem.Deserialize(value, PropertySystem.Property.GetDbValueType(type));
         if (v is TValue tv)
         {
             return tv;
@@ -23,14 +23,14 @@ public static class PropertyStandardValueExtensions
     }
 
     public static string? SerializeBizValueAsStandardValue(this object? value, PropertyType type) =>
-        value?.SerializeAsStandardValue(type.GetBizValueType());
+        StandardValueSystem.Serialize(value, PropertySystem.Property.GetBizValueType(type));
 
     public static object? DeserializeBizValueAsStandardValue(this string? value, PropertyType type) =>
-        value?.DeserializeAsStandardValue(type.GetBizValueType());
+        StandardValueSystem.Deserialize(value, PropertySystem.Property.GetBizValueType(type));
 
     public static TValue? DeserializeBizValueAsStandardValue<TValue>(this string? value, PropertyType type)
     {
-        var v = value?.DeserializeAsStandardValue(type.GetBizValueType());
+        var v = StandardValueSystem.Deserialize(value, PropertySystem.Property.GetBizValueType(type));
         if (v is TValue tv)
         {
             return tv;

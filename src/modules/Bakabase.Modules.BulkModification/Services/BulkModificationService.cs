@@ -11,6 +11,7 @@ using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Orm.Infrastructures;
@@ -278,7 +279,7 @@ namespace Bakabase.Modules.BulkModification.Services
 
                         var expectedValue = apply ? rDiff.Value1 : rDiff.Value2;
 
-                        var stdHandler = StandardValueInternals.HandlerMap[property.Type.GetBizValueType()];
+                        var stdHandler = StandardValueSystem.GetHandler(property.Type.GetBizValueType());
                         if (!stdHandler.Compare(currentValue, expectedValue))
                         {
                             throw new Exception(

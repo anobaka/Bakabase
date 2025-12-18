@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -65,7 +66,7 @@ namespace Bakabase.Service.Controllers
                 }
                 else
                 {
-                    var virtualProperty = PropertyInternals.VirtualPropertyMap.GetValueOrDefault(a);
+                    var virtualProperty = PropertySystem.Property.TryGetVirtual(a);
                     if (virtualProperty != null)
                     {
                         properties = [virtualProperty.ToViewModel(localizer)];
@@ -93,7 +94,7 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<string>> GetDbValue(PropertyPool pool, int id, string? bizValue)
         {
             var property = await service.GetProperty(pool, id);
-            var pd = PropertyInternals.DescriptorMap[property.Type];
+            var pd = PropertySystem.Property.GetDescriptor(property.Type);
             var (dbValue, _) = pd.PrepareDbValue(property, bizValue.DeserializeBizValueAsStandardValue(property.Type));
             return new SingletonResponse<string>(dbValue.SerializeDbValueAsStandardValue(property.Type));
         }

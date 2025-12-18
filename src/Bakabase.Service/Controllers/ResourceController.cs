@@ -20,10 +20,12 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.Property.Services;
 using Bakabase.Modules.Search.Models.Db;
@@ -75,7 +77,7 @@ namespace Bakabase.Service.Controllers
             PropertyType? pt;
             if (propertyPool != PropertyPool.Custom)
             {
-                pt = PropertyInternals.BuiltinPropertyMap.GetValueOrDefault((ResourceProperty) propertyId)?.Type;
+                pt = PropertySystem.Builtin.TryGet((ResourceProperty) propertyId)?.Type;
             }
             else
             {
@@ -88,7 +90,7 @@ namespace Bakabase.Service.Controllers
                 return ListResponseBuilder<SearchOperation>.NotFound;
             }
 
-            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(pt.Value);
+            var psh = PropertySystem.Property.TryGetSearchHandler(pt.Value);
 
             return new ListResponse<SearchOperation>(psh?.SearchOperations.Keys);
         }
@@ -101,7 +103,7 @@ namespace Bakabase.Service.Controllers
         {
             var p = await propertyService.GetProperty(propertyPool, propertyId);
 
-            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(p.Type);
+            var psh = PropertySystem.Property.TryGetSearchHandler(p.Type);
             if (psh?.SearchOperations.TryGetValue(operation, out var options) != true)
             {
                 return SingletonResponseBuilder<PropertyViewModel>.NotFound;
@@ -506,7 +508,7 @@ namespace Bakabase.Service.Controllers
                 foreach (var (pId, values) in propertyValuesGroups)
                 {
                     var p = values[0].Property!.ToProperty();
-                    var psh = PropertyInternals.PropertySearchHandlerMap[p.Type];
+                    var psh = PropertySystem.Property.GetSearchHandler(p.Type);
                     var filter = psh.BuildSearchFilterByKeyword(p, keyword);
                     if (filter != null)
                     {
@@ -514,9 +516,9 @@ namespace Bakabase.Service.Controllers
                         {
                             if (psh.IsMatch(pv.Value, filter.Operation, filter.DbValue))
                             {
-                                var pd = PropertyInternals.DescriptorMap[p.Type];
+                                var pd = PropertySystem.Property.GetDescriptor(p.Type);
                                 var bizValue = pd.GetBizValue(p, filter.DbValue);
-                                var svh = StandardValueInternals.HandlerMap[p.Type.GetBizValueType()];
+                                var svh = StandardValueSystem.GetHandler(p.Type.GetBizValueType());
                                 var kw = svh.BuildDisplayValue(pv.BizValue);
                                 if (kw.IsNotEmpty() && set.Add(kw))
                                 {

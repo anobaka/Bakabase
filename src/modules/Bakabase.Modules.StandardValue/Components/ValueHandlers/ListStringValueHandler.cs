@@ -9,7 +9,6 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -46,7 +45,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         public override string? ConvertToString(List<string> optimizedValue)
         {
             return optimizedValue.Any()
-                ? string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue)
+                ? string.Join(StandardValueSystem.CommonListItemSeparator, optimizedValue)
                 : null;
         }
 
@@ -70,7 +69,7 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
                 }
             }
 
-            return new LinkValue(string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue), null);
+            return new LinkValue(string.Join(StandardValueSystem.CommonListItemSeparator, optimizedValue), null);
         }
 
         protected override List<string>? ExtractTextsForConvertingToDateTimeInternal(List<string> optimizedValue) =>

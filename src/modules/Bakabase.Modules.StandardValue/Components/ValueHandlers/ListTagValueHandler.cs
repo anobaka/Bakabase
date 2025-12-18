@@ -4,7 +4,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -37,7 +36,7 @@ public class ListTagValueHandler : AbstractStandardValueHandler<List<TagValue>>
     }
 
     public override string? ConvertToString(List<TagValue> optimizedValue) =>
-        string.Join(StandardValueInternals.CommonListItemSeparator, optimizedValue.Select(t => t.ToString()));
+        string.Join(StandardValueSystem.CommonListItemSeparator, optimizedValue.Select(t => t.ToString()));
 
     public override List<string>? ConvertToListString(List<TagValue> optimizedValue) =>
         optimizedValue.Select(t => t.ToString()).ToList();

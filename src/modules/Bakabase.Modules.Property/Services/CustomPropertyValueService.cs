@@ -6,10 +6,9 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -82,7 +81,8 @@ namespace Bakabase.Modules.Property.Services
                             {
                                 if (propertyMap.TryGetValue(dto.PropertyId, out var p))
                                 {
-                                    if (PropertyInternals.DescriptorMap.TryGetValue(p.Type, out var cpd))
+                                    var cpd = PropertySystem.Property.TryGetDescriptor(p.Type);
+                                    if (cpd != null)
                                     {
                                         dto.BizValue = cpd.GetBizValue(p.ToProperty(), dto.Value);
                                     }
@@ -206,7 +206,8 @@ namespace Bakabase.Modules.Property.Services
                     var cp = propertyMap.GetValueOrDefault(propertyId);
                     if (cp != null)
                     {
-                        if (!PropertyInternals.DescriptorMap.TryGetValue(cp.Type, out var pd))
+                        var pd = PropertySystem.Property.TryGetDescriptor(cp.Type);
+                        if (pd == null)
                         {
                             Logger.LogError(localizer.DescriptorNotDefined(cp.Type));
                             continue;
@@ -218,8 +219,8 @@ namespace Bakabase.Modules.Property.Services
                         {
                             foreach (var v in propertyValue.Values)
                             {
-                                var optimizedBizValue = StandardValueInternals
-                                    .HandlerMap[cp.Type.GetBizValueType()].Optimize(v.BizValue);
+                                var optimizedBizValue = StandardValueSystem
+                                    .GetHandler(cp.Type.GetBizValueType()).Optimize(v.BizValue);
                                 var (rawDbValue, propertyChanged) = pd.PrepareDbValue(p, optimizedBizValue);
 
                                 var dbPv = dbValueMap.GetValueOrDefault(resourceId)?.GetValueOrDefault(propertyId)
@@ -272,7 +273,8 @@ namespace Bakabase.Modules.Property.Services
             StandardValueType bizValueType, CustomProperty customProperty, int resourceId,
             int scope)
         {
-            if (!PropertyInternals.DescriptorMap.TryGetValue(customProperty.Type, out var pd))
+            var pd = PropertySystem.Property.TryGetDescriptor(customProperty.Type);
+            if (pd == null)
             {
                 Logger.LogError(localizer.DescriptorNotDefined(customProperty.Type));
                 return null;

@@ -548,16 +548,6 @@ export interface BakabaseAbstractionsModelsDomainProperty {
   order: number;
 }
 
-export interface BakabaseAbstractionsModelsDomainPropertyFilter {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  propertyId: number;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-  value?: any;
-}
-
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
   fixedText?: string;
   /** @format int32 */
@@ -668,7 +658,7 @@ export interface BakabaseAbstractionsModelsDomainResourceProfile {
   /** @format int32 */
   id: number;
   name: string;
-  searchCriteria: BakabaseAbstractionsModelsDomainSearchCriteria;
+  search: BakabaseAbstractionsModelsDomainResourceSearch;
   nameTemplate?: string;
   enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
   playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
@@ -694,6 +684,42 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
 }
 
+export interface BakabaseAbstractionsModelsDomainResourceSearch {
+  /** @format int32 */
+  pageIndex: number;
+  /**
+   * @format int32
+   * @min 0
+   * @max 100
+   */
+  pageSize: number;
+  /** @format int32 */
+  skipCount: number;
+  group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
+  tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  dbValue?: any;
+  property: BakabaseAbstractionsModelsDomainProperty;
+  disabled: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
+  /** [1: And, 2: Or] */
+  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
+  groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[];
+  filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[];
+  disabled: boolean;
+}
+
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -701,14 +727,6 @@ export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
   id: number;
   /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
-}
-
-export interface BakabaseAbstractionsModelsDomainSearchCriteria {
-  mediaLibraryIds?: number[];
-  propertyFilters?: BakabaseAbstractionsModelsDomainPropertyFilter[];
-  pathPattern?: string;
-  /** [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary] */
-  tagFilter?: BakabaseAbstractionsModelsDomainConstantsResourceTag;
 }
 
 export interface BakabaseAbstractionsModelsDomainSpecialText {
@@ -2727,7 +2745,7 @@ export interface BakabaseServiceModelsInputBulkModificationPatchInputModel {
   name?: string;
   isActive?: boolean;
   variables?: BakabaseServiceModelsInputBulkModificationVariableInputModel[];
-  filter?: BakabaseServiceModelsInputResourceSearchFilterGroupInputModel;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
   processes?: BakabaseServiceModelsInputBulkModificationProcessInputModel[];
 }
 
@@ -2906,7 +2924,7 @@ export interface BakabaseServiceModelsViewBulkModificationViewModel {
   /** @format date-time */
   createdAt: string;
   variables?: BakabaseServiceModelsViewBulkModificationVariableViewModel[];
-  filter?: BakabaseServiceModelsViewResourceSearchFilterGroupViewModel;
+  search?: BakabaseServiceModelsViewResourceSearchViewModel;
   processes?: BakabaseServiceModelsViewBulkModificationProcessViewModel[];
   filteredResourceIds?: number[];
   /** @format date-time */
@@ -14526,89 +14544,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name TestResourceProfileCriteria
-     * @request POST:/resource-profile/test-criteria
-     */
-    testResourceProfileCriteria: (
-      data: BakabaseAbstractionsModelsDomainSearchCriteria,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemInt32, any>({
-        path: `/resource-profile/test-criteria`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for testResourceProfileCriteria
-     * @name testResourceProfileCriteriaUrl
-     */
-    testResourceProfileCriteriaUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource-profile/test-criteria`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name GetMatchingResources
-     * @request POST:/resource-profile/matching-resources
-     */
-    getMatchingResources: (
-      data: BakabaseAbstractionsModelsDomainSearchCriteria,
-      query?: {
-        /** @format int32 */
-        limit?: number;
-      },
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
-        any
-      >({
-        path: `/resource-profile/matching-resources`,
-        method: "POST",
-        query: query,
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getMatchingResources
-     * @name getMatchingResourcesUrl
-     */
-    getMatchingResourcesUrl: (query?: {
-        /** @format int32 */
-        limit?: number;
-      }) => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource-profile/matching-resources`;
-      
-      // Build query string
-      if (query) {
-        const queryString = Object.keys(query)
-          .filter(key => query[key] !== undefined && query[key] !== null)
-          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
-          .join("&");
-        
-        return baseUrl + path + (queryString ? `?${queryString}` : "");
-      }
-      
-      return baseUrl + path;
-    },
   };
   specialText = {
     /**

@@ -18,6 +18,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Components;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
@@ -142,7 +143,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                                 }
                                 else
                                 {
-                                    if (!StandardValueInternals.HandlerMap[p.BizValueType]
+                                    if (!StandardValueSystem.GetHandler(p.BizValueType)
                                             .Compare(cv.BizValue, v.BizValue))
                                     {
                                         cv.BizValue = v.BizValue;

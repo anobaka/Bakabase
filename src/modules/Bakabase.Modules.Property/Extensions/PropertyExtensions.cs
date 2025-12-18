@@ -4,7 +4,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
-using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
@@ -15,15 +14,26 @@ namespace Bakabase.Modules.Property.Extensions;
 public static class PropertyExtensions
 {
     private static readonly ConcurrentDictionary<StandardValueType, PropertyType[]>
-        StandardValueTypeCustomPropertyTypesMap = new ConcurrentDictionary<StandardValueType, PropertyType[]>(
-            PropertyInternals.PropertyAttributeMap.GroupBy(d => d.Value.BizValueType)
-                .ToDictionary(d => d.Key, d => d.Select(c => c.Key).ToArray()));
+        StandardValueTypeCustomPropertyTypesMap = new(
+            Enum.GetValues<PropertyType>()
+                .Select(t => (Type: t, Attr: PropertySystem.Property.TryGetAttribute(t)))
+                .Where(x => x.Attr != null)
+                .GroupBy(x => x.Attr!.BizValueType)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Type).ToArray()));
 
+    /// <summary>
+    /// Get the DB value type for a PropertyType.
+    /// </summary>
+    [Obsolete("Use PropertySystem.Property.GetDbValueType() instead.")]
     public static StandardValueType GetDbValueType(this PropertyType type) =>
-        PropertyInternals.PropertyAttributeMap.GetValueOrDefault(type)?.DbValueType ?? default;
+        PropertySystem.Property.TryGetAttribute(type)?.DbValueType ?? default;
 
+    /// <summary>
+    /// Get the Biz value type for a PropertyType.
+    /// </summary>
+    [Obsolete("Use PropertySystem.Property.GetBizValueType() instead.")]
     public static StandardValueType GetBizValueType(this PropertyType type) =>
-        PropertyInternals.PropertyAttributeMap.GetValueOrDefault(type)?.BizValueType ?? default;
+        PropertySystem.Property.TryGetAttribute(type)?.BizValueType ?? default;
 
     public static PropertyType[]? GetCompatibleCustomPropertyTypes(this StandardValueType bizValueType) =>
         StandardValueTypeCustomPropertyTypesMap.GetValueOrDefault(bizValueType);
@@ -59,7 +69,7 @@ public static class PropertyExtensions
         };
         if (dbModel.Options.IsNotEmpty())
         {
-            var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(dbModel.Type);
+            var pd = PropertySystem.Property.TryGetDescriptor(dbModel.Type);
             if (pd?.OptionsType != null)
             {
                 p.Options = JsonConvert.DeserializeObject(dbModel.Options, pd.OptionsType);
@@ -93,7 +103,7 @@ public static class PropertyExtensions
             PropertyId = dbModel.PropertyId,
             ResourceId = dbModel.ResourceId,
             Scope = dbModel.Scope,
-            Value = dbModel.Value?.DeserializeAsStandardValue(PropertyInternals.DescriptorMap[type].DbValueType)
+            Value = dbModel.Value?.DeserializeAsStandardValue(PropertySystem.Property.GetDescriptor(type).DbValueType)
         };
     }
 
@@ -142,8 +152,12 @@ public static class PropertyExtensions
         }
     }
 
+    /// <summary>
+    /// Check if a PropertyType is a reference value type (stores UUIDs).
+    /// </summary>
+    [Obsolete("Use PropertySystem.Property.IsReferenceValueType() instead.")]
     public static bool IsReferenceValueType(this PropertyType type) =>
-        PropertyInternals.PropertyAttributeMap[type].IsReferenceValueType;
+        PropertySystem.Property.IsReferenceValueType(type);
 
     // public static void SetAllowAddingNewDataDynamically(this Bakabase.Abstractions.Models.Domain.Property property,
     //     bool enable)
@@ -194,9 +208,17 @@ public static class PropertyExtensions
         };
     }
 
+    /// <summary>
+    /// Convert DbValue to BizValue for a property.
+    /// </summary>
+    [Obsolete("Use PropertySystem.Property.ToBizValue() instead.")]
     public static object? GetBizValue(this Bakabase.Abstractions.Models.Domain.Property property, object? dbValue) =>
-        PropertyInternals.DescriptorMap[property.Type].GetBizValue(property, dbValue);
+        PropertySystem.Property.ToBizValue(property, dbValue);
 
+    /// <summary>
+    /// Convert DbValue to typed BizValue for a property.
+    /// </summary>
+    [Obsolete("Use PropertySystem.Property.ToBizValue<TBizValue>() instead.")]
     public static TBizValue? GetBizValue<TBizValue>(this Bakabase.Abstractions.Models.Domain.Property property,
         object? dbValue) => GetBizValue(property, dbValue) is TBizValue bv ? bv : default;
 

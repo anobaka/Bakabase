@@ -4,7 +4,6 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
-using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
@@ -15,8 +14,8 @@ namespace Bakabase.Modules.Property.Components.Properties
         AbstractPropertyDescriptor<TDbValue, TBizValue> : IPropertyDescriptor,
         IPropertySearchHandler
     {
-        public StandardValueType DbValueType => Type.GetDbValueType();
-        public StandardValueType BizValueType => Type.GetBizValueType();
+        public StandardValueType DbValueType => PropertySystem.Property.GetDbValueType(Type);
+        public StandardValueType BizValueType => PropertySystem.Property.GetBizValueType(Type);
 
         public abstract PropertyType Type { get; }
         // public Bakabase.Abstractions.Models.Domain.Property ToDomainModel(CustomPropertyDbModel customProperty)
@@ -94,13 +93,11 @@ namespace Bakabase.Modules.Property.Components.Properties
         {
             // validate filter value
             // todo: optimize filter value
-            var expectedFilterValueType = SearchOperations.GetValueOrDefault(operation)?.AsType.GetDbValueType();
-            if (expectedFilterValueType.HasValue)
+            var expectedFilterValueType = PropertySystem.Property.GetDbValueType(
+                SearchOperations.GetValueOrDefault(operation)?.AsType ?? Type);
+            if (!filterValue.IsStandardValueType(expectedFilterValueType))
             {
-                if (!filterValue.IsStandardValueType(expectedFilterValueType.Value))
-                {
-                    return false;
-                }
+                return false;
             }
 
             if (dbValue is TDbValue tv)
@@ -142,7 +139,8 @@ namespace Bakabase.Modules.Property.Components.Properties
                 return null;
             }
 
-            var dbValueType = SearchOperations.GetValueOrDefault(sf.Value.Operation)?.AsType.GetDbValueType();
+            var opAsType = SearchOperations.GetValueOrDefault(sf.Value.Operation)?.AsType;
+            var dbValueType = opAsType != null ? PropertySystem.Property.GetDbValueType(opAsType.Value) : (StandardValueType?)null;
             if (!dbValueType.HasValue)
             {
                 return null;

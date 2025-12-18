@@ -13,7 +13,7 @@ import BApi from "@/sdk/BApi";
 
 const quickFilterMap: Record<number, SearchOperation> = {
   [ResourceProperty.Filename]: SearchOperation.Contains,
-  [ResourceProperty.MediaLibraryV2]: SearchOperation.In,
+  [ResourceProperty.MediaLibraryV2Multi]: SearchOperation.In,
 };
 
 interface QuickFiltersProps {
@@ -28,9 +28,7 @@ const QuickFilters = ({ onAdded }: QuickFiltersProps) => {
   useEffect(() => {
     BApi.property.getPropertiesByPool(PropertyPool.Internal).then((r) => {
       setProperties(
-        (r.data || [])
-          .filter((x) => x.id in quickFilterMap)
-          .sort((a, b) => b.id - a.id),
+        (r.data || []).filter((x) => x.id in quickFilterMap).sort((a, b) => b.id - a.id),
       );
       setLoading(false);
     });
@@ -51,7 +49,7 @@ const QuickFilters = ({ onAdded }: QuickFiltersProps) => {
               <Button
                 key={p.id}
                 size="sm"
-                onClick={async () => {
+                onPress={async () => {
                   const vp = (
                     await BApi.resource.getFilterValueProperty({
                       propertyPool: pool,

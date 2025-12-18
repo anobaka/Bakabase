@@ -1,5 +1,9 @@
 /**
- * This StandardValue is a collection of components that are used to render and edit values in GUI. It's different to the StandardValue in back-end.
+ * This StandardValue is a collection of components that are used to render and edit values in GUI.
+ * It's different to the StandardValue in back-end.
+ *
+ * For type-safe value construction, use StandardValueFactory.
+ * For value serialization/deserialization, use helpers.ts.
  */
 
 import Icon from "./Icon";
@@ -19,6 +23,27 @@ import LinkValueRenderer from "./ValueRenderer/Renderers/LinkValueRenderer";
 import TagsValueRenderer from "./ValueRenderer/Renderers/TagsValueRenderer";
 import TimeValueRenderer from "./ValueRenderer/Renderers/TimeValueRenderer";
 
+// Type-safe utilities
+export { StandardValueFactory } from "./StandardValueFactory";
+export type { StandardValue } from "./StandardValueFactory";
+
+// Re-export types from models
+export type { LinkValue, TagValue, MultilevelData } from "./models";
+
+// Re-export helpers
+export {
+  serializeStandardValue,
+  deserializeStandardValue,
+  convertFromApiValue,
+  filterMultilevelData,
+  findNodeChainInMultilevelData,
+  // Type-safe versions
+  serializeStandardValueTyped,
+  deserializeStandardValueTyped,
+  convertFromApiValueTyped,
+} from "./helpers";
+
+// Renderers and Editors
 export {
   Icon as StandardValueIcon,
   NumberValueEditor,

@@ -3902,38 +3902,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/resource-profile/test-criteria": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["TestResourceProfileCriteria"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/resource-profile/matching-resources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["GetMatchingResources"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/special-text": {
         parameters: {
             query?: never;
@@ -4672,13 +4640,6 @@ export interface components {
             /** Format: int32 */
             order: number;
         };
-        "Bakabase.Abstractions.Models.Domain.PropertyFilter": {
-            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
-            /** Format: int32 */
-            propertyId: number;
-            operation: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"];
-            value?: unknown;
-        };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
             /** Format: int32 */
@@ -4782,7 +4743,7 @@ export interface components {
             /** Format: int32 */
             id: number;
             name: string;
-            searchCriteria: components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
+            search: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearch"];
             nameTemplate?: string;
             enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions"];
             playableFileOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
@@ -4804,17 +4765,37 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions": {
             players?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
         };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearch": {
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            readonly skipCount: number;
+            group?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"];
+            orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
+            tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearchFilter": {
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            operation: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"];
+            dbValue?: unknown;
+            property: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
+            disabled: boolean;
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup": {
+            combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
+            groups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"][];
+            filters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilter"][];
+            disabled: boolean;
+        };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             id: number;
             scope: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
-        };
-        "Bakabase.Abstractions.Models.Domain.SearchCriteria": {
-            mediaLibraryIds?: number[];
-            propertyFilters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyFilter"][];
-            pathPattern?: string;
-            tagFilter?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"];
         };
         "Bakabase.Abstractions.Models.Domain.SpecialText": {
             /** Format: int32 */
@@ -6414,7 +6395,7 @@ export interface components {
             name?: string;
             isActive?: boolean;
             variables?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationVariableInputModel"][];
-            filter?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel"];
+            search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.Input.BulkModificationProcessInputModel"][];
         };
         "Bakabase.Service.Models.Input.BulkModificationProcessInputModel": {
@@ -6556,7 +6537,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             variables?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationVariableViewModel"][];
-            filter?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchFilterGroupViewModel"];
+            search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             processes?: components["schemas"]["Bakabase.Service.Models.View.BulkModificationProcessViewModel"][];
             filteredResourceIds?: number[];
             /** Format: date-time */
@@ -16498,66 +16479,6 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                };
-            };
-        };
-    };
-    TestResourceProfileCriteria: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Int32]"];
-                };
-            };
-        };
-    };
-    GetMatchingResources: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.SearchCriteria"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]"];
                 };
             };
         };

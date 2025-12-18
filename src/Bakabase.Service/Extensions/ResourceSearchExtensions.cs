@@ -5,6 +5,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -79,7 +80,7 @@ public static class ResourceSearchExtensions
 
             // The value may use a different property type than the property itself
             var valueProperty = property;
-            var ph = PropertyInternals.PropertySearchHandlerMap[property.Type];
+            var ph = PropertySystem.Property.GetSearchHandler(property.Type);
             var conversion = ph.SearchOperations[f.Operation!.Value];
             if (conversion?.ConvertProperty != null)
             {
@@ -159,7 +160,8 @@ public static class ResourceSearchExtensions
 
             foreach (var (pId, p) in propertyMap[PropertyPool.Custom])
             {
-                if (PropertyInternals.PropertySearchHandlerMap.TryGetValue(p.Type, out var pd))
+                var pd = PropertySystem.Property.TryGetSearchHandler(p.Type);
+                if (pd != null)
                 {
                     var filter = pd.BuildSearchFilterByKeyword(p, model.Keyword);
                     if (filter != null)
@@ -200,7 +202,7 @@ public static class ResourceSearchExtensions
 
         if (property != null)
         {
-            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(property.Type);
+            var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
             if (psh != null)
             {
                 filter.AvailableOperations = psh.SearchOperations.Keys.ToList();
@@ -220,7 +222,7 @@ public static class ResourceSearchExtensions
                     if (asType.HasValue)
                     {
                         var dbValue = model.Value?.DeserializeAsStandardValue(asType.Value.GetDbValueType());
-                        var pd = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type);
+                        var pd = PropertySystem.Property.TryGetDescriptor(valueProperty.Type);
                         filter.BizValue = pd?.GetBizValue(valueProperty, dbValue)
                             ?.SerializeAsStandardValue(asType.Value.GetBizValueType());
                     }
@@ -308,9 +310,9 @@ public static class ResourceSearchExtensions
             DbValue = domainModel.DbValue?.SerializeAsStandardValue(valueProperty.Type.GetDbValueType()),
             ValueProperty = valueProperty.ToViewModel(propertyLocalizer),
             Property = domainModel.Property.ToViewModel(propertyLocalizer),
-            BizValue = PropertyInternals.DescriptorMap.GetValueOrDefault(valueProperty.Type)?.GetBizValue(valueProperty, domainModel.DbValue)
+            BizValue = PropertySystem.Property.TryGetDescriptor(valueProperty.Type)?.GetBizValue(valueProperty, domainModel.DbValue)
                 ?.SerializeAsStandardValue(valueProperty.Type.GetBizValueType()),
-            AvailableOperations = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(domainModel.Property.Type)?.SearchOperations.Keys.ToList()
+            AvailableOperations = PropertySystem.Property.TryGetSearchHandler(domainModel.Property.Type)?.SearchOperations.Keys.ToList()
         };
         
         return filter;
@@ -318,7 +320,7 @@ public static class ResourceSearchExtensions
     
     public static Property ConvertPropertyIfNecessary(this Property property, SearchOperation operation)
     {
-        var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(property.Type);
+        var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
         if (psh != null && psh.SearchOperations.TryGetValue(operation, out var conversion) && conversion is
             {
                 ConvertProperty: not null

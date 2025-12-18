@@ -30,6 +30,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -528,7 +529,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         case ResourceProperty.Introduction:
                         case ResourceProperty.Rating:
                         {
-                            var property = PropertyInternals.BuiltinPropertyMap.GetValueOrDefault(propertyId);
+                            var property = PropertySystem.Builtin.TryGet(propertyId);
                             if (property != null)
                             {
                                 var bizValue = await StandardValueService.Convert(values, StandardValueType.ListString,

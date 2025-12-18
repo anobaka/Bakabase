@@ -11,6 +11,8 @@ using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Models.Constants;
+using Bakabase.Modules.Property;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Search.Models.Db;
 using Microsoft.EntityFrameworkCore;
@@ -283,9 +285,13 @@ public class V220Migrator : AbstractMigrator
                         new ResourceSearchFilterDbModel
                         {
                             PropertyPool = PropertyPool.Internal,
-                            PropertyId = (int)ResourceProperty.MediaLibraryV2,
-                            Operation = SearchOperation.Equals,
-                            Value =  library.Id.ToString(),
+                            PropertyId = (int)ResourceProperty.MediaLibraryV2Multi,
+                            Operation = SearchOperation.In,
+                            // Contains on MultipleChoice: filter value is the single item to find in the list
+                            Value = PropertySystem.Search.SerializeFilterValue(
+                                library.Id.ToString(),
+                                PropertyType.MultipleChoice,
+                                SearchOperation.In),
                             Disabled = false
                         }
                     ]
@@ -293,7 +299,7 @@ public class V220Migrator : AbstractMigrator
                 Page = 1,
                 PageSize = int.MaxValue
             };
-
+            
             var profile = new ResourceProfileDbModel
             {
                 Name = $"Profile from {library.Name}",

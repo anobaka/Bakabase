@@ -8,7 +8,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -45,11 +44,11 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         }
 
         public override string? ConvertToString(List<List<string>> optimizedValue) =>
-            string.Join(StandardValueInternals.CommonListItemSeparator,
-                optimizedValue.Select(x => string.Join(StandardValueInternals.ListListStringInnerSeparator, x)));
+            string.Join(StandardValueSystem.CommonListItemSeparator,
+                optimizedValue.Select(x => string.Join(StandardValueSystem.ListListStringInnerSeparator, x)));
 
         public override List<string>? ConvertToListString(List<List<string>> optimizedValue) => optimizedValue
-            .Select(x => string.Join(StandardValueInternals.ListListStringInnerSeparator, x)).ToList();
+            .Select(x => string.Join(StandardValueSystem.ListListStringInnerSeparator, x)).ToList();
 
         public override decimal? ConvertToNumber(List<List<string>> optimizedValue) =>
             optimizedValue.FirstNotNullOrDefault(x => x.FirstNotNullOrDefault(a => a.ConvertToDecimal()));

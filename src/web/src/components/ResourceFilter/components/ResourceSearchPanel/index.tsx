@@ -110,12 +110,12 @@ const ResourceSearchPanelInner = ({
       (criteria.group.groups && criteria.group.groups.length > 0));
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex gap-3">
       {/* 关键词搜索 */}
       {showKeyword && (
         <Input
           isClearable
-          className="w-full"
+          className="grow"
           placeholder={t<string>("Search everything")}
           startContent={<SearchOutlined className="text-lg" />}
           value={criteria.keyword || ""}
@@ -131,7 +131,7 @@ const ResourceSearchPanelInner = ({
           showArrow
           placement="bottom"
           trigger={
-            <Button isIconOnly size={compact ? "sm" : "md"}>
+            <Button isIconOnly size={compact ? "md" : "md"}>
               <TbFilterPlus className="text-lg" />
             </Button>
           }
@@ -228,15 +228,6 @@ const ResourceSearchPanelInner = ({
             )}
           </div>
         </Popover>
-
-        <span className="text-sm text-default-500">
-          {hasFilters
-            ? t<string>("{{count}} filters configured", {
-                count:
-                  (criteria.group?.filters?.length || 0) + (criteria.group?.groups?.length || 0),
-              })
-            : t<string>("Click to add filters")}
-        </span>
       </div>
 
       {/* 筛选器分组预览 */}

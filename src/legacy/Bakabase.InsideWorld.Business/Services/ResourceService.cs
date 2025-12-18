@@ -21,10 +21,12 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Alias.Abstractions.Services;
 using Bakabase.Modules.Property.Abstractions.Components;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -282,7 +284,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 foreach (var filter in group.Filters.Where(f => f.IsValid() && !f.Disabled))
                 {
                     var propertyType = filter.Property.Type;
-                    var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(propertyType);
+                    var psh = PropertySystem.Property.TryGetSearchHandler(propertyType);
                     if (psh != null)
                     {
                         steps.Add(() =>
@@ -546,7 +548,7 @@ namespace Bakabase.InsideWorld.Business.Services
                                     if (values != null)
                                     {
                                         p.Values ??= [];
-                                        PropertyInternals.DescriptorMap.TryGetValue(property.Type, out var cpd);
+                                        var cpd = PropertySystem.Property.TryGetDescriptor(property.Type);
                                         foreach (var v in values)
                                         {
                                             var bizValue = cpd?.GetBizValue(property.ToProperty(), v.Value) ?? v.Value;
@@ -1766,7 +1768,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             continue;
                         }
 
-                        var bizValue = StandardValueInternals.HandlerMap[StandardValueType.ListString]
+                        var bizValue = StandardValueSystem.GetHandler(StandardValueType.ListString)
                             .Convert(listStr, property.Type.GetBizValueType());
 
                         if (bizValue != null)
@@ -1918,7 +1920,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     var value = d.Value.Values?.FirstOrDefault()?.BizValue;
                     if (value != null)
                     {
-                        var stdValueHandler = StandardValueInternals.HandlerMap[d.Value.BizValueType];
+                        var stdValueHandler = StandardValueSystem.GetHandler(d.Value.BizValueType);
                         return stdValueHandler.BuildDisplayValue(value);
                     }
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
@@ -86,7 +87,7 @@ public class ReservedPropertyValueService(
                     continue;
                 }
 
-                var pd = PropertyInternals.ReservedPropertyMap.GetValueOrDefault(rp);
+                var pd = PropertySystem.Builtin.TryGetReserved(rp);
                 if (pd == null)
                 {
                     logger.LogError(

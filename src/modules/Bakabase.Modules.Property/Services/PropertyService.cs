@@ -75,13 +75,26 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
         };
     }
 
+    private static MultipleChoicePropertyOptions BuildOptionsForMediaLibraryV2Multi(List<MediaLibraryV2> mediaLibraries)
+    {
+        return new MultipleChoicePropertyOptions
+        {
+            Choices = mediaLibraries.Select(m => new ChoiceOptions
+            {
+                Color = null,
+                Label = m.Name,
+                Value = m.Id.ToString()
+            }).ToList(),
+        };
+    }
+
     public async Task<Bakabase.Abstractions.Models.Domain.Property> GetProperty(PropertyPool pool, int id)
     {
         switch (pool)
         {
             case PropertyPool.Internal:
             {
-                var rp = (ResourceProperty) id;
+                var rp = (ResourceProperty)id;
                 var tmpProperty = PropertyInternals.BuiltinPropertyMap[rp] with
                 {
                     Name = propertyLocalizer.BuiltinPropertyName(rp)
@@ -105,13 +118,13 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                         await mediaLibraryService.GetAll(null, MediaLibraryAdditionalItem.Category);
                 }
 
-                if (rp == ResourceProperty.MediaLibraryV2)
+                if (rp == ResourceProperty.MediaLibraryV2 || rp == ResourceProperty.MediaLibraryV2Multi)
                 {
                     var mediaLibraryService = serviceProvider.GetRequiredService<IMediaLibraryV2Service>();
                     mediaLibrariesV2 = await mediaLibraryService.GetAll();
                 }
 
-                switch ((InternalProperty) id)
+                switch ((InternalProperty)id)
                 {
                     case InternalProperty.Category:
                     {
@@ -126,6 +139,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     case InternalProperty.MediaLibraryV2:
                     {
                         tmpProperty.Options = BuildOptionsForMediaLibraryV2(mediaLibrariesV2!);
+                        break;
+                    }
+                    case InternalProperty.MediaLibraryV2Multi:
+                    {
+                        tmpProperty.Options = BuildOptionsForMediaLibraryV2Multi(mediaLibrariesV2!);
                         break;
                     }
                     case InternalProperty.RootPath:
@@ -143,9 +161,9 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                 return tmpProperty;
             }
             case PropertyPool.Reserved:
-                return PropertyInternals.BuiltinPropertyMap[(ResourceProperty) id] with
+                return PropertyInternals.BuiltinPropertyMap[(ResourceProperty)id] with
                 {
-                    Name = propertyLocalizer.BuiltinPropertyName((ResourceProperty) id)
+                    Name = propertyLocalizer.BuiltinPropertyName((ResourceProperty)id)
                 };
             case PropertyPool.Custom:
                 return (await serviceProvider.GetRequiredService<ICustomPropertyService>().GetByKey(id)).ToProperty();
@@ -179,9 +197,9 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                         {
                             var tmpProperty = v with
                             {
-                                Name = propertyLocalizer.BuiltinPropertyName((ResourceProperty) v.Id)
+                                Name = propertyLocalizer.BuiltinPropertyName((ResourceProperty)v.Id)
                             };
-                            switch ((InternalProperty) v.Id)
+                            switch ((InternalProperty)v.Id)
                             {
                                 case InternalProperty.Category:
                                 {
@@ -218,7 +236,7 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     case PropertyPool.Reserved:
                     {
                         var reservedProperties = PropertyInternals.ReservedPropertyMap.Values.Select(v =>
-                            v with {Name = propertyLocalizer.BuiltinPropertyName((ResourceProperty) v.Id)});
+                            v with { Name = propertyLocalizer.BuiltinPropertyName((ResourceProperty)v.Id) });
                         properties.AddRange(reservedProperties);
                         break;
                     }

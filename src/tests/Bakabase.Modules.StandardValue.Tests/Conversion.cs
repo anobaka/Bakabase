@@ -2,7 +2,6 @@
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Tests.Components;
 using Bootstrap.Extensions;
@@ -20,7 +19,7 @@ namespace Bakabase.Modules.StandardValue.Tests
         {
             Console.WriteLine($@"Prepared conversion cases:");
             Console.WriteLine();
-            var dataSets = StandardValueInternals.ExpectedConversions;
+            var dataSets = StandardValueSystem.GetExpectedConversions();
             Console.WriteLine();
 
             foreach (var fromType in SpecificEnumUtils<StandardValueType>.Values)
@@ -29,7 +28,7 @@ namespace Bakabase.Modules.StandardValue.Tests
                 {
                     foreach (var data in dataSets[fromType][toType])
                     {
-                        var actualToValue = StandardValueInternals.HandlerMap[fromType].Convert(data.FromValue, toType);
+                        var actualToValue = StandardValueSystem.GetHandler(fromType).Convert(data.FromValue, toType);
                         try
                         {
                             JsonConvert.SerializeObject(actualToValue).Should()

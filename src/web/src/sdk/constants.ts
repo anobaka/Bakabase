@@ -1283,7 +1283,8 @@ export enum ResourceProperty {
   MediaLibrary = 21,
   Cover = 22,
   PlayedAt = 23,
-  MediaLibraryV2 = 24
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25
 }
 
 export const resourceProperties = [
@@ -1302,7 +1303,8 @@ export const resourceProperties = [
   { label: 'MediaLibrary', value: ResourceProperty.MediaLibrary },
   { label: 'Cover', value: ResourceProperty.Cover },
   { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
-  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 }
+  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi }
 ] as const;
 
 export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
@@ -1321,7 +1323,8 @@ export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
   [ResourceProperty.MediaLibrary]: 'MediaLibrary',
   [ResourceProperty.Cover]: 'Cover',
   [ResourceProperty.PlayedAt]: 'PlayedAt',
-  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2'
+  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
 };
 
 export enum ResourceTaskType {

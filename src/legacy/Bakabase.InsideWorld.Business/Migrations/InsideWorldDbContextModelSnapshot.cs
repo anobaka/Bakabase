@@ -518,8 +518,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int>("Priority")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("SearchCriteriaJson")
-                        .IsRequired()
+                    b.Property<string>("SearchJson")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -1300,9 +1299,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Filter")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("FilteredResourceIds")
                         .HasColumnType("TEXT");
 
@@ -1314,6 +1310,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Processes")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SearchJson")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Variables")

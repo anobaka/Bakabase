@@ -8,6 +8,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -177,7 +178,7 @@ namespace Bakabase.Modules.Enhancer.Services
                         case PropertyPool.Reserved:
                         {
                             propertyDescriptor =
-                                PropertyInternals.BuiltinPropertyMap.GetValueOrDefault(
+                                PropertySystem.Builtin.TryGet(
                                     (ResourceProperty)targetOptions.PropertyId);
                             break;
                         }

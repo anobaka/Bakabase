@@ -3,12 +3,15 @@
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { SearchFilter } from "../../models";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import Filter from "../Filter";
+import { FilterProvider } from "../../context/FilterContext";
+import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 
 import { Modal } from "@/components/bakaui";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {
   filter: SearchFilter;
@@ -18,7 +21,9 @@ type Props = {
 
 const FilterModal = ({ filter, onSubmit, isNew }: Props) => {
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
   const filterRef = useRef(filter);
+  const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
 
   return (
     <Modal
@@ -29,16 +34,18 @@ const FilterModal = ({ filter, onSubmit, isNew }: Props) => {
         onSubmit(filterRef.current);
       }}
     >
-      <div className="flex items-center justify-center">
-        <Filter
-          isNew={isNew}
-          disableTooltipOperations
-          filter={filter}
-          onChange={(f) => {
-            filterRef.current = f;
-          }}
-        />
-      </div>
+      <FilterProvider config={filterConfig}>
+        <div className="flex items-center justify-center">
+          <Filter
+            isNew={isNew}
+            disableTooltipOperations
+            filter={filter}
+            onChange={(f) => {
+              filterRef.current = f;
+            }}
+          />
+        </div>
+      </FilterProvider>
     </Modal>
   );
 };
