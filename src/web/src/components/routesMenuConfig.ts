@@ -24,10 +24,11 @@ import {
   AiOutlineSwap,
   AiOutlineEdit,
   AiOutlineBug,
-  AiOutlineNodeIndex,
+  AiOutlineTags,
+  AiOutlineFilter,
 } from "react-icons/ai";
 import { lazy } from "react";
-import { MdOutlineArticle } from "react-icons/md";
+import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
 import { TbToolsKitchen } from "react-icons/tb";
 
 import DashboardPage from "@/pages/dashboard";
@@ -93,7 +94,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     name: "Media library",
     path: "/media-library",
     component: MediaLibraryPage,
-    icon: AiOutlineNodeIndex,
+    icon: MdVideoLibrary,
     layout: "basic",
     menu: true,
   },
@@ -101,7 +102,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     name: "Media library configuration",
     path: "/path-mark-config",
     component: PathRuleConfigPage,
-    icon: AiOutlineNodeIndex,
+    icon: AiOutlineControl,
     layout: "basic",
     menu: true,
     isBeta: true,
@@ -110,7 +111,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     name: "Path marks",
     path: "/path-marks",
     component: PathMarksPage,
-    icon: AiOutlineNodeIndex,
+    icon: AiOutlineTags,
     layout: "basic",
     menu: true,
     isBeta: true,
@@ -119,7 +120,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     name: "Resource Profile",
     path: "/resource-profile",
     component: ResourceProfilePage,
-    icon: AiOutlineControl,
+    icon: AiOutlineFilter,
     layout: "basic",
     menu: true,
     isBeta: true,
