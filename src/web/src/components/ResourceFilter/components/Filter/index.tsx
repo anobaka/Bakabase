@@ -32,6 +32,10 @@ interface IProps {
   isNew?: boolean;
   disableTooltipOperations?: boolean;
   removeBackground?: boolean;
+  /** Auto trigger property selector on mount (for newly added filters) */
+  autoTriggerPropertySelector?: boolean;
+  /** Called when user cancels property selection for a new filter */
+  onCancelNewFilter?: () => void;
 }
 
 const log = buildLogger("Filter");
@@ -44,14 +48,45 @@ const Filter = ({
   isNew,
   disableTooltipOperations,
   removeBackground,
+  autoTriggerPropertySelector,
+  onCancelNewFilter,
 }: IProps) => {
   const { t } = useTranslation();
   const config = useFilterConfig();
   const [filter, setFilter] = useState<SearchFilter>(propsFilter);
+  // Track if this filter was just created (vs restored from storage)
+  // Only newly created filters should auto-trigger value editing
+  const [isNewlyCreated, setIsNewlyCreated] = useState(isNew || autoTriggerPropertySelector);
 
   useEffect(() => {
-    if (isNew) {
-      changeProperty();
+    if (isNew || autoTriggerPropertySelector) {
+      changeProperty({
+        onCancel: onCancelNewFilter,
+      });
+    } else if (filter.propertyPool && filter.propertyId && filter.operation) {
+      // Restored filter needs to fetch property info and valueProperty for display
+      if (!filter.property) {
+        // Fetch property info
+        config.api.getValueProperty(filter).then((p) => {
+          if (p) {
+            setFilter((prev) => ({
+              ...prev,
+              property: p,
+              valueProperty: p,
+            }));
+          }
+        });
+      } else if (!filter.valueProperty) {
+        // Only fetch valueProperty
+        config.api.getValueProperty(filter).then((p) => {
+          if (p) {
+            setFilter((prev) => ({
+              ...prev,
+              valueProperty: p,
+            }));
+          }
+        });
+      }
     }
   }, []);
 
@@ -69,7 +104,7 @@ const Filter = ({
 
   log(propsFilter, filter);
 
-  const changeProperty = () => {
+  const changeProperty = (options?: { onCancel?: () => void }) => {
     config.renderers.openPropertySelector(
       filter.propertyId == undefined
         ? undefined
@@ -90,7 +125,8 @@ const Filter = ({
         };
 
         refreshValue(nf);
-      }
+      },
+      options?.onCancel
     );
   };
 
@@ -218,6 +254,8 @@ const Filter = ({
       filter.dbValue,
       filter.bizValue,
       (dbValue, bizValue) => {
+        // Once value is set, this filter is no longer "newly created"
+        setIsNewlyCreated(false);
         changeFilter({
           ...filter,
           dbValue: dbValue,
@@ -225,7 +263,8 @@ const Filter = ({
         });
       },
       {
-        defaultEditing: filter.dbValue == undefined,
+        // Only auto-edit for newly created filters, not restored ones
+        defaultEditing: isNewlyCreated && filter.dbValue == undefined,
         size: "sm",
         variant: "light",
         isReadonly,
@@ -264,7 +303,7 @@ const Filter = ({
                 color={"success"}
                 size={"sm"}
                 variant={"light"}
-                onPress={isReadonly ? undefined : changeProperty}
+                onPress={isReadonly ? undefined : () => changeProperty()}
               >
                 {filter.property
                   ? (filter.property.name ?? t<string>("Unknown property"))

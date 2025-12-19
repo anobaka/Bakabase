@@ -27,6 +27,13 @@ public interface IResourceProfileService
     Task<string?> GetEffectiveNameTemplate(Resource resource);
 
     /// <summary>
+    /// Get effective name templates for multiple resources (batch operation for performance).
+    /// Returns a dictionary mapping resource ID to its name template.
+    /// Only resources with matching profiles are included in the result.
+    /// </summary>
+    Task<Dictionary<int, string?>> GetEffectiveNameTemplatesForResources(int[] resourceIds);
+
+    /// <summary>
     /// Get effective enhancer options for a resource
     /// </summary>
     Task<ResourceProfileEnhancerOptions?> GetEffectiveEnhancerOptions(Resource resource);
@@ -50,12 +57,42 @@ public interface IResourceProfileService
     /// <summary>
     /// Add a new resource profile
     /// </summary>
-    Task<ResourceProfile> Add(ResourceProfile profile);
+    /// <param name="name">Profile name</param>
+    /// <param name="searchJson">Serialized ResourceSearchDbModel JSON</param>
+    /// <param name="nameTemplate">Optional name template</param>
+    /// <param name="enhancerOptions">Optional enhancer options</param>
+    /// <param name="playableFileOptions">Optional playable file options</param>
+    /// <param name="playerOptions">Optional player options</param>
+    /// <param name="priority">Priority for matching</param>
+    Task<ResourceProfile> Add(
+        string name,
+        string? searchJson,
+        string? nameTemplate,
+        ResourceProfileEnhancerOptions? enhancerOptions,
+        ResourceProfilePlayableFileOptions? playableFileOptions,
+        ResourceProfilePlayerOptions? playerOptions,
+        int priority);
 
     /// <summary>
     /// Update an existing resource profile
     /// </summary>
-    Task Update(ResourceProfile profile);
+    /// <param name="id">Profile ID</param>
+    /// <param name="name">Profile name</param>
+    /// <param name="searchJson">Serialized ResourceSearchDbModel JSON</param>
+    /// <param name="nameTemplate">Optional name template</param>
+    /// <param name="enhancerOptions">Optional enhancer options</param>
+    /// <param name="playableFileOptions">Optional playable file options</param>
+    /// <param name="playerOptions">Optional player options</param>
+    /// <param name="priority">Priority for matching</param>
+    Task Update(
+        int id,
+        string name,
+        string? searchJson,
+        string? nameTemplate,
+        ResourceProfileEnhancerOptions? enhancerOptions,
+        ResourceProfilePlayableFileOptions? playableFileOptions,
+        ResourceProfilePlayerOptions? playerOptions,
+        int priority);
 
     /// <summary>
     /// Delete a resource profile by ID

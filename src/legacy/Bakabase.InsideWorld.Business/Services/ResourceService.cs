@@ -185,9 +185,33 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<int[]> GetAllIds(ResourceSearch model)
         {
-            var resources = await Search(model with { PageIndex = 0, PageSize = int.MaxValue });
-            var ids = resources.Data?.Select(r => r.Id).ToArray() ?? [];
-            return ids;
+            var allResources = await GetAll();
+            var resourceMap = allResources.ToDictionary(d => d.Id, d => d);
+
+            var context = new ResourceSearchContext(allResources);
+
+            await PreparePropertyDbValues(context, model.Group);
+            var resourceIds = SearchResourceIds(model.Group, context);
+
+            if (model.Tags?.Any() == true)
+            {
+                resourceIds ??= allResources.Select(r => r.Id).ToHashSet();
+                resourceIds.RemoveWhere(r =>
+                    model.Tags.Any(t => resourceMap.GetValueOrDefault(r)?.Tags?.Contains(t) != true));
+            }
+
+            // Apply ResourceTag filter
+            ResourceTag? tagsValue = model.Tags?.Any() == true ? (ResourceTag)model.Tags.Sum(x => (int)x) : null;
+            if (tagsValue.HasValue && resourceIds != null)
+            {
+                var dbModels = await _orm.GetAll(r => resourceIds.Contains(r.Id), true);
+                resourceIds = dbModels
+                    .Where(r => (r.Tags & tagsValue.Value) == tagsValue.Value)
+                    .Select(r => r.Id)
+                    .ToHashSet();
+            }
+
+            return resourceIds?.ToArray() ?? allResources.Select(r => r.Id).ToArray();
         }
 
         private async Task PreparePropertyDbValues(ResourceSearchContext context, ResourceSearchFilterGroup? group)
@@ -596,11 +620,12 @@ namespace Bakabase.InsideWorld.Business.Services
                             var wrappers = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
                                 .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
 
-                            // Use ResourceProfile to get effective name templates
+                            // Batch get effective name templates to avoid N+1 query problem
+                            var templateMap = await ResourceProfileService.GetEffectiveNameTemplatesForResources(resourceIds.ToArray());
+
                             foreach (var resource in doList)
                             {
-                                var tpl = await ResourceProfileService.GetEffectiveNameTemplate(resource);
-                                if (!string.IsNullOrEmpty(tpl))
+                                if (templateMap.TryGetValue(resource.Id, out var tpl) && !string.IsNullOrEmpty(tpl))
                                 {
                                     resource.DisplayName = BuildDisplayNameForResource(resource, tpl, wrappers);
                                 }

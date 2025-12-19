@@ -51,10 +51,14 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
     return getItem(
       collapsed ? (
-        t<string>(item.name)
+        <span className={item.isDeprecated ? "line-through" : ""}>
+          {t<string>(item.name)}
+        </span>
       ) : (
         <div className="flex items-center gap-0.5">
-          {t<string>(item.name)}
+          <span className={item.isDeprecated ? "line-through" : ""}>
+            {t<string>(item.name)}
+          </span>
           {item.isBeta && <BetaChip />}
           {item.isDeprecated && <DeprecatedChip />}
         </div>

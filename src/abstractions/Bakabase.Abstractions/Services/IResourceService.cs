@@ -26,6 +26,11 @@ public interface IResourceService
     //     bool asNoTracking = true);
     //
     Task<SearchResponse<Resource>> Search(ResourceSearch model);
+
+    /// <summary>
+    /// Lightweight search that returns only resource IDs without loading additional items.
+    /// Use this to avoid circular dependencies (e.g., ResourceProfile matching).
+    /// </summary>
     Task<int[]> GetAllIds(ResourceSearch model);
 
     // Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool asNoTracking);

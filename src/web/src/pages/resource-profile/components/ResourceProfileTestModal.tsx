@@ -1,6 +1,7 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BakabaseAbstractionsModelsDomainResourceProfile } from "@/sdk/Api";
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -9,31 +10,13 @@ import { LoadingOutlined, FileOutlined } from "@ant-design/icons";
 import { Modal, Input, Chip, Button } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 
-interface SearchCriteria {
-  mediaLibraryIds?: number[];
-  propertyFilters?: PropertyFilter[];
-  pathPattern?: string;
-  tagFilter?: any;
-}
-
-interface PropertyFilter {
-  pool: number;
-  propertyId: number;
-  operation: number;
-  value?: any;
-}
-
-interface ResourceProfile {
-  id?: number;
-  name: string;
-  searchCriteria: SearchCriteria;
-  priority: number;
-}
+type ResourceProfile = BakabaseAbstractionsModelsDomainResourceProfile;
 
 interface Resource {
   id: number;
   path: string;
   name?: string;
+  displayName?: string;
 }
 
 type Props = {
@@ -52,11 +35,18 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
     const loadMatchingResources = async () => {
       setLoading(true);
       try {
-        const countRsp = await BApi.resourceProfile.testResourceProfileCriteria(profile.searchCriteria as any);
-        setMatchCount(countRsp.data ?? 0);
+        // Use resource search API to test the profile's search criteria
+        const searchParams = {
+          group: profile.search?.group,
+          tags: profile.search?.tags,
+          pageSize: limit,
+          page: 1,
+        };
 
-        const rsp = await BApi.resourceProfile.getMatchingResources(profile.searchCriteria as any, { limit });
-        setMatchingResources((rsp.data || []) as Resource[]);
+        const rsp = await BApi.resource.searchResources(searchParams as any);
+        const resources = (rsp.data || []) as Resource[];
+        setMatchingResources(resources);
+        setMatchCount(rsp.totalCount ?? resources.length);
       } catch (e) {
         console.error("Failed to test criteria", e);
       } finally {
@@ -71,7 +61,8 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
     (r) =>
       keyword === "" ||
       r.path?.toLowerCase().includes(keyword.toLowerCase()) ||
-      r.name?.toLowerCase().includes(keyword.toLowerCase())
+      r.name?.toLowerCase().includes(keyword.toLowerCase()) || 
+      r.displayName?.toLowerCase().includes(keyword.toLowerCase())
   );
 
   return (
@@ -142,16 +133,16 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
             {keyword ? t("No resources match your filter") : t("No resources matched by this criteria")}
           </div>
         ) : (
-          <div className="max-h-[400px] overflow-y-auto border rounded-lg">
+          <div className="max-h-[400px] overflow-y-auto border-divider border rounded-lg">
             {filteredResources.map((resource) => (
               <div
                 key={resource.id}
-                className="flex items-center gap-2 px-3 py-2 border-b last:border-b-0 hover:bg-default-100"
+                className="flex items-center gap-2 px-3 py-2 border-b border-b-divider last:border-b-0 hover:bg-default-100"
               >
                 <FileOutlined className="text-default-400" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" title={resource.name}>
-                    {resource.name || t("Unnamed")}
+                    {resource.displayName || t("Unnamed")}
                   </div>
                   <div className="text-xs text-default-400 font-mono truncate" title={resource.path}>
                     {resource.path}

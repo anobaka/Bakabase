@@ -4739,22 +4739,6 @@ export interface components {
             playableFilePaths?: string[];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
         };
-        "Bakabase.Abstractions.Models.Domain.ResourceProfile": {
-            /** Format: int32 */
-            id: number;
-            name: string;
-            search: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearch"];
-            nameTemplate?: string;
-            enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions"];
-            playableFileOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
-            playerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
-            /** Format: int32 */
-            priority: number;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            updatedAt: string;
-        };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
             enhancers?: components["schemas"]["Bakabase.Abstractions.Models.Domain.EnhancerFullOptions"][];
         };
@@ -4764,32 +4748,6 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions": {
             players?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
-        };
-        "Bakabase.Abstractions.Models.Domain.ResourceSearch": {
-            /** Format: int32 */
-            pageIndex: number;
-            /** Format: int32 */
-            pageSize: number;
-            /** Format: int32 */
-            readonly skipCount: number;
-            group?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"];
-            orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
-            tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
-        };
-        "Bakabase.Abstractions.Models.Domain.ResourceSearchFilter": {
-            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
-            /** Format: int32 */
-            propertyId: number;
-            operation: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"];
-            dbValue?: unknown;
-            property: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
-            disabled: boolean;
-        };
-        "Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup": {
-            combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
-            groups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"][];
-            filters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilter"][];
-            disabled: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -6470,6 +6428,16 @@ export interface components {
             keepResourcesOnPathChange?: boolean;
             deleteKeepResourceMarkers?: boolean;
         };
+        "Bakabase.Service.Models.Input.ResourceProfileInputModel": {
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            nameTemplate?: string;
+            enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions"];
+            playableFileOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
+            playerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+            /** Format: int32 */
+            priority: number;
+        };
         "Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel": {
             combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
             groups?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchFilterGroupInputModel"][];
@@ -6703,6 +6671,22 @@ export interface components {
             path: string;
             fileName: string;
         };
+        "Bakabase.Service.Models.View.ResourceProfileViewModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
+            nameTemplate?: string;
+            enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions"];
+            playableFileOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
+            playerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+            /** Format: int32 */
+            priority: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         "Bakabase.Service.Models.View.ResourceSearchFilterGroupViewModel": {
             combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
             groups?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchFilterGroupViewModel"][];
@@ -6805,12 +6789,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
-        };
-        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.Resource]": {
             /** Format: int32 */
@@ -6943,6 +6921,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.ResourcePathInfoViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceSearchFilterViewModel]": {
             /** Format: int32 */
@@ -7111,12 +7095,6 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"];
-        };
-        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]": {
-            /** Format: int32 */
-            code: number;
-            message?: string;
-            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.SpecialText]": {
             /** Format: int32 */
@@ -7399,6 +7377,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ResourceProfileViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceSearchViewModel]": {
             /** Format: int32 */
@@ -16368,9 +16352,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                 };
             };
         };
@@ -16384,10 +16368,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
             };
         };
         responses: {
@@ -16397,9 +16381,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                 };
             };
         };
@@ -16421,9 +16405,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Abstractions.Models.Domain.ResourceProfile]"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                 };
             };
         };
@@ -16439,10 +16423,10 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
-                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
-                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
-                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfile"];
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ResourceProfileInputModel"];
             };
         };
         responses: {

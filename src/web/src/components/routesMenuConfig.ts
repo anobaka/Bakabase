@@ -37,7 +37,7 @@ import MediaLibraryPage from "@/pages/media-library";
 import MediaLibraryTemplatePage from "@/pages/deprecated/media-library-template";
 import CustomPropertyPage from "@/pages/custom-property";
 import ExtensionGroup from "@/pages/extension-group";
-import BulkModification2Page from "@/pages/bulk-modification2";
+import BulkModification2Page from "@/pages/bulk-modification";
 import CachePage from "@/pages/cache";
 import AliasPage from "@/pages/alias";
 import TextPage from "@/pages/text";
@@ -95,7 +95,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     component: MediaLibraryPage,
     icon: AiOutlineNodeIndex,
     layout: "basic",
-    menu: true
+    menu: true,
   },
   {
     name: "Media library configuration",
@@ -129,14 +129,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineDatabase,
     menu: true,
     children: [
-      {
-        name: "Synchronization options",
-        path: "/synchronization-options",
-        component: SynchronizationOptionsPage,
-        icon: AiOutlineSync,
-        layout: "basic",
-        menu: true,
-      },
       {
         name: "Custom property",
         path: "/customproperty",
@@ -187,7 +179,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
       },
       {
         name: "Bulk modification",
-        path: "/bulk-modification2",
+        path: "/bulk-modification",
         component: BulkModification2Page,
         icon: AiOutlineForm,
         layout: "basic",
@@ -208,6 +200,15 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/media-library-template",
         component: MediaLibraryTemplatePage,
         icon: AiOutlineAppstoreAdd,
+        layout: "basic",
+        menu: true,
+        isDeprecated: true,
+      },
+      {
+        name: "Synchronization options",
+        path: "/synchronization-options",
+        component: SynchronizationOptionsPage,
+        icon: AiOutlineSync,
         layout: "basic",
         menu: true,
         isDeprecated: true,

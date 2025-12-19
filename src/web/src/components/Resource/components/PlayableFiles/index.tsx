@@ -13,6 +13,7 @@ import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
 import { useUiOptionsStore } from "@/stores/options";
 import { ResourceCacheType } from "@/sdk/constants.ts";
+import ResourceRequestQueue from "@/utils/requestQueue";
 
 type Props = {
   resource: ResourceModel;
@@ -115,7 +116,7 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
       }
     }
     log("Set playable files via api");
-    await BApi.resource.getResourcePlayableFiles(resource.id).then((a) => {
+    await ResourceRequestQueue.push(() => BApi.resource.getResourcePlayableFiles(resource.id)).then((a) => {
       setPortalCtx({
         files: a.data || [],
         hasMore: false,

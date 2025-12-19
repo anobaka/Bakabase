@@ -70,7 +70,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
   const handleAddMapping = useCallback(
     async (mediaLibraryId: number) => {
       try {
-        await BApi.mediaLibraryResourceMapping.addMapping({
+        await BApi.mediaLibraryResourceMapping.addMediaLibraryResourceMapping({
           id: 0,
           mediaLibraryId,
           resourceId,
@@ -82,7 +82,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
         setAddPopoverOpen(false);
       } catch (error) {
         console.error("Failed to add mapping:", error);
-        toast.error(t("Failed to add media library"));
+        toast.danger(t("Failed to add media library"));
       }
     },
     [resourceId, t, loadData, onMappingsChange]
@@ -91,13 +91,15 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
   const handleRemoveMapping = useCallback(
     async (mappingId: number) => {
       try {
-        await BApi.mediaLibraryResourceMapping.deleteMapping(mappingId);
+        await BApi.mediaLibraryResourceMapping.deleteMediaLibraryResourceMapping(
+          mappingId,
+        );
         toast.success(t("Media library removed"));
         await loadData();
         onMappingsChange?.();
       } catch (error) {
         console.error("Failed to remove mapping:", error);
-        toast.error(t("Failed to remove media library"));
+        toast.danger(t("Failed to remove media library"));
       }
     },
     [t, loadData, onMappingsChange]
@@ -125,11 +127,8 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
           {t("Media Libraries")}
         </div>
         <Popover
-          isOpen={addPopoverOpen}
           placement="bottom-end"
-          onOpenChange={setAddPopoverOpen}
-        >
-          <Popover.Trigger>
+          trigger={
             <Button
               isIconOnly
               isDisabled={availableLibraries.length === 0}
@@ -139,33 +138,31 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
             >
               <PlusOutlined />
             </Button>
-          </Popover.Trigger>
-          <Popover.Content>
-            <div className="max-h-60 overflow-y-auto min-w-[200px]">
-              <Listbox
-                aria-label={t("Select media library")}
-                onAction={(key) => {
-                  const id = parseInt(key as string, 10);
-                  handleAddMapping(id);
-                }}
-              >
-                {availableLibraries.map((lib) => (
-                  <ListboxItem
-                    key={lib.id}
-                    textValue={lib.name}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: lib.color || "#888" }}
-                      />
-                      <span>{lib.name}</span>
-                    </div>
-                  </ListboxItem>
-                ))}
-              </Listbox>
-            </div>
-          </Popover.Content>
+          }
+          visible={addPopoverOpen}
+          onOpenChange={setAddPopoverOpen}
+        >
+          <div className="max-h-60 overflow-y-auto min-w-[200px]">
+            <Listbox
+              aria-label={t("Select media library")}
+              onAction={(key) => {
+                const id = parseInt(key as string, 10);
+                handleAddMapping(id);
+              }}
+            >
+              {availableLibraries.map((lib) => (
+                <ListboxItem key={lib.id} textValue={lib.name}>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: lib.color || "#888" }}
+                    />
+                    <span>{lib.name}</span>
+                  </div>
+                </ListboxItem>
+              ))}
+            </Listbox>
+          </div>
         </Popover>
       </div>
 

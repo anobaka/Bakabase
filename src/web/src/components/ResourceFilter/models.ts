@@ -70,10 +70,12 @@ export interface FilterComponentRenderers {
    * 打开属性选择器
    * @param currentSelection 当前选中的属性
    * @param onSelect 选择回调
+   * @param onCancel 取消选择回调（关闭选择器但未选择）
    */
   openPropertySelector: (
     currentSelection: { id: number; pool: PropertyPool } | undefined,
-    onSelect: (property: IProperty, availableOperations: SearchOperation[]) => void
+    onSelect: (property: IProperty, availableOperations: SearchOperation[]) => void,
+    onCancel?: () => void
   ) => void;
 
   /**

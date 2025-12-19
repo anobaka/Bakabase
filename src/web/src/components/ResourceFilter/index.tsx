@@ -20,10 +20,21 @@ export { FilterProvider, useFilterConfig } from "./context/FilterContext";
 // Components
 export { default as Filter } from "./components/Filter";
 export { default as FilterGroup } from "./components/FilterGroup";
-export { default as FilterModal } from "./components/FilterModal";
 export { default as RecentFilters } from "./components/RecentFilters";
 export { default as ResourceSearchPanel } from "./components/ResourceSearchPanel";
 export type { SearchCriteria } from "./components/ResourceSearchPanel";
 
 // Presets
 export { createDefaultFilterConfig } from "./presets/DefaultFilterPreset";
+
+// Utils for API input models
+export {
+  toFilterInputModel,
+  toFilterGroupInputModel,
+  toSearchInputModel,
+} from "./utils/toInputModel";
+export type {
+  SearchFilterInputModel,
+  SearchFilterGroupInputModel,
+  ResourceSearchInputModel,
+} from "./utils/toInputModel";

@@ -5,7 +5,7 @@
 import type { SearchFilterGroup } from "../../models";
 
 import { useTranslation } from "react-i18next";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
 import {
   AppstoreOutlined,
@@ -17,18 +17,20 @@ import { MdOutlineFilterAlt, MdOutlineFilterAltOff } from "react-icons/md";
 
 import { GroupCombinator } from "../../models";
 import Filter from "../Filter";
-import FilterModal from "../FilterModal";
 import RecentFilters from "../RecentFilters";
 
 import { Button, Popover, Tooltip } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 type Props = {
   group: SearchFilterGroup;
   onRemove?: () => void;
   onChange?: (group: SearchFilterGroup) => void;
   isRoot?: boolean;
+  /** Index of filter that should auto-trigger property selector (set from external) */
+  externalNewFilterIndex?: number | null;
+  /** Called when external new filter index is consumed */
+  onExternalNewFilterConsumed?: () => void;
 };
 
 const log = buildLogger("FilterGroup");
@@ -38,12 +40,19 @@ const FilterGroup = ({
   onRemove,
   onChange,
   isRoot = false,
+  externalNewFilterIndex,
+  onExternalNewFilterConsumed,
 }: Props) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
 
   const [group, setGroup] = React.useState<SearchFilterGroup>(propsGroup);
   const groupRef = useRef(group);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  // Track newly added filter index to auto-trigger property selector
+  const [internalNewFilterIndex, setInternalNewFilterIndex] = useState<number | null>(null);
+
+  // Combine internal and external new filter index
+  const newFilterIndex = internalNewFilterIndex ?? externalNewFilterIndex ?? null;
 
   const changeGroup = useCallback(
     (newGroup: SearchFilterGroup) => {
@@ -64,24 +73,44 @@ const FilterGroup = ({
   const { filters, groups, combinator } = group;
 
   const conditionElements: any[] = (filters || [])
-    .map((f, i) => (
-      <Filter
-        key={`f-${i}`}
-        filter={f}
-        onChange={(tf) => {
-          changeGroup({
-            ...group,
-            filters: (group.filters || []).map((fil) => (fil === f ? tf : fil)),
-          });
-        }}
-        onRemove={() => {
-          changeGroup({
-            ...group,
-            filters: (group.filters || []).filter((fil) => fil !== f),
-          });
-        }}
-      />
-    ))
+    .map((f, i) => {
+      const isNewFilter = newFilterIndex === i;
+      return (
+        <Filter
+          key={`f-${i}`}
+          filter={f}
+          autoTriggerPropertySelector={isNewFilter}
+          onChange={(tf) => {
+            if (isNewFilter) {
+              setInternalNewFilterIndex(null);
+              onExternalNewFilterConsumed?.();
+            }
+            changeGroup({
+              ...group,
+              filters: (group.filters || []).map((fil) => (fil === f ? tf : fil)),
+            });
+          }}
+          onRemove={() => {
+            if (isNewFilter) {
+              setInternalNewFilterIndex(null);
+              onExternalNewFilterConsumed?.();
+            }
+            changeGroup({
+              ...group,
+              filters: (group.filters || []).filter((fil) => fil !== f),
+            });
+          }}
+          onCancelNewFilter={isNewFilter ? () => {
+            setInternalNewFilterIndex(null);
+            onExternalNewFilterConsumed?.();
+            changeGroup({
+              ...groupRef.current,
+              filters: (groupRef.current.filters || []).filter((_, idx) => idx !== i),
+            });
+          } : undefined}
+        />
+      );
+    })
     .concat(
       (groups || []).map((g, i) => (
         <FilterGroup
@@ -152,6 +181,8 @@ const FilterGroup = ({
           <Popover
             showArrow
             placement={"bottom"}
+            isOpen={popoverOpen}
+            onOpenChange={setPopoverOpen}
             trigger={
               <Button isIconOnly size={"sm"}>
                 <TbFilterPlus className={"text-lg"} />
@@ -163,15 +194,15 @@ const FilterGroup = ({
                 <Button
                   size={"sm"}
                   onPress={() => {
-                    createPortal(FilterModal, {
-                      isNew: true,
-                      filter: { disabled: false },
-                      onSubmit: (filter) => {
-                        changeGroup({
-                          ...groupRef.current,
-                          filters: [...(groupRef.current.filters || []), filter],
-                        });
-                      },
+                    // Close popover first
+                    setPopoverOpen(false);
+                    // Add empty filter and track its index
+                    const currentFilters = groupRef.current.filters || [];
+                    const newIndex = currentFilters.length;
+                    setInternalNewFilterIndex(newIndex);
+                    changeGroup({
+                      ...groupRef.current,
+                      filters: [...currentFilters, { disabled: false }],
                     });
                   }}
                 >
@@ -181,6 +212,7 @@ const FilterGroup = ({
                 <Button
                   size={"sm"}
                   onPress={() => {
+                    setPopoverOpen(false);
                     changeGroup({
                       ...groupRef.current,
                       groups: [
@@ -201,6 +233,7 @@ const FilterGroup = ({
                 <div>{t("Recent filters")}</div>
                 <RecentFilters
                   onSelectFilter={(filter) => {
+                    setPopoverOpen(false);
                     changeGroup({
                       ...groupRef.current,
                       filters: [...(groupRef.current.filters || []), filter],

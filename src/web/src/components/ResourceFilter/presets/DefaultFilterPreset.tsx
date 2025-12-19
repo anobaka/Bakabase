@@ -51,7 +51,7 @@ export function createDefaultFilterConfig(
     },
 
     renderers: {
-      openPropertySelector: (currentSelection, onSelect) => {
+      openPropertySelector: (currentSelection, onSelect, onCancel) => {
         createPortal(PropertySelector, {
           v2: true,
           selection: currentSelection
@@ -68,6 +68,7 @@ export function createDefaultFilterConfig(
               onSelect(property, availableOperations);
             }
           },
+          onCancel,
           multiple: false,
           pool: PropertyPool.All,
           addable: false,

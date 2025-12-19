@@ -168,7 +168,8 @@ export enum InternalProperty {
   FileModifiedAt = 19,
   Category = 20,
   MediaLibrary = 21,
-  MediaLibraryV2 = 24
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25
 }
 
 export const internalProperties = [
@@ -182,7 +183,8 @@ export const internalProperties = [
   { label: 'FileModifiedAt', value: InternalProperty.FileModifiedAt },
   { label: 'Category', value: InternalProperty.Category },
   { label: 'MediaLibrary', value: InternalProperty.MediaLibrary },
-  { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 }
+  { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi }
 ] as const;
 
 export const InternalPropertyLabel: Record<InternalProperty, string> = {
@@ -196,7 +198,8 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.FileModifiedAt]: 'FileModifiedAt',
   [InternalProperty.Category]: 'Category',
   [InternalProperty.MediaLibrary]: 'MediaLibrary',
-  [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2'
+  [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
 };
 
 export enum MediaLibraryTemplateAdditionalItem {

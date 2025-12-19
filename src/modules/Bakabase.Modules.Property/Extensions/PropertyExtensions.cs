@@ -24,7 +24,6 @@ public static class PropertyExtensions
     /// <summary>
     /// Get the DB value type for a PropertyType.
     /// </summary>
-    [Obsolete("Use PropertySystem.Property.GetDbValueType() instead.")]
     public static StandardValueType GetDbValueType(this PropertyType type) =>
         PropertySystem.Property.TryGetAttribute(type)?.DbValueType ?? default;
 

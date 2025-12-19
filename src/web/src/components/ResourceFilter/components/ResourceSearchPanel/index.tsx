@@ -1,14 +1,13 @@
 "use client";
 
 import type { SearchFilter, SearchFilterGroup } from "../../models";
-import type { ResourceTag } from "@/sdk/constants";
+import { ResourceTag } from "@/sdk/constants";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AppstoreOutlined, FilterOutlined, SearchOutlined } from "@ant-design/icons";
 import { TbFilterPlus } from "react-icons/tb";
 import { useTranslation } from "react-i18next";
 
-import FilterModal from "../FilterModal";
 import RecentFilters from "../RecentFilters";
 import FilterGroup from "../FilterGroup";
 import QuickFilters from "./QuickFilters";
@@ -63,9 +62,10 @@ const ResourceSearchPanelInner = ({
   compact = false,
 }: ResourceSearchPanelProps) => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [newFilterIndex, setNewFilterIndex] = useState<number | null>(null);
 
-  const addFilter = (filter: SearchFilter) => {
+  const addFilter = (filter: SearchFilter, autoTriggerPropertySelector = false) => {
     const newGroup: SearchFilterGroup = criteria.group ?? {
       combinator: GroupCombinator.And,
       disabled: false,
@@ -76,8 +76,13 @@ const ResourceSearchPanelInner = ({
     if (!newGroup.filters) {
       newGroup.filters = [];
     }
-    newGroup.filters.push(filter);
 
+    // Track the index if we need to auto-trigger property selector
+    if (autoTriggerPropertySelector) {
+      setNewFilterIndex(newGroup.filters.length);
+    }
+
+    newGroup.filters.push(filter);
     onChange({ ...criteria, group: newGroup });
   };
 
@@ -130,6 +135,8 @@ const ResourceSearchPanelInner = ({
         <Popover
           showArrow
           placement="bottom"
+          isOpen={popoverOpen}
+          onOpenChange={setPopoverOpen}
           trigger={
             <Button isIconOnly size={compact ? "md" : "md"}>
               <TbFilterPlus className="text-lg" />
@@ -144,12 +151,8 @@ const ResourceSearchPanelInner = ({
               <>
                 <QuickFilters
                   onAdded={(filter) => {
-                    createPortal(FilterModal, {
-                      filter,
-                      onSubmit: (f: SearchFilter) => {
-                        addFilter(f);
-                      },
-                    });
+                    setPopoverOpen(false);
+                    addFilter(filter);
                   }}
                 />
                 <div />
@@ -162,13 +165,8 @@ const ResourceSearchPanelInner = ({
               <Button
                 size="sm"
                 onPress={() => {
-                  createPortal(FilterModal, {
-                    isNew: true,
-                    filter: { disabled: false },
-                    onSubmit: (filter: SearchFilter) => {
-                      addFilter(filter);
-                    },
-                  });
+                  setPopoverOpen(false);
+                  addFilter({ disabled: false }, true);
                 }}
               >
                 <FilterOutlined className="text-base" />
@@ -177,6 +175,7 @@ const ResourceSearchPanelInner = ({
               <Button
                 size="sm"
                 onPress={() => {
+                  setPopoverOpen(false);
                   addFilterGroup();
                 }}
               >
@@ -202,7 +201,7 @@ const ResourceSearchPanelInner = ({
                       });
                     }}
                   >
-                    {resourceTags.map((rt) => (
+                    {resourceTags.filter(rt => rt.value != ResourceTag.PathDoesNotExist && rt.value != ResourceTag.UnknownMediaLibrary).map((rt) => (
                       <Checkbox key={rt.value} value={rt.value.toString()}>
                         {t<string>(`ResourceTag.${rt.label}`)}
                       </Checkbox>
@@ -236,6 +235,8 @@ const ResourceSearchPanelInner = ({
           <FilterGroup
             isRoot
             group={criteria.group}
+            externalNewFilterIndex={newFilterIndex}
+            onExternalNewFilterConsumed={() => setNewFilterIndex(null)}
             onChange={(group) => {
               onChange({ ...criteria, group });
             }}

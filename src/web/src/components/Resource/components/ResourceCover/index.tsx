@@ -12,6 +12,7 @@ import { useAppContextStore } from "@/stores/appContext";
 import { CoverFit, ResourceCacheType } from "@/sdk/constants";
 import { Carousel, Tooltip, Image } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ResourceRequestQueue from "@/utils/requestQueue";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
@@ -80,6 +81,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   });
 
   const [failureUrls, setFailureUrls] = useState<Set<string>>(new Set());
+  const [blobUrls, setBlobUrls] = useState<Map<string, string>>(new Map());
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(true);
 
   // log(resource);
 
@@ -95,11 +99,23 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     disableCacheRef.current = useCache;
   }, [useCache]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      // Clean up blob URLs on unmount
+      blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+    };
+  }, []);
+
   const loadCover = useCallback(
     (disableBrowserCache?: boolean) => {
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+
       const serverAddresses = appContext.apiEndpoints ?? [envConfig.apiEndpoint];
 
-      const urls: string[] = [];
+      const newUrls: string[] = [];
 
       const cps = resource.coverPaths ?? [];
 
@@ -123,27 +139,52 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
       log("cps", cps, "cache", resource.cache);
 
       if (cps.length > 0) {
-        urls.push(
+        newUrls.push(
           ...cps.map(
             (coverPath) => `${serverAddress}/tool/thumbnail?path=${encodeURIComponent(coverPath)}`,
           ),
         );
       } else {
-        urls.push(`${serverAddress}/resource/${resource.id}/cover`);
+        newUrls.push(`${serverAddress}/resource/${resource.id}/cover`);
       }
 
       if (disableBrowserCache) {
-        for (let i = 0; i < urls.length; i++) {
-          urls[i] += urls[i].includes("?") ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
+        for (let i = 0; i < newUrls.length; i++) {
+          newUrls[i] += newUrls[i].includes("?") ? `&v=${uuidv4()}` : `?v=${uuidv4()}`;
         }
       }
-      // log(urls, resource);
-      setUrls(urls);
+
+      setUrls(newUrls);
+
+      // Load images through queue
+      newUrls.forEach((url) => {
+        ResourceRequestQueue.push(async () => {
+          if (!mountedRef.current) return;
+          try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Failed to load");
+            const blob = await response.blob();
+            if (!mountedRef.current) return;
+            const blobUrl = URL.createObjectURL(blob);
+            setBlobUrls((prev) => new Map(prev).set(url, blobUrl));
+          } catch (e) {
+            if (!mountedRef.current) return;
+            setFailureUrls((prev) => new Set(prev).add(url));
+            log("failed to load url", url);
+          }
+        });
+      });
+
+      loadingRef.current = false;
     },
     [resource, useCache],
   );
 
   useUpdateEffect(() => {
+    // Clean up old blob URLs before loading new ones
+    blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
+    setBlobUrls(new Map());
+    setFailureUrls(new Set());
     loadCover(false);
   }, [resource, loadCover]);
 
@@ -175,7 +216,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const renderCover = useCallback(() => {
     if (urls) {
-      let dynamicClassNames: string[] = [];
+      let dynamicClassNames: string[] = [
+        coverFit == CoverFit.Cover ? "object-cover" : "object-contain",
+      ];
 
       if (containerRef.current && maxCoverRawSizeRef.current) {
         if (maxCoverRawSizeRef.current.w > containerRef.current.clientWidth) {
@@ -184,7 +227,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         if (maxCoverRawSizeRef.current.h > containerRef.current.clientHeight) {
           dynamicClassNames.push("h-full");
         }
-        dynamicClassNames.push(coverFit == CoverFit.Cover ? "object-cover" : "object-contain");
       }
       const dynamicClassName = dynamicClassNames.join(" ");
 
@@ -198,6 +240,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
           dots={urls && urls.length > 1}
         >
           {renderingUrls?.map((url) => {
+            const blobUrl = blobUrls.get(url);
+            const isLoading = !blobUrl && !failureUrls.has(url);
+
             return (
               <div key={url}>
                 <div
@@ -210,31 +255,22 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                   {/* https://github.com/heroui-inc/heroui/issues/4756 */}
                   {failureUrls.has(url) ? (
                     <FallbackCover afterClearingCache={() => loadCover(true)} id={resource.id} />
+                  ) : isLoading ? (
+                    <div className="w-full h-full bg-default-100 animate-pulse" />
                   ) : (
                     <Image
-                      key={url}
+                      key={blobUrl}
                       removeWrapper
                       className={`${dynamicClassName} max-w-full max-h-full`}
-                      // fallbackSrc={renderBrokenCover()}
-                      // fallbackSrc={
-                      //   <FallbackCover
-                      //     afterClearingCache={() => loadCover(true)}
-                      //     id={resource.id}
-                      //   />
-                      // }
                       loading={"eager"}
-                      src={url}
-                      onError={() => {
-                        failureUrls.add(url);
-                        setFailureUrls(new Set<string>(failureUrls));
-                        log("failed to load url", url);
-                      }}
+                      src={blobUrl}
                       onLoad={(e) => {
-                        // forceUpdate();
                         const img = e.target as HTMLImageElement;
 
-                        // log("loaded", e, img);
                         if (img) {
+                          const prevW = maxCoverRawSizeRef.current?.w ?? 0;
+                          const prevH = maxCoverRawSizeRef.current?.h ?? 0;
+
                           if (!maxCoverRawSizeRef.current) {
                             maxCoverRawSizeRef.current = {
                               w: img.naturalWidth,
@@ -250,6 +286,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                               img.naturalHeight,
                             );
                           }
+
+                          if (
+                            maxCoverRawSizeRef.current.w !== prevW ||
+                            maxCoverRawSizeRef.current.h !== prevH
+                          ) {
+                            forceUpdate();
+                          }
                         }
                       }}
                     />
@@ -263,7 +306,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
 
     return null;
-  }, [urls, coverFit, disableCarousel]);
+  }, [urls, coverFit, disableCarousel, blobUrls, failureUrls]);
 
   const renderContainer = () => {
     return (
@@ -338,46 +381,45 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
             autoplay={urls && urls.length > 1}
             dots={urls && urls.length > 1}
           >
-            {urls?.map((url) => (
-              <div key={url}>
-                <div
-                  className={"flex items-center justify-center"}
-                  style={{
-                    maxWidth: tooltipWidth,
-                    maxHeight: tooltipHeight,
-                  }}
-                >
-                  {failureUrls.has(url) ? (
-                    <FallbackCover afterClearingCache={() => loadCover(true)} id={resource.id} />
-                  ) : (
-                    <Image
-                      key={url}
-                      removeWrapper
-                      alt={""}
-                      // fallbackSrc={
-                      //   <FallbackCover
-                      //     afterClearingCache={() => loadCover(true)}
-                      //     id={resource.id}
-                      //   />
-                      // }
-                      loading={"eager"}
-                      src={url}
-                      style={{
-                        maxWidth: tooltipWidth,
-                        maxHeight: tooltipHeight,
-                      }}
-                      onError={() => {
-                        failureUrls.add(url);
-                        setFailureUrls(new Set<string>(failureUrls));
-                      }}
-                      onLoad={(e) => {
-                        // log('loaded bigger', e);
-                      }}
-                    />
-                  )}
+            {urls?.map((url) => {
+              const blobUrl = blobUrls.get(url);
+
+              return (
+                <div key={url}>
+                  <div
+                    className={"flex items-center justify-center"}
+                    style={{
+                      maxWidth: tooltipWidth,
+                      maxHeight: tooltipHeight,
+                    }}
+                  >
+                    {failureUrls.has(url) ? (
+                      <FallbackCover afterClearingCache={() => loadCover(true)} id={resource.id} />
+                    ) : blobUrl ? (
+                      <Image
+                        key={blobUrl}
+                        removeWrapper
+                        alt={""}
+                        loading={"eager"}
+                        src={blobUrl}
+                        style={{
+                          maxWidth: tooltipWidth,
+                          maxHeight: tooltipHeight,
+                        }}
+                      />
+                    ) : (
+                      <div
+                        className="bg-default-100 animate-pulse"
+                        style={{
+                          width: tooltipWidth,
+                          height: tooltipHeight,
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </Carousel>
         </div>
       }

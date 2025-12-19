@@ -3,7 +3,7 @@
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import PropertyModal from "../PropertyModal";
@@ -25,6 +25,8 @@ type Key = {
 interface IProps extends DestroyableProps {
   selection?: Key[];
   onSubmit?: (selectedProperties: IProperty[]) => Promise<any>;
+  /** Called when modal is closed without making a selection */
+  onCancel?: () => void;
   multiple?: boolean;
   pool: PropertyPool;
   valueTypes?: StandardValueType[];
@@ -46,6 +48,7 @@ const PropertySelector = (props: IProps) => {
   const {
     selection: propsSelection,
     onSubmit: propsOnSubmit,
+    onCancel,
     multiple = true,
     pool,
     types,
@@ -62,6 +65,7 @@ const PropertySelector = (props: IProps) => {
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [selection, setSelection] = useState<Key[]>(propsSelection || []);
   const [visible, setVisible] = useState(true);
+  const hasSubmittedRef = useRef(false);
   const uiOptionsStore = useUiOptionsStore();
 
   // console.log('props selection', propsSelection, properties, addable, editable, removable);
@@ -185,6 +189,7 @@ const PropertySelector = (props: IProps) => {
           .filter((x) => x != undefined) as IProperty[],
       );
     }
+    hasSubmittedRef.current = true;
     setVisible(false);
   };
 
@@ -352,7 +357,12 @@ const PropertySelector = (props: IProps) => {
       onClose={() => {
         setVisible(false);
       }}
-      onDestroyed={onDestroyed}
+      onDestroyed={() => {
+        if (!hasSubmittedRef.current) {
+          onCancel?.();
+        }
+        onDestroyed?.();
+      }}
       onOk={async () => {
         await onSubmit(selection);
       }}

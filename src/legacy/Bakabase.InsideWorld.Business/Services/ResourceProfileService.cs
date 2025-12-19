@@ -59,8 +59,8 @@ public class ResourceProfileService<TDbContext>(
 
         foreach (var profile in allProfiles)
         {
-            var matchingResources = await GetMatchingResources(profile.Search, limit: null);
-            if (matchingResources.Any(r => r.Id == resource.Id))
+            var matchingIds = await GetMatchingResourceIds(profile.Search);
+            if (matchingIds.Contains(resource.Id))
             {
                 matchingProfiles.Add(profile);
             }
@@ -73,6 +73,27 @@ public class ResourceProfileService<TDbContext>(
     {
         var profiles = await GetMatchingProfiles(resource);
         return profiles.FirstOrDefault(p => !string.IsNullOrEmpty(p.NameTemplate))?.NameTemplate;
+    }
+
+    public async Task<Dictionary<int, string?>> GetEffectiveNameTemplatesForResources(int[] resourceIds)
+    {
+        var result = new Dictionary<int, string?>();
+        var resourceIdSet = resourceIds.ToHashSet();
+        var allProfiles = await GetAll();
+
+        // Process profiles in priority order (highest first, already sorted by GetAll)
+        foreach (var profile in allProfiles.Where(p => !string.IsNullOrEmpty(p.NameTemplate)))
+        {
+            var matchingIds = await GetMatchingResourceIds(profile.Search);
+
+            foreach (var id in matchingIds.Where(id => resourceIdSet.Contains(id)))
+            {
+                // Only set if not already set (higher priority profiles take precedence)
+                result.TryAdd(id, profile.NameTemplate);
+            }
+        }
+
+        return result;
     }
 
     public async Task<ResourceProfileEnhancerOptions?> GetEffectiveEnhancerOptions(Resource resource)
@@ -91,8 +112,7 @@ public class ResourceProfileService<TDbContext>(
         // For each profile, get matching resources and map enhancer options
         foreach (var profile in allProfiles.Where(p => p.EnhancerOptions != null))
         {
-            var matchingResources = await GetMatchingResources(profile.Search, limit: null);
-            var matchingIds = matchingResources.Select(r => r.Id).ToHashSet();
+            var matchingIds = await GetMatchingResourceIds(profile.Search);
 
             foreach (var resource in resourcesList)
             {
@@ -119,24 +139,72 @@ public class ResourceProfileService<TDbContext>(
         return profiles.FirstOrDefault(p => p.PlayerOptions != null)?.PlayerOptions;
     }
 
-    public async Task<ResourceProfile> Add(ResourceProfile profile)
+    public async Task<ResourceProfile> Add(
+        string name,
+        string? searchJson,
+        string? nameTemplate,
+        ResourceProfileEnhancerOptions? enhancerOptions,
+        ResourceProfilePlayableFileOptions? playableFileOptions,
+        ResourceProfilePlayerOptions? playerOptions,
+        int priority)
     {
-        profile.CreatedAt = DateTime.UtcNow;
-        profile.UpdatedAt = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        var dbModel = new ResourceProfileDbModel
+        {
+            Name = name,
+            SearchJson = searchJson,
+            NameTemplate = nameTemplate,
+            EnhancerSettingsJson = enhancerOptions != null
+                ? JsonConvert.SerializeObject(enhancerOptions)
+                : null,
+            PlayableFileSettingsJson = playableFileOptions != null
+                ? JsonConvert.SerializeObject(playableFileOptions)
+                : null,
+            PlayerSettingsJson = playerOptions != null
+                ? JsonConvert.SerializeObject(playerOptions)
+                : null,
+            Priority = priority,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
 
-        var searchJson = SerializeSearchToJson(profile.Search);
-        var dbModel = profile.ToDbModel(searchJson);
         await orm.Add(dbModel);
         orm.DbContext.Detach(dbModel);
-        profile.Id = dbModel.Id;
-        return profile;
+
+        var search = await ParseSearchFromDbModel(dbModel);
+        return dbModel.ToDomainModel(search);
     }
 
-    public async Task Update(ResourceProfile profile)
+    public async Task Update(
+        int id,
+        string name,
+        string? searchJson,
+        string? nameTemplate,
+        ResourceProfileEnhancerOptions? enhancerOptions,
+        ResourceProfilePlayableFileOptions? playableFileOptions,
+        ResourceProfilePlayerOptions? playerOptions,
+        int priority)
     {
-        profile.UpdatedAt = DateTime.UtcNow;
-        var searchJson = SerializeSearchToJson(profile.Search);
-        await orm.Update(profile.ToDbModel(searchJson));
+        var dbModel = new ResourceProfileDbModel
+        {
+            Id = id,
+            Name = name,
+            SearchJson = searchJson,
+            NameTemplate = nameTemplate,
+            EnhancerSettingsJson = enhancerOptions != null
+                ? JsonConvert.SerializeObject(enhancerOptions)
+                : null,
+            PlayableFileSettingsJson = playableFileOptions != null
+                ? JsonConvert.SerializeObject(playableFileOptions)
+                : null,
+            PlayerSettingsJson = playerOptions != null
+                ? JsonConvert.SerializeObject(playerOptions)
+                : null,
+            Priority = priority,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        await orm.Update(dbModel);
     }
 
     public async Task Delete(int id)
@@ -144,19 +212,24 @@ public class ResourceProfileService<TDbContext>(
         await orm.RemoveByKey(id);
     }
 
-    private async Task<List<Resource>> GetMatchingResources(ResourceSearch search, int? limit = null)
+    private async Task<HashSet<int>> GetMatchingResourceIds(ResourceSearch? search)
     {
-        // Ensure we don't use pagination/ordering for profile matching
+        if (search == null)
+        {
+            return [];
+        }
+
+        // Use GetAllIds to avoid circular dependency (Search -> DisplayName -> ResourceProfile -> Search)
         var searchForMatching = new ResourceSearch
         {
             Group = search.Group,
             Tags = search.Tags,
             PageIndex = 1,
-            PageSize = limit ?? int.MaxValue
+            PageSize = int.MaxValue
         };
 
-        var searchResult = await ResourceService.Search(searchForMatching);
-        return searchResult.Data?.ToList() ?? new List<Resource>();
+        var ids = await ResourceService.GetAllIds(searchForMatching);
+        return ids.ToHashSet();
     }
 
     private async Task<ResourceSearch?> ParseSearchFromDbModel(ResourceProfileDbModel dbModel)
@@ -182,14 +255,4 @@ public class ResourceProfileService<TDbContext>(
         }
     }
 
-    private string? SerializeSearchToJson(ResourceSearch? search)
-    {
-        if (search?.Group == null && search?.Tags == null)
-        {
-            return null;
-        }
-
-        var dbModel = search.ToDbModel();
-        return JsonConvert.SerializeObject(dbModel);
-    }
 }

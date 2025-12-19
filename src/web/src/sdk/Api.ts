@@ -654,23 +654,6 @@ export interface BakabaseAbstractionsModelsDomainResourceCache {
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
 }
 
-export interface BakabaseAbstractionsModelsDomainResourceProfile {
-  /** @format int32 */
-  id: number;
-  name: string;
-  search: BakabaseAbstractionsModelsDomainResourceSearch;
-  nameTemplate?: string;
-  enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
-  playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
-  playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
-  /** @format int32 */
-  priority: number;
-  /** @format date-time */
-  createdAt: string;
-  /** @format date-time */
-  updatedAt: string;
-}
-
 export interface BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions {
   enhancers?: BakabaseAbstractionsModelsDomainEnhancerFullOptions[];
 }
@@ -682,42 +665,6 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOpti
 
 export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
-}
-
-export interface BakabaseAbstractionsModelsDomainResourceSearch {
-  /** @format int32 */
-  pageIndex: number;
-  /**
-   * @format int32
-   * @min 0
-   * @max 100
-   */
-  pageSize: number;
-  /** @format int32 */
-  skipCount: number;
-  group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
-  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
-  tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
-}
-
-export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  propertyId: number;
-  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
-  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
-  dbValue?: any;
-  property: BakabaseAbstractionsModelsDomainProperty;
-  disabled: boolean;
-}
-
-export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
-  /** [1: And, 2: Or] */
-  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
-  groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[];
-  filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[];
-  disabled: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -2843,6 +2790,17 @@ export interface BakabaseServiceModelsInputResourceOptionsPatchInputModel {
   deleteKeepResourceMarkers?: boolean;
 }
 
+export interface BakabaseServiceModelsInputResourceProfileInputModel {
+  name: string;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
+  nameTemplate?: string;
+  enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
+  playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
+  playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+  /** @format int32 */
+  priority: number;
+}
+
 export interface BakabaseServiceModelsInputResourceSearchFilterGroupInputModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
@@ -3122,6 +3080,23 @@ export interface BakabaseServiceModelsViewResourcePathInfoViewModel {
   fileName: string;
 }
 
+export interface BakabaseServiceModelsViewResourceProfileViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  search?: BakabaseServiceModelsViewResourceSearchViewModel;
+  nameTemplate?: string;
+  enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
+  playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
+  playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+  /** @format int32 */
+  priority: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
 export interface BakabaseServiceModelsViewResourceSearchFilterGroupViewModel {
   /** [1: And, 2: Or] */
   combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
@@ -3242,13 +3217,6 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathMark[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceProfile {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainResourceProfile[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource {
@@ -3403,6 +3371,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewResourcePathInfoViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceSearchFilterViewModel {
@@ -3594,13 +3569,6 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathMark;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfile {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainResourceProfile;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainSpecialText {
@@ -3930,6 +3898,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewResourceProfileViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceSearchViewModel {
@@ -14437,7 +14412,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getAllResourceProfiles: (params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceProfile,
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel,
         any
       >({
         path: `/resource-profile`,
@@ -14465,11 +14440,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/resource-profile
      */
     addResourceProfile: (
-      data: BakabaseAbstractionsModelsDomainResourceProfile,
+      data: BakabaseServiceModelsInputResourceProfileInputModel,
       params: RequestParams = {},
     ) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfile,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
         any
       >({
         path: `/resource-profile`,
@@ -14500,7 +14475,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourceProfile: (id: number, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceProfile,
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
         any
       >({
         path: `/resource-profile/${id}`,
@@ -14518,7 +14493,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     updateResourceProfile: (
       id: number,
-      data: BakabaseAbstractionsModelsDomainResourceProfile,
+      data: BakabaseServiceModelsInputResourceProfileInputModel,
       params: RequestParams = {},
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({

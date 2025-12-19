@@ -345,4 +345,22 @@ public static class ResourceSearchExtensions
             Tags = domainModel.Tags
         };
     }
+
+    public static ResourceProfileViewModel ToViewModel(this ResourceProfile profile,
+        IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceProfileViewModel
+        {
+            Id = profile.Id,
+            Name = profile.Name,
+            Search = profile.Search.Group != null ? profile.Search.ToViewModel(propertyLocalizer) : null,
+            NameTemplate = profile.NameTemplate,
+            EnhancerOptions = profile.EnhancerOptions,
+            PlayableFileOptions = profile.PlayableFileOptions,
+            PlayerOptions = profile.PlayerOptions,
+            Priority = profile.Priority,
+            CreatedAt = profile.CreatedAt,
+            UpdatedAt = profile.UpdatedAt
+        };
+    }
 }

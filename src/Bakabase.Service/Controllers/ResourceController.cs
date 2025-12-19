@@ -190,7 +190,7 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("search")]
         [SwaggerOperation(OperationId = "SearchResources")]
-        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string searchId)
+        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string? searchId = null)
         {
             model.StandardPageable();
 
@@ -201,10 +201,13 @@ namespace Bakabase.Service.Controllers
                     await resourceOptionsManager.SaveAsync(a =>
                     {
                         a.LastSearchV2 = model.ToDbModel();
-                        var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
-                        if (search != null)
+                        if (searchId.IsNotEmpty())
                         {
-                            search.Search = model.ToDbModel();
+                            var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
+                            if (search != null)
+                            {
+                                search.Search = model.ToDbModel();
+                            }    
                         }
                     });
                 }

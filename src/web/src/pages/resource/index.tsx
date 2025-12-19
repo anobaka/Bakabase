@@ -2,8 +2,7 @@ import type { components } from "@/sdk/BApi2";
 import type { IdName } from "@/components/types";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Tab, Tabs } from "@heroui/react";
-import { Input } from "@/components/bakaui";
+import { Button, Input } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
 
@@ -22,6 +21,8 @@ const ResourcePage2 = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
   const [activeSearchId, setActiveSearchId] = useState<string>();
+  const [creatingTab, setCreatingTab] = useState(false);
+  const [removingTabId, setRemovingTabId] = useState<string | null>(null);
   const resourceOptions = useResourceOptionsStore();
   const optionsInitialized = useRef(false);
 
@@ -58,15 +59,23 @@ const ResourcePage2 = () => {
   }, [resourceOptions.initialized]);
 
   const searchInNewTab = async (f: SearchForm) => {
-    const nrs = {
-      search: f,
-      // id: uuidv4().slice(0, 6),
-    };
+    if (creatingTab) return;
+    setCreatingTab(true);
 
-    const newSearch = (await BApi.resource.saveNewResourceSearch(nrs)).data!;
+    try {
+      const nrs = {
+        search: f,
+        // id: uuidv4().slice(0, 6),
+      };
 
-    setSavedSearches((prev) => [...prev, newSearch]);
-    changeTab(newSearch.id);
+      const newSearch = (await BApi.resource.saveNewResourceSearch(nrs)).data;
+      if (!newSearch) return;
+
+      setSavedSearches((prev) => [...prev, newSearch]);
+      changeTab(newSearch.id);
+    } finally {
+      setCreatingTab(false);
+    }
   };
 
   const beginRename = (id: string) => {
@@ -104,14 +113,20 @@ const ResourcePage2 = () => {
   };
 
   const removeSaved = async (id: string) => {
-    // if (!confirm(t("Are you sure to delete this tab?"))) return;
-    await BApi.resource.deleteSavedSearch({ id });
-    const idx = savedSearches.findIndex((x) => x.id == id);
-    const prev = savedSearches[idx - 1];
-    const next = savedSearches[idx + 1];
+    if (removingTabId) return;
+    setRemovingTabId(id);
 
-    setSavedSearches((prev) => prev.filter((s) => s.id != id));
-    changeTab((prev ?? next)?.id);
+    try {
+      await BApi.resource.deleteSavedSearch({ id });
+      const idx = savedSearches.findIndex((x) => x.id == id);
+      const prev = savedSearches[idx - 1];
+      const next = savedSearches[idx + 1];
+
+      setSavedSearches((prev) => prev.filter((s) => s.id != id));
+      changeTab((prev ?? next)?.id);
+    } finally {
+      setRemovingTabId(null);
+    }
   };
 
   console.log("saved searches", savedSearches);
@@ -126,28 +141,47 @@ const ResourcePage2 = () => {
 
   return (
     <div className={"flex flex-col h-full max-h-full "}>
-      <Tabs
-        classNames={{ panel: "grow py-0 px-0", tabList: ss.length == 1 ? "hidden" : "" }}
-        destroyInactiveTabPanel={false}
-        selectedKey={activeSearchId}
-        variant="underlined"
-        onSelectionChange={(key) => {
-          changeTab(key as string);
-        }}
-      >
-        {ss.map((s, i) => (
-          <Tab
-            key={s.id}
-            className={"w-auto"}
-            title={
-              <div className="flex items-center gap-2 mb-2">
-                {activeSearchId == s.id || (activeSearchId == undefined && i == 0) ? (
-                  <>
-                    {editingId == s.id ? (
+      {ss.length > 1 && (
+        <div className="flex flex-wrap items-center gap-1 py-2 border-b border-divider">
+          {ss.map((s, i) => {
+            const isActive = activeSearchId == s.id || (activeSearchId == undefined && i == 0);
+            const isEditing = editingId == s.id;
+
+            return (
+              <div key={s.id} className="group flex items-center">
+                <Button
+                  size="sm"
+                  // variant="flat"
+                  color={isActive ? "primary" : "default"}
+                  className="gap-1 pr-1"
+                  onPress={() => {
+                    if (!isActive) {
+                      changeTab(s.id);
+                    }
+                  }}
+                >
+                  <div className="relative">
+                    <span
+                      className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}
+                      onDoubleClick={(e) => {
+                        if (isActive) {
+                          e.stopPropagation();
+                          beginRename(s.id);
+                        }
+                      }}
+                    >
+                      {s.name}
+                    </span>
+                    {isEditing && (
                       <Input
                         ref={inputRef}
                         size="sm"
-                        className="max-w-xs w-auto min-w-auto"
+                        className="absolute inset-0"
+                        classNames={{
+                          input: "text-sm font-medium",
+                          inputWrapper: "min-h-0 h-full px-0 bg-transparent shadow-none",
+                          base: "h-full",
+                        }}
                         value={editingName}
                         onValueChange={(v) => setEditingName(v)}
                         onBlur={() => {
@@ -163,42 +197,31 @@ const ResourcePage2 = () => {
                             setEditingId(null);
                           }
                         }}
+                        onClick={(e) => e.stopPropagation()}
                       />
-                    ) : (
-                      <div
-                        key={s.id}
-                        className="max-w-xs w-auto min-w-auto outline-none"
-                        onClick={(e) => {
-                          if (activeSearchId == s.id && editingId != s.id) {
-                            e.preventDefault();
-                            beginRename(s.id);
-                          }
-                        }}
-                      >
-                        {s.name}
-                      </div>
                     )}
-                  </>
-                ) : (
-                  s.name
-                )}
-                <Button
-                  isIconOnly
-                  variant="light"
-                  onPress={() => {
-                    removeSaved(s.id);
-                  }}
-                  size="sm"
-                  // color="danger"
-                  className="opacity-60"
-                >
-                  <AiOutlineClose className={"text-sm"} />
+                  </div>
+                  <div
+                    className={`
+                      p-0.5 rounded transition-opacity
+                      ${isActive
+                        ? "opacity-70 hover:opacity-100 hover:bg-primary/30"
+                        : "opacity-0 group-hover:opacity-60 hover:!opacity-100 hover:bg-default-300"
+                      }
+                    `}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeSaved(s.id);
+                    }}
+                  >
+                    <AiOutlineClose className="text-xs" />
+                  </div>
                 </Button>
               </div>
-            }
-          />
-        ))}
-      </Tabs>
+            );
+          })}
+        </div>
+      )}
       {ss.map((s) => {
         const isActive = s.id == activeSearchId;
 

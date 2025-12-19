@@ -20,6 +20,7 @@ import { UiTheme } from "@/sdk/constants";
 import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
 import Window from "@/components/Window";
+import { ErrorBoundary } from "@/components/Error";
 
 dayjs.extend(duration);
 
@@ -237,7 +238,9 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
             }}
           >
             {portals.map(({ key, component }) => (
-              <Fragment key={key}>{component}</Fragment>
+              <ErrorBoundary key={key}>
+                <Fragment>{component}</Fragment>
+              </ErrorBoundary>
             ))}
             <div
               className={`${isDarkMode ? "dark" : "light"} h-[100vh] w-[100vw] text-foreground bg-background`}
