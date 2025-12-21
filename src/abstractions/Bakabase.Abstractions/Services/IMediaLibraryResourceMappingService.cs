@@ -23,6 +23,11 @@ public interface IMediaLibraryResourceMappingService
     Task<List<MediaLibraryResourceMapping>> GetByMediaLibraryId(int mediaLibraryId);
 
     /// <summary>
+    /// Get mappings by media library IDs
+    /// </summary>
+    Task<Dictionary<int, List<MediaLibraryResourceMapping>>> GetByMediaLibraryIds(int[] mediaLibraryIds);
+
+    /// <summary>
     /// Get mappings by multiple resource IDs
     /// </summary>
     Task<List<MediaLibraryResourceMapping>> GetByResourceIds(int[] resourceIds);

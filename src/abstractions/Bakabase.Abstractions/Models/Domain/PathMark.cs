@@ -69,4 +69,18 @@ public class PathMark
     /// 同步完成后经过此时间，mark 会被标记为 Pending 状态重新同步
     /// </summary>
     public int? ExpiresInSeconds { get; set; }
+
+    #region Additional Items
+
+    /// <summary>
+    /// 关联的属性（仅当 Type 为 Property 且请求 additionalItems 包含 Property 时填充）
+    /// </summary>
+    public Property? Property { get; set; }
+
+    /// <summary>
+    /// 关联的媒体库（仅当 Type 为 MediaLibrary 且请求 additionalItems 包含 MediaLibrary 时填充）
+    /// </summary>
+    public MediaLibraryV2? MediaLibrary { get; set; }
+
+    #endregion
 }

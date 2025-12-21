@@ -11,7 +11,7 @@ public interface IPathMarkService
     /// <summary>
     /// Get all path marks
     /// </summary>
-    Task<List<PathMark>> GetAll(Expression<Func<PathMarkDbModel, bool>>? filter = null);
+    Task<List<PathMark>> GetAll(Expression<Func<PathMarkDbModel, bool>>? filter = null, PathMarkAdditionalItem additionalItems = PathMarkAdditionalItem.None);
 
     /// <summary>
     /// Get a path mark by ID

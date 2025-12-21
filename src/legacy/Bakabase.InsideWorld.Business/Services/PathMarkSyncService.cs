@@ -790,33 +790,60 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
         try
         {
+            List<string> initialMatches;
+
             if (config.MatchMode == PathMatchMode.Layer)
             {
                 if (config.Layer == null) return matchedPaths;
 
                 var layer = config.Layer.Value;
-                if (layer == -1)
+                if (layer < 0)
                 {
-                    var entries = GetAllEntries(normalizedRoot, config.FsTypeFilter, config.Extensions);
-                    matchedPaths.AddRange(entries);
+                    // Negative layer means parent directories
+                    // -1 = parent, -2 = grandparent, etc.
+                    initialMatches = GetParentAtLayer(normalizedRoot, Math.Abs(layer), config.FsTypeFilter);
                 }
                 else
                 {
-                    var entries = GetEntriesAtLayer(normalizedRoot, layer, config.FsTypeFilter, config.Extensions);
-                    matchedPaths.AddRange(entries);
+                    initialMatches = GetEntriesAtLayer(normalizedRoot, layer, config.FsTypeFilter, config.Extensions);
                 }
             }
             else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
             {
                 var regex = new Regex(config.Regex, RegexOptions.IgnoreCase);
                 var entries = GetAllEntries(normalizedRoot, config.FsTypeFilter, config.Extensions);
+                initialMatches = new List<string>();
 
                 foreach (var entry in entries)
                 {
                     var relativePath = entry.Substring(normalizedRoot.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                     if (regex.IsMatch(relativePath))
                     {
-                        matchedPaths.Add(entry);
+                        initialMatches.Add(entry);
+                    }
+                }
+            }
+            else
+            {
+                return matchedPaths;
+            }
+
+            // Apply ApplyScope logic
+            if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
+            {
+                // Only matched paths
+                matchedPaths.AddRange(initialMatches);
+            }
+            else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
+            {
+                // Matched paths + all subdirectories
+                matchedPaths.AddRange(initialMatches);
+                foreach (var match in initialMatches)
+                {
+                    if (Directory.Exists(match))
+                    {
+                        var subdirEntries = GetAllEntries(match, config.FsTypeFilter, config.Extensions);
+                        matchedPaths.AddRange(subdirEntries);
                     }
                 }
             }
@@ -915,36 +942,154 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return entries.Select(x => x.StandardizePath()!).ToList();
     }
 
+    private List<string> GetParentAtLayer(string rootPath, int absLayer, PathFilterFsType? fsTypeFilter)
+    {
+        var entries = new List<string>();
+
+        try
+        {
+            // Navigate up to parent directories
+            var currentPath = rootPath;
+            for (int i = 0; i < absLayer; i++)
+            {
+                var parentPath = Path.GetDirectoryName(currentPath);
+                if (string.IsNullOrEmpty(parentPath))
+                {
+                    // Reached root, can't go higher
+                    return entries;
+                }
+                currentPath = parentPath;
+            }
+
+            // Check if the parent exists and matches filter
+            if (Directory.Exists(currentPath))
+            {
+                if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.Directory)
+                {
+                    entries.Add(currentPath.StandardizePath()!);
+                }
+            }
+            else if (File.Exists(currentPath))
+            {
+                if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File)
+                {
+                    entries.Add(currentPath.StandardizePath()!);
+                }
+            }
+        }
+        catch
+        {
+            // Ignore access errors
+        }
+
+        return entries;
+    }
+
     private List<Resource> FilterResourcesByMarkConfig(List<Resource> resources, string markPath, PropertyMarkConfig config)
     {
         var normalizedMarkPath = markPath.StandardizePath()!;
 
-        return config.MatchMode switch
+        // First filter by MatchMode
+        var filteredResources = config.MatchMode switch
         {
             PathMatchMode.Layer when config.Layer.HasValue => FilterByLayer(resources, normalizedMarkPath, config.Layer.Value),
             PathMatchMode.Regex when !string.IsNullOrEmpty(config.Regex) => FilterByRegex(resources, normalizedMarkPath, config.Regex),
             _ => resources
         };
+
+        // Then apply ApplyScope logic
+        if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
+        {
+            // Only return the matched resources
+            return filteredResources;
+        }
+        else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
+        {
+            // Return matched resources + all resources under them
+            var result = new List<Resource>(filteredResources);
+            var matchedPaths = filteredResources.Select(r => r.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var resource in resources)
+            {
+                if (matchedPaths.Contains(resource.Path)) continue; // Already included
+
+                // Check if this resource is under any matched path
+                if (matchedPaths.Any(matchedPath => IsPathUnderParent(resource.Path, matchedPath) &&
+                                                     !resource.Path.Equals(matchedPath, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.Add(resource);
+                }
+            }
+
+            return result;
+        }
+
+        return filteredResources;
     }
 
     private List<Resource> FilterResourcesByMediaLibraryMarkConfig(List<Resource> resources, string markPath, MediaLibraryMarkConfig config)
     {
         var normalizedMarkPath = markPath.StandardizePath()!;
 
-        return config.MatchMode switch
+        // First filter by MatchMode
+        var filteredResources = config.MatchMode switch
         {
             PathMatchMode.Layer when config.Layer.HasValue => FilterByLayer(resources, normalizedMarkPath, config.Layer.Value),
             PathMatchMode.Regex when !string.IsNullOrEmpty(config.Regex) => FilterByRegex(resources, normalizedMarkPath, config.Regex),
             _ => resources
         };
+
+        // Then apply ApplyScope logic
+        if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
+        {
+            // Only return the matched resources
+            return filteredResources;
+        }
+        else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
+        {
+            // Return matched resources + all resources under them
+            var result = new List<Resource>(filteredResources);
+            var matchedPaths = filteredResources.Select(r => r.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var resource in resources)
+            {
+                if (matchedPaths.Contains(resource.Path)) continue; // Already included
+
+                // Check if this resource is under any matched path
+                if (matchedPaths.Any(matchedPath => IsPathUnderParent(resource.Path, matchedPath) &&
+                                                     !resource.Path.Equals(matchedPath, StringComparison.OrdinalIgnoreCase)))
+                {
+                    result.Add(resource);
+                }
+            }
+
+            return result;
+        }
+
+        return filteredResources;
     }
 
     private List<Resource> FilterByLayer(List<Resource> resources, string rootPath, int layer)
     {
-        if (layer == -1) return resources; // All layers
-
         var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
             StringSplitOptions.RemoveEmptyEntries);
+
+        if (layer < 0)
+        {
+            // Negative layer means parent directories
+            // -1 = parent, -2 = grandparent, etc.
+            // For resources, filter those whose path is the parent at the specified level
+            var absLayer = Math.Abs(layer);
+            var targetSegmentCount = rootSegments.Length - absLayer;
+            if (targetSegmentCount <= 0) return new List<Resource>();
+
+            return resources.Where(r =>
+            {
+                var resourceSegments = r.Path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
+                    StringSplitOptions.RemoveEmptyEntries);
+                return resourceSegments.Length == targetSegmentCount;
+            }).ToList();
+        }
 
         return resources.Where(r =>
         {

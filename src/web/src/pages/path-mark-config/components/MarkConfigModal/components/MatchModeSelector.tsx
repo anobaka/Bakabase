@@ -2,28 +2,27 @@
 
 import type { MarkConfig } from "../types";
 import { Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PathMatchMode } from "@/sdk/constants";
+import { PathMatchMode, PathMarkApplyScope } from "@/sdk/constants";
 
 type Props = {
   config: MarkConfig;
   updateConfig: (updates: Partial<MarkConfig>) => void;
   t: (key: string) => string;
-  priority: number;
-  onPriorityChange: (priority: number) => void;
 };
 
-const MatchModeSelector = ({ config, updateConfig, t, priority, onPriorityChange }: Props) => {
+const MatchModeSelector = ({ config, updateConfig, t }: Props) => {
   const isLayerMode = config.matchMode === PathMatchMode.Layer;
+  const currentApplyScope = config.applyScope ?? PathMarkApplyScope.MatchedOnly;
 
   return (
     <>
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t("Match Mode")}</span>
         <RadioGroup
           value={String(config.matchMode)}
           onValueChange={(value) => updateConfig({ matchMode: Number(value) })}
           size="sm"
           orientation="horizontal"
+          label={t("Match Mode")}
         >
           <Radio value={String(PathMatchMode.Layer)}>
             {t("Layer")}
@@ -34,33 +33,45 @@ const MatchModeSelector = ({ config, updateConfig, t, priority, onPriorityChange
         </RadioGroup>
       </div>
 
-      <div className="flex gap-2 items-start">
-        {isLayerMode ? (
-          <NumberInput
-            label={t("Layer")}
-            description={t("PathMark.Layer.Description")}
-            size="sm"
-            className="flex-1"
-            value={config.layer ?? 0}
-            onChange={(e) => updateConfig({ layer: typeof e === "number" ? e : (e.target.value ? parseInt(e.target.value, 10) : 0) })}
-          />
-        ) : (
-          <Input
-            label={t("Regex Pattern")}
-            description={t("PathMark.Regex.Description")}
-            size="sm"
-            className="flex-1"
-            value={config.regex ?? ""}
-            onValueChange={(v) => updateConfig({ regex: v })}
-          />
-        )}
+      {isLayerMode ? (
         <NumberInput
-          label={t("Priority")}
+          label={t("Layer")}
+          description={t("PathMark.Layer.Description")}
           size="sm"
-          className="w-28"
-          value={priority}
-          onValueChange={(v) => onPriorityChange(v ?? 10)}
+          value={config.layer ?? 0}
+          onChange={(e) => updateConfig({ layer: typeof e === "number" ? e : (e.target.value ? parseInt(e.target.value, 10) : 0) })}
         />
+      ) : (
+        <Input
+          label={t("Regex Pattern")}
+          description={t("PathMark.Regex.Description")}
+          size="sm"
+          value={config.regex ?? ""}
+          onValueChange={(v) => updateConfig({ regex: v })}
+        />
+      )}
+
+      <div className="flex flex-col gap-1">
+        <RadioGroup
+          value={String(currentApplyScope)}
+          onValueChange={(value) => updateConfig({ applyScope: Number(value) as PathMarkApplyScope })}
+          size="sm"
+          label={t("Apply Scope")}
+          orientation="horizontal"
+        >
+          <Radio
+            value={String(PathMarkApplyScope.MatchedOnly)}
+            description={t("PathMark.ApplyScope.MatchedOnly.Description")}
+          >
+            {t("MatchedOnly")}
+          </Radio>
+          <Radio
+            value={String(PathMarkApplyScope.MatchedAndSubdirectories)}
+            description={t("PathMark.ApplyScope.MatchedAndSubdirectories.Description")}
+          >
+            {t("MatchedAndSubdirectories")}
+          </Radio>
+        </RadioGroup>
       </div>
     </>
   );

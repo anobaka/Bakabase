@@ -2,13 +2,13 @@
 
 import type { MarkConfig } from "../types";
 import type { IProperty } from "@/components/Property/models";
+import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
 
 import { useState, useEffect } from "react";
-import { usePreview } from "../hooks/usePreview";
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
 import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PathMarkType, PathMatchMode, PropertyValueType, PropertyPool } from "@/sdk/constants";
+import { PathMatchMode, PropertyValueType, PropertyPool, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import { EditOutlined } from "@ant-design/icons";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -17,15 +17,20 @@ import BApi from "@/sdk/BApi";
 type Props = {
   config: MarkConfig;
   updateConfig: (updates: Partial<MarkConfig>) => void;
-  rootPath?: string;
-  rootPaths?: string[];
   t: (key: string) => string;
   priority: number;
   onPriorityChange: (priority: number) => void;
+  preview: {
+    loading: boolean;
+    results: PathMarkPreviewResult[];
+    resultsByPath?: PreviewResultsByPath[];
+    isMultiplePaths?: boolean;
+    error: string | null;
+    applyScope?: PathMarkApplyScope;
+  };
 };
 
-const PropertyMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, priority, onPriorityChange }: Props) => {
-  const preview = usePreview(rootPath, PathMarkType.Property, config, 500, rootPaths);
+const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
   const { createPortal } = useBakabaseContext();
   const [selectedProperty, setSelectedProperty] = useState<IProperty | null>(null);
 
@@ -66,25 +71,32 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, prio
 
   return (
     <>
+      {/* Explanatory text */}
+      <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
+        {t("PathMark.Property.Explanation")}
+      </div>
+
       <MatchModeSelector
         config={config}
         updateConfig={updateConfig}
         t={t}
-        priority={priority}
-        onPriorityChange={onPriorityChange}
       />
 
+      {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
       <PreviewResults
         loading={preview.loading}
         results={preview.results}
         resultsByPath={preview.resultsByPath}
         isMultiplePaths={preview.isMultiplePaths}
         error={preview.error}
+        markType={PathMarkType.Property}
         t={t}
+        applyScope={preview.applyScope}
       />
 
       <div className="border-t border-default-200 pt-2">
         <span className="text-sm font-medium text-default-600">{t("Property Settings")}</span>
+        <div className="text-xs text-default-400 mt-1">{t("PathMark.Property.SettingsDescription")}</div>
       </div>
 
       {/* Property Selector */}
@@ -180,6 +192,17 @@ const PropertyMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, prio
           )}
         </>
       )}
+
+      {/* Priority at the bottom */}
+      <div className="border-t border-default-200 pt-2">
+        <NumberInput
+          label={t("Priority")}
+          description={t("PathMark.Priority.Description")}
+          size="sm"
+          value={priority}
+          onValueChange={(v) => onPriorityChange(v ?? 10)}
+        />
+      </div>
     </>
   );
 };

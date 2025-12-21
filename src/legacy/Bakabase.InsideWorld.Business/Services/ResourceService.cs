@@ -64,6 +64,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IMediaLibraryService _mediaLibraryService;
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
         private IResourceProfileService ResourceProfileService => GetRequiredService<IResourceProfileService>();
+        private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
@@ -222,8 +223,16 @@ namespace Bakabase.InsideWorld.Business.Services
                 if (filters.Any() && context.ResourcesPool?.Any() == true)
                 {
                     context.PropertyValueMap = new();
-                    if (filters.Any(f => f.PropertyPool == PropertyPool.Internal))
+                    var internalPropertyFilters = filters.Where(f => f.PropertyPool == PropertyPool.Internal).ToArray();
+                    if (internalPropertyFilters.Any())
                     {
+                        if (filters.Any(f =>
+                                f is { PropertyPool: PropertyPool.Internal, PropertyId: (int)ResourceProperty.MediaLibraryV2Multi }))
+                        {
+                            var mlIds = filters.
+                            var mrMappings = await MediaLibraryResourceMappingService.GetByMediaLibraryIds()
+                        }
+
                         var getValue = SpecificEnumUtils<InternalProperty>.Values.ToDictionary(d => d, d => d switch
                         {
                             InternalProperty.Filename => (Func<Resource, object?>) (r => r.FileName),

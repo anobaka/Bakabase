@@ -1,13 +1,13 @@
 "use client";
 
 import type { MarkConfig } from "../types";
+import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
 
 import { useState, useEffect } from "react";
-import { usePreview } from "../hooks/usePreview";
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
 import { Button, Chip, Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PathMarkType, PropertyValueType } from "@/sdk/constants";
+import { PropertyValueType, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import MediaLibrarySelectorV2 from "@/components/MediaLibrarySelectorV2";
@@ -16,11 +16,17 @@ import { EditOutlined } from "@ant-design/icons";
 type Props = {
   config: MarkConfig;
   updateConfig: (updates: Partial<MarkConfig>) => void;
-  rootPath?: string;
-  rootPaths?: string[];
   t: (key: string) => string;
   priority: number;
   onPriorityChange: (priority: number) => void;
+  preview: {
+    loading: boolean;
+    results: PathMarkPreviewResult[];
+    resultsByPath?: PreviewResultsByPath[];
+    isMultiplePaths?: boolean;
+    error: string | null;
+    applyScope?: PathMarkApplyScope;
+  };
 };
 
 interface MediaLibrary {
@@ -28,8 +34,7 @@ interface MediaLibrary {
   name: string;
 }
 
-const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, priority, onPriorityChange }: Props) => {
-  const preview = usePreview(rootPath, PathMarkType.MediaLibrary, config, 500, rootPaths);
+const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
   const { createPortal } = useBakabaseContext();
   const [selectedLibrary, setSelectedLibrary] = useState<MediaLibrary | null>(null);
 
@@ -70,14 +75,18 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
 
   return (
     <>
+      {/* Explanatory text */}
+      <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
+        {t("PathMark.MediaLibrary.Explanation")}
+      </div>
+
       <MatchModeSelector
         config={config}
         updateConfig={updateConfig}
         t={t}
-        priority={priority}
-        onPriorityChange={onPriorityChange}
       />
 
+      {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
       <PreviewResults
         loading={preview.loading}
         results={preview.results}
@@ -86,10 +95,12 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
         error={preview.error}
         markType={PathMarkType.MediaLibrary}
         t={t}
+        applyScope={preview.applyScope}
       />
 
       <div className="border-t border-default-200 pt-2">
         <span className="text-sm font-medium text-default-600">{t("Media Library Settings")}</span>
+        <div className="text-xs text-default-400 mt-1">{t("PathMark.MediaLibrary.SettingsDescription")}</div>
       </div>
 
       {/* Value Type - Radio Group */}
@@ -171,6 +182,17 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, 
           />
         </>
       )}
+
+      {/* Priority at the bottom */}
+      <div className="border-t border-default-200 pt-2">
+        <NumberInput
+          label={t("Priority")}
+          description={t("PathMark.Priority.Description")}
+          size="sm"
+          value={priority}
+          onValueChange={(v) => onPriorityChange(v ?? 10)}
+        />
+      </div>
     </>
   );
 };

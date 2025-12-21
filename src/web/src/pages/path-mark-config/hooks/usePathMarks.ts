@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import BApi from "@/sdk/BApi";
-import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
-import { IwFsType, PathMarkSyncStatus } from "@/sdk/constants";
+import type { BakabaseAbstractionsModelsDomainPathMark, BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem } from "@/sdk/Api";
+import { IwFsType, PathMarkSyncStatus, PathMarkAdditionalItem } from "@/sdk/constants";
 
 // Group marks by path
 export interface PathMarkGroup {
@@ -28,7 +28,10 @@ export function usePathMarks() {
   const loadAllMarks = useCallback(async () => {
     setLoading(true);
     try {
-      const rsp = await BApi.pathMark.getAllPathMarks();
+      // Request both Property and MediaLibrary additional items
+      // Cast to the API type since it's a flags enum and bitwise OR produces a value (3) not in the union type
+      const additionalItems = (PathMarkAdditionalItem.Property | PathMarkAdditionalItem.MediaLibrary) as BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
+      const rsp = await BApi.pathMark.getAllPathMarks({ additionalItems });
       if (!rsp.code && rsp.data) {
         setAllMarks(rsp.data);
 

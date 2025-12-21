@@ -114,8 +114,9 @@ export const usePreview = (
     config.fsTypeFilter,
     config.extensions,
     config.extensionGroupIds,
+    config.applyScope,
     debounceMs,
   ]);
 
-  return { loading, results, resultsByPath, error, isMultiplePaths: effectivePaths.length > 1 };
+  return { loading, results, resultsByPath, error, isMultiplePaths: effectivePaths.length > 1, applyScope: config.applyScope };
 };

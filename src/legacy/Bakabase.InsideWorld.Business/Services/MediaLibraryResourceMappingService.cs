@@ -41,6 +41,13 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         return dbModels.Select(d => d.ToDomainModel()).ToList();
     }
 
+    public async Task<Dictionary<int, List<MediaLibraryResourceMapping>>> GetByMediaLibraryIds(int[] mediaLibraryIds)
+    {
+        var dbModels = await orm.GetAll(m => mediaLibraryIds.Contains(m.MediaLibraryId));
+        return dbModels.GroupBy(d => d.MediaLibraryId)
+            .ToDictionary(d => d.Key, d => d.Select(a => a.ToDomainModel()).ToList());
+    }
+
     public async Task<List<MediaLibraryResourceMapping>> GetByResourceIds(int[] resourceIds)
     {
         var dbModels = await orm.GetAll(m => resourceIds.Contains(m.ResourceId));

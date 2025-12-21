@@ -2,7 +2,7 @@
 
 import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
 import { Spinner, Chip } from "@/components/bakaui";
-import { PathMarkType } from "@/sdk/constants";
+import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import { ResourceTerm } from "@/components/Chips/Terms";
 
 type Props = {
@@ -13,9 +13,11 @@ type Props = {
   error: string | null;
   markType: PathMarkType;
   t: (key: string) => string;
+  applyScope?: PathMarkApplyScope;
 };
 
-const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, error, markType, t }: Props) => {
+const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, error, markType, t, applyScope }: Props) => {
+  const showSubdirectoriesSuffix = applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-default-500 py-2">
@@ -39,10 +41,19 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     );
   }
 
+  const renderSubdirectoriesSuffix = () => {
+    if (!showSubdirectoriesSuffix) return null;
+    return (
+      <span className="text-primary-500 italic ml-1">
+        {t("and all subdirectories")}
+      </span>
+    );
+  };
+
   const renderResult = (result: PathMarkPreviewResult, idx: number) => {
     const pathSegments = result.path.split(/[/\\]/).filter(Boolean);
     const separator = result.path.includes("/") ? "/" : "\\";
-    
+
     // For Resource type: highlight the resource layer in the path
     if (markType === PathMarkType.Resource && result.resourceLayerIndex !== null && result.resourceLayerIndex !== undefined) {
       return (
@@ -72,18 +83,22 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
                   </span>
                 );
               })}
+              {renderSubdirectoriesSuffix()}
             </span>
           </div>
         </div>
       );
     }
-    
+
     // For Property type: show path and property value prominently
     if (markType === PathMarkType.Property) {
       return (
         <div key={idx} className="text-xs text-default-600 break-all">
-          <div className="flex items-start gap-2 flex-col">
-            <span className="break-all">{result.path}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="break-all">
+              {result.path}
+              {renderSubdirectoriesSuffix()}
+            </span>
             {result.propertyValue !== null && result.propertyValue !== undefined && (
               <Chip
                 size="sm"
@@ -103,8 +118,11 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     if (markType === PathMarkType.MediaLibrary) {
       return (
         <div key={idx} className="text-xs text-default-600 break-all">
-          <div className="flex items-start gap-2 flex-col">
-            <span className="break-all">{result.path}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="break-all">
+              {result.path}
+              {renderSubdirectoriesSuffix()}
+            </span>
             {result.propertyValue !== null && result.propertyValue !== undefined && (
               <Chip
                 size="sm"
@@ -123,7 +141,10 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     // Fallback: show path only
     return (
       <div key={idx} className="text-xs text-default-600 break-all">
-        <span>{result.path}</span>
+        <span>
+          {result.path}
+          {renderSubdirectoriesSuffix()}
+        </span>
       </div>
     );
   };

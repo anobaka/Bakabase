@@ -176,10 +176,7 @@ const PathMarkChip = ({ mark, onClick, onContextMenu }: PathMarkChipProps) => {
       >
         <div className="flex items-center gap-1 text-xs">
           {getSyncStatusIcon(mark.syncStatus, isTaskRunning, taskProgress)}
-          <span className="font-medium">
-            [{label}#{mark.priority}]
-          </span>
-          <MarkDescription mark={mark} />
+          <MarkDescription mark={mark} label={label} priority={mark.priority} />
         </div>
       </Chip>
     </Tooltip>

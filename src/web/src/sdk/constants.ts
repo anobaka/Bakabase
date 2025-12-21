@@ -247,6 +247,39 @@ export const PathFilterFsTypeLabel: Record<PathFilterFsType, string> = {
   [PathFilterFsType.Directory]: 'Directory'
 };
 
+export enum PathMarkAdditionalItem {
+  None = 0,
+  Property = 1,
+  MediaLibrary = 2
+}
+
+export const pathMarkAdditionalItems = [
+  { label: 'None', value: PathMarkAdditionalItem.None },
+  { label: 'Property', value: PathMarkAdditionalItem.Property },
+  { label: 'MediaLibrary', value: PathMarkAdditionalItem.MediaLibrary }
+] as const;
+
+export const PathMarkAdditionalItemLabel: Record<PathMarkAdditionalItem, string> = {
+  [PathMarkAdditionalItem.None]: 'None',
+  [PathMarkAdditionalItem.Property]: 'Property',
+  [PathMarkAdditionalItem.MediaLibrary]: 'MediaLibrary'
+};
+
+export enum PathMarkApplyScope {
+  MatchedOnly = 1,
+  MatchedAndSubdirectories = 2
+}
+
+export const pathMarkApplyScopes = [
+  { label: 'MatchedOnly', value: PathMarkApplyScope.MatchedOnly },
+  { label: 'MatchedAndSubdirectories', value: PathMarkApplyScope.MatchedAndSubdirectories }
+] as const;
+
+export const PathMarkApplyScopeLabel: Record<PathMarkApplyScope, string> = {
+  [PathMarkApplyScope.MatchedOnly]: 'MatchedOnly',
+  [PathMarkApplyScope.MatchedAndSubdirectories]: 'MatchedAndSubdirectories'
+};
+
 export enum PathMarkSyncStatus {
   Pending = 0,
   Syncing = 1,

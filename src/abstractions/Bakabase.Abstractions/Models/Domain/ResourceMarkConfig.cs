@@ -39,4 +39,11 @@ public class ResourceMarkConfig
     /// 会与 Extensions 合并使用
     /// </summary>
     public List<int>? ExtensionGroupIds { get; set; }
+
+    /// <summary>
+    /// 应用范围
+    /// MatchedOnly = 仅对匹配的路径生效
+    /// MatchedAndSubdirectories = 对匹配的路径及其所有子目录生效
+    /// </summary>
+    public PathMarkApplyScope ApplyScope { get; set; } = PathMarkApplyScope.MatchedOnly;
 }

@@ -2,73 +2,144 @@
 
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { PathMarkType } from "@/sdk/constants";
+import { PathMarkType, PropertyValueType, PathMatchMode, PathMarkApplyScope } from "@/sdk/constants";
 
 type Props = {
   mark: BakabaseAbstractionsModelsDomainPathMark;
   className?: string;
+  /** Mark type label (e.g., "Resource", "Property", "Media Library") */
+  label?: string;
+  /** Priority number to display as subscript */
+  priority?: number;
 };
 
-const MarkDescription = ({ mark, className }: Props) => {
+const MarkDescription = ({ mark, className, label, priority }: Props) => {
   const { t } = useTranslation();
+
+  const config = useMemo(() => {
+    try {
+      return JSON.parse(mark.configJson || "{}");
+    } catch {
+      return {};
+    }
+  }, [mark.configJson]);
 
   const getDescription = (): string => {
     try {
-      const config = JSON.parse(mark.configJson || "{}");
-      const isResource = mark.type === PathMarkType.Resource;
-      const matchMode = config.MatchMode;
+      const matchMode = config.matchMode;
+      const parts: string[] = [];
 
-      let description = "";
+      // Build type label with additional info
+      let typeLabel = label || "";
 
-      // Match mode description
-      if (matchMode === "Layer") {
-        const layer = config.Layer ?? 0;
+      // For property marks, append property name
+      if (mark.type === PathMarkType.Property && mark.property?.name) {
+        typeLabel = `${typeLabel}:${mark.property.name}`;
+      }
+
+      // For media library marks with fixed value, append library name
+      if (mark.type === PathMarkType.MediaLibrary) {
+        const valueType = config.mediaLibraryValueType ?? PropertyValueType.Fixed;
+        if (valueType === PropertyValueType.Fixed && mark.mediaLibrary?.name) {
+          typeLabel = `${typeLabel}:${mark.mediaLibrary.name}`;
+        }
+      }
+
+      if (typeLabel) {
+        // Add priority as subscript if > 0
+        const prioritySuffix = priority && priority > 0 ? `₍${priority}₎` : "";
+        parts.push(`[${typeLabel}]${prioritySuffix}`);
+      }
+
+      // Match mode description - simplified layer format
+      const applyScope = config.applyScope ?? PathMarkApplyScope.MatchedOnly;
+      const includesSubdirs = applyScope === PathMarkApplyScope.MatchedAndSubdirectories;
+
+      if (matchMode === PathMatchMode.Layer) {
+        const layer = config.layer ?? 0;
         if (layer === 0) {
-          description = t("MarkDescription.Layer.Current");
+          if (includesSubdirs) {
+            parts.push(t("MarkDescription.Layer.CurrentAndSubdirs"));
+          } else {
+            parts.push(t("MarkDescription.Layer.Current"));
+          }
+        } else if (layer > 0) {
+          const layerText = `+${layer}${t("MarkDescription.Layer.Suffix")}`;
+          parts.push(includesSubdirs ? `${layerText}${t("MarkDescription.AndSubdirs")}` : layerText);
         } else {
-          description = t("MarkDescription.Layer.Down", { layer });
+          const layerText = `${layer}${t("MarkDescription.Layer.Suffix")}`;
+          parts.push(includesSubdirs ? `${layerText}${t("MarkDescription.AndSubdirs")}` : layerText);
         }
-      } else if (matchMode === "Regex") {
-        const regex = config.Regex ?? "";
-        description = t("MarkDescription.Regex", { regex });
+      } else if (matchMode === PathMatchMode.Regex) {
+        const regex = config.regex ?? "";
+        const regexText = t("MarkDescription.Regex", { regex });
+        parts.push(includesSubdirs ? `${regexText}${t("MarkDescription.AndSubdirs")}` : regexText);
+      } else if (includesSubdirs) {
+        // No match mode but has subdirs scope
+        parts.push(t("MarkDescription.Layer.CurrentAndSubdirs"));
       }
 
-      // For property marks, add value information
-      if (!isResource) {
-        const valueType = config.ValueType;
-        if (valueType === "Fixed") {
-          const fixedValue = config.FixedValue;
+      // For property marks - value info
+      if (mark.type === PathMarkType.Property) {
+        const valueType = config.valueType;
+        if (valueType === PropertyValueType.Fixed) {
+          const fixedValue = config.fixedValue;
           if (fixedValue) {
-            description += t("MarkDescription.FixedValue", { value: fixedValue });
+            parts.push(`="${fixedValue}"`);
           }
-        } else if (valueType === "Dynamic") {
-          const valueLayer = config.ValueLayer;
-          const valueRegex = config.ValueRegex;
-          if (valueLayer !== undefined) {
-            description += t("MarkDescription.ValueLayer", { layer: valueLayer });
-          }
-          if (valueRegex) {
-            description += t("MarkDescription.ValueRegex", { regex: valueRegex });
+        } else if (valueType === PropertyValueType.Dynamic) {
+          const valueMatchMode = config.valueMatchMode;
+          if (valueMatchMode === PathMatchMode.Layer) {
+            const valueLayer = config.valueLayer ?? 0;
+            if (valueLayer === 0) {
+              parts.push(t("MarkDescription.ValueLayer.Current"));
+            } else if (valueLayer > 0) {
+              parts.push(`${t("MarkDescription.ValueFrom")}+${valueLayer}${t("MarkDescription.Layer.Suffix")}`);
+            } else {
+              parts.push(`${t("MarkDescription.ValueFrom")}${valueLayer}${t("MarkDescription.Layer.Suffix")}`);
+            }
+          } else if (valueMatchMode === PathMatchMode.Regex) {
+            const valueRegex = config.valueRegex;
+            if (valueRegex) {
+              parts.push(t("MarkDescription.ValueRegex", { regex: valueRegex }));
+            }
           }
         }
       }
 
-      // Add file type filter for resource marks
-      if (isResource) {
-        const fsTypeFilter = config.FsTypeFilter;
-        if (fsTypeFilter) {
-          description += t("MarkDescription.FileType", { type: fsTypeFilter });
+      // For media library marks with dynamic value
+      if (mark.type === PathMarkType.MediaLibrary) {
+        const valueType = config.mediaLibraryValueType ?? PropertyValueType.Fixed;
+        if (valueType === PropertyValueType.Dynamic) {
+          const layerToMediaLibrary = config.layerToMediaLibrary ?? 0;
+          if (layerToMediaLibrary === 0) {
+            parts.push(t("MarkDescription.MediaLibraryLayer.Current"));
+          } else if (layerToMediaLibrary > 0) {
+            parts.push(`${t("MarkDescription.MediaLibraryFrom")}+${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+          } else {
+            parts.push(`${t("MarkDescription.MediaLibraryFrom")}${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+          }
+        }
+      }
+
+      // For resource marks
+      if (mark.type === PathMarkType.Resource) {
+        const fsTypeFilter = config.fsTypeFilter;
+        if (fsTypeFilter === 1) {
+          parts.push(t("MarkDescription.FileOnly"));
+        } else if (fsTypeFilter === 2) {
+          parts.push(t("MarkDescription.DirOnly"));
         }
 
-        const extensions = config.Extensions;
+        const extensions = config.extensions;
         if (extensions && extensions.length > 0) {
-          description += t("MarkDescription.Extensions", { ext: extensions.join(", ") });
+          parts.push(extensions.join(","));
         }
       }
 
-      return description || t("MarkDescription.Empty");
+      return parts.length > 0 ? parts.join(" ") : t("MarkDescription.Empty");
     } catch (error) {
       console.error("Failed to parse mark config:", error);
       return t("MarkDescription.Invalid");

@@ -4329,6 +4329,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PathFilterFsType": 1 | 2;
         /**
          * Format: int32
+         * @description [0: None, 1: Property, 2: MediaLibrary]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.PathMarkAdditionalItem": 0 | 1 | 2;
+        /**
+         * Format: int32
          * @description [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete]
          * @enum {integer}
          */
@@ -4615,6 +4621,8 @@ export interface components {
             deletedAt?: string;
             /** Format: int32 */
             expiresInSeconds?: number;
+            property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
+            mediaLibrary?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryV2"];
         };
         "Bakabase.Abstractions.Models.Domain.PathMarkPreviewResult": {
             path: string;
@@ -14475,7 +14483,10 @@ export interface operations {
     };
     GetAllPathMarks: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description [0: None, 1: Property, 2: MediaLibrary] */
+                additionalItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PathMarkAdditionalItem"];
+            };
             header?: never;
             path?: never;
             cookie?: never;

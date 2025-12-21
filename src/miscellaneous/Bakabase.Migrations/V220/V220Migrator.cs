@@ -9,12 +9,15 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App.Migrations;
 using Bakabase.InsideWorld.Business;
+using Bakabase.InsideWorld.Business.Components.Configurations;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Migration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Components.Properties.Choice;
 using Bakabase.Modules.Search.Models.Db;
+using Bootstrap.Components.Configuration.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -48,6 +51,9 @@ public class V220Migrator : AbstractMigrator
 
         // 2) Convert MediaLibraryV2 + Template to PathMark + ResourceProfile (marked as synced)
         await MigrateMediaLibraryTemplateToPathMarkAndResourceProfile(dbCtx);
+
+        // 3) Migrate MediaLibraryV2 (PropertyId=24) to MediaLibraryV2Multi (PropertyId=25) in SearchFilters
+        await MigrateMediaLibraryV2ToMultiInSearchFilters();
     }
 
     /// <summary>
@@ -199,6 +205,28 @@ public class V220Migrator : AbstractMigrator
                 }
                 processedPaths.Add(normalizedPath);
 
+                // Create MediaLibrary mark for this path (associate path with media library)
+                var mediaLibraryConfig = new MediaLibraryMarkConfig
+                {
+                    MatchMode = PathMatchMode.Layer,
+                    Layer = 0, // Apply to all layers
+                    ValueType = PropertyValueType.Fixed,
+                    MediaLibraryId = library.Id,
+                    ApplyScope = PathMarkApplyScope.MatchedAndSubdirectories
+                };
+                pathMarks.Add(new PathMarkDbModel
+                {
+                    Path = normalizedPath,
+                    Type = PathMarkType.MediaLibrary,
+                    Priority = 0,
+                    ConfigJson = JsonConvert.SerializeObject(mediaLibraryConfig),
+                    SyncStatus = PathMarkSyncStatus.Synced,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                    IsDeleted = false
+                });
+
+                // Create Resource and Property marks from template
                 var marks = ConvertTemplateToMarks(template);
                 foreach (var mark in marks)
                 {
@@ -454,21 +482,7 @@ public class V220Migrator : AbstractMigrator
 
         if (template == null)
         {
-            // No template - create default resource mark (layer 1)
-            var defaultResourceConfig = new ResourceMarkConfig
-            {
-                MatchMode = PathMatchMode.Layer,
-                Layer = 1,
-                FsTypeFilter = null, // Both files and directories
-                Extensions = null
-            };
-            marks.Add(new PathMark
-            {
-                Type = PathMarkType.Resource,
-                Priority = 0,
-                ConfigJson = JsonConvert.SerializeObject(defaultResourceConfig)
-            });
-            return marks;
+            return [];
         }
 
         // Parse ResourceFilters from template
@@ -497,7 +511,9 @@ public class V220Migrator : AbstractMigrator
                     Layer = filter.Layer,
                     Regex = filter.Regex,
                     FsTypeFilter = filter.FsType,
-                    Extensions = filter.Extensions?.ToList()
+                    Extensions = filter.Extensions?.ToList(),
+                    ExtensionGroupIds = filter.ExtensionGroupIds?.ToList(),
+                    ApplyScope = PathMarkApplyScope.MatchedOnly
                 };
                 marks.Add(new PathMark
                 {
@@ -509,20 +525,7 @@ public class V220Migrator : AbstractMigrator
         }
         else
         {
-            // No resource filters - create default (layer 1)
-            var defaultResourceConfig = new ResourceMarkConfig
-            {
-                MatchMode = PathMatchMode.Layer,
-                Layer = 1,
-                FsTypeFilter = null,
-                Extensions = null
-            };
-            marks.Add(new PathMark
-            {
-                Type = PathMarkType.Resource,
-                Priority = 0,
-                ConfigJson = JsonConvert.SerializeObject(defaultResourceConfig)
-            });
+            return [];
         }
 
         // Parse Properties from template
@@ -557,9 +560,15 @@ public class V220Migrator : AbstractMigrator
                         Pool = prop.Pool,
                         PropertyId = prop.Id,
                         ValueType = PropertyValueType.Dynamic, // From path extraction
-                        MatchMode = locator.Positioner == PathPositioner.Regex ? PathMatchMode.Regex : PathMatchMode.Layer,
-                        Layer = locator.Layer,
-                        Regex = locator.Regex
+                        // Match all resources (set to -1 to apply to all layers)
+                        // The actual value extraction is controlled by ValueLayer/ValueRegex
+                        MatchMode = PathMatchMode.Layer,
+                        Layer = -1, // Apply to all layers
+                        Regex = null,
+                        // Value extraction from path
+                        ValueLayer = locator.Layer, // Which layer to extract value from
+                        ValueRegex = locator.Regex, // Optional regex to extract value
+                        ApplyScope = PathMarkApplyScope.MatchedOnly
                     };
                     marks.Add(new PathMark
                     {
@@ -572,5 +581,178 @@ public class V220Migrator : AbstractMigrator
         }
 
         return marks;
+    }
+
+    /// <summary>
+    /// Migrate MediaLibraryV2 (PropertyId=24, SingleChoice) to MediaLibraryV2Multi (PropertyId=25, MultipleChoice)
+    /// in all search filters: SavedSearches, LastSearchV2, and RecentFilters.
+    /// This ensures backward compatibility as MediaLibraryV2 is being deprecated.
+    /// </summary>
+    private async Task MigrateMediaLibraryV2ToMultiInSearchFilters()
+    {
+        var optionsManagerPool = GetRequiredService<BakabaseOptionsManagerPool>();
+        var optionsManager = optionsManagerPool.Get<ResourceOptions>();
+        var modified = false;
+
+        await optionsManager.SaveAsync(options =>
+        {
+            // 1) Migrate SavedSearches
+            if (options.SavedSearches != null && options.SavedSearches.Any())
+            {
+                foreach (var savedSearch in options.SavedSearches)
+                {
+                    if (savedSearch.Search != null)
+                    {
+                        if (MigrateSearchFiltersInGroup(savedSearch.Search.Group))
+                        {
+                            modified = true;
+                            Logger.LogInformation("Migrated MediaLibraryV2 to MediaLibraryV2Multi in SavedSearch: {Name}",
+                                savedSearch.Name);
+                        }
+                    }
+                }
+            }
+
+            // 2) Migrate LastSearchV2
+            if (options.LastSearchV2 != null)
+            {
+                if (MigrateSearchFiltersInGroup(options.LastSearchV2.Group))
+                {
+                    modified = true;
+                    Logger.LogInformation("Migrated MediaLibraryV2 to MediaLibraryV2Multi in LastSearchV2");
+                }
+            }
+
+            // 3) Migrate RecentFilters
+            if (options.RecentFilters != null && options.RecentFilters.Any())
+            {
+                var migratedCount = 0;
+                foreach (var filter in options.RecentFilters)
+                {
+                    if (filter.PropertyPool == PropertyPool.Internal &&
+                        filter.PropertyId == (int)ResourceProperty.MediaLibraryV2)
+                    {
+                        // Convert MediaLibraryV2 (SingleChoice) to MediaLibraryV2Multi (MultipleChoice)
+                        filter.PropertyId = (int)ResourceProperty.MediaLibraryV2Multi;
+
+                        // The value format changes from SingleChoice to MultipleChoice
+                        // SingleChoice: serialized as a single string value
+                        // MultipleChoice: serialized as a JSON array of strings
+                        if (!string.IsNullOrEmpty(filter.DbValue))
+                        {
+                            try
+                            {
+                                // Deserialize as SingleChoice (string)
+                                var singleValue = PropertySystem.Search.DeserializeFilterValue(
+                                    filter.DbValue,
+                                    PropertyType.SingleChoice,
+                                    filter.Operation);
+
+                                // Re-serialize as MultipleChoice (array with single item)
+                                if (singleValue != null)
+                                {
+                                    filter.DbValue = PropertySystem.Search.SerializeFilterValue(
+                                        singleValue.ToString(),
+                                        PropertyType.MultipleChoice,
+                                        filter.Operation);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Logger.LogWarning(ex, "Failed to migrate RecentFilter value from MediaLibraryV2 to MediaLibraryV2Multi");
+                            }
+                        }
+
+                        migratedCount++;
+                        modified = true;
+                    }
+                }
+
+                if (migratedCount > 0)
+                {
+                    Logger.LogInformation("Migrated {Count} RecentFilters from MediaLibraryV2 to MediaLibraryV2Multi",
+                        migratedCount);
+                }
+            }
+        });
+
+        if (modified)
+        {
+            Logger.LogInformation("Completed migration of MediaLibraryV2 to MediaLibraryV2Multi in search filters");
+        }
+        else
+        {
+            Logger.LogInformation("No MediaLibraryV2 filters found to migrate");
+        }
+    }
+
+    /// <summary>
+    /// Recursively migrate MediaLibraryV2 filters to MediaLibraryV2Multi in a filter group.
+    /// Returns true if any filters were migrated.
+    /// </summary>
+    private bool MigrateSearchFiltersInGroup(ResourceSearchFilterGroupDbModel? group)
+    {
+        if (group == null)
+        {
+            return false;
+        }
+
+        var modified = false;
+
+        // Migrate filters in this group
+        if (group.Filters != null)
+        {
+            foreach (var filter in group.Filters)
+            {
+                if (filter.PropertyPool == PropertyPool.Internal &&
+                    filter.PropertyId == (int)ResourceProperty.MediaLibraryV2)
+                {
+                    // Convert MediaLibraryV2 (SingleChoice) to MediaLibraryV2Multi (MultipleChoice)
+                    filter.PropertyId = (int)ResourceProperty.MediaLibraryV2Multi;
+
+                    // The value format changes from SingleChoice to MultipleChoice
+                    if (!string.IsNullOrEmpty(filter.Value))
+                    {
+                        try
+                        {
+                            // Deserialize as SingleChoice (string)
+                            var singleValue = PropertySystem.Search.DeserializeFilterValue(
+                                filter.Value,
+                                PropertyType.SingleChoice,
+                                filter.Operation ?? SearchOperation.Equals);
+
+                            // Re-serialize as MultipleChoice (array with single item)
+                            if (singleValue != null)
+                            {
+                                filter.Value = PropertySystem.Search.SerializeFilterValue(
+                                    singleValue.ToString(),
+                                    PropertyType.MultipleChoice,
+                                    filter.Operation ?? SearchOperation.Equals);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogWarning(ex, "Failed to migrate filter value from MediaLibraryV2 to MediaLibraryV2Multi");
+                        }
+                    }
+
+                    modified = true;
+                }
+            }
+        }
+
+        // Recursively migrate child groups
+        if (group.Groups != null)
+        {
+            foreach (var childGroup in group.Groups)
+            {
+                if (MigrateSearchFiltersInGroup(childGroup))
+                {
+                    modified = true;
+                }
+            }
+        }
+
+        return modified;
     }
 }

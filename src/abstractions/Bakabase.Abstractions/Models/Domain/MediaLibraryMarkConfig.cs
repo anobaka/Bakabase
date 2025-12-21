@@ -44,4 +44,11 @@ public class MediaLibraryMarkConfig
     /// Dynamic 模式：正则提取（可选），默认取第一个 group，或最后一级目录匹配项
     /// </summary>
     public string? RegexToMediaLibrary { get; set; }
+
+    /// <summary>
+    /// 应用范围
+    /// MatchedOnly = 仅对匹配的路径生效
+    /// MatchedAndSubdirectories = 对匹配的路径及其所有子目录生效
+    /// </summary>
+    public PathMarkApplyScope ApplyScope { get; set; } = PathMarkApplyScope.MatchedOnly;
 }

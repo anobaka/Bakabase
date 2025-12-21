@@ -54,4 +54,11 @@ public class PropertyMarkConfig
     /// Dynamic 模式：正则提取（可选）
     /// </summary>
     public string? ValueRegex { get; set; }
+
+    /// <summary>
+    /// 应用范围
+    /// MatchedOnly = 仅对匹配的路径生效
+    /// MatchedAndSubdirectories = 对匹配的路径及其所有子目录生效
+    /// </summary>
+    public PathMarkApplyScope ApplyScope { get; set; } = PathMarkApplyScope.MatchedOnly;
 }

@@ -1,35 +1,42 @@
 "use client";
 
 import type { MarkConfig } from "../types";
-import { usePreview } from "../hooks/usePreview";
+import type { PreviewResultsByPath, PathMarkPreviewResult } from "../hooks/usePreview";
 import MatchModeSelector from "./MatchModeSelector";
 import PreviewResults from "./PreviewResults";
-import { Select } from "@/components/bakaui";
-import { PathMarkType, PathFilterFsType, pathFilterFsTypes } from "@/sdk/constants";
+import { Select, NumberInput } from "@/components/bakaui";
+import { PathFilterFsType, pathFilterFsTypes, PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import ExtensionGroupSelect from "@/components/ExtensionGroupSelect";
 import ExtensionsInput from "@/components/ExtensionsInput";
 
 type Props = {
   config: MarkConfig;
   updateConfig: (updates: Partial<MarkConfig>) => void;
-  rootPath?: string;
-  rootPaths?: string[];
   t: (key: string) => string;
   priority: number;
   onPriorityChange: (priority: number) => void;
+  preview: {
+    loading: boolean;
+    results: PathMarkPreviewResult[];
+    resultsByPath?: PreviewResultsByPath[];
+    isMultiplePaths?: boolean;
+    error: string | null;
+    applyScope?: PathMarkApplyScope;
+  };
 };
 
-const ResourceMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, priority, onPriorityChange }: Props) => {
-  const preview = usePreview(rootPath, PathMarkType.Resource, config, 500, rootPaths);
-
+const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChange, preview }: Props) => {
   return (
     <>
+      {/* Explanatory text */}
+      <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
+        {t("PathMark.Resource.Explanation")}
+      </div>
+
       <MatchModeSelector
         config={config}
         updateConfig={updateConfig}
         t={t}
-        priority={priority}
-        onPriorityChange={onPriorityChange}
       />
 
       <div className="border-t border-default-200 pt-2">
@@ -71,6 +78,7 @@ const ResourceMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, prio
         />
       )}
 
+      {/* Preview Results - placed after resource filters */}
       <PreviewResults
         loading={preview.loading}
         results={preview.results}
@@ -79,7 +87,19 @@ const ResourceMarkConfig = ({ config, updateConfig, rootPath, rootPaths, t, prio
         error={preview.error}
         markType={PathMarkType.Resource}
         t={t}
+        applyScope={preview.applyScope}
       />
+
+      {/* Priority at the bottom */}
+      <div className="border-t border-default-200 pt-2">
+        <NumberInput
+          label={t("Priority")}
+          description={t("PathMark.Priority.Description")}
+          size="sm"
+          value={priority}
+          onValueChange={(v) => onPriorityChange(v ?? 10)}
+        />
+      </div>
     </>
   );
 };

@@ -143,6 +143,12 @@ export type BakabaseAbstractionsModelsDomainConstantsMediaLibraryV2AdditionalIte
 export type BakabaseAbstractionsModelsDomainConstantsPathFilterFsType = 1 | 2;
 
 /**
+ * [0: None, 1: Property, 2: MediaLibrary]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem = 0 | 1 | 2;
+
+/**
  * [0: Pending, 1: Syncing, 2: Synced, 3: Failed, 4: PendingDelete]
  * @format int32
  */
@@ -515,6 +521,8 @@ export interface BakabaseAbstractionsModelsDomainPathMark {
   deletedAt?: string;
   /** @format int32 */
   expiresInSeconds?: number;
+  property?: BakabaseAbstractionsModelsDomainProperty;
+  mediaLibrary?: BakabaseAbstractionsModelsDomainMediaLibraryV2;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathMarkPreviewResult {
@@ -13265,13 +13273,20 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllPathMarks
      * @request GET:/path-mark
      */
-    getAllPathMarks: (params: RequestParams = {}) =>
+    getAllPathMarks: (
+      query?: {
+        /** [0: None, 1: Property, 2: MediaLibrary] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPathMark,
         any
       >({
         path: `/path-mark`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -13280,9 +13295,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for getAllPathMarks
      * @name getAllPathMarksUrl
      */
-    getAllPathMarksUrl: () => {
+    getAllPathMarksUrl: (query?: {
+        /** [0: None, 1: Property, 2: MediaLibrary] */
+        additionalItems?: BakabaseAbstractionsModelsDomainConstantsPathMarkAdditionalItem;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/path-mark`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },

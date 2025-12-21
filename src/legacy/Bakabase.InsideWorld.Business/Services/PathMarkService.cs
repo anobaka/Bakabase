@@ -12,6 +12,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.Input;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Modules.Property.Abstractions.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
@@ -47,13 +48,124 @@ public class PathMarkService<TDbContext>(
         }
     }
 
-    public async Task<List<PathMark>> GetAll(Expression<Func<PathMarkDbModel, bool>>? filter = null)
+    public async Task<List<PathMark>> GetAll(Expression<Func<PathMarkDbModel, bool>>? filter = null, PathMarkAdditionalItem additionalItems = PathMarkAdditionalItem.None)
     {
         var dbModels = filter != null
             ? await orm.GetAll(filter)
             : await orm.GetAll();
 
-        return dbModels.Select(d => d.ToDomainModel()).ToList();
+        var marks = dbModels.Select(d => d.ToDomainModel()).ToList();
+
+        // Populate additional items if requested
+        if (additionalItems != PathMarkAdditionalItem.None)
+        {
+            await PopulateAdditionalItems(marks, additionalItems);
+        }
+
+        return marks;
+    }
+
+    private async Task PopulateAdditionalItems(List<PathMark> marks, PathMarkAdditionalItem additionalItems)
+    {
+        // Collect property IDs and media library IDs that need to be loaded
+        var propertyKeys = new HashSet<(PropertyPool pool, int id)>();
+        var mediaLibraryIds = new HashSet<int>();
+
+        foreach (var mark in marks)
+        {
+            try
+            {
+                if (mark.Type == PathMarkType.Property && additionalItems.HasFlag(PathMarkAdditionalItem.Property))
+                {
+                    var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(mark.ConfigJson);
+                    if (config != null)
+                    {
+                        propertyKeys.Add((config.Pool, config.PropertyId));
+                    }
+                }
+                else if (mark.Type == PathMarkType.MediaLibrary && additionalItems.HasFlag(PathMarkAdditionalItem.MediaLibrary))
+                {
+                    var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
+                    if (config?.MediaLibraryId.HasValue == true)
+                    {
+                        mediaLibraryIds.Add(config.MediaLibraryId.Value);
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore JSON parse errors
+            }
+        }
+
+        // Batch load properties
+        Dictionary<(PropertyPool pool, int id), Property> propertiesMap = new();
+        if (additionalItems.HasFlag(PathMarkAdditionalItem.Property) && propertyKeys.Count > 0)
+        {
+            var propertyService = serviceProvider.GetService<IPropertyService>();
+            if (propertyService != null)
+            {
+                // Group by pool to minimize API calls
+                var pools = propertyKeys.Select(k => k.pool).Distinct().ToList();
+                foreach (var pool in pools)
+                {
+                    var properties = await propertyService.GetProperties(pool);
+                    foreach (var prop in properties)
+                    {
+                        propertiesMap[(prop.Pool, prop.Id)] = prop;
+                    }
+                }
+            }
+        }
+
+        // Batch load media libraries
+        Dictionary<int, MediaLibraryV2> mediaLibrariesMap = new();
+        if (additionalItems.HasFlag(PathMarkAdditionalItem.MediaLibrary) && mediaLibraryIds.Count > 0)
+        {
+            var mediaLibraryService = serviceProvider.GetService<IMediaLibraryV2Service>();
+            if (mediaLibraryService != null)
+            {
+                var libraries = await mediaLibraryService.GetAll();
+                foreach (var lib in libraries.Where(l => mediaLibraryIds.Contains(l.Id)))
+                {
+                    mediaLibrariesMap[lib.Id] = lib;
+                }
+            }
+        }
+
+        // Assign loaded data to marks
+        foreach (var mark in marks)
+        {
+            try
+            {
+                if (mark.Type == PathMarkType.Property && additionalItems.HasFlag(PathMarkAdditionalItem.Property))
+                {
+                    var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(mark.ConfigJson);
+                    if (config != null)
+                    {
+                        if (propertiesMap.TryGetValue((config.Pool, config.PropertyId), out var prop))
+                        {
+                            mark.Property = prop;
+                        }
+                    }
+                }
+                else if (mark.Type == PathMarkType.MediaLibrary && additionalItems.HasFlag(PathMarkAdditionalItem.MediaLibrary))
+                {
+                    var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
+                    if (config?.MediaLibraryId.HasValue == true)
+                    {
+                        if (mediaLibrariesMap.TryGetValue(config.MediaLibraryId.Value, out var lib))
+                        {
+                            mark.MediaLibrary = lib;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore JSON parse errors
+            }
+        }
     }
 
     public async Task<PathMark?> Get(int id)
