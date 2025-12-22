@@ -558,6 +558,12 @@
   <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
     <value>生成资源标记</value>
   </data>
+  <data name="BTask_Name_ResourceProfileIndex" xml:space="preserve">
+    <value>构建资源配置索引</value>
+  </data>
+  <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
+    <value>构建资源与配置的匹配索引</value>
+  </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>发现新版本</value>
   </data>

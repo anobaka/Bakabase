@@ -8,20 +8,19 @@ import {
   TableColumn,
   TableHeader,
   TableRow,
-  Tooltip,
   Radio,
   RadioGroup,
 } from "@heroui/react";
-import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import { CloseBehavior, startupPages } from "@/sdk/constants";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
-const Functional = ({
-  applyPatches = () => {},
-}: {
-  applyPatches: (API: any, patches: any) => void;
-}) => {
+
+interface FunctionalProps {
+  applyPatches: <T>(api: (patches: T) => Promise<{ code?: number }>, patches: T) => void;
+}
+
+const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
   const { t } = useTranslation();
 
   const appOptions = useAppOptionsStore((state) => state.data);
@@ -98,24 +97,11 @@ const Functional = ({
               return (
                 <TableRow
                   key={i}
-                  className={"hover:bg-[var(--bakaui-overlap-background)]"}
+                  className="hover:bg-[var(--bakaui-overlap-background)]"
                 >
                   <TableCell>
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      {c.tip ? (
-                        <Tooltip
-                          color={"secondary"}
-                          content={t<string>(c.tip)}
-                          placement={"top"}
-                        >
-                          <div className={"flex items-center gap-1"}>
-                            {t<string>(c.label)}
-                            <AiOutlineQuestionCircle className={"text-base"} />
-                          </div>
-                        </Tooltip>
-                      ) : (
-                        t<string>(c.label)
-                      )}
+                    <div className="flex items-center">
+                      {t(c.label)}
                     </div>
                   </TableCell>
                   <TableCell>{c.renderCell()}</TableCell>

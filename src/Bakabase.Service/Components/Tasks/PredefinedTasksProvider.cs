@@ -55,6 +55,23 @@ public class PredefinedTasksProvider
                 }
             },
             {
+                "ResourceProfileIndex", async (args, sp) =>
+                {
+                    // Build the initial ResourceProfile index
+                    var indexService = sp.GetRequiredService<IResourceProfileIndexService>();
+                    await indexService.RebuildAsync(
+                        async (percentage, process) =>
+                        {
+                            await args.UpdateTask(t =>
+                            {
+                                t.Percentage = percentage;
+                                t.Process = process;
+                            });
+                        },
+                        args.CancellationToken);
+                }
+            },
+            {
                 "GenerateResourceMarker", async (args, sp) =>
                 {
                     // Note: The enable/disable check has been moved to task definition
@@ -184,6 +201,8 @@ public class PredefinedTasksProvider
                     case "MoveFiles":
                         var fsOptions = serviceProvider.GetRequiredService<IBOptions<FileSystemOptions>>();
                         return fsOptions.Value.FileMover?.Enabled ?? false;
+                    case "ResourceProfileIndex":
+                        return true; // Always enabled
 
                     default:
                         return true;
@@ -194,6 +213,7 @@ public class PredefinedTasksProvider
                 // Can be made configurable in the future
                 return x.Key switch
                 {
+                    "ResourceProfileIndex" => null, // One-time task at startup
                     _ => TimeSpan.FromMinutes(1)
                 };
             },

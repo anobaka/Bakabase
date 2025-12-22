@@ -622,6 +622,9 @@ namespace Bakabase.Modules.Enhancer.Services
             {
                 var enhanceTask = Task.Run(async () =>
                 {
+                    await using var scope = _serviceProvider.CreateAsyncScope();
+                    var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
+
                     var set = tasks.ToHashSet();
                     while (set.Any() && !consumerTaskErrorBox.Value)
                     {
@@ -638,7 +641,7 @@ namespace Bakabase.Modules.Enhancer.Services
                             foreach (var task in nextTasks)
                             {
                                 var resource =
-                                    (await _resourceService.Get(task.Resource.Id, ResourceAdditionalItem.All))!;
+                                    (await resourceService.Get(task.Resource.Id, ResourceAdditionalItem.All))!;
                                 List<Enhancement>? enhancements = null;
                                 if (task.Record == null)
                                 {

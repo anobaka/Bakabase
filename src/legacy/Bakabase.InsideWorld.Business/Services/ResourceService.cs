@@ -65,6 +65,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
         private IResourceProfileService ResourceProfileService => GetRequiredService<IResourceProfileService>();
         private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
+        private IResourceProfileIndexService ResourceProfileIndexService => GetRequiredService<IResourceProfileIndexService>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
@@ -135,6 +136,9 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await DeleteRelatedData(ids.ToList());
             await _orm.RemoveByKeys(ids);
+
+            // Invalidate resource profile index for deleted resources
+            ResourceProfileIndexService.InvalidateResources(ids);
         }
 
         public async Task<List<Resource>> GetAll(
@@ -226,11 +230,37 @@ namespace Bakabase.InsideWorld.Business.Services
                     var internalPropertyFilters = filters.Where(f => f.PropertyPool == PropertyPool.Internal).ToArray();
                     if (internalPropertyFilters.Any())
                     {
-                        if (filters.Any(f =>
-                                f is { PropertyPool: PropertyPool.Internal, PropertyId: (int)ResourceProperty.MediaLibraryV2Multi }))
+                        // Pre-fetch MediaLibraryV2Multi matching resource IDs from filter values
+                        HashSet<int>? matchingMlResourceIds = null;
+                        Dictionary<int, List<string>>? resourceMediaLibraryMap = null;
+                        var mlFilters = filters.Where(f =>
+                            f is { PropertyPool: PropertyPool.Internal, PropertyId: (int)ResourceProperty.MediaLibraryV2Multi }).ToList();
+                        if (mlFilters.Any())
                         {
-                            var mlIds = filters.
-                            var mrMappings = await MediaLibraryResourceMappingService.GetByMediaLibraryIds()
+                            // Extract all media library IDs from filters' DbValue
+                            var allFilterMediaLibraryIds = new HashSet<int>();
+                            var mlAccessor = PropertySystem.Builtin.MediaLibraryV2Multi;
+                            foreach (var f in mlFilters)
+                            {
+                                var ids = mlAccessor.ParseDbValueAsLibraryIds(f.DbValue);
+                                if (ids != null) allFilterMediaLibraryIds.UnionWith(ids);
+                            }
+
+                            if (allFilterMediaLibraryIds.Count > 0)
+                            {
+                                // Get resource IDs that belong to those libraries (O(m) lookup where m = number of filter library IDs)
+                                matchingMlResourceIds = await MediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryIds(allFilterMediaLibraryIds);
+
+                                // Get detailed mappings only for resources in the pool that potentially match
+                                var relevantResourceIds = context.ResourcesPool.Keys.Where(id => matchingMlResourceIds.Contains(id)).ToArray();
+                                if (relevantResourceIds.Length > 0)
+                                {
+                                    var mappings = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(relevantResourceIds);
+                                    resourceMediaLibraryMap = mappings.ToDictionary(
+                                        kv => kv.Key,
+                                        kv => kv.Value.Select(id => id.ToString()).ToList());
+                                }
+                            }
                         }
 
                         var getValue = SpecificEnumUtils<InternalProperty>.Values.ToDictionary(d => d, d => d switch
@@ -243,6 +273,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             InternalProperty.Category => r => r.CategoryId.ToString(),
                             InternalProperty.MediaLibrary => r => new List<string> {r.MediaLibraryId.ToString()},
                             InternalProperty.MediaLibraryV2 => r => (r.CategoryId == 0 ? r.MediaLibraryId : -1).ToString(),
+                            InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id) ?? new List<string>(),
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),
                             _ => null
                         });
@@ -790,6 +821,10 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 // Custom properties
                 await _customPropertyValueService.SaveByResources(resources);
+
+                // Invalidate resource profile index for changed resources
+                var allChangedIds = dbResources.Select(r => r.Id).ToArray();
+                ResourceProfileIndexService.InvalidateResources(allChangedIds);
 
                 return [new DataChangeViewModel("Resource", newResources.Count, existedResources.Count, 0)];
             }

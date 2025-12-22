@@ -18,6 +18,7 @@ public interface IEnhancerLocalizer
     string Enhancer_ReApplyingEnhancements(int count);
     string Enhance();
     string Enhancer_KeywordPropertyIsEmpty(string poolName, string propertyName, string scopeName);
+    string Enhancer_KeywordIsEmpty();
     string Enhancer_UsePropertyAsKeyword(string poolName, string propertyName, string scopeName);
     string Enhancer_UseFilenameAsKeyword(string filename);
     string Enhancer_KeywordPretreatStatus(bool enabled);

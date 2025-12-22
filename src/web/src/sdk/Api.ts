@@ -9059,6 +9059,169 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  resourceProfile = {
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByResourceProfile
+     * @request DELETE:/resource-profile/{profileId}/enhancement
+     */
+    deleteEnhancementsByResourceProfile: (
+      profileId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${profileId}/enhancement`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
+     * @name DeleteEnhancementsByResourceProfileAndEnhancer
+     * @request DELETE:/resource-profile/{profileId}/enhancer/{enhancerId}/enhancement
+     */
+    deleteEnhancementsByResourceProfileAndEnhancer: (
+      profileId: number,
+      enhancerId: number,
+      query?: {
+        deleteEmptyOnly?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${profileId}/enhancer/${enhancerId}/enhancement`,
+        method: "DELETE",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name GetAllResourceProfiles
+     * @request GET:/resource-profile
+     */
+    getAllResourceProfiles: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllResourceProfiles
+     * @name getAllResourceProfilesUrl
+     */
+    getAllResourceProfilesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name AddResourceProfile
+     * @request POST:/resource-profile
+     */
+    addResourceProfile: (
+      data: BakabaseServiceModelsInputResourceProfileInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addResourceProfile
+     * @name addResourceProfileUrl
+     */
+    addResourceProfileUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource-profile`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name GetResourceProfile
+     * @request GET:/resource-profile/{id}
+     */
+    getResourceProfile: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name UpdateResourceProfile
+     * @request PUT:/resource-profile/{id}
+     */
+    updateResourceProfile: (
+      id: number,
+      data: BakabaseServiceModelsInputResourceProfileInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name DeleteResourceProfile
+     * @request DELETE:/resource-profile/{id}
+     */
+    deleteResourceProfile: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource-profile/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
   extensionGroup = {
     /**
      * No description
@@ -14429,124 +14592,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
-  };
-  resourceProfile = {
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name GetAllResourceProfiles
-     * @request GET:/resource-profile
-     */
-    getAllResourceProfiles: (params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel,
-        any
-      >({
-        path: `/resource-profile`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for getAllResourceProfiles
-     * @name getAllResourceProfilesUrl
-     */
-    getAllResourceProfilesUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource-profile`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name AddResourceProfile
-     * @request POST:/resource-profile
-     */
-    addResourceProfile: (
-      data: BakabaseServiceModelsInputResourceProfileInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
-        any
-      >({
-        path: `/resource-profile`,
-        method: "POST",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * @description Build URL for addResourceProfile
-     * @name addResourceProfileUrl
-     */
-    addResourceProfileUrl: () => {
-      const baseUrl = this.baseUrl || "";
-      let path = `/resource-profile`;
-      
-      return baseUrl + path;
-    },
-
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name GetResourceProfile
-     * @request GET:/resource-profile/{id}
-     */
-    getResourceProfile: (id: number, params: RequestParams = {}) =>
-      this.request<
-        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceProfileViewModel,
-        any
-      >({
-        path: `/resource-profile/${id}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name UpdateResourceProfile
-     * @request PUT:/resource-profile/{id}
-     */
-    updateResourceProfile: (
-      id: number,
-      data: BakabaseServiceModelsInputResourceProfileInputModel,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-profile/${id}`,
-        method: "PUT",
-        body: data,
-        type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ResourceProfile
-     * @name DeleteResourceProfile
-     * @request DELETE:/resource-profile/{id}
-     */
-    deleteResourceProfile: (id: number, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/resource-profile/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
   };
   specialText = {
     /**

@@ -673,7 +673,10 @@ namespace Bakabase.Service.Controllers
                 string[] files = [];
                 if (isDirectory)
                 {
-                    var dirWithPathSep = $"{root.StandardizePath()}{InternalOptions.DirSeparator}";
+                    var standardizedRoot = root.StandardizePath()!;
+                    var dirWithPathSep = standardizedRoot.EndsWith(InternalOptions.DirSeparator)
+                        ? standardizedRoot
+                        : $"{standardizedRoot}{InternalOptions.DirSeparator}";
                     files = Directory.GetFiles(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
                     dirs = Directory.GetDirectories(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
                 }

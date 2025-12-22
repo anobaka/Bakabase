@@ -633,6 +633,9 @@
   <data name="Enhancer_KeywordPropertyIsEmpty" xml:space="preserve">
     <value>已设置关键字属性为[{2}]维度的属性[{0}]{1}，但获取到的值为空，使用文件/文件夹名称作为备用</value>
   </data>
+  <data name="Enhancer_KeywordIsEmpty" xml:space="preserve">
+    <value>关键字为空，跳过此资源的增强</value>
+  </data>
   <data name="Enhancer_UsePropertyAsKeyword" xml:space="preserve">
     <value>使用[{2}]维度的属性[{0}]{1}作为关键字</value>
   </data>

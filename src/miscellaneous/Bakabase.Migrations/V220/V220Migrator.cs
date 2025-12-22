@@ -95,11 +95,13 @@ public class V220Migrator : AbstractMigrator
     /// </summary>
     private async Task MigrateResourceMediaLibraryMappings(BakabaseDbContext dbCtx)
     {
+        var mappingService = GetRequiredService<IMediaLibraryResourceMappingService>();
+
         // Check if we already have mappings (skip if already migrated)
-        var existingMappingsCount = await dbCtx.MediaLibraryResourceMappings.CountAsync();
-        if (existingMappingsCount > 0)
+        var existingMappings = await mappingService.GetAll();
+        if (existingMappings.Count > 0)
         {
-            Logger.LogInformation("MediaLibraryResourceMappings already exist ({Count}), skipping migration.", existingMappingsCount);
+            Logger.LogInformation("MediaLibraryResourceMappings already exist ({Count}), skipping migration.", existingMappings.Count);
             return;
         }
 
@@ -120,21 +122,18 @@ public class V220Migrator : AbstractMigrator
             .Select(m => m.Id)
             .ToHashSetAsync();
 
-        var now = DateTime.UtcNow;
         var mappings = resources
             .Where(r => validMediaLibraryIds.Contains(r.MediaLibraryId))
-            .Select(r => new MediaLibraryResourceMappingDbModel
+            .Select(r => new MediaLibraryResourceMapping
             {
                 MediaLibraryId = r.MediaLibraryId,
-                ResourceId = r.Id,
-                CreateDt = now
+                ResourceId = r.Id
             })
             .ToList();
 
         if (mappings.Any())
         {
-            await dbCtx.MediaLibraryResourceMappings.AddRangeAsync(mappings);
-            await dbCtx.SaveChangesAsync();
+            await mappingService.AddRange(mappings);
             Logger.LogInformation("Migrated {Count} resource-media library mappings.", mappings.Count);
         }
 

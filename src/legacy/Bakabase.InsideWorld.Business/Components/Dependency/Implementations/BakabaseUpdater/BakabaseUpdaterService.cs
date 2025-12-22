@@ -49,6 +49,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
             _uiHub = uiHub;
         }
 
+        private bool IsOssConfigured =>
+            _options.Value.OssEndpoint.IsNotEmpty() &&
+            _options.Value.OssAccessKeyId.IsNotEmpty() &&
+            _options.Value.OssAccessKeySecret.IsNotEmpty();
+
         protected OssClient OssClient
         {
             get
@@ -59,9 +64,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
                     {
                         if (_ossClient == null)
                         {
-                            if (_options.Value.OssEndpoint.IsNotEmpty() &&
-                                _options.Value.OssAccessKeyId.IsNotEmpty() &&
-                                _options.Value.OssAccessKeySecret.IsNotEmpty())
+                            if (IsOssConfigured)
                             {
                                 _ossClient = new OssClient(_options.Value.OssEndpoint,
                                     _options.Value.OssAccessKeyId, _options.Value.OssAccessKeySecret);
@@ -80,8 +83,25 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ba
             }
         }
 
+        public override async Task Install(CancellationToken ct)
+        {
+            if (!IsOssConfigured)
+            {
+                Logger.LogWarning("OSS not configured, updater installation skipped");
+                return;
+            }
+
+            await base.Install(ct);
+        }
+
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
         {
+            if (!IsOssConfigured)
+            {
+                Logger.LogWarning("OSS not configured, version check skipped");
+                return DependentComponentVersion.Unknown;
+            }
+
             var versionPaths = OssClient.ListObjects(new ListObjectsRequest(_options.Value.OssBucket)
             {
                 Prefix = OssPrefix,

@@ -2,7 +2,7 @@
 
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined } from "@ant-design/icons";
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined, ClearOutlined, MoreOutlined } from "@ant-design/icons";
 import { BsController } from "react-icons/bs";
 
 import BApi from "@/sdk/BApi";
@@ -15,7 +15,7 @@ import type {
 } from "@/sdk/Api";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { IProperty } from "@/components/Property/models";
-import { Button, Input, Table, TableHeader, TableBody, TableColumn, TableRow, TableCell, Chip, Tooltip } from "@/components/bakaui";
+import { Button, Input, Table, TableHeader, TableBody, TableColumn, TableRow, TableCell, Chip, Tooltip, Popover, Listbox, ListboxItem } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ResourceProfileModal from "./components/ResourceProfileModal";
 import ResourceProfileTestModal from "./components/ResourceProfileTestModal";
@@ -23,6 +23,7 @@ import DisplayNameTemplateEditorModal from "./components/DisplayNameTemplateEdit
 import EnhancerSelectorModal from "./components/EnhancerSelectorModal";
 import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
+import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
 import { FilterGroup, FilterProvider, createDefaultFilterConfig, toSearchInputModel, toFilterGroupInputModel } from "@/components/ResourceFilter";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
@@ -502,7 +503,7 @@ const ResourceProfilePage = () => {
     {
       key: "actions",
       label: t("Actions"),
-      width: 150,
+      width: 180,
       render: (profile: ResourceProfile) => (
         <div className="flex gap-1">
           <Tooltip content={t("Test criteria")}>
@@ -540,17 +541,46 @@ const ResourceProfilePage = () => {
               <CopyOutlined />
             </Button>
           </Tooltip>
-          <Tooltip content={t("Delete")}>
-            <Button
-              isIconOnly
-              size="sm"
-              variant="light"
-              color="danger"
-              onPress={() => handleDelete(profile.id)}
+          <Popover
+            placement="bottom-end"
+            trigger={
+              <Button isIconOnly size="sm" variant="light">
+                <MoreOutlined />
+              </Button>
+            }
+          >
+            <Listbox
+              aria-label="More actions"
+              onAction={(key) => {
+                switch (key) {
+                  case "delete-enhancements":
+                    createPortal(DeleteEnhancementsModal, {
+                      profile,
+                    });
+                    break;
+                  case "delete":
+                    handleDelete(profile.id);
+                    break;
+                }
+              }}
             >
-              <DeleteOutlined />
-            </Button>
-          </Tooltip>
+              <ListboxItem
+                key="delete-enhancements"
+                startContent={<ClearOutlined />}
+                color="warning"
+              >
+                {t("Delete enhancements")}
+              </ListboxItem>
+              <ListboxItem
+                key="delete"
+                startContent={<DeleteOutlined />}
+                color="danger"
+                className="text-danger"
+              >
+                {t("Delete")}
+              </ListboxItem>
+            </Listbox>
+          </Popover>
         </div>
       ),
     },

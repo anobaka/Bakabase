@@ -13,7 +13,7 @@ import {
 
 import MarkDescription from "./MarkDescription";
 
-import { Chip, Tooltip, CircularProgress, formatDuration } from "@/components/bakaui";
+import { Chip, Tooltip, CircularProgress, formatDuration, Checkbox } from "@/components/bakaui";
 import { PathMarkType, PathMarkSyncStatus, BTaskStatus } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import { AiOutlineFieldTime } from "react-icons/ai";
@@ -22,6 +22,9 @@ export interface PathMarkChipProps {
   mark: BakabaseAbstractionsModelsDomainPathMark;
   onClick?: () => void;
   onContextMenu?: () => void;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelectionChange?: (selected: boolean) => void;
 }
 
 // Build task ID for a single mark sync
@@ -114,7 +117,14 @@ const getMarkTypeColor = (type?: number) => {
   }
 };
 
-const PathMarkChip = ({ mark, onClick, onContextMenu }: PathMarkChipProps) => {
+const PathMarkChip = ({
+  mark,
+  onClick,
+  onContextMenu,
+  selectable,
+  selected,
+  onSelectionChange,
+}: PathMarkChipProps) => {
   const { t } = useTranslation();
 
   // Watch BTask store for this mark's sync task
@@ -131,6 +141,46 @@ const PathMarkChip = ({ mark, onClick, onContextMenu }: PathMarkChipProps) => {
   const isTaskRunning =
     markTask?.status === BTaskStatus.Running || markTask?.status === BTaskStatus.NotStarted;
   const taskProgress = markTask?.percentage || 0;
+
+  const chipContent = (
+    <Chip
+      className={`cursor-pointer hover:opacity-80 ${isPendingDelete ? "line-through opacity-50" : ""}`}
+      color={color as any}
+      size="sm"
+      variant="flat"
+      onClick={() => {
+        if (selectable) {
+          onSelectionChange?.(!selected);
+        } else if (!isPendingDelete && onClick) {
+          onClick();
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (!selectable && !isPendingDelete && onContextMenu) {
+          onContextMenu();
+        }
+      }}
+    >
+      <div className="flex items-center gap-1 text-xs">
+        {getSyncStatusIcon(mark.syncStatus, isTaskRunning, taskProgress)}
+        <MarkDescription mark={mark} label={label} priority={mark.priority} />
+      </div>
+    </Chip>
+  );
+
+  if (selectable) {
+    return (
+      <div className="flex items-center gap-1">
+        <Checkbox
+          size="sm"
+          isSelected={selected}
+          onValueChange={onSelectionChange}
+        />
+        {chipContent}
+      </div>
+    );
+  }
 
   return (
     <Tooltip
@@ -157,28 +207,7 @@ const PathMarkChip = ({ mark, onClick, onContextMenu }: PathMarkChipProps) => {
         </div>
       }
     >
-      <Chip
-        className={`cursor-pointer hover:opacity-80 ${isPendingDelete ? "line-through opacity-50" : ""}`}
-        color={color as any}
-        size="sm"
-        variant="flat"
-        onClick={() => {
-          if (!isPendingDelete && onClick) {
-            onClick();
-          }
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          if (!isPendingDelete && onContextMenu) {
-            onContextMenu();
-          }
-        }}
-      >
-        <div className="flex items-center gap-1 text-xs">
-          {getSyncStatusIcon(mark.syncStatus, isTaskRunning, taskProgress)}
-          <MarkDescription mark={mark} label={label} priority={mark.priority} />
-        </div>
-      </Chip>
+      {chipContent}
     </Tooltip>
   );
 };

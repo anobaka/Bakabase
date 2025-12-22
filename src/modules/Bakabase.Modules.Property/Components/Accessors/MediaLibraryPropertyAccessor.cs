@@ -135,4 +135,34 @@ public class MediaLibraryPropertyAccessor
         }
         return result.Count > 0 ? result : null;
     }
+
+    /// <summary>
+    /// Parse DbValue (object) to typed List&lt;string&gt;.
+    /// Use this when you have a raw DbValue from filter or other sources.
+    /// </summary>
+    /// <param name="dbValue">The raw DbValue (object?)</param>
+    /// <returns>Typed List&lt;string&gt; or null</returns>
+    public List<string>? ParseDbValue(object? dbValue)
+    {
+        return dbValue switch
+        {
+            null => null,
+            List<string> list => list,
+            IEnumerable<string> enumerable => enumerable.ToList(),
+            string s => string.IsNullOrEmpty(s) ? null : [s],
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Parse DbValue (object) directly to library IDs.
+    /// Combines ParseDbValue and ParseLibraryIds for convenience.
+    /// </summary>
+    /// <param name="dbValue">The raw DbValue (object?)</param>
+    /// <returns>List of library IDs or null</returns>
+    public List<int>? ParseDbValueAsLibraryIds(object? dbValue)
+    {
+        var stringList = ParseDbValue(dbValue);
+        return ParseLibraryIds(stringList);
+    }
 }

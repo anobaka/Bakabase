@@ -51,6 +51,7 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<IPathMarkSyncService, PathMarkSyncService<TDbContext>>();
 
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int>>();
+        services.AddSingleton<MediaLibraryResourceMappingIndexService>();
         services.AddScoped<IMediaLibraryResourceMappingService, MediaLibraryResourceMappingService<TDbContext>>();
 
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceProfileDbModel, int>>();

@@ -16,6 +16,7 @@ namespace Bakabase.InsideWorld.Business.Services;
 
 public class MediaLibraryResourceMappingService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int> orm,
+    MediaLibraryResourceMappingIndexService indexService,
     IServiceProvider serviceProvider
 ) : ScopedService(serviceProvider), IMediaLibraryResourceMappingService where TDbContext : DbContext
 {
@@ -54,11 +55,29 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         return dbModels.Select(d => d.ToDomainModel()).ToList();
     }
 
+    #region Fast O(1) lookups using bidirectional indices
+
+    public Task<HashSet<int>> GetResourceIdsByMediaLibraryId(int mediaLibraryId)
+        => indexService.GetByKey1Async(mediaLibraryId);
+
+    public Task<HashSet<int>> GetResourceIdsByMediaLibraryIds(IEnumerable<int> mediaLibraryIds)
+        => indexService.GetByKey1sAsync(mediaLibraryIds);
+
+    public Task<HashSet<int>> GetMediaLibraryIdsByResourceId(int resourceId)
+        => indexService.GetByKey2Async(resourceId);
+
+    public Task<Dictionary<int, HashSet<int>>> GetMediaLibraryIdsByResourceIds(IEnumerable<int> resourceIds)
+        => indexService.GetByKey2sAsync(resourceIds);
+
+    #endregion
+
     public async Task<MediaLibraryResourceMapping> Add(MediaLibraryResourceMapping mapping)
     {
         mapping.CreateDt = DateTime.UtcNow;
         var dbModel = mapping.ToDbModel();
         await orm.Add(dbModel);
+        await indexService.AddAsync(dbModel);
+
         orm.DbContext.Detach(dbModel);
         mapping.Id = dbModel.Id;
         return mapping;
@@ -74,11 +93,17 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         }).ToList();
 
         await orm.AddRange(dbModels);
+        await indexService.AddRangeAsync(dbModels);
     }
 
     public async Task Delete(int id)
     {
-        await orm.RemoveByKey(id);
+        var dbModel = await orm.GetByKey(id);
+        if (dbModel != null)
+        {
+            await orm.RemoveByKey(id);
+            await indexService.RemoveAsync(dbModel);
+        }
     }
 
     public async Task DeleteByResourceId(int resourceId)
@@ -87,6 +112,7 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         if (dbModels.Any())
         {
             await orm.RemoveRange(dbModels);
+            await indexService.RemoveRangeAsync(dbModels);
         }
     }
 
@@ -96,6 +122,7 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         if (dbModels.Any())
         {
             await orm.RemoveRange(dbModels);
+            await indexService.RemoveRangeAsync(dbModels);
         }
     }
 

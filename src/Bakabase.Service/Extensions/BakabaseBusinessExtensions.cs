@@ -162,6 +162,10 @@ namespace Bakabase.Service.Extensions
 
             services.AddBakaTracing();
 
+            // ResourceProfile index service (singleton for in-memory caching)
+            services.AddSingleton<ResourceProfileIndexService>();
+            services.AddSingleton<IResourceProfileIndexService>(sp => sp.GetRequiredService<ResourceProfileIndexService>());
+
             #endregion
 
             services.AddScoped<MigrationHelper>();

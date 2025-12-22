@@ -98,4 +98,9 @@ public interface IResourceProfileService
     /// Delete a resource profile by ID
     /// </summary>
     Task Delete(int id);
+
+    /// <summary>
+    /// Get resource IDs matching a profile's search criteria
+    /// </summary>
+    Task<HashSet<int>> GetMatchingResourceIds(int profileId);
 }

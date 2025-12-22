@@ -26,6 +26,7 @@ public class ResourceProfileService<TDbContext>(
 {
     protected IResourceService ResourceService => GetRequiredService<IResourceService>();
     protected IPropertyService PropertyService => GetRequiredService<IPropertyService>();
+    protected IResourceProfileIndexService IndexService => GetRequiredService<IResourceProfileIndexService>();
 
     public async Task<List<ResourceProfile>> GetAll(Expression<Func<ResourceProfileDbModel, bool>>? filter = null)
     {
@@ -54,10 +55,30 @@ public class ResourceProfileService<TDbContext>(
 
     public async Task<List<ResourceProfile>> GetMatchingProfiles(Resource resource)
     {
-        var allProfiles = await GetAll();
+        // Use index service for faster lookup if available
+        if (IndexService.IsReady)
+        {
+            var profileIds = await IndexService.GetMatchingProfileIds(resource.Id);
+            if (profileIds.Count == 0)
+            {
+                return [];
+            }
+
+            var allProfiles = await GetAll();
+            var profileMap = allProfiles.ToDictionary(p => p.Id);
+
+            // profileIds are already sorted by priority
+            return profileIds
+                .Where(id => profileMap.ContainsKey(id))
+                .Select(id => profileMap[id])
+                .ToList();
+        }
+
+        // Fallback to direct evaluation
+        var allProfilesFallback = await GetAll();
         var matchingProfiles = new List<ResourceProfile>();
 
-        foreach (var profile in allProfiles)
+        foreach (var profile in allProfilesFallback)
         {
             var matchingIds = await GetMatchingResourceIds(profile.Search);
             if (matchingIds.Contains(resource.Id))
@@ -78,11 +99,39 @@ public class ResourceProfileService<TDbContext>(
     public async Task<Dictionary<int, string?>> GetEffectiveNameTemplatesForResources(int[] resourceIds)
     {
         var result = new Dictionary<int, string?>();
-        var resourceIdSet = resourceIds.ToHashSet();
         var allProfiles = await GetAll();
+        var profilesWithNameTemplate = allProfiles.Where(p => !string.IsNullOrEmpty(p.NameTemplate)).ToList();
+
+        if (profilesWithNameTemplate.Count == 0)
+        {
+            return result;
+        }
+
+        // Use index service for faster lookup if available
+        if (IndexService.IsReady)
+        {
+            foreach (var resourceId in resourceIds)
+            {
+                var profileIds = await IndexService.GetMatchingProfileIds(resourceId);
+                // profileIds are sorted by priority (highest first)
+                var matchingProfile = profileIds
+                    .Select(pid => profilesWithNameTemplate.FirstOrDefault(p => p.Id == pid))
+                    .FirstOrDefault(p => p != null);
+
+                if (matchingProfile != null)
+                {
+                    result[resourceId] = matchingProfile.NameTemplate;
+                }
+            }
+
+            return result;
+        }
+
+        // Fallback to direct evaluation
+        var resourceIdSet = resourceIds.ToHashSet();
 
         // Process profiles in priority order (highest first, already sorted by GetAll)
-        foreach (var profile in allProfiles.Where(p => !string.IsNullOrEmpty(p.NameTemplate)))
+        foreach (var profile in profilesWithNameTemplate)
         {
             var matchingIds = await GetMatchingResourceIds(profile.Search);
 
@@ -108,9 +157,35 @@ public class ResourceProfileService<TDbContext>(
         var result = new Dictionary<int, ResourceProfileEnhancerOptions>();
         var allProfiles = await GetAll();
         var resourcesList = resources.ToList();
+        var profilesWithEnhancerOptions = allProfiles.Where(p => p.EnhancerOptions != null).ToList();
 
-        // For each profile, get matching resources and map enhancer options
-        foreach (var profile in allProfiles.Where(p => p.EnhancerOptions != null))
+        if (profilesWithEnhancerOptions.Count == 0)
+        {
+            return result;
+        }
+
+        // Use index service for faster lookup if available
+        if (IndexService.IsReady)
+        {
+            foreach (var resource in resourcesList)
+            {
+                var profileIds = await IndexService.GetMatchingProfileIds(resource.Id);
+                // profileIds are sorted by priority (highest first)
+                var matchingProfile = profileIds
+                    .Select(pid => profilesWithEnhancerOptions.FirstOrDefault(p => p.Id == pid))
+                    .FirstOrDefault(p => p != null);
+
+                if (matchingProfile != null)
+                {
+                    result[resource.Id] = matchingProfile.EnhancerOptions!;
+                }
+            }
+
+            return result;
+        }
+
+        // Fallback: For each profile, get matching resources and map enhancer options
+        foreach (var profile in profilesWithEnhancerOptions)
         {
             var matchingIds = await GetMatchingResourceIds(profile.Search);
 
@@ -171,6 +246,9 @@ public class ResourceProfileService<TDbContext>(
         await orm.Add(dbModel);
         orm.DbContext.Detach(dbModel);
 
+        // Invalidate index for new profile
+        IndexService.InvalidateProfile(dbModel.Id);
+
         var search = await ParseSearchFromDbModel(dbModel);
         return dbModel.ToDomainModel(search);
     }
@@ -205,11 +283,31 @@ public class ResourceProfileService<TDbContext>(
         };
 
         await orm.Update(dbModel);
+
+        // Invalidate index for updated profile (search criteria or priority might have changed)
+        IndexService.InvalidateProfile(id);
     }
 
     public async Task Delete(int id)
     {
         await orm.RemoveByKey(id);
+
+        // Invalidate index for deleted profile
+        IndexService.InvalidateProfile(id);
+    }
+
+    public async Task<HashSet<int>> GetMatchingResourceIds(int profileId)
+    {
+        // Use index service for faster lookup if available
+        if (IndexService.IsReady)
+        {
+            var resourceIds = await IndexService.GetMatchingResourceIds(profileId);
+            return resourceIds.ToHashSet();
+        }
+
+        // Fallback to direct evaluation
+        var profile = await Get(profileId);
+        return profile == null ? [] : await GetMatchingResourceIds(profile.Search);
     }
 
     private async Task<HashSet<int>> GetMatchingResourceIds(ResourceSearch? search)

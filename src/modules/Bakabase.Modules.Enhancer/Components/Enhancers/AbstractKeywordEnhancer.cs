@@ -85,6 +85,14 @@ public abstract class
             TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(), Localizer.Enhancer_UseFilenameAsKeyword(keyword));
         }
 
+        if (keyword.IsNullOrEmpty())
+        {
+            var msg = Localizer.Enhancer_KeywordIsEmpty();
+            TracingContext?.AddTrace(LogLevel.Warning, Localizer.Enhance(), msg);
+            Logger.LogWarning(msg);
+            return default;
+        }
+
         TracingContext?.AddTrace(LogLevel.Information, Localizer.Enhance(),
             Localizer.Enhancer_KeywordPretreatStatus(options.PretreatKeyword ?? false));
 
