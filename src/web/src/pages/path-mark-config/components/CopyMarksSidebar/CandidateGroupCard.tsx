@@ -2,11 +2,13 @@
 
 import type { CandidateGroup } from "@/stores/copyMarks";
 
+import { useCallback } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 
 import PathMarkChip from "../PathMarkChip";
 
 import { Card, CardBody, Button } from "@/components/bakaui";
+import { useCopyMarksStore } from "@/stores/copyMarks";
 
 interface CandidateGroupCardProps {
   group: CandidateGroup;
@@ -21,6 +23,7 @@ const CandidateGroupCard = ({
   onSelect,
   onRemove,
 }: CandidateGroupCardProps) => {
+  const { removeMarkFromGroup } = useCopyMarksStore();
 
   // Get display path (truncate if too long)
   const displayPath =
@@ -30,6 +33,13 @@ const CandidateGroupCard = ({
 
   // Sort marks by type for consistent display
   const sortedMarks = [...group.marks].sort((a, b) => (a.type ?? 0) - (b.type ?? 0));
+
+  const handleRemoveMark = useCallback(
+    (markId: number) => {
+      removeMarkFromGroup(group.id, markId);
+    },
+    [group.id, removeMarkFromGroup],
+  );
 
   return (
     <Card
@@ -64,12 +74,13 @@ const CandidateGroupCard = ({
           </Button>
         </div>
 
-        {/* Display all marks using PathMarkChip */}
+        {/* Display all marks using PathMarkChip - right click to remove */}
         <div className="flex items-center gap-1 flex-wrap">
           {sortedMarks.map((mark) => (
             <PathMarkChip
               key={mark.id}
               mark={mark}
+              onContextMenu={mark.id !== undefined ? () => handleRemoveMark(mark.id!) : undefined}
             />
           ))}
         </div>

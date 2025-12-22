@@ -30,6 +30,7 @@ interface CopyMarksState {
   deselectAllMarks: () => void;
   confirmSelection: (sourcePath: string, marks: BakabaseAbstractionsModelsDomainPathMark[]) => void;
   removeGroup: (groupId: string) => void;
+  removeMarkFromGroup: (groupId: string, markId: number) => void;
   selectGroup: (groupId: string | null) => void;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
@@ -97,6 +98,23 @@ export const useCopyMarksStore = create<CopyMarksState>((set, get) => ({
       return {
         candidateGroups: newGroups,
         selectedGroupId: state.selectedGroupId === groupId ? null : state.selectedGroupId,
+        sidebarCollapsed: newGroups.length === 0 ? true : state.sidebarCollapsed,
+      };
+    }),
+
+  removeMarkFromGroup: (groupId, markId) =>
+    set((state) => {
+      const newGroups = state.candidateGroups.map((g) => {
+        if (g.id !== groupId) return g;
+        const newMarks = g.marks.filter((m) => m.id !== markId);
+        return { ...g, marks: newMarks };
+      }).filter((g) => g.marks.length > 0); // Remove group if no marks left
+
+      return {
+        candidateGroups: newGroups,
+        selectedGroupId: newGroups.find((g) => g.id === state.selectedGroupId)
+          ? state.selectedGroupId
+          : null,
         sidebarCollapsed: newGroups.length === 0 ? true : state.sidebarCollapsed,
       };
     }),

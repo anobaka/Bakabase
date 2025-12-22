@@ -237,6 +237,10 @@ namespace Bakabase.InsideWorld.Business.Services
                             f is { PropertyPool: PropertyPool.Internal, PropertyId: (int)ResourceProperty.MediaLibraryV2Multi }).ToList();
                         if (mlFilters.Any())
                         {
+                            // Check if any filter uses IsNull/IsNotNull operation (needs all resource mappings)
+                            var hasNullCheckOperation = mlFilters.Any(f =>
+                                f.Operation == SearchOperation.IsNull || f.Operation == SearchOperation.IsNotNull);
+
                             // Extract all media library IDs from filters' DbValue
                             var allFilterMediaLibraryIds = new HashSet<int>();
                             var mlAccessor = PropertySystem.Builtin.MediaLibraryV2Multi;
@@ -246,16 +250,35 @@ namespace Bakabase.InsideWorld.Business.Services
                                 if (ids != null) allFilterMediaLibraryIds.UnionWith(ids);
                             }
 
-                            if (allFilterMediaLibraryIds.Count > 0)
+                            if (hasNullCheckOperation)
+                            {
+                                // For IsNull/IsNotNull operations, we need mappings for all resources in the pool
+                                var allResourceIds = context.ResourcesPool.Keys.ToArray();
+                                if (allResourceIds.Length > 0)
+                                {
+                                    var mappings =
+                                        await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(
+                                            allResourceIds);
+                                    resourceMediaLibraryMap = mappings.ToDictionary(
+                                        kv => kv.Key,
+                                        kv => kv.Value.Select(id => id.ToString()).ToList());
+                                }
+                            }
+                            else if (allFilterMediaLibraryIds.Count > 0)
                             {
                                 // Get resource IDs that belong to those libraries (O(m) lookup where m = number of filter library IDs)
-                                matchingMlResourceIds = await MediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryIds(allFilterMediaLibraryIds);
+                                matchingMlResourceIds =
+                                    await MediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryIds(
+                                        allFilterMediaLibraryIds);
 
                                 // Get detailed mappings only for resources in the pool that potentially match
-                                var relevantResourceIds = context.ResourcesPool.Keys.Where(id => matchingMlResourceIds.Contains(id)).ToArray();
+                                var relevantResourceIds = context.ResourcesPool.Keys
+                                    .Where(id => matchingMlResourceIds.Contains(id)).ToArray();
                                 if (relevantResourceIds.Length > 0)
                                 {
-                                    var mappings = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(relevantResourceIds);
+                                    var mappings =
+                                        await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(
+                                            relevantResourceIds);
                                     resourceMediaLibraryMap = mappings.ToDictionary(
                                         kv => kv.Key,
                                         kv => kv.Value.Select(id => id.ToString()).ToList());
@@ -273,7 +296,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             InternalProperty.Category => r => r.CategoryId.ToString(),
                             InternalProperty.MediaLibrary => r => new List<string> {r.MediaLibraryId.ToString()},
                             InternalProperty.MediaLibraryV2 => r => (r.CategoryId == 0 ? r.MediaLibraryId : -1).ToString(),
-                            InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id) ?? new List<string>(),
+                            InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id),
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),
                             _ => null
                         });
@@ -285,6 +308,10 @@ namespace Bakabase.InsideWorld.Business.Services
                                         var v = d.Value!(x.Value);
                                         return v == null ? null : (List<object>?) [v];
                                     }));
+
+                        var validData = context.PropertyValueMap[PropertyPool.Internal]
+                            ?.GetValueOrDefault((int)ResourceProperty.MediaLibraryV2Multi)?.Where(x => x.Value == null)
+                            .ToList();
                     }
 
                     if (filters.Any(f => f.PropertyPool == PropertyPool.Reserved))

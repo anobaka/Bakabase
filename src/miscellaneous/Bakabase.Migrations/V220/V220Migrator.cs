@@ -554,19 +554,79 @@ public class V220Migrator : AbstractMigrator
 
                 foreach (var locator in prop.ValueLocators)
                 {
+                    // Calculate ValueLayer based on BasePathType and Positioner
+                    // Old system: Layer is relative to MediaLibrary path or Resource path
+                    // New system: ValueLayer is relative to PathMark path (which is MediaLibrary path)
+                    //
+                    // For BasePathType.MediaLibrary + Layer mode:
+                    //   Layer = 1 means first child of media library -> ValueLayer = 1
+                    //   Layer = -1 means parent of media library -> ValueLayer = -1
+                    //
+                    // For BasePathType.Resource + Layer mode:
+                    //   Layer = 0 means resource itself -> ValueLayer = 0 (special case, uses file name)
+                    //   Layer = -1 means parent of resource (one level above resource) -> need to calculate
+                    //   This is tricky because we don't know the resource depth at migration time
+                    //   We'll use Regex mode instead for Resource base type to avoid this issue
+
+                    int? valueLayer = null;
+                    string? valueRegex = locator.Regex;
+                    var matchMode = PathMatchMode.Regex;
+
+                    if (locator.Positioner == PathPositioner.Layer && locator.Layer.HasValue)
+                    {
+                        if (locator.BasePathType == PathPropertyExtractorBasePathType.MediaLibrary)
+                        {
+                            // MediaLibrary base: Layer semantics are preserved
+                            valueLayer = locator.Layer.Value;
+                            matchMode = PathMatchMode.Layer;
+                        }
+                        else // Resource base
+                        {
+                            // Resource base with Layer mode is complex because resource depth varies
+                            // Layer = 0 means resource itself (use ValueLayer = 0 which returns filename)
+                            // Layer = -1 means parent of resource
+                            // We keep Layer mode but note that ValueLayer semantics differ:
+                            // In new system, ValueLayer is relative to mark path, not resource path
+                            // This may not be 100% accurate but preserves most use cases
+                            if (locator.Layer.Value == 0)
+                            {
+                                // Resource itself - this works correctly
+                                valueLayer = 0;
+                                matchMode = PathMatchMode.Layer;
+                            }
+                            else
+                            {
+                                // For negative layers (parent directories), we cannot accurately migrate
+                                // because resource depth is not fixed. Log a warning and skip.
+                                Logger.LogWarning(
+                                    "Cannot migrate property locator with BasePathType=Resource and Layer={Layer} for property {Pool}/{Id}. " +
+                                    "Resource-relative parent directory extraction is not supported in the new PathMark system.",
+                                    locator.Layer.Value, prop.Pool, prop.Id);
+                                continue;
+                            }
+                        }
+                    }
+                    else if (locator.Positioner == PathPositioner.Regex && !string.IsNullOrEmpty(locator.Regex))
+                    {
+                        // Regex mode: valueRegex is already set
+                        matchMode = PathMatchMode.Regex;
+                    }
+                    else
+                    {
+                        // No valid extraction method, skip
+                        continue;
+                    }
+
                     var propertyConfig = new PropertyMarkConfig
                     {
                         Pool = prop.Pool,
                         PropertyId = prop.Id,
-                        ValueType = PropertyValueType.Dynamic, // From path extraction
-                        // Match all resources (set to -1 to apply to all layers)
-                        // The actual value extraction is controlled by ValueLayer/ValueRegex
-                        MatchMode = PathMatchMode.Layer,
-                        Layer = -1, // Apply to all layers
-                        Regex = null,
-                        // Value extraction from path
-                        ValueLayer = locator.Layer, // Which layer to extract value from
-                        ValueRegex = locator.Regex, // Optional regex to extract value
+                        ValueType = PropertyValueType.Dynamic,
+                        MatchMode = matchMode,
+                        Layer = null,
+                        Regex = null, // Null regex matches all paths
+                        ValueLayer = valueLayer,
+                        ValueRegex = valueRegex,
                         ApplyScope = PathMarkApplyScope.MatchedOnly
                     };
                     marks.Add(new PathMark

@@ -13,9 +13,10 @@ public class PropertyMarkConfig
     public PathMatchMode MatchMode { get; set; }
 
     /// <summary>
-    /// Layer 模式：作用的路径层级（相对于 PathRule.Path）
+    /// Layer 模式：作用的路径层级（相对于 PathMark.Path）
     /// 1 = 第一级子目录，2 = 第二级子目录，以此类推
-    /// -1 = 所有层级
+    /// 0 = 匹配 PathMark.Path 本身
+    /// 负数 = 父目录（-1 = 上一级，-2 = 上两级）
     /// </summary>
     public int? Layer { get; set; }
 

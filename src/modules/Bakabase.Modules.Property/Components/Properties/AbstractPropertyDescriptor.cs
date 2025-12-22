@@ -4,6 +4,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Extensions;
 using Newtonsoft.Json;
@@ -92,7 +93,6 @@ namespace Bakabase.Modules.Property.Components.Properties
         public bool IsMatch(object? dbValue, SearchOperation operation, object? filterValue)
         {
             // validate filter value
-            // todo: optimize filter value
             var expectedFilterValueType = PropertySystem.Property.GetDbValueType(
                 SearchOperations.GetValueOrDefault(operation)?.AsType ?? Type);
             if (!filterValue.IsStandardValueType(expectedFilterValueType))
@@ -100,7 +100,9 @@ namespace Bakabase.Modules.Property.Components.Properties
                 return false;
             }
 
-            if (dbValue is TDbValue tv)
+            var optValue = StandardValueSystem.GetHandler(expectedFilterValueType).Optimize(dbValue);
+
+            if (optValue is TDbValue tv)
             {
                 return operation switch
                 {

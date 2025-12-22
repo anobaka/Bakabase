@@ -15,6 +15,8 @@ import {
   AiOutlineSwap,
   AiOutlineSetting,
   AiOutlineSync,
+  AiOutlineCopy,
+  AiOutlineSnippets,
 } from "react-icons/ai";
 
 import { Button, toast, Tooltip } from "@/components/bakaui";
@@ -22,6 +24,8 @@ import BApi from "@/sdk/BApi";
 import MarkConfigModal from "@/pages/path-mark-config/components/MarkConfigModal";
 import PathMarkChip from "@/pages/path-mark-config/components/PathMarkChip";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { useCopyMarksStore } from "@/stores/copyMarks";
+import { getNewMarks, getExistingMarksCount } from "@/pages/path-mark-config/utils/markComparison";
 
 interface PathTreeNode {
   name: string;
@@ -42,6 +46,7 @@ interface PathTreeProps {
   onConfigurePath: (path: string) => void; // Open config modal for valid paths
   onTransferMarks: (fromPath: string) => void; // Transfer marks from path
   onDeletePathMarks: (path: string) => void; // Delete all marks on a path
+  onPasteMarks: (path: string, marks: BakabaseAbstractionsModelsDomainPathMark[]) => void; // Paste marks to path
 }
 
 // Build a tree structure from path groups
@@ -150,6 +155,7 @@ interface TreeNodeComponentProps {
   onConfigurePath: (path: string) => void;
   onTransferMarks: (fromPath: string) => void;
   onDeletePathMarks: (path: string) => void;
+  onPasteMarks: (path: string, marks: BakabaseAbstractionsModelsDomainPathMark[]) => void;
 }
 
 const TreeNodeComponent = ({
@@ -160,15 +166,42 @@ const TreeNodeComponent = ({
   onConfigurePath,
   onTransferMarks,
   onDeletePathMarks,
+  onPasteMarks,
 }: TreeNodeComponentProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
 
   const [expanded, setExpanded] = useState(true);
 
+  // Copy/paste store
+  const {
+    candidateGroups,
+    selectedGroupId,
+    copyModeEntryPath,
+    selectedMarkIds,
+    enterCopyMode,
+    exitCopyMode,
+    toggleMarkSelection,
+    selectAllMarks,
+    confirmSelection,
+  } = useCopyMarksStore();
+
+  const isInCopyMode = copyModeEntryPath === node.fullPath;
+
   const hasChildren = node.children.size > 0;
   const hasMarks = node.marks.length > 0;
   const children = Array.from(node.children.values());
+
+  // Calculate paste info
+  const pasteInfo = useMemo(() => {
+    const selectedGroup = candidateGroups.find((g) => g.id === selectedGroupId);
+    if (!selectedGroup || selectedGroup.sourcePath === node.fullPath) {
+      return { canPaste: false, newMarks: [], existingCount: 0 };
+    }
+    const newMarks = getNewMarks(selectedGroup.marks, node.marks);
+    const existingCount = getExistingMarksCount(selectedGroup.marks, node.marks);
+    return { canPaste: newMarks.length > 0, newMarks, existingCount };
+  }, [candidateGroups, selectedGroupId, node.fullPath, node.marks]);
 
   const handleCopyPath = useCallback(() => {
     navigator.clipboard.writeText(node.fullPath);
@@ -186,6 +219,31 @@ const TreeNodeComponent = ({
   const handleDeletePathMarks = useCallback(() => {
     onDeletePathMarks(node.fullPath);
   }, [node.fullPath, onDeletePathMarks]);
+
+  // Enter copy mode and select all marks by default
+  const handleEnterCopyMode = useCallback(() => {
+    if (node.marks.length > 0) {
+      enterCopyMode(node.fullPath);
+      const markIds = node.marks.filter((m) => m.id !== undefined).map((m) => m.id!);
+      selectAllMarks(markIds);
+    }
+  }, [enterCopyMode, node.fullPath, node.marks, selectAllMarks]);
+
+  // Confirm selected marks for copy
+  const handleConfirmCopy = useCallback(() => {
+    confirmSelection(node.fullPath, node.marks);
+  }, [confirmSelection, node.fullPath, node.marks]);
+
+  // Cancel copy mode
+  const handleCancelCopy = useCallback(() => {
+    exitCopyMode();
+  }, [exitCopyMode]);
+
+  const handlePasteMarks = useCallback(() => {
+    if (pasteInfo.canPaste) {
+      onPasteMarks(node.fullPath, pasteInfo.newMarks);
+    }
+  }, [node.fullPath, pasteInfo, onPasteMarks]);
 
   const [syncing, setSyncing] = useState(false);
   const handleSyncPath = useCallback(async () => {
@@ -284,76 +342,147 @@ const TreeNodeComponent = ({
               <PathMarkChip
                 key={`mark-${mark.id}`}
                 mark={mark}
-                onClick={() => handleEditMark(mark)}
-                onContextMenu={() => handleDeleteMark(mark)}
+                selectable={isInCopyMode}
+                selected={mark.id !== undefined && selectedMarkIds.includes(mark.id)}
+                onClick={isInCopyMode ? undefined : () => handleEditMark(mark)}
+                onContextMenu={isInCopyMode ? undefined : () => handleDeleteMark(mark)}
+                onSelectionChange={() => {
+                  if (mark.id !== undefined) {
+                    toggleMarkSelection(mark.id);
+                  }
+                }}
               />
             ))}
           </div>
         )}
 
-        {/* Action buttons - always visible on hover */}
-        <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-          {/* Configure button - only for valid paths */}
-          {!isInvalid && (
-            <Tooltip content={t("Configure marks")}>
+        {/* Copy mode actions */}
+        {isInCopyMode && (
+          <div className="flex items-center gap-1 ml-3">
+            <Button
+              color="primary"
+              size="sm"
+              isDisabled={selectedMarkIds.length === 0}
+              onPress={handleConfirmCopy}
+            >
+              {t("Confirm selection")} ({selectedMarkIds.length}/{node.marks.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="light"
+              onPress={handleCancelCopy}
+            >
+              {t("Cancel")}
+            </Button>
+          </div>
+        )}
+
+        {/* Action buttons - always visible on hover, hidden in copy mode */}
+        {!isInCopyMode && (
+          <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Configure button - only for valid paths */}
+            {!isInvalid && (
+              <Tooltip content={t("Configure marks")}>
+                <Button
+                  isIconOnly
+                  className="min-w-0 w-6 h-6"
+                  color="primary"
+                  size="sm"
+                  variant="light"
+                  onPress={handleConfigurePath}
+                >
+                  <AiOutlineSetting className="text-sm" />
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Sync button - only for paths with marks */}
+            {hasMarks && (
+              <Tooltip content={t("Sync all marks on this path")}>
+                <Button
+                  isIconOnly
+                  className="min-w-0 w-6 h-6"
+                  color="success"
+                  size="sm"
+                  variant="light"
+                  isLoading={syncing}
+                  onPress={handleSyncPath}
+                >
+                  <AiOutlineSync className="text-sm" />
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Copy button - only for paths with marks */}
+            {hasMarks && (
+              <Tooltip content={t("Copy marks from this path")}>
+                <Button
+                  isIconOnly
+                  className="min-w-0 w-6 h-6"
+                  color="default"
+                  size="sm"
+                  variant="light"
+                  onPress={handleEnterCopyMode}
+                >
+                  <AiOutlineCopy className="text-sm" />
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Paste button - only when marks can be pasted */}
+            {pasteInfo.canPaste && (
+              <Tooltip
+                content={
+                  pasteInfo.existingCount > 0
+                    ? t("Paste {{count}} marks ({{existing}} already exist)", {
+                        count: pasteInfo.newMarks.length,
+                        existing: pasteInfo.existingCount,
+                      })
+                    : t("Paste {{count}} marks", { count: pasteInfo.newMarks.length })
+                }
+              >
+                <Button
+                  isIconOnly
+                  className="min-w-0 w-6 h-6"
+                  color="warning"
+                  size="sm"
+                  variant="flat"
+                  onPress={handlePasteMarks}
+                >
+                  <AiOutlineSnippets className="text-sm" />
+                </Button>
+              </Tooltip>
+            )}
+
+            {/* Transfer button - for all paths */}
+            <Tooltip content={t("Transfer marks to another path")}>
               <Button
                 isIconOnly
                 className="min-w-0 w-6 h-6"
-                color="primary"
+                color="warning"
                 size="sm"
                 variant="light"
-                onPress={handleConfigurePath}
+                onPress={handleTransferMarks}
               >
-                <AiOutlineSetting className="text-sm" />
+                <AiOutlineSwap className="text-sm" />
               </Button>
             </Tooltip>
-          )}
 
-          {/* Sync button - only for paths with marks */}
-          {hasMarks && (
-            <Tooltip content={t("Sync all marks on this path")}>
+            {/* Delete button - for all paths */}
+            <Tooltip content={t("Delete all marks on this path")}>
               <Button
                 isIconOnly
                 className="min-w-0 w-6 h-6"
-                color="success"
+                color="danger"
                 size="sm"
                 variant="light"
-                isLoading={syncing}
-                onPress={handleSyncPath}
+                onPress={handleDeletePathMarks}
               >
-                <AiOutlineSync className="text-sm" />
+                <AiOutlineDelete className="text-sm" />
               </Button>
             </Tooltip>
-          )}
-
-          {/* Transfer button - for all paths */}
-          <Tooltip content={t("Transfer marks to another path")}>
-            <Button
-              isIconOnly
-              className="min-w-0 w-6 h-6"
-              color="warning"
-              size="sm"
-              variant="light"
-              onPress={handleTransferMarks}
-            >
-              <AiOutlineSwap className="text-sm" />
-            </Button>
-          </Tooltip>
-
-          {/* Delete button - for all paths */}
-          <Tooltip content={t("Delete all marks on this path")}>
-            <Button
-              isIconOnly
-              className="min-w-0 w-6 h-6"
-              color="danger"
-              size="sm"
-              variant="light"
-              onPress={handleDeletePathMarks}
-            >
-              <AiOutlineDelete className="text-sm" />
-            </Button>
-          </Tooltip>
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Children */}
@@ -369,6 +498,7 @@ const TreeNodeComponent = ({
                 onConfigurePath={onConfigurePath}
                 onDeleteMark={onDeleteMark}
                 onDeletePathMarks={onDeletePathMarks}
+                onPasteMarks={onPasteMarks}
                 onSaveMark={onSaveMark}
                 onTransferMarks={onTransferMarks}
               />
@@ -386,6 +516,7 @@ const PathTree = ({
   onConfigurePath,
   onTransferMarks,
   onDeletePathMarks,
+  onPasteMarks,
 }: PathTreeProps) => {
   const { t } = useTranslation();
 
@@ -414,6 +545,7 @@ const PathTree = ({
           onConfigurePath={onConfigurePath}
           onDeleteMark={onDeleteMark}
           onDeletePathMarks={onDeletePathMarks}
+          onPasteMarks={onPasteMarks}
           onSaveMark={onSaveMark}
           onTransferMarks={onTransferMarks}
         />

@@ -41,7 +41,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
 
       // For media library marks with fixed value, append library name
       if (mark.type === PathMarkType.MediaLibrary) {
-        const valueType = config.mediaLibraryValueType ?? PropertyValueType.Fixed;
+        const valueType = config.valueType ?? PropertyValueType.Fixed;
         if (valueType === PropertyValueType.Fixed && mark.mediaLibrary?.name) {
           typeLabel = `${typeLabel}:${mark.mediaLibrary.name}`;
         }
@@ -86,13 +86,16 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         const valueType = config.valueType;
         if (valueType === PropertyValueType.Fixed) {
           const fixedValue = config.fixedValue;
-          if (fixedValue) {
+          if (fixedValue !== undefined && fixedValue !== null) {
             parts.push(`="${fixedValue}"`);
           }
         } else if (valueType === PropertyValueType.Dynamic) {
-          const valueMatchMode = config.valueMatchMode;
-          if (valueMatchMode === PathMatchMode.Layer) {
-            const valueLayer = config.valueLayer ?? 0;
+          // Dynamic mode: check valueLayer and valueRegex to determine extraction method
+          const valueLayer = config.valueLayer;
+          const valueRegex = config.valueRegex;
+
+          if (valueLayer !== undefined && valueLayer !== null) {
+            // Layer-based extraction
             if (valueLayer === 0) {
               parts.push(t("MarkDescription.ValueLayer.Current"));
             } else if (valueLayer > 0) {
@@ -100,26 +103,35 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
             } else {
               parts.push(`${t("MarkDescription.ValueFrom")}${valueLayer}${t("MarkDescription.Layer.Suffix")}`);
             }
-          } else if (valueMatchMode === PathMatchMode.Regex) {
-            const valueRegex = config.valueRegex;
-            if (valueRegex) {
-              parts.push(t("MarkDescription.ValueRegex", { regex: valueRegex }));
-            }
+          } else if (valueRegex) {
+            // Regex-based extraction
+            parts.push(t("MarkDescription.ValueRegex", { regex: valueRegex }));
           }
         }
       }
 
-      // For media library marks with dynamic value
+      // For media library marks - value info
       if (mark.type === PathMarkType.MediaLibrary) {
-        const valueType = config.mediaLibraryValueType ?? PropertyValueType.Fixed;
-        if (valueType === PropertyValueType.Dynamic) {
-          const layerToMediaLibrary = config.layerToMediaLibrary ?? 0;
-          if (layerToMediaLibrary === 0) {
-            parts.push(t("MarkDescription.MediaLibraryLayer.Current"));
-          } else if (layerToMediaLibrary > 0) {
-            parts.push(`${t("MarkDescription.MediaLibraryFrom")}+${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
-          } else {
-            parts.push(`${t("MarkDescription.MediaLibraryFrom")}${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+        const valueType = config.valueType ?? PropertyValueType.Fixed;
+        if (valueType === PropertyValueType.Fixed) {
+          // Fixed mode: library name is already shown in the label
+        } else if (valueType === PropertyValueType.Dynamic) {
+          // Dynamic mode: check layerToMediaLibrary and regexToMediaLibrary
+          const layerToMediaLibrary = config.layerToMediaLibrary;
+          const regexToMediaLibrary = config.regexToMediaLibrary;
+
+          if (layerToMediaLibrary !== undefined && layerToMediaLibrary !== null) {
+            // Layer-based extraction
+            if (layerToMediaLibrary === 0) {
+              parts.push(t("MarkDescription.MediaLibraryLayer.Current"));
+            } else if (layerToMediaLibrary > 0) {
+              parts.push(`${t("MarkDescription.MediaLibraryFrom")}+${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+            } else {
+              parts.push(`${t("MarkDescription.MediaLibraryFrom")}${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+            }
+          } else if (regexToMediaLibrary) {
+            // Regex-based extraction
+            parts.push(t("MarkDescription.MediaLibraryRegex", { regex: regexToMediaLibrary }));
           }
         }
       }
@@ -139,7 +151,7 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         }
       }
 
-      return parts.length > 0 ? parts.join(" ") : t("MarkDescription.Empty");
+      return parts.length > 0 ? parts.join(" | ") : t("MarkDescription.Empty");
     } catch (error) {
       console.error("Failed to parse mark config:", error);
       return t("MarkDescription.Invalid");

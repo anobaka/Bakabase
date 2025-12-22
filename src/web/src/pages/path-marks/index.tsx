@@ -16,6 +16,7 @@ import usePathMarks from "@/pages/path-mark-config/hooks/usePathMarks";
 import PathMarkSettingsButton from "@/pages/path-mark-config/components/PathMarkSettingsButton";
 import PendingSyncButton from "@/pages/path-mark-config/components/PendingSyncButton";
 import type { PendingSyncButtonRef } from "@/pages/path-mark-config/components/PendingSyncButton";
+import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Chip, toast, Modal, Spinner, Switch } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -28,6 +29,7 @@ const PathMarksPage = () => {
 
   const { loading, checkingPaths, loadAllMarks, getGroupedMarksFiltered, getGroupedMarks, getInvalidPathsCount } = usePathMarks();
   const pendingSyncButtonRef = useRef<PendingSyncButtonRef>(null);
+
 
   const allGroups = useMemo(() => getGroupedMarks(), [getGroupedMarks]);
   const groups = useMemo(() => getGroupedMarksFiltered(showOnlyInvalid), [getGroupedMarksFiltered, showOnlyInvalid]);
@@ -244,6 +246,31 @@ const PathMarksPage = () => {
     [createPortal, allGroups, t, loadAllMarks, refreshPendingSyncCount],
   );
 
+  // Handle pasting marks to a path
+  const handlePasteMarks = useCallback(
+    async (path: string, marks: BakabaseAbstractionsModelsDomainPathMark[]) => {
+      try {
+        for (const mark of marks) {
+          await BApi.pathMark.addPathMark({
+            path,
+            type: mark.type,
+            configJson: mark.configJson,
+            priority: mark.priority,
+            expiresInSeconds: mark.expiresInSeconds,
+          } as BakabaseAbstractionsModelsDomainPathMark);
+        }
+
+        toast.success(t("Pasted {{count}} marks successfully", { count: marks.length }));
+        loadAllMarks();
+        refreshPendingSyncCount();
+      } catch (error) {
+        console.error("Failed to paste marks", error);
+        toast.danger(t("Failed to paste marks"));
+      }
+    },
+    [t, loadAllMarks, refreshPendingSyncCount],
+  );
+
   return (
     <div className="path-marks-page h-full flex flex-col">
       <div className="flex flex-col gap-4 p-4 flex-1 min-h-0">
@@ -292,21 +319,28 @@ const PathMarksPage = () => {
         )}
 
         {/* Content */}
-        <div className="overflow-auto flex-1 min-h-0 border border-default-200 rounded-lg p-2">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <Spinner size="lg" />
-            </div>
-          ) : (
-            <PathTree
-              groups={groups}
-              onConfigurePath={handleConfigurePath}
-              onDeleteMark={handleDeleteMark}
-              onDeletePathMarks={handleDeletePathMarks}
-              onSaveMark={handleSaveMark}
-              onTransferMarks={handleTransferMarks}
-            />
-          )}
+        <div className="overflow-hidden flex-1 min-h-0 flex">
+          {/* Tree container */}
+          <div className="flex-1 min-w-0 overflow-auto border border-default-200 rounded-lg p-2">
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <Spinner size="lg" />
+              </div>
+            ) : (
+              <PathTree
+                groups={groups}
+                onConfigurePath={handleConfigurePath}
+                onDeleteMark={handleDeleteMark}
+                onDeletePathMarks={handleDeletePathMarks}
+                onPasteMarks={handlePasteMarks}
+                onSaveMark={handleSaveMark}
+                onTransferMarks={handleTransferMarks}
+              />
+            )}
+          </div>
+
+          {/* Copy Marks Sidebar */}
+          <CopyMarksSidebar />
         </div>
       </div>
     </div>

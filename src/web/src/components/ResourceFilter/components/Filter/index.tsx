@@ -228,6 +228,11 @@ const Filter = ({
         ...filter,
       });
     } else {
+      // Clear value for operations that don't need it (IsNull, IsNotNull)
+      if (filter.operation === SearchOperation.IsNull || filter.operation === SearchOperation.IsNotNull) {
+        filter.dbValue = undefined;
+        filter.bizValue = undefined;
+      }
       config.api.getValueProperty(filter).then((p) => {
         filter.valueProperty = p;
         changeFilter({
