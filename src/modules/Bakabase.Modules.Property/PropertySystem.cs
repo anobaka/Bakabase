@@ -452,6 +452,61 @@ public static class PropertySystem
             var (dbValueType, _) = GetFilterValueTypes(propertyType, operation);
             return Value.Deserialize(serialized, dbValueType);
         }
+
+        /// <summary>
+        /// Convert a serialized filter value from one property to another.
+        /// If both properties use the same filter value type for the given operation, the original serialized value is returned unchanged.
+        /// This is useful for migrating search filters when property types change (e.g., SingleChoice to MultipleChoice).
+        /// </summary>
+        /// <param name="serializedValue">The serialized filter value to convert</param>
+        /// <param name="fromProperty">The source property definition</param>
+        /// <param name="toProperty">The target property definition</param>
+        /// <param name="operation">The search operation</param>
+        /// <returns>Converted serialized filter value, or null if input is null/empty</returns>
+        public static string? ConvertFilterValue(
+            string? serializedValue,
+            Bakabase.Abstractions.Models.Domain.Property fromProperty,
+            Bakabase.Abstractions.Models.Domain.Property toProperty,
+            SearchOperation operation)
+        {
+            return ConvertFilterValue(serializedValue, fromProperty.Type, toProperty.Type, operation);
+        }
+
+        /// <summary>
+        /// Convert a serialized filter value from one property type to another.
+        /// If both types use the same filter value type for the given operation, the original serialized value is returned unchanged.
+        /// This is useful for migrating search filters when property types change (e.g., SingleChoice to MultipleChoice).
+        /// </summary>
+        /// <param name="serializedValue">The serialized filter value to convert</param>
+        /// <param name="fromType">The source property type</param>
+        /// <param name="toType">The target property type</param>
+        /// <param name="operation">The search operation</param>
+        /// <returns>Converted serialized filter value, or null if input is null/empty</returns>
+        public static string? ConvertFilterValue(
+            string? serializedValue,
+            PropertyType fromType,
+            PropertyType toType,
+            SearchOperation operation)
+        {
+            if (string.IsNullOrEmpty(serializedValue)) return null;
+
+            // Get filter value types for both properties
+            var (fromDbType, _) = GetFilterValueTypes(fromType, operation);
+            var (toDbType, _) = GetFilterValueTypes(toType, operation);
+
+            // If same type, no conversion needed - return original value
+            if (fromDbType == toDbType)
+            {
+                return serializedValue;
+            }
+
+            // Deserialize from source type, convert, and re-serialize to target type
+            var value = Value.Deserialize(serializedValue, fromDbType);
+            if (value == null) return null;
+
+            var converted = SvSystem.Convert(value, fromDbType, toDbType);
+            return Value.Serialize(converted, toDbType);
+        }
     }
 
     /// <summary>

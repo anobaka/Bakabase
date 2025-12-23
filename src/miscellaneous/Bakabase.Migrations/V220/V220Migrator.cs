@@ -643,12 +643,15 @@ public class V220Migrator : AbstractMigrator
     }
 
     /// <summary>
-    /// Migrate MediaLibraryV2 (PropertyId=24, SingleChoice) to MediaLibraryV2Multi (PropertyId=25, MultipleChoice)
-    /// in all search filters: SavedSearches, LastSearchV2, and RecentFilters.
+    /// Migrate MediaLibraryV2 to MediaLibraryV2Multi in all search filters: SavedSearches, LastSearchV2, and RecentFilters.
     /// This ensures backward compatibility as MediaLibraryV2 is being deprecated.
     /// </summary>
     private async Task MigrateMediaLibraryV2ToMultiInSearchFilters()
     {
+        // Get property definitions from PropertySystem - we don't hardcode property types
+        var fromProperty = PropertySystem.Builtin.Get(ResourceProperty.MediaLibraryV2);
+        var toProperty = PropertySystem.Builtin.Get(ResourceProperty.MediaLibraryV2Multi);
+
         var optionsManagerPool = GetRequiredService<BakabaseOptionsManagerPool>();
         var optionsManager = optionsManagerPool.Get<ResourceOptions>();
         var modified = false;
@@ -662,7 +665,7 @@ public class V220Migrator : AbstractMigrator
                 {
                     if (savedSearch.Search != null)
                     {
-                        if (MigrateSearchFiltersInGroup(savedSearch.Search.Group))
+                        if (MigrateSearchFiltersInGroup(savedSearch.Search.Group, fromProperty, toProperty))
                         {
                             modified = true;
                             Logger.LogInformation("Migrated MediaLibraryV2 to MediaLibraryV2Multi in SavedSearch: {Name}",
@@ -675,7 +678,7 @@ public class V220Migrator : AbstractMigrator
             // 2) Migrate LastSearchV2
             if (options.LastSearchV2 != null)
             {
-                if (MigrateSearchFiltersInGroup(options.LastSearchV2.Group))
+                if (MigrateSearchFiltersInGroup(options.LastSearchV2.Group, fromProperty, toProperty))
                 {
                     modified = true;
                     Logger.LogInformation("Migrated MediaLibraryV2 to MediaLibraryV2Multi in LastSearchV2");
@@ -688,33 +691,22 @@ public class V220Migrator : AbstractMigrator
                 var migratedCount = 0;
                 foreach (var filter in options.RecentFilters)
                 {
-                    if (filter.PropertyPool == PropertyPool.Internal &&
-                        filter.PropertyId == (int)ResourceProperty.MediaLibraryV2)
+                    if (filter.PropertyPool == fromProperty.Pool &&
+                        filter.PropertyId == fromProperty.Id)
                     {
-                        // Convert MediaLibraryV2 (SingleChoice) to MediaLibraryV2Multi (MultipleChoice)
-                        filter.PropertyId = (int)ResourceProperty.MediaLibraryV2Multi;
+                        // Update property reference to target property
+                        filter.PropertyId = toProperty.Id;
 
-                        // The value format changes from SingleChoice to MultipleChoice
-                        // SingleChoice: serialized as a single string value
-                        // MultipleChoice: serialized as a JSON array of strings
+                        // Convert filter value using property definitions
                         if (!string.IsNullOrEmpty(filter.DbValue))
                         {
                             try
                             {
-                                // Deserialize as SingleChoice (string)
-                                var singleValue = PropertySystem.Search.DeserializeFilterValue(
+                                filter.DbValue = PropertySystem.Search.ConvertFilterValue(
                                     filter.DbValue,
-                                    PropertyType.SingleChoice,
+                                    fromProperty,
+                                    toProperty,
                                     filter.Operation);
-
-                                // Re-serialize as MultipleChoice (array with single item)
-                                if (singleValue != null)
-                                {
-                                    filter.DbValue = PropertySystem.Search.SerializeFilterValue(
-                                        singleValue.ToString(),
-                                        PropertyType.MultipleChoice,
-                                        filter.Operation);
-                                }
                             }
                             catch (Exception ex)
                             {
@@ -746,10 +738,16 @@ public class V220Migrator : AbstractMigrator
     }
 
     /// <summary>
-    /// Recursively migrate MediaLibraryV2 filters to MediaLibraryV2Multi in a filter group.
+    /// Recursively migrate filters from one property to another in a filter group.
     /// Returns true if any filters were migrated.
     /// </summary>
-    private bool MigrateSearchFiltersInGroup(ResourceSearchFilterGroupDbModel? group)
+    /// <param name="group">The filter group to migrate</param>
+    /// <param name="fromProperty">The source property definition</param>
+    /// <param name="toProperty">The target property definition</param>
+    private bool MigrateSearchFiltersInGroup(
+        ResourceSearchFilterGroupDbModel? group,
+        Bakabase.Abstractions.Models.Domain.Property fromProperty,
+        Bakabase.Abstractions.Models.Domain.Property toProperty)
     {
         if (group == null)
         {
@@ -763,35 +761,27 @@ public class V220Migrator : AbstractMigrator
         {
             foreach (var filter in group.Filters)
             {
-                if (filter.PropertyPool == PropertyPool.Internal &&
-                    filter.PropertyId == (int)ResourceProperty.MediaLibraryV2)
+                if (filter.PropertyPool == fromProperty.Pool &&
+                    filter.PropertyId == fromProperty.Id)
                 {
-                    // Convert MediaLibraryV2 (SingleChoice) to MediaLibraryV2Multi (MultipleChoice)
-                    filter.PropertyId = (int)ResourceProperty.MediaLibraryV2Multi;
+                    // Update property reference to target property
+                    filter.PropertyId = toProperty.Id;
 
-                    // The value format changes from SingleChoice to MultipleChoice
+                    // Convert filter value using property definitions
                     if (!string.IsNullOrEmpty(filter.Value))
                     {
                         try
                         {
-                            // Deserialize as SingleChoice (string)
-                            var singleValue = PropertySystem.Search.DeserializeFilterValue(
+                            filter.Value = PropertySystem.Search.ConvertFilterValue(
                                 filter.Value,
-                                PropertyType.SingleChoice,
+                                fromProperty,
+                                toProperty,
                                 filter.Operation ?? SearchOperation.Equals);
-
-                            // Re-serialize as MultipleChoice (array with single item)
-                            if (singleValue != null)
-                            {
-                                filter.Value = PropertySystem.Search.SerializeFilterValue(
-                                    singleValue.ToString(),
-                                    PropertyType.MultipleChoice,
-                                    filter.Operation ?? SearchOperation.Equals);
-                            }
                         }
                         catch (Exception ex)
                         {
-                            Logger.LogWarning(ex, "Failed to migrate filter value from MediaLibraryV2 to MediaLibraryV2Multi");
+                            Logger.LogWarning(ex, "Failed to migrate filter value from {FromProperty} to {ToProperty}",
+                                fromProperty.Id, toProperty.Id);
                         }
                     }
 
@@ -805,7 +795,7 @@ public class V220Migrator : AbstractMigrator
         {
             foreach (var childGroup in group.Groups)
             {
-                if (MigrateSearchFiltersInGroup(childGroup))
+                if (MigrateSearchFiltersInGroup(childGroup, fromProperty, toProperty))
                 {
                     modified = true;
                 }
