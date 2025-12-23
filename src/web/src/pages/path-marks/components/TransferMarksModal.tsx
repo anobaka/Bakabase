@@ -12,7 +12,7 @@ import PathMarkChip from "@/pages/path-mark-config/components/PathMarkChip";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Modal, Button, toast, Spinner, Checkbox, Tooltip } from "@/components/bakaui";
-import RootTreeEntry from "@/pages/file-processor/RootTreeEntry";
+import { FileExplorer } from "@/components/FileExplorer";
 import BApi from "@/sdk/BApi";
 
 // Child path info for transfer
@@ -213,7 +213,7 @@ const TransferMarksModal = ({
 
         {/* RootTreeEntry for browsing */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <RootTreeEntry
+          <FileExplorer
             expandable
             capabilities={["select"]}
             renderAfterName={renderAfterName}

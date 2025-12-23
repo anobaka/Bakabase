@@ -728,9 +728,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         var allMarks = await _pathMarkService.GetAll(m => m.Type == type && !excludeIds.Contains(m.Id));
 
         // Find marks whose Path is a parent directory of any resource path
+        // Include Synced marks so they can be re-applied to newly created resources
         var relatedMarks = allMarks
             .Where(m => resourcePaths.Any(rp => IsPathUnderParent(rp, m.Path)))
-            .Where(m => m.SyncStatus is PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete)
+            .Where(m => m.SyncStatus is PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete or PathMarkSyncStatus.Synced)
             .ToList();
 
         return relatedMarks;
@@ -753,26 +754,63 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         var allResources = await _resourceService.GetAll();
         var pathToResourceMap = allResources.ToDictionary(r => r.Path, r => r, StringComparer.OrdinalIgnoreCase);
 
+        // Standardize and sort paths lexicographically
+        // After sorting, parent paths will appear before their child paths
+        var sortedPaths = resourcePaths
+            .Select(p => p.StandardizePath()!)
+            .Where(p => !string.IsNullOrEmpty(p) && pathToResourceMap.ContainsKey(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
         var changedResources = new List<Resource>();
 
-        foreach (var path in resourcePaths)
+        // Stack to track potential parent paths
+        // Each entry is (path, resource)
+        var parentStack = new Stack<(string Path, Resource Resource)>();
+
+        foreach (var path in sortedPaths)
         {
             ct.ThrowIfCancellationRequested();
 
-            if (!pathToResourceMap.TryGetValue(path, out var resource)) continue;
+            var resource = pathToResourceMap[path];
 
-            // Find parent by looking at directory path
-            var parentPath = Path.GetDirectoryName(path)?.StandardizePath();
-            if (string.IsNullOrEmpty(parentPath)) continue;
-
-            if (pathToResourceMap.TryGetValue(parentPath, out var parentResource))
+            // Pop from stack until we find a valid parent or stack is empty
+            // A valid parent's path + separator must be a prefix of current path
+            while (parentStack.Count > 0)
             {
-                if (resource.ParentId != parentResource.Id)
+                var top = parentStack.Peek();
+                var parentPathWithSeparator = top.Path + Path.DirectorySeparatorChar;
+
+                if (path.StartsWith(parentPathWithSeparator, StringComparison.OrdinalIgnoreCase))
                 {
-                    resource.ParentId = parentResource.Id;
+                    // Found parent
+                    break;
+                }
+
+                // Not a parent, pop and continue
+                parentStack.Pop();
+            }
+
+            // Set parent if found
+            if (parentStack.Count > 0)
+            {
+                var parent = parentStack.Peek();
+                if (resource.ParentId != parent.Resource.Id)
+                {
+                    resource.ParentId = parent.Resource.Id;
                     changedResources.Add(resource);
                 }
             }
+            else if (resource.ParentId != null)
+            {
+                // No parent found but resource had one, clear it
+                resource.ParentId = null;
+                changedResources.Add(resource);
+            }
+
+            // Push current path as potential parent for subsequent paths
+            parentStack.Push((path, resource));
         }
 
         if (changedResources.Count > 0)

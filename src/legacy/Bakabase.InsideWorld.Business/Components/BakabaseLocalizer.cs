@@ -118,6 +118,10 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string MoveResource() => this[nameof(MoveResource)];
 
+        public string CopyFiles() => this[nameof(CopyFiles)];
+        public string CopyFile(string src, string dest) => this[nameof(CopyFile), src, dest];
+        public string? MessageOnInterruption_CopyFiles() => BTask_MessageOnInterruption("CopyFiles");
+
         public string BTask_Name(string key) => this[$"{nameof(BTask_Name)}_{key}"];
 
         public string? BTask_Description(string key)

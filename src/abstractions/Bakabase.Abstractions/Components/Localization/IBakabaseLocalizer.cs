@@ -32,6 +32,9 @@ public interface IBakabaseLocalizer
     string MoveFile(string src, string dest);
     string MoveResourceDetail(string srcPath, string mediaLibraryName, string destPath);
     string MoveResource();
+    string CopyFiles();
+    string CopyFile(string src, string dest);
+    string? MessageOnInterruption_CopyFiles();
     string BTask_Name(string key);
     string? BTask_Description(string key);
     string? BTask_MessageOnInterruption(string key);

@@ -1730,6 +1730,9 @@
   "Auto group internal items in {{count}} selected directories": "自动组合{{count}}个选中文件夹的内部项目",
   "Wrap {{count}} items using directory": "使用文件夹包裹{{count}}个项目",
   "No play history": "没有播放记录",
+  "Recently played": "最近播放",
+  "{{count}} resources": "{{count}}个资源",
+  "No recently played resources": "没有最近播放的资源",
   "Item": "项目",
   "Played at": "播放时间",
   "Last played at {{dt}}": "上次播放于 {{dt}}",
@@ -2676,5 +2679,13 @@
   "PathMark.MediaLibrary.Explanation": "匹配模式和应用范围配合使用，共同决定哪些资源将关联到媒体库。下方预览显示了将受影响的资源。",
   "PathMark.MediaLibrary.SettingsDescription": "选择如何确定匹配资源的目标媒体库。",
   "Property Value": "属性值",
-  "Scroll for more": "向下滚动查看更多"
+  "Scroll for more": "向下滚动查看更多",
+  "Copied {{count}} items": "已复制 {{count}} 个项目",
+  "Cut {{count}} items": "已剪切 {{count}} 个项目",
+  "Moved {{count}} items": "已移动 {{count}} 个项目",
+  "Enter directory": "进入目录",
+  "Open in system file manager": "在系统文件管理器中打开",
+  "Select multiple resources": "选择多个资源",
+  "Right click": "右键点击",
+  "More actions": "更多操作"
 }

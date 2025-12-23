@@ -29,7 +29,8 @@ namespace Bakabase.Service.Controllers
         IEnhancerService enhancerService,
         IEnhancerDescriptors enhancerDescriptors,
         IEnhancementRecordService enhancementRecordService,
-        IResourceProfileService resourceProfileService)
+        IResourceProfileService resourceProfileService,
+        IMediaLibraryResourceMappingService mediaLibraryResourceMappingService)
         : Controller
     {
         [HttpGet("~/resource/{resourceId:int}/enhancement")]
@@ -131,8 +132,8 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
         public async Task<BaseResponse> DeleteMediaLibraryEnhancementRecords(int mediaLibraryId, bool deleteEmptyOnly)
         {
-            var resourceIds = (await resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
-                .Select(t => t.Id).ToArray();
+            var resourceIds = (await mediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryId(mediaLibraryId))
+                .ToArray();
 
             if (deleteEmptyOnly)
             {
@@ -161,9 +162,8 @@ namespace Bakabase.Service.Controllers
             int enhancerId,
             bool deleteEmptyOnly)
         {
-            var resourceIds =
-                (await resourceService.GetAll(t => t.CategoryId == 0 && t.MediaLibraryId == mediaLibraryId))
-                .Select(t => t.Id).ToArray();
+            var resourceIds = (await mediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryId(mediaLibraryId))
+                .ToArray();
             if (deleteEmptyOnly)
             {
                 var records = await enhancementRecordService.GetAll(x =>

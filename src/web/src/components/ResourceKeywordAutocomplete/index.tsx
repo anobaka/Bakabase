@@ -3,7 +3,7 @@
 import type { AutocompleteProps } from "@heroui/react";
 
 import React, { useCallback, useRef, useState } from "react";
-import { useDebounce, useUpdateEffect } from "react-use";
+import { useDebounce } from "react-use";
 
 import { Autocomplete, AutocompleteItem } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -30,7 +30,7 @@ export default function ResourceKeywordAutocomplete({
 }: ResourceKeywordAutocompleteProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [candidates, setCandidates] = useState<string[]>([]);
-  const valueRef = useRef(value);
+  const lastSearchedRef = useRef<string | undefined>(undefined);
 
   const searchKeywords = useCallback(
     (prefix: string) => {
@@ -54,19 +54,16 @@ export default function ResourceKeywordAutocomplete({
     [maxResults],
   );
 
-  const [,] = useDebounce(
+  useDebounce(
     () => {
-      if (valueRef.current !== value) {
+      if (lastSearchedRef.current !== value) {
+        lastSearchedRef.current = value;
         searchKeywords(value ?? "");
       }
     },
     debounceDelay,
     [value],
   );
-
-  useUpdateEffect(() => {
-    valueRef.current = value;
-  }, [value]);
 
   const handleSelectionChange = (key: React.Key | null) => {
     if (key) {

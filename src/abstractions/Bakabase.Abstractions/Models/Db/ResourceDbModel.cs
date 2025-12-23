@@ -21,7 +21,9 @@ namespace Bakabase.Abstractions.Models.Db
         public DateTime UpdateDt { get; set; } = DateTime.Now;
         public DateTime FileCreateDt { get; set; }
         public DateTime FileModifyDt { get; set; }
+        [Obsolete]
         public int MediaLibraryId { get; set; }
+        [Obsolete]
         public int CategoryId { get; set; }
         public int? ParentId { get; set; }
         public ResourceTag Tags { get; set; }

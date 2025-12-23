@@ -9,6 +9,7 @@ import { AiOutlineClose } from "react-icons/ai";
 import { useResourceOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
+import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
 
 type SavedSearch =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SavedSearch"];
@@ -23,6 +24,7 @@ const ResourcePage2 = () => {
   const [activeSearchId, setActiveSearchId] = useState<string>();
   const [creatingTab, setCreatingTab] = useState(false);
   const [removingTabId, setRemovingTabId] = useState<string | null>(null);
+  const [recentlyPlayedOpen, setRecentlyPlayedOpen] = useState(false);
   const resourceOptions = useResourceOptionsStore();
   const optionsInitialized = useRef(false);
 
@@ -140,7 +142,7 @@ const ResourcePage2 = () => {
   // console.log(activeSearchId, ss);
 
   return (
-    <div className={"flex flex-col h-full max-h-full "}>
+    <div className={"flex flex-col h-full max-h-full gap-1"}>
       {ss.length > 1 && (
         <div className="flex flex-wrap items-center gap-1 py-2 border-b border-divider">
           {ss.map((s, i) => {
@@ -232,11 +234,16 @@ const ResourcePage2 = () => {
                 activated={isActive}
                 searchId={s.id}
                 searchInNewTab={searchInNewTab}
+                onOpenRecentlyPlayed={() => setRecentlyPlayedOpen(true)}
               />
             )}
           </div>
         );
       })}
+      <RecentlyPlayedDrawer
+        isOpen={recentlyPlayedOpen}
+        onClose={() => setRecentlyPlayedOpen(false)}
+      />
     </div>
   );
 };

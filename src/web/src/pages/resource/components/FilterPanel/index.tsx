@@ -6,12 +6,12 @@ import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
 import {
-  QuestionCircleOutlined,
   SearchOutlined,
   SnippetsOutlined,
 } from "@ant-design/icons";
 import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
+import { HistoryOutlined } from "@ant-design/icons";
 
 import styles from "./index.module.scss";
 import OrderSelector from "./OrderSelector";
@@ -19,7 +19,7 @@ import OrderSelector from "./OrderSelector";
 import BApi from "@/sdk/BApi";
 import { PlaylistCollection } from "@/components/Playlist";
 import { Button, Checkbox, Chip, Popover, Spinner, Tooltip } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import ShortcutsButton from "./ShortcutsButton";
 import MiscellaneousOptions from "@/pages/resource/components/FilterPanel/MiscellaneousOptions";
 import ResourceKeywordAutocomplete from "@/components/ResourceKeywordAutocomplete";
 import { ResourceSearchPanel } from "@/components/ResourceFilter";
@@ -36,6 +36,7 @@ interface IProps {
   onSelectAllChange: (selected: boolean, includeNotLoaded?: boolean) => any;
   resourceCount?: number;
   totalFilteredResourceCount?: number;
+  onOpenRecentlyPlayed?: () => void;
 }
 
 const MinResourceColCount = 3;
@@ -61,6 +62,7 @@ const FilterPanel = (props: IProps) => {
     onSelectAllChange,
     resourceCount,
     totalFilteredResourceCount,
+    onOpenRecentlyPlayed,
   } = props;
 
   useTraceUpdate(props, "FilterPanel");
@@ -77,9 +79,6 @@ const FilterPanel = (props: IProps) => {
   });
 
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
-
-  
 
   const [selectedAll, setSelectedAll] = useState(false);
 
@@ -237,14 +236,7 @@ const FilterPanel = (props: IProps) => {
               <SnippetsOutlined className={"text-base"} />
             </Chip>
           )}
-          <Popover color={"success"} trigger={<QuestionCircleOutlined className={"text-base"} />}>
-            <div className={"flex flex-col gap-1"}>
-              <div>{t<string>("Hold down Ctrl to select multiple resources.")}</div>
-              <div>
-                {t<string>("You can perform more actions by right-clicking on the resource.")}
-              </div>
-            </div>
-          </Popover>
+          <ShortcutsButton />
           <Tooltip
             content={
               <div className={"flex items-center gap-1"}>
@@ -338,6 +330,16 @@ const FilterPanel = (props: IProps) => {
           >
             <PlaylistCollection />
           </Popover>
+          <Tooltip content={t<string>("Recently played")}>
+            <Button
+              isIconOnly
+              color={"default"}
+              size={"sm"}
+              onPress={onOpenRecentlyPlayed}
+            >
+              <HistoryOutlined className={"text-base"} />
+            </Button>
+          </Tooltip>
           <MiscellaneousOptions rearrangeResources={rearrangeResources} />
         </div>
       </div>

@@ -8,7 +8,6 @@ import { AiOutlineWarning } from "react-icons/ai";
 
 import PathTree from "./components/PathTree";
 import PathConfigModal from "./components/PathConfigModal";
-import TransferMarksModal from "./components/TransferMarksModal";
 import type { ChildPathInfo } from "./components/TransferMarksModal";
 import DeleteMarksConfirmationModal from "./components/DeleteMarksConfirmationModal";
 
@@ -140,46 +139,6 @@ const PathMarksPage = () => {
       });
     },
     [createPortal, loadAllMarks, refreshPendingSyncCount],
-  );
-
-  // Handle transfer marks from path
-  const handleTransferMarks = useCallback(
-    (fromPath: string) => {
-      // Find marks for this path
-      const group = allGroups.find((g) => g.path === fromPath);
-      const marks = group?.marks || [];
-
-      if (marks.length === 0) {
-        toast.warning(t("No marks to transfer"));
-        return;
-      }
-
-      // Find child paths with marks (for transfer, we include all child paths)
-      const normalizedFromPath = fromPath.replace(/\\/g, "/").toLowerCase();
-      const invalidChildPaths: ChildPathInfo[] = allGroups
-        .filter((g) => {
-          if (g.exists !== false) return false; // Only invalid paths
-          if (g.path === fromPath) return false; // Exclude the main path itself
-          const normalizedPath = g.path.replace(/\\/g, "/").toLowerCase();
-          // Check if it's a child path
-          return normalizedPath.startsWith(normalizedFromPath + "/");
-        })
-        .map((g) => ({
-          path: g.path,
-          marks: g.marks,
-        }));
-
-      createPortal(TransferMarksModal, {
-        fromPath,
-        marks,
-        invalidChildPaths,
-        onTransferComplete: () => {
-          loadAllMarks();
-          refreshPendingSyncCount();
-        },
-      });
-    },
-    [createPortal, allGroups, t, loadAllMarks, refreshPendingSyncCount],
   );
 
   // Handle delete all marks on a path
@@ -334,7 +293,6 @@ const PathMarksPage = () => {
                 onDeletePathMarks={handleDeletePathMarks}
                 onPasteMarks={handlePasteMarks}
                 onSaveMark={handleSaveMark}
-                onTransferMarks={handleTransferMarks}
               />
             )}
           </div>

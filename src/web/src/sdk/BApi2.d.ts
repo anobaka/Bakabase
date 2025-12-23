@@ -388,22 +388,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/cache/category/{categoryId}/type/{type}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete: operations["DeleteResourceCacheByCategoryIdAndCacheType"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/cache/media-library/{mediaLibraryId}/type/{type}": {
         parameters: {
             query?: never;
@@ -415,6 +399,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeleteResourceCacheByMediaLibraryIdAndCacheType"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/cache/unassociated/type/{type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteUnassociatedResourceCacheByCacheType"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1556,6 +1556,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/copy-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["CopyEntries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/same-name-entries-in-working-directory": {
         parameters: {
             query?: never;
@@ -1743,6 +1759,22 @@ export interface paths {
         put?: never;
         post: operations["StartWatchingChangesInFileProcessorWorkspace"];
         delete: operations["StopWatchingChangesInFileProcessorWorkspace"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/file/file-processor-watcher/keep-alive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["KeepAliveFileProcessorWatcher"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4979,23 +5011,20 @@ export interface components {
             };
         };
         "Bakabase.Abstractions.Models.View.CacheOverviewViewModel": {
-            categoryCaches: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+CategoryCacheViewModel"][];
             mediaLibraryCaches: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+MediaLibraryCacheViewModel"][];
+            unassociatedCaches?: components["schemas"]["Bakabase.Abstractions.Models.View.CacheOverviewViewModel+UnassociatedCacheViewModel"];
         };
-        "Bakabase.Abstractions.Models.View.CacheOverviewViewModel+CategoryCacheViewModel": {
+        "Bakabase.Abstractions.Models.View.CacheOverviewViewModel+MediaLibraryCacheViewModel": {
             /** Format: int32 */
-            categoryId: number;
-            categoryName: string;
+            mediaLibraryId: number;
+            mediaLibraryName: string;
             resourceCacheCountMap: {
                 [key: string]: number;
             };
             /** Format: int32 */
             resourceCount: number;
         };
-        "Bakabase.Abstractions.Models.View.CacheOverviewViewModel+MediaLibraryCacheViewModel": {
-            /** Format: int32 */
-            mediaLibraryId: number;
-            mediaLibraryName: string;
+        "Bakabase.Abstractions.Models.View.CacheOverviewViewModel+UnassociatedCacheViewModel": {
             resourceCacheCountMap: {
                 [key: string]: number;
             };
@@ -8900,12 +8929,12 @@ export interface operations {
             };
         };
     };
-    DeleteResourceCacheByCategoryIdAndCacheType: {
+    DeleteResourceCacheByMediaLibraryIdAndCacheType: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                categoryId: number;
+                mediaLibraryId: number;
                 /** @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };
@@ -8926,12 +8955,11 @@ export interface operations {
             };
         };
     };
-    DeleteResourceCacheByMediaLibraryIdAndCacheType: {
+    DeleteUnassociatedResourceCacheByCacheType: {
         parameters: {
             query?: never;
             header?: never;
             path: {
-                mediaLibraryId: number;
                 /** @description [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
                 type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
             };
@@ -11170,6 +11198,35 @@ export interface operations {
             };
         };
     };
+    CopyEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.FileMoveRequestModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.FileMoveRequestModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.FileMoveRequestModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.RequestModels.FileMoveRequestModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     GetSameNameEntriesInWorkingDirectory: {
         parameters: {
             query?: never;
@@ -11483,6 +11540,28 @@ export interface operations {
         };
     };
     StopWatchingChangesInFileProcessorWorkspace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    KeepAliveFileProcessorWatcher: {
         parameters: {
             query?: never;
             header?: never;

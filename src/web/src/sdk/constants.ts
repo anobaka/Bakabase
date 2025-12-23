@@ -824,6 +824,7 @@ export enum BTaskType {
   Decompress = 1,
   MoveFiles = 2,
   MoveResources = 3,
+  CopyFiles = 4,
   Any = 1000
 }
 
@@ -831,6 +832,7 @@ export const bTaskTypes = [
   { label: 'Decompress', value: BTaskType.Decompress },
   { label: 'MoveFiles', value: BTaskType.MoveFiles },
   { label: 'MoveResources', value: BTaskType.MoveResources },
+  { label: 'CopyFiles', value: BTaskType.CopyFiles },
   { label: 'Any', value: BTaskType.Any }
 ] as const;
 
@@ -838,6 +840,7 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.Decompress]: 'Decompress',
   [BTaskType.MoveFiles]: 'MoveFiles',
   [BTaskType.MoveResources]: 'MoveResources',
+  [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Any]: 'Any'
 };
 

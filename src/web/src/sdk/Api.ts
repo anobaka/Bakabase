@@ -927,23 +927,20 @@ export interface BakabaseAbstractionsModelsViewAppNotificationMessageViewModel {
 }
 
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModel {
-  categoryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel[];
   mediaLibraryCaches: BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel[];
-}
-
-export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelCategoryCacheViewModel {
-  /** @format int32 */
-  categoryId: number;
-  categoryName: string;
-  resourceCacheCountMap: Record<string, number>;
-  /** @format int32 */
-  resourceCount: number;
+  unassociatedCaches?: BakabaseAbstractionsModelsViewCacheOverviewViewModelUnassociatedCacheViewModel;
 }
 
 export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelMediaLibraryCacheViewModel {
   /** @format int32 */
   mediaLibraryId: number;
   mediaLibraryName: string;
+  resourceCacheCountMap: Record<string, number>;
+  /** @format int32 */
+  resourceCount: number;
+}
+
+export interface BakabaseAbstractionsModelsViewCacheOverviewViewModelUnassociatedCacheViewModel {
   resourceCacheCountMap: Record<string, number>;
   /** @format int32 */
   resourceCount: number;
@@ -5869,25 +5866,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Cache
-     * @name DeleteResourceCacheByCategoryIdAndCacheType
-     * @request DELETE:/cache/category/{categoryId}/type/{type}
-     */
-    deleteResourceCacheByCategoryIdAndCacheType: (
-      categoryId: number,
-      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
-      params: RequestParams = {},
-    ) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/cache/category/${categoryId}/type/${type}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags Cache
      * @name DeleteResourceCacheByMediaLibraryIdAndCacheType
      * @request DELETE:/cache/media-library/{mediaLibraryId}/type/{type}
      */
@@ -5898,6 +5876,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/cache/media-library/${mediaLibraryId}/type/${type}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name DeleteUnassociatedResourceCacheByCacheType
+     * @request DELETE:/cache/unassociated/type/{type}
+     */
+    deleteUnassociatedResourceCacheByCacheType: (
+      type: BakabaseAbstractionsModelsDomainConstantsResourceCacheType,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/cache/unassociated/type/${type}`,
         method: "DELETE",
         format: "json",
         ...params,
@@ -9863,6 +9859,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags File
+     * @name CopyEntries
+     * @request POST:/file/copy-entries
+     */
+    copyEntries: (
+      data: BakabaseInsideWorldModelsRequestModelsFileMoveRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/copy-entries`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for copyEntries
+     * @name copyEntriesUrl
+     */
+    copyEntriesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/copy-entries`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
      * @name GetSameNameEntriesInWorkingDirectory
      * @request POST:/file/same-name-entries-in-working-directory
      */
@@ -10361,6 +10388,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     stopWatchingChangesInFileProcessorWorkspaceUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/file-processor-watcher`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name KeepAliveFileProcessorWatcher
+     * @request PUT:/file/file-processor-watcher/keep-alive
+     */
+    keepAliveFileProcessorWatcher: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/file/file-processor-watcher/keep-alive`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for keepAliveFileProcessorWatcher
+     * @name keepAliveFileProcessorWatcherUrl
+     */
+    keepAliveFileProcessorWatcherUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/file-processor-watcher/keep-alive`;
       
       return baseUrl + path;
     },

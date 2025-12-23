@@ -17,7 +17,7 @@ public class AliasTests
     [TestMethod]
     public async Task TestMergeGroupsByImporting()
     {
-        var sp = await HostUtils.PrepareScopedServiceProvider();
+        var sp = await TestServiceBuilder.BuildServiceProvider();
         var aliasService = sp.GetRequiredService<IAliasService>();
 
         var initGroups = new string[][]
@@ -58,7 +58,7 @@ public class AliasTests
     [TestMethod]
     public async Task TestExport()
     {
-        var sp = await HostUtils.PrepareScopedServiceProvider();
+        var sp = await TestServiceBuilder.BuildServiceProvider();
         var aliasService = sp.GetRequiredService<IAliasService>();
 
         var initGroups = new string[][]

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Extensions;
+using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components;
@@ -37,10 +38,12 @@ namespace Bakabase.Service.Controllers
         private readonly IPropertyService _propertyService;
         private readonly IBakabaseLocalizer _localizer;
         private readonly IMediaLibraryV2Service _mediaLibraryV2Service;
+        private readonly IMediaLibraryResourceMappingService _mediaLibraryResourceMappingService;
 
         public DashboardController(IResourceService resourceService, DownloadTaskService downloadTaskService, IThirdPartyService thirdPartyService,
             IBOptions<FileSystemOptions> fsOptions, IAliasService aliasService, ISpecialTextService specialTextService, PasswordService passwordService,
-            IPropertyService propertyService, IBakabaseLocalizer localizer, IMediaLibraryV2Service mediaLibraryV2Service)
+            IPropertyService propertyService, IBakabaseLocalizer localizer, IMediaLibraryV2Service mediaLibraryV2Service,
+            IMediaLibraryResourceMappingService mediaLibraryResourceMappingService)
         {
             _resourceService = resourceService;
             _downloadTaskService = downloadTaskService;
@@ -52,6 +55,7 @@ namespace Bakabase.Service.Controllers
             _propertyService = propertyService;
             _localizer = localizer;
             _mediaLibraryV2Service = mediaLibraryV2Service;
+            _mediaLibraryResourceMappingService = mediaLibraryResourceMappingService;
         }
 
         [HttpGet]
@@ -63,11 +67,30 @@ namespace Bakabase.Service.Controllers
             // Resource
             var mediaLibraries = (await _mediaLibraryV2Service.GetAll());
             var mlIds = mediaLibraries.Select(ml => ml.Id).ToHashSet();
-            var allEntities =
-                await _resourceService.GetAllDbModels(r => r.CategoryId == 0 && mlIds.Contains(r.MediaLibraryId));
 
-            var mediaLibraryResources =
-                allEntities.GroupBy(r => r.MediaLibraryId).ToDictionary(d => d.Key, d => d.ToList());
+            // Get all resources and their media library mappings
+            var allEntities = await _resourceService.GetAllDbModels();
+            var resourceIds = allEntities.Select(r => r.Id).ToList();
+            var resourceMediaLibraryMap = await _mediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(resourceIds);
+
+            // Group resources by media library
+            var mediaLibraryResources = new Dictionary<int, List<ResourceDbModel>>();
+            foreach (var resource in allEntities)
+            {
+                var associatedMlIds = resourceMediaLibraryMap.GetValueOrDefault(resource.Id);
+                if (associatedMlIds != null)
+                {
+                    foreach (var mlId in associatedMlIds.Where(id => mlIds.Contains(id)))
+                    {
+                        if (!mediaLibraryResources.TryGetValue(mlId, out var list))
+                        {
+                            list = [];
+                            mediaLibraryResources[mlId] = list;
+                        }
+                        list.Add(resource);
+                    }
+                }
+            }
 
             ds.MediaLibraryResourceCounts = mediaLibraries.Select(d =>
                 new DashboardStatistics.TextAndCount(d.Name, mediaLibraryResources.GetValueOrDefault(d.Id)?.Count ?? 0,
@@ -136,8 +159,8 @@ namespace Bakabase.Service.Controllers
         {
             var ds = new DashboardPropertyStatistics();
 
-            // Property value coverage
-            var resources = await _resourceService.GetAll(x => x.CategoryId == 0, ResourceAdditionalItem.All);
+            // Property value coverage - get all resources with media library associations
+            var resources = await _resourceService.GetAllGeneratedByMediaLibraryV2(additionalItems: ResourceAdditionalItem.All);
             var propertyValueExpectedCounts = new Dictionary<int, Dictionary<int, int>>();
             var propertyValueFilledCounts = new Dictionary<int, Dictionary<int, int>>();
             var propertyMap =

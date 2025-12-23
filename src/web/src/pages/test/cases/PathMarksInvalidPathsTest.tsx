@@ -3,13 +3,10 @@ import { useTranslation } from "react-i18next";
 import { AiOutlineWarning } from "react-icons/ai";
 
 import PathTree from "@/pages/path-marks/components/PathTree";
-import TransferMarksModal from "@/pages/path-marks/components/TransferMarksModal";
-import type { ChildPathInfo } from "@/pages/path-marks/components/TransferMarksModal";
 import type { PathMarkGroup } from "@/pages/path-mark-config/hooks/usePathMarks";
 import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 import { PathMarkType } from "@/sdk/constants";
 import { Switch, toast } from "@/components/bakaui";
-import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
 // Helper to create mock marks with required fields
 const createMockMark = (
@@ -166,7 +163,6 @@ const mockGroups: PathMarkGroup[] = [
 
 const PathMarksInvalidPathsTest = () => {
   const { t } = useTranslation();
-  const { createPortal } = useBakabaseContext();
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
   const invalidPathsCount = mockGroups.filter(g => g.exists === false).length;
@@ -180,42 +176,6 @@ const PathMarksInvalidPathsTest = () => {
       console.log("Configure path", path);
     },
     [],
-  );
-
-  const handleTransferMarks = useCallback(
-    (fromPath: string) => {
-      const group = mockGroups.find((g) => g.path === fromPath);
-      const marks = group?.marks || [];
-
-      if (marks.length === 0) {
-        toast.warning(t("No marks to transfer"));
-        return;
-      }
-
-      // Find child paths with marks
-      const normalizedFromPath = fromPath.replace(/\\/g, "/").toLowerCase();
-      const invalidChildPaths: ChildPathInfo[] = mockGroups
-        .filter((g) => {
-          if (g.path === fromPath) return false; // Exclude the main path itself
-          const normalizedPath = g.path.replace(/\\/g, "/").toLowerCase();
-          // Check if it's a child path
-          return normalizedPath.startsWith(normalizedFromPath + "/");
-        })
-        .map((g) => ({
-          path: g.path,
-          marks: g.marks,
-        }));
-
-      createPortal(TransferMarksModal, {
-        fromPath,
-        marks,
-        invalidChildPaths,
-        onTransferComplete: () => {
-          toast.success("Transfer complete (mock)");
-        },
-      });
-    },
-    [createPortal, t],
   );
 
   return (
@@ -271,7 +231,10 @@ const PathMarksInvalidPathsTest = () => {
               toast.success(`Saved mark to ${path} (mock)`);
               console.log("Save mark", path, mark, oldMark);
             }}
-            onTransferMarks={handleTransferMarks}
+            onPasteMarks={(path, marks) => {
+              toast.success(`Pasted ${marks.length} marks to ${path} (mock)`);
+              console.log("Paste marks", path, marks);
+            }}
           />
         </div>
       </div>

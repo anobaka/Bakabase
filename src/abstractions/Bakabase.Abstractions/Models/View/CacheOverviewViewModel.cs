@@ -4,17 +4,17 @@ namespace Bakabase.Abstractions.Models.View;
 
 public record CacheOverviewViewModel
 {
-    public List<CategoryCacheViewModel> CategoryCaches { get; set; } = [];
+    public List<MediaLibraryCacheViewModel> MediaLibraryCaches { get; set; } = [];
 
     /// <summary>
-    /// V2
+    /// Cache stats for resources not associated with any media library
     /// </summary>
-    public IEnumerable<MediaLibraryCacheViewModel> MediaLibraryCaches { get; set; } = [];
+    public UnassociatedCacheViewModel? UnassociatedCaches { get; set; }
 
-    public record CategoryCacheViewModel
+    public record MediaLibraryCacheViewModel
     {
-        public int CategoryId { get; set; }
-        public string CategoryName { get; set; } = null!;
+        public int MediaLibraryId { get; set; }
+        public string MediaLibraryName { get; set; } = null!;
 
         /// <summary>
         /// <see cref="ResourceCacheType"/> - Count
@@ -24,14 +24,8 @@ public record CacheOverviewViewModel
         public int ResourceCount { get; set; }
     }
 
-    /// <summary>
-    /// V2
-    /// </summary>
-    public record MediaLibraryCacheViewModel
+    public record UnassociatedCacheViewModel
     {
-        public int MediaLibraryId { get; set; }
-        public string MediaLibraryName { get; set; } = null!;
-
         /// <summary>
         /// <see cref="ResourceCacheType"/> - Count
         /// </summary>

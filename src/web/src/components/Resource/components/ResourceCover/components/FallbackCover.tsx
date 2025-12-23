@@ -19,7 +19,7 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
   const { createPortal } = useBakabaseContext();
 
   return (
-    <Tooltip content={t<string>("ResourceCover.CoverTips.Tooltip")}>
+    <Tooltip content={t<string>("ResourceCover.CoverTips.Tooltip")} delay={1000}>
       <Button
         isIconOnly
         size={"sm"}
@@ -96,7 +96,7 @@ const FallbackCover = ({ id, afterClearingCache }: Props) => {
           });
         }}
       >
-        <MdBrokenImage className={"text-2xl"} />
+        <MdBrokenImage className={"text-2xl opacity-50"} />
       </Button>
     </Tooltip>
   );

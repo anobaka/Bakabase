@@ -883,5 +883,16 @@
   "PathMark.MediaLibrary.Explanation": "Match Mode and Apply Scope work together to determine which resources will be associated with the media library. The preview below shows which resources will be affected.",
   "PathMark.MediaLibrary.SettingsDescription": "Choose how to determine the target media library for matched resources.",
   "Property Value": "Property Value",
-  "Scroll for more": "Scroll for more"
+  "Scroll for more": "Scroll for more",
+  "Copied {{count}} items": "Copied {{count}} items",
+  "Cut {{count}} items": "Cut {{count}} items",
+  "Moved {{count}} items": "Moved {{count}} items",
+  "Enter directory": "Enter directory",
+  "Open in system file manager": "Open in system file manager",
+  "Recently played": "Recently played",
+  "{{count}} resources": "{{count}} resources",
+  "No recently played resources": "No recently played resources",
+  "Select multiple resources": "Select multiple resources",
+  "Right click": "Right click",
+  "More actions": "More actions"
 }

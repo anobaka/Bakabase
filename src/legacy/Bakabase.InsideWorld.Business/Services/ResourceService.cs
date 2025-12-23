@@ -298,6 +298,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             InternalProperty.MediaLibraryV2 => r => (r.CategoryId == 0 ? r.MediaLibraryId : -1).ToString(),
                             InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id),
                             InternalProperty.ParentResource => r => r.ParentId?.ToString(),
+                            InternalProperty.PlayedAt => r => r.PlayedAt,
                             _ => null
                         });
                         context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)
@@ -549,23 +550,18 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             SortPropertyValuesByScope(doList);
 
-                            var categoryIds = resources.Where(x => x.CategoryId > 0).Select(r => r.CategoryId)
-                                .ToHashSet();
                             // ResourceId - PropertyId - Values
                             var customPropertiesValuesMap = (await _customPropertyValueService.GetAll(
                                 x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
                                 true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
                                 x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.ToList()));
-                            var categoryMap =
-                                (await _categoryService.GetByKeys(categoryIds, CategoryAdditionalItem.CustomProperties))
-                                .ToDictionary(d => d.Id, d => d);
-                            var categoryIdCustomPropertiesMap = categoryMap.ToDictionary(d => d.Key,
-                                d => d.Value.CustomProperties);
 
-                            var mediaLibraryV2Ids = resources.Where(d => d.CategoryId == 0)
-                                .Select(d => d.MediaLibraryId).Distinct().ToArray();
-                            var mediaLibrariesV2 = (await MediaLibraryV2Service.GetByKeys(mediaLibraryV2Ids,
-                                MediaLibraryV2AdditionalItem.Template));
+                            // Get resource -> media library mappings
+                            var resourceMediaLibraryMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(resourceIds);
+                            var allMediaLibraryIds = resourceMediaLibraryMap.Values.SelectMany(x => x).Distinct().ToArray();
+                            var mediaLibrariesV2 = allMediaLibraryIds.Length > 0
+                                ? await MediaLibraryV2Service.GetByKeys(allMediaLibraryIds, MediaLibraryV2AdditionalItem.Template)
+                                : [];
                             var mediaLibraryV2IdCustomPropertyIdsMap = mediaLibrariesV2.Where(x => x.Template != null)
                                 .ToDictionary(d => d.Id,
                                     d => d.Template!.Properties?.Where(f => f.Pool == PropertyPool.Custom)
@@ -573,12 +569,6 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             var customPropertyMap =
                                 (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
-                            var loadedProperties = categoryMap.Values.SelectMany(x => x.CustomProperties ?? [])
-                                .GroupBy(d => d.Id).Select(d => d.First());
-                            foreach (var p in loadedProperties)
-                            {
-                                customPropertyMap[p.Id] = (p as CustomProperty)!;
-                            }
 
                             foreach (var r in doList)
                             {
@@ -587,21 +577,16 @@ namespace Bakabase.InsideWorld.Business.Services
                                     r.Properties.GetOrAdd((int)PropertyPool.Custom, _ => []);
 
                                 var propertyIds = new List<int>();
-                                if (r.CategoryId > 0)
+                                // Get custom properties from associated media libraries
+                                var mlIds = resourceMediaLibraryMap.GetValueOrDefault(r.Id);
+                                if (mlIds != null)
                                 {
-                                    if (categoryIdCustomPropertiesMap.TryGetValue(r.CategoryId,
-                                            out var boundProperties) && boundProperties != null)
+                                    foreach (var mlId in mlIds)
                                     {
-                                        var bPIds = boundProperties.Select(p => p.Id).ToArray();
-                                        propertyIds.AddRange(bPIds);
-                                    }
-                                }
-                                else
-                                {
-                                    if (mediaLibraryV2IdCustomPropertyIdsMap.TryGetValue(r.MediaLibraryId,
-                                            out var bPIds))
-                                    {
-                                        propertyIds.AddRange(bPIds);
+                                        if (mediaLibraryV2IdCustomPropertyIdsMap.TryGetValue(mlId, out var bPIds))
+                                        {
+                                            propertyIds.AddRange(bPIds);
+                                        }
                                     }
                                 }
 
@@ -947,9 +932,8 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct)
         {
             var resource = await _orm.GetByKey(id, false);
-            var coverSelectOrder =
-                (await _categoryService.Get(resource.CategoryId))?.CoverSelectionOrder ??
-                CoverSelectOrder.FilenameAscending;
+            // TODO: Get CoverSelectionOrder from ResourceProfile when implemented
+            var coverSelectOrder = CoverSelectOrder.FilenameAscending;
             var coverDiscoverResult = await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false, ct);
 
             string? path = null;
@@ -1235,11 +1219,6 @@ namespace Bakabase.InsideWorld.Business.Services
                 resource.IsFile = toResource.IsFile;
                 resource.ParentId = toResource.ParentId;
                 resource.UpdatedAt = DateTime.Now;
-                if (keepMediaLibrary)
-                {
-                    resource.CategoryId = toResource.CategoryId;
-                    resource.MediaLibraryId = toResource.MediaLibraryId;
-                }
 
                 changedResources.Add(resource);
                 if (deleteSource)
@@ -1250,6 +1229,22 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await AddOrPutRange(changedResources);
             await DeleteByKeys(discardResourceIds.ToArray(), false);
+
+            // Handle media library mappings for keepMediaLibrary
+            foreach (var item in model.Items)
+            {
+                var keepMediaLibrary = item.KeepMediaLibrary || model.KeepMediaLibraryForAll;
+                if (!keepMediaLibrary)
+                {
+                    // Transfer media library mappings from source to target
+                    var fromMappings = await MediaLibraryResourceMappingService.GetByResourceId(item.FromId);
+                    var toMlIds = fromMappings.Select(m => m.MediaLibraryId).ToList();
+                    if (toMlIds.Any())
+                    {
+                        await MediaLibraryResourceMappingService.ReplaceMappings(item.ToId, toMlIds);
+                    }
+                }
+            }
         }
 
         public async Task SaveCover(int id, byte[] imageBytes, CoverSaveMode mode)
@@ -1290,39 +1285,69 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<CacheOverviewViewModel> GetCacheOverview()
         {
             var cacheMap = (await _resourceCacheOrm.GetAll(null, false)).ToDictionary(d => d.ResourceId, d => d);
-            var categories = await _categoryService.GetAll(null, CategoryAdditionalItem.None);
             var resources = await GetAllDbModels(null, false);
             var mediaLibrariesV2 = await MediaLibraryV2Service.GetAll(null, MediaLibraryV2AdditionalItem.None);
-            var categoryIdResourcesMap = resources.Where(r => r.CategoryId > 0).GroupBy(r => r.CategoryId)
-                .ToDictionary(d => d.Key, d => d.ToList());
-            var categoryIdCachesMap = categories.ToDictionary(d => d.Id,
-                d => categoryIdResourcesMap.GetValueOrDefault(d.Id)?.Select(r => cacheMap.GetValueOrDefault(r.Id))
-                    .OfType<ResourceCacheDbModel>().ToList() ?? []);
-            var mediaLibraryIdResourcesMap = resources.Where(r => r.CategoryId == 0).GroupBy(r => r.MediaLibraryId)
-                .ToDictionary(d => d.Key, d => d.ToList());
-            var mediaLibraryIdCachesMap = mediaLibrariesV2.ToDictionary(d => d.Id,
-                d => resources.Where(r => r.MediaLibraryId == d.Id && r.CategoryId == 0)
-                    .Select(r => cacheMap.GetValueOrDefault(r.Id)).OfType<ResourceCacheDbModel>().ToList());
+
+            // Get resource -> mediaLibraryIds mapping
+            var resourceIds = resources.Select(r => r.Id).ToList();
+            var resourceMediaLibraryMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(resourceIds);
+
+            // Build mediaLibraryId -> resourceIds mapping
+            var mediaLibraryIdResourceIdsMap = new Dictionary<int, HashSet<int>>();
+            var unassociatedResourceIds = new HashSet<int>();
+
+            foreach (var resource in resources)
+            {
+                var mediaLibraryIds = resourceMediaLibraryMap.GetValueOrDefault(resource.Id);
+                if (mediaLibraryIds == null || mediaLibraryIds.Count == 0)
+                {
+                    unassociatedResourceIds.Add(resource.Id);
+                }
+                else
+                {
+                    foreach (var mlId in mediaLibraryIds)
+                    {
+                        if (!mediaLibraryIdResourceIdsMap.TryGetValue(mlId, out var set))
+                        {
+                            set = [];
+                            mediaLibraryIdResourceIdsMap[mlId] = set;
+                        }
+                        set.Add(resource.Id);
+                    }
+                }
+            }
+
+            // Build cache maps
+            var mediaLibraryIdCachesMap = mediaLibrariesV2.ToDictionary(
+                ml => ml.Id,
+                ml => mediaLibraryIdResourceIdsMap.GetValueOrDefault(ml.Id)?
+                    .Select(rid => cacheMap.GetValueOrDefault(rid))
+                    .OfType<ResourceCacheDbModel>()
+                    .ToList() ?? []);
+
+            var unassociatedCaches = unassociatedResourceIds
+                .Select(rid => cacheMap.GetValueOrDefault(rid))
+                .OfType<ResourceCacheDbModel>()
+                .ToList();
 
             return new CacheOverviewViewModel
             {
-                CategoryCaches = categories.Select(c => new CacheOverviewViewModel.CategoryCacheViewModel
-                {
-                    CategoryId = c.Id,
-                    CategoryName = c.Name,
-                    ResourceCacheCountMap = SpecificEnumUtils<ResourceCacheType>.Values.ToDictionary(d => (int)d,
-                        d => categoryIdCachesMap.GetValueOrDefault(c.Id)?.Count(x => x.CachedTypes.HasFlag(d)) ?? 0),
-                    ResourceCount = categoryIdResourcesMap.GetValueOrDefault(c.Id)?.Count ?? 0
-                }).ToList(),
                 MediaLibraryCaches = mediaLibrariesV2.Select(ml => new CacheOverviewViewModel.MediaLibraryCacheViewModel
                 {
                     MediaLibraryId = ml.Id,
                     MediaLibraryName = ml.Name,
                     ResourceCacheCountMap = SpecificEnumUtils<ResourceCacheType>.Values.ToDictionary(d => (int)d,
-                        d => mediaLibraryIdCachesMap.GetValueOrDefault(ml.Id)?.Count(x => x.CachedTypes.HasFlag(d)) ??
-                             0),
-                    ResourceCount = mediaLibraryIdResourcesMap.GetValueOrDefault(ml.Id)?.Count ?? 0
-                })
+                        d => mediaLibraryIdCachesMap.GetValueOrDefault(ml.Id)?.Count(x => x.CachedTypes.HasFlag(d)) ?? 0),
+                    ResourceCount = mediaLibraryIdResourceIdsMap.GetValueOrDefault(ml.Id)?.Count ?? 0
+                }).ToList(),
+                UnassociatedCaches = unassociatedResourceIds.Count > 0
+                    ? new CacheOverviewViewModel.UnassociatedCacheViewModel
+                    {
+                        ResourceCacheCountMap = SpecificEnumUtils<ResourceCacheType>.Values.ToDictionary(d => (int)d,
+                            d => unassociatedCaches.Count(x => x.CachedTypes.HasFlag(d))),
+                        ResourceCount = unassociatedResourceIds.Count
+                    }
+                    : null
             };
         }
 
@@ -1339,21 +1364,33 @@ namespace Bakabase.InsideWorld.Business.Services
             });
         }
 
-        public async Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type)
-        {
-            var resources = await GetAllDbModels(d => d.CategoryId == categoryId);
-            var resourceIds = resources.Select(r => r.Id).ToList();
-            await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId), x =>
-            {
-                x.CachedTypes &= ~type;
-            });
-        }
-
         public async Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type)
         {
-            var resources = await GetAllDbModels(d => d.MediaLibraryId == mediaLibraryId && d.CategoryId == 0);
-            var resourceIds = resources.Select(r => r.Id).ToList();
+            var resourceIds = await MediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryId(mediaLibraryId);
+            if (resourceIds.Count == 0) return;
+
             await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId),
+                x => { x.CachedTypes &= ~type; });
+        }
+
+        public async Task DeleteUnassociatedResourceCacheByCacheType(ResourceCacheType type)
+        {
+            // Get all resources
+            var allResources = await GetAllDbModels(null, false);
+            var allResourceIds = allResources.Select(r => r.Id).ToList();
+
+            // Get resource -> mediaLibraryIds mapping
+            var resourceMediaLibraryMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(allResourceIds);
+
+            // Find unassociated resource IDs
+            var unassociatedResourceIds = allResources
+                .Where(r => !resourceMediaLibraryMap.TryGetValue(r.Id, out var mlIds) || mlIds.Count == 0)
+                .Select(r => r.Id)
+                .ToHashSet();
+
+            if (unassociatedResourceIds.Count == 0) return;
+
+            await _resourceCacheOrm.UpdateAll(c => unassociatedResourceIds.Contains(c.ResourceId),
                 x => { x.CachedTypes &= ~type; });
         }
 
@@ -1362,15 +1399,23 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.UpdateByKey(id, r => r.PlayedAt = null);
         }
 
-        public async Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null,ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
+        public async Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
-            Expression<Func<ResourceDbModel, bool>> exp = x => x.CategoryId == 0;
+            HashSet<int> resourceIds;
             if (ids?.Any() == true)
             {
-                exp = exp.And(x => ids.Contains(x.MediaLibraryId));
+                resourceIds = await MediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryIds(ids);
+            }
+            else
+            {
+                // Get all resources that have at least one media library mapping
+                var allMappings = await MediaLibraryResourceMappingService.GetAll();
+                resourceIds = allMappings.Select(m => m.ResourceId).ToHashSet();
             }
 
-            return (await GetAll(exp, additionalItems)).ToArray();
+            if (resourceIds.Count == 0) return [];
+
+            return (await GetAll(r => resourceIds.Contains(r.Id), additionalItems)).ToArray();
         }
 
         public async Task<List<Resource>> GetByMediaLibraryId(int mediaLibraryId, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
@@ -1640,15 +1685,7 @@ namespace Bakabase.InsideWorld.Business.Services
         public async Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false,
             Dictionary<int, string>? newPaths = null)
         {
-            var resources = await _orm.GetByKeys(ids);
-            var resourcesToBeChanged = resources.Where(r => r.MediaLibraryId != mediaLibraryId).ToList();
-
-            if (!resourcesToBeChanged.Any())
-            {
-                return BaseResponseBuilder.Ok;
-            }
-
-            var categoryId = 0;
+            // Verify media library exists
             if (isLegacyMediaLibrary)
             {
                 var library = await _mediaLibraryService.Get(mediaLibraryId, MediaLibraryAdditionalItem.None);
@@ -1656,8 +1693,6 @@ namespace Bakabase.InsideWorld.Business.Services
                 {
                     return BaseResponseBuilder.NotFound;
                 }
-
-                categoryId = library.CategoryId;
             }
             else
             {
@@ -1668,19 +1703,28 @@ namespace Bakabase.InsideWorld.Business.Services
                 }
             }
 
-            foreach (var resource in resourcesToBeChanged)
+            // Update paths if provided
+            if (newPaths?.Any() == true)
             {
-                resource.CategoryId = categoryId;
-                resource.MediaLibraryId = mediaLibraryId;
-                var newPath = newPaths?.GetValueOrDefault(resource.Id);
-                if (newPath.IsNotEmpty())
+                var resources = await _orm.GetByKeys(ids);
+                foreach (var resource in resources)
                 {
-                    resource.Path = newPath.StandardizePath()!;
+                    var newPath = newPaths.GetValueOrDefault(resource.Id);
+                    if (newPath.IsNotEmpty())
+                    {
+                        resource.Path = newPath.StandardizePath()!;
+                    }
                 }
+                await _orm.UpdateRange(resources);
             }
 
-            await _orm.UpdateRange(resources);
+            // Update media library mappings using the new service
+            foreach (var resourceId in ids)
+            {
+                await MediaLibraryResourceMappingService.ReplaceMappings(resourceId, [mediaLibraryId]);
+            }
 
+            // Refresh resource count
             if (isLegacyMediaLibrary)
             {
                 await _mediaLibraryService.RefreshResourceCount(mediaLibraryId);

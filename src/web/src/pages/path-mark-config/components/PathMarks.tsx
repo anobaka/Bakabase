@@ -77,10 +77,9 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
       if (!mark.id) continue;
       const taskId = buildMarkTaskId(mark.id);
       const task = bTasks.find((t) => t.id === taskId) as BTask | undefined;
+      const prevStatus = prevStatuses.get(taskId);
 
       if (task) {
-        const prevStatus = prevStatuses.get(taskId);
-
         // Check if task just completed (was running/not started, now completed)
         if (
           prevStatus !== undefined &&
@@ -91,6 +90,13 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
         }
 
         prevStatuses.set(taskId, task.status);
+      } else if (
+        prevStatus !== undefined &&
+        (prevStatus === BTaskStatus.Running || prevStatus === BTaskStatus.NotStarted)
+      ) {
+        // Task was running but is now removed from the list - treat as completed
+        hasCompletedTask = true;
+        prevStatuses.delete(taskId);
       }
     }
 

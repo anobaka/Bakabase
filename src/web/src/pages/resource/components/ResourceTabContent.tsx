@@ -32,6 +32,7 @@ type Props = {
   searchId: string;
   searchInNewTab?: (form: SearchForm) => any;
   activated: boolean;
+  onOpenRecentlyPlayed?: () => void;
 };
 
 export type ResourceTabContentRef = {
@@ -413,6 +414,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         searchForm={searchForm}
         selectedResourceIds={selectedIds}
         totalFilteredResourceCount={pageable?.totalCount}
+        onOpenRecentlyPlayed={props.onOpenRecentlyPlayed}
         onSearch={onSearch}
         onSelectAllChange={onSelectAllChange}
       />

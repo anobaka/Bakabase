@@ -136,8 +136,8 @@ public interface IResourceService
     Task<ResourceCache?> GetResourceCache(int id);
 
     Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type);
-    Task DeleteResourceCacheByCategoryIdAndCacheType(int categoryId, ResourceCacheType type);
     Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type);
+    Task DeleteUnassociatedResourceCacheByCacheType(ResourceCacheType type);
 
     Task MarkAsNotPlayed(int id);
 
