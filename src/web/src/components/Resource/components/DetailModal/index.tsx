@@ -13,7 +13,6 @@ import {
   ProfileOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import _ from "lodash";
 import { MdCalendarMonth } from "react-icons/md";
 import { TiFlowChildren } from "react-icons/ti";
 
@@ -22,6 +21,8 @@ import ChildrenModal from "../ChildrenModal";
 import BasicInfo from "./BasicInfo";
 import Properties from "./Properties";
 import MediaLibraryMappings from "./MediaLibraryMappings";
+import IntroductionSummary from "./IntroductionSummary";
+import ResourceProfiles from "./ResourceProfiles";
 
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 
@@ -41,16 +42,11 @@ import {
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import BApi from "@/sdk/BApi";
-import {
-  PropertyPool,
-  ReservedProperty,
-  ResourceAdditionalItem,
-} from "@/sdk/constants";
+import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from "@/sdk/constants";
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import PropertyValueScopePicker from "@/components/Resource/components/DetailDialog/PropertyValueScopePicker";
+import PropertyValueScopePicker from "@/components/Resource/components/DetailModal/PropertyValueScopePicker";
 import PlayableFiles from "@/components/Resource/components/PlayableFiles";
-import CategoryPropertySortModal from "@/components/Resource/components/DetailDialog/CategoryPropertySortModal";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import { useUiOptionsStore } from "@/stores/options";
 
@@ -58,7 +54,7 @@ interface Props extends DestroyableProps {
   id: number;
   onRemoved?: () => void;
 }
-const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
+const DetailModal = ({ id, onRemoved, ...props }: Props) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const [resource, setResource] = useState<ResourceModel>();
@@ -78,10 +74,7 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
           if (b.values) {
             for (const v of b.values) {
               v.bizValue = convertFromApiValue(v.bizValue, b.bizValueType!);
-              v.aliasAppliedBizValue = convertFromApiValue(
-                v.aliasAppliedBizValue,
-                b.bizValueType!,
-              );
+              v.aliasAppliedBizValue = convertFromApiValue(v.aliasAppliedBizValue, b.bizValueType!);
               v.value = convertFromApiValue(v.value, b.dbValueType!);
             }
           }
@@ -104,7 +97,7 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
     <Modal
       defaultVisible
       footer={false}
-      size={"xl"}
+      size={"7xl"}
       title={
         <div className={"flex items-center justify-between"}>
           <div>{resource?.displayName}</div>
@@ -132,37 +125,9 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                     });
                     break;
                   }
-                  case "SortPropertiesInCategory": {
-                    const propertyMap =
-                      resource?.properties?.[PropertyPool.Custom] ?? {};
-                    const properties = _.keys(propertyMap)
-                      .map((x) => {
-                        const id = parseInt(x, 10);
-                        const p = propertyMap[id]!;
-
-                        if (p.visible) {
-                          return {
-                            id,
-                            name: p.name!,
-                          };
-                        }
-
-                        return null;
-                      })
-                      .filter((x) => x != null);
-
-                    createPortal(CategoryPropertySortModal, {
-                      categoryId: resource.categoryId,
-                      properties,
-                      onDestroyed: loadResource,
-                    });
-                    break;
-                  }
                   case "SortPropertiesGlobally": {
                     BApi.customProperty.getAllCustomProperties().then((r) => {
-                      const properties = (r.data || []).sort(
-                        (a, b) => a.order - b.order,
-                      );
+                      const properties = (r.data || []).sort((a, b) => a.order - b.order);
 
                       createPortal(CustomPropertySortModal, {
                         properties,
@@ -178,14 +143,6 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                 startContent={<AppstoreOutlined className={"text-small"} />}
               >
                 {t<string>("Adjust the display priority of property scopes")}
-              </ListboxItem>
-              <ListboxItem
-                key="SortPropertiesInCategory"
-                startContent={<ProfileOutlined className={"text-small"} />}
-              >
-                {t<string>(
-                  "Adjust orders of linked properties for current category",
-                )}
               </ListboxItem>
               <ListboxItem
                 key="SortPropertiesGlobally"
@@ -209,13 +166,10 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                 }
                 style={{ borderColor: "var(--bakaui-overlap-background)" }}
               >
-                <ResourceCover
-                  resource={resource}
-                  showBiggerOnHover={false}
-                  useCache={false}
-                />
+                <ResourceCover resource={resource} showBiggerOnHover={false} useCache={false} />
               </div>
-              <div className={"flex justify-center"}>
+              <div className={"flex items-center"}>
+                <div className="flex-1" />
                 <Properties
                   hidePropertyName
                   propertyInnerDirection={"ver"}
@@ -224,99 +178,82 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                   restrictedPropertyIds={[ReservedProperty.Rating]}
                   restrictedPropertyPool={PropertyPool.Reserved}
                 />
-              </div>
-              <div className={"flex items-center justify-between relative"}>
-                <div
-                  className={
-                    "absolute flex justify-center left-0 right-0 w-full "
-                  }
-                >
+                <div className="flex-1 flex justify-end">
                   <ButtonGroup size={"sm"}>
                     <PlayableFiles
                       autoInitialize
                       PortalComponent={({ onClick }) => (
-                        <Button color="primary" onPress={onClick}>
-                          <PlayCircleOutlined />
-                          {t<string>("Play")}
-                        </Button>
+                        <Tooltip content={t("Play")}>
+                          <Button isIconOnly color="primary" onPress={onClick}>
+                            <PlayCircleOutlined className="text-lg" />
+                          </Button>
+                        </Tooltip>
                       )}
                       resource={resource}
                     />
-                    <Button
-                      color="default"
-                      onPress={() => {
-                        BApi.resource.openResourceDirectory({
-                          id: resource.id,
-                        });
-                      }}
-                    >
-                      <FolderOpenOutlined />
-                      {t<string>("Open")}
-                    </Button>
-                    {resource.hasChildren && (
+                    <Tooltip content={t("Open folder")}>
                       <Button
+                        isIconOnly
                         color="default"
                         onPress={() => {
-                          createPortal(ChildrenModal, {
-                            resourceId: resource.id,
+                          BApi.resource.openResourceDirectory({
+                            id: resource.id,
                           });
                         }}
                       >
-                        <TiFlowChildren className="text-lg" />
-                        {t<string>("View Children")}
+                        <FolderOpenOutlined className="text-lg" />
                       </Button>
+                    </Tooltip>
+                    {resource.hasChildren && (
+                      <Tooltip content={t("View Children")}>
+                        <Button
+                          isIconOnly
+                          color="default"
+                          onPress={() => {
+                            createPortal(ChildrenModal, {
+                              resourceId: resource.id,
+                            });
+                          }}
+                        >
+                          <TiFlowChildren className="text-lg" />
+                        </Button>
+                      </Tooltip>
                     )}
-                    {/* <Button */}
-                    {/*   color={'danger'} */}
-                    {/*   onClick={() => onRemoved?.()} */}
-                    {/* > */}
-                    {/*   <DeleteOutlined /> */}
-                    {/*   {t<string>('Remove')} */}
-                    {/* </Button> */}
+                    <Tooltip content={hideTimeInfo ? t("Show time info") : t("Hide time info")}>
+                      <Button
+                        isIconOnly
+                        className={hideTimeInfo ? "opacity-40" : undefined}
+                        color="default"
+                        variant={"light"}
+                        onPress={() => {
+                          BApi.options.patchUiOptions({
+                            ...uiOptions,
+                            resource: {
+                              ...uiOptions.resource,
+                              hideResourceTimeInfo: !hideTimeInfo,
+                            },
+                          });
+                        }}
+                      >
+                        <MdCalendarMonth className={"text-lg"} />
+                      </Button>
+                    </Tooltip>
                   </ButtonGroup>
                 </div>
-                <div />
-                <div>
-                  <Button
-                    isIconOnly
-                    className={hideTimeInfo ? "opacity-20" : undefined}
-                    color="default"
-                    size={"sm"}
-                    variant={"light"}
-                    onPress={() => {
-                      BApi.options.patchUiOptions({
-                        ...uiOptions,
-                        resource: {
-                          ...uiOptions.resource,
-                          hideResourceTimeInfo: !hideTimeInfo,
-                        },
-                      });
-                    }}
-                  >
-                    <MdCalendarMonth className={"text-lg"} />
-                  </Button>
-                </div>
               </div>
+              <IntroductionSummary resource={resource} onReload={loadResource} />
               {!hideTimeInfo && <BasicInfo resource={resource} />}
               {/* Media Library Mappings - v2.2.0 multi-library support */}
-              <MediaLibraryMappings
-                resourceId={resource.id}
-                onMappingsChange={loadResource}
-              />
+              <MediaLibraryMappings resourceId={resource.id} onMappingsChange={loadResource} />
+              <ResourceProfiles resourceId={resource.id} />
             </div>
             <div className="overflow-auto relative grow">
               <Properties
                 noPropertyContent={
-                  <div
-                    className={
-                      "flex flex-col items-center gap-2 justify-center"
-                    }
-                  >
+                  <div className={"flex flex-col items-center gap-2 justify-center"}>
                     <div className={"w-4/5"}>
                       <DisconnectOutlined className={"text-base mr-1"} />
-                      {t<string>(
-                        "No custom property bound. You can bind them in media library template",
-                      )}
+                      {t<string>("No custom property bound. You can bind them in resource profile")}
                     </div>
                   </div>
                 }
@@ -339,9 +276,7 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                 />
                 {resource.playedAt && (
                   <div
-                    className={
-                      "grid gap-x-4 gap-y-1 undefined items-center overflow-visible"
-                    }
+                    className={"grid gap-x-4 gap-y-1 undefined items-center overflow-visible"}
                     style={{
                       gridTemplateColumns: "calc(120px) minmax(0, 1fr)",
                     }}
@@ -362,18 +297,14 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                           size={"sm"}
                           variant={"light"}
                           onPress={() => {
-                            BApi.resource
-                              .markResourceAsNotPlayed(resource.id)
-                              .then((r) => {
-                                if (!r.code) {
-                                  loadResource();
-                                }
-                              });
+                            BApi.resource.markResourceAsNotPlayed(resource.id).then((r) => {
+                              if (!r.code) {
+                                loadResource();
+                              }
+                            });
                           }}
                         >
-                          <CloseCircleOutlined
-                            className={"text-base opacity-60"}
-                          />
+                          <CloseCircleOutlined className={"text-base opacity-60"} />
                         </Button>
                       </Tooltip>
                     </div>
@@ -381,15 +312,6 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
                 )}
               </div>
             </div>
-          </div>
-          <div className={"mt-2"}>
-            <Properties
-              propertyInnerDirection={"ver"}
-              reload={loadResource}
-              resource={resource}
-              restrictedPropertyIds={[ReservedProperty.Introduction]}
-              restrictedPropertyPool={PropertyPool.Reserved}
-            />
           </div>
           {/* <Divider /> */}
           {/* <FileSystemEntries isFile={resource.isFile} path={resource.path} /> */}
@@ -399,6 +321,6 @@ const DetailDialog = ({ id, onRemoved, ...props }: Props) => {
   );
 };
 
-DetailDialog.displayName = "DetailDialog";
+DetailModal.displayName = "DetailModal";
 
-export default DetailDialog;
+export default DetailModal;

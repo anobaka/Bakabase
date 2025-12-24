@@ -29,7 +29,7 @@ import StandardValueRenderer from "../StandardValue/ValueRenderer";
 import styles from "./index.module.scss";
 
 import { buildLogger, useTraceUpdate } from "@/components/utils";
-import ResourceDetailDialog from "@/components/Resource/components/DetailDialog";
+import ResourceDetailModal from "@/components/Resource/components/DetailModal";
 import BApi from "@/sdk/BApi";
 import ResourceCover from "@/components/Resource/components/ResourceCover";
 import Operations from "@/components/Resource/components/Operations";
@@ -78,7 +78,7 @@ type Props = {
   className?: string;
   selected?: boolean;
   selectionModeRef?: React.RefObject<boolean>;
-  onSelected?: (id: number) => any;
+  onSelected?: (id: number, shiftKey?: boolean) => any;
   selectedResourceIds?: number[];
   onSelectedResourcesChanged?: (ids: number[]) => any;
   debug?: boolean;
@@ -94,7 +94,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     style: propStyle = {},
     selected = false,
     selectionModeRef,
-    onSelected = (id: number) => {},
+    onSelected = (id: number, shiftKey?: boolean) => {},
     selectedResourceIds: propsSelectedResourceIds,
     onSelectedResourcesChanged,
     debug,
@@ -174,7 +174,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const coverRef = useRef<IResourceCoverRef>();
 
   const onCoverClick = useCallback(() => {
-    createPortal(ResourceDetailDialog, {
+    createPortal(ResourceDetailModal, {
       id: resource.id,
       onDestroyed: () => {
         reload();
@@ -264,7 +264,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               "inline-flex flex-col gap-1 absolute bottom-0 right-0 items-end max-w-full max-h-full w-fit"
             }
           >
-            {displayPropertyKeys.map((dpk) => {
+            {displayPropertyKeys.flatMap((dpk) => {
               const style: CSSProperties = {};
 
               let bizValue: any | undefined;
@@ -276,6 +276,36 @@ const Resource = React.forwardRef((props: Props, ref) => {
                     switch (dpk.id) {
                       case ResourceProperty.MediaLibrary:
                       case ResourceProperty.MediaLibraryV2:
+                      case ResourceProperty.MediaLibraryV2Multi:
+                        // Render multiple chips for multiple media libraries
+                        if (resource.mediaLibraries && resource.mediaLibraries.length > 0) {
+                          return resource.mediaLibraries.map((ml) => {
+                            const mlStyle: CSSProperties = {};
+
+                            if (ml.color) {
+                              mlStyle.color = ml.color;
+                              mlStyle.backgroundColor = autoBackgroundColor(ml.color);
+                            }
+
+                            return (
+                              <Chip
+                                key={`${dpk.pool}-${dpk.id}-${ml.id}`}
+                                className={"h-auto w-fit"}
+                                radius={"sm"}
+                                size={"sm"}
+                                style={mlStyle}
+                                variant={"flat"}
+                              >
+                                <StandardValueRenderer
+                                  type={StandardValueType.String}
+                                  value={ml.name}
+                                  variant="light"
+                                />
+                              </Chip>
+                            );
+                          });
+                        }
+                        // Fallback to legacy single value
                         if (resource.mediaLibraryColor) {
                           style.color = resource.mediaLibraryColor;
                           style.backgroundColor = autoBackgroundColor(resource.mediaLibraryColor);
@@ -320,10 +350,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
               }
 
               if (bizValue == undefined || bizValueType == undefined) {
-                return null;
+                return [];
               }
 
-              return (
+              return [
                 <Chip
                   key={`${dpk.pool}-${dpk.id}`}
                   className={"h-auto w-fit"}
@@ -333,8 +363,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   variant={"flat"}
                 >
                   <StandardValueRenderer type={bizValueType} value={bizValue} variant="light" />
-                </Chip>
-              );
+                </Chip>,
+              ];
             })}
             {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
           </div>
@@ -452,16 +482,14 @@ const Resource = React.forwardRef((props: Props, ref) => {
     <div
       key={resource.id}
       className={`flex flex-col p-1 rounded relative border-2 group/resource ${styles.resource} ${props.className} ${
-        selected
-          ? "border-primary ring-2 ring-primary/30 bg-primary/5"
-          : "border-default-200"
+        selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-default-200"
       }`}
       data-id={resource.id}
       role={"resource"}
       style={style}
       onClickCapture={(e) => {
-        if (selectionModeRef?.current) {
-          onSelected(resource.id);
+        if (selectionModeRef?.current || e.shiftKey) {
+          onSelected(resource.id, e.shiftKey);
           e.preventDefault();
           e.stopPropagation();
         }

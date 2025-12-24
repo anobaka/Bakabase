@@ -298,31 +298,7 @@ namespace Bakabase.Service.Controllers
         [SwaggerOperation(OperationId = "SetResourceMediaLibraries")]
         public async Task<BaseResponse> SetMediaLibraries([FromBody] ResourceSetMediaLibrariesRequestModel model)
         {
-            var resources = (await service.GetByKeys(model.Ids)).ToList();
-            if (!resources.Any())
-            {
-                return BaseResponseBuilder.BuildBadRequest($"Resources [{string.Join(',', model.Ids)}] are not found");
-            }
-
-            // Validate all media library IDs exist
-            if (model.MediaLibraryIds.Length > 0)
-            {
-                var mediaLibraries = await mediaLibraryV2Service.GetAll();
-                var existingIds = mediaLibraries.Select(m => m.Id).ToHashSet();
-                var invalidIds = model.MediaLibraryIds.Where(id => !existingIds.Contains(id)).ToList();
-                if (invalidIds.Any())
-                {
-                    return BaseResponseBuilder.BuildBadRequest($"Invalid media library IDs: [{string.Join(',', invalidIds)}]");
-                }
-            }
-
-            // Replace mappings for each resource
-            foreach (var resource in resources)
-            {
-                await mappingService.ReplaceMappings(resource.Id, model.MediaLibraryIds);
-            }
-
-            return BaseResponseBuilder.Ok;
+            return await service.SetMediaLibraries(model.Ids, model.MediaLibraryIds);
         }
 
         [HttpPost("media-library-mappings")]
@@ -429,6 +405,28 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> PutPropertyValue(int id, [FromBody] ResourcePropertyValuePutInputModel model)
         {
             return await service.PutPropertyValue(id, model);
+        }
+
+        /// <summary>
+        /// Bulk update property values across multiple resources using batch operations
+        /// </summary>
+        [HttpPut("bulk/property-value")]
+        [SwaggerOperation(OperationId = "BulkPutResourcePropertyValue")]
+        public async Task<BaseResponse> BulkPutPropertyValue([FromBody] BulkResourcePropertyValuePutInputModel model)
+        {
+            if (model.ResourceIds.Count == 0)
+            {
+                return BaseResponseBuilder.BuildBadRequest("No resource IDs provided");
+            }
+
+            var propertyValueModel = new ResourcePropertyValuePutInputModel
+            {
+                PropertyId = model.PropertyId,
+                IsCustomProperty = model.IsCustomProperty,
+                Value = model.Value
+            };
+
+            return await service.BulkPutPropertyValue(model.ResourceIds.ToArray(), propertyValueModel);
         }
 
         [HttpGet("{resourceId}/play")]

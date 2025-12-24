@@ -15,9 +15,4 @@
         <PackageReference Include="NJsonSchema" Version="11.1.0" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Attributes\" />
-      <Folder Include="RequestModels\Options\" />
-    </ItemGroup>
-
 </Project>

@@ -38,6 +38,11 @@ public class ResourceProfile
     public ResourceProfilePlayerOptions? PlayerOptions { get; set; }
 
     /// <summary>
+    /// 属性配置
+    /// </summary>
+    public ResourceProfilePropertyOptions? PropertyOptions { get; set; }
+
+    /// <summary>
     /// 优先级（多个 Profile 匹配同一资源时使用）
     /// </summary>
     public int Priority { get; set; }

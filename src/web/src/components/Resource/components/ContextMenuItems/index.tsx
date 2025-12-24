@@ -6,10 +6,9 @@ import { useTranslation } from "react-i18next";
 import {
   ApiOutlined,
   DeleteOutlined,
-  ExportOutlined,
+  EditOutlined,
   SendOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
 
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import { ResourceAdditionalItem } from "@/sdk/constants";
@@ -18,6 +17,7 @@ import { Checkbox, Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
+import BulkPropertyEditor from "@/components/Resource/components/BulkPropertyEditor";
 
 const log = buildLogger("ResourceContextMenuItems");
 
@@ -86,30 +86,27 @@ const ContextMenuItems = ({
             : t<string>("Transfer resource data")}
         </div>
       </MenuItem>
-      {selectedResourceIds.length > 1 && (
-        <MenuItem
-          onClick={() => {
-            log("inner", "click");
-            createPortal(Modal, {
-              defaultVisible: true,
-              title: t<string>("We are leaving current page"),
-              onOk: async () => {
-                const navigate = useNavigate();
-
-                navigate("/bulkmodification2");
-              },
-            });
-          }}
-          onClickCapture={() => {
-            log("inner", "click capture");
-          }}
-        >
-          <div className={"flex items-center gap-2 text-secondary"}>
-            <ExportOutlined className={"text-base"} />
-            {t<string>("Bulk modification")}
-          </div>
-        </MenuItem>
-      )}
+      <MenuItem
+        onClick={() => {
+          log("inner", "click");
+          createPortal(BulkPropertyEditor, {
+            resourceIds: selectedResourceIds,
+            onSubmitted: () => {
+              onSelectedResourcesChanged?.(selectedResourceIds);
+            },
+          });
+        }}
+        onClickCapture={() => {
+          log("inner", "click capture");
+        }}
+      >
+        <div className={"flex items-center gap-2 text-secondary"}>
+          <EditOutlined className={"text-base"} />
+          {selectedResourceIds.length > 1
+            ? t<string>("Bulk edit properties")
+            : t<string>("Edit properties")}
+        </div>
+      </MenuItem>
       <MenuItem
         onClick={() => {
           log("inner", "click");

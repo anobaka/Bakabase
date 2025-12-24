@@ -556,16 +556,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                 true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
                                 x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.ToList()));
 
-                            // Get resource -> media library mappings
-                            var resourceMediaLibraryMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(resourceIds);
-                            var allMediaLibraryIds = resourceMediaLibraryMap.Values.SelectMany(x => x).Distinct().ToArray();
-                            var mediaLibrariesV2 = allMediaLibraryIds.Length > 0
-                                ? await MediaLibraryV2Service.GetByKeys(allMediaLibraryIds, MediaLibraryV2AdditionalItem.Template)
-                                : [];
-                            var mediaLibraryV2IdCustomPropertyIdsMap = mediaLibrariesV2.Where(x => x.Template != null)
-                                .ToDictionary(d => d.Id,
-                                    d => d.Template!.Properties?.Where(f => f.Pool == PropertyPool.Custom)
-                                        .Select(p => p.Id).Distinct().ToArray() ?? []);
+                            // Get custom property IDs from resource profiles
+                            var resourceProfilePropertyOptions = await ResourceProfileService.GetEffectivePropertyOptionsForResources(doList);
 
                             var customPropertyMap =
                                 (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
@@ -577,17 +569,12 @@ namespace Bakabase.InsideWorld.Business.Services
                                     r.Properties.GetOrAdd((int)PropertyPool.Custom, _ => []);
 
                                 var propertyIds = new List<int>();
-                                // Get custom properties from associated media libraries
-                                var mlIds = resourceMediaLibraryMap.GetValueOrDefault(r.Id);
-                                if (mlIds != null)
+                                // Get custom properties from resource profile
+                                if (resourceProfilePropertyOptions.TryGetValue(r.Id, out var propOptions))
                                 {
-                                    foreach (var mlId in mlIds)
-                                    {
-                                        if (mediaLibraryV2IdCustomPropertyIdsMap.TryGetValue(mlId, out var bPIds))
-                                        {
-                                            propertyIds.AddRange(bPIds);
-                                        }
-                                    }
+                                    propertyIds.AddRange(propOptions.Properties?
+                                        .Where(p => p.Pool == PropertyPool.Custom)
+                                        .Select(p => p.Id) ?? []);
                                 }
 
                                 var boundPropertyIds = propertyIds.ToHashSet();
@@ -689,14 +676,11 @@ namespace Bakabase.InsideWorld.Business.Services
                             break;
                         case ResourceAdditionalItem.MediaLibraryName:
                         {
-                            // Use MediaLibraryResourceMapping to get associated media libraries
+                            // Use MediaLibraryResourceMappingService with index for efficient O(1) lookups
                             var mlResourceIds = doList.Select(d => d.Id).ToArray();
-                            var mappings = await GetRequiredService<IMediaLibraryResourceMappingService>().GetByResourceIds(mlResourceIds);
-                            var resourceMediaLibraryMap = mappings
-                                .GroupBy(m => m.ResourceId)
-                                .ToDictionary(g => g.Key, g => g.First().MediaLibraryId); // Use first mapping
+                            var resourceMediaLibraryIdsMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(mlResourceIds);
 
-                            var allMediaLibraryIds = mappings.Select(m => m.MediaLibraryId).Distinct().ToHashSet();
+                            var allMediaLibraryIds = resourceMediaLibraryIdsMap.Values.SelectMany(x => x).Distinct().ToHashSet();
                             var mediaLibraryV2Map = allMediaLibraryIds.Count > 0
                                 ? (await MediaLibraryV2Service.GetByKeys(allMediaLibraryIds.ToArray())).ToDictionary(
                                     d => d.Id, d => d)
@@ -704,10 +688,25 @@ namespace Bakabase.InsideWorld.Business.Services
 
                             foreach (var resource in doList)
                             {
-                                var mlId = resourceMediaLibraryMap.GetValueOrDefault(resource.Id);
-                                var ml = mlId > 0 ? mediaLibraryV2Map.GetValueOrDefault(mlId) : null;
-                                resource.MediaLibraryName = ml?.Name;
-                                resource.MediaLibraryColor = ml?.Color;
+                                var mlIds = resourceMediaLibraryIdsMap.GetValueOrDefault(resource.Id);
+                                if (mlIds is { Count: > 0 })
+                                {
+                                    var libraries = mlIds
+                                        .Select(id => mediaLibraryV2Map.GetValueOrDefault(id))
+                                        .Where(ml => ml != null)
+                                        .Select(ml => new Resource.MediaLibraryInfo(ml!.Id, ml.Name, ml.Color))
+                                        .ToList();
+
+                                    resource.MediaLibraries = libraries;
+
+                                    // Keep backward compatibility for deprecated fields
+                                    var firstLibrary = libraries.FirstOrDefault();
+                                    if (firstLibrary != null)
+                                    {
+                                        resource.MediaLibraryName = firstLibrary.Name;
+                                        resource.MediaLibraryColor = firstLibrary.Color;
+                                    }
+                                }
                             }
 
                             break;
@@ -1432,6 +1431,40 @@ namespace Bakabase.InsideWorld.Business.Services
             return await GetByKeys(resourceIds, additionalItems);
         }
 
+        public async Task<BaseResponse> SetMediaLibraries(int[] resourceIds, int[] mediaLibraryIds)
+        {
+            if (resourceIds.Length == 0)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            var resources = (await GetByKeys(resourceIds)).ToList();
+            if (!resources.Any())
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Resources [{string.Join(',', resourceIds)}] are not found");
+            }
+
+            // Validate all media library IDs exist
+            if (mediaLibraryIds.Length > 0)
+            {
+                var mediaLibraries = await MediaLibraryV2Service.GetAll();
+                var existingIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+                var invalidIds = mediaLibraryIds.Where(id => !existingIds.Contains(id)).ToList();
+                if (invalidIds.Any())
+                {
+                    return BaseResponseBuilder.BuildBadRequest($"Invalid media library IDs: [{string.Join(',', invalidIds)}]");
+                }
+            }
+
+            // Replace mappings for each resource
+            foreach (var resource in resources)
+            {
+                await MediaLibraryResourceMappingService.ReplaceMappings(resource.Id, mediaLibraryIds);
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
         public async Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model)
         {
             if (model.IsCustomProperty)
@@ -1519,6 +1552,171 @@ namespace Bakabase.InsideWorld.Business.Services
                     //     break;
                     // case ResourceProperty.MediaLibrary:
                     //     break;
+                    default:
+                        return BaseResponseBuilder.BuildBadRequest("Unknown property");
+                }
+            }
+        }
+
+        public async Task<BaseResponse> BulkPutPropertyValue(int[] resourceIds, ResourcePropertyValuePutInputModel model)
+        {
+            if (resourceIds.Length == 0)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            if (model.IsCustomProperty)
+            {
+                // Get all existing values for these resources and property
+                var existingValues = await _customPropertyValueService.GetAllDbModels(x =>
+                    resourceIds.Contains(x.ResourceId) && x.PropertyId == model.PropertyId &&
+                    x.Scope == (int) PropertyValueScope.Manual);
+
+                var existingByResourceId = existingValues.ToDictionary(v => v.ResourceId);
+
+                var toAdd = new List<CustomPropertyValue>();
+                var toUpdate = new List<CustomPropertyValue>();
+
+                foreach (var resourceId in resourceIds)
+                {
+                    if (existingByResourceId.TryGetValue(resourceId, out var existing))
+                    {
+                        // Update existing
+                        toUpdate.Add(new CustomPropertyValue
+                        {
+                            Id = existing.Id,
+                            ResourceId = resourceId,
+                            PropertyId = model.PropertyId,
+                            Value = model.Value,
+                            Scope = (int) PropertyValueScope.Manual
+                        });
+                    }
+                    else
+                    {
+                        // Add new
+                        toAdd.Add(new CustomPropertyValue
+                        {
+                            ResourceId = resourceId,
+                            PropertyId = model.PropertyId,
+                            Value = model.Value,
+                            Scope = (int) PropertyValueScope.Manual
+                        });
+                    }
+                }
+
+                if (toAdd.Count > 0)
+                {
+                    var addResult = await _customPropertyValueService.AddRange(toAdd);
+                    if (addResult.Code != 0)
+                    {
+                        return addResult;
+                    }
+                }
+
+                if (toUpdate.Count > 0)
+                {
+                    var updateResult = await _customPropertyValueService.UpdateRange(toUpdate);
+                    if (updateResult.Code != 0)
+                    {
+                        return updateResult;
+                    }
+                }
+
+                return BaseResponseBuilder.Ok;
+            }
+            else
+            {
+                // Internal or Reserved properties
+                var property = (ResourceProperty) model.PropertyId;
+                switch (property)
+                {
+                    case ResourceProperty.MediaLibraryV2Multi:
+                    {
+                        var mediaLibraryIds = model.Value?.DeserializeAsStandardValue<List<string>>(StandardValueType.ListString)?
+                            .Select(int.Parse).ToArray() ?? [];
+                        return await SetMediaLibraries(resourceIds, mediaLibraryIds);
+                    }
+                    case ResourceProperty.Introduction:
+                    case ResourceProperty.Cover:
+                    case ResourceProperty.Rating:
+                    {
+                        // Get all existing scope values for these resources
+                        var existingValues = await _reservedPropertyValueService.GetAll(x =>
+                            resourceIds.Contains(x.ResourceId) && x.Scope == (int) PropertyValueScope.Manual);
+
+                        var existingByResourceId = existingValues.ToDictionary(v => v.ResourceId);
+
+                        var toAdd = new List<ReservedPropertyValue>();
+                        var toUpdate = new List<ReservedPropertyValue>();
+
+                        foreach (var resourceId in resourceIds)
+                        {
+                            ReservedPropertyValue scopeValue;
+                            bool isNew = false;
+
+                            if (existingByResourceId.TryGetValue(resourceId, out var existing))
+                            {
+                                scopeValue = existing;
+                            }
+                            else
+                            {
+                                scopeValue = new ReservedPropertyValue
+                                {
+                                    ResourceId = resourceId,
+                                    Scope = (int) PropertyValueScope.Manual
+                                };
+                                isNew = true;
+                            }
+
+                            switch (property)
+                            {
+                                case ResourceProperty.Introduction:
+                                    scopeValue.Introduction =
+                                        model.Value?.DeserializeAsStandardValue<string>(StandardValueType.String);
+                                    break;
+                                case ResourceProperty.Rating:
+                                    scopeValue.Rating =
+                                        model.Value?.DeserializeAsStandardValue<decimal>(StandardValueType.Decimal);
+                                    break;
+                                case ResourceProperty.Cover:
+                                    scopeValue.CoverPaths =
+                                        model.Value?.DeserializeDbValueAsStandardValue<List<string>>(
+                                            PropertyType.Attachment);
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
+
+                            if (isNew)
+                            {
+                                toAdd.Add(scopeValue);
+                            }
+                            else
+                            {
+                                toUpdate.Add(scopeValue);
+                            }
+                        }
+
+                        if (toAdd.Count > 0)
+                        {
+                            var addResult = await _reservedPropertyValueService.AddRange(toAdd);
+                            if (addResult.Code != 0)
+                            {
+                                return addResult;
+                            }
+                        }
+
+                        if (toUpdate.Count > 0)
+                        {
+                            var updateResult = await _reservedPropertyValueService.UpdateRange(toUpdate);
+                            if (updateResult.Code != 0)
+                            {
+                                return updateResult;
+                            }
+                        }
+
+                        return BaseResponseBuilder.Ok;
+                    }
                     default:
                         return BaseResponseBuilder.BuildBadRequest("Unknown property");
                 }
@@ -1776,194 +1974,7 @@ namespace Bakabase.InsideWorld.Business.Services
 
             return BaseResponseBuilder.Ok;
         }
-
-        public async Task ReSyncResourcesByTemplate(int[] resourceIds, int mediaLibraryId)
-        {
-            if (resourceIds.Length == 0)
-            {
-                return;
-            }
-
-            // Get media library with template
-            var mediaLibrary = await MediaLibraryV2Service.Get(mediaLibraryId, MediaLibraryV2AdditionalItem.Template);
-            if (mediaLibrary?.Template == null)
-            {
-                _logger.LogWarning(
-                    $"Cannot re-sync resources: media library {mediaLibraryId} not found or has no template");
-                return;
-            }
-
-            var template = mediaLibrary.Template;
-
-            // Get all resources including children recursively
-            var allResourceIds = new HashSet<int>(resourceIds);
-            var pendingIds = new Queue<int>(resourceIds);
-            while (pendingIds.Count > 0)
-            {
-                var parentIds = pendingIds.ToArray();
-                pendingIds.Clear();
-                var children = await _orm.GetAll(r => parentIds.Contains(r.ParentId ?? 0));
-                foreach (var child in children)
-                {
-                    if (allResourceIds.Add(child.Id))
-                    {
-                        pendingIds.Enqueue(child.Id);
-                    }
-                }
-            }
-
-            var resources = await GetByKeys(allResourceIds.ToArray(), ResourceAdditionalItem.All);
-            if (resources.Count == 0)
-            {
-                return;
-            }
-
-            // Find the root path for resources (the media library path that contains this resource)
-            string? FindRootPath(string resourcePath)
-            {
-                foreach (var mlPath in mediaLibrary.Paths)
-                {
-                    if (resourcePath.StartsWith(mlPath, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return mlPath;
-                    }
-                }
-
-                return null;
-            }
-
-            var changedResources = new List<Resource>();
-            foreach (var resource in resources)
-            {
-                var rootPath = FindRootPath(resource.Path);
-                if (rootPath == null)
-                {
-                    _logger.LogWarning(
-                        $"Cannot find root path for resource {resource.Id} ({resource.Path}) in media library {mediaLibraryId}");
-                    continue;
-                }
-
-                // Update file metadata
-                var fi = new FileInfo(resource.Path);
-                if (fi.Exists || Directory.Exists(resource.Path))
-                {
-                    var isFile = fi.Exists && !fi.Attributes.HasFlag(FileAttributes.Directory);
-                    resource.IsFile = isFile;
-                    resource.FileCreatedAt = isFile ? fi.CreationTime : new DirectoryInfo(resource.Path).CreationTime;
-                    resource.FileModifiedAt = isFile ? fi.LastWriteTime : new DirectoryInfo(resource.Path).LastWriteTime;
-                }
-
-                // Clear ParentId
-                resource.ParentId = null;
-                resource.Parent = null;
-
-                // Clear Synchronization scope property values
-                if (resource.Properties != null)
-                {
-                    foreach (var (pool, properties) in resource.Properties)
-                    {
-                        foreach (var (propId, prop) in properties)
-                        {
-                            prop.Values?.RemoveAll(v => v.Scope == (int)PropertyValueScope.Synchronization);
-                        }
-                    }
-                }
-
-                // Re-extract property values from path using template
-                if (template.Properties != null)
-                {
-                    var rootPathDir = Path.GetDirectoryName(rootPath)!.StandardizePath()!;
-                    var relativePath = resource.Path.Replace(rootPathDir, "").TrimStart(InternalOptions.DirSeparator)
-                        .StandardizePath()!;
-                    var rootSegments = rootPath.Split(InternalOptions.DirSeparator,
-                        StringSplitOptions.RemoveEmptyEntries);
-                    var relativeSegments = relativePath.Split(InternalOptions.DirSeparator,
-                        StringSplitOptions.RemoveEmptyEntries);
-
-                    var rpi = new ResourcePathInfo(
-                        resource.Path,
-                        relativePath,
-                        rootSegments,
-                        relativeSegments,
-                        [], // InnerPaths not needed for property extraction
-                        resource.IsFile
-                    );
-
-                    foreach (var propertyDef in template.Properties)
-                    {
-                        if (propertyDef.ValueLocators == null || propertyDef.Property == null)
-                        {
-                            continue;
-                        }
-
-                        var property = propertyDef.Property;
-                        var listStr = propertyDef.ValueLocators
-                            .Select(v => v.ExtractValues(relativePath, rpi))
-                            .OfType<string[]>()
-                            .SelectMany(v => v).Distinct()
-                            .ToList();
-
-                        if (listStr.Count == 0)
-                        {
-                            continue;
-                        }
-
-                        var bizValue = StandardValueSystem.GetHandler(StandardValueType.ListString)
-                            .Convert(listStr, property.Type.GetBizValueType());
-
-                        if (bizValue != null)
-                        {
-                            resource.Properties ??= [];
-                            var poolDict = resource.Properties.GetOrAdd((int)property.Pool, _ => []);
-                            if (!poolDict.TryGetValue(property.Id, out var existingProp))
-                            {
-                                existingProp = new Resource.Property(
-                                    property.Name,
-                                    property.Type,
-                                    property.Type.GetDbValueType(),
-                                    property.Type.GetBizValueType(),
-                                    []
-                                );
-                                poolDict[property.Id] = existingProp;
-                            }
-
-                            existingProp.Values ??= [];
-                            var syncValue =
-                                existingProp.Values.FirstOrDefault(v =>
-                                    v.Scope == (int)PropertyValueScope.Synchronization);
-                            if (syncValue == null)
-                            {
-                                existingProp.Values.Add(new Resource.Property.PropertyValue(
-                                    (int)PropertyValueScope.Synchronization,
-                                    null,
-                                    bizValue,
-                                    null
-                                ));
-                            }
-                            else
-                            {
-                                syncValue.BizValue = bizValue;
-                            }
-                        }
-                    }
-                }
-
-                resource.UpdatedAt = DateTime.Now;
-                changedResources.Add(resource);
-
-                // Clear resource cache
-                await _resourceCacheOrm.UpdateAll(c => c.ResourceId == resource.Id, x =>
-                {
-                    x.CachedTypes &= ~(ResourceCacheType.PlayableFiles | ResourceCacheType.Covers);
-                });
-            }
-
-            if (changedResources.Count > 0)
-            {
-                await AddOrPutRange(changedResources);
-            }
-        }
-
+        
         public async Task Pin(int id, bool pin)
         {
             await _orm.UpdateByKey(id, r =>

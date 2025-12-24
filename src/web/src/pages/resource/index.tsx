@@ -2,6 +2,7 @@ import type { components } from "@/sdk/BApi2";
 import type { IdName } from "@/components/types";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button, Input } from "@/components/bakaui";
 import { useTranslation } from "react-i18next";
 import { AiOutlineClose } from "react-icons/ai";
@@ -16,8 +17,9 @@ type SavedSearch =
 
 type SearchForm = components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
 
-const ResourcePage2 = () => {
+const ResourcePage = () => {
   const { t } = useTranslation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [savedSearches, setSavedSearches] = useState<IdName<string>[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState<string>("");
@@ -27,6 +29,7 @@ const ResourcePage2 = () => {
   const [recentlyPlayedOpen, setRecentlyPlayedOpen] = useState(false);
   const resourceOptions = useResourceOptionsStore();
   const optionsInitialized = useRef(false);
+  const urlQueryProcessed = useRef(false);
 
   const activatedSearchIds = useRef(new Set<string>());
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -49,6 +52,24 @@ const ResourcePage2 = () => {
     }
     if (resourceOptions.initialized) {
       const ss1 = resourceOptions.data.savedSearches ?? [];
+
+      // Check if there's a query parameter from URL
+      const queryParam = searchParams.get("query");
+      if (queryParam && !urlQueryProcessed.current) {
+        urlQueryProcessed.current = true;
+        try {
+          const searchForm = JSON.parse(decodeURIComponent(queryParam)) as SearchForm;
+          // Clear the query parameter from URL
+          setSearchParams({}, { replace: true });
+          // Create new tab with the search form
+          setSavedSearches(ss1);
+          searchInNewTab(searchForm);
+          optionsInitialized.current = true;
+          return;
+        } catch (e) {
+          console.error("Failed to parse query parameter:", e);
+        }
+      }
 
       if (ss1.length == 0) {
         searchInNewTab({ page: 1, pageSize: 50 });
@@ -248,4 +269,4 @@ const ResourcePage2 = () => {
   );
 };
 
-export default ResourcePage2;
+export default ResourcePage;

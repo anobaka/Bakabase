@@ -156,8 +156,8 @@
   padding: 0 25px;
 }
 
-// Selection mode styles - parent class is global
-:global(.selection-mode) {
+// Selection mode styles - parent attribute is global
+:global([data-selection-mode]) {
   .resource {
     cursor: pointer;
     transition: all 0.15s ease;

@@ -117,6 +117,40 @@ public class MediaLibraryPropertyAccessor
     public string? MatchBizValueSerialized(MultipleChoicePropertyOptions? options, List<string>? dbValues) =>
         PropertyValueFactory.MultipleChoice.MatchBizValueSerialized(options, dbValues);
 
+    // === Search Filter Values ===
+
+    /// <summary>
+    /// Build filter value for SearchOperation.In.
+    /// Returns the DbValue (List&lt;string&gt;) to use as filter value.
+    /// </summary>
+    /// <param name="libraryIds">Media library IDs to filter by</param>
+    /// <returns>Filter value as List&lt;string&gt; (library IDs as strings)</returns>
+    public List<string>? BuildInFilterValue(IEnumerable<int>? libraryIds) =>
+        BuildDbValue(libraryIds);
+
+    /// <summary>
+    /// Build filter value for SearchOperation.In.
+    /// Returns the DbValue (List&lt;string&gt;) to use as filter value.
+    /// </summary>
+    public List<string>? BuildInFilterValue(params int[] libraryIds) =>
+        BuildDbValue(libraryIds);
+
+    /// <summary>
+    /// Build serialized filter value for SearchOperation.In.
+    /// Returns the serialized string ready for use in ResourceSearchFilterDbModel.Value.
+    /// </summary>
+    /// <param name="libraryIds">Media library IDs to filter by</param>
+    /// <returns>Serialized filter value</returns>
+    public string? BuildInFilterValueSerialized(IEnumerable<int>? libraryIds) =>
+        BuildDbValueSerialized(libraryIds);
+
+    /// <summary>
+    /// Build serialized filter value for SearchOperation.In.
+    /// Returns the serialized string ready for use in ResourceSearchFilterDbModel.Value.
+    /// </summary>
+    public string? BuildInFilterValueSerialized(params int[] libraryIds) =>
+        BuildDbValueSerialized(libraryIds);
+
     // === Utility ===
 
     /// <summary>

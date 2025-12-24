@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Bakabase.InsideWorld.Models.RequestModels
 {
+    [Obsolete]
     public class PathConfigurationRemoveRequestModel
     {
         [Required][BindRequired] public int Index { get; set; } = -1;

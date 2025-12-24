@@ -3774,6 +3774,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/bulk/property-value": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["BulkPutResourcePropertyValue"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/{resourceId}/play": {
         parameters: {
             query?: never;
@@ -3961,6 +3977,22 @@ export interface paths {
         put: operations["UpdateResourceProfile"];
         post?: never;
         delete: operations["DeleteResourceProfile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource-profile/by-resource/{resourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetMatchingProfilesForResource"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4786,6 +4818,13 @@ export interface components {
             mediaLibraryName?: string;
             /** @deprecated */
             mediaLibraryColor?: string;
+            mediaLibraries?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Resource+MediaLibraryInfo"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.Resource+MediaLibraryInfo": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            color?: string;
         };
         "Bakabase.Abstractions.Models.Domain.Resource+Property": {
             name?: string;
@@ -4820,6 +4859,14 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions": {
             players?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions": {
+            properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyReference"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyReference": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -6440,6 +6487,13 @@ export interface components {
             name: string;
             preprocesses?: string;
         };
+        "Bakabase.Service.Models.Input.BulkResourcePropertyValuePutInputModel": {
+            resourceIds: number[];
+            /** Format: int32 */
+            propertyId: number;
+            isCustomProperty: boolean;
+            value?: string;
+        };
         "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
             orderedPropertyIds: number[];
         };
@@ -6504,6 +6558,7 @@ export interface components {
             enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions"];
             playableFileOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
             playerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+            propertyOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions"];
             /** Format: int32 */
             priority: number;
         };
@@ -6749,6 +6804,7 @@ export interface components {
             enhancerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions"];
             playableFileOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayableFileOptions"];
             playerOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePlayerOptions"];
+            propertyOptions?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions"];
             /** Format: int32 */
             priority: number;
             /** Format: date-time */
@@ -16199,6 +16255,35 @@ export interface operations {
             };
         };
     };
+    BulkPutResourcePropertyValue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.BulkResourcePropertyValuePutInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.BulkResourcePropertyValuePutInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.BulkResourcePropertyValuePutInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.BulkResourcePropertyValuePutInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
     PlayResourceFile: {
         parameters: {
             query?: {
@@ -16638,6 +16723,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetMatchingProfilesForResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ResourceProfileViewModel]"];
                 };
             };
         };

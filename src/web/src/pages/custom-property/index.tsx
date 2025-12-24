@@ -10,7 +10,7 @@ import { SearchOutlined, SortAscendingOutlined } from "@ant-design/icons";
 import PropertyModal from "@/components/PropertyModal";
 import BApi from "@/sdk/BApi";
 import { CustomPropertyAdditionalItem } from "@/sdk/constants";
-import { Button, Chip, Input, Divider } from "@/components/bakaui";
+import { Button, Input } from "@/components/bakaui";
 import Property from "@/components/Property/v2";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import TypeConversionRuleOverviewDialog from "@/pages/custom-property/components/TypeConversionRuleOverviewDialog";
@@ -108,44 +108,43 @@ const CustomPropertyPage = () => {
         </div>
         <div />
       </div>
-      <div
-        className={"grid gap-2 items-center"}
-        style={{ gridTemplateColumns: "auto 1fr" }}
-      >
-        {Object.keys(groupedFilteredProperties).map((k) => {
-          const ps = groupedFilteredProperties[k].sort(
-            (a, b) => a.order - b.order,
+      <div className={"grid gap-4 grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"}>
+        {(Object.keys(groupedFilteredProperties) as unknown as PropertyType[]).map((k) => {
+          const ps = groupedFilteredProperties[k]!.sort(
+            (a: IProperty, b: IProperty) => a.order! - b.order!,
           );
 
           return (
-            <>
-              <div className={"mb-1 text-right"}>
-                <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                  <PropertyTypeIcon textVariant={"default"} type={ps[0].type} />
-                </Chip>
+            <div
+              key={k}
+              className={"rounded-lg border border-default-200 bg-content1 overflow-hidden"}
+            >
+              <div className={"flex items-center gap-2 px-4 py-3 bg-default-100 border-b border-default-200"}>
+                <PropertyTypeIcon textVariant={"default"} type={ps[0].type} />
+                <span className={"text-default-500 text-sm"}>({ps.length})</span>
               </div>
-              <div className={"flex items-start gap-2 flex-wrap"}>
-                {ps.map((p) => {
-                  return (
-                    <Property
-                      key={p.id}
-                      editable
-                      hidePool
-                      hideType
-                      removable
-                      property={p}
-                      onDialogDestroyed={loadProperties}
-                      onRemoved={() => {
-                        loadProperties();
-                      }}
-                      onSaved={loadProperties}
-                    />
-                  );
-                })}
+              <div className={"p-4"}>
+                <div className={"flex flex-wrap gap-2"}>
+                  {ps.map((p) => {
+                    return (
+                      <Property
+                        key={p.id}
+                        editable
+                        hidePool
+                        hideType
+                        removable
+                        property={p}
+                        onDialogDestroyed={loadProperties}
+                        onRemoved={() => {
+                          loadProperties();
+                        }}
+                        onSaved={loadProperties}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-              <div />
-              <Divider orientation={"horizontal"} />
-            </>
+            </div>
           );
         })}
       </div>

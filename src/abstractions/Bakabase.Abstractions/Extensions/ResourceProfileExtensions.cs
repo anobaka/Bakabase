@@ -23,6 +23,9 @@ public static class ResourceProfileExtensions
             PlayerSettingsJson = model.PlayerOptions != null
                 ? JsonConvert.SerializeObject(model.PlayerOptions)
                 : null,
+            PropertiesJson = model.PropertyOptions != null
+                ? JsonConvert.SerializeObject(model.PropertyOptions)
+                : null,
             Priority = model.Priority,
             CreatedAt = model.CreatedAt,
             UpdatedAt = model.UpdatedAt
@@ -74,6 +77,19 @@ public static class ResourceProfileExtensions
             {
                 domain.PlayerOptions =
                     JsonConvert.DeserializeObject<ResourceProfilePlayerOptions>(dbModel.PlayerSettingsJson);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+
+        if (!string.IsNullOrEmpty(dbModel.PropertiesJson))
+        {
+            try
+            {
+                domain.PropertyOptions =
+                    JsonConvert.DeserializeObject<ResourceProfilePropertyOptions>(dbModel.PropertiesJson);
             }
             catch (Exception)
             {

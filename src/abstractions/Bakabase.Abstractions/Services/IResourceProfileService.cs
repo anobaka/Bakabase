@@ -55,6 +55,17 @@ public interface IResourceProfileService
     Task<ResourceProfilePlayerOptions?> GetEffectivePlayerOptions(Resource resource);
 
     /// <summary>
+    /// Get effective property options for a resource
+    /// </summary>
+    Task<ResourceProfilePropertyOptions?> GetEffectivePropertyOptions(Resource resource);
+
+    /// <summary>
+    /// Get effective property options for multiple resources (batch operation for performance)
+    /// Returns a dictionary mapping resource ID to its property options
+    /// </summary>
+    Task<Dictionary<int, ResourceProfilePropertyOptions>> GetEffectivePropertyOptionsForResources(IEnumerable<Resource> resources);
+
+    /// <summary>
     /// Add a new resource profile
     /// </summary>
     /// <param name="name">Profile name</param>
@@ -63,6 +74,7 @@ public interface IResourceProfileService
     /// <param name="enhancerOptions">Optional enhancer options</param>
     /// <param name="playableFileOptions">Optional playable file options</param>
     /// <param name="playerOptions">Optional player options</param>
+    /// <param name="propertyOptions">Optional property options</param>
     /// <param name="priority">Priority for matching</param>
     Task<ResourceProfile> Add(
         string name,
@@ -71,6 +83,7 @@ public interface IResourceProfileService
         ResourceProfileEnhancerOptions? enhancerOptions,
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
+        ResourceProfilePropertyOptions? propertyOptions,
         int priority);
 
     /// <summary>
@@ -83,6 +96,7 @@ public interface IResourceProfileService
     /// <param name="enhancerOptions">Optional enhancer options</param>
     /// <param name="playableFileOptions">Optional playable file options</param>
     /// <param name="playerOptions">Optional player options</param>
+    /// <param name="propertyOptions">Optional property options</param>
     /// <param name="priority">Priority for matching</param>
     Task Update(
         int id,
@@ -92,6 +106,7 @@ public interface IResourceProfileService
         ResourceProfileEnhancerOptions? enhancerOptions,
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
+        ResourceProfilePropertyOptions? propertyOptions,
         int priority);
 
     /// <summary>

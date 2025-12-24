@@ -38,6 +38,11 @@ public record ResourceProfileDbModel
     public string? PlayerSettingsJson { get; set; }
 
     /// <summary>
+    /// 属性配置 JSON
+    /// </summary>
+    public string? PropertiesJson { get; set; }
+
+    /// <summary>
     /// 优先级（多个 Profile 匹配同一资源时使用）
     /// </summary>
     public int Priority { get; set; }

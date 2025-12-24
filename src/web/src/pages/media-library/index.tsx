@@ -129,7 +129,7 @@ const MediaLibraryPage = () => {
         };
         const query = encodeURIComponent(JSON.stringify(searchForm));
 
-        navigate(`/resource2?query=${query}`);
+        navigate(`/resource?query=${query}`);
       },
       footer: {
         actions: ["ok", "cancel"],

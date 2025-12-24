@@ -19,5 +19,7 @@ public record ResourceProfileInputModel
 
     public ResourceProfilePlayerOptions? PlayerOptions { get; set; }
 
+    public ResourceProfilePropertyOptions? PropertyOptions { get; set; }
+
     public int Priority { get; set; }
 }

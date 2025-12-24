@@ -112,20 +112,57 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-2">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 text-sm text-default-500 shrink-0">
+          <LinkOutlined className="text-base" />
+          <span>{t("Media Libraries")}</span>
+        </div>
         <Spinner size="sm" />
-        <span className="text-sm text-default-500">{t("Loading...")}</span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 text-sm font-medium">
-          <LinkOutlined className="text-base" />
-          {t("Media Libraries")}
-        </div>
+    <div className="flex items-start gap-2">
+      <div className="flex items-center gap-1 text-sm text-default-500 shrink-0 pt-0.5">
+        <LinkOutlined className="text-base" />
+        <span>{t("Media Libraries")}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1 flex-1">
+        {mappings.length === 0 ? (
+          <span className="text-sm text-default-400">
+            {t("None")}
+          </span>
+        ) : (
+          mappings.map((mapping) => (
+            <Chip
+              key={mapping.id}
+              size="sm"
+              variant="flat"
+              style={{
+                backgroundColor: mapping.mediaLibrary?.color
+                  ? `${mapping.mediaLibrary.color}20`
+                  : undefined,
+                color: mapping.mediaLibrary?.color,
+              }}
+              endContent={
+                <Tooltip content={t("Remove from this media library")}>
+                  <button
+                    className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveMapping(mapping.id);
+                    }}
+                  >
+                    <DeleteOutlined className="text-xs" />
+                  </button>
+                </Tooltip>
+              }
+            >
+              <span>{mapping.mediaLibrary?.name || t("Unknown")}</span>
+            </Chip>
+          ))
+        )}
         <Popover
           placement="bottom-end"
           trigger={
@@ -135,8 +172,9 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
               size="sm"
               variant="light"
               color="primary"
+              className="min-w-6 w-6 h-6"
             >
-              <PlusOutlined />
+              <PlusOutlined className="text-xs" />
             </Button>
           }
           visible={addPopoverOpen}
@@ -165,43 +203,6 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange })
           </div>
         </Popover>
       </div>
-
-      {mappings.length === 0 ? (
-        <div className="text-sm text-default-400 py-1">
-          {t("Not assigned to any media library")}
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-1">
-          {mappings.map((mapping) => (
-            <Chip
-              key={mapping.id}
-              size="sm"
-              variant="flat"
-              style={{
-                backgroundColor: mapping.mediaLibrary?.color
-                  ? `${mapping.mediaLibrary.color}20`
-                  : undefined,
-                color: mapping.mediaLibrary?.color,
-              }}
-              endContent={
-                <Tooltip content={t("Remove from this media library")}>
-                  <button
-                    className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveMapping(mapping.id);
-                    }}
-                  >
-                    <DeleteOutlined className="text-xs" />
-                  </button>
-                </Tooltip>
-              }
-            >
-              <span>{mapping.mediaLibrary?.name || t("Unknown")}</span>
-            </Chip>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

@@ -5,10 +5,7 @@ import type { SearchForm } from "@/pages/resource/models";
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useRef, useState } from "react";
 import { useUpdateEffect } from "react-use";
-import {
-  SearchOutlined,
-  SnippetsOutlined,
-} from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import { AiOutlineExport, AiOutlineSearch } from "react-icons/ai";
 import { MdPlaylistPlay } from "react-icons/md";
 import { HistoryOutlined } from "@ant-design/icons";
@@ -31,7 +28,6 @@ interface IProps {
   searchForm?: SearchForm;
   onSearch?: (form: Partial<SearchForm>, newTab: boolean) => Promise<any>;
   reloadResources: (ids: number[]) => any;
-  multiSelection?: boolean;
   rearrangeResources?: () => any;
   onSelectAllChange: (selected: boolean, includeNotLoaded?: boolean) => any;
   resourceCount?: number;
@@ -57,7 +53,6 @@ const FilterPanel = (props: IProps) => {
     selectedResourceIds,
     onSearch,
     searchForm: propsSearchForm,
-    multiSelection = false,
     rearrangeResources,
     onSelectAllChange,
     resourceCount,
@@ -190,52 +185,8 @@ const FilterPanel = (props: IProps) => {
             <AiOutlineExport className={"text-base"} />
             {t<string>("View in new tab")}
           </Button>
-          {/* <Button
-            isIconOnly
-            size={"sm"}
-            onPress={() => {
-              let name = `${t<string>("Untitled search")}1`;
-
-              createPortal(Modal, {
-                defaultVisible: true,
-                size: "lg",
-                title: t<string>("Save current search"),
-                children: (
-                  <Input
-                    isRequired
-                    defaultValue={name}
-                    label={t<string>("Name")}
-                    placeholder={t<string>(
-                      "Please set a name for current search",
-                    )}
-                    onValueChange={(v) => (name = v?.trim())}
-                  />
-                ),
-                onOk: async () => {
-                  if (name != undefined && name.length > 0) {
-                    // @ts-ignore
-                    await BApi.resource.saveNewResourceSearch({
-                      search: searchForm,
-                      name,
-                    });
-                    savedSearchesRef.current?.reload();
-                  } else {
-                    toast.error(t<string>("Name is required"));
-                    throw new Error("Name is required");
-                  }
-                },
-              });
-            }}
-          >
-            <SaveOutlined className={"text-base"} />
-          </Button> */}
         </div>
         <div className={"flex items-center gap-2"}>
-          {multiSelection && (
-            <Chip color={"success"} variant={"light"}>
-              <SnippetsOutlined className={"text-base"} />
-            </Chip>
-          )}
           <ShortcutsButton />
           <Tooltip
             content={

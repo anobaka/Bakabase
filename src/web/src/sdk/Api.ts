@@ -630,6 +630,14 @@ export interface BakabaseAbstractionsModelsDomainResource {
   mediaLibraryName?: string;
   /** @deprecated */
   mediaLibraryColor?: string;
+  mediaLibraries?: BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
+  /** @format int32 */
+  id: number;
+  name: string;
+  color?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProperty {
@@ -673,6 +681,17 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOpti
 
 export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
   players?: BakabaseAbstractionsModelsDomainMediaLibraryPlayer[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions {
+  properties?: BakabaseAbstractionsModelsDomainResourceProfilePropertyReference[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyReference {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -2721,6 +2740,14 @@ export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   preprocesses?: string;
 }
 
+export interface BakabaseServiceModelsInputBulkResourcePropertyValuePutInputModel {
+  resourceIds: number[];
+  /** @format int32 */
+  propertyId: number;
+  isCustomProperty: boolean;
+  value?: string;
+}
+
 export interface BakabaseServiceModelsInputCategoryCustomPropertySortInputModel {
   orderedPropertyIds: number[];
 }
@@ -2802,6 +2829,7 @@ export interface BakabaseServiceModelsInputResourceProfileInputModel {
   enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
   playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
   playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+  propertyOptions?: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
   /** @format int32 */
   priority: number;
 }
@@ -3094,6 +3122,7 @@ export interface BakabaseServiceModelsViewResourceProfileViewModel {
   enhancerOptions?: BakabaseAbstractionsModelsDomainResourceProfileEnhancerOptions;
   playableFileOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions;
   playerOptions?: BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions;
+  propertyOptions?: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions;
   /** @format int32 */
   priority: number;
   /** @format date-time */
@@ -8271,6 +8300,37 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name BulkPutResourcePropertyValue
+     * @request PUT:/resource/bulk/property-value
+     */
+    bulkPutResourcePropertyValue: (
+      data: BakabaseServiceModelsInputBulkResourcePropertyValuePutInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/bulk/property-value`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for bulkPutResourcePropertyValue
+     * @name bulkPutResourcePropertyValueUrl
+     */
+    bulkPutResourcePropertyValueUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/bulk/property-value`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name PlayResourceFile
      * @request GET:/resource/{resourceId}/play
      */
@@ -9214,6 +9274,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/resource-profile/${id}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ResourceProfile
+     * @name GetMatchingProfilesForResource
+     * @request GET:/resource-profile/by-resource/{resourceId}
+     */
+    getMatchingProfilesForResource: (resourceId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewResourceProfileViewModel,
+        any
+      >({
+        path: `/resource-profile/by-resource/${resourceId}`,
+        method: "GET",
         format: "json",
         ...params,
       }),

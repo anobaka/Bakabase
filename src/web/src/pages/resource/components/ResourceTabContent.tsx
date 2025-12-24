@@ -66,8 +66,9 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const selectedIdsRef = useRef(selectedIds);
-  const [multiSelection, setMultiSelection] = useState<boolean>(false);
-  const multiSelectionRef = useRef(multiSelection);
+  const multiSelectionRef = useRef(false);
+  const lastSelectedIndexRef = useRef<number | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const resourcesComponentRef = useRef<ResourcesRef | null>();
   const rearrangeResources = useCallback(() => {
@@ -149,21 +150,28 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   const onKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key == selectionKey && !multiSelectionRef.current) {
       multiSelectionRef.current = true;
-      setMultiSelection(true);
+      containerRef.current?.setAttribute("data-selection-mode", "true");
     }
   }, [selectionKey]);
 
   const onKeyUp = useCallback((e: KeyboardEvent) => {
     if (e.key == selectionKey && multiSelectionRef.current) {
       multiSelectionRef.current = false;
-      setMultiSelection(false);
+      containerRef.current?.removeAttribute("data-selection-mode");
     }
   }, [selectionKey]);
 
   const onClick = useCallback((e: globalThis.MouseEvent) => {
-    if (!multiSelectionRef.current) {
+    if (!multiSelectionRef.current && !e.shiftKey) {
+      // Don't clear selection if clicking on menu items, modals, or other overlay elements
+      const target = e.target as HTMLElement;
+      if (target.closest(".szh-menu, [role='dialog'], [role='menu'], .bakaui-modal")) {
+        return;
+      }
+
       if (selectedIdsRef.current.length != 0) {
         setSelectedIds([]);
+        lastSelectedIndexRef.current = null;
       }
     }
   }, []);
@@ -172,7 +180,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     return () => {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("click", onClick);
+      window.removeEventListener("click", onClick, true);
     };
   }, []);
 
@@ -190,17 +198,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     if (props.activated) {
       window.addEventListener("keydown", onKeyDown);
       window.addEventListener("keyup", onKeyUp);
-      window.addEventListener("click", onClick);
+      window.addEventListener("click", onClick, true);
     } else {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
-      window.removeEventListener("click", onClick);
+      window.removeEventListener("click", onClick, true);
     }
   }, [props.activated]);
-
-  useEffect(() => {
-    multiSelectionRef.current = multiSelection;
-  }, [multiSelection]);
 
   useEffect(() => {
     if (uiOptionsStore.initialized) {
@@ -274,6 +278,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       if (renderMode == "replace") {
         setResources([]);
+        lastSelectedIndexRef.current = null;
       }
 
       setSearching(true);
@@ -313,13 +318,35 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     [],
   );
 
-  const onSelect = useCallback((id: number) => {
-    const selected = selectedIdsRef.current.includes(id);
+  const onSelect = useCallback((id: number, shiftKey: boolean = false) => {
+    const currentIndex = resourcesRef.current.findIndex((r) => r.id === id);
 
-    if (selected) {
-      setSelectedIds(selectedIdsRef.current.filter((x) => x != id));
+    // Shift+Click range selection
+    if (shiftKey && lastSelectedIndexRef.current !== null && currentIndex !== -1) {
+      const start = Math.min(lastSelectedIndexRef.current, currentIndex);
+      const end = Math.max(lastSelectedIndexRef.current, currentIndex);
+      const rangeIds = resourcesRef.current.slice(start, end + 1).map((r) => r.id);
+
+      // Merge with existing selection
+      const newSelectedIds = [...new Set([...selectedIdsRef.current, ...rangeIds])];
+      setSelectedIds(newSelectedIds);
+
+      // Update last selected index to current position for subsequent shift selections
+      lastSelectedIndexRef.current = currentIndex;
     } else {
-      setSelectedIds([...selectedIdsRef.current, id]);
+      // Normal toggle selection
+      const selected = selectedIdsRef.current.includes(id);
+
+      if (selected) {
+        setSelectedIds(selectedIdsRef.current.filter((x) => x != id));
+      } else {
+        setSelectedIds([...selectedIdsRef.current, id]);
+      }
+
+      // Update last selected index for future range selection
+      if (currentIndex !== -1) {
+        lastSelectedIndexRef.current = currentIndex;
+      }
     }
   }, []);
 
@@ -402,12 +429,12 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   return (
     <div
       ref={(r) => {
+        containerRef.current = r;
         pageContainerRef.current = r?.parentElement;
       }}
-      className={`flex flex-col h-full max-h-full relative ${multiSelection ? "selection-mode" : ""}`}
+      className="flex flex-col h-full max-h-full relative"
     >
       <FilterPanel
-        multiSelection={multiSelection}
         rearrangeResources={rearrangeResources}
         reloadResources={reloadResources}
         resourceCount={resources.length}

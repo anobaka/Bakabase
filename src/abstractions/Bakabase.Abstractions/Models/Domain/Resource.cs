@@ -157,6 +157,10 @@ public record Resource
     [Obsolete]
     public string? MediaLibraryColor { get; set; }
 
+    public List<MediaLibraryInfo>? MediaLibraries { get; set; }
+
+    public record MediaLibraryInfo(int Id, string Name, string? Color);
+
     private void RebuildPath()
     {
         if (!string.IsNullOrEmpty(_fileName) || !string.IsNullOrEmpty(_directory))

@@ -352,6 +352,13 @@ public static class PropertySystem
     public static class Search
     {
         /// <summary>
+        /// MediaLibraryV2Multi search filter value builder.
+        /// Provides type-safe methods to build filter values for media library searches.
+        /// </summary>
+        public static MediaLibraryPropertyAccessor MediaLibraryV2Multi =>
+            BuiltinProperties.Internal.MediaLibraryV2Multi;
+
+        /// <summary>
         /// Get the property to use for filter value based on operation.
         /// For example, SingleChoice + In → returns MultipleChoice property.
         /// This is useful when the filter value type differs from the property type.

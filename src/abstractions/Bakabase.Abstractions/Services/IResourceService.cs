@@ -14,17 +14,11 @@ namespace Bakabase.Abstractions.Services;
 
 public interface IResourceService
 {
-    // Task RemoveByMediaLibraryIdsNotIn(int[] ids);
     Task DeleteByKeys(int[] ids, bool deleteFiles);
 
-    // Task LogicallyRemoveByCategoryId(int categoryId);
     Task<List<Resource>> GetAll(Expression<Func<Models.Db.ResourceDbModel, bool>>? selector = null,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
-
-    //
-    // Task<List<Abstractions.Models.Db.Resource>> GetAll(Expression<Func<Abstractions.Models.Db.Resource, bool>> selector = null,
-    //     bool asNoTracking = true);
-    //
+    
     Task<SearchResponse<Resource>> Search(ResourceSearch model);
 
     /// <summary>
@@ -33,20 +27,12 @@ public interface IResourceService
     /// </summary>
     Task<int[]> GetAllIds(ResourceSearch model);
 
-    // Task<Abstractions.Models.Db.Resource?> GetByKey(int id, bool asNoTracking);
     Task<Abstractions.Models.Domain.Resource?> Get(int id,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
     Task<List<Abstractions.Models.Domain.Resource>> GetByKeys(int[] ids,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
 
-    //
-    // Task<Resource> ToDomainModel(Abstractions.Models.Db.Resource resource,
-    //     ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
-    //
-    // Task<List<Resource>> ToDomainModel(Abstractions.Models.Db.Resource[] resources,
-    //     ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
-    //
     Task<List<Abstractions.Models.Db.ResourceDbModel>> GetAllDbModels(
         Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? selector = null,
         bool asNoTracking = true);
@@ -70,28 +56,11 @@ public interface IResourceService
 
     Task<BaseResponse> PutPropertyValue(int resourceId, ResourcePropertyValuePutInputModel model);
 
-    //
-    // /// <summary>
-    // /// 
-    // /// </summary>
-    // /// <param name="path"></param>
-    // /// <param name="ct"></param>
-    // /// <param name="order"></param>
-    // /// <param name="additionalSources"></param>
-    // /// <returns>If ShouldSave is true, it usually means the cost of discovering cover is high, and we should save the result for better performance.</returns>
-    // /// <exception cref="ArgumentOutOfRangeException"></exception>
-    // Task<(Stream Stream, string Ext, bool ShouldSave)?> DiscoverCover(string path,
-    //     CancellationToken ct, CoverSelectOrder order,
-    //     AdditionalCoverDiscoveringSource[] additionalSources);
-    //
-    // Task<List<Resource>> GetNfoGenerationNeededResources(int[] resourceIds);
-    // Task SaveNfo(Resource resource, bool overwrite, CancellationToken ct = new());
-    // Task TryToGenerateNfoInBackground();
-    // Task RunBatchSaveNfoBackgroundTask(int[] resourceIds, string backgroundTaskName, bool overwrite);
-    // Task<BaseResponse> StartGeneratingNfo(BackgroundTask task);
-    // Task PopulateStatistics(DashboardStatistics statistics);
-    //
-    // Task<BaseResponse> SaveThumbnail(int id, bool overwrite, byte[] imageBytes, CancellationToken ct);
+    /// <summary>
+    /// Bulk update property values for multiple resources in a single batch operation.
+    /// More efficient than calling PutPropertyValue multiple times.
+    /// </summary>
+    Task<BaseResponse> BulkPutPropertyValue(int[] resourceIds, ResourcePropertyValuePutInputModel model);
 
     /// <summary>
     /// Raw cover, no cache.
@@ -105,21 +74,6 @@ public interface IResourceService
 
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, bool isLegacyMediaLibrary = false, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);
-
-    /// <summary>
-    /// Re-sync resources by the template of the target media library.
-    /// This method will:
-    /// 1. Clear PropertyValueScope.Synchronization values
-    /// 2. Re-extract property values from the new path using the template's ValueLocators
-    /// 3. Clear ParentId
-    /// 4. Update file metadata (IsFile, FileCreatedAt, FileModifiedAt)
-    /// 5. Clear resource cache (PlayableFiles, Covers)
-    /// 6. Recursively process child resources
-    /// </summary>
-    /// <param name="resourceIds">Resource IDs to re-sync</param>
-    /// <param name="mediaLibraryId">Target media library ID</param>
-    /// <returns></returns>
-    Task ReSyncResourcesByTemplate(int[] resourceIds, int mediaLibraryId);
 
     Task Pin(int id, bool pin);
 
@@ -150,6 +104,14 @@ public interface IResourceService
     /// <param name="additionalItems">Additional items to include</param>
     /// <returns>List of resources associated with the media library</returns>
     Task<List<Resource>> GetByMediaLibraryId(int mediaLibraryId, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
+
+    /// <summary>
+    /// Set media libraries for resources, replacing existing mappings.
+    /// </summary>
+    /// <param name="resourceIds">Resource IDs to update</param>
+    /// <param name="mediaLibraryIds">Media library IDs to set</param>
+    /// <returns>Response indicating success or failure</returns>
+    Task<BaseResponse> SetMediaLibraries(int[] resourceIds, int[] mediaLibraryIds);
 
     Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
         (string Left, string Right)[] wrappers);

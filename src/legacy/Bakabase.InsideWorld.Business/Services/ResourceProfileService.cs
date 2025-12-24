@@ -214,6 +214,63 @@ public class ResourceProfileService<TDbContext>(
         return profiles.FirstOrDefault(p => p.PlayerOptions != null)?.PlayerOptions;
     }
 
+    public async Task<ResourceProfilePropertyOptions?> GetEffectivePropertyOptions(Resource resource)
+    {
+        var profiles = await GetMatchingProfiles(resource);
+        return profiles.FirstOrDefault(p => p.PropertyOptions != null)?.PropertyOptions;
+    }
+
+    public async Task<Dictionary<int, ResourceProfilePropertyOptions>> GetEffectivePropertyOptionsForResources(
+        IEnumerable<Resource> resources)
+    {
+        var result = new Dictionary<int, ResourceProfilePropertyOptions>();
+        var allProfiles = await GetAll();
+        var resourcesList = resources.ToList();
+        var profilesWithPropertyOptions = allProfiles.Where(p => p.PropertyOptions != null).ToList();
+
+        if (profilesWithPropertyOptions.Count == 0)
+        {
+            return result;
+        }
+
+        // Use index service for faster lookup if available
+        if (IndexService.IsReady)
+        {
+            foreach (var resource in resourcesList)
+            {
+                var profileIds = await IndexService.GetMatchingProfileIds(resource.Id);
+                // profileIds are sorted by priority (highest first)
+                var matchingProfile = profileIds
+                    .Select(pid => profilesWithPropertyOptions.FirstOrDefault(p => p.Id == pid))
+                    .FirstOrDefault(p => p != null);
+
+                if (matchingProfile != null)
+                {
+                    result[resource.Id] = matchingProfile.PropertyOptions!;
+                }
+            }
+
+            return result;
+        }
+
+        // Fallback: For each profile, get matching resources and map property options
+        foreach (var profile in profilesWithPropertyOptions)
+        {
+            var matchingIds = await GetMatchingResourceIds(profile.Search);
+
+            foreach (var resource in resourcesList)
+            {
+                // Only set if not already set (higher priority profiles take precedence)
+                if (!result.ContainsKey(resource.Id) && matchingIds.Contains(resource.Id))
+                {
+                    result[resource.Id] = profile.PropertyOptions!;
+                }
+            }
+        }
+
+        return result;
+    }
+
     public async Task<ResourceProfile> Add(
         string name,
         string? searchJson,
@@ -221,6 +278,7 @@ public class ResourceProfileService<TDbContext>(
         ResourceProfileEnhancerOptions? enhancerOptions,
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
+        ResourceProfilePropertyOptions? propertyOptions,
         int priority)
     {
         var now = DateTime.UtcNow;
@@ -237,6 +295,9 @@ public class ResourceProfileService<TDbContext>(
                 : null,
             PlayerSettingsJson = playerOptions != null
                 ? JsonConvert.SerializeObject(playerOptions)
+                : null,
+            PropertiesJson = propertyOptions != null
+                ? JsonConvert.SerializeObject(propertyOptions)
                 : null,
             Priority = priority,
             CreatedAt = now,
@@ -261,6 +322,7 @@ public class ResourceProfileService<TDbContext>(
         ResourceProfileEnhancerOptions? enhancerOptions,
         ResourceProfilePlayableFileOptions? playableFileOptions,
         ResourceProfilePlayerOptions? playerOptions,
+        ResourceProfilePropertyOptions? propertyOptions,
         int priority)
     {
         var dbModel = new ResourceProfileDbModel
@@ -277,6 +339,9 @@ public class ResourceProfileService<TDbContext>(
                 : null,
             PlayerSettingsJson = playerOptions != null
                 ? JsonConvert.SerializeObject(playerOptions)
+                : null,
+            PropertiesJson = propertyOptions != null
+                ? JsonConvert.SerializeObject(propertyOptions)
                 : null,
             Priority = priority,
             UpdatedAt = DateTime.UtcNow

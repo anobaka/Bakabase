@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useState } from "react";
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined, ClearOutlined, MoreOutlined } from "@ant-design/icons";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined, ClearOutlined, MoreOutlined, InfoCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { useTour } from "@reactour/tour";
 import { BsController } from "react-icons/bs";
 
 import BApi from "@/sdk/BApi";
@@ -12,6 +13,7 @@ import type {
   BakabaseAbstractionsModelsDomainEnhancerFullOptions,
   BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions,
   BakabaseAbstractionsModelsDomainMediaLibraryPlayer,
+  BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions,
 } from "@/sdk/Api";
 import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { IProperty } from "@/components/Property/models";
@@ -24,6 +26,7 @@ import EnhancerSelectorModal from "./components/EnhancerSelectorModal";
 import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
 import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
+import PropertySelector from "@/components/PropertySelector";
 import { FilterGroup, FilterProvider, createDefaultFilterConfig, toSearchInputModel, toFilterGroupInputModel } from "@/components/ResourceFilter";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
@@ -75,6 +78,7 @@ const toProfileInputModel = (profile: Partial<ResourceProfile>) => {
     enhancerOptions: profile.enhancerOptions,
     playableFileOptions: profile.playableFileOptions,
     playerOptions: profile.playerOptions,
+    propertyOptions: profile.propertyOptions,
     priority: profile.priority ?? 0,
   };
 };
@@ -82,12 +86,52 @@ const toProfileInputModel = (profile: Partial<ResourceProfile>) => {
 const ResourceProfilePage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
+  const { setIsOpen, setSteps, setCurrentStep } = useTour();
   const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
   const [profiles, setProfiles] = useState<ResourceProfile[]>([]);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [enhancerDescriptors, setEnhancerDescriptors] = useState<EnhancerDescriptor[]>([]);
+
+  const startTour = useCallback(() => {
+    setSteps?.([
+      {
+        selector: ".tour-add-profile",
+        content: t("Click here to create a new resource profile. Each profile defines settings for a group of resources."),
+      },
+      {
+        selector: ".tour-profile-table",
+        content: t("This table shows all your resource profiles. Profiles with higher priority are matched first."),
+      },
+      {
+        selector: "[data-tour='col-search']",
+        content: t("Search Criteria: Define which resources this profile applies to. Use filters like media library, properties, or tags."),
+      },
+      {
+        selector: "[data-tour='col-nameTemplate']",
+        content: t("Name Template: Customize how resource names are displayed using property placeholders like {Name}."),
+      },
+      {
+        selector: "[data-tour='col-enhancers']",
+        content: t("Enhancers: Plugins that automatically fetch metadata or download additional files from external sources."),
+      },
+      {
+        selector: "[data-tour='col-playableFiles']",
+        content: t("Playable Files: Rules to identify which files are playable, by extension or filename pattern."),
+      },
+      {
+        selector: "[data-tour='col-players']",
+        content: t("Players: Configure external applications to open playable files."),
+      },
+      {
+        selector: "[data-tour='col-properties']",
+        content: t("Properties: Select which properties should be displayed for matching resources."),
+      },
+    ]);
+    setCurrentStep(0);
+    setIsOpen(true);
+  }, [t, setSteps, setCurrentStep, setIsOpen]);
 
   const loadProfiles = async () => {
     setLoading(true);
@@ -432,20 +476,87 @@ const ResourceProfilePage = () => {
     );
   };
 
+  const renderProperties = (profile: ResourceProfile) => {
+    const propertyRefs = profile.propertyOptions?.properties ?? [];
+    const hasProperties = propertyRefs.length > 0;
+
+    const openModal = () => {
+      createPortal(PropertySelector, {
+        pool: PropertyPool.Reserved | PropertyPool.Custom,
+        multiple: true,
+        selection: propertyRefs.map((ref) => ({ pool: ref.pool!, id: ref.id! })),
+        onSubmit: async (selectedProperties: IProperty[]) => {
+          const newRefs = selectedProperties.map((p) => ({ pool: p.pool, id: p.id }));
+          updateProfile(profile, {
+            propertyOptions: newRefs.length > 0 ? { properties: newRefs } : undefined,
+          });
+        },
+      });
+    };
+
+    if (!hasProperties) {
+      return (
+        <Button
+          size="sm"
+          variant="light"
+          className="min-w-0"
+          onPress={openModal}
+        >
+          <span className="text-default-400">-</span>
+          <EditOutlined className="ml-1 text-xs opacity-50" />
+        </Button>
+      );
+    }
+
+    // Find property objects for the references
+    const selectedProperties = propertyRefs
+      .map((ref) => properties.find((p) => p.pool === ref.pool && p.id === ref.id))
+      .filter((p): p is NonNullable<typeof p> => p != null);
+
+    return (
+      <div className="flex flex-wrap gap-1 items-center">
+        {selectedProperties.map((property) => (
+          <Chip
+            key={`${property.pool}-${property.id}`}
+            size="sm"
+            color="secondary"
+            variant="flat"
+            className="cursor-pointer h-5 text-xs"
+            onClick={openModal}
+          >
+            {property.name}
+          </Chip>
+        ))}
+        <Button
+          isIconOnly
+          size="sm"
+          variant="light"
+          className="min-w-0 w-6 h-6"
+          onPress={openModal}
+        >
+          <EditOutlined className="text-xs opacity-50" />
+        </Button>
+      </div>
+    );
+  };
+
   const columns = [
     {
       key: "priority",
       label: t("Priority"),
+      description: t("Higher priority profiles are matched first. When multiple profiles match a resource, the one with highest priority takes effect."),
       width: 80,
     },
     {
       key: "name",
       label: t("Name"),
+      description: t("A unique name to identify this profile."),
       width: 150,
     },
     {
       key: "search",
       label: t("Search Criteria"),
+      description: t("Define which resources this profile applies to. Resources matching these criteria will use this profile's settings."),
       render: (profile: ResourceProfile) => {
         const group = profile.search?.group ?? { combinator: 1, disabled: false };
         return (
@@ -480,25 +591,36 @@ const ResourceProfilePage = () => {
     {
       key: "nameTemplate",
       label: t("Name Template"),
+      description: t("Customize how resource names are displayed using property placeholders like {Name}. Leave empty to use the original filename."),
       render: renderNameTemplate,
     },
     {
       key: "enhancers",
       label: t("Enhancers"),
+      description: t("Plugins that automatically populate resource properties or download additional files (covers, subtitles, etc.) from external sources."),
       width: 130,
       render: renderEnhancers,
     },
     {
       key: "playableFiles",
       label: t("Playable Files"),
+      description: t("Rules to identify which files within a resource are playable. Configure by file extension or filename pattern."),
       width: 130,
       render: renderPlayableFiles,
     },
     {
       key: "players",
       label: t("Players"),
+      description: t("External applications to open playable files. You can assign different players for different file extensions."),
       width: 200,
       render: renderPlayers,
+    },
+    {
+      key: "properties",
+      label: t("Properties"),
+      description: t("Select which properties should be displayed or editable for resources matching this profile."),
+      width: 200,
+      render: renderProperties,
     },
     {
       key: "actions",
@@ -594,6 +716,7 @@ const ResourceProfilePage = () => {
             color="primary"
             size="sm"
             startContent={<PlusOutlined />}
+            className="tour-add-profile"
             onPress={() => {
               createPortal(ResourceProfileModal, {
                 existingNames: profiles.map((p) => p.name),
@@ -603,6 +726,16 @@ const ResourceProfilePage = () => {
           >
             {t("Add Resource Profile")}
           </Button>
+          <Tooltip content={t("Start guided tour")}>
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              onPress={startTour}
+            >
+              <QuestionCircleOutlined className="text-base" />
+            </Button>
+          </Tooltip>
           <Input
             size="sm"
             placeholder={t("Search by name")}
@@ -621,6 +754,7 @@ const ResourceProfilePage = () => {
         aria-label="Resource Profiles Table"
         isHeaderSticky
         removeWrapper
+        className="tour-profile-table"
         classNames={{
           wrapper: "max-h-[calc(100vh-200px)]",
         }}
@@ -630,8 +764,16 @@ const ResourceProfilePage = () => {
             <TableColumn
               key={column.key}
               width={column.width}
+              data-tour={column.description ? `col-${column.key}` : undefined}
             >
-              {column.label}
+              <div className="flex items-center gap-1">
+                {column.label}
+                {column.description && (
+                  <Tooltip content={column.description}>
+                    <InfoCircleOutlined className="text-xs opacity-50 cursor-help" />
+                  </Tooltip>
+                )}
+              </div>
             </TableColumn>
           ))}
         </TableHeader>

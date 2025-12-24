@@ -358,6 +358,7 @@ public static class ResourceSearchExtensions
             EnhancerOptions = profile.EnhancerOptions,
             PlayableFileOptions = profile.PlayableFileOptions,
             PlayerOptions = profile.PlayerOptions,
+            PropertyOptions = profile.PropertyOptions,
             Priority = profile.Priority,
             CreatedAt = profile.CreatedAt,
             UpdatedAt = profile.UpdatedAt

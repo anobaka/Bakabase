@@ -300,6 +300,8 @@ public class V220Migrator : AbstractMigrator
                 continue;
             }
 
+            var mla = PropertySystem.Builtin.MediaLibraryV2Multi;
+            
             // Create search using ResourceSearchDbModel structure
             var searchDbModel = new ResourceSearchDbModel
             {
@@ -311,14 +313,10 @@ public class V220Migrator : AbstractMigrator
                     [
                         new ResourceSearchFilterDbModel
                         {
-                            PropertyPool = PropertyPool.Internal,
-                            PropertyId = (int)ResourceProperty.MediaLibraryV2Multi,
+                            PropertyPool = mla.Pool,
+                            PropertyId = mla.Id,
                             Operation = SearchOperation.In,
-                            // Contains on MultipleChoice: filter value is the single item to find in the list
-                            Value = PropertySystem.Search.SerializeFilterValue(
-                                library.Id.ToString(),
-                                PropertyType.MultipleChoice,
-                                SearchOperation.In),
+                            Value = PropertySystem.Search.MediaLibraryV2Multi.BuildInFilterValueSerialized(library.Id),
                             Disabled = false
                         }
                     ]
@@ -746,8 +744,8 @@ public class V220Migrator : AbstractMigrator
     /// <param name="toProperty">The target property definition</param>
     private bool MigrateSearchFiltersInGroup(
         ResourceSearchFilterGroupDbModel? group,
-        Bakabase.Abstractions.Models.Domain.Property fromProperty,
-        Bakabase.Abstractions.Models.Domain.Property toProperty)
+        Property fromProperty,
+        Property toProperty)
     {
         if (group == null)
         {

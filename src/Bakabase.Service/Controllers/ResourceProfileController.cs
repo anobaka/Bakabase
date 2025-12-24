@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
@@ -50,6 +51,7 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
             model.EnhancerOptions,
             model.PlayableFileOptions,
             model.PlayerOptions,
+            model.PropertyOptions,
             model.Priority);
 
         return new SingletonResponse<ResourceProfileViewModel>(result.ToViewModel(propertyLocalizer));
@@ -71,6 +73,7 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
             model.EnhancerOptions,
             model.PlayableFileOptions,
             model.PlayerOptions,
+            model.PropertyOptions,
             model.Priority);
 
         return BaseResponseBuilder.Ok;
@@ -82,6 +85,19 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
     {
         await service.Delete(id);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("by-resource/{resourceId:int}")]
+    [SwaggerOperation(OperationId = "GetMatchingProfilesForResource")]
+    public async Task<ListResponse<ResourceProfileViewModel>> GetMatchingProfilesForResource(int resourceId, [FromServices] IResourceService resourceService)
+    {
+        var resource = await resourceService.Get(resourceId, ResourceAdditionalItem.None);
+        if (resource == null)
+        {
+            return new ListResponse<ResourceProfileViewModel>();
+        }
+        var profiles = await service.GetMatchingProfiles(resource);
+        return new ListResponse<ResourceProfileViewModel>(profiles.Select(p => p.ToViewModel(propertyLocalizer)).ToList());
     }
 
     // Note: For testing search criteria, use ResourceController.Search directly

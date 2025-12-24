@@ -1,20 +1,16 @@
 "use client";
 
 import type { Property, Resource } from "@/core/models/Resource";
-import type { PropertyContainerProps } from "@/components/Resource/components/DetailDialog/Properties/PropertyContainer";
+import type { PropertyContainerProps } from "@/components/Resource/components/DetailModal/Properties/PropertyContainer";
 import type { IProperty } from "@/components/Property/models";
 
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 
-import {
-  PropertyPool,
-  PropertyValueScope,
-  propertyValueScopes,
-} from "@/sdk/constants";
+import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import { useResourceOptionsStore } from "@/stores/options";
-import PropertyContainer from "@/components/Resource/components/DetailDialog/Properties/PropertyContainer";
+import PropertyContainer from "@/components/Resource/components/DetailModal/Properties/PropertyContainer";
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
@@ -61,21 +57,14 @@ const Properties = (props: Props) => {
   const forceUpdate = useUpdate();
   const cps = resource.properties;
   const resourceOptions = useResourceOptionsStore((state) => state.data);
-  const [valueScopePriority, setValueScopePriority] = useState<
-    PropertyValueScope[]
-  >([]);
-  const [builtinPropertyMap, setBuiltinPropertyMap] = useState<
-    Record<number, IProperty>
-  >({});
-  const [customPropertyMap, setCustomPropertyMap] = useState<
-    Record<number, IProperty>
-  >({});
+  const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
+  const [builtinPropertyMap, setBuiltinPropertyMap] = useState<Record<number, IProperty>>({});
+  const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
   const [showInvisibleProperties, setShowInvisibleProperties] = useState(false);
 
   useEffect(() => {
     const c = resourceOptions.propertyValueScopePriority;
-    const vsp =
-      c && c.length > 0 ? c.slice() : propertyValueScopes.map((s) => s.value);
+    const vsp = c && c.length > 0 ? c.slice() : propertyValueScopes.map((s) => s.value);
 
     for (const scope of propertyValueScopes) {
       if (!vsp.includes(scope.value)) {
@@ -92,46 +81,36 @@ const Properties = (props: Props) => {
 
   useEffect(() => {
     // @ts-ignore
-    BApi.property
-      .getPropertiesByPool(PropertyPool.Reserved | PropertyPool.Internal)
-      .then((r) => {
-        const ps = r.data || [];
+    BApi.property.getPropertiesByPool(PropertyPool.Reserved | PropertyPool.Internal).then((r) => {
+      const ps = r.data || [];
 
-        setBuiltinPropertyMap(
-          ps.reduce<Record<number, IProperty>>((s, t) => {
-            // @ts-ignore
-            s[t.id!] = t;
+      setBuiltinPropertyMap(
+        ps.reduce<Record<number, IProperty>>((s, t) => {
+          // @ts-ignore
+          s[t.id!] = t;
 
-            return s;
-          }, {}),
-        );
-      });
-
-    if (
-      restrictedPropertyPool == undefined ||
-      restrictedPropertyPool == PropertyPool.Custom
-    ) {
-      const customPropertyMap =
-        resource.properties?.[PropertyPool.Custom] || {};
-      const customPropertyIds = Object.keys(customPropertyMap).map((x) =>
-        parseInt(x, 10),
+          return s;
+        }, {}),
       );
+    });
+
+    if (restrictedPropertyPool == undefined || restrictedPropertyPool == PropertyPool.Custom) {
+      const customPropertyMap = resource.properties?.[PropertyPool.Custom] || {};
+      const customPropertyIds = Object.keys(customPropertyMap).map((x) => parseInt(x, 10));
 
       if (customPropertyIds.length > 0) {
-        BApi.customProperty
-          .getCustomPropertyByKeys({ ids: customPropertyIds })
-          .then((r) => {
-            const ps = r.data || [];
+        BApi.customProperty.getCustomPropertyByKeys({ ids: customPropertyIds }).then((r) => {
+          const ps = r.data || [];
 
-            setCustomPropertyMap(
-              ps.reduce<Record<number, IProperty>>((s, t) => {
-                // @ts-ignore
-                s[t.id!] = t;
+          setCustomPropertyMap(
+            ps.reduce<Record<number, IProperty>>((s, t) => {
+              // @ts-ignore
+              s[t.id!] = t;
 
-                return s;
-              }, {}),
-            );
-          });
+              return s;
+            }, {}),
+          );
+        });
       }
     }
   }, []);
@@ -139,18 +118,12 @@ const Properties = (props: Props) => {
   if (!cps || Object.keys(cps).length == 0) {
     return (
       <div className={"opacity-60"}>
-        {t<string>(
-          "There is no property bound yet, you can bind properties to media library template or category(deprecated) first.",
-        )}
+        {t<string>("There is no property bound yet, you can bind properties in resource profile.")}
       </div>
     );
   }
 
-  const onValueChange = async (
-    propertyId: number,
-    isCustomProperty: boolean,
-    value?: string,
-  ) => {
+  const onValueChange = async (propertyId: number, isCustomProperty: boolean, value?: string) => {
     await BApi.resource.putResourcePropertyValue(resource.id, {
       value,
       isCustomProperty,
@@ -175,10 +148,7 @@ const Properties = (props: Props) => {
       Object.keys(propertyMap).forEach((idStr) => {
         const pId = parseInt(idStr, 10);
 
-        if (
-          restrictedPropertyIds != undefined &&
-          !restrictedPropertyIds.includes(pId)
-        ) {
+        if (restrictedPropertyIds != undefined && !restrictedPropertyIds.includes(pId)) {
           return;
         }
 
@@ -229,27 +199,10 @@ const Properties = (props: Props) => {
         valueScopePriority={valueScopePriority}
         values={propertyValues.values}
         onValueChange={(sdv, sbv) => {
-          const dv = deserializeStandardValue(
-            sdv ?? null,
-            property!.dbValueType!,
-          );
-          const bv = deserializeStandardValue(
-            sbv ?? null,
-            property!.bizValueType!,
-          );
+          const dv = deserializeStandardValue(sdv ?? null, property!.dbValueType!);
+          const bv = deserializeStandardValue(sbv ?? null, property!.bizValueType!);
 
-          log(
-            "OnValueChange",
-            "dv",
-            dv,
-            "bv",
-            bv,
-            "sdv",
-            sdv,
-            "sbv",
-            sbv,
-            property,
-          );
+          log("OnValueChange", "dv", dv, "bv", bv, "sdv", sdv, "sbv", sbv, property);
 
           let manualValue = propertyValues.values?.find(
             (v) => v.scope == PropertyValueScope.Manual,
@@ -266,11 +219,7 @@ const Properties = (props: Props) => {
           manualValue.value = dv;
           forceUpdate();
 
-          onValueChange(
-            property.id,
-            property!.pool == PropertyPool.Custom,
-            sdv,
-          );
+          onValueChange(property.id, property!.pool == PropertyPool.Custom, sdv);
         }}
         onValueScopePriorityChange={reload}
       />
@@ -299,11 +248,7 @@ const Properties = (props: Props) => {
           {renderContext
             .filter((x) => showInvisibleProperties || x.visible)
             .map((pCtx) => {
-              return (
-                <div className={"flex flex-col gap-2"}>
-                  {renderProperty(pCtx)}
-                </div>
-              );
+              return <div className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>;
             })}
         </div>
       )}
@@ -318,9 +263,7 @@ const Properties = (props: Props) => {
               setShowInvisibleProperties(true);
             }}
           >
-            {t<string>(
-              "Show properties not bound to media library templates or categories(deprecated)",
-            )}
+            {t<string>("Show properties not bound to resource profiles")}
           </Button>
         </div>
       )}

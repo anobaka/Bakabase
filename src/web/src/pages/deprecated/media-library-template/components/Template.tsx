@@ -319,91 +319,37 @@ const Template = ({
         </div>
       </Block>
       <Block
-        description={t<string>("You can configure which properties your resource includes")}
+        description={t<string>("This section is read-only. Use Resource Profile for new property configurations.")}
         leftIcon={<TbDatabase className={"text-large"} />}
-        rightIcon={<AiOutlineEdit className={"text-large"} />}
-        title={`3. ${t<string>("Properties")}`}
-        onRightIconPress={() => {
-          createPortal(PropertySelector, {
-            v2: true,
-            selection: template.properties,
-            pool: PropertyPool.Reserved | PropertyPool.Custom,
-            editable: true,
-            addable: true,
-            onSubmit: async (properties) => {
-              template.properties = properties.map((p) => ({
-                pool: p.pool,
-                id: p.id,
-                property: p,
-                valueLocators: [],
-              }));
-              await putTemplate(template);
-              forceUpdate();
-            },
-          });
-        }}
+        title={`3. ${t<string>("Properties")} (${t<string>("Deprecated")})`}
       >
-        <div className={"flex flex-wrap items-center gap-1"}>
-          {template.properties?.map((p, i) => {
-            return (
-              <>
-                <div key={`${p.pool}-${p.id}`} className={"flex items-center gap-2"}>
-                  <BriefProperty fields={["name", "pool", "type"]} property={p.property} />
-                  <div className={"flex items-center gap-1"}>
-                    {p.valueLocators?.map((v) => {
-                      return (
-                        <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
-                          <PathPropertyExtractorDemonstrator locator={v} />
-                        </Chip>
-                      );
-                    })}
+        <div className={"flex flex-col gap-2"}>
+          <Chip color={"warning"} size={"sm"} variant={"flat"}>
+            {t("Read-only - Use Resource Profile for new configurations")}
+          </Chip>
+          <div className={"flex flex-wrap items-center gap-1"}>
+            {template.properties?.map((p, i) => {
+              return (
+                <>
+                  <div key={`${p.pool}-${p.id}`} className={"flex items-center gap-2"}>
+                    <BriefProperty fields={["name", "pool", "type"]} property={p.property} />
+                    <div className={"flex items-center gap-1"}>
+                      {p.valueLocators?.map((v) => {
+                        return (
+                          <Chip radius={"sm"} size={"sm"} variant={"bordered"}>
+                            <PathPropertyExtractorDemonstrator locator={v} />
+                          </Chip>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <div className={"flex items-center gap-1"}>
-                    <Button
-                      isIconOnly
-                      size={"sm"}
-                      variant={"light"}
-                      onPress={() => {
-                        createPortal(PathPropertyExtractorModal, {
-                          locators: p.valueLocators,
-                          onSubmit: async (vls) => {
-                            p.valueLocators = vls;
-                            await putTemplate(template);
-                            forceUpdate();
-                          },
-                        });
-                      }}
-                    >
-                      <IoLocate className={"text-base"} />
-                    </Button>
-                    <Button
-                      isIconOnly
-                      color={"danger"}
-                      size={"sm"}
-                      variant={"light"}
-                      onPress={() => {
-                        createPortal(Modal, {
-                          defaultVisible: true,
-                          title: t<string>("Delete resource filter"),
-                          children: t<string>("Sure to delete?"),
-                          onOk: async () => {
-                            template.properties?.splice(i, 1);
-                            await putTemplate(template);
-                            forceUpdate();
-                          },
-                        });
-                      }}
-                    >
-                      <AiOutlineDelete className={"text-base"} />
-                    </Button>
-                  </div>
-                </div>
-                {i < template.properties!.length - 1 && (
-                  <div className="w-[1px] h-[12px] bg-divider" />
-                )}
-              </>
-            );
-          })}
+                  {i < template.properties!.length - 1 && (
+                    <div className="w-[1px] h-[12px] bg-divider" />
+                  )}
+                </>
+              );
+            })}
+          </div>
         </div>
       </Block>
       <Block
