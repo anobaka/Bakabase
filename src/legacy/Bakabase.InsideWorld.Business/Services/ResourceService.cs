@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Cover;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Helpers;
@@ -14,6 +15,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Search;
+using Bakabase.InsideWorld.Business.Components.Search.Index;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Models.Domain.Constants;
@@ -44,13 +46,17 @@ using DotNext.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Infrastructures.Components.Configurations.App;
+using StackExchange.Profiling;
 using static Bakabase.Abstractions.Models.View.ResourceDisplayNameViewModel;
 using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedPropertyValue;
 
@@ -65,11 +71,13 @@ namespace Bakabase.InsideWorld.Business.Services
         private IMediaLibraryV2Service MediaLibraryV2Service => GetRequiredService<IMediaLibraryV2Service>();
         private IResourceProfileService ResourceProfileService => GetRequiredService<IResourceProfileService>();
         private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
-        private IResourceProfileIndexService ResourceProfileIndexService => GetRequiredService<IResourceProfileIndexService>();
+        private IResourceDataChangeEventPublisher ResourceDataChangeEventPublisher => GetRequiredService<IResourceDataChangeEventPublisher>();
+        private IResourceSearchIndexService ResourceSearchIndexService => GetRequiredService<IResourceSearchIndexService>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
         private readonly IBOptionsManager<ResourceOptions> _optionsManager;
+        private readonly IBOptionsManager<AppOptions> _appOptionsManager;
         private readonly ICustomPropertyService _customPropertyService;
         private readonly ICustomPropertyValueService _customPropertyValueService;
         private readonly IAliasService _aliasService;
@@ -81,6 +89,17 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly ISystemPlayer _systemPlayer;
         private readonly IPropertyLocalizer _propertyLocalizer;
         private readonly LogService _logService;
+        private readonly IResourceLegacySearchService _legacySearchService;
+        private readonly IPrepareCacheTrigger _prepareCacheTrigger;
+
+        /// <summary>
+        /// Gets the ParallelOptions configured with the user's max parallelism setting.
+        /// </summary>
+        private ParallelOptions GetParallelOptions(CancellationToken ct = default) => new()
+        {
+            MaxDegreeOfParallelism = _appOptionsManager.Value.EffectiveMaxParallelism,
+            CancellationToken = ct
+        };
 
         public ResourceService(IServiceProvider serviceProvider, ISpecialTextService specialTextService,
             IAliasService aliasService, IMediaLibraryService mediaLibraryService, ICategoryService categoryService,
@@ -88,11 +107,14 @@ namespace Bakabase.InsideWorld.Business.Services
             ICustomPropertyService customPropertyService, ICustomPropertyValueService customPropertyValueService,
             IReservedPropertyValueService reservedPropertyValueService,
             ICoverDiscoverer coverDiscoverer, IBOptionsManager<ResourceOptions> optionsManager,
+            IBOptionsManager<AppOptions> appOptionsManager,
             IPropertyService propertyService,
             FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
             FullMemoryCacheResourceService<BakabaseDbContext, Abstractions.Models.Db.ResourceDbModel, int> orm,
             IFileManager fileManager, IPlayHistoryService playHistoryService,
-            ISystemPlayer systemPlayer, IPropertyLocalizer propertyLocalizer, LogService logService) : base(serviceProvider)
+            ISystemPlayer systemPlayer, IPropertyLocalizer propertyLocalizer, LogService logService,
+            IResourceLegacySearchService legacySearchService,
+            IPrepareCacheTrigger prepareCacheTrigger) : base(serviceProvider)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -104,6 +126,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _reservedPropertyValueService = reservedPropertyValueService;
             _coverDiscoverer = coverDiscoverer;
             _optionsManager = optionsManager;
+            _appOptionsManager = appOptionsManager;
             _propertyService = propertyService;
             _resourceCacheOrm = resourceCacheOrm;
             _fileManager = fileManager;
@@ -111,356 +134,166 @@ namespace Bakabase.InsideWorld.Business.Services
             _systemPlayer = systemPlayer;
             _propertyLocalizer = propertyLocalizer;
             _logService = logService;
+            _legacySearchService = legacySearchService;
+            _prepareCacheTrigger = prepareCacheTrigger;
             _orm = orm;
         }
 
         public BakabaseDbContext DbContext => _orm.DbContext;
 
-        public async Task DeleteByKeys(int[] ids, bool deleteFiles)
+        public async Task DeleteByKeys(int[] ids)
         {
-            if (deleteFiles)
-            {
-                var resources = await GetAllDbModels(d => ids.Contains(d.Id), false);
-                foreach (var r in resources)
-                {
-                    if (r.IsFile)
-                    {
-                        FileUtils.Delete(r.Path, true, true);
-                    }
-                    else
-                    {
-                        DirectoryUtils.Delete(r.Path, true, true);
-                    }
-                }
-            }
-
             await DeleteRelatedData(ids.ToList());
             await _orm.RemoveByKeys(ids);
 
-            // Invalidate resource profile index for deleted resources
-            ResourceProfileIndexService.InvalidateResources(ids);
+            // Publish resource removed event (triggers index updates via event subscription)
+            ResourceDataChangeEventPublisher.PublishResourcesRemoved(ids);
         }
 
         public async Task<List<Resource>> GetAll(
             Expression<Func<Abstractions.Models.Db.ResourceDbModel, bool>>? selector = null,
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
+            var sw = Stopwatch.StartNew();
             var data = await _orm.GetAll(selector, false);
+            _logger.LogInformation($"[GetAll Perf] _orm.GetAll: {sw.ElapsedMilliseconds}ms, Count: {data.Count}");
+
+            sw.Restart();
             var dtoList = await ToDomainModel(data.ToArray(), additionalItems);
+            _logger.LogInformation($"[GetAll Perf] ToDomainModel: {sw.ElapsedMilliseconds}ms");
+
             return dtoList;
         }
 
-        public async Task<SearchResponse<Resource>> Search(ResourceSearch model)
+        public async Task<SearchResponse<Resource>> Search(ResourceSearch model,
+            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All,
+            bool asNoTracking = true)
         {
-            var allResources = await GetAll();
-            var resourceMap = allResources.ToDictionary(d => d.Id, d => d);
+            var totalSw = Stopwatch.StartNew();
+            var sw = Stopwatch.StartNew();
 
-            var context = new ResourceSearchContext(allResources);
+            HashSet<int>? resourceIds = null;
 
-            await PreparePropertyDbValues(context, model.Group);
-            var resourceIds = SearchResourceIds(model.Group, context);
-
-            if (model.Tags?.Any() == true)
+            // Try to use inverted index first for property filters
+            if (model.Group != null && !model.Group.Disabled)
             {
-                resourceIds ??= allResources.Select(r => r.Id).ToHashSet();
-                resourceIds.RemoveWhere(r =>
-                    model.Tags.Any(t => resourceMap.GetValueOrDefault(r)?.Tags?.Contains(t) != true));
+                using (MiniProfiler.Current.Step("IndexLookup"))
+                {
+                    resourceIds = await ResourceSearchIndexService.SearchResourceIdsAsync(model.Group);
+                }
+                _logger.LogInformation(
+                    "[Search Perf] IndexLookup: {Ms}ms, Matched: {Count}",
+                    sw.ElapsedMilliseconds,
+                    resourceIds?.Count.ToString() ?? "all (fallback)");
+
+                // If index returned empty, no matches
+                if (resourceIds is { Count: 0 })
+                {
+                    _logger.LogInformation("[Search Perf] Total: {Ms}ms (no matches from index)", totalSw.ElapsedMilliseconds);
+                    return model.BuildResponse(new List<Resource>(), 0);
+                }
             }
 
-            Expression<Func<ResourceDbModel, bool>>? exp = resourceIds == null
-                ? null
-                : r => resourceIds.Contains(r.Id);
-
-            ResourceTag? tagsValue = model.Tags?.Any() == true ? (ResourceTag)model.Tags.Sum(x => (int)x) : null;
-            if (tagsValue.HasValue)
+            // If index is not ready or returned null, fallback to legacy search
+            if (resourceIds == null && model.Group != null && !model.Group.Disabled)
             {
-                exp = exp == null
-                    ? r => (r.Tags & tagsValue.Value) == tagsValue.Value
-                    : exp.And(r => (r.Tags & tagsValue.Value) == tagsValue.Value);
+                sw.Restart();
+                List<Resource> allResources;
+                using (MiniProfiler.Current.Step("GetAll (fallback)"))
+                {
+                    allResources = await GetAll();
+                }
+                _logger.LogInformation("[Search Perf] GetAll (fallback): {Ms}ms, Count: {Count}", sw.ElapsedMilliseconds, allResources.Count);
+
+                sw.Restart();
+                using (MiniProfiler.Current.Step("LegacySearch (fallback)"))
+                {
+                    resourceIds = await _legacySearchService.SearchAsync(allResources, model.Group, model.Tags?.ToList());
+                }
+                _logger.LogInformation("[Search Perf] LegacySearch (fallback): {Ms}ms, MatchedCount: {Count}",
+                    sw.ElapsedMilliseconds, resourceIds?.Count ?? allResources.Count);
             }
 
-            var ordersForSearch = model.Orders.BuildForSearch();
-            var resources = await _orm.Search(exp?.Compile(), model.PageIndex, model.PageSize,
-                ordersForSearch,
-                false);
-            var dtoList = await ToDomainModel(resources.Data!.ToArray(), ResourceAdditionalItem.All);
+            sw.Restart();
+            SearchResponse<ResourceDbModel> resources;
+            using (MiniProfiler.Current.Step("OrmSearch"))
+            {
+                Expression<Func<ResourceDbModel, bool>>? exp = resourceIds == null
+                    ? null
+                    : r => resourceIds.Contains(r.Id);
+
+                ResourceTag? tagsValue = model.Tags?.Any() == true ? (ResourceTag)model.Tags.Sum(x => (int)x) : null;
+                if (tagsValue.HasValue)
+                {
+                    exp = exp == null
+                        ? r => (r.Tags & tagsValue.Value) == tagsValue.Value
+                        : exp.And(r => (r.Tags & tagsValue.Value) == tagsValue.Value);
+                }
+
+                var ordersForSearch = model.Orders.BuildForSearch();
+                resources = await _orm.Search(exp?.Compile(), model.PageIndex, model.PageSize,
+                    ordersForSearch,
+                    asNoTracking);
+            }
+            _logger.LogInformation("[Search Perf] OrmSearch: {Ms}ms, ResultCount: {ResultCount}, TotalCount: {TotalCount}",
+                sw.ElapsedMilliseconds, resources.Data?.Count ?? 0, resources.TotalCount);
+
+            sw.Restart();
+            // Use the specified additionalItems parameter
+            var dtoList = await ToDomainModel(resources.Data!.ToArray(), additionalItems, asNoTracking);
+            _logger.LogInformation("[Search Perf] ToDomainModel: {Ms}ms", sw.ElapsedMilliseconds);
+
+            _logger.LogInformation("[Search Perf] Total: {Ms}ms", totalSw.ElapsedMilliseconds);
 
             return model.BuildResponse(dtoList, resources.TotalCount);
         }
 
         public async Task<int[]> GetAllIds(ResourceSearch model)
         {
-            var allResources = await GetAll();
-            var resourceMap = allResources.ToDictionary(d => d.Id, d => d);
+            HashSet<int>? resourceIds = null;
 
-            var context = new ResourceSearchContext(allResources);
-
-            await PreparePropertyDbValues(context, model.Group);
-            var resourceIds = SearchResourceIds(model.Group, context);
-
-            if (model.Tags?.Any() == true)
+            // Try to use inverted index first for property filters
+            if (model.Group != null && !model.Group.Disabled)
             {
-                resourceIds ??= allResources.Select(r => r.Id).ToHashSet();
-                resourceIds.RemoveWhere(r =>
-                    model.Tags.Any(t => resourceMap.GetValueOrDefault(r)?.Tags?.Contains(t) != true));
+                resourceIds = await ResourceSearchIndexService.SearchResourceIdsAsync(model.Group);
+
+                // If index returned empty, no matches
+                if (resourceIds is { Count: 0 })
+                {
+                    return [];
+                }
+            }
+
+            // If index is not ready or returned null, fallback to legacy search
+            if (resourceIds == null && model.Group != null && !model.Group.Disabled)
+            {
+                var allResources = await GetAll();
+                resourceIds = await _legacySearchService.SearchAsync(allResources, model.Group, model.Tags?.ToList());
             }
 
             // Apply ResourceTag filter
             ResourceTag? tagsValue = model.Tags?.Any() == true ? (ResourceTag)model.Tags.Sum(x => (int)x) : null;
             if (tagsValue.HasValue && resourceIds != null)
             {
-                var dbModels = await _orm.GetAll(r => resourceIds.Contains(r.Id), true);
+                var dbModels = await _orm.GetAll(r => resourceIds.Contains(r.Id), asNoTracking: false);
                 resourceIds = dbModels
                     .Where(r => (r.Tags & tagsValue.Value) == tagsValue.Value)
                     .Select(r => r.Id)
                     .ToHashSet();
             }
 
-            return resourceIds?.ToArray() ?? allResources.Select(r => r.Id).ToArray();
+            // If no filter applied, return all resource IDs
+            if (resourceIds == null)
+            {
+                return await GetAllResourceIds();
+            }
+
+            return resourceIds.ToArray();
         }
 
-        private async Task PreparePropertyDbValues(ResourceSearchContext context, ResourceSearchFilterGroup? group)
+        public async Task<int[]> GetAllResourceIds()
         {
-            if (group != null)
-            {
-                var filters = group.ExtractFilters() ?? [];
-                if (filters.Any() && context.ResourcesPool?.Any() == true)
-                {
-                    context.PropertyValueMap = new();
-                    var internalPropertyFilters = filters.Where(f => f.PropertyPool == PropertyPool.Internal).ToArray();
-                    if (internalPropertyFilters.Any())
-                    {
-                        // Pre-fetch MediaLibraryV2Multi matching resource IDs from filter values
-                        HashSet<int>? matchingMlResourceIds = null;
-                        Dictionary<int, List<string>>? resourceMediaLibraryMap = null;
-                        var mlFilters = filters.Where(f =>
-                            f is { PropertyPool: PropertyPool.Internal, PropertyId: (int)ResourceProperty.MediaLibraryV2Multi }).ToList();
-                        if (mlFilters.Any())
-                        {
-                            // Check if any filter uses IsNull/IsNotNull operation (needs all resource mappings)
-                            var hasNullCheckOperation = mlFilters.Any(f =>
-                                f.Operation == SearchOperation.IsNull || f.Operation == SearchOperation.IsNotNull);
-
-                            // Extract all media library IDs from filters' DbValue
-                            var allFilterMediaLibraryIds = new HashSet<int>();
-                            var mlAccessor = PropertySystem.Builtin.MediaLibraryV2Multi;
-                            foreach (var f in mlFilters)
-                            {
-                                var ids = mlAccessor.ParseDbValueAsLibraryIds(f.DbValue);
-                                if (ids != null) allFilterMediaLibraryIds.UnionWith(ids);
-                            }
-
-                            if (hasNullCheckOperation)
-                            {
-                                // For IsNull/IsNotNull operations, we need mappings for all resources in the pool
-                                var allResourceIds = context.ResourcesPool.Keys.ToArray();
-                                if (allResourceIds.Length > 0)
-                                {
-                                    var mappings =
-                                        await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(
-                                            allResourceIds);
-                                    resourceMediaLibraryMap = mappings.ToDictionary(
-                                        kv => kv.Key,
-                                        kv => kv.Value.Select(id => id.ToString()).ToList());
-                                }
-                            }
-                            else if (allFilterMediaLibraryIds.Count > 0)
-                            {
-                                // Get resource IDs that belong to those libraries (O(m) lookup where m = number of filter library IDs)
-                                matchingMlResourceIds =
-                                    await MediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryIds(
-                                        allFilterMediaLibraryIds);
-
-                                // Get detailed mappings only for resources in the pool that potentially match
-                                var relevantResourceIds = context.ResourcesPool.Keys
-                                    .Where(id => matchingMlResourceIds.Contains(id)).ToArray();
-                                if (relevantResourceIds.Length > 0)
-                                {
-                                    var mappings =
-                                        await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(
-                                            relevantResourceIds);
-                                    resourceMediaLibraryMap = mappings.ToDictionary(
-                                        kv => kv.Key,
-                                        kv => kv.Value.Select(id => id.ToString()).ToList());
-                                }
-                            }
-                        }
-
-                        var getValue = SpecificEnumUtils<InternalProperty>.Values.ToDictionary(d => d, d => d switch
-                        {
-                            InternalProperty.Filename => (Func<Resource, object?>) (r => r.FileName),
-                            InternalProperty.DirectoryPath => r => r.Directory,
-                            InternalProperty.CreatedAt => r => r.CreatedAt,
-                            InternalProperty.FileCreatedAt => r => r.FileCreatedAt,
-                            InternalProperty.FileModifiedAt => r => r.FileModifiedAt,
-                            InternalProperty.Category => r => r.CategoryId.ToString(),
-                            InternalProperty.MediaLibrary => r => new List<string> {r.MediaLibraryId.ToString()},
-                            InternalProperty.MediaLibraryV2 => r => (r.CategoryId == 0 ? r.MediaLibraryId : -1).ToString(),
-                            InternalProperty.MediaLibraryV2Multi => r => resourceMediaLibraryMap?.GetValueOrDefault(r.Id),
-                            InternalProperty.ParentResource => r => r.ParentId?.ToString(),
-                            InternalProperty.PlayedAt => r => r.PlayedAt,
-                            _ => null
-                        });
-                        context.PropertyValueMap[PropertyPool.Internal] = getValue.Where(x => x.Value != null)
-                            .ToDictionary(d => (int) d.Key,
-                                d => context.ResourcesPool.ToDictionary(x => x.Key,
-                                    x =>
-                                    {
-                                        var v = d.Value!(x.Value);
-                                        return v == null ? null : (List<object>?) [v];
-                                    }));
-
-                        var validData = context.PropertyValueMap[PropertyPool.Internal]
-                            ?.GetValueOrDefault((int)ResourceProperty.MediaLibraryV2Multi)?.Where(x => x.Value == null)
-                            .ToList();
-                    }
-
-                    if (filters.Any(f => f.PropertyPool == PropertyPool.Reserved))
-                    {
-                        var reservedValue =
-                            (await _reservedPropertyValueService.GetAll(x =>
-                                context.AllResourceIds.Contains(x.ResourceId)))
-                            .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
-                        var getValue = SpecificEnumUtils<ReservedProperty>.Values.ToDictionary(d => d, d => d switch
-                        {
-                            ReservedProperty.Rating => (Func<ReservedPropertyValue, object?>) (r => r.Rating),
-                            ReservedProperty.Introduction => r => r.Introduction,
-                            ReservedProperty.Cover => r => r.CoverPaths,
-                            _ => null
-                        });
-                        context.PropertyValueMap[PropertyPool.Reserved] = getValue.Where(x => x.Value != null)
-                            .ToDictionary(d => (int) d.Key,
-                                d => context.AllResourceIds.ToDictionary(x => x,
-                                    x => reservedValue.GetValueOrDefault(x)?.Select(y => d.Value!(y))
-                                        .Where(z => z != null).ToList() as List<object>));
-                    }
-
-                    if (filters.Any(f => f.PropertyPool == PropertyPool.Custom))
-                    {
-                        var propertyIds = filters.Where(x => x.PropertyPool == PropertyPool.Custom)
-                            .Select(d => d.PropertyId).ToHashSet();
-                        var cpValues =
-                            (await _customPropertyValueService.GetAll(x => propertyIds.Contains(x.PropertyId),
-                                CustomPropertyValueAdditionalItem.None, false)).GroupBy(d => d.PropertyId)
-                            .ToDictionary(d => d.Key,
-                                d => d.GroupBy(x => x.ResourceId)
-                                    .ToDictionary(a => a.Key,
-                                        List<object>? (a) => a.Select(b => b.Value).Where(c => c != null).ToList()!));
-                        context.PropertyValueMap[PropertyPool.Custom] = cpValues;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="group"></param>
-        /// <param name="context"></param>
-        /// <returns>
-        /// <para>Null: all resources are valid</para>
-        /// <para>Empty: all resources are invalid</para>
-        /// <para>Any: valid resource id list</para>
-        /// </returns>
-        private HashSet<int>? SearchResourceIds(ResourceSearchFilterGroup? group, ResourceSearchContext context)
-        {
-            if (group == null || group.Disabled)
-            {
-                return null;
-            }
-
-            var steps = new List<Func<HashSet<int>?>>();
-
-            if (group.Filters?.Any() == true)
-            {
-                foreach (var filter in group.Filters.Where(f => f.IsValid() && !f.Disabled))
-                {
-                    var propertyType = filter.Property.Type;
-                    var psh = PropertySystem.Property.TryGetSearchHandler(propertyType);
-                    if (psh != null)
-                    {
-                        steps.Add(() =>
-                        {
-                            return context.ResourceIdCandidates.Where(id =>
-                            {
-                                var values = context.PropertyValueMap?.GetValueOrDefault(filter.PropertyPool)
-                                    ?.GetValueOrDefault(filter.PropertyId)?.GetValueOrDefault(id);
-                                return values?.Any(v => psh.IsMatch(v, filter.Operation, filter.DbValue)) ??
-                                       psh.IsMatch(null, filter.Operation, filter.DbValue);
-                            }).ToHashSet();
-                        });
-                    }
-                }
-            }
-
-            if (group.Groups?.Any() == true)
-            {
-                foreach (var subGroup in group.Groups.Where(g => !g.Disabled))
-                {
-                    steps.Add(() => SearchResourceIds(subGroup, context));
-                }
-            }
-
-            HashSet<int>? result = null;
-
-            for (var index = 0; index < steps.Count; index++)
-            {
-                var step = steps[index];
-                var ids = step();
-
-                if (ids == null)
-                {
-                    if (group.Combinator == SearchCombinator.Or)
-                    {
-                        break;
-                    }
-                    else
-                    {
-                        // do nothing
-                    }
-                }
-                else
-                {
-                    if (!ids.Any())
-                    {
-                        if (group.Combinator == SearchCombinator.And)
-                        {
-                            return [];
-                        }
-                        else
-                        {
-                            if (index == steps.Count - 1 && result == null)
-                            {
-                                return [];
-                            }
-                            else
-                            {
-                                // do nothing
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (result == null)
-                        {
-                            result = ids;
-                        }
-                        else
-                        {
-                            if (group.Combinator == SearchCombinator.Or)
-                            {
-                                result.UnionWith(ids);
-                            }
-                            else
-                            {
-                                result.IntersectWith(ids);
-                            }
-                        }
-                    }
-                }
-            }
-
-            return result;
+            return (await _orm.GetAll(null, false)).Select(r => r.Id).ToArray();
         }
 
         public async Task<Resource?> Get(int id, ResourceAdditionalItem additionalItems)
@@ -482,308 +315,401 @@ namespace Bakabase.InsideWorld.Business.Services
             return dtoList;
         }
 
-        public async Task<Resource> ToDomainModel(ResourceDbModel resource,
-            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
+        private async Task<Resource> ToDomainModel(ResourceDbModel resource,
+            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None,
+            bool asNoTracking = true)
         {
-            return (await ToDomainModel([resource], additionalItems)).FirstOrDefault()!;
+            return (await ToDomainModel([resource], additionalItems, asNoTracking)).FirstOrDefault()!;
         }
 
-        public async Task<List<Resource>> ToDomainModel(ResourceDbModel[] resources,
-            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
+        private async Task<List<Resource>> ToDomainModel(ResourceDbModel[] resources,
+            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None,
+            bool asNoTracking = true)
         {
-            var doList = resources.Select(r => r.ToDomainModel()).ToList();
-            var resourceIds = resources.Select(a => a.Id).ToList();
-            foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values.OrderBy(x => x))
+            using (MiniProfiler.Current.Step($"ToDomainModel ({resources.Length} resources)"))
             {
-                if (additionalItems.HasFlag(i))
+                List<Resource> doList;
+                using (MiniProfiler.Current.Step("Basic conversion"))
                 {
-                    switch (i)
+                    doList = resources.Select(r => r.ToDomainModel()).ToList();
+                }
+
+                var resourceIds = resources.Select(a => a.Id).ToList();
+                foreach (var i in SpecificEnumUtils<ResourceAdditionalItem>.Values.OrderBy(x => x))
+                {
+                    if (additionalItems.HasFlag(i))
                     {
-                        case ResourceAdditionalItem.Properties:
+                        using (MiniProfiler.Current.Step($"AdditionalItem.{i}"))
                         {
-                            var reservedPropertyValueMap =
-                                (await _reservedPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId)))
-                                .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
-
-                            var reservedPropertyMap =
-                                (await _propertyService.GetProperties(PropertyPool.Reserved)).ToDictionary(d => d.Id,
-                                    d => d);
-
-                            foreach (var r in doList)
+                            switch (i)
                             {
-                                r.Properties ??= [];
-                                var reservedProperties =
-                                    r.Properties.GetOrAdd((int)PropertyPool.Reserved, _ => []);
-                                var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
-                                reservedProperties[(int)ResourceProperty.Rating] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Type ??
-                                    default,
-                                    StandardValueType.Decimal,
-                                    StandardValueType.Decimal,
-                                    dbReservedProperties?.Select(s =>
-                                        new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating,
-                                            s.Rating)).ToList(), true);
-                                reservedProperties[(int)ResourceProperty.Introduction] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Type ??
-                                    default,
-                                    StandardValueType.String,
-                                    StandardValueType.String,
-                                    dbReservedProperties?.Select(s =>
-                                        new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction,
-                                            s.Introduction)).ToList(), true);
-
-                                reservedProperties[(int)ResourceProperty.Cover] = new Resource.Property(
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Name,
-                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Type ??
-                                    default,
-                                    StandardValueType.ListString,
-                                    StandardValueType.ListString,
-                                    dbReservedProperties?.Select(s =>
+                                case ResourceAdditionalItem.Properties:
+                                {
+                                    using (MiniProfiler.Current.Step("Properties"))
                                     {
-                                        var coverPaths = s.CoverPaths;
-                                        return new Resource.Property.PropertyValue(s.Scope, coverPaths, coverPaths,
-                                            coverPaths);
-                                    }).ToList(), true);
-                            }
+                                        // 并行执行所有独立的数据查询 (使用 Parallel.ForEachAsync 以利用线程池并行执行内存缓存操作)
+                                        List<ReservedPropertyValue>? reservedPropertyValues = null;
+                                        List<Property>? reservedProperties = null;
+                                        List<CustomPropertyValue>? customPropertyValues = null;
+                                        Dictionary<int, ResourceProfilePropertyOptions>? resourceProfilePropertyOptionsResult = null;
+                                        List<CustomProperty>? customPropertiesResult = null;
 
-                            SortPropertyValuesByScope(doList);
-
-                            // ResourceId - PropertyId - Values
-                            var customPropertiesValuesMap = (await _customPropertyValueService.GetAll(
-                                x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None,
-                                true)).GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
-                                x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.ToList()));
-
-                            // Get custom property IDs from resource profiles
-                            var resourceProfilePropertyOptions = await ResourceProfileService.GetEffectivePropertyOptionsForResources(doList);
-
-                            var customPropertyMap =
-                                (await _customPropertyService.GetAll()).ToDictionary(d => d.Id, d => d);
-
-                            foreach (var r in doList)
-                            {
-                                r.Properties ??= [];
-                                var customProperties =
-                                    r.Properties.GetOrAdd((int)PropertyPool.Custom, _ => []);
-
-                                var propertyIds = new List<int>();
-                                // Get custom properties from resource profile
-                                if (resourceProfilePropertyOptions.TryGetValue(r.Id, out var propOptions))
-                                {
-                                    propertyIds.AddRange(propOptions.Properties?
-                                        .Where(p => p.Pool == PropertyPool.Custom)
-                                        .Select(p => p.Id) ?? []);
-                                }
-
-                                var boundPropertyIds = propertyIds.ToHashSet();
-
-                                propertyIds = propertyIds.Distinct().ToList();
-
-                                if (customPropertiesValuesMap.TryGetValue(r.Id, out var pValues))
-                                {
-                                    propertyIds.AddRange(pValues.Keys.Except(propertyIds).OrderBy(x =>
-                                        customPropertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue));
-                                }
-
-                                var propertyOrderMap = new Dictionary<int, int>();
-                                for (var j = 0; j < propertyIds.Count; j++)
-                                {
-                                    propertyOrderMap[propertyIds[j]] = j;
-                                }
-
-                                foreach (var pId in propertyIds)
-                                {
-                                    var property = customPropertyMap.GetValueOrDefault(pId);
-                                    if (property == null)
-                                    {
-                                        continue;
-                                    }
-
-                                    var values = pValues?.GetValueOrDefault(pId);
-                                    var visible = boundPropertyIds?.Contains(pId) == true;
-
-                                    var p = customProperties.GetOrAdd(pId,
-                                        _ => new Resource.Property(property.Name, property.Type,
-                                            property.Type.GetDbValueType(),
-                                            property.Type.GetBizValueType(), [], visible, propertyOrderMap[pId]));
-                                    if (values != null)
-                                    {
-                                        p.Values ??= [];
-                                        var cpd = PropertySystem.Property.TryGetDescriptor(property.Type);
-                                        foreach (var v in values)
+                                        using (MiniProfiler.Current.Step("Execute parallel queries"))
                                         {
-                                            var bizValue = cpd?.GetBizValue(property.ToProperty(), v.Value) ?? v.Value;
-                                            var pv = new Resource.Property.PropertyValue(v.Scope, v.Value, bizValue,
-                                                bizValue);
-                                            p.Values.Add(pv);
+                                            var parallelOptions = GetParallelOptions();
+
+                                            // Define all query operations
+                                            var queryOperations = new Func<Task>[]
+                                            {
+                                                async () => reservedPropertyValues = await _reservedPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId), asNoTracking),
+                                                async () => reservedProperties = await _propertyService.GetProperties(PropertyPool.Reserved),
+                                                async () => customPropertyValues = await _customPropertyValueService.GetAll(x => resourceIds.Contains(x.ResourceId), CustomPropertyValueAdditionalItem.None, asNoTracking),
+                                                async () => resourceProfilePropertyOptionsResult = await ResourceProfileService.GetEffectivePropertyOptionsForResources(doList),
+                                                async () => customPropertiesResult = await _customPropertyService.GetAll(null, CustomPropertyAdditionalItem.None, asNoTracking)
+                                            };
+
+                                            // Execute queries in parallel with limited parallelism
+                                            await Parallel.ForEachAsync(
+                                                queryOperations,
+                                                parallelOptions,
+                                                async (operation, ct) => await operation());
+                                        }
+
+                                        Dictionary<int, List<ReservedPropertyValue>> reservedPropertyValueMap;
+                                        Dictionary<int, Property> reservedPropertyMap;
+
+                                        using (MiniProfiler.Current.Step("Build reserved property maps"))
+                                        {
+                                            reservedPropertyValueMap = reservedPropertyValues!
+                                                .GroupBy(d => d.ResourceId).ToDictionary(d => d.Key, d => d.ToList());
+                                            reservedPropertyMap = reservedProperties!.ToDictionary(d => d.Id, d => d);
+                                        }
+
+                                        // 使用并行查询的结果
+                                        Dictionary<int, Dictionary<int, List<CustomPropertyValue>>> customPropertiesValuesMap;
+                                        Dictionary<int, ResourceProfilePropertyOptions> resourceProfilePropertyOptions;
+                                        Dictionary<int, CustomProperty> customPropertyMap;
+
+                                        // Pre-build descriptor and property caches to avoid repeated lookups in inner loop
+                                        Dictionary<int, IPropertyDescriptor?> descriptorCache;
+                                        Dictionary<int, Property> propertyCache;
+
+                                        using (MiniProfiler.Current.Step("Build custom property maps"))
+                                        {
+                                            customPropertiesValuesMap = customPropertyValues!
+                                                .GroupBy(x => x.ResourceId).ToDictionary(x => x.Key,
+                                                    x => x.GroupBy(y => y.PropertyId).ToDictionary(y => y.Key, y => y.ToList()));
+                                            resourceProfilePropertyOptions = resourceProfilePropertyOptionsResult!;
+                                            customPropertyMap = customPropertiesResult!.ToDictionary(d => d.Id, d => d);
+
+                                            // Cache descriptors and Property objects to avoid repeated lookups
+                                            descriptorCache = customPropertyMap.ToDictionary(
+                                                kv => kv.Key,
+                                                kv => PropertySystem.Property.TryGetDescriptor(kv.Value.Type));
+                                            propertyCache = customPropertyMap.ToDictionary(
+                                                kv => kv.Key,
+                                                kv => kv.Value.ToProperty());
+                                        }
+
+                                        // Process all properties in parallel (each resource is independent)
+                                        using (MiniProfiler.Current.Step("Process properties (parallel)"))
+                                        {
+                                            var parallelOptions = GetParallelOptions();
+                                            // Pre-fetch scope priority map to avoid repeated calls in parallel tasks
+                                            var scopePriorityMap = GetScopePriorityMap();
+
+                                            await Parallel.ForEachAsync(doList, parallelOptions, (r, ct) =>
+                                            {
+                                                // Initialize Properties dictionary for this resource
+                                                r.Properties ??= new Dictionary<int, Dictionary<int, Resource.Property>>(2);
+
+                                                // Process reserved properties
+                                                var reservedProperties = r.Properties.GetOrAdd((int)PropertyPool.Reserved, _ => []);
+                                                var dbReservedProperties = reservedPropertyValueMap.GetValueOrDefault(r.Id);
+
+                                                reservedProperties[(int)ResourceProperty.Rating] = new Resource.Property(
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Name,
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Rating)?.Type ?? default,
+                                                    StandardValueType.Decimal,
+                                                    StandardValueType.Decimal,
+                                                    dbReservedProperties?.Select(s =>
+                                                        new Resource.Property.PropertyValue(s.Scope, s.Rating, s.Rating, s.Rating)).ToList(),
+                                                    true);
+
+                                                reservedProperties[(int)ResourceProperty.Introduction] = new Resource.Property(
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Name,
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Introduction)?.Type ?? default,
+                                                    StandardValueType.String,
+                                                    StandardValueType.String,
+                                                    dbReservedProperties?.Select(s =>
+                                                        new Resource.Property.PropertyValue(s.Scope, s.Introduction, s.Introduction, s.Introduction)).ToList(),
+                                                    true);
+
+                                                reservedProperties[(int)ResourceProperty.Cover] = new Resource.Property(
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Name,
+                                                    reservedPropertyMap.GetValueOrDefault((int)ResourceProperty.Cover)?.Type ?? default,
+                                                    StandardValueType.ListString,
+                                                    StandardValueType.ListString,
+                                                    dbReservedProperties?.Select(s =>
+                                                    {
+                                                        var coverPaths = s.CoverPaths;
+                                                        return new Resource.Property.PropertyValue(s.Scope, coverPaths, coverPaths, coverPaths);
+                                                    }).ToList(),
+                                                    true);
+
+                                                // Process custom properties
+                                                var customProperties = r.Properties.GetOrAdd((int)PropertyPool.Custom, _ => []);
+
+                                                var propertyIds = new List<int>();
+                                                if (resourceProfilePropertyOptions.TryGetValue(r.Id, out var propOptions))
+                                                {
+                                                    propertyIds.AddRange(propOptions.Properties?
+                                                        .Where(p => p.Pool == PropertyPool.Custom)
+                                                        .Select(p => p.Id) ?? []);
+                                                }
+
+                                                var boundPropertyIds = propertyIds.ToHashSet();
+                                                propertyIds = propertyIds.Distinct().ToList();
+
+                                                customPropertiesValuesMap.TryGetValue(r.Id, out var pValues);
+                                                if (pValues != null)
+                                                {
+                                                    propertyIds.AddRange(pValues.Keys.Except(propertyIds).OrderBy(x =>
+                                                        customPropertyMap.GetValueOrDefault(x)?.Order ?? int.MaxValue));
+                                                }
+
+                                                var propertyOrderMap = new Dictionary<int, int>(propertyIds.Count);
+                                                for (var j = 0; j < propertyIds.Count; j++)
+                                                {
+                                                    propertyOrderMap[propertyIds[j]] = j;
+                                                }
+
+                                                foreach (var pId in propertyIds)
+                                                {
+                                                    var property = customPropertyMap.GetValueOrDefault(pId);
+                                                    if (property == null) continue;
+
+                                                    var values = pValues?.GetValueOrDefault(pId);
+                                                    var visible = boundPropertyIds.Contains(pId);
+
+                                                    var p = customProperties.GetOrAdd(pId,
+                                                        _ => new Resource.Property(property.Name, property.Type,
+                                                            property.Type.GetDbValueType(),
+                                                            property.Type.GetBizValueType(), [], visible, propertyOrderMap[pId]));
+
+                                                    if (values != null)
+                                                    {
+                                                        p.Values ??= new List<Resource.Property.PropertyValue>(values.Count);
+                                                        var cpd = descriptorCache.GetValueOrDefault(pId);
+                                                        var cachedProperty = propertyCache.GetValueOrDefault(pId);
+                                                        foreach (var v in values)
+                                                        {
+                                                            var bizValue = (cpd != null && cachedProperty != null)
+                                                                ? cpd.GetBizValue(cachedProperty, v.Value)
+                                                                : v.Value;
+                                                            p.Values.Add(new Resource.Property.PropertyValue(v.Scope, v.Value, bizValue, bizValue));
+                                                        }
+                                                    }
+                                                }
+
+                                                // Sort property values by scope for this resource
+                                                SortPropertyValuesByScope(r, scopePriorityMap);
+
+                                                return ValueTask.CompletedTask;
+                                            });
                                         }
                                     }
+
+                                    break;
                                 }
-                            }
-
-                            SortPropertyValuesByScope(doList);
-                            break;
-                        }
-                        case ResourceAdditionalItem.Alias:
-                            break;
-                        case ResourceAdditionalItem.None:
-                            break;
-                        case ResourceAdditionalItem.Category:
-                        {
-                            var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
-                            var categoryMap = (await _categoryService.GetAll(x => categoryIds.Contains(x.Id),
-                                CategoryAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
-                            foreach (var r in doList)
-                            {
-                                r.Category = categoryMap.GetValueOrDefault(r.CategoryId);
-                            }
-
-                            break;
-                        }
-                        case ResourceAdditionalItem.HasChildren:
-                        {
-                            //var children = await _orm.GetAll(a =>
-                            //    a.ParentId.HasValue && resourceIds.Contains(a.ParentId.Value));
-                            //var parentIds = children.Select(a => a.ParentId!.Value).ToHashSet();
-                            //foreach (var r in doList)
-                            //{
-                            //    r.HasChildren = parentIds.Contains(r.Id);
-                            //}
-
-                            break;
-                        }
-                        case ResourceAdditionalItem.DisplayName:
-                        {
-                            var wrappers = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
-                                .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
-
-                            // Batch get effective name templates to avoid N+1 query problem
-                            var templateMap = await ResourceProfileService.GetEffectiveNameTemplatesForResources(resourceIds.ToArray());
-
-                            foreach (var resource in doList)
-                            {
-                                if (templateMap.TryGetValue(resource.Id, out var tpl) && !string.IsNullOrEmpty(tpl))
+                                case ResourceAdditionalItem.Alias:
+                                    break;
+                                case ResourceAdditionalItem.None:
+                                    break;
+                                case ResourceAdditionalItem.Category:
                                 {
-                                    resource.DisplayName = BuildDisplayNameForResource(resource, tpl, wrappers);
-                                }
-                            }
-
-                            break;
-                        }
-                        case ResourceAdditionalItem.All:
-                            break;
-                        case ResourceAdditionalItem.MediaLibraryName:
-                        {
-                            // Use MediaLibraryResourceMappingService with index for efficient O(1) lookups
-                            var mlResourceIds = doList.Select(d => d.Id).ToArray();
-                            var resourceMediaLibraryIdsMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(mlResourceIds);
-
-                            var allMediaLibraryIds = resourceMediaLibraryIdsMap.Values.SelectMany(x => x).Distinct().ToHashSet();
-                            var mediaLibraryV2Map = allMediaLibraryIds.Count > 0
-                                ? (await MediaLibraryV2Service.GetByKeys(allMediaLibraryIds.ToArray())).ToDictionary(
-                                    d => d.Id, d => d)
-                                : new Dictionary<int, MediaLibraryV2>();
-
-                            foreach (var resource in doList)
-                            {
-                                var mlIds = resourceMediaLibraryIdsMap.GetValueOrDefault(resource.Id);
-                                if (mlIds is { Count: > 0 })
-                                {
-                                    var libraries = mlIds
-                                        .Select(id => mediaLibraryV2Map.GetValueOrDefault(id))
-                                        .Where(ml => ml != null)
-                                        .Select(ml => new Resource.MediaLibraryInfo(ml!.Id, ml.Name, ml.Color))
-                                        .ToList();
-
-                                    resource.MediaLibraries = libraries;
-
-                                    // Keep backward compatibility for deprecated fields
-                                    var firstLibrary = libraries.FirstOrDefault();
-                                    if (firstLibrary != null)
+                                    var categoryIds = resources.Select(r => r.CategoryId).Distinct().ToArray();
+                                    var categoryMap = (await _categoryService.GetAll(x => categoryIds.Contains(x.Id),
+                                        CategoryAdditionalItem.None)).ToDictionary(d => d.Id, d => d);
+                                    foreach (var r in doList)
                                     {
-                                        resource.MediaLibraryName = firstLibrary.Name;
-                                        resource.MediaLibraryColor = firstLibrary.Color;
+                                        r.Category = categoryMap.GetValueOrDefault(r.CategoryId);
                                     }
+
+                                    break;
                                 }
-                            }
+                                case ResourceAdditionalItem.HasChildren:
+                                {
+                                    break;
+                                }
+                                case ResourceAdditionalItem.DisplayName:
+                                {
+                                    using (MiniProfiler.Current.Step("DisplayName"))
+                                    {
+                                        var wrappers = (await _specialTextService.GetAll(x => x.Type == SpecialTextType.Wrapper))
+                                            .Select(x => (Left: x.Value1, Right: x.Value2!)).ToArray();
 
-                            break;
-                        }
-                        case ResourceAdditionalItem.Cache:
-                        {
-                            var cacheMap =
-                                (await _resourceCacheOrm.GetAll(x => resourceIds.Contains(x.ResourceId))).ToDictionary(
-                                    d => d.ResourceId, d => d);
-                            foreach (var r in doList)
-                            {
-                                var cache = cacheMap.GetValueOrDefault(r.Id);
-                                r.Cache = cache?.ToDomainModel();
-                            }
+                                        // Batch get effective name templates to avoid N+1 query problem
+                                        Dictionary<int, string?> templateMap;
+                                        using (MiniProfiler.Current.Step("GetEffectiveNameTemplatesForResources"))
+                                        {
+                                            templateMap = await ResourceProfileService.GetEffectiveNameTemplatesForResources(resourceIds.ToArray());
+                                        }
 
-                            break;
+                                        // Pre-cache builtin property name mappings to avoid repeated _propertyLocalizer calls
+                                        var builtinPropertyKeyMap = SpecificEnumUtils<BuiltinPropertyForDisplayName>.Values
+                                            .ToDictionary(
+                                                b => b,
+                                                b => $"{{{_propertyLocalizer.BuiltinPropertyName((ResourceProperty)b)}}}");
+
+                                        using (MiniProfiler.Current.Step("BuildDisplayName foreach"))
+                                        {
+                                            foreach (var resource in doList)
+                                            {
+                                                if (templateMap.TryGetValue(resource.Id, out var tpl) && !string.IsNullOrEmpty(tpl))
+                                                {
+                                                    resource.DisplayName = BuildDisplayNameForResourceOptimized(resource, tpl, wrappers, builtinPropertyKeyMap);
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                case ResourceAdditionalItem.All:
+                                    break;
+                                case ResourceAdditionalItem.MediaLibraryName:
+                                {
+                                    // Use MediaLibraryResourceMappingService with index for efficient O(1) lookups
+                                    var mlResourceIds = doList.Select(d => d.Id).ToArray();
+                                    var resourceMediaLibraryIdsMap = await MediaLibraryResourceMappingService.GetMediaLibraryIdsByResourceIds(mlResourceIds);
+
+                                    var allMediaLibraryIds = resourceMediaLibraryIdsMap.Values.SelectMany(x => x).Distinct().ToHashSet();
+                                    var mediaLibraryV2Map = allMediaLibraryIds.Count > 0
+                                        ? (await MediaLibraryV2Service.GetByKeys(allMediaLibraryIds.ToArray())).ToDictionary(
+                                            d => d.Id, d => d)
+                                        : new Dictionary<int, MediaLibraryV2>();
+
+                                    foreach (var resource in doList)
+                                    {
+                                        var mlIds = resourceMediaLibraryIdsMap.GetValueOrDefault(resource.Id);
+                                        if (mlIds is { Count: > 0 })
+                                        {
+                                            var libraries = mlIds
+                                                .Select(id => mediaLibraryV2Map.GetValueOrDefault(id))
+                                                .Where(ml => ml != null)
+                                                .Select(ml => new Resource.MediaLibraryInfo(ml!.Id, ml.Name, ml.Color))
+                                                .ToList();
+
+                                            resource.MediaLibraries = libraries;
+
+                                            // Keep backward compatibility for deprecated fields
+                                            var firstLibrary = libraries.FirstOrDefault();
+                                            if (firstLibrary != null)
+                                            {
+                                                resource.MediaLibraryName = firstLibrary.Name;
+                                                resource.MediaLibraryColor = firstLibrary.Color;
+                                            }
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                case ResourceAdditionalItem.Cache:
+                                {
+                                    var cacheMap =
+                                        (await _resourceCacheOrm.GetAll(x => resourceIds.Contains(x.ResourceId))).ToDictionary(
+                                            d => d.ResourceId, d => d);
+                                    foreach (var r in doList)
+                                    {
+                                        var cache = cacheMap.GetValueOrDefault(r.Id);
+                                        r.Cache = cache?.ToDomainModel();
+                                    }
+
+                                    break;
+                                }
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
                         }
-                        default:
-                            throw new ArgumentOutOfRangeException();
                     }
                 }
-            }
 
-            // Set cover: reserved(manually) > reserved(other scope) > custom(manually) > custom(other scope)
-            foreach (var @do in doList)
-            {
-                var coverPropertyValue = @do.Properties?.GetValueOrDefault((int)PropertyPool.Reserved)
-                    ?.GetValueOrDefault((int)ReservedProperty.Cover)?.Values?.OrderBy(x => x.Scope)
-                    .Select(x => x.Value as List<string>)
-                    .OfType<List<string>>()
-                    .Where(x => x.Any())
-                    .ToList();
-                if (coverPropertyValue != null && coverPropertyValue.Any())
+                // Set cover: reserved(manually) > reserved(other scope) > custom(manually) > custom(other scope)
+                using (MiniProfiler.Current.Step("Set cover"))
                 {
-                    @do.CoverPaths = coverPropertyValue.First();
-                    continue;
+                    foreach (var @do in doList)
+                    {
+                        var coverPropertyValue = @do.Properties?.GetValueOrDefault((int)PropertyPool.Reserved)
+                            ?.GetValueOrDefault((int)ReservedProperty.Cover)?.Values?.OrderBy(x => x.Scope)
+                            .Select(x => x.Value as List<string>)
+                            .OfType<List<string>>()
+                            .Where(x => x.Any())
+                            .ToList();
+                        if (coverPropertyValue != null && coverPropertyValue.Any())
+                        {
+                            @do.CoverPaths = coverPropertyValue.First();
+                            continue;
+                        }
+
+                        var candidateCustomAttachmentPropertyValues =
+                            (@do.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.ToList() ?? []).Select(x => x.Value)
+                            .Where(x =>
+                                x.Type == PropertyType.Attachment && x.Values?.Any() == true).ToList();
+                        var coverPathsCandidates = candidateCustomAttachmentPropertyValues
+                            .Select(x => x.Values!.FirstOrDefault(a => a.IsManuallySet))
+                            .Concat(candidateCustomAttachmentPropertyValues.SelectMany(x =>
+                                x.Values!.Where(a => !a.IsManuallySet)))
+                            .Select(x => x?.Value)
+                            .OfType<List<string>>()
+                            .Where(a => a.Any())
+                            .ToList();
+                        @do.CoverPaths = coverPathsCandidates.FirstOrDefault();
+                    }
                 }
 
-                var candidateCustomAttachmentPropertyValues =
-                    (@do.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.ToList() ?? []).Select(x => x.Value)
-                    .Where(x =>
-                        x.Type == PropertyType.Attachment && x.Values?.Any() == true).ToList();
-                var coverPathsCandidates = candidateCustomAttachmentPropertyValues
-                    .Select(x => x.Values!.FirstOrDefault(a => a.IsManuallySet))
-                    .Concat(candidateCustomAttachmentPropertyValues.SelectMany(x =>
-                        x.Values!.Where(a => !a.IsManuallySet)))
-                    .Select(x => x?.Value)
-                    .OfType<List<string>>()
-                    .Where(a => a.Any())
-                    .ToList();
-                @do.CoverPaths = coverPathsCandidates.FirstOrDefault();
-            }
+                if (additionalItems.HasFlag(ResourceAdditionalItem.Alias))
+                {
+                    using (MiniProfiler.Current.Step("ReplaceWithPreferredAlias"))
+                    {
+                        await ReplaceWithPreferredAlias(doList);
+                    }
+                }
 
-            if (additionalItems.HasFlag(ResourceAdditionalItem.Alias))
-            {
-                await ReplaceWithPreferredAlias(doList);
+                return doList;
             }
-
-            return doList;
         }
+
+        /// <summary>
+        /// Gets the scope priority map for sorting property values.
+        /// </summary>
+        private Dictionary<int, int> GetScopePriorityMap() =>
+            _optionsManager.Value.PropertyValueScopePriority.Cast<int>()
+                .Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
 
         private void SortPropertyValuesByScope(List<Resource> resources)
         {
-            var scopePriorityMap = _optionsManager.Value.PropertyValueScopePriority.Cast<int>()
-                .Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
+            var scopePriorityMap = GetScopePriorityMap();
             foreach (var resource in resources)
             {
-                if (resource.Properties != null)
+                SortPropertyValuesByScope(resource, scopePriorityMap);
+            }
+        }
+
+        private void SortPropertyValuesByScope(Resource resource) =>
+            SortPropertyValuesByScope(resource, GetScopePriorityMap());
+
+        private static void SortPropertyValuesByScope(Resource resource, Dictionary<int, int> scopePriorityMap)
+        {
+            if (resource.Properties != null)
+            {
+                foreach (var (_, ps) in resource.Properties)
                 {
-                    foreach (var (_, ps) in resource.Properties)
+                    foreach (var p in ps.Values)
                     {
-                        foreach (var p in ps.Values)
-                        {
-                            p.Values?.Sort((a, b) =>
-                                scopePriorityMap.GetValueOrDefault(a.Scope, int.MaxValue) -
-                                scopePriorityMap.GetValueOrDefault(b.Scope, int.MaxValue));
-                        }
+                        p.Values?.Sort((a, b) =>
+                            scopePriorityMap.GetValueOrDefault(a.Scope, int.MaxValue) -
+                            scopePriorityMap.GetValueOrDefault(b.Scope, int.MaxValue));
                     }
                 }
             }
@@ -833,9 +759,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 // Custom properties
                 await _customPropertyValueService.SaveByResources(resources);
 
-                // Invalidate resource profile index for changed resources
+                // Publish resource data changed event (triggers index updates via event subscription)
                 var allChangedIds = dbResources.Select(r => r.Id).ToArray();
-                ResourceProfileIndexService.InvalidateResources(allChangedIds);
+                ResourceDataChangeEventPublisher.PublishResourcesChanged(allChangedIds);
 
                 return [new DataChangeViewModel("Resource", newResources.Count, existedResources.Count, 0)];
             }
@@ -930,51 +856,95 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct)
         {
-            var resource = await _orm.GetByKey(id, false);
-            // TODO: Get CoverSelectionOrder from ResourceProfile when implemented
-            var coverSelectOrder = CoverSelectOrder.FilenameAscending;
-            var coverDiscoverResult = await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false, ct);
-
-            string? path = null;
-            if (coverDiscoverResult != null)
+            using (MiniProfiler.Current.Step("DiscoverAndCacheCover"))
             {
-                try
+                ResourceDbModel resource;
+                using (MiniProfiler.Current.Step("GetResource"))
                 {
-                    var image = await coverDiscoverResult.LoadByImageSharp(ct);
-                    var pathWithoutExt =
-                        Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
-                            .StandardizePath()!;
-                    path = await image.SaveAsThumbnail(pathWithoutExt, ct);
+                    resource = await _orm.GetByKey(id, false);
                 }
-                catch (Exception e)
-                {
-                    _logger.LogWarning(e, $"An error occurred during saving image as cover");
-                }
-            }
 
-            var cache = await _resourceCacheOrm.GetByKey(id, true);
-            var isNewCache = cache == null;
-            cache ??= new ResourceCacheDbModel { ResourceId = id };
-            var serializedCoverPaths =
-                new ListStringValueBuilder(path.IsNullOrEmpty() ? null : [path]).Value!.SerializeAsStandardValue(
-                    StandardValueType.ListString);
-            if (cache.CoverPaths != serializedCoverPaths ||
-                !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
-            {
-                cache.CoverPaths = serializedCoverPaths;
-                cache.CachedTypes |= ResourceCacheType.Covers;
-                if (isNewCache)
-                {
-                    await _resourceCacheOrm.Add(cache);
-                }
-                else
-                {
-                    await _resourceCacheOrm.Update(cache);
-                }
-            }
+                // TODO: Get CoverSelectionOrder from ResourceProfile when implemented
+                var coverSelectOrder = CoverSelectOrder.FilenameAscending;
 
-            // Use cached cover path instead
-            return path;
+                CoverDiscoveryResult? coverDiscoverResult;
+                using (MiniProfiler.Current.Step("CoverDiscoverer.Discover"))
+                {
+                    coverDiscoverResult = await _coverDiscoverer.Discover(resource.Path, coverSelectOrder, false, ct);
+                }
+
+                string? path = null;
+                if (coverDiscoverResult != null)
+                {
+                    try
+                    {
+                        Image<Argb32> image;
+                        using (MiniProfiler.Current.Step("LoadByImageSharp"))
+                        {
+                            image = await coverDiscoverResult.LoadByImageSharp(ct);
+                        }
+
+                        string pathWithoutExt;
+                        using (MiniProfiler.Current.Step("BuildThumbnailPath"))
+                        {
+                            pathWithoutExt = Path.Combine(_fileManager.BuildAbsolutePath("cache", "cover"), resource.Id.ToString())
+                                .StandardizePath()!;
+                        }
+
+                        using (MiniProfiler.Current.Step("SaveAsThumbnail"))
+                        {
+                            path = await image.SaveAsThumbnail(pathWithoutExt, ct);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogWarning(e, $"An error occurred during saving image as cover");
+                    }
+                }
+
+                using (MiniProfiler.Current.Step("UpdateCache"))
+                {
+                    ResourceCacheDbModel? cache;
+                    using (MiniProfiler.Current.Step("GetCacheByKey"))
+                    {
+                        cache = await _resourceCacheOrm.GetByKey(id, true);
+                    }
+
+                    var isNewCache = cache == null;
+                    cache ??= new ResourceCacheDbModel { ResourceId = id };
+
+                    string? serializedCoverPaths;
+                    using (MiniProfiler.Current.Step("SerializeCoverPaths"))
+                    {
+                        serializedCoverPaths = new ListStringValueBuilder(path.IsNullOrEmpty() ? null : [path]).Value!.SerializeAsStandardValue(
+                            StandardValueType.ListString);
+                    }
+
+                    if (cache.CoverPaths != serializedCoverPaths ||
+                        !cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
+                    {
+                        cache.CoverPaths = serializedCoverPaths;
+                        cache.CachedTypes |= ResourceCacheType.Covers;
+                        if (isNewCache)
+                        {
+                            using (MiniProfiler.Current.Step("AddCache"))
+                            {
+                                await _resourceCacheOrm.Add(cache);
+                            }
+                        }
+                        else
+                        {
+                            using (MiniProfiler.Current.Step("UpdateCacheRecord"))
+                            {
+                                await _resourceCacheOrm.Update(cache);
+                            }
+                        }
+                    }
+                }
+
+                // Use cached cover path instead
+                return path;
+            }
         }
 
         public async Task<string[]> GetPlayableFiles(int id, CancellationToken ct)
@@ -1227,7 +1197,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await AddOrPutRange(changedResources);
-            await DeleteByKeys(discardResourceIds.ToArray(), false);
+            await DeleteByKeys(discardResourceIds.ToArray());
 
             // Handle media library mappings for keepMediaLibrary
             foreach (var item in model.Items)
@@ -1361,6 +1331,7 @@ namespace Bakabase.InsideWorld.Business.Services
             {
                 x.CachedTypes &= ~type;
             });
+            _prepareCacheTrigger.RequestTrigger();
         }
 
         public async Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type)
@@ -1370,6 +1341,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId),
                 x => { x.CachedTypes &= ~type; });
+            _prepareCacheTrigger.RequestTrigger();
+        }
+
+        public async Task DeleteResourceCacheByResourceIdsAndCacheType(IEnumerable<int> resourceIds, ResourceCacheType type)
+        {
+            var ids = resourceIds.ToHashSet();
+            if (ids.Count == 0) return;
+
+            await _resourceCacheOrm.UpdateAll(c => ids.Contains(c.ResourceId),
+                x => { x.CachedTypes &= ~type; });
+            _prepareCacheTrigger.RequestTrigger();
         }
 
         public async Task DeleteUnassociatedResourceCacheByCacheType(ResourceCacheType type)
@@ -1391,11 +1373,13 @@ namespace Bakabase.InsideWorld.Business.Services
 
             await _resourceCacheOrm.UpdateAll(c => unassociatedResourceIds.Contains(c.ResourceId),
                 x => { x.CachedTypes &= ~type; });
+            _prepareCacheTrigger.RequestTrigger();
         }
 
         public async Task MarkAsNotPlayed(int id)
         {
             await _orm.UpdateByKey(id, r => r.PlayedAt = null);
+            ResourceDataChangeEventPublisher.PublishResourceChanged(id);
         }
 
         public async Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
@@ -1971,10 +1955,11 @@ namespace Bakabase.InsideWorld.Business.Services
             }
 
             await _orm.UpdateRange(resourcesToBeChanged);
+            ResourceDataChangeEventPublisher.PublishResourcesChanged(resourcesToBeChanged.Select(r => r.Id));
 
             return BaseResponseBuilder.Ok;
         }
-        
+
         public async Task Pin(int id, bool pin)
         {
             await _orm.UpdateByKey(id, r =>
@@ -1988,6 +1973,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     r.Tags &= ~ResourceTag.Pinned;
                 }
             });
+            ResourceDataChangeEventPublisher.PublishResourceChanged(id);
         }
 
         private async Task DeleteRelatedData(List<int> ids)
@@ -2093,6 +2079,49 @@ namespace Bakabase.InsideWorld.Business.Services
                 ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
 
             return segments;
+        }
+
+        /// <summary>
+        /// Optimized version that accepts pre-cached builtin property key map
+        /// </summary>
+        private string BuildDisplayNameForResourceOptimized(
+            Resource resource,
+            string template,
+            (string Left, string Right)[] wrappers,
+            Dictionary<BuiltinPropertyForDisplayName, string> builtinPropertyKeyMap)
+        {
+            var matcherPropertyMap = resource.Properties?.GetValueOrDefault((int)PropertyPool.Custom)?.Values
+                .GroupBy(d => d.Name)
+                .ToDictionary(d => $"{{{d.Key}}}", d => d.First()) ?? [];
+
+            var replacements = new Dictionary<string, string?>(matcherPropertyMap.Count + builtinPropertyKeyMap.Count);
+
+            foreach (var kv in matcherPropertyMap)
+            {
+                var value = kv.Value.Values?.FirstOrDefault()?.BizValue;
+                if (value != null)
+                {
+                    var stdValueHandler = StandardValueSystem.GetHandler(kv.Value.BizValueType);
+                    replacements[kv.Key] = stdValueHandler.BuildDisplayValue(value);
+                }
+                else
+                {
+                    replacements[kv.Key] = null;
+                }
+            }
+
+            foreach (var (b, key) in builtinPropertyKeyMap)
+            {
+                replacements[key] = b switch
+                {
+                    BuiltinPropertyForDisplayName.Filename => resource.FileName,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+            }
+
+            var segments = ResourceUtils.SplitDisplayNameTemplateIntoSegments(template, replacements, wrappers);
+            var displayName = string.Join("", segments.Select(a => a.Text));
+            return displayName.IsNullOrEmpty() ? resource.FileName : displayName;
         }
     }
 }

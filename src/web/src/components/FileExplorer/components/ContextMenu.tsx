@@ -11,6 +11,7 @@ import {
   DeleteColumnOutlined,
   DeleteOutlined,
   DownOutlined,
+  FolderAddOutlined,
   FolderOpenOutlined,
   GroupOutlined,
   LoginOutlined,
@@ -36,6 +37,7 @@ import FileNameModifierModal from "@/components/FileNameModifierModal";
 import { toast } from "@/components/bakaui";
 import FolderSelector from "@/components/FolderSelector";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
+import CreateDirectoryModal from "./CreateDirectoryModal";
 
 type Props = {
   selectedEntries: Entry[];
@@ -85,6 +87,19 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
         label: t<string>("Enter directory"),
         onClick: () => {
           onChangeWorkingDirectory(selectedEntries[0].path);
+        },
+      });
+    }
+
+    // Create new folder - only for single directory selection
+    if (capabilities?.includes("create-directory") && selectedEntries.length === 1 && selectedEntries[0].isDirectoryOrDrive) {
+      items.push({
+        icon: <FolderAddOutlined className={"text-base"} />,
+        label: t<string>("Create new folder"),
+        onClick: () => {
+          createPortal(CreateDirectoryModal, {
+            parentPath: selectedEntries[0].path,
+          });
         },
       });
     }
@@ -294,6 +309,19 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
       },
     });
 
+  }
+
+  // Create new folder in current working directory when no entries selected
+  if (selectedEntries.length === 0 && capabilities?.includes("create-directory") && root?.path) {
+    items.push({
+      icon: <FolderAddOutlined className={"text-base"} />,
+      label: t<string>("Create new folder"),
+      onClick: () => {
+        createPortal(CreateDirectoryModal, {
+          parentPath: root.path,
+        });
+      },
+    });
   }
 
   return (

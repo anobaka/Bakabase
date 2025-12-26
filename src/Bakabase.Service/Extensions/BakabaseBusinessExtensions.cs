@@ -1,4 +1,5 @@
-﻿using Bakabase.Abstractions.Components.Tracing;
+﻿using Bakabase.Abstractions.Components.Events;
+using Bakabase.Abstractions.Components.Tracing;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -24,6 +25,8 @@ using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileS
 using Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableFileSelector.Infrastructures;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
+using Bakabase.InsideWorld.Business.Components.Search;
+using Bakabase.InsideWorld.Business.Components.Search.Index;
 using Bakabase.InsideWorld.Business.Components.Tampermonkey;
 using Bakabase.InsideWorld.Business.Components.ThirdParty;
 using Bakabase.InsideWorld.Business.Models.Db;
@@ -118,6 +121,7 @@ namespace Bakabase.Service.Extensions
             services.AddReservedProperty();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ResourceDbModel, int>>();
+            services.AddScoped<IResourceLegacySearchService, ResourceLegacySearchService>();
             services.AddScoped<IResourceService, ResourceService>();
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SpecialText, int>>();
             services.AddScoped<SpecialTextService>();
@@ -165,6 +169,21 @@ namespace Bakabase.Service.Extensions
             // ResourceProfile index service (singleton for in-memory caching)
             services.AddSingleton<ResourceProfileIndexService>();
             services.AddSingleton<IResourceProfileIndexService>(sp => sp.GetRequiredService<ResourceProfileIndexService>());
+
+            // Resource data change event hub (singleton for event pub/sub)
+            services.AddSingleton<ResourceDataChangeEventHub>();
+            services.AddSingleton<IResourceDataChangeEvent>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+            services.AddSingleton<IResourceDataChangeEventPublisher>(sp => sp.GetRequiredService<ResourceDataChangeEventHub>());
+
+            // Resource search index service (singleton for in-memory caching)
+            // Note: Index is built via BTask "SearchIndex" task, not IHostedService
+            // Note: Depends on IResourceDataChangeEvent for event-driven index updates
+            services.AddSingleton<ResourceSearchIndexService>();
+            services.AddSingleton<IResourceSearchIndexService>(sp => sp.GetRequiredService<ResourceSearchIndexService>());
+
+            // Temporary: Resource index notification service (notifies frontend about index updates)
+            // TODO: Remove when no longer needed
+            services.AddHostedService<ResourceIndexNotificationService>();
 
             #endregion
 

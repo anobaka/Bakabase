@@ -8,6 +8,8 @@ import {
   FileNameModifierPosition,
   fileNameModifierPositions,
 } from "@/sdk/constants";
+import { getFieldRequirements } from "../validation";
+
 const PositionType = FileNameModifierPosition;
 const PositionTypeOptions = fileNameModifierPositions.map((opt) => ({
   label: "FileNameModifier.PositionType." + FileNameModifierPosition[opt.value],
@@ -18,18 +20,13 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const handleChangeField = (key: string, value: any) =>
     onChange({ ...operation, [key]: value });
 
+  const requirements = getFieldRequirements(operation);
+
   return (
     <>
       <Input
         className="w-[240px]"
-        isRequired={
-          !operation.text &&
-          !(
-            operation.position === PositionType.BeforeText ||
-            (operation.position === PositionType.AfterText &&
-              operation.targetText)
-          )
-        }
+        isRequired={requirements.text}
         label={t<string>("FileNameModifier.Label.Text")}
         placeholder={t<string>("FileNameModifier.Placeholder.Text")}
         size="sm"
@@ -40,7 +37,7 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
         operation.position === PositionType.AfterText) && (
         <Input
           className="w-[240px]"
-          isRequired={!operation.targetText}
+          isRequired={requirements.targetText}
           label={t<string>("FileNameModifier.Label.TargetText")}
           placeholder={t<string>("FileNameModifier.Placeholder.TargetText")}
           size="sm"
@@ -54,7 +51,8 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
           label: t<string>(opt.label),
           value: opt.value,
         }))}
-        isRequired={!operation.position}
+        disallowEmptySelection
+        isRequired={requirements.position}
         label={t<string>("FileNameModifier.Label.PositionType")}
         placeholder={t<string>("FileNameModifier.Placeholder.PositionType")}
         selectedKeys={[operation.position?.toString() || ""]}
@@ -70,7 +68,7 @@ const InsertOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
       {operation.position === PositionType.AtPosition && (
         <NumberInput
           className="w-[120px]"
-          isRequired={true}
+          isRequired={requirements.positionIndex}
           label={t<string>("FileNameModifier.Label.PositionIndex")}
           placeholder={t<string>("FileNameModifier.Placeholder.PositionIndex")}
           size="sm"

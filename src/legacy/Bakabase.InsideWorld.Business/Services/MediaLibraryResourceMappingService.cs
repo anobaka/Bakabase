@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
@@ -11,15 +12,18 @@ using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Orm;
 using Bootstrap.Components.Orm.Extensions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
 public class MediaLibraryResourceMappingService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int> orm,
     MediaLibraryResourceMappingIndexService indexService,
+    IResourceDataChangeEventPublisher eventPublisher,
     IServiceProvider serviceProvider
 ) : ScopedService(serviceProvider), IMediaLibraryResourceMappingService where TDbContext : DbContext
 {
+
     public async Task<List<MediaLibraryResourceMapping>> GetAll(
         Expression<Func<MediaLibraryResourceMappingDbModel, bool>>? filter = null)
     {
@@ -78,6 +82,9 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         await orm.Add(dbModel);
         await indexService.AddAsync(dbModel);
 
+        // Publish resource data changed event
+        eventPublisher.PublishResourceChanged(mapping.ResourceId);
+
         orm.DbContext.Detach(dbModel);
         mapping.Id = dbModel.Id;
         return mapping;
@@ -86,7 +93,8 @@ public class MediaLibraryResourceMappingService<TDbContext>(
     public async Task AddRange(IEnumerable<MediaLibraryResourceMapping> mappings)
     {
         var now = DateTime.UtcNow;
-        var dbModels = mappings.Select(m =>
+        var mappingsList = mappings.ToList();
+        var dbModels = mappingsList.Select(m =>
         {
             m.CreateDt = now;
             return m.ToDbModel();
@@ -94,6 +102,10 @@ public class MediaLibraryResourceMappingService<TDbContext>(
 
         await orm.AddRange(dbModels);
         await indexService.AddRangeAsync(dbModels);
+
+        // Publish resource data changed event
+        var affectedResourceIds = mappingsList.Select(m => m.ResourceId).Distinct();
+        eventPublisher.PublishResourcesChanged(affectedResourceIds);
     }
 
     public async Task Delete(int id)
@@ -103,6 +115,9 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         {
             await orm.RemoveByKey(id);
             await indexService.RemoveAsync(dbModel);
+
+            // Publish resource data changed event
+            eventPublisher.PublishResourceChanged(dbModel.ResourceId);
         }
     }
 
@@ -113,6 +128,9 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         {
             await orm.RemoveRange(dbModels);
             await indexService.RemoveRangeAsync(dbModels);
+
+            // Publish resource data changed event
+            eventPublisher.PublishResourceChanged(resourceId);
         }
     }
 
@@ -123,6 +141,10 @@ public class MediaLibraryResourceMappingService<TDbContext>(
         {
             await orm.RemoveRange(dbModels);
             await indexService.RemoveRangeAsync(dbModels);
+
+            // Publish resource data changed event
+            var affectedResourceIds = dbModels.Select(m => m.ResourceId).Distinct();
+            eventPublisher.PublishResourcesChanged(affectedResourceIds);
         }
     }
 

@@ -21,7 +21,8 @@ export type Capability =
   | "delete-all-same-name"
   | "group"
   | "play"
-  | "play-first-file";
+  | "play-first-file"
+  | "create-directory";
 
 export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefinition> = {
   select: {
@@ -73,5 +74,9 @@ export const FileSystemTreeEntryCapabilityMap: Record<Capability, CapabilityDefi
   "play-first-file": {
     shortcut: { key: " ", nameI18nKey: "Shortcut.Space" },
     nameI18NKey: "Capability.play-first-file",
+  },
+  "create-directory": {
+    shortcut: { key: "n", nameI18nKey: "Shortcut.N" },
+    nameI18NKey: "Capability.create-directory",
   },
 };

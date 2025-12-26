@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
@@ -26,7 +26,8 @@ namespace Bakabase.Modules.Property.Services
             IServiceProvider serviceProvider,
             IPropertyLocalizer localizer,
             IStandardValueLocalizer standardValueLocalizer,
-            IStandardValueService standardValueService)
+            IStandardValueService standardValueService,
+            IResourceDataChangeEventPublisher eventPublisher)
         : FullMemoryCacheResourceService<TDbContext, CustomPropertyValueDbModel, int>(
             serviceProvider), ICustomPropertyValueService where TDbContext : DbContext
     {
@@ -114,11 +115,7 @@ namespace Bakabase.Modules.Property.Services
                 customPropertyValues.ToDictionary(v => v.ToDbModel(propertyMap[v.PropertyId].Type.GetDbValueType())!,
                     v => v);
             await AddRange(dbModelsMap.Keys.ToList());
-            // foreach (var (k, v) in dbModelsMap)
-            // {
-            //     v.Id = k.Id;
-            //     DbValueCache[v.Id] = v.Value;
-            // }
+            eventPublisher.PublishResourcesChanged(customPropertyValues.Select(v => v.ResourceId));
 
             return BaseResponseBuilder.Ok;
         }
@@ -132,10 +129,7 @@ namespace Bakabase.Modules.Property.Services
                 .Select(v => v.ToDbModel(propertyMap[v.PropertyId].Type.GetDbValueType())!)
                 .ToList();
             await UpdateRange(dbModels);
-            // foreach (var v in customPropertyValues)
-            // {
-            //     DbValueCache[v.Id] = v.Value;
-            // }
+            eventPublisher.PublishResourcesChanged(customPropertyValues.Select(v => v.ResourceId));
 
             return BaseResponseBuilder.Ok;
         }
@@ -149,8 +143,7 @@ namespace Bakabase.Modules.Property.Services
                 return rsp;
             }
 
-            // var property = await CustomPropertyService.GetByKey(resource.PropertyId);
-            // DbValueCache[rsp.Data!.Id] = rsp.Data.Value?.DeserializeAsStandardValue(property.DbValueType);
+            eventPublisher.PublishResourceChanged(resource.ResourceId);
 
             return rsp;
         }
@@ -163,10 +156,31 @@ namespace Bakabase.Modules.Property.Services
                 return rsp;
             }
 
-            // var property = await CustomPropertyService.GetByKey(resource.PropertyId);
-            // DbValueCache[resource.Id] = resource.Value?.DeserializeAsStandardValue(property.DbValueType);
+            eventPublisher.PublishResourceChanged(resource.ResourceId);
 
             return rsp;
+        }
+
+        public async Task<BaseResponse> AddDbModelRange(IEnumerable<CustomPropertyValueDbModel> resources)
+        {
+            var list = resources.ToList();
+            if (list.Count == 0) return BaseResponseBuilder.Ok;
+
+            await AddRange(list);
+            eventPublisher.PublishResourcesChanged(list.Select(r => r.ResourceId).Distinct());
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> UpdateDbModelRange(IEnumerable<CustomPropertyValueDbModel> resources)
+        {
+            var list = resources.ToList();
+            if (list.Count == 0) return BaseResponseBuilder.Ok;
+
+            await UpdateRange(list);
+            eventPublisher.PublishResourcesChanged(list.Select(r => r.ResourceId).Distinct());
+
+            return BaseResponseBuilder.Ok;
         }
 
         /// <summary>
@@ -255,18 +269,14 @@ namespace Bakabase.Modules.Property.Services
             var added = await AddRange(valuesToAdd);
             await UpdateRange(valuesToUpdate);
 
-            // if (added.Data != null)
-            // {
-            //     for (var i = 0; i < added.Data.Count; i++)
-            //     {
-            //         DbValueCache[added.Data[i].Id] = newValuesDbValuesMap[valuesToAdd[i]];
-            //     }
-            // }
-            //
-            // foreach (var t in valuesToUpdate)
-            // {
-            //     DbValueCache[t.Id] = existedValuesDbValuesMap[t];
-            // }
+            var changedResourceIds = valuesToAdd.Select(v => v.ResourceId)
+                .Concat(valuesToUpdate.Select(v => v.ResourceId))
+                .Distinct()
+                .ToList();
+            if (changedResourceIds.Count > 0)
+            {
+                eventPublisher.PublishResourcesChanged(changedResourceIds);
+            }
         }
 
         public async Task<(CustomPropertyValue Value, bool PropertyChanged)?> CreateTransient(object? bizValue,

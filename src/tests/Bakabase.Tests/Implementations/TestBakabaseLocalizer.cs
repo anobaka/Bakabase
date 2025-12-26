@@ -41,6 +41,7 @@ public class TestBakabaseLocalizer : IBakabaseLocalizer
     public string? BTask_MessageOnInterruption(string key) => $"BTask_MessageOnInterruption_{key}";
     public string? MessageOnInterruption_MoveFiles() => "MessageOnInterruption_MoveFiles";
     public string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames) => "BTask_FailedToRunTaskDueToConflict";
+    public string BTask_FailedToRunTaskDueToDependency(string incomingTaskName, params string[] dependencyTaskNames) => $"Task {incomingTaskName} waiting for: {string.Join(", ", dependencyTaskNames)}";
     public string BTask_FailedToRunTaskDueToUnknownTaskId(string id) => $"BTask_FailedToRunTaskDueToUnknownTaskId_{id}";
     public string BTask_FailedToRunTaskDueToIdExisting(string id, string name) => "BTask_FailedToRunTaskDueToIdExisting";
     public string BTask_CanNotReplaceAnActiveTask(string id, string name) => "BTask_CanNotReplaceAnActiveTask";

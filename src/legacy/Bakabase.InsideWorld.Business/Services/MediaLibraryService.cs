@@ -816,8 +816,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case MediaLibrarySyncStep.SaveResources:
                     {
                         var resourcesToBeSaved = changedResources.Values.ToList();
-                        resourcesToBeSaved.AddRange(fileNotFoundResources.Where(ir =>
-                            ir.Tags.Add(ResourceTag.PathDoesNotExist)));
+                        // PathDoesNotExist tag is obsolete, no longer marking resources with it
 
                         var newResources = resourcesToBeSaved.Where(a => a.Id == 0).ToArray();
                         await ResourceService.AddOrPutRange(resourcesToBeSaved);
@@ -853,7 +852,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 onProcessChange(_localizer.DeletingInvalidResources(toBeDeletedResourceIds.Count));
 
-                                await ResourceService.DeleteByKeys(toBeDeletedResourceIds.ToArray(), false);
+                                await ResourceService.DeleteByKeys(toBeDeletedResourceIds.ToArray());
                             }
 
                             // ResourceId - EnhancerIds

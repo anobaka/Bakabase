@@ -1,8 +1,6 @@
 "use client";
 
-import type { Resource as ResourceModel } from "@/core/models/Resource";
-
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Drawer,
@@ -11,7 +9,6 @@ import {
   DrawerHeader,
 } from "@heroui/react";
 
-import BApi from "@/sdk/BApi";
 import { Pagination, Spinner } from "@/components/bakaui";
 import Resource from "@/components/Resource";
 import {
@@ -21,6 +18,7 @@ import {
   SearchCombinator,
   SearchOperation,
 } from "@/sdk/constants";
+import { useResourceSearch } from "@/hooks/useResourceSearch";
 
 interface IProps {
   isOpen: boolean;
@@ -31,18 +29,14 @@ const PAGE_SIZE = 100;
 
 const RecentlyPlayedDrawer = ({ isOpen, onClose }: IProps) => {
   const { t } = useTranslation();
-
-  const [resources, setResources] = useState<ResourceModel[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { resources, loading, response, search } = useResourceSearch();
   const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
-  const loadResources = useCallback(async (pageIndex: number) => {
-    setLoading(true);
-    try {
-      const response = await BApi.resource.searchResources({
+  useEffect(() => {
+    if (isOpen) {
+      search({
         pageSize: PAGE_SIZE,
-        page: pageIndex,
+        page,
         orders: [
           {
             property: ResourceSearchSortableProperty.PlayedAt,
@@ -62,22 +56,10 @@ const RecentlyPlayedDrawer = ({ isOpen, onClose }: IProps) => {
           disabled: false,
         },
       });
-
-      if (!response.code) {
-        setResources((response.data ?? []) as ResourceModel[]);
-        setTotalCount(response.totalCount ?? 0);
-      }
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [isOpen, page]);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadResources(page);
-    }
-  }, [isOpen, page, loadResources]);
-
+  const totalCount = response?.totalCount ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   return (

@@ -12,6 +12,12 @@ public interface IResourceProfileIndexService
     Task<IReadOnlyList<int>> GetMatchingProfileIds(int resourceId);
 
     /// <summary>
+    /// Get profile IDs matching multiple resources (batch operation to avoid N+1)
+    /// Returns a dictionary mapping resourceId to profileIds (sorted by priority, highest first)
+    /// </summary>
+    Task<Dictionary<int, IReadOnlyList<int>>> GetMatchingProfileIdsForResources(IEnumerable<int> resourceIds);
+
+    /// <summary>
     /// Get resource IDs matching a profile
     /// </summary>
     Task<IReadOnlySet<int>> GetMatchingResourceIds(int profileId);

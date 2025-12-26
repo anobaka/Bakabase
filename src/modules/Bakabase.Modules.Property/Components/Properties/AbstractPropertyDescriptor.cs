@@ -13,42 +13,13 @@ namespace Bakabase.Modules.Property.Components.Properties
 {
     public abstract class
         AbstractPropertyDescriptor<TDbValue, TBizValue> : IPropertyDescriptor,
-        IPropertySearchHandler
+        IPropertySearchHandler,
+        IPropertyIndexProvider
     {
         public StandardValueType DbValueType => PropertySystem.Property.GetDbValueType(Type);
         public StandardValueType BizValueType => PropertySystem.Property.GetBizValueType(Type);
 
         public abstract PropertyType Type { get; }
-        // public Bakabase.Abstractions.Models.Domain.Property ToDomainModel(CustomPropertyDbModel customProperty)
-        // {
-        //     return new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Custom, customProperty.Id, customProperty.Type, customProperty.Name, )
-        //     {
-        //         Categories = null,
-        //         CreatedAt = customProperty.CreatedAt,
-        //         Id = customProperty.Id,
-        //         Name = customProperty.Name,
-        //         Type = Type,
-        //         DbValueType = DbValueType,
-        //         BizValueType = BizValueType
-        //     };
-        // }
-        //
-        // public CustomPropertyValue ToDomainModel(CustomPropertyValueDbModel value)
-        // {
-        //     var innerValue = value.Value?.DeserializeAsStandardValue(DbValueType);
-        //
-        //     var dto = new TPropertyValue
-        //     {
-        //         Id = value.Id,
-        //         Property = null,
-        //         PropertyId = value.PropertyId,
-        //         ResourceId = value.ResourceId,
-        //         TypedValue = (TDbValue?) innerValue,
-        //         Scope = value.Scope
-        //     };
-        //
-        //     return dto;
-        // }
 
         protected virtual void EnsureOptionsType(object? options)
         {
@@ -78,17 +49,6 @@ namespace Bakabase.Modules.Property.Components.Properties
 
         public virtual object? InitializeOptions() => null;
         public virtual Type? OptionsType => null;
-
-        // public CustomPropertyValue InitializePropertyValue(object? dbValue, int resourceId, int propertyId, int scope)
-        // {
-        //     return new TPropertyValue
-        //     {
-        //         PropertyId = propertyId,
-        //         Scope = scope,
-        //         ResourceId = resourceId,
-        //         Value = dbValue is TDbValue? ? dbValue : default,
-        //     };
-        // }
 
         public bool IsMatch(object? dbValue, SearchOperation operation, object? filterValue)
         {
@@ -160,6 +120,51 @@ namespace Bakabase.Modules.Property.Components.Properties
 
         protected virtual (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(
             Bakabase.Abstractions.Models.Domain.Property property, string keyword) => null;
+
+        #region IPropertyIndexProvider
+
+        /// <summary>
+        /// 生成索引条目，默认实现将值转换为字符串作为索引键
+        /// 子类可以覆盖此方法提供特定的索引生成逻辑
+        /// </summary>
+        public virtual IEnumerable<PropertyIndexEntry> GenerateIndexEntries(
+            Bakabase.Abstractions.Models.Domain.Property property,
+            object? dbValue)
+        {
+            if (dbValue == null) yield break;
+
+            if (dbValue is TDbValue typedValue)
+            {
+                foreach (var entry in GenerateIndexEntriesInternal(property, typedValue))
+                {
+                    yield return entry;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 生成索引条目的内部实现，默认将值转换为单个字符串键
+        /// </summary>
+        protected virtual IEnumerable<PropertyIndexEntry> GenerateIndexEntriesInternal(
+            Bakabase.Abstractions.Models.Domain.Property property,
+            TDbValue dbValue)
+        {
+            var key = dbValue?.ToString();
+            if (!string.IsNullOrEmpty(key))
+            {
+                // 对于数值和日期类型，同时提供范围值
+                IComparable? rangeValue = dbValue is IComparable c && IsNumericOrDateTime(dbValue) ? c : null;
+                yield return new PropertyIndexEntry(key, rangeValue);
+            }
+        }
+
+        private static bool IsNumericOrDateTime(object value)
+        {
+            return value is int or long or float or double or decimal
+                or System.DateTime or System.DateTimeOffset or System.TimeSpan;
+        }
+
+        #endregion
     }
 
     public abstract class
@@ -167,18 +172,6 @@ namespace Bakabase.Modules.Property.Components.Properties
         TBizValue>
         where TPropertyOptions : class, new()
     {
-        // public override CustomProperty ToDomainModel(CustomPropertyDbModel customProperty)
-        // {
-        //     var p = base.ToDomainModel(customProperty);
-        //     if (p is TProperty sp)
-        //     {
-        //         sp.Options = customProperty.Options?.DeserializeAsCustomPropertyOptions<TPropertyOptions>() ??
-        //                      InitializeOptionsInternal();
-        //     }
-        //
-        //     return p;
-        // }
-
         protected sealed override void EnsureOptionsType(object? options)
         {
             if (options != null && options is not TPropertyOptions)

@@ -430,7 +430,7 @@ public class PathMarkSyncTests
             var resources = await resourceService.GetAll();
             foreach (var r in resources)
             {
-                await resourceService.DeleteByKeys(new[] { r.Id }, false);
+                await resourceService.DeleteByKeys(new[] { r.Id });
             }
         }
 
@@ -478,7 +478,7 @@ public class PathMarkSyncTests
 
         // 清理
         await pathMarkService.HardDelete(layer0Mark.Id);
-        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id }, false);
+        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id });
 
         // Layer 1: 匹配第一层子目录 (Series_A, Series_B, Library_Main)
         var layer1Mark = await pathMarkService.Add(new PathMark
@@ -501,7 +501,7 @@ public class PathMarkSyncTests
 
         // 清理
         await pathMarkService.HardDelete(layer1Mark.Id);
-        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id }, false);
+        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id });
 
         // Layer 2: 匹配第二层子目录 (Episode01, Episode02, Special x 3)
         var layer2Mark = await pathMarkService.Add(new PathMark
@@ -555,7 +555,7 @@ public class PathMarkSyncTests
 
         // 清理
         await pathMarkService.HardDelete(mp4Mark.Id);
-        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id }, false);
+        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id });
 
         // Regex: 匹配 Episode 开头的目录
         var episodeMark = await pathMarkService.Add(new PathMark
@@ -608,7 +608,7 @@ public class PathMarkSyncTests
 
         // 清理
         await pathMarkService.HardDelete(dirMark.Id);
-        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id }, false);
+        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id });
 
         // FsType = File: 只匹配文件
         var fileMark = await pathMarkService.Add(new PathMark
@@ -847,7 +847,7 @@ public class PathMarkSyncTests
 
         // 清理
         await pathMarkService.HardDelete(matchedOnlyMark.Id);
-        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id }, false);
+        foreach (var r in resources) await resourceService.DeleteByKeys(new[] { r.Id });
 
         // MatchedAndSubdirectories: 匹配指定层级及其子目录
         var matchedAndSubMark = await pathMarkService.Add(new PathMark
@@ -900,7 +900,7 @@ public class PathMarkSyncTests
             var existingMarks = await pathMarkService.GetAll();
             foreach (var m in existingMarks) await pathMarkService.HardDelete(m.Id);
             var existingResources = await resourceService.GetAll();
-            foreach (var r in existingResources) await resourceService.DeleteByKeys(new[] { r.Id }, false);
+            foreach (var r in existingResources) await resourceService.DeleteByKeys(new[] { r.Id });
 
             // 添加随机 Resource mark
             var (resourceMark, _) = PathMarkGenerator.GenerateRandomResourceMark(

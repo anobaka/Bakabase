@@ -58,6 +58,24 @@ export const AppNotificationSeverityLabel: Record<AppNotificationSeverity, strin
   [AppNotificationSeverity.Error]: 'Error'
 };
 
+export enum BTaskDependencyFailurePolicy {
+  Wait = 1,
+  Skip = 2,
+  Fail = 3
+}
+
+export const bTaskDependencyFailurePolicies = [
+  { label: 'Wait', value: BTaskDependencyFailurePolicy.Wait },
+  { label: 'Skip', value: BTaskDependencyFailurePolicy.Skip },
+  { label: 'Fail', value: BTaskDependencyFailurePolicy.Fail }
+] as const;
+
+export const BTaskDependencyFailurePolicyLabel: Record<BTaskDependencyFailurePolicy, string> = {
+  [BTaskDependencyFailurePolicy.Wait]: 'Wait',
+  [BTaskDependencyFailurePolicy.Skip]: 'Skip',
+  [BTaskDependencyFailurePolicy.Fail]: 'Fail'
+};
+
 export enum BTaskLevel {
   Default = 1,
   Critical = 2
@@ -1626,21 +1644,21 @@ export const MediaLibraryAdditionalItemLabel: Record<MediaLibraryAdditionalItem,
 
 export enum ResourceAdditionalItem {
   None = 0,
+  Properties = 32,
   Alias = 64,
   Category = 128,
-  Properties = 160,
-  DisplayName = 416,
+  DisplayName = 288,
   HasChildren = 512,
   MediaLibraryName = 2048,
   Cache = 4096,
-  All = 7136
+  All = 7008
 }
 
 export const resourceAdditionalItems = [
   { label: 'None', value: ResourceAdditionalItem.None },
+  { label: 'Properties', value: ResourceAdditionalItem.Properties },
   { label: 'Alias', value: ResourceAdditionalItem.Alias },
   { label: 'Category', value: ResourceAdditionalItem.Category },
-  { label: 'Properties', value: ResourceAdditionalItem.Properties },
   { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
   { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
@@ -1650,9 +1668,9 @@ export const resourceAdditionalItems = [
 
 export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string> = {
   [ResourceAdditionalItem.None]: 'None',
+  [ResourceAdditionalItem.Properties]: 'Properties',
   [ResourceAdditionalItem.Alias]: 'Alias',
   [ResourceAdditionalItem.Category]: 'Category',
-  [ResourceAdditionalItem.Properties]: 'Properties',
   [ResourceAdditionalItem.DisplayName]: 'DisplayName',
   [ResourceAdditionalItem.HasChildren]: 'HasChildren',
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
@@ -2588,6 +2606,21 @@ export const tampermonkeyScripts = [
 export const TampermonkeyScriptLabel: Record<TampermonkeyScript, string> = {
   [TampermonkeyScript.SoulPlus]: 'SoulPlus',
   [TampermonkeyScript.Bakabase]: 'Bakabase'
+};
+
+export enum IndexOperationType {
+  Update = 0,
+  Remove = 1
+}
+
+export const indexOperationTypes = [
+  { label: 'Update', value: IndexOperationType.Update },
+  { label: 'Remove', value: IndexOperationType.Remove }
+] as const;
+
+export const IndexOperationTypeLabel: Record<IndexOperationType, string> = {
+  [IndexOperationType.Update]: 'Update',
+  [IndexOperationType.Remove]: 'Remove'
 };
 
 export enum PostParserSource {

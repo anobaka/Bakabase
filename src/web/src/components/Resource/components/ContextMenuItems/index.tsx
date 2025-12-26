@@ -1,7 +1,6 @@
 "use client";
 
 import { MenuItem } from "@szhsin/react-menu";
-import React from "react";
 import { useTranslation } from "react-i18next";
 import {
   ApiOutlined,
@@ -13,7 +12,7 @@ import {
 import MediaLibraryMultiSelector from "@/components/MediaLibraryMultiSelector";
 import { ResourceAdditionalItem } from "@/sdk/constants";
 import ResourceTransferModal from "@/components/ResourceTransferModal";
-import { Checkbox, Modal } from "@/components/bakaui";
+import { Modal } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import BApi from "@/sdk/BApi";
@@ -110,8 +109,6 @@ const ContextMenuItems = ({
       <MenuItem
         onClick={() => {
           log("inner", "click");
-          let deleteFiles = false;
-
           createPortal(Modal, {
             defaultVisible: true,
             title: t<string>("Delete {{count}} resources", {
@@ -119,32 +116,20 @@ const ContextMenuItems = ({
             }),
             children: (
               <div>
-                <div>
-                  <Checkbox
-                    // color={'warning'}
-                    // size={'sm'}
-                    onValueChange={(s) => (deleteFiles = s)}
-                  >
-                    {t<string>("Delete files also")}
-                  </Checkbox>
-                </div>
-                <div className={"opacity-80"}>
-                  {t<string>(
-                    "Resource will be shown again after next synchronization if you leave files undeleted.",
-                  )}
-                </div>
-                <div className={"mt-6 font-bold"}>
+                <div className={"font-bold"}>
                   {t<string>(
                     "Are you sure you want to delete {{count}} resources?",
                     { count: selectedResourceIds.length },
                   )}
+                </div>
+                <div className={"opacity-60 mt-2"}>
+                  {t<string>("Files will not be deleted.")}
                 </div>
               </div>
             ),
             onOk: async () => {
               await BApi.resource.deleteResourcesByKeys({
                 ids: selectedResourceIds,
-                deleteFiles,
               });
             },
           });

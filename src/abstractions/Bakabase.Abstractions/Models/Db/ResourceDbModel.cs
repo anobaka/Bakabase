@@ -1,14 +1,5 @@
-﻿using Bakabase.InsideWorld.Models.Constants;
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.InsideWorld.Models.Extensions;
-using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Models.Db
 {

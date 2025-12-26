@@ -103,6 +103,7 @@ const FileProcessorPage = () => {
                   "delete-all-same-name",
                   "group",
                   "play-first-file",
+                  "create-directory"
                 ]}
                 rootPath={rootPath}
                 selectable={"multiple"}

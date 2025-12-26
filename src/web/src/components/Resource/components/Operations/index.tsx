@@ -17,7 +17,7 @@ import {
 import { AiOutlinePicture } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import ResourceEnhancementsDialog from "@/components/Resource/components/ResourceEnhancementsDialog";
+import ResourceEnhancementsModal from "@/components/Resource/components/ResourceEnhancementsModal.tsx";
 import { EnhancementAdditionalItem, IwFsType } from "@/sdk/constants";
 import { PlaylistCollection } from "@/components/Playlist";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -159,7 +159,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
               })
               .then((t) => {
-                createPortal(ResourceEnhancementsDialog, {
+                createPortal(ResourceEnhancementsModal, {
                   resourceId: resource.id,
                   // @ts-ignore
                   enhancements: t.data || [],
@@ -250,7 +250,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
               })
               .then((t) => {
-                createPortal(ResourceEnhancementsDialog, {
+                createPortal(ResourceEnhancementsModal, {
                   resourceId: resource.id,
                   // @ts-ignore
                   enhancements: t.data || [],
@@ -366,7 +366,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
               additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
             })
             .then((t) => {
-              createPortal(ResourceEnhancementsDialog, {
+              createPortal(ResourceEnhancementsModal, {
                 resourceId: resource.id,
                 // @ts-ignore
                 enhancements: t.data || [],

@@ -141,6 +141,9 @@ namespace Bakabase.InsideWorld.Business.Components
         public string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames) =>
             this[nameof(BTask_FailedToRunTaskDueToConflict), incomingTaskName, string.Join(',', conflictTaskNames)];
 
+        public string BTask_FailedToRunTaskDueToDependency(string incomingTaskName, params string[] dependencyTaskNames) =>
+            this[nameof(BTask_FailedToRunTaskDueToDependency), incomingTaskName, string.Join(", ", dependencyTaskNames)];
+
         public string BTask_FailedToRunTaskDueToUnknownTaskId(string id) =>
             this[nameof(BTask_FailedToRunTaskDueToUnknownTaskId), id];
 

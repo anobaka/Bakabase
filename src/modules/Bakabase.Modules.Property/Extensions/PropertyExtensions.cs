@@ -30,7 +30,6 @@ public static class PropertyExtensions
     /// <summary>
     /// Get the Biz value type for a PropertyType.
     /// </summary>
-    [Obsolete("Use PropertySystem.Property.GetBizValueType() instead.")]
     public static StandardValueType GetBizValueType(this PropertyType type) =>
         PropertySystem.Property.TryGetAttribute(type)?.BizValueType ?? default;
 

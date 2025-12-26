@@ -3,36 +3,57 @@
 import React from "react";
 
 import { Input, Checkbox } from "../../bakaui";
+import { getFieldRequirements } from "../validation";
 
 const ReplaceOperationFields: React.FC<any> = ({ operation, t, onChange }) => {
   const handleChangeField = (key: string, value: any) =>
     onChange({ ...operation, [key]: value });
 
+  const requirements = getFieldRequirements(operation);
+
+  const isReplaceEntire = operation.replaceEntire || false;
+
   return (
     <>
-      {[
-        ["text", "Text"],
-        ["targetText", "TargetText"],
-      ].map(([key, label]) => (
-        <Input
-          key={key as string}
-          className="w-[180px]"
-          isRequired={!operation.text && !operation.targetText}
-          label={t<string>(`FileNameModifier.Label.${label}`)}
-          placeholder={t<string>(`FileNameModifier.Placeholder.${label}`)}
-          size="sm"
-          value={operation[key as keyof typeof operation] || ""}
-          onValueChange={(e) => handleChangeField(key as string, e)}
-        />
-      ))}
-      <div className="flex items-center gap-1">
-        <Checkbox
-          checked={operation.replaceEntire}
-          onChange={(e) => handleChangeField("replaceEntire", e.target.checked)}
-        />
-        <span className="text-xs text-gray-500">
-          {t<string>("FileNameModifier.ReplaceEntire")}
-        </span>
+      <Input
+        className="w-[180px]"
+        isDisabled={isReplaceEntire}
+        isRequired={!isReplaceEntire && requirements.targetText}
+        label={t<string>("FileNameModifier.Label.TargetText")}
+        placeholder={t<string>("FileNameModifier.Placeholder.TargetText")}
+        size="sm"
+        value={isReplaceEntire ? "" : (operation.targetText || "")}
+        onValueChange={(e) => handleChangeField("targetText", e)}
+      />
+      <Input
+        className="w-[180px]"
+        isRequired={requirements.text}
+        label={t<string>("FileNameModifier.Label.Text")}
+        placeholder={t<string>("FileNameModifier.Placeholder.Text")}
+        size="sm"
+        value={operation.text || ""}
+        onValueChange={(e) => handleChangeField("text", e)}
+      />
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
+          <Checkbox
+            isDisabled={isReplaceEntire}
+            checked={isReplaceEntire ? false : (operation.regex || false)}
+            onChange={(e) => handleChangeField("regex", e.target.checked)}
+          />
+          <span className={`text-xs ${isReplaceEntire ? "text-gray-300" : "text-gray-500"}`}>
+            {t<string>("FileNameModifier.UseRegex")}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Checkbox
+            checked={isReplaceEntire}
+            onChange={(e) => handleChangeField("replaceEntire", e.target.checked)}
+          />
+          <span className="text-xs text-gray-500">
+            {t<string>("FileNameModifier.ReplaceEntire")}
+          </span>
+        </div>
       </div>
     </>
   );

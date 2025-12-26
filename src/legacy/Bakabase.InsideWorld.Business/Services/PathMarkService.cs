@@ -302,6 +302,11 @@ public class PathMarkService<TDbContext>(
         await orm.RemoveByKey(id);
     }
 
+    public async Task HardDeleteBatch(IEnumerable<int> ids)
+    {
+        await orm.RemoveByKeys(ids);
+    }
+
     public async Task MarkAsSyncing(int id)
     {
         var dbModel = await orm.GetByKey(id);
@@ -324,6 +329,25 @@ public class PathMarkService<TDbContext>(
             dbModel.UpdatedAt = DateTime.UtcNow;
             await orm.Update(dbModel);
         }
+    }
+
+    public async Task MarkAsSyncedBatch(IEnumerable<int> ids)
+    {
+        var idSet = ids.ToHashSet();
+        if (idSet.Count == 0) return;
+
+        var dbModels = await orm.GetAll(m => idSet.Contains(m.Id));
+        var now = DateTime.UtcNow;
+
+        foreach (var dbModel in dbModels)
+        {
+            dbModel.SyncStatus = PathMarkSyncStatus.Synced;
+            dbModel.SyncedAt = now;
+            dbModel.SyncError = null;
+            dbModel.UpdatedAt = now;
+        }
+
+        await orm.UpdateRange(dbModels);
     }
 
     public async Task MarkAsFailed(int id, string? error)

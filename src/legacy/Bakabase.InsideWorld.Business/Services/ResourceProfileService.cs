@@ -107,15 +107,18 @@ public class ResourceProfileService<TDbContext>(
             return result;
         }
 
+        var profileMap = profilesWithNameTemplate.ToDictionary(p => p.Id, p => p);
+
         // Use index service for faster lookup if available
         if (IndexService.IsReady)
         {
-            foreach (var resourceId in resourceIds)
+            // Use batch lookup to avoid N+1 problem
+            var allProfileIds = await IndexService.GetMatchingProfileIdsForResources(resourceIds);
+            foreach (var (resourceId, profileIds) in allProfileIds)
             {
-                var profileIds = await IndexService.GetMatchingProfileIds(resourceId);
                 // profileIds are sorted by priority (highest first)
                 var matchingProfile = profileIds
-                    .Select(pid => profilesWithNameTemplate.FirstOrDefault(p => p.Id == pid))
+                    .Select(pid => profileMap.GetValueOrDefault(pid))
                     .FirstOrDefault(p => p != null);
 
                 if (matchingProfile != null)
@@ -167,9 +170,11 @@ public class ResourceProfileService<TDbContext>(
         // Use index service for faster lookup if available
         if (IndexService.IsReady)
         {
-            foreach (var resource in resourcesList)
+            // Use batch lookup to avoid N+1 problem
+            var resourceIds = resourcesList.Select(r => r.Id);
+            var allProfileIds = await IndexService.GetMatchingProfileIdsForResources(resourceIds);
+            foreach (var (resourceId, profileIds) in allProfileIds)
             {
-                var profileIds = await IndexService.GetMatchingProfileIds(resource.Id);
                 // profileIds are sorted by priority (highest first)
                 var matchingProfile = profileIds
                     .Select(pid => profilesWithEnhancerOptions.FirstOrDefault(p => p.Id == pid))
@@ -177,7 +182,7 @@ public class ResourceProfileService<TDbContext>(
 
                 if (matchingProfile != null)
                 {
-                    result[resource.Id] = matchingProfile.EnhancerOptions!;
+                    result[resourceId] = matchingProfile.EnhancerOptions!;
                 }
             }
 
@@ -236,9 +241,11 @@ public class ResourceProfileService<TDbContext>(
         // Use index service for faster lookup if available
         if (IndexService.IsReady)
         {
-            foreach (var resource in resourcesList)
+            // Use batch lookup to avoid N+1 problem
+            var resourceIds = resourcesList.Select(r => r.Id);
+            var allProfileIds = await IndexService.GetMatchingProfileIdsForResources(resourceIds);
+            foreach (var (resourceId, profileIds) in allProfileIds)
             {
-                var profileIds = await IndexService.GetMatchingProfileIds(resource.Id);
                 // profileIds are sorted by priority (highest first)
                 var matchingProfile = profileIds
                     .Select(pid => profilesWithPropertyOptions.FirstOrDefault(p => p.Id == pid))
@@ -246,7 +253,7 @@ public class ResourceProfileService<TDbContext>(
 
                 if (matchingProfile != null)
                 {
-                    result[resource.Id] = matchingProfile.PropertyOptions!;
+                    result[resourceId] = matchingProfile.PropertyOptions!;
                 }
             }
 
@@ -325,6 +332,15 @@ public class ResourceProfileService<TDbContext>(
         ResourceProfilePropertyOptions? propertyOptions,
         int priority)
     {
+        // Get old profile to detect changes
+        var oldDbModel = await orm.GetByKey(id);
+        var oldSearchJson = oldDbModel?.SearchJson;
+        var oldPlayableFileOptionsJson = oldDbModel?.PlayableFileSettingsJson;
+
+        var newPlayableFileOptionsJson = playableFileOptions != null
+            ? JsonConvert.SerializeObject(playableFileOptions)
+            : null;
+
         var dbModel = new ResourceProfileDbModel
         {
             Id = id,
@@ -334,9 +350,7 @@ public class ResourceProfileService<TDbContext>(
             EnhancerSettingsJson = enhancerOptions != null
                 ? JsonConvert.SerializeObject(enhancerOptions)
                 : null,
-            PlayableFileSettingsJson = playableFileOptions != null
-                ? JsonConvert.SerializeObject(playableFileOptions)
-                : null,
+            PlayableFileSettingsJson = newPlayableFileOptionsJson,
             PlayerSettingsJson = playerOptions != null
                 ? JsonConvert.SerializeObject(playerOptions)
                 : null,
@@ -351,6 +365,35 @@ public class ResourceProfileService<TDbContext>(
 
         // Invalidate index for updated profile (search criteria or priority might have changed)
         IndexService.InvalidateProfile(id);
+
+        // Check if we need to invalidate PlayableFiles cache
+        var searchChanged = oldSearchJson != searchJson;
+        var playableOptionsChanged = oldPlayableFileOptionsJson != newPlayableFileOptionsJson;
+
+        // Only invalidate cache if PlayableFileOptions is involved (was set or is now set)
+        if ((searchChanged || playableOptionsChanged) &&
+            (oldPlayableFileOptionsJson != null || newPlayableFileOptionsJson != null))
+        {
+            var resourceIds = new HashSet<int>();
+
+            // Get old matching resources (if search changed or playable options changed)
+            if (oldSearchJson != null)
+            {
+                var oldMatchingIds = await GetMatchingResourceIdsBySearchJson(oldSearchJson);
+                resourceIds.UnionWith(oldMatchingIds);
+            }
+
+            // Get new matching resources
+            var newMatchingIds = await GetMatchingResourceIdsBySearchJson(searchJson);
+            resourceIds.UnionWith(newMatchingIds);
+
+            if (resourceIds.Count > 0)
+            {
+                await ResourceService.DeleteResourceCacheByResourceIdsAndCacheType(
+                    resourceIds,
+                    Abstractions.Models.Domain.Constants.ResourceCacheType.PlayableFiles);
+            }
+        }
     }
 
     public async Task Delete(int id)
@@ -373,6 +416,30 @@ public class ResourceProfileService<TDbContext>(
         // Fallback to direct evaluation
         var profile = await Get(profileId);
         return profile == null ? [] : await GetMatchingResourceIds(profile.Search);
+    }
+
+    public async Task<HashSet<int>> GetMatchingResourceIdsBySearchJson(string? searchJson)
+    {
+        if (string.IsNullOrEmpty(searchJson))
+        {
+            return [];
+        }
+
+        try
+        {
+            var searchDbModel = JsonConvert.DeserializeObject<ResourceSearchDbModel>(searchJson);
+            if (searchDbModel == null)
+            {
+                return [];
+            }
+
+            var search = await searchDbModel.ToDomainModel(PropertyService);
+            return await GetMatchingResourceIds(search);
+        }
+        catch
+        {
+            return [];
+        }
     }
 
     private async Task<HashSet<int>> GetMatchingResourceIds(ResourceSearch? search)

@@ -193,6 +193,31 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
         );
       },
     },
+    {
+      label: "Max parallelism",
+      tip: "Maximum degree of parallelism for CPU-intensive operations. Set to 1 to disable parallelism. Leave empty for default (half of CPU cores).",
+      renderValue: () => {
+        return (
+          <Input
+            type="number"
+            size="sm"
+            min={1}
+            placeholder={String(appOptions.effectiveMaxParallelism)}
+            value={appOptions.maxParallelism !== undefined && appOptions.maxParallelism !== null ? String(appOptions.maxParallelism) : ""}
+            className="w-24"
+            onValueChange={(v) => {
+              const value = v === "" ? undefined : parseInt(v, 10);
+              if (value === undefined || (value >= 1 && !isNaN(value))) {
+                applyPatches(
+                  BApi.options.patchAppOptions,
+                  { maxParallelism: value },
+                );
+              }
+            }}
+          />
+        );
+      },
+    },
   ];
 
   return (

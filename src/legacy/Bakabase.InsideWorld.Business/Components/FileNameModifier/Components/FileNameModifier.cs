@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using Bakabase.InsideWorld.Business.Components.FileNameModifier.Models;
-using Bootstrap.Extensions;
 
 namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
 {
@@ -47,8 +46,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
                 FileNameModifierOperationType.Insert => !string.IsNullOrEmpty(operation.Text),
                 FileNameModifierOperationType.AddDateTime => !string.IsNullOrEmpty(operation.DateTimeFormat),
                 FileNameModifierOperationType.Delete => operation is { DeleteCount: > 0, DeleteStartPosition: >= 0 },
-                FileNameModifierOperationType.Replace => !string.IsNullOrEmpty(operation.Text) ||
-                                                         !string.IsNullOrEmpty(operation.TargetText),
+                FileNameModifierOperationType.Replace => operation.ReplaceEntire || !string.IsNullOrEmpty(operation.TargetText),
                 FileNameModifierOperationType.ChangeCase => true,
                 FileNameModifierOperationType.AddAlphabetSequence => operation.AlphabetCount > 0,
                 FileNameModifierOperationType.Reverse => true,
@@ -58,72 +56,22 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
 
         private string ApplyOperation(string fileName, FileNameModifierOperation operation)
         {
-            return ApplyOperationToText(fileName, operation);
-        }
-
-        private string GetTargetText(string fileName, FileNameModifierFileNameTarget target)
-        {
-            switch (target)
-            {
-                case FileNameModifierFileNameTarget.FileName:
-                    return fileName;
-                case FileNameModifierFileNameTarget.FileNameWithoutExtension:
-                    return System.IO.Path.GetFileNameWithoutExtension(fileName);
-                case FileNameModifierFileNameTarget.Extension:
-                    return System.IO.Path.GetExtension(fileName);
-                case FileNameModifierFileNameTarget.ExtensionWithoutDot:
-                    var extension = System.IO.Path.GetExtension(fileName);
-                    return extension.StartsWith(".") ? extension.Substring(1) : extension;
-                default:
-                    return fileName;
-            }
-        }
-
-        private string ReplaceTargetText(string fileName, FileNameModifierFileNameTarget target, string newText)
-        {
-            switch (target)
-            {
-                case FileNameModifierFileNameTarget.FileName:
-                    return newText;
-                case FileNameModifierFileNameTarget.FileNameWithoutExtension:
-                    var extension = System.IO.Path.GetExtension(fileName);
-                    return newText + extension;
-                case FileNameModifierFileNameTarget.Extension:
-                    var nameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(fileName);
-                    return nameWithoutExt + newText;
-                case FileNameModifierFileNameTarget.ExtensionWithoutDot:
-                    var nameWithoutExt2 = System.IO.Path.GetFileNameWithoutExtension(fileName);
-                    return nameWithoutExt2 + "." + newText;
-                default:
-                    return fileName;
-            }
-        }
-
-        private string ApplyOperationToText(string fileName, FileNameModifierOperation operation)
-        {
             // 先根据 Target 拆分出目标文本
             var text = GetTargetText(fileName, operation.Target);
-            if (operation.ReplaceEntire)
-            {
-                var ext = System.IO.Path.GetExtension(fileName);
-                if (!string.IsNullOrEmpty(ext) && (operation.Text == null || !operation.Text.EndsWith(ext)))
-                    return (operation.Text ?? text) + ext;
-                return operation.Text ?? text;
-            }
 
             var result = operation.Operation switch
             {
                 FileNameModifierOperationType.Insert => ApplyInsert(text, operation),
                 FileNameModifierOperationType.AddDateTime => ApplyAddDateTime(text, operation),
                 FileNameModifierOperationType.Delete => ApplyDelete(text, operation),
-                FileNameModifierOperationType.Replace => ApplyReplace(text, operation),
+                FileNameModifierOperationType.Replace => ApplyReplace(text, fileName, operation),
                 FileNameModifierOperationType.ChangeCase => ApplyChangeCase(text, operation),
                 FileNameModifierOperationType.AddAlphabetSequence => ApplyAddAlphabetSequence(text, operation),
-                FileNameModifierOperationType.Reverse => ApplyReverse(text, operation),
+                FileNameModifierOperationType.Reverse => ApplyReverse(text),
                 _ => text
             };
 
-            // 新增：如果 target 是 FileNameWithoutExtension，自动拼接扩展名
+            // 如果 target 是 FileNameWithoutExtension，自动拼接扩展名
             if (operation.Target == FileNameModifierFileNameTarget.FileNameWithoutExtension)
             {
                 var ext = System.IO.Path.GetExtension(fileName);
@@ -132,52 +80,53 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
             return result;
         }
 
+        private string GetTargetText(string fileName, FileNameModifierFileNameTarget target)
+        {
+            return target switch
+            {
+                FileNameModifierFileNameTarget.FileName => fileName,
+                FileNameModifierFileNameTarget.FileNameWithoutExtension => System.IO.Path.GetFileNameWithoutExtension(fileName),
+                FileNameModifierFileNameTarget.Extension => System.IO.Path.GetExtension(fileName),
+                FileNameModifierFileNameTarget.ExtensionWithoutDot => System.IO.Path.GetExtension(fileName).TrimStart('.'),
+                _ => fileName
+            };
+        }
+
+        /// <summary>
+        /// 通用的文本插入方法，根据 Position 在指定位置插入文本
+        /// </summary>
+        private string InsertTextAtPosition(string text, string insertText, FileNameModifierOperation operation)
+        {
+            if (string.IsNullOrEmpty(insertText))
+                return text;
+
+            return operation.Position switch
+            {
+                FileNameModifierPosition.Start => insertText + text,
+                FileNameModifierPosition.End => text + insertText,
+                FileNameModifierPosition.AtPosition when operation.PositionIndex >= 0 && operation.PositionIndex <= text.Length
+                    => text.Insert(operation.PositionIndex, insertText),
+                FileNameModifierPosition.AfterText when !string.IsNullOrEmpty(operation.TargetText)
+                    => text.IndexOf(operation.TargetText, StringComparison.Ordinal) is var idx and >= 0
+                        ? text.Insert(idx + operation.TargetText.Length, insertText)
+                        : text,
+                FileNameModifierPosition.BeforeText when !string.IsNullOrEmpty(operation.TargetText)
+                    => text.IndexOf(operation.TargetText, StringComparison.Ordinal) is var idx and >= 0
+                        ? text.Insert(idx, insertText)
+                        : text,
+                _ => text
+            };
+        }
+
         private string ApplyInsert(string text, FileNameModifierOperation operation)
         {
-            if (operation.Text == null) return text;
-            switch (operation.Position)
-            {
-                case FileNameModifierPosition.Start:
-                    return operation.Text + text;
-                case FileNameModifierPosition.End:
-                    return text + operation.Text;
-                case FileNameModifierPosition.AtPosition:
-                    if (operation.PositionIndex >= 0 && operation.PositionIndex <= text.Length)
-                        return text.Insert(operation.PositionIndex, operation.Text);
-                    return text;
-                case FileNameModifierPosition.AfterText:
-                    if (string.IsNullOrEmpty(operation.TargetText)) return text;
-                    var indexAfter = text.IndexOf(operation.TargetText, StringComparison.Ordinal);
-                    if (indexAfter >= 0)
-                        return text.Insert(indexAfter + operation.TargetText.Length, operation.Text);
-                    return text;
-                case FileNameModifierPosition.BeforeText:
-                    if (string.IsNullOrEmpty(operation.TargetText)) return text;
-                    var indexBefore = text.IndexOf(operation.TargetText, StringComparison.Ordinal);
-                    if (indexBefore >= 0)
-                        return text.Insert(indexBefore, operation.Text);
-                    return text;
-                default:
-                    return text;
-            }
+            return InsertTextAtPosition(text, operation.Text ?? "", operation);
         }
 
         private string ApplyAddDateTime(string text, FileNameModifierOperation operation)
         {
             var dateTimeText = DateTime.Now.ToString(operation.DateTimeFormat ?? "yyyyMMdd_HHmmss");
-            switch (operation.Position)
-            {
-                case FileNameModifierPosition.Start:
-                    return dateTimeText + text;
-                case FileNameModifierPosition.End:
-                    return text + dateTimeText;
-                case FileNameModifierPosition.AtPosition:
-                    if (operation.PositionIndex >= 0 && operation.PositionIndex <= text.Length)
-                        return text.Insert(operation.PositionIndex, dateTimeText);
-                    return text;
-                default:
-                    return text;
-            }
+            return InsertTextAtPosition(text, dateTimeText, operation);
         }
 
         private string ApplyDelete(string text, FileNameModifierOperation operation)
@@ -192,101 +141,129 @@ namespace Bakabase.InsideWorld.Business.Components.FileNameModifier.Components
             return text;
         }
 
-        private string ApplyReplace(string text, FileNameModifierOperation operation)
+        private string ApplyReplace(string text, string fileName, FileNameModifierOperation operation)
         {
+            // ReplaceEntire: 替换整个目标文本
             if (operation.ReplaceEntire)
-                return operation.Text ?? text;
-            else
-                return string.IsNullOrEmpty(operation.TargetText)
-                    ? text
-                    : text.Replace(operation.TargetText, operation.Text ?? text);
+            {
+                var ext = System.IO.Path.GetExtension(fileName);
+                var newText = operation.Text ?? text;
+                // 如果有扩展名且新文本不包含该扩展名，则自动添加
+                if (!string.IsNullOrEmpty(ext) && !newText.EndsWith(ext))
+                    return newText + ext;
+                return newText;
+            }
+
+            if (string.IsNullOrEmpty(operation.TargetText))
+                return text;
+
+            var replacement = operation.Text ?? "";
+
+            if (operation.Regex)
+            {
+                try
+                {
+                    return Regex.Replace(text, operation.TargetText, replacement);
+                }
+                catch (ArgumentException)
+                {
+                    // 无效的正则表达式，返回原文本
+                    return text;
+                }
+            }
+
+            return text.Replace(operation.TargetText, replacement);
         }
 
         private string ApplyChangeCase(string text, FileNameModifierOperation operation)
         {
-            switch (operation.CaseType)
+            return operation.CaseType switch
             {
-                case FileNameModifierCaseType.TitleCase:
-                    return ToTitleCase(text);
-                case FileNameModifierCaseType.UpperCase:
-                    return text.ToUpper();
-                case FileNameModifierCaseType.LowerCase:
-                    return text.ToLower();
-                case FileNameModifierCaseType.CamelCase:
-                    return ToCamelCase(text);
-                case FileNameModifierCaseType.PascalCase:
-                    return ToPascalCase(text);
-                default:
-                    return text;
-            }
+                FileNameModifierCaseType.TitleCase => ToTitleCase(text),
+                FileNameModifierCaseType.UpperCase => text.ToUpper(),
+                FileNameModifierCaseType.LowerCase => text.ToLower(),
+                FileNameModifierCaseType.CamelCase => ToCamelCase(text),
+                FileNameModifierCaseType.PascalCase => ToPascalCase(text),
+                _ => text
+            };
         }
 
         private string ApplyAddAlphabetSequence(string text, FileNameModifierOperation operation)
         {
             var alphabetSequence = GenerateAlphabetSequence(operation.AlphabetStartChar, operation.AlphabetCount);
-            switch (operation.Position)
-            {
-                case FileNameModifierPosition.Start:
-                    return alphabetSequence + text;
-                case FileNameModifierPosition.End:
-                    return text + alphabetSequence;
-                case FileNameModifierPosition.AtPosition:
-                    if (operation.PositionIndex >= 0 && operation.PositionIndex <= text.Length)
-                        return text.Insert(operation.PositionIndex, alphabetSequence);
-                    return text;
-                default:
-                    return text;
-            }
+            return InsertTextAtPosition(text, alphabetSequence, operation);
         }
 
-        private string ApplyReverse(string text, FileNameModifierOperation operation)
+        private string ApplyReverse(string text)
         {
             return new string(text.Reverse().ToArray());
         }
 
-        private string ToTitleCase(string text)
+        private static string ToTitleCase(string text)
         {
             if (string.IsNullOrEmpty(text))
                 return text;
             return char.ToUpper(text[0]) + text.Substring(1).ToLower();
         }
 
-        private string ToCamelCase(string text)
-        {
-            if (string.IsNullOrEmpty(text))
-                return text;
-            var words = text.Split(new[] { ' ', '_', '-', '.' }, StringSplitOptions.RemoveEmptyEntries);
-            var result = new StringBuilder();
-            for (int i = 0; i < words.Length; i++)
-            {
-                if (i == 0)
-                    result.Append(words[i].ToLower());
-                else
-                    result.Append(char.ToUpper(words[i][0]) + words[i].Substring(1).ToLower());
-            }
-
-            return result.ToString();
-        }
-
-        private string ToPascalCase(string text)
+        private static string ToCamelCase(string text)
         {
             if (string.IsNullOrEmpty(text))
                 return text;
             var words = text.Split([' ', '_', '-', '.'], StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0)
+                return text;
+
             var result = new StringBuilder();
-            foreach (var word in words)
-                result.Append(char.ToUpper(word[0]) + word.Substring(1).ToLower());
-            return result.ToString();
+            for (int i = 0; i < words.Length; i++)
+            {
+                var word = words[i];
+                if (word.Length == 0) continue;
+
+                if (i == 0)
+                    result.Append(word.ToLower());
+                else
+                    result.Append(char.ToUpper(word[0])).Append(word.Length > 1 ? word.Substring(1).ToLower() : "");
+            }
+
+            return result.Length > 0 ? result.ToString() : text;
         }
 
-        private string GenerateAlphabetSequence(char startChar, int count)
+        private static string ToPascalCase(string text)
         {
+            if (string.IsNullOrEmpty(text))
+                return text;
+            var words = text.Split([' ', '_', '-', '.'], StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 0)
+                return text;
+
             var result = new StringBuilder();
-            var currentChar = startChar;
+            foreach (var word in words)
+            {
+                if (word.Length == 0) continue;
+                result.Append(char.ToUpper(word[0])).Append(word.Length > 1 ? word.Substring(1).ToLower() : "");
+            }
+
+            return result.Length > 0 ? result.ToString() : text;
+        }
+
+        private static string GenerateAlphabetSequence(char startChar, int count)
+        {
+            if (count <= 0)
+                return string.Empty;
+
+            var result = new StringBuilder(count);
+            var isUpper = char.IsUpper(startChar);
+            var baseChar = isUpper ? 'A' : 'a';
+            var offset = char.ToUpper(startChar) - 'A';
+
+            // 确保 offset 在有效范围内
+            if (offset < 0 || offset > 25)
+                offset = 0;
+
             for (int i = 0; i < count; i++)
             {
-                result.Append(currentChar);
-                currentChar = (char)(currentChar + 1);
+                result.Append((char)(baseChar + (offset + i) % 26));
             }
 
             return result.ToString();

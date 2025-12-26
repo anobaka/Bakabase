@@ -69,6 +69,11 @@ public interface IPathMarkService
     Task HardDelete(int id);
 
     /// <summary>
+    /// Hard delete multiple path marks (batch operation)
+    /// </summary>
+    Task HardDeleteBatch(IEnumerable<int> ids);
+
+    /// <summary>
     /// Mark a path mark as syncing
     /// </summary>
     Task MarkAsSyncing(int id);
@@ -77,6 +82,11 @@ public interface IPathMarkService
     /// Mark a path mark as synced
     /// </summary>
     Task MarkAsSynced(int id);
+
+    /// <summary>
+    /// Mark multiple path marks as synced (batch operation)
+    /// </summary>
+    Task MarkAsSyncedBatch(IEnumerable<int> ids);
 
     /// <summary>
     /// Mark a path mark as failed

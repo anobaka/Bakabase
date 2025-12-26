@@ -3950,6 +3950,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/discovery/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["StreamResourceDiscovery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/discovery/subscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SubscribeResourceDiscovery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/discovery/subscribe/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["SubscribeResourceDiscoveryBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource-profile": {
         parameters: {
             query?: never;
@@ -5123,6 +5171,8 @@ export interface components {
             /** Format: int32 */
             autoListeningPortCount?: number;
             listeningPorts?: number[];
+            /** Format: int32 */
+            maxParallelism?: number;
         };
         "Bakabase.Infrastructures.Components.App.Models.RequestModels.CoreDataMoveRequestModel": {
             dataPath: string;
@@ -5162,6 +5212,10 @@ export interface components {
             /** Format: int32 */
             autoListeningPortCount?: number;
             listeningPorts?: number[];
+            /** Format: int32 */
+            maxParallelism?: number;
+            /** Format: int32 */
+            readonly effectiveMaxParallelism: number;
         };
         /**
          * Format: int32
@@ -6025,10 +6079,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.AdditionalItems.MediaLibraryAdditionalItem": 0 | 1 | 2 | 4;
         /**
          * Format: int32
-         * @description [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
+         * @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 64 | 128 | 160 | 416 | 512 | 2048 | 4096 | 7136;
+        "Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem": 0 | 32 | 64 | 128 | 288 | 512 | 2048 | 4096 | 7008;
         /**
          * Format: int32
          * @description [1: Latest, 2: Frequency]
@@ -6443,6 +6497,11 @@ export interface components {
             title: string;
             /** Format: int32 */
             mediaCount: number;
+        };
+        "Bakabase.Service.Controllers.DiscoverySubscribeRequest": {
+            /** Format: int32 */
+            resourceId: number;
+            types: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"];
         };
         "Bakabase.Service.Controllers.EnsureMappingsInput": {
             /** Format: int32 */
@@ -15961,6 +16020,8 @@ export interface operations {
             query?: {
                 saveSearch?: boolean;
                 searchId?: string;
+                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+                additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
             path?: never;
@@ -16021,7 +16082,7 @@ export interface operations {
         parameters: {
             query?: {
                 ids?: number[];
-                /** @description [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
+                /** @description [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
                 additionalItems?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.AdditionalItems.ResourceAdditionalItem"];
             };
             header?: never;
@@ -16581,6 +16642,82 @@ export interface operations {
                 "application/json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
                 "text/json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
                 "application/*+json": components["schemas"]["BulkResourceMediaLibraryMappingInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    StreamResourceDiscovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    SubscribeResourceDiscovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SubscribeResourceDiscoveryBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"][];
+                "application/json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"][];
+                "text/json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"][];
+                "application/*+json": components["schemas"]["Bakabase.Service.Controllers.DiscoverySubscribeRequest"][];
             };
         };
         responses: {

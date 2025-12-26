@@ -86,10 +86,10 @@ const components = {
   LongTabs: <LongTabsPage />,
   FileSelector: (
     <FileSystemSelectorButton
-      defaultLabel={"File Selector"}
-      defaultSelectedPath={"I:\\Test\\updater\\AppData\\configs\\updater.json"}
-      startPath={"I:\\Test\\updater\\AppData\\configs\\updater.json"}
-      targetType={"file"}
+      fileSystemSelectorProps={{
+        targetType: "file",
+        defaultSelectedPath: "I:\\Test",
+      }}
     />
   ),
   FolderSelector: (
@@ -149,7 +149,7 @@ const TestPage = () => {
               setTestingKey(k as string);
             }}
           >
-            {Object.keys(components).map((c) => {
+            {Object.keys(components).sort().map((c) => {
               return <ListboxItem key={c}>{c}</ListboxItem>;
             })}
           </Listbox>

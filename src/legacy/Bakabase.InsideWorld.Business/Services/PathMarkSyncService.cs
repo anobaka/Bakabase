@@ -21,14 +21,12 @@ using Bakabase.Modules.Property.Abstractions.Services;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.DependencyInjection;
 using Bootstrap.Components.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
-public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncService
-    where TDbContext : DbContext
+public class PathMarkSyncService : ScopedService, IPathMarkSyncService
 {
     private readonly IPathMarkService _pathMarkService;
     private readonly IResourceService _resourceService;
@@ -107,7 +105,7 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
             GetName = () => _localizer.BTask_Name("SyncPathMark_Single"),
             GetDescription = () => _localizer.BTask_Description("SyncPathMark_Single"),
             GetMessageOnInterruption = () => _localizer.BTask_MessageOnInterruption("SyncPathMark_Single"),
-            ConflictKeys = [SyncAllTaskId, taskId],
+            ConflictKeys = [SyncAllTaskId],  // All sync operations share the same conflict key to prevent concurrent sync
             Level = BTaskLevel.Default,
             IsPersistent = false,
             StartNow = true,
@@ -135,10 +133,11 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         CancellationToken ct)
     {
         var result = new PathMarkSyncResult();
+        var ctx = new SyncContext();
 
         try
         {
-            // Phase 1: Collect and sort marks (0-5%)
+            // Phase 1: Collect marks and preload data (0-5%)
             await ReportProgress(onProgressChange, onProcessChange, 0, _localizer.SyncPathMark_Collecting());
 
             List<PathMark> marks;
@@ -158,6 +157,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 return result;
             }
 
+            // Preload all resources once - this is the key optimization
+            ctx.AllResources = await _resourceService.GetAll();
+            ctx.BuildIndexes();
+
             // Separate marks by type
             var resourceMarks = marks.Where(m => m.Type == PathMarkType.Resource).OrderByDescending(m => m.Priority).ToList();
             var propertyMarks = marks.Where(m => m.Type == PathMarkType.Property).OrderByDescending(m => m.Priority).ToList();
@@ -168,6 +171,7 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
             // Track created resources for property mark processing
             var createdResourcePaths = new List<string>();
             var allResourcePaths = new List<string>();
+            var marksToDelete = new List<int>();
 
             // Phase 2: Process Resource Marks (5-40%)
             var resourceMarkCount = resourceMarks.Count;
@@ -187,24 +191,22 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
                     if (mark.SyncStatus == PathMarkSyncStatus.PendingDelete)
                     {
-                        // Handle deletion
-                        var deletedCount = await ProcessResourceMarkDelete(mark, ct);
+                        var deletedCount = await ProcessResourceMarkDelete(mark, ctx, ct);
                         result.ResourcesDeleted += deletedCount;
-                        await _pathMarkService.HardDelete(mark.Id);
+                        marksToDelete.Add(mark.Id);
                     }
                     else
                     {
-                        // Handle creation/update
-                        var (created, paths) = await ProcessResourceMark(mark, ct);
+                        var (created, paths) = await ProcessResourceMark(mark, ctx, ct);
                         result.ResourcesCreated += created;
                         createdResourcePaths.AddRange(paths);
                         allResourcePaths.AddRange(paths);
-                        await _pathMarkService.MarkAsSynced(mark.Id);
+                        ctx.SuccessfulMarkIds.Add(mark.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    await _pathMarkService.MarkAsFailed(mark.Id, ex.Message);
+                    ctx.FailedMarks.Add((mark.Id, ex.Message));
                     result.FailedMarks++;
                     result.Errors.Add(new PathMarkSyncError
                     {
@@ -215,14 +217,20 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 }
             }
 
+            // Refresh context after resource creation
+            if (createdResourcePaths.Count > 0)
+            {
+                ctx.AllResources = await _resourceService.GetAll();
+                ctx.BuildIndexes();
+            }
+
             // Phase 3: Find related Property/MediaLibrary Marks (40-45%)
             await ReportProgress(onProgressChange, onProcessChange, 40, _localizer.SyncPathMark_FindingRelated());
 
-            // Find property marks whose Path is a parent directory of any resource path
-            var additionalPropertyMarks = await FindRelatedMarks(allResourcePaths, PathMarkType.Property, propertyMarks);
+            var additionalPropertyMarks = await FindRelatedMarksAsync(allResourcePaths, PathMarkType.Property, propertyMarks, ctx);
             var allPropertyMarks = propertyMarks.Concat(additionalPropertyMarks).DistinctBy(m => m.Id).OrderByDescending(m => m.Priority).ToList();
 
-            var additionalMediaLibraryMarks = await FindRelatedMarks(allResourcePaths, PathMarkType.MediaLibrary, mediaLibraryMarks);
+            var additionalMediaLibraryMarks = await FindRelatedMarksAsync(allResourcePaths, PathMarkType.MediaLibrary, mediaLibraryMarks, ctx);
             var allMediaLibraryMarks = mediaLibraryMarks.Concat(additionalMediaLibraryMarks).DistinctBy(m => m.Id).OrderByDescending(m => m.Priority).ToList();
 
             await ReportProgress(onProgressChange, onProcessChange, 45, _localizer.SyncPathMark_FoundRelated(additionalPropertyMarks.Count + additionalMediaLibraryMarks.Count));
@@ -245,22 +253,20 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
                     if (mark.SyncStatus == PathMarkSyncStatus.PendingDelete)
                     {
-                        // Handle property deletion
-                        var deletedCount = await ProcessPropertyMarkDelete(mark, ct);
+                        var deletedCount = await ProcessPropertyMarkDelete(mark, ctx, ct);
                         result.PropertiesDeleted += deletedCount;
-                        await _pathMarkService.HardDelete(mark.Id);
+                        marksToDelete.Add(mark.Id);
                     }
                     else
                     {
-                        // Handle property application
-                        var appliedCount = await ProcessPropertyMark(mark, ct);
+                        var appliedCount = await ProcessPropertyMark(mark, ctx, ct);
                         result.PropertiesApplied += appliedCount;
-                        await _pathMarkService.MarkAsSynced(mark.Id);
+                        ctx.SuccessfulMarkIds.Add(mark.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    await _pathMarkService.MarkAsFailed(mark.Id, ex.Message);
+                    ctx.FailedMarks.Add((mark.Id, ex.Message));
                     result.FailedMarks++;
                     result.Errors.Add(new PathMarkSyncError
                     {
@@ -270,6 +276,9 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                     });
                 }
             }
+
+            // Batch flush property values
+            await FlushPropertyValues(ctx);
 
             // Phase 6: Process MediaLibrary Marks (80-90%)
             var mediaLibraryMarkCount = allMediaLibraryMarks.Count;
@@ -289,20 +298,20 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
                     if (mark.SyncStatus == PathMarkSyncStatus.PendingDelete)
                     {
-                        var deletedCount = await ProcessMediaLibraryMarkDelete(mark, ct);
+                        var deletedCount = await ProcessMediaLibraryMarkDelete(mark, ctx, ct);
                         result.MediaLibraryMappingsDeleted += deletedCount;
-                        await _pathMarkService.HardDelete(mark.Id);
+                        marksToDelete.Add(mark.Id);
                     }
                     else
                     {
-                        var createdCount = await ProcessMediaLibraryMark(mark, ct);
+                        var createdCount = await ProcessMediaLibraryMark(mark, ctx, ct);
                         result.MediaLibraryMappingsCreated += createdCount;
-                        await _pathMarkService.MarkAsSynced(mark.Id);
+                        ctx.SuccessfulMarkIds.Add(mark.Id);
                     }
                 }
                 catch (Exception ex)
                 {
-                    await _pathMarkService.MarkAsFailed(mark.Id, ex.Message);
+                    ctx.FailedMarks.Add((mark.Id, ex.Message));
                     result.FailedMarks++;
                     result.Errors.Add(new PathMarkSyncError
                     {
@@ -313,12 +322,15 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 }
             }
 
+            // Batch update mark statuses
+            await BatchUpdateMarkStatuses(ctx, marksToDelete);
+
             // Phase 7: Establish parent-child relationships (90-100%)
             await ReportProgress(onProgressChange, onProcessChange, 90, _localizer.SyncPathMark_EstablishingRelationships());
 
             if (createdResourcePaths.Count > 0)
             {
-                await EstablishParentChildRelationships(createdResourcePaths, ct);
+                await EstablishParentChildRelationships(createdResourcePaths, ctx, ct);
             }
 
             await _resourceService.RefreshParentTag();
@@ -334,6 +346,42 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return result;
     }
 
+    private async Task FlushPropertyValues(SyncContext ctx)
+    {
+        if (ctx.PropertyValuesToAdd.Count > 0)
+        {
+            await _customPropertyValueService.AddDbModelRange(ctx.PropertyValuesToAdd);
+            ctx.PropertyValuesToAdd.Clear();
+        }
+
+        if (ctx.PropertyValuesToUpdate.Count > 0)
+        {
+            await _customPropertyValueService.UpdateDbModelRange(ctx.PropertyValuesToUpdate);
+            ctx.PropertyValuesToUpdate.Clear();
+        }
+    }
+
+    private async Task BatchUpdateMarkStatuses(SyncContext ctx, List<int> marksToDelete)
+    {
+        // Batch mark as synced
+        if (ctx.SuccessfulMarkIds.Count > 0)
+        {
+            await _pathMarkService.MarkAsSyncedBatch(ctx.SuccessfulMarkIds);
+        }
+
+        // Batch mark as failed
+        foreach (var (markId, error) in ctx.FailedMarks)
+        {
+            await _pathMarkService.MarkAsFailed(markId, error);
+        }
+
+        // Batch delete
+        if (marksToDelete.Count > 0)
+        {
+            await _pathMarkService.HardDeleteBatch(marksToDelete);
+        }
+    }
+
     public async Task StopSync()
     {
         await _btm.Stop(SyncAllTaskId);
@@ -347,27 +395,24 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         if (onProcessChange != null) await onProcessChange(process);
     }
 
-    private async Task<(int Created, List<string> Paths)> ProcessResourceMark(PathMark mark, CancellationToken ct)
+    private async Task<(int Created, List<string> Paths)> ProcessResourceMark(PathMark mark, SyncContext ctx, CancellationToken ct)
     {
         var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
         if (config == null) return (0, new List<string>());
 
-        var matchedPaths = GetMatchingPathsForResourceMark(mark.Path, config);
+        var matchedPaths = GetMatchingPathsForResourceMark(mark.Path, config, ctx);
         var createdPaths = new List<string>();
         var createdCount = 0;
-
-        // Get existing resources
-        var existingResources = await _resourceService.GetAll();
-        var existingPathSet = existingResources.Select(r => r.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
         var resourcesToCreate = new List<Resource>();
 
         foreach (var path in matchedPaths)
         {
             ct.ThrowIfCancellationRequested();
 
-            // Check if resource already exists
-            if (existingPathSet.Contains(path))
+            var standardizedPath = ctx.GetStandardizedPath(path);
+
+            // Check if resource already exists using cached data
+            if (ctx.ExistingPathSet.Contains(standardizedPath))
             {
                 createdPaths.Add(path);
                 continue;
@@ -375,18 +420,14 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
             // Check for bakabase.json marker
             var existingResourceId = await CheckBakabaseJsonMarker(path);
-            if (existingResourceId.HasValue)
+            if (existingResourceId.HasValue && ctx.IdToResource.TryGetValue(existingResourceId.Value, out var existingResource))
             {
                 // Resource exists but path changed, update it
-                var existingResource = existingResources.FirstOrDefault(r => r.Id == existingResourceId.Value);
-                if (existingResource != null)
-                {
-                    existingResource.Path = path;
-                    existingResource.UpdatedAt = DateTime.Now;
-                    resourcesToCreate.Add(existingResource);
-                    createdPaths.Add(path);
-                    continue;
-                }
+                existingResource.Path = path;
+                existingResource.UpdatedAt = DateTime.Now;
+                resourcesToCreate.Add(existingResource);
+                createdPaths.Add(path);
+                continue;
             }
 
             // Create new resource
@@ -413,8 +454,8 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
             {
                 Path = path,
                 IsFile = isFile,
-                CategoryId = 0, // MediaLibraryV2 resource
-                MediaLibraryId = 0, // Not associated with any media library yet
+                CategoryId = 0,
+                MediaLibraryId = 0,
                 FileCreatedAt = fileCreatedAt,
                 FileModifiedAt = fileModifiedAt,
                 CreatedAt = DateTime.Now,
@@ -443,22 +484,20 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return (createdCount, createdPaths);
     }
 
-    private async Task<int> ProcessResourceMarkDelete(PathMark mark, CancellationToken ct)
+    private async Task<int> ProcessResourceMarkDelete(PathMark mark, SyncContext ctx, CancellationToken ct)
     {
         var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
         if (config == null) return 0;
 
-        var matchedPaths = GetMatchingPathsForResourceMark(mark.Path, config);
-        var existingResources = await _resourceService.GetAll();
-        var pathToResourceMap = existingResources.ToDictionary(r => r.Path, r => r, StringComparer.OrdinalIgnoreCase);
-
+        var matchedPaths = GetMatchingPathsForResourceMark(mark.Path, config, ctx);
         var resourcesToDelete = new List<int>();
 
         foreach (var path in matchedPaths)
         {
             ct.ThrowIfCancellationRequested();
 
-            if (!pathToResourceMap.TryGetValue(path, out var resource)) continue;
+            var standardizedPath = ctx.GetStandardizedPath(path);
+            if (!ctx.PathToResource.TryGetValue(standardizedPath, out var resource)) continue;
 
             // Check bakabase.json preservation
             if (_resourceOptions.Value.KeepResourcesOnPathChange && !resource.IsFile)
@@ -466,7 +505,6 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 var markerPath = Path.Combine(path, InternalOptions.ResourceMarkerFileName);
                 if (File.Exists(markerPath))
                 {
-                    // Don't delete, resource is preserved
                     continue;
                 }
             }
@@ -476,29 +514,41 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
         if (resourcesToDelete.Count > 0)
         {
-            await _resourceService.DeleteByKeys(resourcesToDelete.ToArray(), deleteFiles: false);
+            await _resourceService.DeleteByKeys(resourcesToDelete.ToArray());
         }
 
         return resourcesToDelete.Count;
     }
 
-    private async Task<int> ProcessPropertyMark(PathMark mark, CancellationToken ct)
+    private async Task<int> ProcessPropertyMark(PathMark mark, SyncContext ctx, CancellationToken ct)
     {
         var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(mark.ConfigJson);
         if (config == null) return 0;
 
-        // Get all resources and find those whose paths are under the mark's path
-        var allResources = await _resourceService.GetAll();
-        var matchedResources = allResources
-            .Where(r => IsPathUnderParent(r.Path, mark.Path))
+        // Use cached resources
+        var matchedResources = ctx.AllResources
+            .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
             .ToList();
 
         if (matchedResources.Count == 0) return 0;
 
-        // Filter resources based on mark's match config
-        var filteredResources = FilterResourcesByMarkConfig(matchedResources, mark.Path, config);
-
+        var filteredResources = FilterResourcesByMarkConfig(matchedResources, mark.Path, config, ctx);
         var appliedCount = 0;
+
+        // Pre-load existing property values for batch processing
+        if (config.Pool == PropertyPool.Custom && filteredResources.Count > 0)
+        {
+            var resourceIds = filteredResources.Select(r => r.Id).ToList();
+            var existingValues = await _customPropertyValueService.GetAllDbModels(x =>
+                resourceIds.Contains(x.ResourceId) &&
+                x.PropertyId == config.PropertyId &&
+                x.Scope == (int)PropertyValueScope.Synchronization);
+
+            foreach (var v in existingValues)
+            {
+                ctx.ExistingPropertyValues[(v.ResourceId, v.PropertyId)] = v;
+            }
+        }
 
         foreach (var resource in filteredResources)
         {
@@ -506,11 +556,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
             try
             {
-                var propertyValue = ExtractPropertyValue(resource.Path, mark.Path, config);
+                var propertyValue = ExtractPropertyValue(resource.Path, mark.Path, config, ctx);
                 if (propertyValue == null) continue;
 
-                // Apply property value to resource
-                await ApplyPropertyValue(resource, config, propertyValue);
+                CollectPropertyValue(resource, config, propertyValue, ctx);
                 appliedCount++;
             }
             catch
@@ -522,19 +571,16 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return appliedCount;
     }
 
-    private async Task<int> ProcessPropertyMarkDelete(PathMark mark, CancellationToken ct)
+    private async Task<int> ProcessPropertyMarkDelete(PathMark mark, SyncContext ctx, CancellationToken ct)
     {
         var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(mark.ConfigJson);
         if (config == null) return 0;
 
-        // Find resources that had this property applied
-        var allResources = await _resourceService.GetAll();
-        var matchedResources = allResources
-            .Where(r => IsPathUnderParent(r.Path, mark.Path))
+        var matchedResources = ctx.AllResources
+            .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
             .ToList();
 
-        var filteredResources = FilterResourcesByMarkConfig(matchedResources, mark.Path, config);
-
+        var filteredResources = FilterResourcesByMarkConfig(matchedResources, mark.Path, config, ctx);
         var deletedCount = 0;
 
         foreach (var resource in filteredResources)
@@ -543,7 +589,6 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
             try
             {
-                // Remove property value with Synchronization scope
                 await RemovePropertyValue(resource, config);
                 deletedCount++;
             }
@@ -556,19 +601,16 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return deletedCount;
     }
 
-    private async Task<int> ProcessMediaLibraryMark(PathMark mark, CancellationToken ct)
+    private async Task<int> ProcessMediaLibraryMark(PathMark mark, SyncContext ctx, CancellationToken ct)
     {
         var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
         if (config == null) return 0;
 
-        // Get all resources under the mark's path
-        var allResources = await _resourceService.GetAll();
-        var matchedResources = allResources
-            .Where(r => IsPathUnderParent(r.Path, mark.Path))
+        var matchedResources = ctx.AllResources
+            .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
             .ToList();
 
-        var filteredResources = FilterResourcesByMediaLibraryMarkConfig(matchedResources, mark.Path, config);
-
+        var filteredResources = FilterResourcesByMarkConfig(matchedResources, mark.Path, config, ctx);
         var createdCount = 0;
 
         // Cache for dynamic mode: media library name -> id
@@ -597,20 +639,16 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
                 if (config.ValueType == PropertyValueType.Fixed)
                 {
-                    // Fixed mode: use the configured media library ID
                     if (!config.MediaLibraryId.HasValue) continue;
                     mediaLibraryId = config.MediaLibraryId.Value;
                 }
                 else
                 {
-                    // Dynamic mode: extract media library name from path
-                    var mediaLibraryName = ExtractMediaLibraryName(resource.Path, mark.Path, config);
+                    var mediaLibraryName = ExtractMediaLibraryName(resource.Path, mark.Path, config, ctx);
                     if (string.IsNullOrEmpty(mediaLibraryName)) continue;
 
-                    // Check cache first
                     if (!mediaLibraryCache.TryGetValue(mediaLibraryName, out mediaLibraryId))
                     {
-                        // Create new media library
                         var newLibrary = await _mediaLibraryV2Service.Add(new MediaLibraryV2AddOrPutInputModel(
                             Name: mediaLibraryName,
                             Paths: new List<string>()
@@ -620,9 +658,7 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                     }
                 }
 
-                await _mappingService.EnsureMappings(
-                    resource.Id,
-                    new[] { mediaLibraryId });
+                await _mappingService.EnsureMappings(resource.Id, new[] { mediaLibraryId });
                 createdCount++;
             }
             catch
@@ -634,15 +670,9 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return createdCount;
     }
 
-    private string? ExtractMediaLibraryName(string resourcePath, string markPath, MediaLibraryMarkConfig config)
+    private string? ExtractMediaLibraryName(string resourcePath, string markPath, MediaLibraryMarkConfig config, SyncContext ctx)
     {
-        var normalizedResourcePath = resourcePath.StandardizePath()!;
-        var normalizedMarkPath = markPath.StandardizePath()!;
-
-        var resourceSegments = normalizedResourcePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-            StringSplitOptions.RemoveEmptyEntries);
-        var markSegments = normalizedMarkPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-            StringSplitOptions.RemoveEmptyEntries);
+        var resourceSegments = ctx.GetPathSegments(resourcePath);
 
         // Calculate the target index based on LayerToMediaLibrary
         var layer = config.LayerToMediaLibrary ?? 0;
@@ -650,12 +680,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
         if (layer == 0)
         {
-            // Layer 0 = matched item itself
             targetIndex = resourceSegments.Length - 1;
         }
         else
         {
-            // Layer > 0 = parent directories
             targetIndex = resourceSegments.Length - 1 - layer;
         }
 
@@ -671,18 +699,16 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         {
             try
             {
-                var regex = new Regex(config.RegexToMediaLibrary, RegexOptions.IgnoreCase);
+                var regex = ctx.GetOrCreateRegex(config.RegexToMediaLibrary);
                 var match = regex.Match(directoryName);
                 if (match.Success)
                 {
-                    // Return first capture group if available, otherwise full match
                     return match.Groups.Count > 1 ? match.Groups[1].Value : match.Value;
                 }
-                return null; // Regex didn't match
+                return null;
             }
             catch
             {
-                // Invalid regex, return directory name as-is
                 return directoryName;
             }
         }
@@ -690,18 +716,16 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return directoryName;
     }
 
-    private async Task<int> ProcessMediaLibraryMarkDelete(PathMark mark, CancellationToken ct)
+    private async Task<int> ProcessMediaLibraryMarkDelete(PathMark mark, SyncContext ctx, CancellationToken ct)
     {
         var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
         if (config == null) return 0;
 
-        // Get all resources under the mark's path
-        var allResources = await _resourceService.GetAll();
-        var matchedResources = allResources
-            .Where(r => IsPathUnderParent(r.Path, mark.Path))
+        var matchedResources = ctx.AllResources
+            .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
             .ToList();
 
-        var filteredResources = FilterResourcesByMediaLibraryMarkConfig(matchedResources, mark.Path, config);
+        var filteredResources = FilterResourcesByMarkConfig(matchedResources, mark.Path, config, ctx);
         var deletedCount = 0;
 
         foreach (var resource in filteredResources)
@@ -722,61 +746,67 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return deletedCount;
     }
 
-    private async Task<List<PathMark>> FindRelatedMarks(List<string> resourcePaths, PathMarkType type, List<PathMark> excludeMarks)
+    private async Task<List<PathMark>> FindRelatedMarksAsync(List<string> resourcePaths, PathMarkType type, List<PathMark> excludeMarks, SyncContext ctx)
     {
         var excludeIds = excludeMarks.Select(m => m.Id).ToHashSet();
+
+        // Precompute standardized resource paths for efficient lookup
+        var standardizedResourcePaths = resourcePaths
+            .Select(p => ctx.GetStandardizedPath(p))
+            .Where(p => !string.IsNullOrEmpty(p))
+            .ToList();
+
+        // Sort paths to enable prefix-based optimization
+        standardizedResourcePaths.Sort(StringComparer.OrdinalIgnoreCase);
+
         var allMarks = await _pathMarkService.GetAll(m => m.Type == type && !excludeIds.Contains(m.Id));
 
-        // Find marks whose Path is a parent directory of any resource path
-        // Include Synced marks so they can be re-applied to newly created resources
-        var relatedMarks = allMarks
-            .Where(m => resourcePaths.Any(rp => IsPathUnderParent(rp, m.Path)))
-            .Where(m => m.SyncStatus is PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete or PathMarkSyncStatus.Synced)
-            .ToList();
+        var relatedMarks = new List<PathMark>();
+
+        foreach (var mark in allMarks)
+        {
+            if (mark.SyncStatus is not (PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete or PathMarkSyncStatus.Synced))
+                continue;
+
+            var markPath = ctx.GetStandardizedPath(mark.Path);
+            if (string.IsNullOrEmpty(markPath)) continue;
+
+            // Check if any resource path starts with this mark's path
+            var markPathWithSeparator = markPath + Path.DirectorySeparatorChar;
+
+            foreach (var resourcePath in standardizedResourcePaths)
+            {
+                if (resourcePath.StartsWith(markPathWithSeparator, StringComparison.OrdinalIgnoreCase) ||
+                    resourcePath.Equals(markPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    relatedMarks.Add(mark);
+                    break;
+                }
+            }
+        }
 
         return relatedMarks;
     }
 
-    private bool IsPathUnderParent(string childPath, string parentPath)
+    private async Task EstablishParentChildRelationships(List<string> resourcePaths, SyncContext ctx, CancellationToken ct)
     {
-        var normalizedChild = childPath.StandardizePath();
-        var normalizedParent = parentPath.StandardizePath();
-
-        if (string.IsNullOrEmpty(normalizedChild) || string.IsNullOrEmpty(normalizedParent))
-            return false;
-
-        return normalizedChild.StartsWith(normalizedParent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase) ||
-               normalizedChild.Equals(normalizedParent, StringComparison.OrdinalIgnoreCase);
-    }
-
-    private async Task EstablishParentChildRelationships(List<string> resourcePaths, CancellationToken ct)
-    {
-        var allResources = await _resourceService.GetAll();
-        var pathToResourceMap = allResources.ToDictionary(r => r.Path, r => r, StringComparer.OrdinalIgnoreCase);
-
-        // Standardize and sort paths lexicographically
-        // After sorting, parent paths will appear before their child paths
+        // Use cached path-to-resource map
         var sortedPaths = resourcePaths
-            .Select(p => p.StandardizePath()!)
-            .Where(p => !string.IsNullOrEmpty(p) && pathToResourceMap.ContainsKey(p))
+            .Select(p => ctx.GetStandardizedPath(p))
+            .Where(p => !string.IsNullOrEmpty(p) && ctx.PathToResource.ContainsKey(p))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         var changedResources = new List<Resource>();
-
-        // Stack to track potential parent paths
-        // Each entry is (path, resource)
         var parentStack = new Stack<(string Path, Resource Resource)>();
 
         foreach (var path in sortedPaths)
         {
             ct.ThrowIfCancellationRequested();
 
-            var resource = pathToResourceMap[path];
+            var resource = ctx.PathToResource[path];
 
-            // Pop from stack until we find a valid parent or stack is empty
-            // A valid parent's path + separator must be a prefix of current path
             while (parentStack.Count > 0)
             {
                 var top = parentStack.Peek();
@@ -784,15 +814,11 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
 
                 if (path.StartsWith(parentPathWithSeparator, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Found parent
                     break;
                 }
-
-                // Not a parent, pop and continue
                 parentStack.Pop();
             }
 
-            // Set parent if found
             if (parentStack.Count > 0)
             {
                 var parent = parentStack.Peek();
@@ -804,12 +830,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
             }
             else if (resource.ParentId != null)
             {
-                // No parent found but resource had one, clear it
                 resource.ParentId = null;
                 changedResources.Add(resource);
             }
 
-            // Push current path as potential parent for subsequent paths
             parentStack.Push((path, resource));
         }
 
@@ -819,10 +843,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         }
     }
 
-    private List<string> GetMatchingPathsForResourceMark(string rootPath, ResourceMarkConfig config)
+    private List<string> GetMatchingPathsForResourceMark(string rootPath, ResourceMarkConfig config, SyncContext ctx)
     {
         var matchedPaths = new List<string>();
-        var normalizedRoot = rootPath.StandardizePath()!;
+        var normalizedRoot = ctx.GetStandardizedPath(rootPath);
 
         if (!Directory.Exists(normalizedRoot)) return matchedPaths;
 
@@ -837,19 +861,17 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 var layer = config.Layer.Value;
                 if (layer < 0)
                 {
-                    // Negative layer means parent directories
-                    // -1 = parent, -2 = grandparent, etc.
-                    initialMatches = GetParentAtLayer(normalizedRoot, Math.Abs(layer), config.FsTypeFilter);
+                    initialMatches = GetParentAtLayer(normalizedRoot, Math.Abs(layer), config.FsTypeFilter, ctx);
                 }
                 else
                 {
-                    initialMatches = GetEntriesAtLayer(normalizedRoot, layer, config.FsTypeFilter, config.Extensions);
+                    initialMatches = GetEntriesAtLayer(normalizedRoot, layer, config.FsTypeFilter, config.Extensions, ctx);
                 }
             }
             else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
             {
-                var regex = new Regex(config.Regex, RegexOptions.IgnoreCase);
-                var entries = GetAllEntries(normalizedRoot, config.FsTypeFilter, config.Extensions);
+                var regex = ctx.GetOrCreateRegex(config.Regex);
+                var entries = GetAllEntries(normalizedRoot, config.FsTypeFilter, config.Extensions, ctx);
                 initialMatches = new List<string>();
 
                 foreach (var entry in entries)
@@ -866,21 +888,18 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 return matchedPaths;
             }
 
-            // Apply ApplyScope logic
             if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
             {
-                // Only matched paths
                 matchedPaths.AddRange(initialMatches);
             }
             else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
             {
-                // Matched paths + all subdirectories
                 matchedPaths.AddRange(initialMatches);
                 foreach (var match in initialMatches)
                 {
                     if (Directory.Exists(match))
                     {
-                        var subdirEntries = GetAllEntries(match, config.FsTypeFilter, config.Extensions);
+                        var subdirEntries = GetAllEntries(match, config.FsTypeFilter, config.Extensions, ctx);
                         matchedPaths.AddRange(subdirEntries);
                     }
                 }
@@ -894,26 +913,32 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return matchedPaths;
     }
 
-    private List<string> GetAllEntries(string rootPath, PathFilterFsType? fsTypeFilter, List<string>? extensions)
+    private List<string> GetAllEntries(string rootPath, PathFilterFsType? fsTypeFilter, List<string>? extensions, SyncContext ctx)
     {
         var entries = new List<string>();
 
         try
         {
+            // Use EnumerateDirectories/EnumerateFiles for better memory efficiency
             if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.Directory)
             {
-                entries.AddRange(Directory.GetDirectories(rootPath, "*", SearchOption.AllDirectories));
+                foreach (var dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
+                {
+                    entries.Add(ctx.GetStandardizedPath(dir));
+                }
             }
 
             if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File)
             {
-                var files = Directory.GetFiles(rootPath, "*", SearchOption.AllDirectories);
-                if (extensions != null && extensions.Count > 0)
+                var extensionSet = extensions?.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
                 {
-                    files = files.Where(f => extensions.Any(ext =>
-                        f.EndsWith(ext, StringComparison.OrdinalIgnoreCase))).ToArray();
+                    if (extensionSet == null || extensionSet.Count == 0 ||
+                        extensionSet.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        entries.Add(ctx.GetStandardizedPath(file));
+                    }
                 }
-                entries.AddRange(files);
             }
         }
         catch
@@ -921,10 +946,10 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
             // Ignore access errors
         }
 
-        return entries.Select(x => x.StandardizePath()!).ToList();
+        return entries;
     }
 
-    private List<string> GetEntriesAtLayer(string rootPath, int layer, PathFilterFsType? fsTypeFilter, List<string>? extensions)
+    private List<string> GetEntriesAtLayer(string rootPath, int layer, PathFilterFsType? fsTypeFilter, List<string>? extensions, SyncContext ctx)
     {
         var entries = new List<string>();
 
@@ -939,16 +964,18 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 {
                     try
                     {
-                        nextPaths.AddRange(Directory.GetDirectories(path));
+                        nextPaths.AddRange(Directory.EnumerateDirectories(path));
                         if (i == layer && (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File))
                         {
-                            var files = Directory.GetFiles(path);
-                            if (extensions != null && extensions.Count > 0)
+                            var extensionSet = extensions?.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                            foreach (var file in Directory.EnumerateFiles(path))
                             {
-                                files = files.Where(f => extensions.Any(ext =>
-                                    f.EndsWith(ext, StringComparison.OrdinalIgnoreCase))).ToArray();
+                                if (extensionSet == null || extensionSet.Count == 0 ||
+                                    extensionSet.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
+                                {
+                                    nextPaths.Add(file);
+                                }
                             }
-                            nextPaths.AddRange(files);
                         }
                     }
                     catch
@@ -977,41 +1004,38 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
             // Ignore access errors
         }
 
-        return entries.Select(x => x.StandardizePath()!).ToList();
+        return entries.Select(x => ctx.GetStandardizedPath(x)).ToList();
     }
 
-    private List<string> GetParentAtLayer(string rootPath, int absLayer, PathFilterFsType? fsTypeFilter)
+    private List<string> GetParentAtLayer(string rootPath, int absLayer, PathFilterFsType? fsTypeFilter, SyncContext ctx)
     {
         var entries = new List<string>();
 
         try
         {
-            // Navigate up to parent directories
             var currentPath = rootPath;
             for (int i = 0; i < absLayer; i++)
             {
                 var parentPath = Path.GetDirectoryName(currentPath);
                 if (string.IsNullOrEmpty(parentPath))
                 {
-                    // Reached root, can't go higher
                     return entries;
                 }
                 currentPath = parentPath;
             }
 
-            // Check if the parent exists and matches filter
             if (Directory.Exists(currentPath))
             {
                 if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.Directory)
                 {
-                    entries.Add(currentPath.StandardizePath()!);
+                    entries.Add(ctx.GetStandardizedPath(currentPath));
                 }
             }
             else if (File.Exists(currentPath))
             {
                 if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File)
                 {
-                    entries.Add(currentPath.StandardizePath()!);
+                    entries.Add(ctx.GetStandardizedPath(currentPath));
                 }
             }
         }
@@ -1023,39 +1047,62 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return entries;
     }
 
-    private List<Resource> FilterResourcesByMarkConfig(List<Resource> resources, string markPath, PropertyMarkConfig config)
+    // Unified filter method for both PropertyMarkConfig and MediaLibraryMarkConfig
+    private List<Resource> FilterResourcesByMarkConfig<TConfig>(List<Resource> resources, string markPath, TConfig config, SyncContext ctx)
+        where TConfig : class
     {
-        var normalizedMarkPath = markPath.StandardizePath()!;
+        var normalizedMarkPath = ctx.GetStandardizedPath(markPath);
+
+        PathMatchMode? matchMode = null;
+        int? layer = null;
+        string? regex = null;
+        PathMarkApplyScope? applyScope = null;
+
+        if (config is PropertyMarkConfig pmc)
+        {
+            matchMode = pmc.MatchMode;
+            layer = pmc.Layer;
+            regex = pmc.Regex;
+            applyScope = pmc.ApplyScope;
+        }
+        else if (config is MediaLibraryMarkConfig mlmc)
+        {
+            matchMode = mlmc.MatchMode;
+            layer = mlmc.Layer;
+            regex = mlmc.Regex;
+            applyScope = mlmc.ApplyScope;
+        }
 
         // First filter by MatchMode
-        var filteredResources = config.MatchMode switch
+        var filteredResources = matchMode switch
         {
-            PathMatchMode.Layer when config.Layer.HasValue => FilterByLayer(resources, normalizedMarkPath, config.Layer.Value),
-            PathMatchMode.Regex when !string.IsNullOrEmpty(config.Regex) => FilterByRegex(resources, normalizedMarkPath, config.Regex),
+            PathMatchMode.Layer when layer.HasValue => FilterByLayer(resources, normalizedMarkPath, layer.Value, ctx),
+            PathMatchMode.Regex when !string.IsNullOrEmpty(regex) => FilterByRegex(resources, normalizedMarkPath, regex, ctx),
             _ => resources
         };
 
-        // Then apply ApplyScope logic
-        if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
+        if (applyScope == PathMarkApplyScope.MatchedOnly)
         {
-            // Only return the matched resources
             return filteredResources;
         }
-        else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
+        else if (applyScope == PathMarkApplyScope.MatchedAndSubdirectories)
         {
-            // Return matched resources + all resources under them
             var result = new List<Resource>(filteredResources);
-            var matchedPaths = filteredResources.Select(r => r.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var matchedPaths = filteredResources.Select(r => ctx.GetStandardizedPath(r.Path)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
             foreach (var resource in resources)
             {
-                if (matchedPaths.Contains(resource.Path)) continue; // Already included
+                var resourcePath = ctx.GetStandardizedPath(resource.Path);
+                if (matchedPaths.Contains(resourcePath)) continue;
 
-                // Check if this resource is under any matched path
-                if (matchedPaths.Any(matchedPath => IsPathUnderParent(resource.Path, matchedPath) &&
-                                                     !resource.Path.Equals(matchedPath, StringComparison.OrdinalIgnoreCase)))
+                foreach (var matchedPath in matchedPaths)
                 {
-                    result.Add(resource);
+                    if (ctx.IsPathUnderParent(resourcePath, matchedPath) &&
+                        !resourcePath.Equals(matchedPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        result.Add(resource);
+                        break;
+                    }
                 }
             }
 
@@ -1065,113 +1112,59 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return filteredResources;
     }
 
-    private List<Resource> FilterResourcesByMediaLibraryMarkConfig(List<Resource> resources, string markPath, MediaLibraryMarkConfig config)
+    private List<Resource> FilterByLayer(List<Resource> resources, string rootPath, int layer, SyncContext ctx)
     {
-        var normalizedMarkPath = markPath.StandardizePath()!;
-
-        // First filter by MatchMode
-        var filteredResources = config.MatchMode switch
-        {
-            PathMatchMode.Layer when config.Layer.HasValue => FilterByLayer(resources, normalizedMarkPath, config.Layer.Value),
-            PathMatchMode.Regex when !string.IsNullOrEmpty(config.Regex) => FilterByRegex(resources, normalizedMarkPath, config.Regex),
-            _ => resources
-        };
-
-        // Then apply ApplyScope logic
-        if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
-        {
-            // Only return the matched resources
-            return filteredResources;
-        }
-        else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
-        {
-            // Return matched resources + all resources under them
-            var result = new List<Resource>(filteredResources);
-            var matchedPaths = filteredResources.Select(r => r.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var resource in resources)
-            {
-                if (matchedPaths.Contains(resource.Path)) continue; // Already included
-
-                // Check if this resource is under any matched path
-                if (matchedPaths.Any(matchedPath => IsPathUnderParent(resource.Path, matchedPath) &&
-                                                     !resource.Path.Equals(matchedPath, StringComparison.OrdinalIgnoreCase)))
-                {
-                    result.Add(resource);
-                }
-            }
-
-            return result;
-        }
-
-        return filteredResources;
-    }
-
-    private List<Resource> FilterByLayer(List<Resource> resources, string rootPath, int layer)
-    {
-        var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-            StringSplitOptions.RemoveEmptyEntries);
+        var rootSegments = ctx.GetPathSegments(rootPath);
 
         if (layer < 0)
         {
-            // Negative layer means parent directories
-            // -1 = parent, -2 = grandparent, etc.
-            // For resources, filter those whose path is the parent at the specified level
             var absLayer = Math.Abs(layer);
             var targetSegmentCount = rootSegments.Length - absLayer;
             if (targetSegmentCount <= 0) return new List<Resource>();
 
             return resources.Where(r =>
             {
-                var resourceSegments = r.Path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                    StringSplitOptions.RemoveEmptyEntries);
+                var resourceSegments = ctx.GetPathSegments(r.Path);
                 return resourceSegments.Length == targetSegmentCount;
             }).ToList();
         }
 
         return resources.Where(r =>
         {
-            var resourceSegments = r.Path.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-                StringSplitOptions.RemoveEmptyEntries);
+            var resourceSegments = ctx.GetPathSegments(r.Path);
             var relativeDepth = resourceSegments.Length - rootSegments.Length;
             return relativeDepth == layer;
         }).ToList();
     }
 
-    private List<Resource> FilterByRegex(List<Resource> resources, string rootPath, string pattern)
+    private List<Resource> FilterByRegex(List<Resource> resources, string rootPath, string pattern, SyncContext ctx)
     {
-        var regex = new Regex(pattern, RegexOptions.IgnoreCase);
+        var regex = ctx.GetOrCreateRegex(pattern);
 
         return resources.Where(r =>
         {
-            var relativePath = r.Path.Substring(rootPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var standardizedPath = ctx.GetStandardizedPath(r.Path);
+            var relativePath = standardizedPath.Substring(rootPath.Length).TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             return regex.IsMatch(relativePath);
         }).ToList();
     }
 
-    private object? ExtractPropertyValue(string resourcePath, string markPath, PropertyMarkConfig config)
+    private object? ExtractPropertyValue(string resourcePath, string markPath, PropertyMarkConfig config, SyncContext ctx)
     {
         if (config.ValueType == PropertyValueType.Fixed)
         {
             return config.FixedValue;
         }
 
-        // Dynamic value extraction
-        var normalizedResourcePath = resourcePath.StandardizePath()!;
-        var normalizedMarkPath = markPath.StandardizePath()!;
-
-        var resourceSegments = normalizedResourcePath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-            StringSplitOptions.RemoveEmptyEntries);
-        var markSegments = normalizedMarkPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
-            StringSplitOptions.RemoveEmptyEntries);
+        var resourceSegments = ctx.GetPathSegments(resourcePath);
+        var markSegments = ctx.GetPathSegments(markPath);
 
         if (config.MatchMode == PathMatchMode.Layer && config.ValueLayer.HasValue)
         {
             var valueLayer = config.ValueLayer.Value;
             if (valueLayer == 0)
             {
-                // The matched item itself
-                return Path.GetFileName(normalizedResourcePath);
+                return Path.GetFileName(ctx.GetStandardizedPath(resourcePath));
             }
 
             var targetIndex = markSegments.Length + valueLayer - 1;
@@ -1182,9 +1175,11 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         }
         else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.ValueRegex))
         {
+            var normalizedResourcePath = ctx.GetStandardizedPath(resourcePath);
+            var normalizedMarkPath = ctx.GetStandardizedPath(markPath);
             var relativePath = normalizedResourcePath.Substring(normalizedMarkPath.Length)
                 .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var regex = new Regex(config.ValueRegex, RegexOptions.IgnoreCase);
+            var regex = ctx.GetOrCreateRegex(config.ValueRegex);
             var match = regex.Match(relativePath);
             if (match.Success && match.Groups.Count > 1)
             {
@@ -1199,23 +1194,20 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
         return null;
     }
 
-    private async Task ApplyPropertyValue(Resource resource, PropertyMarkConfig config, object? value)
+    // Collect property values for batch processing instead of immediate DB operations
+    private void CollectPropertyValue(Resource resource, PropertyMarkConfig config, object? value, SyncContext ctx)
     {
         if (value == null) return;
-
-        // Only support Custom properties for now (Pool.Custom)
         if (config.Pool != PropertyPool.Custom) return;
 
-        // Serialize value to string for storage
         var valueString = value is string s ? s : System.Text.Json.JsonSerializer.Serialize(value);
 
-        // Check if value already exists
-        var existingValue = (await _customPropertyValueService.GetAllDbModels(x =>
-            x.ResourceId == resource.Id &&
-            x.PropertyId == config.PropertyId &&
-            x.Scope == (int)PropertyValueScope.Synchronization)).FirstOrDefault();
-
-        if (existingValue == null)
+        if (ctx.ExistingPropertyValues.TryGetValue((resource.Id, config.PropertyId), out var existingValue))
+        {
+            existingValue.Value = valueString;
+            ctx.PropertyValuesToUpdate.Add(existingValue);
+        }
+        else
         {
             var newValue = new CustomPropertyValueDbModel
             {
@@ -1224,12 +1216,7 @@ public class PathMarkSyncService<TDbContext> : ScopedService, IPathMarkSyncServi
                 Value = valueString,
                 Scope = (int)PropertyValueScope.Synchronization
             };
-            await _customPropertyValueService.AddDbModel(newValue);
-        }
-        else
-        {
-            existingValue.Value = valueString;
-            await _customPropertyValueService.UpdateDbModel(existingValue);
+            ctx.PropertyValuesToAdd.Add(newValue);
         }
     }
 

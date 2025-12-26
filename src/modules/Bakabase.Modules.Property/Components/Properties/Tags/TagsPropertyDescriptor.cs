@@ -1,4 +1,5 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -8,6 +9,23 @@ namespace Bakabase.Modules.Property.Components.Properties.Tags;
 public class TagsPropertyDescriptor : AbstractPropertyDescriptor<TagsPropertyOptions, List<string>, List<TagValue>>
 {
     public override PropertyType Type => PropertyType.Tags;
+
+    /// <summary>
+    /// 为每个 tag 生成单独的索引条目
+    /// </summary>
+    protected override IEnumerable<PropertyIndexEntry> GenerateIndexEntriesInternal(
+        Bakabase.Abstractions.Models.Domain.Property property,
+        List<string> dbValue)
+    {
+        // 每个 tag ID 单独生成一个索引条目
+        foreach (var tagId in dbValue)
+        {
+            if (!string.IsNullOrEmpty(tagId))
+            {
+                yield return new PropertyIndexEntry(tagId);
+            }
+        }
+    }
 
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(
         Bakabase.Abstractions.Models.Domain.Property property,

@@ -151,6 +151,12 @@ public class BTaskHandler
 
     public async Task TryStartAutomatically()
     {
+        // Check if waiting for retry
+        if (Task.NextRetryAt.HasValue && DateTime.Now < Task.NextRetryAt.Value)
+        {
+            return;
+        }
+
         if (Task.Status == BTaskStatus.NotStarted || (Task.Interval.HasValue && (!Task.LastFinishedAt.HasValue ||
                                                           DateTime.Now - Task.Interval.Value >
                                                           Task.LastFinishedAt.Value) &&
@@ -196,6 +202,7 @@ public class BTaskHandler
             t.Status = BTaskStatus.Running;
             t.Percentage = 0;
             t.StartedAt = DateTime.Now;
+            t.NextRetryAt = null; // Clear retry time when starting
         });
 
         _ = System.Threading.Tasks.Task.Run(async () =>
@@ -219,11 +226,28 @@ public class BTaskHandler
                 else
                 {
                     _logger.LogError(e, "Task failed");
-                    await UpdateTask(t =>
+
+                    // Check if retry is available
+                    if (Task.RetryPolicy != null && Task.RetryCount < Task.RetryPolicy.MaxRetries)
                     {
-                        t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());
-                        Task.Status = BTaskStatus.Error;
-                    });
+                        var delay = Task.RetryPolicy.GetDelayForRetry(Task.RetryCount);
+                        await UpdateTask(t =>
+                        {
+                            t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());
+                            t.RetryCount++;
+                            t.NextRetryAt = DateTime.Now + delay;
+                            t.Status = BTaskStatus.NotStarted; // Will be picked up by daemon
+                        });
+                        _logger.LogInformation($"Task will retry in {delay.TotalSeconds:F1}s (attempt {Task.RetryCount}/{Task.RetryPolicy.MaxRetries})");
+                    }
+                    else
+                    {
+                        await UpdateTask(t =>
+                        {
+                            t.SetError((e as BTaskException)?.BriefMessage, e.BuildFullInformationText());
+                            t.Status = BTaskStatus.Error;
+                        });
+                    }
                 }
             }
             finally

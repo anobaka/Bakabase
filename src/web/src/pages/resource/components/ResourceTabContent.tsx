@@ -282,9 +282,13 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       }
 
       setSearching(true);
+
+      // Step 1: Quick search with Cache for fast initial response
+      // Cache allows ResourceCover and PlayableFiles to use cached data immediately
       const rsp = await BApi.resource.searchResources(dto, {
         saveSearch: save,
         searchId: props.searchId,
+        additionalItems: ResourceAdditionalItem.Cache,
       });
 
       if (renderMode == "replace") {
@@ -300,20 +304,50 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         page: rsp.pageIndex!,
       });
 
-      const newResources = rsp.data || [];
+      const basicResources = rsp.data || [];
 
+      // Show basic resources immediately for quick display
       switch (renderMode) {
         case "append":
-          setResources([...resourcesRef.current, ...newResources]);
+          setResources([...resourcesRef.current, ...basicResources]);
           break;
         case "prepend":
-          setResources([...newResources, ...resourcesRef.current]);
+          setResources([...basicResources, ...resourcesRef.current]);
           break;
         default:
-          setResources(newResources);
+          setResources(basicResources);
           break;
       }
       setSearching(false);
+
+      // Step 2: Fetch full details for the resources in background
+      if (basicResources.length > 0) {
+        const ids = basicResources.map((r: any) => r.id);
+        const fullRsp = await BApi.resource.getResourcesByKeys({
+          ids,
+          additionalItems: ResourceAdditionalItem.All,
+        });
+        const fullResources = fullRsp.data || [];
+
+        // Update resources with full details
+        const fullResourcesMap = new Map(fullResources.map((r: any) => [r.id, r]));
+
+        switch (renderMode) {
+          case "append":
+            setResources((prev) =>
+              prev.map((r) => fullResourcesMap.get(r.id) ?? r),
+            );
+            break;
+          case "prepend":
+            setResources((prev) =>
+              prev.map((r) => fullResourcesMap.get(r.id) ?? r),
+            );
+            break;
+          default:
+            setResources(fullResources);
+            break;
+        }
+      }
     },
     [],
   );

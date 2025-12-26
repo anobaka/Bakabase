@@ -384,6 +384,9 @@
   <data name="BTask_FailedToRunTaskDueToConflict" xml:space="preserve">
     <value>发现任务冲突，任务[{0}]不能和任务[{1}]同时运行</value>
   </data>
+  <data name="BTask_FailedToRunTaskDueToDependency" xml:space="preserve">
+    <value>任务[{0}]正在等待依赖任务完成：{1}</value>
+  </data>
   <data name="BTask_FailedToRunTaskDueToUnknownTaskId" xml:space="preserve">
     <value>无法运行任务：任务id [{0}]不存在</value>
   </data>
@@ -563,6 +566,12 @@
   </data>
   <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
     <value>构建资源与配置的匹配索引</value>
+  </data>
+  <data name="BTask_Name_SearchIndex" xml:space="preserve">
+    <value>构建搜索索引</value>
+  </data>
+  <data name="BTask_Description_SearchIndex" xml:space="preserve">
+    <value>构建用于快速资源搜索的倒排索引</value>
   </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>发现新版本</value>

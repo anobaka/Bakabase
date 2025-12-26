@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Components.Properties.Choice.Abstractions;
 using Bakabase.Modules.Property.Extensions;
@@ -13,6 +14,22 @@ public class MultipleChoicePropertyDescriptor
     : AbstractPropertyDescriptor<MultipleChoicePropertyOptions, List<string>, List<string>>
 {
     public override PropertyType Type => PropertyType.MultipleChoice;
+
+    /// <summary>
+    /// 为每个选项生成单独的索引条目
+    /// </summary>
+    protected override IEnumerable<PropertyIndexEntry> GenerateIndexEntriesInternal(
+        Bakabase.Abstractions.Models.Domain.Property property,
+        List<string> dbValue)
+    {
+        foreach (var choiceId in dbValue)
+        {
+            if (!string.IsNullOrEmpty(choiceId))
+            {
+                yield return new PropertyIndexEntry(choiceId);
+            }
+        }
+    }
 
     protected override bool IsMatchInternal(List<string> dbValue, SearchOperation operation, object filterValue)
     {

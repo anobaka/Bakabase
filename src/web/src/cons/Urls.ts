@@ -1,4 +1,4 @@
-const github = "https://github.com/Bakabase/InsideWorld";
+const github = "https://github.com/Anobaka/Bakabase";
 
 const urls = {
   Github: github,

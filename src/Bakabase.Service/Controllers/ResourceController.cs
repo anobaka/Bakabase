@@ -46,6 +46,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NPOI.Util.Collections;
+using StackExchange.Profiling;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -190,36 +191,50 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("search")]
         [SwaggerOperation(OperationId = "SearchResources")]
-        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string? searchId = null)
+        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string? searchId = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
         {
-            model.StandardPageable();
+            using (MiniProfiler.Current.Step("StandardPageable"))
+            {
+                model.StandardPageable();
+            }
 
             if (saveSearch)
             {
-                try
+                // Fire-and-forget: save search criteria in background to avoid blocking search response
+                var dbModel = model.ToDbModel();
+                _ = Task.Run(async () =>
                 {
-                    await resourceOptionsManager.SaveAsync(a =>
+                    try
                     {
-                        a.LastSearchV2 = model.ToDbModel();
-                        if (searchId.IsNotEmpty())
+                        await resourceOptionsManager.SaveAsync(a =>
                         {
-                            var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
-                            if (search != null)
+                            a.LastSearchV2 = dbModel;
+                            if (searchId.IsNotEmpty())
                             {
-                                search.Search = model.ToDbModel();
-                            }    
-                        }
-                    });
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to save search criteria");
-                }
+                                var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
+                                if (search != null)
+                                {
+                                    search.Search = dbModel;
+                                }
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to save search criteria");
+                    }
+                });
             }
 
-            var domainModel = await model.ToDomainModel(propertyService);
+            using (MiniProfiler.Current.Step("InputModel.ToDomainModel"))
+            {
+                var domainModel = await model.ToDomainModel(propertyService);
 
-            return await service.Search(domainModel);
+                using (MiniProfiler.Current.Step("ResourceService.Search"))
+                {
+                    return await service.Search(domainModel, additionalItems);
+                }
+            }
         }
 
         [HttpPost("search/ids")]
@@ -438,9 +453,9 @@ namespace Bakabase.Service.Controllers
 
         [HttpDelete("ids")]
         [SwaggerOperation(OperationId = "DeleteResourcesByKeys")]
-        public async Task<BaseResponse> DeleteByKeys(int[] ids, bool deleteFiles)
+        public async Task<BaseResponse> DeleteByKeys(int[] ids)
         {
-            await service.DeleteByKeys(ids, deleteFiles);
+            await service.DeleteByKeys(ids);
             return BaseResponseBuilder.Ok;
         }
 

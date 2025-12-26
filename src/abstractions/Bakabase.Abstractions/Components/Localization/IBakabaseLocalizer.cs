@@ -40,6 +40,7 @@ public interface IBakabaseLocalizer
     string? BTask_MessageOnInterruption(string key);
     string? MessageOnInterruption_MoveFiles();
     string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames);
+    string BTask_FailedToRunTaskDueToDependency(string incomingTaskName, params string[] dependencyTaskNames);
     string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
     string BTask_FailedToRunTaskDueToIdExisting(string id, string name);
     string BTask_CanNotReplaceAnActiveTask(string id, string name);

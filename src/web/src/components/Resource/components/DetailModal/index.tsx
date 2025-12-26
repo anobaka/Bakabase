@@ -166,7 +166,7 @@ const DetailModal = ({ id, onRemoved, ...props }: Props) => {
                 }
                 style={{ borderColor: "var(--bakaui-overlap-background)" }}
               >
-                <ResourceCover resource={resource} showBiggerOnHover={false} useCache={false} />
+                <ResourceCover resource={resource} showBiggerOnHover={false} />
               </div>
               <div className={"flex items-center"}>
                 <div className="flex-1" />
@@ -181,7 +181,6 @@ const DetailModal = ({ id, onRemoved, ...props }: Props) => {
                 <div className="flex-1 flex justify-end">
                   <ButtonGroup size={"sm"}>
                     <PlayableFiles
-                      autoInitialize
                       PortalComponent={({ onClick }) => (
                         <Tooltip content={t("Play")}>
                           <Button isIconOnly color="primary" onPress={onClick}>

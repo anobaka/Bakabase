@@ -48,7 +48,7 @@ public static class MediaLibraryTemplateExtensions
         // New services for media library refactoring
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, PathMarkDbModel, int>>();
         services.AddScoped<IPathMarkService, PathMarkService<TDbContext>>();
-        services.AddScoped<IPathMarkSyncService, PathMarkSyncService<TDbContext>>();
+        services.AddScoped<IPathMarkSyncService, PathMarkSyncService>();
 
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, MediaLibraryResourceMappingDbModel, int>>();
         services.AddSingleton<MediaLibraryResourceMappingIndexService>();

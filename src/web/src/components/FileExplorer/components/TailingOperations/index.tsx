@@ -3,7 +3,7 @@
 import type { Entry } from "@/core/models/FileExplorer/Entry";
 import type { FileExplorerEntryProps } from "../../FileExplorerEntry";
 
-import { FolderOpenOutlined, SyncOutlined, UploadOutlined } from "@ant-design/icons";
+import { FolderAddOutlined, FolderOpenOutlined, SyncOutlined, UploadOutlined } from "@ant-design/icons";
 import React from "react";
 import { useTranslation } from "react-i18next";
 
@@ -14,6 +14,7 @@ import { IwFsType } from "@/sdk/constants";
 import { Button, Tooltip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ExtractModal from "../ExtractModal";
+import CreateDirectoryModal from "../CreateDirectoryModal";
 
 type Props = {
   entry: Entry;
@@ -60,6 +61,23 @@ const TailingOperations = (props: Props) => {
             }}
           >
             <UploadOutlined className={"text-base"} />
+          </Button>
+        </Tooltip>
+      )}
+      {entry.isDirectoryOrDrive && capabilities?.includes("create-directory") && (
+        <Tooltip content={`(N)${t<string>("Create new folder")}`} placement={"top"}>
+          <Button
+            isIconOnly
+            className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}
+            variant={"light"}
+            onClick={(e) => {
+              e.stopPropagation();
+              createPortal(CreateDirectoryModal, {
+                parentPath: entry.path,
+              });
+            }}
+          >
+            <FolderAddOutlined className={"text-base"} />
           </Button>
         </Tooltip>
       )}

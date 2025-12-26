@@ -37,6 +37,7 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 import {
   InternalProperty,
   PropertyPool,
+  ResourceAdditionalItem,
   ResourceSearchSortableProperty,
   ResourceTag,
   SearchOperation,
@@ -74,6 +75,44 @@ const DashboardPage = () => {
   const [mediaLibraries, setMediaLibraries] = useState<Array<{ id: number; name: string }>>([]);
   const initializedRef = useRef(false);
 
+  // Helper function for progressive loading: first fetch with Cache, then get full details
+  const progressiveSearch = async (
+    searchParams: Parameters<typeof BApi.resource.searchResources>[0],
+    setState: React.Dispatch<React.SetStateAction<ResourceModel[]>>,
+    filter?: (resources: ResourceModel[]) => ResourceModel[],
+  ) => {
+    // Step 1: Quick search with Cache for fast initial response
+    const quickRes = await BApi.resource.searchResources(searchParams, {
+      additionalItems: ResourceAdditionalItem.Cache,
+    });
+    let basicResources = (quickRes.data ?? []) as ResourceModel[];
+
+    // Apply filter if provided (e.g., for recently played)
+    if (filter) {
+      basicResources = filter(basicResources);
+    }
+
+    // Set basic resources immediately for quick display
+    setState(basicResources);
+
+    // Step 2: Fetch full details for the resources
+    if (basicResources.length > 0) {
+      const ids = basicResources.map((r) => r.id);
+      const fullRes = await BApi.resource.getResourcesByKeys({
+        ids,
+        additionalItems: ResourceAdditionalItem.All,
+      });
+      let fullResources = (fullRes.data ?? []) as ResourceModel[];
+
+      // Apply filter again if provided
+      if (filter) {
+        fullResources = filter(fullResources);
+      }
+
+      setState(fullResources);
+    }
+  };
+
   useEffect(() => {
     BApi.dashboard.getStatistics().then((res) => {
       initializedRef.current = true;
@@ -87,35 +126,37 @@ const DashboardPage = () => {
       setProperty(r.data);
     });
 
-    // Fetch recently added
-    BApi.resource.searchResources({
-      page: 1,
-      pageSize: 20,
-      orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
-    }).then((res) => {
-      setRecentlyAdded((res.data ?? []) as ResourceModel[]);
-    });
+    // Fetch recently added with progressive loading
+    progressiveSearch(
+      {
+        page: 1,
+        pageSize: 20,
+        orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
+      },
+      setRecentlyAdded,
+    );
 
-    // Fetch recently played
-    BApi.resource.searchResources({
-      page: 1,
-      pageSize: 20,
-      orders: [{ property: ResourceSearchSortableProperty.PlayedAt, asc: false }],
-    }).then((res) => {
-      // Filter out resources that have never been played
-      const played = ((res.data ?? []) as ResourceModel[]).filter(r => r.playedAt);
-      setRecentlyPlayed(played);
-    });
+    // Fetch recently played with progressive loading
+    progressiveSearch(
+      {
+        page: 1,
+        pageSize: 20,
+        orders: [{ property: ResourceSearchSortableProperty.PlayedAt, asc: false }],
+      },
+      setRecentlyPlayed,
+      (resources) => resources.filter((r) => r.playedAt),
+    );
 
-    // Fetch pinned resources
-    BApi.resource.searchResources({
-      page: 1,
-      pageSize: 20,
-      tags: [ResourceTag.Pinned],
-      orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
-    }).then((res) => {
-      setPinnedResources((res.data ?? []) as ResourceModel[]);
-    });
+    // Fetch pinned resources with progressive loading
+    progressiveSearch(
+      {
+        page: 1,
+        pageSize: 20,
+        tags: [ResourceTag.Pinned],
+        orders: [{ property: ResourceSearchSortableProperty.AddDt, asc: false }],
+      },
+      setPinnedResources,
+    );
 
     // Fetch media libraries for Browse Libraries dropdown
     BApi.mediaLibraryV2.getAllMediaLibraryV2().then((res) => {

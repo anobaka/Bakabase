@@ -58,10 +58,10 @@ body {
 }
 
 /* Firefox scrollbar */
-* {
+/* * {
   scrollbar-width: thin;
   scrollbar-color: var(--theme-scrollbar-thumb-background) var(--theme-scrollbar-track-background);
-}
+} */
 
 *,
 *:focus,

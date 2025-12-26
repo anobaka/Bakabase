@@ -14,18 +14,26 @@ namespace Bakabase.Abstractions.Services;
 
 public interface IResourceService
 {
-    Task DeleteByKeys(int[] ids, bool deleteFiles);
+    Task DeleteByKeys(int[] ids);
 
     Task<List<Resource>> GetAll(Expression<Func<Models.Db.ResourceDbModel, bool>>? selector = null,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
     
-    Task<SearchResponse<Resource>> Search(ResourceSearch model);
+    Task<SearchResponse<Resource>> Search(ResourceSearch model,
+        ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All,
+        bool asNoTracking = true);
 
     /// <summary>
     /// Lightweight search that returns only resource IDs without loading additional items.
     /// Use this to avoid circular dependencies (e.g., ResourceProfile matching).
     /// </summary>
     Task<int[]> GetAllIds(ResourceSearch model);
+
+    /// <summary>
+    /// Returns all resource IDs without any filtering or additional items.
+    /// Ultra-lightweight method for preventing circular dependencies.
+    /// </summary>
+    Task<int[]> GetAllResourceIds();
 
     Task<Abstractions.Models.Domain.Resource?> Get(int id,
         ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);
@@ -91,6 +99,7 @@ public interface IResourceService
 
     Task DeleteResourceCacheByResourceIdAndCacheType(int resourceId, ResourceCacheType type);
     Task DeleteResourceCacheByMediaLibraryIdAndCacheType(int mediaLibraryId, ResourceCacheType type);
+    Task DeleteResourceCacheByResourceIdsAndCacheType(IEnumerable<int> resourceIds, ResourceCacheType type);
     Task DeleteUnassociatedResourceCacheByCacheType(ResourceCacheType type);
 
     Task MarkAsNotPlayed(int id);

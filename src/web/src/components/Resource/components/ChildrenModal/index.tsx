@@ -6,7 +6,6 @@ import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Modal, Spinner } from "@/components/bakaui";
-import BApi from "@/sdk/BApi";
 import Resource from "@/components/Resource";
 import { buildLogger } from "@/components/utils";
 import {
@@ -15,6 +14,7 @@ import {
   PropertyPool,
   InternalProperty,
 } from "@/sdk/constants";
+import { useResourceSearch } from "@/hooks/useResourceSearch";
 
 const log = buildLogger("ChildrenModal");
 
@@ -27,55 +27,40 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
   onDestroyed,
 }) => {
   const { t } = useTranslation();
-  const [children, setChildren] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { resources: children, loading, search } = useResourceSearch();
   const [error, setError] = useState<string | null>(null);
-
-  // 搜索子资源
-  const searchChildren = async () => {
-    if (!resourceId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // 创建搜索表单，查找parentId为当前resourceId的资源
-      const searchForm = {
-        group: {
-          combinator: SearchCombinator.And,
-          disabled: false,
-          filters: [
-            {
-              propertyPool: PropertyPool.Internal,
-              propertyId: InternalProperty.ParentResource, // ParentResource 属性ID
-              operation: SearchOperation.Equals,
-              dbValue: resourceId.toString(),
-              disabled: false,
-            },
-          ],
-        },
-        page: 1,
-        pageSize: 1000, // 获取更多子资源
-      };
-
-      const response = await BApi.resource.searchResources(searchForm, {
-        saveSearch: false,
-      });
-
-      setChildren(response.data || []);
-      log("Found children:", response.data?.length || 0);
-    } catch (err) {
-      console.error("Failed to search children:", err);
-      setError(t<string>("Failed to load children"));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 当Modal显示且resourceId变化时，重新搜索
   useEffect(() => {
     if (resourceId) {
-      searchChildren();
+      setError(null);
+      search(
+        {
+          group: {
+            combinator: SearchCombinator.And,
+            disabled: false,
+            filters: [
+              {
+                propertyPool: PropertyPool.Internal,
+                propertyId: InternalProperty.ParentResource,
+                operation: SearchOperation.Equals,
+                dbValue: resourceId.toString(),
+                disabled: false,
+              },
+            ],
+          },
+          page: 1,
+          pageSize: 1000,
+        },
+        { saveSearch: false },
+      )
+        .then((result) => {
+          log("Found children:", result.length);
+        })
+        .catch((err) => {
+          console.error("Failed to search children:", err);
+          setError(t<string>("Failed to load children"));
+        });
     }
   }, [resourceId]);
 

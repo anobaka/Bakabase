@@ -118,4 +118,9 @@ public interface IResourceProfileService
     /// Get resource IDs matching a profile's search criteria
     /// </summary>
     Task<HashSet<int>> GetMatchingResourceIds(int profileId);
+
+    /// <summary>
+    /// Get resource IDs matching a search JSON string
+    /// </summary>
+    Task<HashSet<int>> GetMatchingResourceIdsBySearchJson(string? searchJson);
 }

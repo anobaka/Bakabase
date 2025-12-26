@@ -14,7 +14,6 @@ import { buildLogger } from "@/components/utils";
 import envConfig from "@/config/env";
 
 // 导入所有需要的 zustand store
-import { useBackgroundTasksStore } from "@/stores/backgroundTasks";
 import { useDownloadTasksStore } from "@/stores/downloadTasks";
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 import { useFileMovingProgressesStore } from "@/stores/fileMovingProgresses";
@@ -51,9 +50,6 @@ export const UIHubConnection = () => {
     conn.on("GetData", (key, data) => {
       log("GetData", key, data);
       switch (key) {
-        case "BackgroundTask":
-          useBackgroundTasksStore.getState().setTasks(data);
-          break;
         case "DownloadTask":
           useDownloadTasksStore.getState().setTasks(data);
           break;
@@ -84,9 +80,6 @@ export const UIHubConnection = () => {
     conn.on("GetIncrementalData", (key, data) => {
       log("GetIncrementalData", key, data);
       switch (key) {
-        case "BackgroundTask":
-          useBackgroundTasksStore.getState().updateTask(data);
-          break;
         case "DownloadTask":
           useDownloadTasksStore.getState().updateTask(data);
           break;

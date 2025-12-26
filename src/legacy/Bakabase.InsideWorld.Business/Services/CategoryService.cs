@@ -52,7 +52,8 @@ namespace Bakabase.InsideWorld.Business.Services
     public class CategoryService(
         IServiceProvider serviceProvider,
         ResourceService<BakabaseDbContext, Bakabase.Abstractions.Models.Db.CategoryDbModel, int> orm,
-        FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm)
+        FullMemoryCacheResourceService<BakabaseDbContext, ResourceCacheDbModel, int> resourceCacheOrm,
+        IPrepareCacheTrigger prepareCacheTrigger)
         : BootstrapService(serviceProvider), ICategoryService
     {
         protected IMediaLibraryService MediaLibraryService => GetRequiredService<IMediaLibraryService>();
@@ -375,6 +376,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     .ToList();
                 await _resourceCacheOrm.UpdateAll(c => resourceIds.Contains(c.ResourceId),
                     c => c.CachedTypes &= ~ResourceCacheType.PlayableFiles);
+                prepareCacheTrigger.RequestTrigger();
             }
 
             await orm.DbContext.SaveChangesAsync();

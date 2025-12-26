@@ -190,6 +190,13 @@ public static class PropertySystem
             PropertyInternals.PropertySearchHandlerMap[type];
 
         /// <summary>
+        /// Get the index provider for a PropertyType.
+        /// Returns null if the descriptor doesn't implement IPropertyIndexProvider.
+        /// </summary>
+        public static IPropertyIndexProvider? TryGetIndexProvider(PropertyType type) =>
+            TryGetDescriptor(type) as IPropertyIndexProvider;
+
+        /// <summary>
         /// Try get the search handler for a PropertyType.
         /// </summary>
         public static IPropertySearchHandler? TryGetSearchHandler(PropertyType type) =>

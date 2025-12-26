@@ -6,9 +6,8 @@ import type { IResourceCoverRef } from "@/components/Resource/components/Resourc
 import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
 import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
-import type { PlayableFilesRef } from "@/components/Resource/components/PlayableFiles";
 
-import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import React, { useCallback, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdate } from "react-use";
 import {
@@ -26,7 +25,7 @@ import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
 
-import styles from "./index.module.scss";
+import "./index.css";
 
 import { buildLogger, useTraceUpdate } from "@/components/utils";
 import ResourceDetailModal from "@/components/Resource/components/DetailModal";
@@ -114,8 +113,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const forceUpdate = useUpdate();
 
-  const playableFilesRef = useRef<PlayableFilesRef>(null);
-
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
     x: 0,
@@ -134,20 +131,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const displayPropertyKeys = uiOptions.resource?.displayProperties ?? [];
 
-  const initialize = useCallback(async (ct: AbortSignal) => {
-    if (playableFilesRef.current) {
-      await playableFilesRef.current.initialize();
-    }
-    // log('Initialized');
-  }, []);
-
-  useEffect(() => {
-    if (queue) {
-      queue.push(async () => await initialize(ct));
-    } else {
-      initialize(ct);
-    }
-  }, []);
+  // Discovery happens automatically via SSE now
 
   const reload = useCallback(async (ct?: AbortSignal) => {
     const newResourceRsp = await BApi.resource.getResourcesByKeys({
@@ -162,8 +146,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         Object.keys(nr).forEach((k) => {
           resource[k] = nr[k];
         });
-        coverRef.current?.load(true);
-        playableFilesRef.current?.initialize();
+        coverRef.current?.reload();
         forceUpdate();
       }
     } else {
@@ -186,8 +169,11 @@ const Resource = React.forwardRef((props: Props, ref) => {
     const elementId = `resource-${resource.id}`;
 
     return (
-      <div className={styles.coverRectangle} id={elementId}>
-        <div className={styles.absoluteRectangle}>
+      <div
+        className="resource-cover-rectangle w-full max-w-full min-w-full pb-[100%] relative rounded group/cover"
+        id={elementId}
+      >
+        <div className="absolute inset-0">
           <ResourceCover
             ref={coverRef}
             biggerCoverPlacement={biggerCoverPlacement}
@@ -196,7 +182,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
             disableMediaPreviewer={uiOptions?.resource?.disableMediaPreviewer}
             resource={resource}
             showBiggerOnHover={uiOptions?.resource?.showBiggerCoverWhileHover}
-            useCache={!uiOptions?.resource?.disableCache}
             onClick={onCoverClick}
           />
         </div>
@@ -370,9 +355,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
           </div>
         )}
         <PlayableFiles
-          ref={playableFilesRef}
           PortalComponent={({ onClick }) => (
-            <div className={`${styles.play} z-1`}>
+            <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
               <Tooltip content={t<string>("Play")}>
                 <Button
                   onPress={onClick}
@@ -438,18 +422,22 @@ const Resource = React.forwardRef((props: Props, ref) => {
   }
 
   const renderDisplayNameAndTags = (highContrastBackground: boolean = false) => {
+    // inline 模式下 (highContrastBackground=true) 父元素是 w-fit，不能用 container queries
+    // 非 inline 模式下可以用 container queries 实现字体随容器缩放
     return (
       <div
-        className={`${highContrastBackground ? "bg-default/70 text-default-700" : ""} px-1 rounded`}
+        className={`rounded w-full text-right ${highContrastBackground ? "" : "[container-type:inline-size]"}`}
       >
-        <div className={styles.info}>
-          <div className={`select-text ${styles.limitedContent}`}>{resource.displayName}</div>
+        <div
+          className={`${highContrastBackground ? "bg-default/70 backdrop-blur-sm text-default-700 px-1.5 py-0.5 rounded-md text-xs" : "mt-1 text-[clamp(11px,5cqw,22px)]"}`}
+        >
+          <div className="select-text resource-limited-content">{resource.displayName}</div>
         </div>
         {firstTagsValue && firstTagsValue.length > 0 && (
-          <div className={styles.info}>
-            <div
-              className={`select-text ${styles.limitedContent} flex flex-wrap opacity-70 leading-3 gap-px`}
-            >
+          <div
+            className={`${highContrastBackground ? "bg-default/70 backdrop-blur-sm text-default-700 px-1.5 py-0.5 rounded-md mt-1 text-xs" : "mt-1 text-[clamp(11px,5cqw,22px)]"}`}
+          >
+            <div className="select-text resource-limited-content flex flex-wrap opacity-70 leading-3 gap-px">
               {firstTagsValue.map((v) => {
                 return (
                   <Link
@@ -481,7 +469,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   return (
     <div
       key={resource.id}
-      className={`flex flex-col p-1 rounded relative border-2 group/resource ${styles.resource} ${props.className} ${
+      className={`flex flex-col p-1 rounded relative border-2 group/resource resource ${props.className} ${
         selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-default-200"
       }`}
       data-id={resource.id}

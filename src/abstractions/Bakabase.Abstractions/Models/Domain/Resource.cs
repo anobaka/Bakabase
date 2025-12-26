@@ -1,6 +1,7 @@
 ﻿using Bakabase.InsideWorld.Models.Constants;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Frozen;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.InsideWorld.Models.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -103,7 +104,7 @@ public record Resource
     public DateTime FileCreatedAt { get; set; }
     public DateTime FileModifiedAt { get; set; }
     public List<string>? CoverPaths { get; set; }
-    public HashSet<ResourceTag> Tags { get; set; } = [];
+    public IReadOnlySet<ResourceTag> Tags { get; set; } = FrozenSet<ResourceTag>.Empty;
     public Resource? Parent { get; set; }
     /// <summary>
     /// ResourcePropertyType - PropertyId - Property

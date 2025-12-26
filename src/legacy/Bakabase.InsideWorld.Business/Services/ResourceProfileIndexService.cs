@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Domain;
@@ -53,12 +54,28 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
         IServiceProvider serviceProvider,
         BTaskManager taskManager,
         IBakabaseLocalizer localizer,
+        IResourceDataChangeEvent resourceDataChangeEvent,
         ILogger<ResourceProfileIndexService> logger)
     {
         _serviceProvider = serviceProvider;
         _taskManager = taskManager;
         _localizer = localizer;
         _logger = logger;
+
+        // Subscribe to resource data change events
+        resourceDataChangeEvent.OnResourceDataChanged += OnResourceDataChanged;
+        resourceDataChangeEvent.OnResourceRemoved += OnResourceRemoved;
+    }
+
+    private void OnResourceDataChanged(ResourceDataChangedEventArgs args)
+    {
+        InvalidateResources(args.ResourceIds);
+    }
+
+    private void OnResourceRemoved(ResourceRemovedEventArgs args)
+    {
+        // When resources are removed, we need to invalidate them to remove from index
+        InvalidateResources(args.ResourceIds);
     }
 
     public bool IsReady => _isReady;
@@ -79,6 +96,24 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
     {
         await WaitUntilReady();
         return _resourceToProfiles.TryGetValue(resourceId, out var profileIds) ? profileIds : Array.Empty<int>();
+    }
+
+    public async Task<Dictionary<int, IReadOnlyList<int>>> GetMatchingProfileIdsForResources(IEnumerable<int> resourceIds)
+    {
+        await WaitUntilReady();
+        var result = new Dictionary<int, IReadOnlyList<int>>();
+        foreach (var resourceId in resourceIds)
+        {
+            if (_resourceToProfiles.TryGetValue(resourceId, out var profileIds))
+            {
+                result[resourceId] = profileIds;
+            }
+            else
+            {
+                result[resourceId] = Array.Empty<int>();
+            }
+        }
+        return result;
     }
 
     public async Task<IReadOnlySet<int>> GetMatchingResourceIds(int profileId)

@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Extensions;
@@ -11,6 +12,22 @@ namespace Bakabase.Modules.Property.Components.Properties.Multilevel;
 public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<MultilevelPropertyOptions, List<string>, List<List<string>>>
 {
     public override PropertyType Type => PropertyType.Multilevel;
+
+    /// <summary>
+    /// 为每个节点 ID 生成单独的索引条目
+    /// </summary>
+    protected override IEnumerable<PropertyIndexEntry> GenerateIndexEntriesInternal(
+        Bakabase.Abstractions.Models.Domain.Property property,
+        List<string> dbValue)
+    {
+        foreach (var nodeId in dbValue)
+        {
+            if (!string.IsNullOrEmpty(nodeId))
+            {
+                yield return new PropertyIndexEntry(nodeId);
+            }
+        }
+    }
 
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {

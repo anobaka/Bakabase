@@ -292,10 +292,11 @@ public class V220Migrator : AbstractMigrator
             var nameTemplate = template?.DisplayNameTemplate;
             var playableFileOptions = template != null ? ExtractPlayableFileOptions(template) : null;
             var playerOptions = libraryDbModel != null ? ExtractPlayerOptions(libraryDbModel) : null;
+            var propertyOptions = template != null ? ExtractPropertyOptions(template) : null;
 
             // Skip if no settings to migrate
             if (enhancerOptions == null && string.IsNullOrEmpty(nameTemplate) &&
-                playableFileOptions == null && playerOptions == null)
+                playableFileOptions == null && playerOptions == null && propertyOptions == null)
             {
                 continue;
             }
@@ -334,6 +335,7 @@ public class V220Migrator : AbstractMigrator
                 EnhancerSettingsJson = enhancerOptions != null ? JsonConvert.SerializeObject(enhancerOptions) : null,
                 PlayableFileSettingsJson = playableFileOptions != null ? JsonConvert.SerializeObject(playableFileOptions) : null,
                 PlayerSettingsJson = playerOptions != null ? JsonConvert.SerializeObject(playerOptions) : null,
+                PropertiesJson = propertyOptions != null ? JsonConvert.SerializeObject(propertyOptions) : null,
                 CreatedAt = now,
                 UpdatedAt = now,
             };
@@ -465,6 +467,41 @@ public class V220Migrator : AbstractMigrator
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Failed to parse Players from MediaLibraryV2 {Id}", library.Id);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Extract ResourceProfilePropertyOptions from MediaLibraryTemplate.
+    /// Converts MediaLibraryTemplateProperty list to ResourceProfilePropertyOptions.
+    /// </summary>
+    private ResourceProfilePropertyOptions? ExtractPropertyOptions(MediaLibraryTemplateDbModel template)
+    {
+        if (string.IsNullOrEmpty(template.Properties))
+        {
+            return null;
+        }
+
+        try
+        {
+            var properties = JsonConvert.DeserializeObject<List<MediaLibraryTemplateProperty>>(template.Properties);
+            if (properties == null || !properties.Any())
+            {
+                return null;
+            }
+
+            return new ResourceProfilePropertyOptions
+            {
+                Properties = properties.Select(p => new ResourceProfilePropertyReference
+                {
+                    Pool = p.Pool,
+                    Id = p.Id
+                }).ToList()
+            };
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Failed to parse Properties from template {Id}", template.Id);
             return null;
         }
     }

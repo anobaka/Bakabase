@@ -33,6 +33,7 @@ import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils
 import { PropertyPool, resourceTags, builtinPropertyForDisplayNames } from "@/sdk/constants";
 import { splitPathIntoSegments } from "@/components/utils";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
+import { EnhancerDescription } from "@/components/Chips/Terms";
 
 // Parse template and render with highlighted properties
 const parseTemplateSegments = (
@@ -597,7 +598,7 @@ const ResourceProfilePage = () => {
     {
       key: "enhancers",
       label: t("Enhancers"),
-      description: t("Plugins that automatically populate resource properties or download additional files (covers, subtitles, etc.) from external sources."),
+      description: <EnhancerDescription />,
       width: 130,
       render: renderEnhancers,
     },

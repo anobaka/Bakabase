@@ -615,7 +615,6 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @format date-time */
   fileModifiedAt: string;
   coverPaths?: string[];
-  /** @uniqueItems true */
   tags: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
   parent?: BakabaseAbstractionsModelsDomainResource;
   properties?: Record<string, Record<string, BakabaseAbstractionsModelsDomainResourceProperty>>;
@@ -1022,6 +1021,8 @@ export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptio
   /** @format int32 */
   autoListeningPortCount?: number;
   listeningPorts?: number[];
+  /** @format int32 */
+  maxParallelism?: number;
 }
 
 export interface BakabaseInfrastructuresComponentsAppModelsRequestModelsCoreDataMoveRequestModel {
@@ -1070,6 +1071,10 @@ export interface BakabaseInfrastructuresComponentsConfigurationsAppAppOptions {
   /** @format int32 */
   autoListeningPortCount?: number;
   listeningPorts?: number[];
+  /** @format int32 */
+  maxParallelism?: number;
+  /** @format int32 */
+  effectiveMaxParallelism: number;
 }
 
 /**
@@ -2068,19 +2073,19 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditio
   | 4;
 
 /**
- * [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All]
+ * [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
   | 0
+  | 32
   | 64
   | 128
-  | 160
-  | 416
+  | 288
   | 512
   | 2048
   | 4096
-  | 7136;
+  | 7008;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -2685,6 +2690,13 @@ export interface BakabaseModulesThirdPartyThirdPartiesBilibiliModelsFavorites {
   title: string;
   /** @format int32 */
   mediaCount: number;
+}
+
+export interface BakabaseServiceControllersDiscoverySubscribeRequest {
+  /** @format int32 */
+  resourceId: number;
+  /** [1: Covers, 2: PlayableFiles, 4: ResourceMarkers] */
+  types: BakabaseAbstractionsModelsDomainConstantsResourceCacheType;
 }
 
 export interface BakabaseServiceControllersEnsureMappingsInput {
@@ -7977,6 +7989,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         saveSearch?: boolean;
         searchId?: string;
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
     ) =>
@@ -8000,6 +8014,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchResourcesUrl: (query?: {
         saveSearch?: boolean;
         searchId?: string;
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/search`;
@@ -8058,7 +8074,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -8080,7 +8096,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourcesByKeysUrl: (query?: {
         ids?: number[];
-        /** [0: None, 64: Alias, 128: Category, 160: Properties, 416: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7136: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -8668,6 +8684,93 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     bulkAddResourceMediaLibraryMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/bulk/media-libraries`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name StreamResourceDiscovery
+     * @request GET:/resource/discovery/stream
+     */
+    streamResourceDiscovery: (params: RequestParams = {}) =>
+      this.request<void, any>({
+        path: `/resource/discovery/stream`,
+        method: "GET",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for streamResourceDiscovery
+     * @name streamResourceDiscoveryUrl
+     */
+    streamResourceDiscoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/stream`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name SubscribeResourceDiscovery
+     * @request POST:/resource/discovery/subscribe
+     */
+    subscribeResourceDiscovery: (
+      data: BakabaseServiceControllersDiscoverySubscribeRequest,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/discovery/subscribe`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for subscribeResourceDiscovery
+     * @name subscribeResourceDiscoveryUrl
+     */
+    subscribeResourceDiscoveryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/subscribe`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ResourceDiscovery
+     * @name SubscribeResourceDiscoveryBatch
+     * @request POST:/resource/discovery/subscribe/batch
+     */
+    subscribeResourceDiscoveryBatch: (
+      data: BakabaseServiceControllersDiscoverySubscribeRequest[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/discovery/subscribe/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for subscribeResourceDiscoveryBatch
+     * @name subscribeResourceDiscoveryBatchUrl
+     */
+    subscribeResourceDiscoveryBatchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/discovery/subscribe/batch`;
       
       return baseUrl + path;
     },
