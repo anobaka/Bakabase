@@ -300,6 +300,7 @@ jobs:
         with:
           config: cliff.toml
           args: -v ${{ steps.previous.outputs.previous_tag }}..${{ github.sha }} --context
+          version: v2.10.0
         env:
           OUTPUT: cliff.context.initial.json
 
@@ -356,6 +357,7 @@ jobs:
             }
 
             initial.version = "${{ needs.prepare.outputs.version }}";
+
             // set changelog timestamp as Unix seconds from current commit, fallback to now
             try {
               const { data: c } = await github.rest.repos.getCommit({ owner, repo, ref: context.sha });
@@ -378,6 +380,7 @@ jobs:
         with:
           config: cliff.toml
           args: --from-context cliff.context.enriched.json
+          version: v2.10.0
         env:
           OUTPUT: CHANGELOG_${{ needs.prepare.outputs.version }}.md
       - name: Upload changelog artifact
