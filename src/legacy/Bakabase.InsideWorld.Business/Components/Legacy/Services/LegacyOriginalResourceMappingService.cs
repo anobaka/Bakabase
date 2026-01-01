@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
     [Obsolete]
     public class LegacyOriginalResourceMappingService(IServiceProvider serviceProvider)
         : FullMemoryCacheResourceService<
-            InsideWorldDbContext, OriginalResourceMapping, int>(serviceProvider)
+            BakabaseDbContext, OriginalResourceMapping, int>(serviceProvider)
     {
         // public override async Task<ListResponse<OriginalResourceMapping>> AddRange(
         //     List<OriginalResourceMapping> resources)

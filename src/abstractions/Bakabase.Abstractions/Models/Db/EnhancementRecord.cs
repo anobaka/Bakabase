@@ -11,4 +11,19 @@ public record EnhancementRecord
     public DateTime? ContextCreatedAt { get; set; }
     public DateTime? ContextAppliedAt { get; set; }
     public EnhancementRecordStatus Status { get; set; }
+
+    /// <summary>
+    /// JSON serialized list of enhancement logs
+    /// </summary>
+    public string? Logs { get; set; }
+
+    /// <summary>
+    /// JSON serialized EnhancerFullOptions used during enhancement
+    /// </summary>
+    public string? OptionsSnapshot { get; set; }
+
+    /// <summary>
+    /// Error message if enhancement failed
+    /// </summary>
+    public string? ErrorMessage { get; set; }
 }

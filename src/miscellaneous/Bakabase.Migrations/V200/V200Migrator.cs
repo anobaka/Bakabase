@@ -27,7 +27,7 @@ public class V200Migrator : AbstractMigrator
     protected override string ApplyOnVersionEqualsOrBeforeString => "2.0.0-beta";
     protected override async Task MigrateAfterDbMigrationInternal(object context)
     {
-        var dbCtx = GetRequiredService<InsideWorldDbContext>();
+        var dbCtx = GetRequiredService<BakabaseDbContext>();
 
         // 1) Enhancement migration: fill new Key field
         var enhancements = await dbCtx.Enhancements.ToListAsync();

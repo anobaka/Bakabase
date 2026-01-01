@@ -58,6 +58,24 @@ export const AppNotificationSeverityLabel: Record<AppNotificationSeverity, strin
   [AppNotificationSeverity.Error]: 'Error'
 };
 
+export enum BTaskDependencyFailurePolicy {
+  Wait = 1,
+  Skip = 2,
+  Fail = 3
+}
+
+export const bTaskDependencyFailurePolicies = [
+  { label: 'Wait', value: BTaskDependencyFailurePolicy.Wait },
+  { label: 'Skip', value: BTaskDependencyFailurePolicy.Skip },
+  { label: 'Fail', value: BTaskDependencyFailurePolicy.Fail }
+] as const;
+
+export const BTaskDependencyFailurePolicyLabel: Record<BTaskDependencyFailurePolicy, string> = {
+  [BTaskDependencyFailurePolicy.Wait]: 'Wait',
+  [BTaskDependencyFailurePolicy.Skip]: 'Skip',
+  [BTaskDependencyFailurePolicy.Fail]: 'Fail'
+};
+
 export enum BTaskLevel {
   Default = 1,
   Critical = 2
@@ -168,7 +186,9 @@ export enum InternalProperty {
   FileModifiedAt = 19,
   Category = 20,
   MediaLibrary = 21,
-  MediaLibraryV2 = 24
+  PlayedAt = 23,
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25
 }
 
 export const internalProperties = [
@@ -182,7 +202,9 @@ export const internalProperties = [
   { label: 'FileModifiedAt', value: InternalProperty.FileModifiedAt },
   { label: 'Category', value: InternalProperty.Category },
   { label: 'MediaLibrary', value: InternalProperty.MediaLibrary },
-  { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 }
+  { label: 'PlayedAt', value: InternalProperty.PlayedAt },
+  { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi }
 ] as const;
 
 export const InternalPropertyLabel: Record<InternalProperty, string> = {
@@ -196,7 +218,9 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.FileModifiedAt]: 'FileModifiedAt',
   [InternalProperty.Category]: 'Category',
   [InternalProperty.MediaLibrary]: 'MediaLibrary',
-  [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2'
+  [InternalProperty.PlayedAt]: 'PlayedAt',
+  [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
 };
 
 export enum MediaLibraryTemplateAdditionalItem {
@@ -242,6 +266,96 @@ export const pathFilterFsTypes = [
 export const PathFilterFsTypeLabel: Record<PathFilterFsType, string> = {
   [PathFilterFsType.File]: 'File',
   [PathFilterFsType.Directory]: 'Directory'
+};
+
+export enum PathMarkAdditionalItem {
+  None = 0,
+  Property = 1,
+  MediaLibrary = 2
+}
+
+export const pathMarkAdditionalItems = [
+  { label: 'None', value: PathMarkAdditionalItem.None },
+  { label: 'Property', value: PathMarkAdditionalItem.Property },
+  { label: 'MediaLibrary', value: PathMarkAdditionalItem.MediaLibrary }
+] as const;
+
+export const PathMarkAdditionalItemLabel: Record<PathMarkAdditionalItem, string> = {
+  [PathMarkAdditionalItem.None]: 'None',
+  [PathMarkAdditionalItem.Property]: 'Property',
+  [PathMarkAdditionalItem.MediaLibrary]: 'MediaLibrary'
+};
+
+export enum PathMarkApplyScope {
+  MatchedOnly = 1,
+  MatchedAndSubdirectories = 2
+}
+
+export const pathMarkApplyScopes = [
+  { label: 'MatchedOnly', value: PathMarkApplyScope.MatchedOnly },
+  { label: 'MatchedAndSubdirectories', value: PathMarkApplyScope.MatchedAndSubdirectories }
+] as const;
+
+export const PathMarkApplyScopeLabel: Record<PathMarkApplyScope, string> = {
+  [PathMarkApplyScope.MatchedOnly]: 'MatchedOnly',
+  [PathMarkApplyScope.MatchedAndSubdirectories]: 'MatchedAndSubdirectories'
+};
+
+export enum PathMarkSyncStatus {
+  Pending = 0,
+  Syncing = 1,
+  Synced = 2,
+  Failed = 3,
+  PendingDelete = 4
+}
+
+export const pathMarkSyncStatuses = [
+  { label: 'Pending', value: PathMarkSyncStatus.Pending },
+  { label: 'Syncing', value: PathMarkSyncStatus.Syncing },
+  { label: 'Synced', value: PathMarkSyncStatus.Synced },
+  { label: 'Failed', value: PathMarkSyncStatus.Failed },
+  { label: 'PendingDelete', value: PathMarkSyncStatus.PendingDelete }
+] as const;
+
+export const PathMarkSyncStatusLabel: Record<PathMarkSyncStatus, string> = {
+  [PathMarkSyncStatus.Pending]: 'Pending',
+  [PathMarkSyncStatus.Syncing]: 'Syncing',
+  [PathMarkSyncStatus.Synced]: 'Synced',
+  [PathMarkSyncStatus.Failed]: 'Failed',
+  [PathMarkSyncStatus.PendingDelete]: 'PendingDelete'
+};
+
+export enum PathMarkType {
+  Resource = 1,
+  Property = 2,
+  MediaLibrary = 3
+}
+
+export const pathMarkTypes = [
+  { label: 'Resource', value: PathMarkType.Resource },
+  { label: 'Property', value: PathMarkType.Property },
+  { label: 'MediaLibrary', value: PathMarkType.MediaLibrary }
+] as const;
+
+export const PathMarkTypeLabel: Record<PathMarkType, string> = {
+  [PathMarkType.Resource]: 'Resource',
+  [PathMarkType.Property]: 'Property',
+  [PathMarkType.MediaLibrary]: 'MediaLibrary'
+};
+
+export enum PathMatchMode {
+  Layer = 1,
+  Regex = 2
+}
+
+export const pathMatchModes = [
+  { label: 'Layer', value: PathMatchMode.Layer },
+  { label: 'Regex', value: PathMatchMode.Regex }
+] as const;
+
+export const PathMatchModeLabel: Record<PathMatchMode, string> = {
+  [PathMatchMode.Layer]: 'Layer',
+  [PathMatchMode.Regex]: 'Regex'
 };
 
 export enum PathPositioner {
@@ -391,6 +505,21 @@ export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.AvEnhancer]: 'AvEnhancer'
 };
 
+export enum PropertyValueType {
+  Fixed = 1,
+  Dynamic = 2
+}
+
+export const propertyValueTypes = [
+  { label: 'Fixed', value: PropertyValueType.Fixed },
+  { label: 'Dynamic', value: PropertyValueType.Dynamic }
+] as const;
+
+export const PropertyValueTypeLabel: Record<PropertyValueType, string> = {
+  [PropertyValueType.Fixed]: 'Fixed',
+  [PropertyValueType.Dynamic]: 'Dynamic'
+};
+
 export enum ReservedProperty {
   Introduction = 12,
   Rating = 13,
@@ -446,6 +575,45 @@ export const ResourceTagLabel: Record<ResourceTag, string> = {
   [ResourceTag.Pinned]: 'Pinned',
   [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
   [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
+};
+
+export enum RuleQueueAction {
+  Apply = 1,
+  Reevaluate = 2,
+  FileSystemChange = 3
+}
+
+export const ruleQueueActions = [
+  { label: 'Apply', value: RuleQueueAction.Apply },
+  { label: 'Reevaluate', value: RuleQueueAction.Reevaluate },
+  { label: 'FileSystemChange', value: RuleQueueAction.FileSystemChange }
+] as const;
+
+export const RuleQueueActionLabel: Record<RuleQueueAction, string> = {
+  [RuleQueueAction.Apply]: 'Apply',
+  [RuleQueueAction.Reevaluate]: 'Reevaluate',
+  [RuleQueueAction.FileSystemChange]: 'FileSystemChange'
+};
+
+export enum RuleQueueStatus {
+  Pending = 0,
+  Processing = 1,
+  Completed = 2,
+  Failed = 3
+}
+
+export const ruleQueueStatuses = [
+  { label: 'Pending', value: RuleQueueStatus.Pending },
+  { label: 'Processing', value: RuleQueueStatus.Processing },
+  { label: 'Completed', value: RuleQueueStatus.Completed },
+  { label: 'Failed', value: RuleQueueStatus.Failed }
+] as const;
+
+export const RuleQueueStatusLabel: Record<RuleQueueStatus, string> = {
+  [RuleQueueStatus.Pending]: 'Pending',
+  [RuleQueueStatus.Processing]: 'Processing',
+  [RuleQueueStatus.Completed]: 'Completed',
+  [RuleQueueStatus.Failed]: 'Failed'
 };
 
 export enum SearchCombinator {
@@ -677,6 +845,7 @@ export enum BTaskType {
   Decompress = 1,
   MoveFiles = 2,
   MoveResources = 3,
+  CopyFiles = 4,
   Any = 1000
 }
 
@@ -684,6 +853,7 @@ export const bTaskTypes = [
   { label: 'Decompress', value: BTaskType.Decompress },
   { label: 'MoveFiles', value: BTaskType.MoveFiles },
   { label: 'MoveResources', value: BTaskType.MoveResources },
+  { label: 'CopyFiles', value: BTaskType.CopyFiles },
   { label: 'Any', value: BTaskType.Any }
 ] as const;
 
@@ -691,6 +861,7 @@ export const BTaskTypeLabel: Record<BTaskType, string> = {
   [BTaskType.Decompress]: 'Decompress',
   [BTaskType.MoveFiles]: 'MoveFiles',
   [BTaskType.MoveResources]: 'MoveResources',
+  [BTaskType.CopyFiles]: 'CopyFiles',
   [BTaskType.Any]: 'Any'
 };
 
@@ -1172,7 +1343,8 @@ export enum ResourceProperty {
   MediaLibrary = 21,
   Cover = 22,
   PlayedAt = 23,
-  MediaLibraryV2 = 24
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25
 }
 
 export const resourceProperties = [
@@ -1191,7 +1363,8 @@ export const resourceProperties = [
   { label: 'MediaLibrary', value: ResourceProperty.MediaLibrary },
   { label: 'Cover', value: ResourceProperty.Cover },
   { label: 'PlayedAt', value: ResourceProperty.PlayedAt },
-  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 }
+  { label: 'MediaLibraryV2', value: ResourceProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: ResourceProperty.MediaLibraryV2Multi }
 ] as const;
 
 export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
@@ -1210,7 +1383,8 @@ export const ResourcePropertyLabel: Record<ResourceProperty, string> = {
   [ResourceProperty.MediaLibrary]: 'MediaLibrary',
   [ResourceProperty.Cover]: 'Cover',
   [ResourceProperty.PlayedAt]: 'PlayedAt',
-  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2'
+  [ResourceProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [ResourceProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
 };
 
 export enum ResourceTaskType {
@@ -1236,7 +1410,8 @@ export enum SearchableReservedProperty {
   Category = 20,
   MediaLibrary = 21,
   Cover = 22,
-  MediaLibraryV2 = 24
+  MediaLibraryV2 = 24,
+  MediaLibraryV2Multi = 25
 }
 
 export const searchableReservedProperties = [
@@ -1250,7 +1425,8 @@ export const searchableReservedProperties = [
   { label: 'Category', value: SearchableReservedProperty.Category },
   { label: 'MediaLibrary', value: SearchableReservedProperty.MediaLibrary },
   { label: 'Cover', value: SearchableReservedProperty.Cover },
-  { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 }
+  { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
+  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi }
 ] as const;
 
 export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
@@ -1264,7 +1440,8 @@ export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty,
   [SearchableReservedProperty.Category]: 'Category',
   [SearchableReservedProperty.MediaLibrary]: 'MediaLibrary',
   [SearchableReservedProperty.Cover]: 'Cover',
-  [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2'
+  [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
+  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
 };
 
 export enum StartupPage {
@@ -1470,21 +1647,21 @@ export const MediaLibraryAdditionalItemLabel: Record<MediaLibraryAdditionalItem,
 
 export enum ResourceAdditionalItem {
   None = 0,
+  Properties = 32,
   Alias = 64,
   Category = 128,
-  Properties = 160,
-  DisplayName = 416,
+  DisplayName = 288,
   HasChildren = 512,
   MediaLibraryName = 2048,
   Cache = 4096,
-  All = 7136
+  All = 7008
 }
 
 export const resourceAdditionalItems = [
   { label: 'None', value: ResourceAdditionalItem.None },
+  { label: 'Properties', value: ResourceAdditionalItem.Properties },
   { label: 'Alias', value: ResourceAdditionalItem.Alias },
   { label: 'Category', value: ResourceAdditionalItem.Category },
-  { label: 'Properties', value: ResourceAdditionalItem.Properties },
   { label: 'DisplayName', value: ResourceAdditionalItem.DisplayName },
   { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
@@ -1494,9 +1671,9 @@ export const resourceAdditionalItems = [
 
 export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string> = {
   [ResourceAdditionalItem.None]: 'None',
+  [ResourceAdditionalItem.Properties]: 'Properties',
   [ResourceAdditionalItem.Alias]: 'Alias',
   [ResourceAdditionalItem.Category]: 'Category',
-  [ResourceAdditionalItem.Properties]: 'Properties',
   [ResourceAdditionalItem.DisplayName]: 'DisplayName',
   [ResourceAdditionalItem.HasChildren]: 'HasChildren',
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
@@ -2432,6 +2609,21 @@ export const tampermonkeyScripts = [
 export const TampermonkeyScriptLabel: Record<TampermonkeyScript, string> = {
   [TampermonkeyScript.SoulPlus]: 'SoulPlus',
   [TampermonkeyScript.Bakabase]: 'Bakabase'
+};
+
+export enum IndexOperationType {
+  Update = 0,
+  Remove = 1
+}
+
+export const indexOperationTypes = [
+  { label: 'Update', value: IndexOperationType.Update },
+  { label: 'Remove', value: IndexOperationType.Remove }
+] as const;
+
+export const IndexOperationTypeLabel: Record<IndexOperationType, string> = {
+  [IndexOperationType.Update]: 'Update',
+  [IndexOperationType.Remove]: 'Remove'
 };
 
 export enum PostParserSource {

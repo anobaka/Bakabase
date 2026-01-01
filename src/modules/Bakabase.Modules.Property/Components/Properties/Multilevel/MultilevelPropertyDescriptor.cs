@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models;
 using Bakabase.Modules.Property.Abstractions.Models.Domain;
 using Bakabase.Modules.Property.Extensions;
@@ -11,6 +12,22 @@ namespace Bakabase.Modules.Property.Components.Properties.Multilevel;
 public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<MultilevelPropertyOptions, List<string>, List<List<string>>>
 {
     public override PropertyType Type => PropertyType.Multilevel;
+
+    /// <summary>
+    /// 为每个节点 ID 生成单独的索引条目
+    /// </summary>
+    protected override IEnumerable<PropertyIndexEntry> GenerateIndexEntriesInternal(
+        Bakabase.Abstractions.Models.Domain.Property property,
+        List<string> dbValue)
+    {
+        foreach (var nodeId in dbValue)
+        {
+            if (!string.IsNullOrEmpty(nodeId))
+            {
+                yield return new PropertyIndexEntry(nodeId);
+            }
+        }
+    }
 
     protected override (object DbValue, SearchOperation Operation)? BuildSearchFilterByKeywordInternal(Bakabase.Abstractions.Models.Domain.Property property, string keyword)
     {
@@ -35,6 +52,42 @@ public class MultilevelPropertyDescriptor : AbstractPropertyDescriptor<Multileve
             SearchOperation.NotContains => fv.All(v => !dbValue.Contains(v)),
             SearchOperation.In => dbValue.All(fv.Contains),
             _ => true
+        };
+    }
+
+    /// <summary>
+    /// 在索引上搜索多层级值
+    /// </summary>
+    protected override HashSet<int>? SearchIndexInternal(
+        SearchOperation operation,
+        List<string> filterDbValue,
+        IReadOnlyDictionary<string, HashSet<int>>? valueIndex,
+        IReadOnlyList<KeyValuePair<IComparable, HashSet<int>>>? rangeIndex,
+        IReadOnlyCollection<int> allResourceIds)
+    {
+        if (valueIndex == null || filterDbValue.Count == 0)
+        {
+            return operation == SearchOperation.NotContains
+                ? new HashSet<int>(allResourceIds)
+                : new HashSet<int>();
+        }
+
+        var matchingSets = filterDbValue
+            .Select(v => valueIndex.GetValueOrDefault(Normalize(v)))
+            .ToList();
+
+        return operation switch
+        {
+            // Contains: 资源必须包含 filter 中所有节点 → 取交集
+            SearchOperation.Contains => IntersectAll(matchingSets),
+
+            // In: 资源的节点必须都在 filter 列表中 → 返回匹配任一节点的资源
+            SearchOperation.In => UnionAll(matchingSets),
+
+            // NotContains: 资源不能包含 filter 中任何节点 → 取反
+            SearchOperation.NotContains => Negate(UnionAll(matchingSets), allResourceIds),
+
+            _ => null
         };
     }
 

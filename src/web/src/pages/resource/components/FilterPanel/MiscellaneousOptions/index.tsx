@@ -84,7 +84,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
       {visible && (
         <Modal
           footer={false}
-          size="lg"
+          size="4xl"
           title={t<string>("Display options")}
           visible={visible}
           onClose={() => setVisible(false)}
@@ -100,7 +100,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   ).map((num) => (
                     <Button
                       key={num}
-                      className={"min-w-0 px-6"}
+                      // className={"min-w-0 px-6"}
                       color={currentColCount === num ? "primary" : "default"}
                       size={"sm"}
                       onPress={() => patchOptions({ colCount: num })}

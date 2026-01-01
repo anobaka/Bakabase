@@ -35,6 +35,7 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             }
 
             string realUrl;
+            string? searchUrl = null;
 
             if (!string.IsNullOrEmpty(appointUrl))
             {
@@ -42,7 +43,7 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             }
             else
             {
-                var searchUrl = $"{actualBaseUrl}/search_result?kw={processedNumber}";
+                searchUrl = $"{actualBaseUrl}/search_result?kw={processedNumber}";
                 var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 var searchCq = new CQ(searchHtml);
 
@@ -107,7 +108,8 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 Outline = CleanOutline(outline),
                 Series = GetSeries(detailCq),
                 Website = realUrl,
-                Source = "airav_cc"
+                Source = "airav_cc",
+                SearchUrl = searchUrl
             };
 
             detail.Year = GetYear(detail.Release);

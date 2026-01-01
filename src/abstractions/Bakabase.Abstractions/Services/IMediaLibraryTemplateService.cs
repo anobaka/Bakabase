@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Models.View;
 
 namespace Bakabase.Abstractions.Services;
 
+[Obsolete]
 public interface IMediaLibraryTemplateService
 {
     Task GeneratePreview(int id);

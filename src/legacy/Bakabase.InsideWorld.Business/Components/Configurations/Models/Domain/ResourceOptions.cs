@@ -132,6 +132,12 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
             /// V2
             /// </summary>
             public Dictionary<int, SynchronizationMediaLibraryOptions>? MediaLibraryOptionsMap { get; set; }
+
+            /// <summary>
+            /// When enabled, path marks will be synced immediately when created or modified.
+            /// When disabled, marks will be collected and synced manually or during the next sync operation.
+            /// </summary>
+            public bool? SyncMarksImmediately { get; set; } = true;
         }
 
         public record SynchronizationCategoryOptions

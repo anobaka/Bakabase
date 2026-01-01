@@ -228,6 +228,9 @@
   <data name="BuiltinPropertyName_MediaLibraryV2" xml:space="preserve">
     <value>Media library</value>
   </data>
+  <data name="BuiltinPropertyName_MediaLibraryV2Multi" xml:space="preserve">
+    <value>Media library</value>
+  </data>
   <data name="BuiltinPropertyName_PlayedAt" xml:space="preserve">
     <value>Played at</value>
   </data>

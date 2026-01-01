@@ -38,7 +38,8 @@ public class GuochanClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 PosterUrl = string.Empty,
                 Website = appointUrl ?? string.Empty,
                 Source = "guochan",
-                Mosaic = "国产"
+                Mosaic = "国产",
+                SearchUrl = appointUrl ?? string.Empty
             };
 
             return detail;

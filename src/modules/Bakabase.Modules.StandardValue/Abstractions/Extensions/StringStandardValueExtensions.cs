@@ -1,5 +1,4 @@
-﻿using Bakabase.Modules.StandardValue.Abstractions.Configurations;
-using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
+﻿using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Components.ValueHandlers;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bootstrap.Extensions;
@@ -31,16 +30,16 @@ public static class StringStandardValueExtensions
     }
 
     public static List<string>? ConvertToListString(this string? value) => value?.Trim()
-        .Split(StandardValueInternals.CommonListItemSeparator, StringSplitOptions.RemoveEmptyEntries)
+        .Split(StandardValueSystem.CommonListItemSeparator, StringSplitOptions.RemoveEmptyEntries)
         .Select(x => x.Trim())
         .Where(x => x.IsNotEmpty()).ToList();
 
     public static List<List<string>>? ConvertToListListString(this string? value) => value?
         .Trim()
-        .Split(StandardValueInternals.CommonListItemSeparator, StringSplitOptions.RemoveEmptyEntries)
+        .Split(StandardValueSystem.CommonListItemSeparator, StringSplitOptions.RemoveEmptyEntries)
         .Select(x => x.Trim())
         .Where(x => x.IsNotEmpty())
-        .Select(x => x.Split(StandardValueInternals.ListListStringInnerSeparator, StringSplitOptions.RemoveEmptyEntries)
+        .Select(x => x.Split(StandardValueSystem.ListListStringInnerSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(y => y.Trim()).Where(y => y.IsNotEmpty()).ToList())
         .ToList();
 
@@ -48,7 +47,7 @@ public static class StringStandardValueExtensions
     {
         var list = value?
             .Trim()
-            .Split(StandardValueInternals.ListListStringInnerSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Split(StandardValueSystem.ListListStringInnerSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(x => x.Trim())
             .Where(x => x.IsNotEmpty())
             .ToList();
@@ -56,7 +55,7 @@ public static class StringStandardValueExtensions
     }
 
     public static List<TagValue>? ConvertToListTag(this string? value) => value?.Trim()
-        .Split(StandardValueInternals.CommonListItemSeparator, StringSplitOptions.RemoveEmptyEntries)
+        .Split(StandardValueSystem.CommonListItemSeparator, StringSplitOptions.RemoveEmptyEntries)
         .Select(TagValue.TryParse)
         .OfType<TagValue>()
         .ToList();

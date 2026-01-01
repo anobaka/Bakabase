@@ -68,7 +68,8 @@ public class MdtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 PosterUrl = "",
                 Website = realUrl,
                 Source = "mdtv",
-                Mosaic = "国产"
+                Mosaic = "国产",
+                SearchUrl = searchUrl
             };
 
             return detail;

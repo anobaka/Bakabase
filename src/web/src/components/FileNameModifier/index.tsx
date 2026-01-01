@@ -1,21 +1,36 @@
 "use client";
 
-import type { BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation } from "@/sdk/Api";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AiOutlineEdit,
   AiOutlineEye,
   AiOutlineEyeInvisible,
   AiOutlinePlusCircle,
+  AiOutlineUndo,
 } from "react-icons/ai";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 import { Button, Textarea, Modal, Card } from "../bakaui";
 
-import OperationCard from "./OperationCard";
+import SortableOperationCard from "./SortableOperationCard";
 import PreviewList from "./PreviewList";
-import { useFileNameModifier } from "./useFileNameModifier";
+import { useFileNameModifier, OperationWithId } from "./useFileNameModifier";
 
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -30,70 +45,33 @@ export interface FileNameModificationResult {
   modifiedRelative: string;
 }
 
-const defaultOperation: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation =
-  {
-    target: 2, // FileNameWithoutExtension
-    operation: 1,
-    position: 1,
-    positionIndex: 0,
-    targetText: "",
-    text: "",
-    deleteCount: 0,
-    deleteStartPosition: 0,
-    caseType: 1,
-    dateTimeFormat: "",
-    alphabetStartChar: "A",
-    alphabetCount: 0,
-    replaceEntire: false,
-  };
+let operationIdCounter = 0;
+const generateOperationId = () => `op-${Date.now()}-${operationIdCounter++}`;
+
+const createDefaultOperation = (): OperationWithId => ({
+  id: generateOperationId(),
+  target: 2, // FileNameWithoutExtension
+  operation: 1,
+  position: 1,
+  positionIndex: 0,
+  targetText: "",
+  text: "",
+  deleteCount: 0,
+  deleteStartPosition: 0,
+  caseType: 1,
+  dateTimeFormat: "",
+  alphabetStartChar: "A",
+  alphabetCount: 0,
+  replaceEntire: false,
+});
 
 interface FileNameModifierProps {
   initialFilePaths?: string[];
   onClose?: () => void;
 }
 
-// 校验函数，返回 i18n key
-function validateOperation(
-  op: BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation,
-): string {
-  if (!op.target) return "FileNameModifier.Error.TargetRequired";
-  if (!op.operation) return "FileNameModifier.Error.OperationTypeRequired";
-  switch (op.operation) {
-    case 1: // Insert
-      if (!op.text && !op.targetText)
-        return "FileNameModifier.Error.InsertTextRequired";
-      break;
-    case 2: // AddDateTime
-      if (!op.dateTimeFormat)
-        return "FileNameModifier.Error.DateTimeFormatRequired";
-      break;
-    case 3: // Delete
-      if (
-        op.deleteCount == null ||
-        op.deleteStartPosition == null ||
-        !op.position
-      )
-        return "FileNameModifier.Error.DeleteParamsRequired";
-      break;
-    case 4: // Replace
-      if (!op.text && !op.targetText)
-        return "FileNameModifier.Error.ReplaceTextRequired";
-      break;
-    case 5: // ChangeCase
-      if (!op.caseType) return "FileNameModifier.Error.CaseTypeRequired";
-      break;
-    case 6: // AddAlphabetSequence
-      if (!op.alphabetStartChar || op.alphabetCount == null)
-        return "FileNameModifier.Error.AlphabetParamsRequired";
-      break;
-    case 7: // Reverse
-      break;
-    default:
-      return "FileNameModifier.Error.UnknownOperationType";
-  }
-
-  return "";
-}
+import { validateOperation } from "./validation";
+import { detectCommonPrefix } from "./utils";
 
 const FileNameModifier: React.FC<FileNameModifierProps> = ({
   initialFilePaths = [],
@@ -110,71 +88,82 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
     setPreviewResults,
     error,
     setError,
+    isPreviewLoading,
+    setIsPreviewLoading,
+    lastFilePaths,
+    setLastFilePaths,
   } = useFileNameModifier(initialFilePaths);
 
-  // 折叠/展开状态
-  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
   const [showTextarea, setShowTextarea] = useState(false);
   const [showFullPaths, setShowFullPaths] = useState(false);
   const [modifying, setModifying] = useState(false);
 
-  // 操作项增删改、移动、复制
-  const handleOperationChange = (idx: number, op) => {
-    setOperations((ops) => ops.map((item, i) => (i === idx ? op : item)));
-  };
-  const handleOperationDelete = (idx: number) => {
-    setOperations((ops) => ops.filter((_, i) => i !== idx));
-  };
-  const handleOperationMoveUp = (idx: number) => {
-    setOperations((ops) => {
-      if (idx === 0) return ops;
-      const next = [...ops];
+  // 拖拽排序 sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-      if (next[idx] && next[idx - 1]) {
-        const temp = {
-          ...next[idx - 1],
-        } as BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
-
-        next[idx - 1] = {
-          ...next[idx],
-        } as BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
-        next[idx] = temp;
+  // 拖拽结束处理
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (over && active.id !== over.id) {
+        setOperations((ops) => {
+          const oldIndex = ops.findIndex((op) => op.id === active.id);
+          const newIndex = ops.findIndex((op) => op.id === over.id);
+          return arrayMove(ops, oldIndex, newIndex);
+        });
       }
+    },
+    [setOperations]
+  );
 
-      return next;
-    });
-  };
-  const handleOperationMoveDown = (idx: number) => {
-    setOperations((ops) => {
-      if (idx === ops.length - 1) return ops;
-      const next = [...ops];
+  // 操作项增删改、复制
+  const handleOperationChange = useCallback(
+    (id: string, op: OperationWithId) => {
+      setOperations((ops) => ops.map((item) => (item.id === id ? op : item)));
+    },
+    [setOperations]
+  );
 
-      if (next[idx] && next[idx + 1]) {
-        const temp = {
-          ...next[idx + 1],
-        } as BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
+  const handleOperationDelete = useCallback(
+    (id: string) => {
+      setOperations((ops) => ops.filter((op) => op.id !== id));
+    },
+    [setOperations]
+  );
 
-        next[idx + 1] = {
-          ...next[idx],
-        } as BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
-        next[idx] = temp;
-      }
+  const handleOperationCopy = useCallback(
+    (id: string) => {
+      setOperations((ops) => {
+        const idx = ops.findIndex((op) => op.id === id);
+        if (idx === -1) return ops;
+        const next = [...ops];
+        const copy: OperationWithId = {
+          ...ops[idx],
+          id: generateOperationId(),
+        };
+        next.splice(idx + 1, 0, copy);
+        return next;
+      });
+    },
+    [setOperations]
+  );
 
-      return next;
-    });
-  };
-  const handleOperationCopy = (idx: number) => {
-    setOperations((ops) => {
-      const next = [...ops];
-      const copy = {
-        ...ops[idx],
-      } as BakabaseInsideWorldBusinessComponentsFileNameModifierModelsFileNameModifierOperation;
+  const handleAddOperation = useCallback(() => {
+    setOperations((ops) => [...ops, createDefaultOperation()]);
+  }, [setOperations]);
 
-      next.splice(idx + 1, 0, copy);
-
-      return next;
-    });
-  };
+  // 撤销功能：恢复上次的文件路径
+  const handleRestoreFilePaths = useCallback(() => {
+    if (lastFilePaths) {
+      setFilePaths(lastFilePaths);
+      setLastFilePaths(null);
+    }
+  }, [lastFilePaths, setFilePaths, setLastFilePaths]);
 
   // 文件路径输入
   const handleConfirmPaths = () => {
@@ -196,8 +185,17 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       Array.from(new Set(paths.map((f) => f.trim()).filter(Boolean))),
     );
   };
-  // 预览区主行/展开
-  const commonPrefix = ""; // TODO: 用 utils.detectCommonPrefix(previewResults.map(r => r.originalPath))
+  // 预览区公共前缀
+  const commonPrefix = useMemo(
+    () => detectCommonPrefix(previewResults.map((r) => r.originalPath)),
+    [previewResults]
+  );
+
+  // 检查预览结果中是否有任何变更
+  const hasAnyChanges = useMemo(
+    () => previewResults.some((r) => r.originalPath !== r.modifiedPath),
+    [previewResults]
+  );
 
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -205,6 +203,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     if (filePaths.length === 0) {
+      setPreviewResults([]);
       return;
     }
     // 只用合法操作预览
@@ -214,6 +213,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       (async () => {
         try {
           setError("");
+          setIsPreviewLoading(true);
           const rsp = await BApi.fileNameModifier.previewFileNameModification({
             filePaths,
             operations: validOperations,
@@ -238,9 +238,16 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
           setPreviewResults(results);
         } catch (e: any) {
           setError(e?.message || t<string>("FileNameModifier.PreviewFailed"));
+        } finally {
+          setIsPreviewLoading(false);
         }
       })();
     }, 300);
+
+    // 清理定时器
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
   }, [filePaths, operations]);
 
   const handleExecuteModification = async () => {
@@ -248,17 +255,28 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
 
     if (validOperations.length === 0) {
       setError(t<string>("FileNameModifier.Error.NoValidOperation"));
-
       return;
     }
+
     try {
       setModifying(true);
       setError("");
+
+      // 保存当前文件路径用于撤销
+      setLastFilePaths([...filePaths]);
+
       const rsp = await BApi.fileNameModifier.modifyFileNames({
         filePaths,
         operations: validOperations,
       });
       const result = rsp.data ?? [];
+
+      // 更新文件路径为新路径
+      const newFilePaths = filePaths.map((oldPath) => {
+        const resultItem = result.find((r) => r.oldPath === oldPath);
+        return resultItem?.success && resultItem.newPath ? resultItem.newPath : oldPath;
+      });
+      setFilePaths(newFilePaths);
 
       createPortal(Modal, {
         defaultVisible: true,
@@ -308,6 +326,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
       setModifying(false);
     } catch (e: any) {
       setModifying(false);
+      setLastFilePaths(null); // 失败时清除撤销状态
       setError(e?.message || t<string>("FileNameModifier.ModificationFailed"));
     }
   };
@@ -320,39 +339,53 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
           {t<string>("FileNameModifier.OperationsList")}
         </h5>
         <div className="flex-1 overflow-y-auto rounded p-2">
-          {operations.map((op, idx) => (
-            <OperationCard
-              key={idx}
-              aria-label={t<string>("FileNameModifier.OperationCardAria", {
-                index: idx + 1,
-              })}
-              errors={
-                validateOperation(op) ? t<string>(validateOperation(op)) : ""
-              }
-              index={idx}
-              operation={op}
-              onChange={(op2) => handleOperationChange(idx, op2)}
-              onCopy={() => handleOperationCopy(idx)}
-              onDelete={() => handleOperationDelete(idx)}
-              onMoveDown={
-                idx < operations.length - 1
-                  ? () => handleOperationMoveDown(idx)
-                  : undefined
-              }
-              onMoveUp={idx > 0 ? () => handleOperationMoveUp(idx) : undefined}
-            />
-          ))}
-          <Button
-            aria-label={t<string>("FileNameModifier.AddOperation")}
-            className="w-full mt-2"
-            variant="light"
-            onClick={() =>
-              setOperations((ops) => [...ops, { ...defaultOperation }])
-            }
-          >
-            <AiOutlinePlusCircle className="text-lg" />
-            {t<string>("FileNameModifier.AddOperation")}
-          </Button>
+          {operations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+              <AiOutlinePlusCircle className="text-4xl mb-2" />
+              <p className="text-sm mb-3">{t<string>("FileNameModifier.EmptyOperationsHint")}</p>
+              <Button color="primary" variant="flat" onClick={handleAddOperation}>
+                {t<string>("FileNameModifier.AddFirstOperation")}
+              </Button>
+            </div>
+          ) : (
+            <DndContext
+              collisionDetection={closestCenter}
+              sensors={sensors}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={operations.map((op) => op.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {operations.map((op, idx) => {
+                  const validationError = validateOperation(op);
+                  return (
+                    <SortableOperationCard
+                      key={op.id}
+                      errors={validationError ? t<string>(validationError) : ""}
+                      id={op.id}
+                      index={idx}
+                      operation={op}
+                      onChange={(op2) => handleOperationChange(op.id, { ...op2, id: op.id })}
+                      onCopy={() => handleOperationCopy(op.id)}
+                      onDelete={() => handleOperationDelete(op.id)}
+                    />
+                  );
+                })}
+              </SortableContext>
+            </DndContext>
+          )}
+          {operations.length > 0 && (
+            <Button
+              aria-label={t<string>("FileNameModifier.AddOperation")}
+              className="w-full mt-2"
+              variant="light"
+              onClick={handleAddOperation}
+            >
+              <AiOutlinePlusCircle className="text-lg" />
+              {t<string>("FileNameModifier.AddOperation")}
+            </Button>
+          )}
         </div>
         {/* 操作按钮 */}
         <div className="mt-4">
@@ -360,12 +393,24 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
             <Button
               aria-label={t<string>("FileNameModifier.ExecuteModification")}
               color="primary"
+              isDisabled={!hasAnyChanges || isPreviewLoading}
               isLoading={modifying}
               variant="solid"
               onClick={handleExecuteModification}
             >
               {t<string>("FileNameModifier.ExecuteModification")}
             </Button>
+            {lastFilePaths && (
+              <Button
+                aria-label={t<string>("FileNameModifier.RestoreOriginalPaths")}
+                color="warning"
+                variant="flat"
+                onClick={handleRestoreFilePaths}
+              >
+                <AiOutlineUndo className="text-lg" />
+                {t<string>("FileNameModifier.RestoreOriginalPaths")}
+              </Button>
+            )}
           </div>
           {error && <div className="text-red-500 text-xs mt-2">{error}</div>}
         </div>
@@ -455,6 +500,7 @@ const FileNameModifier: React.FC<FileNameModifierProps> = ({
           ) : (
             <PreviewList
               commonPrefix={commonPrefix}
+              isLoading={isPreviewLoading}
               results={previewResults}
               showFullPaths={showFullPaths}
             />

@@ -69,7 +69,8 @@ public class Jav321Client(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = website,
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = url
             };
         }
         catch

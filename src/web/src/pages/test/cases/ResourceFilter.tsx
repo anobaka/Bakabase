@@ -1,21 +1,23 @@
 "use client";
 
-import type { ResourceSearchFilterGroup } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
+import type { SearchFilterGroup } from "@/components/ResourceFilter";
 
 import React, { useState } from "react";
 import ReactJson from "react-json-view";
 
-import { GroupCombinator } from "@/pages/resource/components/FilterPanel/FilterGroupsPanel/models";
-import FilterGroupsPanel from "@/pages/resource/components/FilterPanel/FilterGroupsPanel";
+import { ResourceSearchPanel } from "@/components/ResourceFilter";
+import { GroupCombinator } from "@/components/ResourceFilter";
+
 const ResourceFilterPage = () => {
-  const [group, setGroup] = useState<ResourceSearchFilterGroup>({
+  const [group, setGroup] = useState<SearchFilterGroup>({
     combinator: GroupCombinator.And,
+    disabled: false,
   });
 
   return (
     <div>
       <div>
-        <FilterGroupsPanel group={group} onChange={(g) => setGroup(g)} />
+        <ResourceSearchPanel group={group} onChange={(g) => setGroup(g)} />
       </div>
       <div>
         <ReactJson collapsed name={"Data"} src={group} theme={"monokai"} />

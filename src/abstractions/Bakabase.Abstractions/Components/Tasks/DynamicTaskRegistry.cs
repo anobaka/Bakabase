@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bootstrap.Components.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -17,7 +18,7 @@ public class DynamicTaskRegistry : IDisposable
     private readonly BTaskManager _taskManager;
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<DynamicTaskRegistry> _logger;
-    private readonly List<PredefinedTaskDefinition> _taskDefinitions = [];
+    private readonly List<IPredefinedBTaskBuilder> _taskBuilders = [];
     private readonly Dictionary<string, bool> _taskStates = [];
     private readonly List<IDisposable> _optionsChangeHandlers = [];
 
@@ -32,117 +33,179 @@ public class DynamicTaskRegistry : IDisposable
     }
 
     /// <summary>
-    /// Register a task definition and start monitoring it
+    /// Discovers and registers all IPredefinedBTaskBuilder implementations from DI container.
     /// </summary>
-    public void RegisterTask(PredefinedTaskDefinition definition)
+    public async Task RegisterAllTasksAsync()
     {
-        _logger.LogInformation($"Registering task definition: {definition.Id}");
-        _taskDefinitions.Add(definition);
+        var taskBuilders = _serviceProvider.GetServices<IPredefinedBTaskBuilder>().ToList();
+
+        _logger.LogInformation($"Found {taskBuilders.Count} predefined task(s)");
+
+        // First, register all task builders to _taskBuilders list
+        foreach (var builder in taskBuilders)
+        {
+            _logger.LogInformation($"Registering task: {builder.Id}");
+
+            // Check for circular dependencies before registering
+            if (HasCircularDependency(builder.Id, builder.DependsOn, [builder.Id]))
+            {
+                _logger.LogError($"Cannot register task [{builder.Id}]: circular dependency detected");
+                throw new InvalidOperationException($"Task [{builder.Id}] has circular dependencies");
+            }
+
+            _taskBuilders.Add(builder);
+
+            // Register change handlers for all watched option types
+            foreach (var optionsType in builder.WatchedOptionsTypes)
+            {
+                RegisterOptionsChangeHandler(optionsType, builder);
+            }
+        }
+
+        // Then, evaluate and enqueue all tasks together to ensure dependencies are registered
+        await Task.WhenAll(taskBuilders.Select(EvaluateAndUpdateTaskAsync));
+    }
+
+    /// <summary>
+    /// Register a task builder and start monitoring it
+    /// </summary>
+    public void RegisterTask(IPredefinedBTaskBuilder builder)
+    {
+        _logger.LogInformation($"Registering task: {builder.Id}");
+
+        // Check for circular dependencies before registering
+        if (HasCircularDependency(builder.Id, builder.DependsOn, [builder.Id]))
+        {
+            _logger.LogError($"Cannot register task [{builder.Id}]: circular dependency detected");
+            throw new InvalidOperationException($"Task [{builder.Id}] has circular dependencies");
+        }
+
+        _taskBuilders.Add(builder);
 
         // Register change handlers for all watched option types
-        foreach (var optionsType in definition.WatchedOptionsTypes)
+        foreach (var optionsType in builder.WatchedOptionsTypes)
         {
-            RegisterOptionsChangeHandler(optionsType, definition);
+            RegisterOptionsChangeHandler(optionsType, builder);
         }
 
         // Immediately evaluate and update the task
-        _ = EvaluateAndUpdateTaskAsync(definition);
+        _ = EvaluateAndUpdateTaskAsync(builder);
+    }
+
+    /// <summary>
+    /// Checks if adding a task with the given dependencies would create a circular dependency
+    /// </summary>
+    /// <param name="taskId">The task being checked</param>
+    /// <param name="dependsOn">The dependencies of the task</param>
+    /// <param name="visited">Set of already visited task IDs in the current path</param>
+    /// <returns>True if a circular dependency would be created</returns>
+    private bool HasCircularDependency(string taskId, HashSet<string>? dependsOn, HashSet<string> visited)
+    {
+        if (dependsOn == null || dependsOn.Count == 0)
+            return false;
+
+        foreach (var depId in dependsOn)
+        {
+            // If we've already visited this dependency in the current path, we have a cycle
+            if (visited.Contains(depId))
+            {
+                _logger.LogWarning($"Circular dependency detected: {taskId} -> ... -> {depId}");
+                return true;
+            }
+
+            // Find the dependency builder
+            var depBuilder = _taskBuilders.FirstOrDefault(b => b.Id == depId);
+            if (depBuilder != null)
+            {
+                // Add to visited set and recursively check
+                var newVisited = new HashSet<string>(visited) { depId };
+                if (HasCircularDependency(depId, depBuilder.DependsOn, newVisited))
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>
     /// Evaluate task state and update accordingly (enqueue or clean)
     /// </summary>
-    private async Task EvaluateAndUpdateTaskAsync(PredefinedTaskDefinition definition)
+    private async Task EvaluateAndUpdateTaskAsync(IPredefinedBTaskBuilder builder)
     {
         try
         {
-            var shouldBeEnabled = definition.IsEnabled();
-            var currentlyEnabled = _taskStates.GetValueOrDefault(definition.Id, false);
+            var shouldBeEnabled = builder.IsEnabled();
+            var currentlyEnabled = _taskStates.GetValueOrDefault(builder.Id, false);
 
             _logger.LogDebug(
-                $"Evaluating task [{definition.Id}]: shouldBeEnabled={shouldBeEnabled}, currentlyEnabled={currentlyEnabled}");
+                $"Evaluating task [{builder.Id}]: shouldBeEnabled={shouldBeEnabled}, currentlyEnabled={currentlyEnabled}");
 
             if (shouldBeEnabled && !currentlyEnabled)
             {
                 // Enable task: add to queue
-                await EnableTaskAsync(definition);
+                await EnableTaskAsync(builder);
             }
             else if (!shouldBeEnabled && currentlyEnabled)
             {
                 // Disable task: remove from queue
-                await DisableTaskAsync(definition);
+                await DisableTaskAsync(builder);
             }
             else if (shouldBeEnabled && currentlyEnabled)
             {
                 // Task is already enabled, but interval might have changed
                 // The BTaskManager's OnChange handler will automatically handle interval updates
-                _logger.LogDebug($"Task [{definition.Id}] is already enabled, checking for interval updates");
+                _logger.LogDebug($"Task [{builder.Id}] is already enabled, checking for interval updates");
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, $"Error evaluating task [{definition.Id}]");
+            _logger.LogError(ex, $"Error evaluating task [{builder.Id}]");
         }
     }
 
-    private async Task EnableTaskAsync(PredefinedTaskDefinition definition)
+    private async Task EnableTaskAsync(IPredefinedBTaskBuilder builder)
     {
-        _logger.LogInformation($"Enabling task: {definition.Id}");
+        _logger.LogInformation($"Enabling task: {builder.Id}");
 
-        var builder = definition.BuildHandler(_serviceProvider);
-
-        // Apply dynamic interval if provided
-        if (definition.GetInterval != null)
+        var handlerBuilder = new BTaskHandlerBuilder
         {
-            var interval = definition.GetInterval();
-            if (interval.HasValue)
-            {
-                // Create a new builder with updated interval
-                builder = new BTaskHandlerBuilder
-                {
-                    Id = builder.Id,
-                    GetName = builder.GetName,
-                    GetDescription = builder.GetDescription,
-                    GetMessageOnInterruption = builder.GetMessageOnInterruption,
-                    CancellationToken = builder.CancellationToken,
-                    Run = builder.Run,
-                    ConflictKeys = builder.ConflictKeys,
-                    Level = builder.Level,
-                    Interval = interval,
-                    IsPersistent = builder.IsPersistent,
-                    RootServiceProvider = builder.RootServiceProvider,
-                    OnStatusChange = builder.OnStatusChange,
-                    OnPercentageChanged = builder.OnPercentageChanged,
-                    Type = builder.Type,
-                    ResourceType = builder.ResourceType,
-                    ResourceKeys = builder.ResourceKeys,
-                    StartNow = builder.StartNow,
-                    DuplicateIdHandling = builder.DuplicateIdHandling
-                };
-            }
-        }
+            Id = builder.Id,
+            GetName = builder.GetName,
+            GetDescription = builder.GetDescription,
+            GetMessageOnInterruption = builder.GetMessageOnInterruption,
+            Run = builder.RunAsync,
+            ConflictKeys = builder.ConflictKeys,
+            DependsOn = builder.DependsOn,
+            Level = builder.Level,
+            Interval = builder.GetInterval(),
+            IsPersistent = builder.IsPersistent,
+            Type = builder.Type,
+            ResourceType = builder.ResourceType,
+            RetryPolicy = builder.RetryPolicy,
+            DependencyFailurePolicy = builder.DependencyFailurePolicy
+        };
 
-        await _taskManager.Enqueue(builder);
-        _taskStates[definition.Id] = true;
+        await _taskManager.Enqueue(handlerBuilder);
+        _taskStates[builder.Id] = true;
     }
 
-    private async Task DisableTaskAsync(PredefinedTaskDefinition definition)
+    private async Task DisableTaskAsync(IPredefinedBTaskBuilder builder)
     {
-        _logger.LogInformation($"Disabling task: {definition.Id}");
+        _logger.LogInformation($"Disabling task: {builder.Id}");
 
         // Stop the task if it's running
-        await _taskManager.Stop(definition.Id);
+        await _taskManager.Stop(builder.Id);
 
         // Remove from task manager
-        await _taskManager.Clean(definition.Id);
+        await _taskManager.Clean(builder.Id);
 
-        _taskStates[definition.Id] = false;
+        _taskStates[builder.Id] = false;
     }
 
     /// <summary>
     /// Register an options change handler for a specific options type
     /// </summary>
-    private void RegisterOptionsChangeHandler(Type optionsType, PredefinedTaskDefinition definition)
+    private void RegisterOptionsChangeHandler(Type optionsType, IPredefinedBTaskBuilder builder)
     {
         try
         {
@@ -153,7 +216,7 @@ public class DynamicTaskRegistry : IDisposable
             if (optionsManager == null)
             {
                 _logger.LogWarning(
-                    $"Could not find AspNetCoreOptionsManager for type {optionsType.Name}, task [{definition.Id}] will not respond to configuration changes");
+                    $"Could not find AspNetCoreOptionsManager for type {optionsType.Name}, task [{builder.Id}] will not respond to configuration changes");
                 return;
             }
 
@@ -163,7 +226,7 @@ public class DynamicTaskRegistry : IDisposable
             if (onChangeMethod == null)
             {
                 _logger.LogWarning(
-                    $"Could not find OnChange method for type {optionsType.Name}, task [{definition.Id}] will not respond to configuration changes");
+                    $"Could not find OnChange method for type {optionsType.Name}, task [{builder.Id}] will not respond to configuration changes");
                 return;
             }
 
@@ -175,11 +238,11 @@ public class DynamicTaskRegistry : IDisposable
                 GetType().GetMethod(nameof(OnOptionsChanged), BindingFlags.NonPublic | BindingFlags.Instance)!
                     .MakeGenericMethod(optionsType));
 
-            // Create a closure to capture the definition
+            // Create a closure to capture the builder
             var parameters = new object[] { callback };
             var closureCallback = new Action<object>(_ =>
             {
-                _ = EvaluateAndUpdateTaskAsync(definition);
+                _ = EvaluateAndUpdateTaskAsync(builder);
             });
 
             // Invoke OnChange to register the handler
@@ -192,13 +255,13 @@ public class DynamicTaskRegistry : IDisposable
             {
                 _optionsChangeHandlers.Add(handler);
                 _logger.LogDebug(
-                    $"Registered options change handler for task [{definition.Id}] on type {optionsType.Name}");
+                    $"Registered options change handler for task [{builder.Id}] on type {optionsType.Name}");
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                $"Error registering options change handler for task [{definition.Id}] on type {optionsType.Name}");
+                $"Error registering options change handler for task [{builder.Id}] on type {optionsType.Name}");
         }
     }
 

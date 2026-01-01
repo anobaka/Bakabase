@@ -51,6 +51,7 @@ const BetaChip = ({
 
   return (
     <Tooltip
+      delay={2000}
       color="foreground"
       content={tooltipContent || defaultTooltipContent}
       placement="top"

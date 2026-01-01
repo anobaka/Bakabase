@@ -49,7 +49,12 @@ jobs:
             echo "version=${TAG_NO_V}" >> $GITHUB_OUTPUT
             echo "is_tag=true" >> $GITHUB_OUTPUT
           else
-            echo "version=${{ env.NBGV_CloudBuildNumber }}" >> $GITHUB_OUTPUT
+            # Clean up version: remove trailing .0 for first beta (e.g., 2.2.0-beta.0 -> 2.2.0-beta)
+            VERSION="${{ env.NBGV_CloudBuildNumber }}"
+            if [[ "$VERSION" =~ ^(.+-[a-zA-Z]+)\.0$ ]]; then
+              VERSION="${BASH_REMATCH[1]}"
+            fi
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "is_tag=false" >> $GITHUB_OUTPUT
           fi
       - name: Debug prepare context
@@ -319,6 +324,21 @@ jobs:
             const issues = {};
             const { owner, repo } = context.repo;
 
+            // Label display configuration (order matters for changelog output)
+            const labelConfig = [
+              { name: 'breaking-changes', emoji: '🚨', title: 'Breaking Changes' },
+              { name: 'feature', emoji: '🚀', title: 'Features' },
+              { name: 'enhancement', emoji: '✨', title: 'Enhancements' },
+              { name: 'architecture optimization', emoji: '🏗️', title: 'Architecture' },
+              { name: 'bug', emoji: '🐛', title: 'Bug Fixes' },
+              { name: 'experiment', emoji: '🧪', title: 'Experiments' },
+            ];
+            const labelGroups = {};
+            for (const cfg of labelConfig) {
+              labelGroups[cfg.name] = { emoji: cfg.emoji, title: cfg.title, issues: [] };
+            }
+
+            // Collect all issue numbers from commit links
             const numberSet = new Set();
             for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
               const links = Array.isArray(commit.links) ? commit.links : [];
@@ -330,17 +350,36 @@ jobs:
               }
             }
 
+            // Fetch issue details including labels
             for (const num of numberSet) {
               try {
                 const { data } = await github.rest.issues.get({ owner, repo, issue_number: Number(num) });
-                const info = { title: data.title, url: data.html_url, number: data.number, state: data.state };
+                const labels = (data.labels || []).map(l => typeof l === 'string' ? l : l.name);
+                const info = {
+                  title: data.title,
+                  url: data.html_url,
+                  number: data.number,
+                  state: data.state,
+                  labels: labels
+                };
                 issues[num] = info;
                 issues['#' + num] = info;
+
+                // Group issue by each of its labels (issue appears in multiple groups if it has multiple labels)
+                for (const label of labels) {
+                  if (labelGroups[label]) {
+                    // Avoid duplicates
+                    if (!labelGroups[label].issues.find(i => i.number === info.number)) {
+                      labelGroups[label].issues.push(info);
+                    }
+                  }
+                }
               } catch (e) {
                 core.warning(`Failed to fetch issue #${num}: ${e.message}`);
               }
             }
 
+            // Attach issues to commits (for backward compatibility)
             for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
               const links = Array.isArray(commit.links) ? commit.links : [];
               const list = [];
@@ -349,12 +388,17 @@ jobs:
                 if (m) {
                   const n = m[1];
                   const issue = issues[n] || issues['#' + n] || null;
-                  list.push(issue);
+                  if (issue) list.push(issue);
                 }
               }
               commit.extra ??= {};
               commit.extra["issues"] = list;
             }
+
+            // Add labelGroups to context for template use
+            initial.extra ??= {};
+            initial.extra.labelGroups = labelGroups;
+            initial.extra.labelOrder = labelConfig.map(c => c.name);
 
             initial.version = "${{ needs.prepare.outputs.version }}";
 

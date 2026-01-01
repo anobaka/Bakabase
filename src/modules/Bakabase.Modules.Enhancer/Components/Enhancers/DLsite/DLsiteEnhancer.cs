@@ -32,16 +32,33 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
     }
 
     protected override async Task<DLsiteEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+        EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var match = IdRegex.Match(keyword);
         if (!match.Success)
         {
+            logCollector.LogWarning(EnhancementLogEvent.KeywordResolved,
+                "No DLsite ID (BJ/VJ/RJ) found in keyword",
+                new { Keyword = keyword, Pattern = IdRegex.ToString() });
             return null;
         }
 
         var id = match.Value;
+        logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+            $"Found DLsite ID: {id}",
+            new { DLsiteId = id });
+
+        var detailUrl = $"https://www.dlsite.com/books/work/=/product_id/{id}.html";
+        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+            $"Fetching DLsite work detail",
+            new { Url = detailUrl, DLsiteId = id });
+
         var detail = await _client.ParseWorkDetailById(id);
+
+        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+            detail != null ? $"Got DLsite work: {detail.Name}" : "No DLsite work found",
+            new { Url = detailUrl, Found = detail != null, Name = detail?.Name, CoverCount = detail?.CoverUrls?.Length ?? 0 });
+
         if (detail == null)
         {
             return null;
@@ -61,7 +78,16 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
             for (var index = 0; index < detail.CoverUrls.Length; index++)
             {
                 var coverUrl = detail.CoverUrls[index];
+                logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                    $"Downloading cover image {index + 1}/{detail.CoverUrls.Length}",
+                    new { Url = coverUrl, Index = index });
+
                 var imageData = await _client.HttpClient.GetByteArrayAsync(coverUrl, ct);
+
+                logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                    $"Cover image {index + 1} downloaded ({imageData.Length} bytes)",
+                    new { Url = coverUrl, Index = index, Size = imageData.Length });
+
                 var queryIdx = coverUrl.IndexOf('?');
                 var coverUrlWithoutQuery = queryIdx == -1 ? coverUrl : coverUrl[..queryIdx];
                 var filenameInUrl = Path.GetFileName(coverUrlWithoutQuery).RemoveInvalidFileNameChars();
@@ -70,6 +96,9 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
             }
 
             ctx.CoverPaths = coverPaths.ToArray();
+            logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                $"Saved {coverPaths.Count} cover images",
+                new { CoverPaths = coverPaths });
         }
 
         return ctx;
@@ -78,7 +107,7 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
     protected override EnhancerId TypedId => EnhancerId.DLsite;
 
     protected override async Task<List<EnhancementTargetValue<DLsiteEnhancerTarget>>> ConvertContextByTargets(
-        DLsiteEnhancerContext context, CancellationToken ct)
+        DLsiteEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<DLsiteEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<DLsiteEnhancerTarget>.Values)

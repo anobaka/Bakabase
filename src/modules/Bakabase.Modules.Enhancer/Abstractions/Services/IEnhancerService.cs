@@ -12,9 +12,7 @@ public interface IEnhancerService
 
     Task EnhanceAll(Func<int, Task>? onProgress, Func<string, Task>? onProcessChange, PauseToken pt,
         CancellationToken ct);
-
-    [Obsolete]
-    Task ReapplyEnhancementsByCategory(int categoryId, int enhancerId, CancellationToken ct);
+    
     Task ReapplyEnhancementsByResources(int[] resourceIds, int[] enhancerIds, CancellationToken ct);
     Task ReapplyEnhancementsByResources(Dictionary<int, int[]> resourceIdsEnhancerIdsMap, CancellationToken ct);
     Task Enhance(Resource resource, Dictionary<int, EnhancerFullOptions> optionsMap);

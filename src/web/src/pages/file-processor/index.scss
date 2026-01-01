@@ -15,9 +15,6 @@
     display: flex;
     align-items: center;
     justify-content: center;
-
-    & > * {
-    }
   }
 
   .file-explorer {
@@ -167,10 +164,6 @@
 }
 
 .tree-entry-name-container-balloon {
-  .name {
-
-  }
-
   .opt {
     display: flex;
     align-items: center;

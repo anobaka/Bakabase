@@ -3,7 +3,6 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Extensions;
 using Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.StandardValue.Models.Domain;
@@ -18,7 +17,8 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
         private Dictionary<StandardValueType, StandardValueConversionRule>? _possibleConversionLosses;
 
         public Dictionary<StandardValueType, StandardValueConversionRule> ConversionRules =>
-            (_possibleConversionLosses ??= StandardValueInternals.ConversionRules[Type]);
+            (_possibleConversionLosses ??= new Dictionary<StandardValueType, StandardValueConversionRule>(
+                StandardValueSystem.GetAllConversionRules()[Type]));
 
 
         public object? Convert(object? currentValue,
@@ -148,5 +148,21 @@ namespace Bakabase.Modules.StandardValue.Components.ValueHandlers
 
         public abstract List<List<string>>? ConvertToListListString(TValue optimizedValue);
         public abstract List<TagValue>? ConvertToListTag(TValue optimizedValue);
+
+        /// <summary>
+        /// Default implementation: returns the first non-null optimized value.
+        /// Collection-type handlers should override this to aggregate (union) values.
+        /// </summary>
+        public virtual object? Combine(IEnumerable<object?> values)
+        {
+            foreach (var value in values)
+            {
+                if (ConvertToOptimizedTypedValue(value, out var optimized) && optimized != null)
+                {
+                    return optimized;
+                }
+            }
+            return null;
+        }
     }
 }

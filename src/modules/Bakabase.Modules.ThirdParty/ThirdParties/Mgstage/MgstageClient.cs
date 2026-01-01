@@ -87,7 +87,8 @@ public class MgstageClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = realUrl,
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = realUrl
             };
         }
         catch

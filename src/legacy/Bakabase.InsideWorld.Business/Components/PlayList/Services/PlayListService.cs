@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bakabase.InsideWorld.Business.Components.PlayList.Services
 {
-    public class PlayListService : ResourceService<InsideWorldDbContext, PlayListDbModel, int>, IPlayListService
+    public class PlayListService : ResourceService<BakabaseDbContext, PlayListDbModel, int>, IPlayListService
     {
         public PlayListService(IServiceProvider serviceProvider) : base(serviceProvider)
         {

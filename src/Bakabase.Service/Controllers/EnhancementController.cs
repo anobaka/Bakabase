@@ -27,10 +27,10 @@ namespace Bakabase.Service.Controllers
         IResourceService resourceService,
         IEnhancementService enhancementService,
         IEnhancerService enhancerService,
-        ICategoryEnhancerOptionsService categoryEnhancerOptionsService,
         IEnhancerDescriptors enhancerDescriptors,
         IEnhancementRecordService enhancementRecordService,
-        IMediaLibraryV2Service mediaLibraryV2Service)
+        IResourceProfileService resourceProfileService,
+        IMediaLibraryResourceMappingService mediaLibraryResourceMappingService)
         : Controller
     {
         [HttpGet("~/resource/{resourceId:int}/enhancement")]
@@ -50,98 +50,66 @@ namespace Bakabase.Service.Controllers
                 (await enhancementRecordService.GetAll(x => x.ResourceId == resourceId)).ToDictionary(
                     d => d.EnhancerId, d => d);
 
-            if (resource.IsMediaLibraryV2)
+            // Use ResourceProfileService to get enhancer options for this resource
+            var enhancerOptions = await resourceProfileService.GetEffectiveEnhancerOptions(resource);
+            var enhancerOptionsSet = new HashSet<int>();
+            if (enhancerOptions?.Enhancers != null)
             {
-                var mediaLibraryTemplate =
-                    (await mediaLibraryV2Service.Get(resource.MediaLibraryId, MediaLibraryV2AdditionalItem.Template))
-                    .Template;
-                if (mediaLibraryTemplate == null)
+                foreach (var enhancer in enhancerOptions.Enhancers)
                 {
-                    return ListResponseBuilder<ResourceEnhancements>.Build(ResponseCode.NotFound,
-                        "Media library template not found");
+                    enhancerOptionsSet.Add(enhancer.EnhancerId);
                 }
-
-                var res = (mediaLibraryTemplate.Enhancers ?? []).Select(e =>
-                {
-                    var ed = enhancerDescriptors[e.EnhancerId];
-                    var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
-                    var record = enhancementRecords.GetValueOrDefault(e.EnhancerId);
-                    var re = new ResourceEnhancements
-                    {
-                        Enhancer = ed,
-                        ContextCreatedAt = record?.ContextCreatedAt,
-                        ContextAppliedAt = record?.ContextAppliedAt,
-                        Status = record?.Status ?? default,
-                        Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
-                        {
-                            var targetId = Convert.ToInt32(t.Id);
-                            var e = es.FirstOrDefault(e => e.Target == targetId);
-                            return new ResourceEnhancements.TargetEnhancement
-                            {
-                                Enhancement = e?.ToViewModel(),
-                                Target = targetId,
-                                TargetName = t.Name
-                            };
-                        }).ToArray(),
-                        DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
-                        {
-                            var targetId = Convert.ToInt32(t.Id);
-                            var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
-                            return new ResourceEnhancements.DynamicTargetEnhancements()
-                            {
-                                Enhancements = e,
-                                Target = targetId,
-                                TargetName = t.Name
-                            };
-                        }).ToArray()
-                    };
-                    return re;
-                }).ToList();
-
-                return new ListResponse<ResourceEnhancements>(res);
             }
-            else
+
+            // Build response for enhancers from resource profile
+            var res = enhancerOptionsSet.Select(enhancerId =>
             {
-                var categoryEnhancerOptions = await categoryEnhancerOptionsService.GetByCategory(resource.CategoryId);
-                var res = categoryEnhancerOptions.Where(o => o.Active).Select(o =>
+                var ed = enhancerDescriptors[enhancerId];
+                var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
+                var record = enhancementRecords.GetValueOrDefault(enhancerId);
+                var re = new ResourceEnhancements
                 {
-                    var ed = enhancerDescriptors[o.EnhancerId];
-                    var es = enhancements.Where(e => e.EnhancerId == ed.Id).ToList();
-                    var record = enhancementRecords.GetValueOrDefault(o.EnhancerId);
-                    var re = new ResourceEnhancements
+                    Enhancer = ed,
+                    ContextCreatedAt = record?.ContextCreatedAt,
+                    ContextAppliedAt = record?.ContextAppliedAt,
+                    Status = record?.Status ?? default,
+                    Logs = record?.Logs?.Select(l => new ResourceEnhancements.EnhancementLogViewModel
                     {
-                        Enhancer = ed,
-                        ContextCreatedAt = record?.ContextCreatedAt,
-                        ContextAppliedAt = record?.ContextAppliedAt,
-                        Status = record?.Status ?? default,
-                        Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
+                        Timestamp = l.Timestamp,
+                        Level = l.Level,
+                        Event = l.Event,
+                        Message = l.Message,
+                        Data = l.Data
+                    }).ToList(),
+                    OptionsSnapshot = record?.OptionsSnapshot,
+                    ErrorMessage = record?.ErrorMessage,
+                    Targets = ed.Targets.Where(x => !x.IsDynamic).Select(t =>
+                    {
+                        var targetId = Convert.ToInt32(t.Id);
+                        var e = es.FirstOrDefault(e => e.Target == targetId);
+                        return new ResourceEnhancements.TargetEnhancement
                         {
-                            var targetId = Convert.ToInt32(t.Id);
-                            var e = es.FirstOrDefault(e => e.Target == targetId);
-                            return new ResourceEnhancements.TargetEnhancement
-                            {
-                                Enhancement = e?.ToViewModel(),
-                                Target = targetId,
-                                TargetName = t.Name
-                            };
-                        }).ToArray(),
-                        DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
+                            Enhancement = e?.ToViewModel(),
+                            Target = targetId,
+                            TargetName = t.Name
+                        };
+                    }).ToArray(),
+                    DynamicTargets = ed.Targets.Where(x => x.IsDynamic).Select(t =>
+                    {
+                        var targetId = Convert.ToInt32(t.Id);
+                        var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
+                        return new ResourceEnhancements.DynamicTargetEnhancements()
                         {
-                            var targetId = Convert.ToInt32(t.Id);
-                            var e = es.Where(e => e.Target == targetId).Select(e => e.ToViewModel()).ToList();
-                            return new ResourceEnhancements.DynamicTargetEnhancements()
-                            {
-                                Enhancements = e,
-                                Target = targetId,
-                                TargetName = t.Name
-                            };
-                        }).ToArray()
-                    };
-                    return re;
-                }).ToList();
+                            Enhancements = e,
+                            Target = targetId,
+                            TargetName = t.Name
+                        };
+                    }).ToArray()
+                };
+                return re;
+            }).ToList();
 
-                return new ListResponse<ResourceEnhancements>(res);
-            }
+            return new ListResponse<ResourceEnhancements>(res);
         }
 
         [HttpDelete("~/resource/{resourceId:int}/enhancer/{enhancerId:int}/enhancement")]
@@ -170,20 +138,12 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
-        [HttpPost("~/category/{categoryId:int}/enhancer/{enhancerId:int}/enhancement/apply")]
-        [SwaggerOperation(OperationId = "ApplyEnhancementContextDataByEnhancerAndCategory")]
-        public async Task<BaseResponse> ApplyEnhancementContextDataByEnhancerAndCategory(int categoryId, int enhancerId)
-        {
-            await enhancerService.ReapplyEnhancementsByCategory(categoryId, enhancerId, CancellationToken.None);
-            return BaseResponseBuilder.Ok;
-        }
-
         [HttpDelete("~/media-library/{mediaLibraryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
         public async Task<BaseResponse> DeleteMediaLibraryEnhancementRecords(int mediaLibraryId, bool deleteEmptyOnly)
         {
-            var resourceIds = (await resourceService.GetAll(t => t.MediaLibraryId == mediaLibraryId))
-                .Select(t => t.Id).ToArray();
+            var resourceIds = (await mediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryId(mediaLibraryId))
+                .ToArray();
 
             if (deleteEmptyOnly)
             {
@@ -201,65 +161,6 @@ namespace Bakabase.Service.Controllers
             {
                 await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
                 await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
-            }
-
-            return BaseResponseBuilder.Ok;
-        }
-
-        [HttpDelete("~/category/{categoryId:int}/enhancement")]
-        [SwaggerOperation(OperationId = "DeleteEnhancementsByCategory")]
-        public async Task<BaseResponse> DeleteCategoryEnhancementRecords(int categoryId, bool deleteEmptyOnly)
-        {
-            var resourceIds = (await resourceService.GetAll(t => t.CategoryId == categoryId))
-                .Select(t => t.Id).ToArray();
-            if (deleteEmptyOnly)
-            {
-                var records = await enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId));
-                var enhancements = await enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId));
-                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
-                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
-                var recordIdsWithEmptyEnhancements =
-                    records.Where(x =>
-                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
-                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
-                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
-            }
-            else
-            {
-                await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
-                await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
-            }
-
-            return BaseResponseBuilder.Ok;
-        }
-
-        [HttpDelete("~/category/{categoryId:int}/enhancer/{enhancerId:int}/enhancements")]
-        [SwaggerOperation(OperationId = "DeleteEnhancementsByCategoryAndEnhancer")]
-        public async Task<BaseResponse> DeleteEnhancementRecordsByCategoryAndEnhancer(int categoryId, int enhancerId,
-            bool deleteEmptyOnly)
-        {
-            var resourceIds = (await resourceService.GetAll(t => t.CategoryId == categoryId))
-                .Select(t => t.Id).ToArray();
-            if (deleteEmptyOnly)
-            {
-                var records = await enhancementRecordService.GetAll(x =>
-                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
-                var enhancements = await enhancementService.GetAll(x =>
-                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
-                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
-                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
-                var recordIdsWithEmptyEnhancements =
-                    records.Where(x =>
-                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
-                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
-                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
-            }
-            else
-            {
-                await enhancementService.RemoveAll(
-                    t => t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId), true);
-                await enhancementRecordService.DeleteAll(t =>
-                    t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId));
             }
 
             return BaseResponseBuilder.Ok;
@@ -271,73 +172,8 @@ namespace Bakabase.Service.Controllers
             int enhancerId,
             bool deleteEmptyOnly)
         {
-            var resourceIds =
-                (await resourceService.GetAll(t => t.CategoryId == 0 && t.MediaLibraryId == mediaLibraryId))
-                .Select(t => t.Id).ToArray();
-            if (deleteEmptyOnly)
-            {
-                var records = await enhancementRecordService.GetAll(x =>
-                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
-                var enhancements = await enhancementService.GetAll(x =>
-                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
-                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
-                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
-                var recordIdsWithEmptyEnhancements =
-                    records.Where(x =>
-                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
-                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
-                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
-            }
-            else
-            {
-                await enhancementService.RemoveAll(
-                    t => t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId), true);
-                await enhancementRecordService.DeleteAll(t =>
-                    t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId));
-            }
-
-            return BaseResponseBuilder.Ok;
-        }
-
-        [HttpGet("~/media-library/{mediaLibraryId:int}/enhancer/enhanced-counts")]
-        [SwaggerOperation(OperationId = "GetEnhancedResourceCountsByMediaLibrary")]
-        public async Task<SingletonResponse<Dictionary<int, int>>> GetEnhancedResourceCountsByMediaLibrary(
-            int mediaLibraryId)
-        {
-            var resourceIds =
-                (await resourceService.GetAll(t => t.CategoryId == 0 && t.MediaLibraryId == mediaLibraryId))
-                .Select(t => t.Id).ToArray();
-
-            var enhancementRecords = await enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId));
-            var mediaLibraryTemplate = (await mediaLibraryV2Service.Get(mediaLibraryId, MediaLibraryV2AdditionalItem.Template))?.Template;
-            var enhancerIds = enhancementRecords.Select(x => x.EnhancerId).ToHashSet();
-            if (mediaLibraryTemplate != null)
-            {
-                var configuredEnhancerIds = mediaLibraryTemplate.Enhancers?.Select(x => x.EnhancerId).ToHashSet() ?? [];
-                enhancerIds.UnionWith(configuredEnhancerIds);
-            }
-
-            var recordGroupedByEnhancerId = enhancementRecords.GroupBy(x => x.EnhancerId).ToDictionary(x => x.Key, x => x.Count());
-
-            var dict = enhancerIds.ToDictionary(x => x, x => recordGroupedByEnhancerId.GetValueOrDefault(x, 0));
-
-            return new SingletonResponse<Dictionary<int, int>>(dict);
-        }
-
-        [HttpDelete("~/media-library-template/{mediaLibraryTemplateId:int}/enhancer/{enhancerId:int}/enhancements")]
-        [SwaggerOperation(OperationId = "DeleteEnhancementsByMediaLibraryTemplateAndEnhancer")]
-        public async Task<BaseResponse> DeleteEnhancementRecordsByMediaLibraryTemplateAndEnhancer(
-            int mediaLibraryTemplateId,
-            int enhancerId,
-            bool deleteEmptyOnly)
-        {
-            var mediaLibraries = await mediaLibraryV2Service.GetAll(x => x.TemplateId == mediaLibraryTemplateId,
-                MediaLibraryV2AdditionalItem.None);
-            var mlIds = mediaLibraries.Select(x => x.Id).ToHashSet();
-
-            var resourceIds =
-                (await resourceService.GetAll(t => t.CategoryId == 0 && mlIds.Contains(t.MediaLibraryId)))
-                .Select(t => t.Id).ToArray();
+            var resourceIds = (await mediaLibraryResourceMappingService.GetResourceIdsByMediaLibraryId(mediaLibraryId))
+                .ToArray();
             if (deleteEmptyOnly)
             {
                 var records = await enhancementRecordService.GetAll(x =>
@@ -380,6 +216,76 @@ namespace Bakabase.Service.Controllers
             {
                 await enhancementService.RemoveAll(t => t.EnhancerId == enhancerId, true);
                 await enhancementRecordService.DeleteAll(t => t.EnhancerId == enhancerId);
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete("~/resource-profile/{profileId:int}/enhancement")]
+        [SwaggerOperation(OperationId = "DeleteEnhancementsByResourceProfile")]
+        public async Task<BaseResponse> DeleteResourceProfileEnhancementRecords(int profileId, bool deleteEmptyOnly)
+        {
+            var resourceIds = (await resourceProfileService.GetMatchingResourceIds(profileId)).ToArray();
+
+            if (resourceIds.Length == 0)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            if (deleteEmptyOnly)
+            {
+                var records = await enhancementRecordService.GetAll(x => resourceIds.Contains(x.ResourceId));
+                var enhancements = await enhancementService.GetAll(x => resourceIds.Contains(x.ResourceId));
+                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
+                var recordIdsWithEmptyEnhancements =
+                    records.Where(x =>
+                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
+                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
+                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
+            }
+            else
+            {
+                await enhancementService.RemoveAll(t => resourceIds.Contains(t.ResourceId), true);
+                await enhancementRecordService.DeleteAll(t => resourceIds.Contains(t.ResourceId));
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpDelete("~/resource-profile/{profileId:int}/enhancer/{enhancerId:int}/enhancement")]
+        [SwaggerOperation(OperationId = "DeleteEnhancementsByResourceProfileAndEnhancer")]
+        public async Task<BaseResponse> DeleteEnhancementRecordsByResourceProfileAndEnhancer(int profileId,
+            int enhancerId,
+            bool deleteEmptyOnly)
+        {
+            var resourceIds = (await resourceProfileService.GetMatchingResourceIds(profileId)).ToArray();
+
+            if (resourceIds.Length == 0)
+            {
+                return BaseResponseBuilder.Ok;
+            }
+
+            if (deleteEmptyOnly)
+            {
+                var records = await enhancementRecordService.GetAll(x =>
+                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
+                var enhancements = await enhancementService.GetAll(x =>
+                    x.EnhancerId == enhancerId && resourceIds.Contains(x.ResourceId));
+                var resourceIdEnhancerIdMap = enhancements.GroupBy(x => x.ResourceId)
+                    .ToDictionary(d => d.Key, d => d.Select(x => x.EnhancerId).ToHashSet());
+                var recordIdsWithEmptyEnhancements =
+                    records.Where(x =>
+                        !resourceIdEnhancerIdMap.TryGetValue(x.ResourceId, out var enhancerIds) ||
+                        !enhancerIds.Contains(x.EnhancerId)).Select(x => x.Id).ToList();
+                await enhancementRecordService.DeleteAll(r => recordIdsWithEmptyEnhancements.Contains(r.Id));
+            }
+            else
+            {
+                await enhancementService.RemoveAll(
+                    t => t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId), true);
+                await enhancementRecordService.DeleteAll(t =>
+                    t.EnhancerId == enhancerId && resourceIds.Contains(t.ResourceId));
             }
 
             return BaseResponseBuilder.Ok;

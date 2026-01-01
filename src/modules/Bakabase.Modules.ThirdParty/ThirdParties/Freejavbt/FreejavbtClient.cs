@@ -132,7 +132,8 @@ public class FreejavbtClient(IHttpClientFactory httpClientFactory, ILoggerFactor
                 PosterUrl = "",
                 Website = realUrl,
                 Source = "freejavbt",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = realUrl
             };
 
             return detail;

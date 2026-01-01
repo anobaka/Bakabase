@@ -9,7 +9,7 @@ using Bootstrap.Components.Orm;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
-public class ExtensionGroupService(FullMemoryCacheResourceService<InsideWorldDbContext, ExtensionGroupDbModel, int> orm)
+public class ExtensionGroupService(FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int> orm)
     : IExtensionGroupService
 {
     public async Task<ExtensionGroup[]> GetAll() => (await orm.GetAll()).Select(x => x.ToDomainModel()).ToArray();

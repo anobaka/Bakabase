@@ -136,7 +136,8 @@ public class DmmClient(IHttpClientFactory httpClientFactory, ILoggerFactory logg
                 ImageDownload = false,
                 ImageCut = "right",
                 Mosaic = mosaic,
-                Wanted = string.Empty
+                Wanted = string.Empty,
+                SearchUrl = appointUrl
             };
 
             return detail;

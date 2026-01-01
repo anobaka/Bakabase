@@ -6,6 +6,7 @@ using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -22,6 +23,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using StackExchange.Profiling;
 
 namespace Bakabase.Service.Controllers
 {
@@ -36,10 +38,24 @@ namespace Bakabase.Service.Controllers
     {
         [HttpGet("pool/{pool}")]
         [SwaggerOperation(OperationId = "GetPropertiesByPool")]
-        public async Task<ListResponse<PropertyViewModel>> GetByPool(PropertyPool pool)
+        public async Task<ListResponse<PropertyViewModel>> GetByPool(PropertyPool pool, bool includeDeprecated = false)
         {
-            return new ListResponse<PropertyViewModel>(
-                (await service.GetProperties(pool)).Select(x => x.ToViewModel(localizer)));
+            using (MiniProfiler.Current.Step($"GetPropertiesByPool({pool}, includeDeprecated: {includeDeprecated})"))
+            {
+                List<Property> properties;
+                using (MiniProfiler.Current.Step("service.GetProperties"))
+                {
+                    properties = await service.GetProperties(pool, includeDeprecated);
+                }
+
+                List<PropertyViewModel> vms;
+                using (MiniProfiler.Current.Step("ToViewModel"))
+                {
+                    vms = properties.Select(x => x.ToViewModel(localizer)).ToList();
+                }
+
+                return new ListResponse<PropertyViewModel>(vms);
+            }
         }
 
         [HttpGet("property-types-for-manually-setting-value")]
@@ -65,7 +81,7 @@ namespace Bakabase.Service.Controllers
                 }
                 else
                 {
-                    var virtualProperty = PropertyInternals.VirtualPropertyMap.GetValueOrDefault(a);
+                    var virtualProperty = PropertySystem.Property.TryGetVirtual(a);
                     if (virtualProperty != null)
                     {
                         properties = [virtualProperty.ToViewModel(localizer)];
@@ -93,7 +109,7 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<string>> GetDbValue(PropertyPool pool, int id, string? bizValue)
         {
             var property = await service.GetProperty(pool, id);
-            var pd = PropertyInternals.DescriptorMap[property.Type];
+            var pd = PropertySystem.Property.GetDescriptor(property.Type);
             var (dbValue, _) = pd.PrepareDbValue(property, bizValue.DeserializeBizValueAsStandardValue(property.Type));
             return new SingletonResponse<string>(dbValue.SerializeDbValueAsStandardValue(property.Type));
         }

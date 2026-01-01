@@ -12,7 +12,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
     [Obsolete]
     public class LegacyFavoritesResourceMappingService(IServiceProvider serviceProvider)
         : FullMemoryCacheResourceService<
-            InsideWorldDbContext, FavoritesResourceMapping, int>(serviceProvider)
+            BakabaseDbContext, FavoritesResourceMapping, int>(serviceProvider)
     {
         // public override async Task<ListResponse<FavoritesResourceMapping>> AddRange(
         //     List<FavoritesResourceMapping> resources)

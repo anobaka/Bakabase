@@ -19,10 +19,11 @@ public class FantasticaClient(IHttpClientFactory httpClientFactory, ILoggerFacto
             string? realUrl = appointUrl;
             string poster = "";
             bool imageDownload = false;
+            string? searchUrl = null;
 
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"http://fantastica-vr.com/items/search?q={Uri.EscapeDataString(number)}";
+                searchUrl = $"http://fantastica-vr.com/items/search?q={Uri.EscapeDataString(number)}";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
 
@@ -111,7 +112,8 @@ public class FantasticaClient(IHttpClientFactory httpClientFactory, ILoggerFacto
                 PosterUrl = poster,
                 Website = realUrl,
                 Source = "fantastica",
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
 
             return detail;

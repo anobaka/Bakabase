@@ -88,7 +88,7 @@ namespace Bakabase.Service.Components
 
         protected override async Task MigrateDb(IServiceProvider serviceProvider)
         {
-            await serviceProvider.MigrateSqliteDbContexts<InsideWorldDbContext>();
+            await serviceProvider.MigrateSqliteDbContexts<BakabaseDbContext>();
             await base.MigrateDb(serviceProvider);
         }
 
@@ -119,18 +119,14 @@ namespace Bakabase.Service.Components
                 });
             }
 
-            var predefinedTasksProvider = serviceProvider.GetRequiredService<PredefinedTasksProvider>();
             var dynamicTaskRegistry = serviceProvider.GetRequiredService<DynamicTaskRegistry>();
             var taskManager = serviceProvider.GetRequiredService<BTaskManager>();
 
             // Initialize BTaskManager
             await taskManager.Initialize();
 
-            // Register all predefined tasks to the dynamic registry
-            foreach (var taskDef in predefinedTasksProvider.TaskDefinitions)
-            {
-                dynamicTaskRegistry.RegisterTask(taskDef);
-            }
+            // Register all predefined tasks via DI discovery
+            await dynamicTaskRegistry.RegisterAllTasksAsync();
         }
 
         protected override Task<string?> CheckIfAppCanExitSafely()

@@ -61,7 +61,8 @@ public class MywifeClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 PosterUrl = cover.Replace("topview.jpg", "thumb.jpg"),
                 Website = realUrl,
                 Source = "mywife",
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = realUrl
             };
 
             return detail;

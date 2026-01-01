@@ -18,9 +18,10 @@ public class LulubarClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
         {
             string? realUrl = appointUrl;
             string poster = "";
+            string searchUrl = "";
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"https://lulubar.co/video/bysearch?search={Uri.EscapeDataString(number)}&page=1";
+                searchUrl = $"https://lulubar.co/video/bysearch?search={Uri.EscapeDataString(number)}&page=1";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var items = docSearch.Select("a.imgBoxW");
@@ -97,7 +98,8 @@ public class LulubarClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 PosterUrl = poster,
                 Website = realUrl,
                 Source = "lulubar",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
 
             return detail;

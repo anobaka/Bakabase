@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
+using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
@@ -19,9 +20,18 @@ public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFile
     : AbstractKeywordEnhancer<TmdbEnhancerTarget, TmdbEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
 {
     protected override async Task<TmdbEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
-        CancellationToken ct)
+        EnhancementLogCollector logCollector, CancellationToken ct)
     {
+        var searchUrl = TmdbUrlBuilder.SearchMovie(keyword);
+        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+            $"Searching TMDB",
+            new { Url = searchUrl, Query = keyword });
+
         var detail = await client.SearchAndGetFirst(keyword);
+
+        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+            detail != null ? $"Found movie: {detail.Title}" : $"No results found for: {keyword}",
+            new { Url = searchUrl, Found = detail != null, Title = detail?.Title, OriginalTitle = detail?.OriginalTitle });
 
         if (detail != null)
         {
@@ -48,13 +58,28 @@ public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFile
                 try
                 {
                     var posterUrl = TmdbUrlBuilder.GetPosterUrl(detail.PosterPath);
+                    logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                        "Downloading poster",
+                        new { Url = posterUrl });
+
                     var imageData = await client.HttpClient.GetByteArrayAsync(posterUrl, ct);
+
+                    logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                        $"Poster downloaded ({imageData.Length} bytes)",
+                        new { Url = posterUrl, Size = imageData.Length });
+
                     var extension = Path.GetExtension(detail.PosterPath) ?? ".jpg";
                     ctx.CoverPath = await SaveFile(resource, $"cover{extension}", imageData);
+                    logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                        $"Poster saved: {ctx.CoverPath}",
+                        new { CoverPath = ctx.CoverPath });
                 }
                 catch (Exception ex)
                 {
                     Logger.LogWarning(ex, "Failed to download poster image from TMDB");
+                    logCollector.LogWarning(EnhancementLogEvent.Error,
+                        $"Failed to download poster: {ex.Message}",
+                        new { Error = ex.Message });
                 }
             }
 
@@ -63,13 +88,28 @@ public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFile
                 try
                 {
                     var backdropUrl = TmdbUrlBuilder.GetBackdropUrl(detail.BackdropPath);
+                    logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                        "Downloading backdrop",
+                        new { Url = backdropUrl });
+
                     var imageData = await client.HttpClient.GetByteArrayAsync(backdropUrl, ct);
+
+                    logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                        $"Backdrop downloaded ({imageData.Length} bytes)",
+                        new { Url = backdropUrl, Size = imageData.Length });
+
                     var extension = Path.GetExtension(detail.BackdropPath) ?? ".jpg";
                     ctx.BackdropPath = await SaveFile(resource, $"backdrop{extension}", imageData);
+                    logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                        $"Backdrop saved: {ctx.BackdropPath}",
+                        new { BackdropPath = ctx.BackdropPath });
                 }
                 catch (Exception ex)
                 {
                     Logger.LogWarning(ex, "Failed to download backdrop image from TMDB");
+                    logCollector.LogWarning(EnhancementLogEvent.Error,
+                        $"Failed to download backdrop: {ex.Message}",
+                        new { Error = ex.Message });
                 }
             }
 
@@ -82,7 +122,7 @@ public class TmdbEnhancer(ILoggerFactory loggerFactory, TmdbClient client, IFile
     protected override EnhancerId TypedId => EnhancerId.Tmdb;
 
     protected override async Task<List<EnhancementTargetValue<TmdbEnhancerTarget>>> ConvertContextByTargets(
-        TmdbEnhancerContext context, CancellationToken ct)
+        TmdbEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var enhancements = new List<EnhancementTargetValue<TmdbEnhancerTarget>>();
         foreach (var target in SpecificEnumUtils<TmdbEnhancerTarget>.Values)

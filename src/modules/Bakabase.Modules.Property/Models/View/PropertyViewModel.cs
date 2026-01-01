@@ -1,5 +1,4 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
-using Bakabase.Modules.Property.Extensions;
 
 namespace Bakabase.Modules.Property.Models.View;
 
@@ -10,8 +9,8 @@ public record PropertyViewModel
     public string Name { get; set; } = null!;
     public PropertyType Type { get; set; }
     public object? Options { get; set; }
-    public StandardValueType DbValueType => Type.GetDbValueType();
-    public StandardValueType BizValueType => Type.GetBizValueType();
+    public StandardValueType DbValueType => PropertySystem.Property.GetDbValueType(Type);
+    public StandardValueType BizValueType => PropertySystem.Property.GetBizValueType(Type);
     public string PoolName { get; set; } = null!;
     public string TypeName { get; set; } = null!;
     public int Order { get; set; }

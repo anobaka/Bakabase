@@ -81,7 +81,8 @@ public class Kin8Client(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = realUrl,
-                Mosaic = "无码"
+                Mosaic = "无码",
+                SearchUrl = realUrl
             };
         }
         catch

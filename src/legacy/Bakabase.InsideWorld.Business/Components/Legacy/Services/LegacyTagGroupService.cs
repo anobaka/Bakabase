@@ -17,7 +17,7 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyTagGroupService(IServiceProvider serviceProvider)
-        : FullMemoryCacheResourceService<InsideWorldDbContext, TagGroup, int>(serviceProvider)
+        : FullMemoryCacheResourceService<BakabaseDbContext, TagGroup, int>(serviceProvider)
     {
         // public async Task<BaseResponse> RemoveByKey(int id)
         // {

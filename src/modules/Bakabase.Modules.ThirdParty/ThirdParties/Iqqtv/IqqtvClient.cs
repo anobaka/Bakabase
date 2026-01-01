@@ -26,9 +26,10 @@ public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             var iqqtvUrl = site + prefix + "/";
 
             string realUrl;
+            string searchUrl = "";
             if (string.IsNullOrEmpty(appointUrl))
             {
-                var searchUrl = iqqtvUrl + "search.php?kw=" + Uri.EscapeDataString(number ?? string.Empty);
+                searchUrl = iqqtvUrl + "search.php?kw=" + Uri.EscapeDataString(number ?? string.Empty);
                 var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 var searchCq = new CQ(searchHtml);
                 var tmp = GetRealUrl(searchCq, number ?? string.Empty);
@@ -75,7 +76,8 @@ public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 CoverUrl = cover,
                 PosterUrl = string.Empty,
                 Website = realUrl,
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
         }
         catch

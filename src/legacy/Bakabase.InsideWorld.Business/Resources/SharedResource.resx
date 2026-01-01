@@ -384,6 +384,9 @@ The version of lux is not limited.</value>
   <data name="BTask_FailedToRunTaskDueToConflict" xml:space="preserve">
     <value>Task conflict detected: Task [{0}] cannot run simultaneously with tasks [{1}]</value>
   </data>
+  <data name="BTask_FailedToRunTaskDueToDependency" xml:space="preserve">
+    <value>Task [{0}] is waiting for dependencies to complete: {1}</value>
+  </data>
   <data name="BTask_FailedToRunTaskDueToUnknownTaskId" xml:space="preserve">
     <value>Failed to run task: task id [{0}] is not found</value>
   </data>
@@ -558,10 +561,67 @@ The version of lux is not limited.</value>
   <data name="BTask_Name_GenerateResourceMarker" xml:space="preserve">
     <value>Generate resource marker</value>
   </data>
+  <data name="BTask_Name_ResourceProfileIndex" xml:space="preserve">
+    <value>Build resource profile index</value>
+  </data>
+  <data name="BTask_Description_ResourceProfileIndex" xml:space="preserve">
+    <value>Build the resource-profile matching index</value>
+  </data>
+  <data name="BTask_Name_SearchIndex" xml:space="preserve">
+    <value>Build search index</value>
+  </data>
+  <data name="BTask_Description_SearchIndex" xml:space="preserve">
+    <value>Build the inverted index for fast resource searching</value>
+  </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>New Version Available</value>
   </data>
   <data name="VersionCheck_NewVersionAvailableMessage" xml:space="preserve">
     <value>A new version ({0}) is available for update.</value>
+  </data>
+  <data name="SyncPathMark_Collecting" xml:space="preserve">
+    <value>Collecting path marks</value>
+  </data>
+  <data name="SyncPathMark_Collected" xml:space="preserve">
+    <value>Collected {0} path marks</value>
+  </data>
+  <data name="SyncPathMark_ProcessingResource" xml:space="preserve">
+    <value>Processing resource: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingProperty" xml:space="preserve">
+    <value>Processing property: {0}</value>
+  </data>
+  <data name="SyncPathMark_ProcessingMediaLibrary" xml:space="preserve">
+    <value>Processing media library: {0}</value>
+  </data>
+  <data name="SyncPathMark_FindingRelated" xml:space="preserve">
+    <value>Finding related marks</value>
+  </data>
+  <data name="SyncPathMark_FoundRelated" xml:space="preserve">
+    <value>Found {0} related marks</value>
+  </data>
+  <data name="SyncPathMark_EstablishingRelationships" xml:space="preserve">
+    <value>Establishing parent-child relationships</value>
+  </data>
+  <data name="SyncPathMark_Complete" xml:space="preserve">
+    <value>Path mark synchronization complete</value>
+  </data>
+  <data name="BTask_Name_SyncPathMarks" xml:space="preserve">
+    <value>Sync path marks</value>
+  </data>
+  <data name="BTask_Description_SyncPathMarks" xml:space="preserve">
+    <value>Synchronize all path marks</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMarks" xml:space="preserve">
+    <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
+  </data>
+  <data name="BTask_Name_SyncPathMark_Single" xml:space="preserve">
+    <value>Sync path mark</value>
+  </data>
+  <data name="BTask_Description_SyncPathMark_Single" xml:space="preserve">
+    <value>Synchronize selected path marks</value>
+  </data>
+  <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
+    <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
   </data>
 </root>

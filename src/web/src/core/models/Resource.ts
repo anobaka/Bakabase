@@ -40,8 +40,12 @@ export type Resource = {
   parent?: Resource;
   properties?: { [key in PropertyPool]?: Record<number, Property> };
   coverPaths?: string[];
+  /** @deprecated */
   mediaLibraryName?: string;
+  /** @deprecated */
   mediaLibraryColor?: string;
+  mediaLibraries?: { id: number; name: string; color?: string }[];
+  /** @deprecated */
   category?: { id: number; name: string };
   pinned: boolean;
   tags: ResourceTag[];

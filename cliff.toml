@@ -1,6 +1,6 @@
 [git]
 conventional_commits = true
-filter_unconventional = true
+filter_unconventional = false
 topo_order = false
 protect_breaking_commits = true
 link_parsers = [
@@ -9,18 +9,7 @@ link_parsers = [
 filter_commits = false
 
 commit_parsers = [
-  { message = "^change", group = "General changes" },
-  { message = "^feat", group = "Features" },
-  { message = "^fix", group = "Bug Fixes" },
-  { message = "^perf", group = "Performance" },
-  { message = "^refactor", group = "Refactoring" },
-  { message = "^docs", group = "Documentation" },
-  { message = "^style", group = "Styling" },
-  { message = "^test", group = "Testing" },
-  { message = "^build", group = "Build System" },
-  { message = "^ci", group = "CI" },
-  { message = "^chore", group = "Chores" },
-  { message = "^revert", group = "Reverts" },
+  { message = ".*", group = "Changes" },
 ]
 
 # [remote.github]
@@ -31,19 +20,33 @@ commit_parsers = [
 [changelog]
 header = ""
 body = """
-{%- for group, commits in commits | group_by(attribute="group") -%}
-### {{ group }}
-{% for commit in commits %}
-- {{ commit.message | upper_first }} ({{ commit.id | truncate(length=7) }})
-  {%- if commit.extra is defined and commit.extra.issues is defined -%}
-    {% for issue in commit.extra.issues %}
-  - [#{{ issue.number }}]({{ issue.url }}) {{ issue.title }}
-    {%- endfor -%}
-  {% endif %}
-{% endfor %}
-{% endfor %}
-{% if version %}
+{#- Output issues grouped by labels (from extra.labelGroups) -#}
+{%- if extra.labelGroups is defined -%}
+{%- for label in extra.labelOrder -%}
+{%- set group = extra.labelGroups[label] -%}
+{%- if group.issues | length > 0 %}
+### {{ group.emoji }} {{ group.title }}
+{% for issue in group.issues %}
+- [#{{ issue.number }}]({{ issue.url }}) {{ issue.title }}
+{%- endfor %}
+{% endif -%}
+{%- endfor -%}
+{%- endif -%}
 
+{#- Fallback: show commits without linked issues -#}
+{%- set orphan_commits = [] -%}
+{%- for commit in commits -%}
+{%- if commit.extra is not defined or commit.extra.issues is not defined or commit.extra.issues | length == 0 -%}
+{%- set_global orphan_commits = orphan_commits | concat(with=[commit]) -%}
+{%- endif -%}
+{%- endfor -%}
+{%- if orphan_commits | length > 0 %}
+### 📝 Other Changes
+{% for commit in orphan_commits %}
+- {{ commit.message | split(pat="\n") | first | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}](https://github.com/anobaka/Bakabase/commit/{{ commit.id }}))
+{%- endfor %}
+{% endif %}
+{% if version %}
 ### 下载地址
 - 可通过程序内【系统】-【配置】界面一键更新
 - 完整安装包下载:

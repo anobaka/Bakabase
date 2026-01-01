@@ -5,9 +5,8 @@ import diff from "deep-diff";
 import _ from "lodash";
 
 import { Entry } from "@/core/models/FileExplorer/Entry";
-import BusinessConstants from "@/components/BusinessConstants";
 import BApi from "@/sdk/BApi";
-import { buildLogger, splitPathIntoSegments } from "@/components/utils";
+import { buildLogger, getStandardParentPath } from "@/components/utils";
 import { BTaskResourceType, BTaskStatus, IwFsEntryChangeType, IwFsType } from "@/sdk/constants";
 import { useBTasksStore } from "@/stores/bTasks";
 import { useIwFsEntryChangeEventsStore } from "@/stores/iwFsEntryChangeEvents";
@@ -66,8 +65,10 @@ class RootEntry extends Entry {
   public nodeMap: Record<string, Entry> = {};
   public filter: IEntryFilter = {};
   private _fsWatcher: ReturnType<typeof setInterval> | undefined;
+  private _keepAliveInterval: ReturnType<typeof setInterval> | undefined;
   private _processingFsEvents: boolean = false;
   private _resizeObserver: ResizeObserver | undefined;
+  private static readonly KEEP_ALIVE_INTERVAL_MS = 30000; // Send keep-alive every 30 seconds
 
   patchFilter(filter?: Partial<IEntryFilter>) {
     this.filter = {
@@ -198,11 +199,8 @@ class RootEntry extends Entry {
         const evt = events[i]!;
         const changedEntryPath = evt.type == IwFsEntryChangeType.Renamed ? evt.prevPath! : evt.path;
         const changedEntry: Entry | undefined = self.nodeMap[changedEntryPath];
-        const segments = splitPathIntoSegments(evt.path);
-        const parentPath = segments
-          .slice(0, segments.length - 1)
-          .join(BusinessConstants.pathSeparator);
-        const parent: Entry | undefined = self.nodeMap[parentPath];
+        const parentPath = getStandardParentPath(evt.path);
+        const parent: Entry | undefined = parentPath ? self.nodeMap[parentPath] : undefined;
 
         log(
           "Try to locate parent",
@@ -284,6 +282,12 @@ class RootEntry extends Entry {
           { path: this.path },
           { showErrorToast: () => false },
         );
+
+        // Start keep-alive interval
+        this._keepAliveInterval = setInterval(() => {
+          BApi.file.keepAliveFileProcessorWatcher({ showErrorToast: () => false });
+        }, RootEntry.KEEP_ALIVE_INTERVAL_MS);
+
         const renderingQueue = new RenderingQueue();
         const self = this;
 
@@ -347,6 +351,7 @@ class RootEntry extends Entry {
     // console.trace();
     log("Stopping watcher", this, this.path, this._fsWatcher);
     clearInterval(this._fsWatcher);
+    clearInterval(this._keepAliveInterval);
     await BApi.file.stopWatchingChangesInFileProcessorWorkspace();
     useIwFsEntryChangeEventsStore.getState().clear();
     // }

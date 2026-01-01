@@ -61,7 +61,8 @@ public class Fc2ppvdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 PosterUrl = cover,
                 Website = url,
                 Source = "fc2",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = url
             };
 
             return detail;

@@ -673,7 +673,10 @@ namespace Bakabase.Service.Controllers
                 string[] files = [];
                 if (isDirectory)
                 {
-                    var dirWithPathSep = $"{root.StandardizePath()}{InternalOptions.DirSeparator}";
+                    var standardizedRoot = root.StandardizePath()!;
+                    var dirWithPathSep = standardizedRoot.EndsWith(InternalOptions.DirSeparator)
+                        ? standardizedRoot
+                        : $"{standardizedRoot}{InternalOptions.DirSeparator}";
                     files = Directory.GetFiles(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
                     dirs = Directory.GetDirectories(dirWithPathSep).Select(p => p.StandardizePath()!).ToArray();
                 }
@@ -849,8 +852,11 @@ namespace Bakabase.Service.Controllers
             switch (AppService.OsPlatform)
             {
                 case OsPlatform.Unknown:
-                case OsPlatform.Osx:
                     throw new PlatformNotSupportedException();
+                case OsPlatform.Osx:
+                    command = "open";
+                    args = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".Trash");
+                    break;
                 case OsPlatform.Windows:
                     command = "explorer.exe";
                     args = "shell:RecycleBinFolder";
@@ -941,6 +947,62 @@ namespace Bakabase.Service.Controllers
                             else
                             {
                                 await FileUtils.MoveAsync(path1, targetPath, false, ProgressChange, PauseToken.None,
+                                    args.CancellationToken);
+                            }
+                        }
+                    },
+                    ConflictKeys = [taskId]
+                });
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPost("copy-entries")]
+        [SwaggerOperation(OperationId = "CopyEntries")]
+        public async Task<BaseResponse> CopyEntries([FromBody] FileMoveRequestModel model)
+        {
+            var paths = model.EntryPaths.FindTopLevelPaths();
+
+            await _fsOptionsManager.SaveAsync(options =>
+            {
+                options.RecentMovingDestinations = new[] { model.DestDir }
+                    .Concat(options.RecentMovingDestinations ?? []).Distinct().Take(5).ToList();
+            });
+
+            var taskId = $"FileSystem:BatchCopy:{CryptographyUtils.Md5(string.Join('\n', paths))}";
+            foreach (var path in paths)
+            {
+                var path1 = path;
+                var targetPath = Path.Combine(model.DestDir, Path.GetFileName(path1));
+                _taskManager.Enqueue(new BTaskHandlerBuilder
+                {
+                    GetName = () => _localizer.CopyFiles(),
+                    GetMessageOnInterruption = () => _localizer.MessageOnInterruption_CopyFiles(),
+                    GetDescription = () => _localizer.CopyFile(path1, targetPath),
+                    ResourceType = BTaskResourceType.FileSystemEntry,
+                    Type = BTaskType.CopyFiles,
+                    ResourceKeys = [path],
+                    Run = async args =>
+                    {
+                        var isDirectory = Directory.Exists(path1);
+                        var isFile = System.IO.File.Exists(path1);
+                        if (isDirectory || isFile)
+                        {
+                            async Task ProgressChange(int p)
+                            {
+                                await args.UpdateTask(task => task.Percentage = p);
+                            }
+
+                            if (isDirectory)
+                            {
+                                await DirectoryUtils.CopyAsync(path1, targetPath, false, ProgressChange,
+                                    PauseToken.None,
+                                    args.CancellationToken);
+                            }
+                            else
+                            {
+                                await FileUtils.CopyAsync(path1, targetPath, false, ProgressChange, PauseToken.None,
                                     args.CancellationToken);
                             }
                         }
@@ -1118,7 +1180,7 @@ namespace Bakabase.Service.Controllers
                     {
                         var stream = new FileStream(fullname, FileMode.Open, FileAccess.Read, FileShare.Read);
                         HttpContext.RequestAborted.Register(() => stream.Dispose());
-                        return File(stream, "video/mp4", Path.GetFileName(fullname));
+                        return File(stream, "video/mp4", enableRangeProcessing: true);
                     }
                     else
                     {
@@ -1635,6 +1697,14 @@ namespace Bakabase.Service.Controllers
         public async Task<BaseResponse> StopWatchingChangesInFileProcessorWorkspace()
         {
             _fileProcessorWatcher.Stop();
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpPut("file-processor-watcher/keep-alive")]
+        [SwaggerOperation(OperationId = "KeepAliveFileProcessorWatcher")]
+        public async Task<BaseResponse> KeepAliveFileProcessorWatcher()
+        {
+            _fileProcessorWatcher.KeepAlive();
             return BaseResponseBuilder.Ok;
         }
 

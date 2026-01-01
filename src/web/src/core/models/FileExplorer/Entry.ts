@@ -11,7 +11,8 @@ import BusinessConstants from "@/components/BusinessConstants";
 
 const DefaultMaxChildrenHeight = 600;
 const MainLineHeight = 35;
-const ChildrenIndent = 15;
+// pl-[8px] + ml-[18px] in FileExplorerEntry.tsx
+export const ChildrenIndent = 26;
 
 export interface IEntryFilter {
   keyword?: string;
@@ -276,7 +277,6 @@ export class Entry {
   delete(render: boolean) {
     const { parent, root } = this;
 
-    console.log(`[${this.path}] Deleting`);
     delete root.nodeMap[this.path];
     if (parent) {
       if (parent.children) {
@@ -487,7 +487,6 @@ export class Entry {
   }
 
   private simpleRefCall(method: string, fallbackProperty: string, value: any): void {
-    console.log(this._ref, method, this);
     if (this._ref) {
       this._ref[method](value);
     } else {

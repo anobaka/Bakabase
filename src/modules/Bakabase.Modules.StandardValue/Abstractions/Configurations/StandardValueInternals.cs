@@ -8,22 +8,28 @@ using static Bakabase.Modules.StandardValue.Abstractions.Models.Domain.Constants
 
 namespace Bakabase.Modules.StandardValue.Abstractions.Configurations;
 
-public class StandardValueInternals
+/// <summary>
+/// Core implementation for the StandardValue system.
+/// Provides handlers, conversion rules, and test data for StandardValue operations.
+/// </summary>
+internal static class StandardValueInternals
 {
-    public static readonly char CommonListItemSeparator = ',';
-    public static readonly char ListListStringInnerSeparator = '/';
-
-    public static readonly ConcurrentBag<IStandardValueHandler> Handlers = new ConcurrentBag<IStandardValueHandler>(
-        Assembly.GetExecutingAssembly()!.GetTypes()
+    private static readonly ConcurrentBag<IStandardValueHandler> Handlers = new ConcurrentBag<IStandardValueHandler>(
+        Assembly.GetExecutingAssembly().GetTypes()
             .Where(s => s is {IsClass: true, IsAbstract: false, IsPublic: true} &&
                         s.IsAssignableTo(SpecificTypeUtils<IStandardValueHandler>.Type))
             .Select(x => (Activator.CreateInstance(x) as IStandardValueHandler)!));
 
+    /// <summary>
+    /// Value handlers by type.
+    /// </summary>
     public static readonly ConcurrentDictionary<StandardValueType, IStandardValueHandler> HandlerMap =
         new(Handlers.ToDictionary(d => d.Type, d => d));
 
-    public static
-        Dictionary<StandardValueType,
+    /// <summary>
+    /// Expected conversion test data.
+    /// </summary>
+    public static readonly Dictionary<StandardValueType,
             Dictionary<StandardValueType, List<(object? FromValue, object? ExpectedValue)>>> ExpectedConversions =
             SpecificEnumUtils<StandardValueType>.Values.ToDictionary(d => d, fromType =>
                 SpecificEnumUtils<StandardValueType>.Values.ToDictionary(c => c,
@@ -39,8 +45,8 @@ public class StandardValueInternals
                         var dataSet = new List<(object? FromValue, object? ExpectedValue)>();
                         for (var i = 0; i < count; i++)
                         {
-                            var tuple = propInfo.GetValue(list, new object[] { i })!;
-                            var tupleType = tuple.GetType()!;
+                            var tuple = propInfo.GetValue(list, [i])!;
+                            var tupleType = tuple.GetType();
                             var fromValueField = tupleType.GetField($"Item1")!;
                             var expectedValueField = tupleType.GetField($"Item2")!;
                             dataSet.Add((fromValueField.GetValue(tuple), expectedValueField.GetValue(tuple)));
@@ -51,7 +57,10 @@ public class StandardValueInternals
                         return dataSet;
                     }));
 
-    public static Dictionary<StandardValueType, Dictionary<StandardValueType, StandardValueConversionRule>>
+    /// <summary>
+    /// Conversion rules between StandardValueTypes.
+    /// </summary>
+    public static readonly Dictionary<StandardValueType, Dictionary<StandardValueType, StandardValueConversionRule>>
         ConversionRules = new()
         {
             {

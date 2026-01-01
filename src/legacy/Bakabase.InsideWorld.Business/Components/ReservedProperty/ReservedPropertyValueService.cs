@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Events;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
@@ -22,8 +24,9 @@ using ReservedPropertyValue = Bakabase.Abstractions.Models.Domain.ReservedProper
 namespace Bakabase.InsideWorld.Business.Components.ReservedProperty;
 
 public class ReservedPropertyValueService(
-    FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.ReservedPropertyValue, int> orm,
+    FullMemoryCacheResourceService<BakabaseDbContext, Abstractions.Models.Db.ReservedPropertyValue, int> orm,
     IStandardValueService standardValueService,
+    IResourceDataChangeEventPublisher eventPublisher,
     ILogger<ReservedPropertyValueService> logger)
     : IReservedPropertyValueService
 {
@@ -42,23 +45,30 @@ public class ReservedPropertyValueService(
 
     public async Task<SingletonResponse<ReservedPropertyValue>> Add(ReservedPropertyValue resource)
     {
-        return new SingletonResponse<ReservedPropertyValue>((await orm.Add(resource.ToDbModel())).Data.ToDomainModel());
+        var rsp = new SingletonResponse<ReservedPropertyValue>((await orm.Add(resource.ToDbModel())).Data.ToDomainModel());
+        eventPublisher.PublishResourceChanged(resource.ResourceId);
+        return rsp;
     }
 
     public async Task<ListResponse<ReservedPropertyValue>> AddRange(List<ReservedPropertyValue> resources)
     {
         var data = await orm.AddRange(resources.Select(x => x.ToDbModel()).ToList());
+        eventPublisher.PublishResourcesChanged(resources.Select(x => x.ResourceId));
         return new ListResponse<ReservedPropertyValue>(data.Data.Select(d => d.ToDomainModel()));
     }
 
     public async Task<BaseResponse> Update(ReservedPropertyValue resource)
     {
-        return await orm.Update(resource.ToDbModel());
+        var rsp = await orm.Update(resource.ToDbModel());
+        eventPublisher.PublishResourceChanged(resource.ResourceId);
+        return rsp;
     }
 
     public async Task<BaseResponse> UpdateRange(IReadOnlyCollection<ReservedPropertyValue> resources)
     {
-        return await orm.UpdateRange(resources.Select(x => x.ToDbModel()).ToArray());
+        var rsp = await orm.UpdateRange(resources.Select(x => x.ToDbModel()).ToArray());
+        eventPublisher.PublishResourcesChanged(resources.Select(x => x.ResourceId));
+        return rsp;
     }
 
     public async Task<BaseResponse> PutByResources(List<Abstractions.Models.Domain.Resource> resources)
@@ -86,7 +96,7 @@ public class ReservedPropertyValueService(
                     continue;
                 }
 
-                var pd = PropertyInternals.ReservedPropertyMap.GetValueOrDefault(rp);
+                var pd = PropertySystem.Builtin.TryGetReserved(rp);
                 if (pd == null)
                 {
                     logger.LogError(
@@ -159,6 +169,11 @@ public class ReservedPropertyValueService(
 
         await orm.AddRange(dataToBeAdded);
         await orm.UpdateRange(dataToBeUpdated);
+
+        if (changed.Count > 0)
+        {
+            eventPublisher.PublishResourcesChanged(changed.Keys);
+        }
 
         return BaseResponseBuilder.Ok;
     }

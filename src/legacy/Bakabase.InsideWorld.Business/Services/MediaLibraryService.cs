@@ -30,6 +30,7 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Services;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -60,7 +61,7 @@ namespace Bakabase.InsideWorld.Business.Services
     [Obsolete]
     public class MediaLibraryService : BootstrapService, IMediaLibraryService
     {
-        private readonly ResourceService<InsideWorldDbContext,
+        private readonly ResourceService<BakabaseDbContext,
             Abstractions.Models.Db.MediaLibraryDbModel, int> _orm;
 
         private readonly IPropertyService _propertyService;
@@ -85,7 +86,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly IEnhancerLocalizer _enhancerLocalizer;
 
         public MediaLibraryService(IServiceProvider serviceProvider,
-            ResourceService<InsideWorldDbContext, Abstractions.Models.Db.MediaLibraryDbModel, int> orm,
+            ResourceService<BakabaseDbContext, Abstractions.Models.Db.MediaLibraryDbModel, int> orm,
             IPropertyService propertyService, IPropertyLocalizer propertyLocalizer,
             IBOptionsManager<ResourceOptions> resourceOptions, IEnhancerLocalizer enhancerLocalizer,
             IBakabaseLocalizer localizer) : base(serviceProvider)
@@ -528,7 +529,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         case ResourceProperty.Introduction:
                         case ResourceProperty.Rating:
                         {
-                            var property = PropertyInternals.BuiltinPropertyMap.GetValueOrDefault(propertyId);
+                            var property = PropertySystem.Builtin.TryGet(propertyId);
                             if (property != null)
                             {
                                 var bizValue = await StandardValueService.Convert(values, StandardValueType.ListString,
@@ -815,8 +816,7 @@ namespace Bakabase.InsideWorld.Business.Services
                     case MediaLibrarySyncStep.SaveResources:
                     {
                         var resourcesToBeSaved = changedResources.Values.ToList();
-                        resourcesToBeSaved.AddRange(fileNotFoundResources.Where(ir =>
-                            ir.Tags.Add(ResourceTag.PathDoesNotExist)));
+                        // PathDoesNotExist tag is obsolete, no longer marking resources with it
 
                         var newResources = resourcesToBeSaved.Where(a => a.Id == 0).ToArray();
                         await ResourceService.AddOrPutRange(resourcesToBeSaved);
@@ -852,7 +852,7 @@ namespace Bakabase.InsideWorld.Business.Services
                             {
                                 onProcessChange(_localizer.DeletingInvalidResources(toBeDeletedResourceIds.Count));
 
-                                await ResourceService.DeleteByKeys(toBeDeletedResourceIds.ToArray(), false);
+                                await ResourceService.DeleteByKeys(toBeDeletedResourceIds.ToArray());
                             }
 
                             // ResourceId - EnhancerIds

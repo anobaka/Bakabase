@@ -228,6 +228,9 @@
   <data name="BuiltinPropertyName_MediaLibraryV2" xml:space="preserve">
     <value>媒体库</value>
   </data>
+  <data name="BuiltinPropertyName_MediaLibraryV2Multi" xml:space="preserve">
+    <value>媒体库</value>
+  </data>
   <data name="BuiltinPropertyName_PlayedAt" xml:space="preserve">
     <value>播放时间</value>
   </data>

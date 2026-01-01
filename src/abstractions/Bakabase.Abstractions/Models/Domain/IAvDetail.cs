@@ -19,4 +19,8 @@ public interface IAvDetail
     string? PosterUrl { get; set; }
     string? Website { get; set; }
     string? Mosaic { get; set; }
+    /// <summary>
+    /// The URL used to search for this resource.
+    /// </summary>
+    string? SearchUrl { get; set; }
 }

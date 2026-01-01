@@ -18,6 +18,7 @@ public record ThePornDBVideoDetail : Bakabase.Abstractions.Models.Domain.IAvDeta
     public string? PosterUrl { get; set; }
     public string? Website { get; set; }
     public string? Mosaic { get; set; }
+    public string? SearchUrl { get; set; }
     public string? Director { get; set; }
 }
 

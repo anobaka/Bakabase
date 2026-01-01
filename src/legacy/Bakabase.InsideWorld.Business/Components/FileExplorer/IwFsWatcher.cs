@@ -22,6 +22,8 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         private readonly ILogger<IwFsWatcher> _logger;
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _hubContext;
         private const int RaiseIntervalMs = 500;
+        private const int KeepAliveTimeoutMs = 60000; // 60 seconds timeout
+        private const int KeepAliveCheckIntervalMs = 10000; // Check every 10 seconds
 
         private readonly MemoryCache _memCache = new("IwFsWatcher");
 
@@ -30,6 +32,7 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
         private readonly object _lock = new object();
 
         private CancellationTokenSource? _cts;
+        private DateTime _lastKeepAlive = DateTime.MinValue;
 
         public IwFsWatcher(ILogger<IwFsWatcher> logger,
             IHubContext<WebGuiHub, IWebGuiClient> hubContext)
@@ -37,6 +40,14 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
             _logger = logger;
             _hubContext = hubContext;
         }
+
+        public void KeepAlive()
+        {
+            _lastKeepAlive = DateTime.UtcNow;
+            _logger.LogDebug("Keep-alive signal received for file watcher");
+        }
+
+        public bool IsWatching => _cts != null && !_cts.IsCancellationRequested;
 
         public void Start(string path)
         {
@@ -48,8 +59,13 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 return;
             }
 
+            _lastKeepAlive = DateTime.UtcNow;
             _cts = new CancellationTokenSource();
             var ct = _cts.Token;
+
+            // Start keep-alive check task
+            StartKeepAliveCheck(ct);
+
             var watcher = new FileSystemWatcher(path)
             {
                 IncludeSubdirectories = true,
@@ -98,6 +114,33 @@ namespace Bakabase.InsideWorld.Business.Components.FileExplorer
                 _pendingEvents.Clear();
                 _sendingEvents.Clear();
             });
+        }
+
+        private void StartKeepAliveCheck(CancellationToken ct)
+        {
+            Task.Run(async () =>
+            {
+                while (true)
+                {
+                    try
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        await Task.Delay(KeepAliveCheckIntervalMs, ct);
+
+                        var elapsed = (DateTime.UtcNow - _lastKeepAlive).TotalMilliseconds;
+                        if (elapsed > KeepAliveTimeoutMs)
+                        {
+                            _logger.LogWarning($"File watcher keep-alive timeout ({elapsed}ms > {KeepAliveTimeoutMs}ms), stopping watcher");
+                            Stop();
+                            break;
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }, ct);
         }
 
         private void SendDataInBackground(CancellationToken ct)

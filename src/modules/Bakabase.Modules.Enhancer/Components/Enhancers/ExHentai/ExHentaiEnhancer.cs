@@ -35,7 +35,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         private readonly ISpecialTextService _specialTextService = specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
-        protected override async Task<ExHentaiEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options, CancellationToken ct)
+        protected override async Task<ExHentaiEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var name = keyword;
             var urlKeywords = new HashSet<string>();
@@ -65,10 +65,26 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
                     name = name.Replace(str, null);
                     urlKeywords.Add(urlKeyword);
                 }
+
+                if (urlKeywords.Any())
+                {
+                    logCollector.LogInfo(EnhancementLogEvent.KeywordResolved,
+                        $"Found URL keywords in filename",
+                        new { UrlKeywords = urlKeywords.ToList(), ProcessedName = name });
+                }
             }
+
+            var searchUrl = $"{ExHentaiClient.Domain}?f_search={System.Net.WebUtility.UrlEncode(name)}";
+            logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                $"Searching ExHentai",
+                new { Url = searchUrl, Keyword = name });
 
             var searchRsp = await _exHentaiClient.Search(
                 new ExHentaiSearchRequestModel {Keyword = name, PageIndex = 1, PageSize = 1});
+
+            logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                $"Search returned {searchRsp?.Resources?.Count ?? 0} results",
+                new { Url = searchUrl, ResultCount = searchRsp?.Resources?.Count ?? 0 });
 
             var targetUrl = searchRsp.Resources?.FirstOrDefault()?.Url;
             if (searchRsp?.Resources?.Count > 1 && urlKeywords.Any())
@@ -79,9 +95,19 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 
             if (targetUrl != null)
             {
+                logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                    $"Fetching detail page",
+                    new { Url = targetUrl });
+
                 var detail = await _exHentaiClient.ParseDetail(targetUrl, false);
+
+                logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                    detail != null ? $"Got detail with {detail.Tags?.Count ?? 0} tag groups" : "Failed to parse detail",
+                    new { Url = targetUrl, Found = detail != null, TagGroupCount = detail?.Tags?.Count ?? 0 });
+
                 if (detail != null)
                 {
+
                     var ctx = new ExHentaiEnhancerContext
                     {
                         Introduction = detail.Introduction,
@@ -97,10 +123,22 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
 
                     if (!string.IsNullOrEmpty(detail.CoverUrl))
                     {
+                        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                            "Downloading cover image",
+                            new { Url = detail.CoverUrl });
+
                         var imageData = await _exHentaiClient.HttpClient.GetByteArrayAsync(detail.CoverUrl, ct);
+
+                        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                            $"Cover image downloaded ({imageData.Length} bytes)",
+                            new { Url = detail.CoverUrl, Size = imageData.Length });
+
                         var queryIdx = detail.CoverUrl.IndexOf('?');
                         var coverUrl = queryIdx == -1 ? detail.CoverUrl : detail.CoverUrl[..queryIdx];
                         ctx.CoverPath = await SaveFile(resource, $"cover{Path.GetExtension(coverUrl)}", imageData);
+                        logCollector.LogInfo(EnhancementLogEvent.FileSaved,
+                            $"Cover saved: {ctx.CoverPath}",
+                            new { CoverPath = ctx.CoverPath });
                     }
 
                     return ctx;
@@ -113,7 +151,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         protected override EnhancerId TypedId => EnhancerId.ExHentai;
 
         protected override async Task<List<EnhancementTargetValue<ExHentaiEnhancerTarget>>> ConvertContextByTargets(
-            ExHentaiEnhancerContext context, CancellationToken ct)
+            ExHentaiEnhancerContext context, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var enhancements = new List<EnhancementTargetValue<ExHentaiEnhancerTarget>>();
             foreach (var target in SpecificEnumUtils<ExHentaiEnhancerTarget>.Values)

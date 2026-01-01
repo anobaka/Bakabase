@@ -28,10 +28,11 @@ public class GetchuDlClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 }
             }
 
+            string searchUrl = "";
             if (string.IsNullOrWhiteSpace(realUrl))
             {
                 // Fallback simple search (encoding nuances in python omitted here)
-                var searchUrl = $"https://dl.getchu.com/search/search_list.php?dojin=1&search_category_id=&search_keyword={Uri.EscapeDataString(number)}&btnWordSearch=%B8%A1%BA%F7&action=search&set_category_flag=1";
+                searchUrl = $"https://dl.getchu.com/search/search_list.php?dojin=1&search_category_id=&search_keyword={Uri.EscapeDataString(number)}&btnWordSearch=%B8%A1%BA%F7&action=search&set_category_flag=1";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var rows = docSearch.Select("table tr td[valign='top']:not([align]) div a");
@@ -87,7 +88,8 @@ public class GetchuDlClient(IHttpClientFactory httpClientFactory, ILoggerFactory
                 PosterUrl = cover,
                 Website = realUrl,
                 Source = "dl_getchu",
-                Mosaic = "同人"
+                Mosaic = "同人",
+                SearchUrl = searchUrl
             };
 
             return detail;

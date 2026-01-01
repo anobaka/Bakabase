@@ -7,11 +7,9 @@ using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
@@ -20,6 +18,7 @@ using Bootstrap.Extensions;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
+using StackExchange.Profiling;
 
 namespace Bakabase.Modules.Property.Services
 {
@@ -36,16 +35,34 @@ namespace Bakabase.Modules.Property.Services
 
         protected IStandardValueService StandardValueService => GetRequiredService<IStandardValueService>();
         protected ICategoryService CategoryService => GetRequiredService<ICategoryService>();
+        protected IPropertyTypeConverter PropertyTypeConverter => GetRequiredService<IPropertyTypeConverter>();
 
         public async Task<List<CustomProperty>> GetAll(
             Expression<Func<CustomPropertyDbModel, bool>>? selector = null,
             CustomPropertyAdditionalItem additionalItems = CustomPropertyAdditionalItem.None,
             bool returnCopy = true)
         {
-            var dbData = await GetAll(selector, returnCopy);
-            var data = dbData.Select(d => d.ToDomainModel()).ToList();
-            await PopulateAdditionalItems(data, additionalItems);
-            return data;
+            using (MiniProfiler.Current.Step("CustomPropertyService.GetAll"))
+            {
+                List<CustomPropertyDbModel> dbData;
+                using (MiniProfiler.Current.Step("GetAll (DbModels from cache)"))
+                {
+                    dbData = await GetAll(selector, returnCopy);
+                }
+
+                List<CustomProperty> data;
+                using (MiniProfiler.Current.Step($"ToDomainModel ({dbData.Count} items)"))
+                {
+                    data = dbData.ToDomainModelsBatch();
+                }
+
+                using (MiniProfiler.Current.Step($"PopulateAdditionalItems ({additionalItems})"))
+                {
+                    await PopulateAdditionalItems(data, additionalItems);
+                }
+
+                return data;
+            }
         }
 
         public async Task<CustomProperty> GetByKey(int id,
@@ -115,12 +132,8 @@ namespace Bakabase.Modules.Property.Services
                         }
                         case CustomPropertyAdditionalItem.ValueCount:
                         {
-                            var propertyIds = properties.Select(x => x.Id).ToHashSet();
-                            var values =
-                                await CustomPropertyValueService.GetAllDbModels(x =>
-                                    propertyIds.Contains(x.PropertyId));
-                            var valueCountMap = values.GroupBy(v => v.PropertyId)
-                                .ToDictionary(d => d.Key, d => d.Count());
+                            var propertyIds = properties.Select(x => x.Id).ToList();
+                            var valueCountMap = await CustomPropertyValueService.GetCountByPropertyIds(propertyIds);
                             foreach (var d in properties)
                             {
                                 d.ValueCount = valueCountMap.GetValueOrDefault(d.Id);
@@ -206,102 +219,59 @@ namespace Bakabase.Modules.Property.Services
             var property = await GetByKey(sourcePropertyId);
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
-            var propertyDescriptor = PropertyInternals.DescriptorMap[property.Type];
 
-            var toBizValueType = toType.GetBizValueType();
+            var preview = await PropertyTypeConverter.PreviewConversionAsync(
+                property.ToProperty(),
+                toType,
+                values.Select(v => v.Value));
 
-            var fromStdHandler = StandardValueInternals.HandlerMap[property.Type.GetBizValueType()];
-            var toStdHandler = StandardValueInternals.HandlerMap[toBizValueType];
-
-            var bizValues = values.Select(v => propertyDescriptor.GetBizValue(property.ToProperty(), v.Value))
-                .ToList();
-
-            var result = new CustomPropertyTypeConversionPreviewViewModel
+            return new CustomPropertyTypeConversionPreviewViewModel
             {
-                DataCount = bizValues.Count,
-                FromType = property.Type.GetBizValueType(),
-                ToType = toBizValueType,
-                Changes = [],
+                DataCount = preview.TotalCount,
+                FromType = preview.FromBizType,
+                ToType = preview.ToBizType,
+                Changes = preview.Changes.Select(c =>
+                    new CustomPropertyTypeConversionPreviewViewModel.Change(c.FromSerialized, c.ToSerialized)).ToList()
             };
-
-            foreach (var bizValue in bizValues)
-            {
-                var serializedFromBizValue = bizValue?.SerializeAsStandardValue(propertyDescriptor.BizValueType);
-                var newBizValue = await StandardValueService.Convert(bizValue, property.Type.GetBizValueType(), toBizValueType);
-                var serializedToBizValue = newBizValue?.SerializeAsStandardValue(toBizValueType);
-                var fromDisplayValue = fromStdHandler.BuildDisplayValue(bizValue);
-                var toDisplayValue = toStdHandler.BuildDisplayValue(newBizValue);
-                if (fromDisplayValue != toDisplayValue)
-                {
-                    result.Changes.Add(
-                        new CustomPropertyTypeConversionPreviewViewModel.Change(serializedFromBizValue,
-                            serializedToBizValue));
-                }
-            }
-
-            return result;
         }
 
         /// <summary>
-        /// todo: factor
+        /// Change the type of a custom property and convert all its values.
+        /// Uses IPropertyTypeConverter for the actual conversion.
         /// </summary>
-        /// <param name="sourcePropertyId"></param>
-        /// <param name="type"></param>
-        /// <returns></returns>
         public async Task<BaseResponse> ChangeType(int sourcePropertyId, PropertyType type)
         {
             var property = (await GetByKey(sourcePropertyId)).ToProperty();
             var values = await CustomPropertyValueService.GetAll(x => x.PropertyId == sourcePropertyId,
                 CustomPropertyValueAdditionalItem.None, false);
-            var propertyDescriptor = PropertyInternals.DescriptorMap[property.Type];
-            var targetPropertyDescriptor = PropertyInternals.DescriptorMap[type];
+            var targetPropertyDescriptor = PropertySystem.Property.GetDescriptor(type);
 
-            // var allowAddingNewDataDynamically =
-            //     (property.Options as IAllowAddingNewDataDynamically)?.AllowAddingNewDataDynamically ?? false;
-            var options = property.Options;
-
-            var fakeNewProperty = property with
+            // Create target property with initialized options
+            var toProperty = property with
             {
                 Type = type,
                 Options = targetPropertyDescriptor.InitializeOptions(),
             };
 
-            // clear previous options
-            // property.Options = null;
-            // brutal new property conversion.
-            // var fakeNewProperty =
-            //     (JsonConvert.DeserializeObject(JsonConvert.SerializeObject(property),
-            //         targetPropertyDescriptor.PropertyType) as CustomProperty)!;
-            // fakeNewProperty.Type = type;
-            // fakeNewProperty.BizValueType = targetPropertyDescriptor.BizValueType;
-            // fakeNewProperty.DbValueType = targetPropertyDescriptor.DbValueType;
-            // fakeNewProperty.SetAllowAddingNewDataDynamically(true);
+            // Batch convert all values using the type converter
+            var conversionResult = await PropertyTypeConverter.ConvertValuesAsync(
+                property,
+                toProperty,
+                values.Select(v => v.Value));
 
-            var newValues = new List<CustomPropertyValue>();
-            property.Options = options;
-
-            foreach (var v in values)
+            // Build new values with converted DB values
+            var newValues = values.Select((v, i) => new CustomPropertyValue
             {
-                var bizValue = propertyDescriptor.GetBizValue(property, v.Value);
-                var nv = await StandardValueService.Convert(bizValue, property.Type.GetBizValueType(),
-                    fakeNewProperty.Type.GetBizValueType());
-                var (dbValue, _) = targetPropertyDescriptor.PrepareDbValue(fakeNewProperty, nv);
-                var newValue = new CustomPropertyValue
-                {
-                    BizValue = bizValue,
-                    Id = v.Id,
-                    Property = v.Property,
-                    PropertyId = v.PropertyId,
-                    ResourceId = v.ResourceId,
-                    Scope = v.Scope,
-                    Value = dbValue
-                };
-                newValues.Add(newValue);
-            }
+                Id = v.Id,
+                Property = v.Property,
+                PropertyId = v.PropertyId,
+                ResourceId = v.ResourceId,
+                Scope = v.Scope,
+                Value = conversionResult.NewDbValues[i]
+            }).ToList();
 
-            // roll back some options
-            // fakeNewProperty.SetAllowAddingNewDataDynamically(allowAddingNewDataDynamically);
-            await Put(fakeNewProperty.ToCustomProperty());
+            // Update property and values
+            await Put(conversionResult.UpdatedToProperty.ToCustomProperty());
             await CustomPropertyValueService.UpdateRange(newValues);
             return BaseResponseBuilder.Ok;
         }

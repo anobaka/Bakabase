@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using SQLitePCL;
 using System.Security.Policy;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 
 namespace Bakabase.Modules.StandardValue.Extensions;
 
@@ -18,7 +17,7 @@ public static class StandardValueExtensions
     private const char SerializationSeparatorEscapeChar = '\\';
 
     public static IStandardValueHandler GetHandler(this StandardValueType type) =>
-        StandardValueInternals.HandlerMap[type];
+        StandardValueSystem.GetHandler(type);
 
     public static object? DeserializeAsStandardValue(this string serializedValue, StandardValueType valueType,
         bool throwOnError = false)

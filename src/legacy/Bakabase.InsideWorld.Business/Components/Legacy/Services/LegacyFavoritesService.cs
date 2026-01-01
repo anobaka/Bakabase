@@ -6,5 +6,5 @@ namespace Bakabase.InsideWorld.Business.Components.Legacy.Services
 {
     [Obsolete]
     public class LegacyFavoritesService(IServiceProvider serviceProvider)
-        : ResourceService<InsideWorldDbContext, Favorites, int>(serviceProvider);
+        : ResourceService<BakabaseDbContext, Favorites, int>(serviceProvider);
 }

@@ -16,5 +16,7 @@ public enum SearchableReservedProperty
 	Introduction = ResourceProperty.Introduction,
 	Rating = ResourceProperty.Rating,
 	Cover = ResourceProperty.Cover,
-    MediaLibraryV2 = ResourceProperty.MediaLibraryV2
+	[Obsolete]
+    MediaLibraryV2 = ResourceProperty.MediaLibraryV2,
+	MediaLibraryV2Multi = ResourceProperty.MediaLibraryV2Multi
 }

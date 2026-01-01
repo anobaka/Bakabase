@@ -13,6 +13,7 @@ using Bakabase.Modules.Presets.Abstractions;
 using Bakabase.Modules.Presets.Abstractions.Components;
 using Bakabase.Modules.Presets.Abstractions.Models;
 using Bakabase.Modules.Presets.Abstractions.Models.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Components;
 using Bootstrap.Extensions;
 using PresetProperty = Bakabase.Modules.Presets.Abstractions.Models.Constants.PresetProperty;
@@ -136,7 +137,7 @@ internal class PresetsService(
                             {
                                 Property = new Bakabase.Abstractions.Models.Domain.Property(PropertyPool.Reserved,
                                     (int)t.ReservedPropertyCandidate.Value,
-                                    PropertyInternals.ReservedPropertyMap[t.ReservedPropertyCandidate.Value].Type,
+                                    PropertySystem.Builtin.Get(t.ReservedPropertyCandidate.Value).Type,
                                     t.Name),
                                 Target = t.Id
                             });

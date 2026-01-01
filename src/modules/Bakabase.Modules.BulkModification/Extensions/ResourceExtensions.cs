@@ -1,5 +1,6 @@
 ﻿using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
 using Bakabase.Modules.StandardValue.Extensions;
 
@@ -38,7 +39,7 @@ public static class ResourceExtensions
                 var bizValueType = (aPvs?.GetValueOrDefault(propertyId) ?? bPvs?.GetValueOrDefault(propertyId))!
                     .BizValueType;
 
-                var stdHandler = StandardValueInternals.HandlerMap[bizValueType];
+                var stdHandler = StandardValueSystem.GetHandler(bizValueType);
                 if (!stdHandler.Compare(aPv, bPv))
                 {
                     diffs.Add(new ResourceDiff

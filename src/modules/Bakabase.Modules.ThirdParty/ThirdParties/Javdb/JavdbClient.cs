@@ -18,10 +18,11 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
         {
             var site = baseUrl ?? "https://javdb.com";
             string realUrl = appointUrl ?? "";
+            string? searchUrl = null;
 
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"{site}/search?q={Uri.EscapeDataString(number)}&locale=zh";
+                searchUrl = $"{site}/search?q={Uri.EscapeDataString(number)}&locale=zh";
                 var searchHtml = await HttpClient.GetStringAsync(searchUrl);
                 var searchCq = new CQ(searchHtml);
 
@@ -81,7 +82,8 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = NormalizeWebsite(realUrl, site),
-                Mosaic = (title.Contains("無修正") || title.Contains("無碼") || title.Contains("无码")) ? "无码" : "有码"
+                Mosaic = (title.Contains("無修正") || title.Contains("無碼") || title.Contains("无码")) ? "无码" : "有码",
+                SearchUrl = searchUrl
             };
         }
         catch

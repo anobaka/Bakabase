@@ -20,4 +20,5 @@ public record AiravCCVideoDetail : Bakabase.Abstractions.Models.Domain.IAvDetail
     public string? PosterUrl { get; set; }
     public string? Website { get; set; }
     public string? Mosaic { get; set; }
+    public string? SearchUrl { get; set; }
 }

@@ -38,7 +38,7 @@ public class FileMoverTests
     [TestMethod]
     public async Task Test()
     {
-        var sp = await HostUtils.PrepareScopedServiceProvider();
+        var sp = await TestServiceBuilder.BuildServiceProvider();
         var fm = sp.GetRequiredService<TestFileMover>();
 
         var root = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!,

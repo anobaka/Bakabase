@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using Bakabase.InsideWorld.Business.Models.Domain;
 using Bakabase.InsideWorld.Models.Extensions;
@@ -18,6 +19,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Components;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.StandardValue.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.Modules.StandardValue.Abstractions.Configurations;
@@ -27,8 +29,18 @@ namespace Bakabase.InsideWorld.Business.Extensions
 {
     public static class ResourceExtensions
     {
+        // 只缓存有效的 ResourceTag 组合（IsParent=1, Pinned=2），共 4 种可能
+        private static readonly ResourceTag[] ValidTags = [ResourceTag.IsParent, ResourceTag.Pinned];
+        private static readonly FrozenDictionary<ResourceTag, FrozenSet<ResourceTag>> TagsCache =
+            Enumerable.Range(0, 4).ToFrozenDictionary(
+                i => (ResourceTag)i,
+                i => ValidTags.Where(t => ((ResourceTag)i & t) == t).ToFrozenSet());
+        private static readonly FrozenSet<ResourceTag> EmptyTags = FrozenSet<ResourceTag>.Empty;
+
         public static Resource ToDomainModel(this Abstractions.Models.Db.ResourceDbModel dbModel)
         {
+            // 只保留有效的 tag 位（IsParent | Pinned = 3）
+            var validTagBits = dbModel.Tags & (ResourceTag.IsParent | ResourceTag.Pinned);
             var domainModel = new Resource()
             {
                 Id = dbModel.Id,
@@ -40,9 +52,9 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 FileModifiedAt = dbModel.FileModifyDt,
                 IsFile = dbModel.IsFile,
                 ParentId = dbModel.ParentId,
-                Directory = Path.GetDirectoryName(dbModel.Path)!.StandardizePath()!,
-                FileName = Path.GetFileName(dbModel.Path),
-                Tags = SpecificEnumUtils<ResourceTag>.Values.Where(t => (dbModel.Tags & t) == t).ToHashSet(),
+                // 直接设置 Path，避免 Directory/FileName 分别设置触发两次 StandardizePath
+                Path = dbModel.Path,
+                Tags = TagsCache.GetValueOrDefault(validTagBits, EmptyTags),
                 PlayedAt = dbModel.PlayedAt
             };
             return domainModel;
@@ -142,7 +154,7 @@ namespace Bakabase.InsideWorld.Business.Extensions
                                 }
                                 else
                                 {
-                                    if (!StandardValueInternals.HandlerMap[p.BizValueType]
+                                    if (!StandardValueSystem.GetHandler(p.BizValueType)
                                             .Compare(cv.BizValue, v.BizValue))
                                     {
                                         cv.BizValue = v.BizValue;

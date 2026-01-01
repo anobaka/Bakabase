@@ -2,6 +2,7 @@
 using Bakabase.Abstractions.Helpers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using StackExchange.Profiling;
 
 namespace Bakabase.Abstractions.Components.Cover;
 
@@ -46,18 +47,35 @@ public record CoverDiscoveryResult(bool IsVirtualPath, string Path, string Ext, 
 
     public async Task<Image<Argb32>> LoadByImageSharp(CancellationToken ct)
     {
-        if (IsVirtualPath)
+        using (MiniProfiler.Current.Step("LoadByImageSharp.Inner"))
         {
-            return await Image.LoadAsync<Argb32>(new MemoryStream(Data!), ct);
-        }
+            if (IsVirtualPath)
+            {
+                using (MiniProfiler.Current.Step($"Image.LoadAsync (from memory, {Data!.Length} bytes)"))
+                {
+                    return await Image.LoadAsync<Argb32>(new MemoryStream(Data!), ct);
+                }
+            }
 
-        var ext = System.IO.Path.GetExtension(Path);
-        if (ext == InternalOptions.IcoFileExtension)
-        {
-            var data = ImageHelpers.ExtractIconAsPng(Path);
-            return Image.Load<Argb32>(data);
-        }
+            var ext = System.IO.Path.GetExtension(Path);
+            if (ext == InternalOptions.IcoFileExtension)
+            {
+                byte[]? data;
+                using (MiniProfiler.Current.Step("ExtractIconAsPng"))
+                {
+                    data = ImageHelpers.ExtractIconAsPng(Path);
+                }
 
-        return await Image.LoadAsync<Argb32>(Path, ct);
+                using (MiniProfiler.Current.Step("Image.Load (from icon data)"))
+                {
+                    return Image.Load<Argb32>(data);
+                }
+            }
+
+            using (MiniProfiler.Current.Step($"Image.LoadAsync (from file: {Path})"))
+            {
+                return await Image.LoadAsync<Argb32>(Path, ct);
+            }
+        }
     }
 }

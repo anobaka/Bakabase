@@ -270,5 +270,10 @@ ModelManifest.xml
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
-.claude
+
+# Changelog test files
+cliff.context.*.json
+CHANGELOG_TEST.md
+
+# Claude Code local overrides
+.claude/*.local.*

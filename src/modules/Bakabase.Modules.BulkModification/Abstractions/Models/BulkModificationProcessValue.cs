@@ -3,6 +3,7 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.BulkModification.Abstractions.Components;
 using Bakabase.Modules.BulkModification.Abstractions.Models.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
@@ -39,7 +40,7 @@ public record BulkModificationProcessValue
             }
             else
             {
-                Property = PropertyInternals.VirtualPropertyMap.GetValueOrDefault(EditorPropertyType.Value);
+                Property = PropertySystem.Property.TryGetVirtual(EditorPropertyType.Value);
             }
         }
     }

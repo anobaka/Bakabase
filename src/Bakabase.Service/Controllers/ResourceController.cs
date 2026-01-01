@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Bakabase.Abstractions.Components.Cover;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Extensions;
@@ -21,10 +20,12 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.InsideWorld.Models.RequestModels;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Modules.StandardValue;
 using Bakabase.Modules.Property.Models.View;
 using Bakabase.Modules.Property.Services;
 using Bakabase.Modules.Search.Models.Db;
@@ -45,6 +46,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NPOI.Util.Collections;
+using StackExchange.Profiling;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers
@@ -56,14 +58,13 @@ namespace Bakabase.Service.Controllers
         IBOptionsManager<ResourceOptions> resourceOptionsManager,
         FfMpegService ffMpegInstaller,
         ILogger<ResourceController> logger,
-        ICategoryService categoryService,
-        ICoverDiscoverer coverDiscoverer,
         IPropertyService propertyService,
         ICustomPropertyService customPropertyService,
         ICustomPropertyValueService customPropertyValueService,
         IPropertyLocalizer propertyLocalizer,
         IMediaLibraryService mediaLibraryService,
         IMediaLibraryV2Service mediaLibraryV2Service,
+        IMediaLibraryResourceMappingService mappingService,
         IBakabaseLocalizer localizer,
         BTaskManager taskManager,
         IBOptionsManager<FileSystemOptions> fsOptionsManager)
@@ -77,7 +78,7 @@ namespace Bakabase.Service.Controllers
             PropertyType? pt;
             if (propertyPool != PropertyPool.Custom)
             {
-                pt = PropertyInternals.BuiltinPropertyMap.GetValueOrDefault((ResourceProperty) propertyId)?.Type;
+                pt = PropertySystem.Builtin.TryGet((ResourceProperty) propertyId)?.Type;
             }
             else
             {
@@ -90,7 +91,7 @@ namespace Bakabase.Service.Controllers
                 return ListResponseBuilder<SearchOperation>.NotFound;
             }
 
-            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(pt.Value);
+            var psh = PropertySystem.Property.TryGetSearchHandler(pt.Value);
 
             return new ListResponse<SearchOperation>(psh?.SearchOperations.Keys);
         }
@@ -103,7 +104,7 @@ namespace Bakabase.Service.Controllers
         {
             var p = await propertyService.GetProperty(propertyPool, propertyId);
 
-            var psh = PropertyInternals.PropertySearchHandlerMap.GetValueOrDefault(p.Type);
+            var psh = PropertySystem.Property.TryGetSearchHandler(p.Type);
             if (psh?.SearchOperations.TryGetValue(operation, out var options) != true)
             {
                 return SingletonResponseBuilder<PropertyViewModel>.NotFound;
@@ -128,7 +129,7 @@ namespace Bakabase.Service.Controllers
             }
 
             ResourceSearchDbModel[] arr = [ls];
-            var viewModels = await arr.ToViewModels(propertyService, propertyLocalizer);
+            var viewModels = await arr.ToViewModels(propertyService, propertyLocalizer, service);
             return new SingletonResponse<ResourceSearchViewModel?>(viewModels[0]);
         }
 
@@ -173,7 +174,7 @@ namespace Bakabase.Service.Controllers
             }
                 
             var dbModels = new[] { search.Search };
-            var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer);
+            var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer, service);
             return new SingletonResponse<SavedSearchViewModel>(new SavedSearchViewModel(id, viewModels[0], search.Name));
         }
 
@@ -190,33 +191,50 @@ namespace Bakabase.Service.Controllers
 
         [HttpPost("search")]
         [SwaggerOperation(OperationId = "SearchResources")]
-        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string searchId)
+        public async Task<SearchResponse<Resource>> Search([FromBody] ResourceSearchInputModel model, bool saveSearch, string? searchId = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
         {
-            model.StandardPageable();
+            using (MiniProfiler.Current.Step("StandardPageable"))
+            {
+                model.StandardPageable();
+            }
 
             if (saveSearch)
             {
-                try
+                // Fire-and-forget: save search criteria in background to avoid blocking search response
+                var dbModel = model.ToDbModel();
+                _ = Task.Run(async () =>
                 {
-                    await resourceOptionsManager.SaveAsync(a =>
+                    try
                     {
-                        a.LastSearchV2 = model.ToDbModel();
-                        var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
-                        if (search != null)
+                        await resourceOptionsManager.SaveAsync(a =>
                         {
-                            search.Search = model.ToDbModel();
-                        }
-                    });
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Failed to save search criteria");
-                }
+                            a.LastSearchV2 = dbModel;
+                            if (searchId.IsNotEmpty())
+                            {
+                                var search = a.SavedSearches.FirstOrDefault(x => x.Id == searchId);
+                                if (search != null)
+                                {
+                                    search.Search = dbModel;
+                                }
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to save search criteria");
+                    }
+                });
             }
 
-            var domainModel = await model.ToDomainModel(propertyService);
+            using (MiniProfiler.Current.Step("InputModel.ToDomainModel"))
+            {
+                var domainModel = await model.ToDomainModel(propertyService);
 
-            return await service.Search(domainModel);
+                using (MiniProfiler.Current.Step("ResourceService.Search"))
+                {
+                    return await service.Search(domainModel, additionalItems);
+                }
+            }
         }
 
         [HttpPost("search/ids")]
@@ -236,6 +254,21 @@ namespace Bakabase.Service.Controllers
             ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None)
         {
             return new ListResponse<Resource>(await service.GetByKeys(ids, additionalItems));
+        }
+
+        [HttpGet("{id:int}/hierarchy-context")]
+        [SwaggerOperation(OperationId = "GetResourceHierarchyContext")]
+        public async Task<SingletonResponse<ResourceHierarchyContextViewModel>> GetHierarchyContext(int id)
+        {
+            var (ancestors, childrenCount) = await service.GetHierarchyContext(id);
+            var ancestorViewModels = ancestors.Select(a => new ResourceAncestorViewModel(
+                a.Id,
+                a.DisplayName,
+                a.ParentId
+            )).ToList();
+
+            return new SingletonResponse<ResourceHierarchyContextViewModel>(
+                new ResourceHierarchyContextViewModel(ancestorViewModels, childrenCount > 0 ? childrenCount : null));
         }
 
         // [HttpPut("{id}")]
@@ -291,118 +324,32 @@ namespace Bakabase.Service.Controllers
                                             new string[] { });
         }
 
-        [HttpPut("move")]
-        [SwaggerOperation(OperationId = "MoveResources")]
-        public async Task<BaseResponse> Move([FromBody] ResourceMoveRequestModel model)
+        [HttpPut("media-libraries")]
+        [SwaggerOperation(OperationId = "SetResourceMediaLibraries")]
+        public async Task<BaseResponse> SetMediaLibraries([FromBody] ResourceSetMediaLibrariesRequestModel model)
         {
-            var resources = (await service.GetByKeys(model.Ids)).ToDictionary(t => t.Id, t => t);
-            if (!resources.Any())
-            {
-                return BaseResponseBuilder.BuildBadRequest($"Resources [{string.Join(',', model.Ids)}] are not found");
-            }
+            return await service.SetMediaLibraries(model.Ids, model.MediaLibraryIds);
+        }
 
-            string? mediaLibraryName;
-            if (model.IsLegacyMediaLibrary)
+        [HttpPost("media-library-mappings")]
+        [SwaggerOperation(OperationId = "GetResourceMediaLibraryMappings")]
+        public async Task<SingletonResponse<Dictionary<int, int[]>>> GetMediaLibraryMappings([FromBody] int[] resourceIds)
+        {
+            var mappings = await mappingService.GetByResourceIds(resourceIds);
+            var result = mappings
+                .GroupBy(m => m.ResourceId)
+                .ToDictionary(g => g.Key, g => g.Select(m => m.MediaLibraryId).ToArray());
+
+            // Ensure all requested resource IDs are in the result (even if they have no mappings)
+            foreach (var id in resourceIds)
             {
-                var mediaLibrary =
-                    await mediaLibraryService.Get(model.MediaLibraryId, MediaLibraryAdditionalItem.Category);
-                mediaLibraryName = mediaLibrary?.Name;
-                if (mediaLibrary?.Category != null)
+                if (!result.ContainsKey(id))
                 {
-                    mediaLibraryName = $"[{mediaLibrary.Category.Name}]{mediaLibrary.Name}";
+                    result[id] = Array.Empty<int>();
                 }
             }
-            else
-            {
-                var mediaLibrary = await mediaLibraryV2Service.Get(model.MediaLibraryId);
-                mediaLibraryName = mediaLibrary?.Name;
-            }
 
-            if (mediaLibraryName.IsNullOrEmpty())
-            {
-                return BaseResponseBuilder.BuildBadRequest($"Invalid {nameof(model.MediaLibraryId)}");
-            }
-
-            if (model.Path.IsNullOrEmpty())
-            {
-                await resourceOptionsManager.SaveAsync(x => x.AddIdOfMediaLibraryRecentlyMovedTo(model.MediaLibraryId));
-                await service.ChangeMediaLibrary(model.Ids, model.MediaLibraryId, model.IsLegacyMediaLibrary);
-                return BaseResponseBuilder.Ok;
-            }
-
-            await fsOptionsManager.SaveAsync(x => x.AddRecentMovingDestination(model.Path.StandardizePath()!));
-
-            var taskName = $"Resource:BulkMove:{CryptographyUtils.Md5(string.Join(',', resources.Keys))}";
-
-            var rand = new Random();
-            foreach (var (id, resource) in resources)
-            {
-                var targetPath = Path.Combine(model.Path, resource.FileName).StandardizePath()!;
-
-                await taskManager.Enqueue(new BTaskHandlerBuilder
-                {
-                    ConflictKeys = [taskName],
-                    ResourceType = BTaskResourceType.Resource,
-                    GetName = localizer.MoveResource,
-                    GetDescription = () => localizer.MoveResourceDetail(resource.Path, mediaLibraryName, targetPath),
-                    GetMessageOnInterruption = localizer.MessageOnInterruption_MoveFiles,
-                    Type = BTaskType.MoveResources,
-                    ResourceKeys = [id],
-                    Run = async args =>
-                    {
-                        // var fakeDelay = rand.Next(50, 300);
-                        // for (var i = 0; i < 100; i++)
-                        // {
-                        //     await args.UpdateTask(t => t.Percentage = i + 1);
-                        //     await Task.Delay(fakeDelay, args.CancellationToken);
-                        // }
-
-                        if (resource.IsFile)
-                        {
-                            await FileUtils.MoveAsync(resource.Path, targetPath, false,
-                                async p => await args.UpdateTask(t => t.Percentage = p),
-                                PauseToken.None,
-                                args.CancellationToken);
-                        }
-                        else
-                        {
-                            await DirectoryUtils.MoveAsync(resource.Path, targetPath, false,
-                                async p => await args.UpdateTask(t => t.Percentage = p),
-                                PauseToken.None,
-                                args.CancellationToken);
-                        }
-
-                        await using var scope = args.RootServiceProvider.CreateAsyncScope();
-                        var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
-
-                        if (resource.MediaLibraryId != model.MediaLibraryId)
-                        {
-                            await resourceService.ChangeMediaLibrary([resource.Id], model.MediaLibraryId,
-                                model.IsLegacyMediaLibrary,
-                                new Dictionary<int, string> { { resource.Id, targetPath } });
-                        }
-                        else
-                        {
-                            await resourceService.ChangePath([resource.Id],
-                                new Dictionary<int, string> { { resource.Id, targetPath } });
-                        }
-
-                        // Re-sync resource properties based on the new media library template
-                        if (!model.IsLegacyMediaLibrary)
-                        {
-                            await resourceService.ReSyncResourcesByTemplate([resource.Id], model.MediaLibraryId);
-                        }
-                        else
-                        {
-                            // For legacy media libraries, just clear the playable file cache
-                            await resourceService.DeleteResourceCacheByResourceIdAndCacheType(resource.Id,
-                                ResourceCacheType.PlayableFiles);
-                        }
-                    }
-                });
-            }
-
-            return BaseResponseBuilder.Ok;
+            return new SingletonResponse<Dictionary<int, int[]>>(result);
         }
 
         // [HttpPost("nfo")]
@@ -490,88 +437,58 @@ namespace Bakabase.Service.Controllers
             return await service.PutPropertyValue(id, model);
         }
 
+        /// <summary>
+        /// Bulk update property values across multiple resources using batch operations
+        /// </summary>
+        [HttpPut("bulk/property-value")]
+        [SwaggerOperation(OperationId = "BulkPutResourcePropertyValue")]
+        public async Task<BaseResponse> BulkPutPropertyValue([FromBody] BulkResourcePropertyValuePutInputModel model)
+        {
+            if (model.ResourceIds.Count == 0)
+            {
+                return BaseResponseBuilder.BuildBadRequest("No resource IDs provided");
+            }
+
+            var propertyValueModel = new ResourcePropertyValuePutInputModel
+            {
+                PropertyId = model.PropertyId,
+                IsCustomProperty = model.IsCustomProperty,
+                Value = model.Value
+            };
+
+            return await service.BulkPutPropertyValue(model.ResourceIds.ToArray(), propertyValueModel);
+        }
+
         [HttpGet("{resourceId}/play")]
         [SwaggerOperation(OperationId = "PlayResourceFile")]
-        public async Task<BaseResponse> Play(int resourceId, string file)
+        public async Task<BaseResponse> Play(int resourceId, string? file)
         {
+            if (file.IsNullOrEmpty())
+            {
+                var pfs = await service.GetPlayableFiles(resourceId, HttpContext.RequestAborted);
+                file = pfs.FirstOrDefault();
+            }
+
+            if (file.IsNullOrEmpty())
+            {
+                return BaseResponseBuilder.BuildBadRequest("No playable file was found.");
+            }
+
             return await service.Play(resourceId, file);
+        }
+
+        [HttpGet("play/random")]
+        [SwaggerOperation(OperationId = "PlayRandomResource")]
+        public async Task<BaseResponse> PlayRandom()
+        {
+            return await service.PlayRandomResource();
         }
 
         [HttpDelete("ids")]
         [SwaggerOperation(OperationId = "DeleteResourcesByKeys")]
-        public async Task<BaseResponse> DeleteByKeys(int[] ids, bool deleteFiles)
+        public async Task<BaseResponse> DeleteByKeys(int[] ids)
         {
-            await service.DeleteByKeys(ids, deleteFiles);
-            return BaseResponseBuilder.Ok;
-        }
-
-        [HttpGet("unknown")]
-        [SwaggerOperation(OperationId = "GetUnknownResources")]
-        public async Task<ListResponse<Resource>> GetUnknownResources(int? mediaLibraryId)
-        {
-            if (mediaLibraryId.HasValue)
-            {
-                // Unknown type b: resources under specific media library that have PathDoesNotExist
-                var items = await service.GetAll(
-                    x => x.CategoryId == 0 && x.MediaLibraryId == mediaLibraryId.Value &&
-                         (x.Tags & ResourceTag.PathDoesNotExist) > 0,
-                    ResourceAdditionalItem.All);
-                return new ListResponse<Resource>(items);
-            }
-
-            // Unknown type a: resources with unknown media library (media library v2 not found)
-            var mediaLibrariesV2 = await mediaLibraryV2Service.GetAll();
-            var validIds = mediaLibrariesV2.Select(m => m.Id).ToHashSet();
-            var typeAItems = await service.GetAll(
-                x => x.CategoryId == 0 && !validIds.Contains(x.MediaLibraryId),
-                ResourceAdditionalItem.All);
-            return new ListResponse<Resource>(typeAItems);
-        }
-
-        [HttpGet("unknown/count")]
-        [SwaggerOperation(OperationId = "GetUnknownResourcesCount")]
-        public async Task<SingletonResponse<UnknownResourcesCountViewModel>> GetUnknownCount()
-        {
-            var mediaLibrariesV2 = await mediaLibraryV2Service.GetAll();
-
-            var mediaLibraryV2Ids = mediaLibrariesV2.Select(m => m.Id).ToHashSet();
-
-            var allResources = await service.GetAllDbModels(x => x.CategoryId == 0, true);
-
-            var unknownMediaLibraryCount = allResources.Count(x => !mediaLibraryV2Ids.Contains(x.MediaLibraryId));
-
-            // Per-media-library PathDoesNotExist for media-library v2 only
-            var unknownPathPerMl = allResources
-                .Where(x => x.Tags.HasFlag(ResourceTag.PathDoesNotExist))
-                .GroupBy(x => x.MediaLibraryId)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var data = new UnknownResourcesCountViewModel
-            {
-                UnknownMediaLibraryCount = unknownMediaLibraryCount,
-                UnknownPathCountByMediaLibraryId = unknownPathPerMl
-            };
-
-            return new SingletonResponse<UnknownResourcesCountViewModel>(data);
-        }
-
-        [HttpDelete("unknown")]
-        [SwaggerOperation(OperationId = "DeleteUnknownResources")]
-        public async Task<BaseResponse> DeleteUnknown(int? mediaLibraryId)
-        {
-            if (mediaLibraryId.HasValue)
-            {
-                // Delete type-b: PathDoesNotExist under specified media library
-                var resources = await service.GetAllDbModels(x => x.CategoryId == 0 && x.MediaLibraryId == mediaLibraryId.Value && (x.Tags & ResourceTag.PathDoesNotExist) > 0);
-                await service.DeleteByKeys(resources.Select(r => r.Id).ToArray(), false);
-                return BaseResponseBuilder.Ok;
-            }
-
-            // Delete type-a: unknown media library
-            var mediaLibrariesV2 = await mediaLibraryV2Service.GetAll();
-            var validIds = mediaLibrariesV2.Select(m => m.Id).ToHashSet();
-            var unknowns = await service.GetAllDbModels(x => x.CategoryId == 0 && !validIds.Contains(x.MediaLibraryId));
-            await service.DeleteByKeys(unknowns.Select(r => r.Id).ToArray(), false);
+            await service.DeleteByKeys(ids);
             return BaseResponseBuilder.Ok;
         }
 
@@ -640,7 +557,7 @@ namespace Bakabase.Service.Controllers
                 foreach (var (pId, values) in propertyValuesGroups)
                 {
                     var p = values[0].Property!.ToProperty();
-                    var psh = PropertyInternals.PropertySearchHandlerMap[p.Type];
+                    var psh = PropertySystem.Property.GetSearchHandler(p.Type);
                     var filter = psh.BuildSearchFilterByKeyword(p, keyword);
                     if (filter != null)
                     {
@@ -648,9 +565,9 @@ namespace Bakabase.Service.Controllers
                         {
                             if (psh.IsMatch(pv.Value, filter.Operation, filter.DbValue))
                             {
-                                var pd = PropertyInternals.DescriptorMap[p.Type];
+                                var pd = PropertySystem.Property.GetDescriptor(p.Type);
                                 var bizValue = pd.GetBizValue(p, filter.DbValue);
-                                var svh = StandardValueInternals.HandlerMap[p.Type.GetBizValueType()];
+                                var svh = StandardValueSystem.GetHandler(p.Type.GetBizValueType());
                                 var kw = svh.BuildDisplayValue(pv.BizValue);
                                 if (kw.IsNotEmpty() && set.Add(kw))
                                 {
@@ -669,5 +586,139 @@ namespace Bakabase.Service.Controllers
 
             return new ListResponse<string>(keywords);
         }
+
+        #region Multi-Library Support
+
+        /// <summary>
+        /// Get all media library mappings for a resource
+        /// </summary>
+        [HttpGet("{id:int}/media-libraries")]
+        [SwaggerOperation(OperationId = "GetResourceMediaLibraries")]
+        public async Task<ListResponse<MediaLibraryResourceMapping>> GetResourceMediaLibraries(int id)
+        {
+            var mappings = await mappingService.GetByResourceId(id);
+            return new ListResponse<MediaLibraryResourceMapping>(mappings);
+        }
+
+        /// <summary>
+        /// Add a media library mapping to a resource
+        /// </summary>
+        [HttpPost("{id:int}/media-libraries/{mediaLibraryId:int}")]
+        [SwaggerOperation(OperationId = "AddResourceMediaLibraryMapping")]
+        public async Task<BaseResponse> AddResourceMediaLibraryMapping(int id, int mediaLibraryId)
+        {
+            // Verify the resource exists
+            var resource = await service.Get(id, ResourceAdditionalItem.None);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            // Verify the media library exists
+            var mediaLibrary = await mediaLibraryV2Service.Get(mediaLibraryId);
+            if (mediaLibrary == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Media library {mediaLibraryId} not found");
+            }
+
+            await mappingService.EnsureMappings(id, new[] { mediaLibraryId });
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Remove a media library mapping from a resource
+        /// </summary>
+        [HttpDelete("{id:int}/media-libraries/{mediaLibraryId:int}")]
+        [SwaggerOperation(OperationId = "RemoveResourceMediaLibraryMapping")]
+        public async Task<BaseResponse> RemoveResourceMediaLibraryMapping(int id, int mediaLibraryId)
+        {
+            var mappings = await mappingService.GetByResourceId(id);
+            var mapping = mappings.FirstOrDefault(m => m.MediaLibraryId == mediaLibraryId);
+            if (mapping == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            await mappingService.Delete(mapping.Id);
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Replace all media library mappings for a resource
+        /// </summary>
+        [HttpPut("{id:int}/media-libraries")]
+        [SwaggerOperation(OperationId = "ReplaceResourceMediaLibraryMappings")]
+        public async Task<BaseResponse> ReplaceResourceMediaLibraryMappings(int id, [FromBody] ResourceMediaLibraryMappingInputModel model)
+        {
+            // Verify the resource exists
+            var resource = await service.Get(id, ResourceAdditionalItem.None);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            // Verify all media libraries exist
+            var mediaLibraries = await mediaLibraryV2Service.GetByKeys(model.MediaLibraryIds.ToArray());
+            var foundIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+            var notFoundIds = model.MediaLibraryIds.Where(id => !foundIds.Contains(id)).ToList();
+            if (notFoundIds.Any())
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Media libraries not found: {string.Join(", ", notFoundIds)}");
+            }
+
+            await mappingService.ReplaceMappings(id, model.MediaLibraryIds);
+            return BaseResponseBuilder.Ok;
+        }
+
+        /// <summary>
+        /// Bulk add media library mappings to multiple resources
+        /// </summary>
+        [HttpPost("bulk/media-libraries")]
+        [SwaggerOperation(OperationId = "BulkAddResourceMediaLibraryMappings")]
+        public async Task<BaseResponse> BulkAddMediaLibraryMappings([FromBody] BulkResourceMediaLibraryMappingInputModel model)
+        {
+            // Verify all resources exist
+            var resources = await service.GetByKeys(model.ResourceIds.ToArray());
+            if (resources.Count != model.ResourceIds.Count)
+            {
+                var foundIds = resources.Select(r => r.Id).ToHashSet();
+                var notFoundIds = model.ResourceIds.Where(id => !foundIds.Contains(id)).ToList();
+                return BaseResponseBuilder.BuildBadRequest($"Resources not found: {string.Join(", ", notFoundIds)}");
+            }
+
+            // Verify all media libraries exist
+            var mediaLibraries = await mediaLibraryV2Service.GetByKeys(model.MediaLibraryIds.ToArray());
+            var foundMlIds = mediaLibraries.Select(m => m.Id).ToHashSet();
+            var notFoundMlIds = model.MediaLibraryIds.Where(id => !foundMlIds.Contains(id)).ToList();
+            if (notFoundMlIds.Any())
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Media libraries not found: {string.Join(", ", notFoundMlIds)}");
+            }
+
+            foreach (var resourceId in model.ResourceIds)
+            {
+                await mappingService.EnsureMappings(resourceId, model.MediaLibraryIds);
+            }
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        #endregion
     }
+}
+
+/// <summary>
+/// Input model for bulk resource media library mapping
+/// </summary>
+public class BulkResourceMediaLibraryMappingInputModel
+{
+    /// <summary>
+    /// Resource IDs to add mappings to
+    /// </summary>
+    public List<int> ResourceIds { get; set; } = new();
+
+    /// <summary>
+    /// Media library IDs to associate with the resources
+    /// </summary>
+    public List<int> MediaLibraryIds { get; set; } = new();
 }

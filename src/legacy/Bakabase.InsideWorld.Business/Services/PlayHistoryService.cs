@@ -9,7 +9,7 @@ using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
-public class PlayHistoryService(FullMemoryCacheResourceService<InsideWorldDbContext, PlayHistoryDbModel, int> orm)
+public class PlayHistoryService(FullMemoryCacheResourceService<BakabaseDbContext, PlayHistoryDbModel, int> orm)
     : IPlayHistoryService
 {
     public async Task Add(PlayHistoryDbModel model)

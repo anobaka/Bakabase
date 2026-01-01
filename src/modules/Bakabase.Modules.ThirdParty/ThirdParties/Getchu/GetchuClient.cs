@@ -25,12 +25,13 @@ public class GetchuClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var baseUrl = "http://www.getchu.com";
             string? realUrl = string.IsNullOrWhiteSpace(appointUrl) ? null : appointUrl.Replace("&gc=gc", "") + "&gc=gc";
             string cover = "";
+            string searchUrl = "";
 
             if (string.IsNullOrWhiteSpace(realUrl))
             {
                 var keyword = number.Replace("10bit", "").Replace("裕未", "祐未").Replace("“", "”").Replace("·", "・");
                 var keywordEncoded = Uri.EscapeDataString(keyword); // approximate
-                var searchUrl = $"{baseUrl}/php/search.phtml?genre=all&search_keyword={keywordEncoded}&gc=gc";
+                searchUrl = $"{baseUrl}/php/search.phtml?genre=all&search_keyword={keywordEncoded}&gc=gc";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var links = docSearch.Select("a.blueb").ToList();
@@ -109,7 +110,8 @@ public class GetchuClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 PosterUrl = cover,
                 Website = realUrl,
                 Source = "getchu",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
 
             return detail;

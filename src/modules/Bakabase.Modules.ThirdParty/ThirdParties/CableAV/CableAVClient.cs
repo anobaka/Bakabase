@@ -21,6 +21,7 @@ public class CableAVClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             var actualBaseUrl = baseUrl ?? DefaultBaseUrl;
             var processedNumber = number.Trim();
             string realUrl = string.Empty;
+            string searchUrl = string.Empty;
 
             if (!string.IsNullOrEmpty(appointUrl))
             {
@@ -30,11 +31,11 @@ public class CableAVClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             {
                 // Get number list (similar to get_number_list in Python)
                 var numberList = GetNumberList(processedNumber);
-                
+
                 bool found = false;
                 foreach (var searchNumber in numberList)
                 {
-                    var searchUrl = $"{actualBaseUrl}/?s={searchNumber}";
+                    searchUrl = $"{actualBaseUrl}/?s={searchNumber}";
                     Logger.LogInformation("Searching CableAV with URL: {Url}", searchUrl);
 
                     var searchHtml = await HttpClient.GetStringAsync(searchUrl);
@@ -49,7 +50,7 @@ public class CableAVClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                         break;
                     }
                 }
-                
+
                 if (!found)
                 {
                     Logger.LogInformation("No matching search results found for: {Number}", number);
@@ -89,7 +90,8 @@ public class CableAVClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 CoverUrl = coverUrl,
                 Website = realUrl,
                 Mosaic = "国产",
-                ActorPhoto = GetActorPhoto(actor)
+                ActorPhoto = GetActorPhoto(actor),
+                SearchUrl = searchUrl
             };
 
             Logger.LogInformation("Successfully extracted CableAV data for: {Number}", detailNumber);

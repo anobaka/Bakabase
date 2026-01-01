@@ -400,18 +400,12 @@ public class MediaLibraryV2Service<TDbContext>(
                     {
                         resourcesToBeDeleted.Add(unknownDbResource);
                     }
-                    else
-                    {
-                        if (unknownDbResource.Tags.Add(ResourceTag.PathDoesNotExist))
-                        {
-                            changedResources.Add(unknownDbResource);
-                        }
-                    }
+                    // PathDoesNotExist tag is obsolete, no longer marking resources with it
                 }
 
                 if (resourcesToBeDeleted.Any())
                 {
-                    await resourceService.DeleteByKeys(resourcesToBeDeleted.Select(r => r.Id).ToArray(), false);
+                    await resourceService.DeleteByKeys(resourcesToBeDeleted.Select(r => r.Id).ToArray());
 
                     ret.Deleted += resourcesToBeDeleted.Count;
                 }

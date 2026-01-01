@@ -21,4 +21,20 @@ if (!i18n.isInitialized) {
   console.log("i18n initialized");
 }
 
+// 开发模式下支持 i18n 资源热更新
+if (import.meta.hot) {
+  import.meta.hot.accept("@/locales/cn.json", (newModule) => {
+    if (newModule) {
+      i18n.addResourceBundle("cn", "translation", newModule.default, true, true);
+      console.log("i18n cn resources hot updated");
+    }
+  });
+  import.meta.hot.accept("@/locales/en.json", (newModule) => {
+    if (newModule) {
+      i18n.addResourceBundle("en", "translation", newModule.default, true, true);
+      console.log("i18n en resources hot updated");
+    }
+  });
+}
+
 export default i18n;

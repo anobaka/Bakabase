@@ -166,6 +166,7 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var extrafanart = doc.Select("a.pop_img").Select(a => a.GetAttribute("href")).Where(h => !string.IsNullOrWhiteSpace(h)).ToList();
             var trailer = doc.Select("a.pop_sample").Attr("href") ?? "";
 
+            var searchUrl = $"https://faleno.jp/top/?s={Uri.EscapeDataString(loweredSpaced)}";
             var detail = new FalenoVideoDetail
             {
                 Number = number,
@@ -183,7 +184,8 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 PosterUrl = poster,
                 Website = realUrl,
                 Source = "faleno",
-                Mosaic = "有码"
+                Mosaic = "有码",
+                SearchUrl = searchUrl
             };
 
             return detail;

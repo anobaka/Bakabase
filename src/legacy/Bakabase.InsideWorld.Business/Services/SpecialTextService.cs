@@ -21,7 +21,7 @@ using Bootstrap.Models.ResponseModels;
 namespace Bakabase.InsideWorld.Business.Services
 {
     public class SpecialTextService(
-        FullMemoryCacheResourceService<InsideWorldDbContext, Abstractions.Models.Db.SpecialText, int> orm)
+        FullMemoryCacheResourceService<BakabaseDbContext, Abstractions.Models.Db.SpecialText, int> orm)
         : ISpecialTextService, ICustomDateTimeParser
     {
         public async Task<List<SpecialText>> GetAll(

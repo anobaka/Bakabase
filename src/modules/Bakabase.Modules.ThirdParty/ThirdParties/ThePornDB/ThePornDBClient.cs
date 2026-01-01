@@ -30,10 +30,11 @@ public class ThePornDBClient(IHttpClientFactory httpClientFactory, ILoggerFactor
                 // NOTE: no hashing here; caller can provide direct scene slug via appointUrl or skipHash=true
             }
 
+            string searchUrl = "";
             if (string.IsNullOrEmpty(detailUrl))
             {
                 var keyword = GuessSearchKeyword(number);
-                var searchUrl = $"https://api.theporndb.net/scenes?parse={Uri.EscapeDataString(keyword)}&per_page=50";
+                searchUrl = $"https://api.theporndb.net/scenes?parse={Uri.EscapeDataString(keyword)}&per_page=50";
                 var searchJson = await client.GetStringAsync(searchUrl);
                 using var searchDoc = JsonDocument.Parse(searchJson);
                 var scenes = searchDoc.RootElement.GetProperty("data");
@@ -83,7 +84,8 @@ public class ThePornDBClient(IHttpClientFactory httpClientFactory, ILoggerFactor
                 CoverUrl = cover,
                 PosterUrl = poster,
                 Website = detailUrl,
-                Mosaic = "无码"
+                Mosaic = "无码",
+                SearchUrl = searchUrl
             };
         }
         catch

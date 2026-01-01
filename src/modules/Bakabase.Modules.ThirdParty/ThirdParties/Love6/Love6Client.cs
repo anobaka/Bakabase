@@ -18,9 +18,10 @@ public class Love6Client(IHttpClientFactory httpClientFactory, ILoggerFactory lo
         {
             string? realUrl = appointUrl;
             string poster = "";
+            string searchUrl = "";
             if (string.IsNullOrWhiteSpace(realUrl))
             {
-                var searchUrl = $"https://love6.tv/search/all/?search_text={Uri.EscapeDataString(number)}";
+                searchUrl = $"https://love6.tv/search/all/?search_text={Uri.EscapeDataString(number)}";
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var items = docSearch.Select("div.col-sm-2.search_item a");
@@ -86,7 +87,8 @@ public class Love6Client(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 PosterUrl = poster,
                 Website = realUrl,
                 Source = "love6",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = searchUrl
             };
 
             return detail;

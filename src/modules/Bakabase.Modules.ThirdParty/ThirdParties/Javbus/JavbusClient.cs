@@ -93,7 +93,8 @@ public class JavbusClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 CoverUrl = coverUrl,
                 PosterUrl = posterUrl,
                 Website = realUrl,
-                Mosaic = mosaicText
+                Mosaic = mosaicText,
+                SearchUrl = realUrl
             };
         }
         catch

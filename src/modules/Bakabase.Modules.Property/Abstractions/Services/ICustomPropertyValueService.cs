@@ -21,6 +21,11 @@ public interface ICustomPropertyValueService
     Task<List<CustomPropertyValueDbModel>> GetAllDbModels(
         Expression<Func<CustomPropertyValueDbModel, bool>> selector = null,
         bool returnCopy = true);
+
+    /// <summary>
+    /// Get count of values grouped by property ID
+    /// </summary>
+    Task<Dictionary<int, int>> GetCountByPropertyIds(IEnumerable<int> propertyIds);
     //
     Task<BaseResponse> AddRange(IEnumerable<CustomPropertyValue> values);
 
@@ -61,8 +66,10 @@ public interface ICustomPropertyValueService
     // Task<BaseResponse> RemoveByKey(Int32 key);
     Task<BaseResponse> RemoveByKeys(IEnumerable<Int32> keys);
     Task<SingletonResponse<CustomPropertyValueDbModel>> AddDbModel(CustomPropertyValueDbModel resource);
+    Task<BaseResponse> AddDbModelRange(IEnumerable<CustomPropertyValueDbModel> resources);
     // Task<SingletonResponse<CustomPropertyValue>> UpdateByKey(Int32 key, Action<CustomPropertyValue> modify);
     Task<BaseResponse> UpdateDbModel(CustomPropertyValueDbModel resource);
+    Task<BaseResponse> UpdateDbModelRange(IEnumerable<CustomPropertyValueDbModel> resources);
     //
     // Task<ListResponse<CustomPropertyValue>> UpdateByKeys(IReadOnlyCollection<Int32> keys,
     //     Action<CustomPropertyValue> modify);

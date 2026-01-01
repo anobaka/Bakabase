@@ -1,36 +1,22 @@
 "use client";
 
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import "./index.scss";
 import { useTranslation } from "react-i18next";
-import { useUpdateEffect } from "react-use";
 
-import RootTreeEntry from "./RootTreeEntry";
+import { FileExplorer } from "@/components/FileExplorer";
 
-import type { Entry } from "@/core/models/FileExplorer/Entry";
-import type RootEntry from "@/core/models/FileExplorer/RootEntry";
-
-import { buildLogger } from "@/components/utils";
 import { useFileSystemOptionsStore } from "@/stores/options";
 import BApi from "@/sdk/BApi";
 import { Checkbox } from "@/components/bakaui/components/Checkbox";
-import FolderSelector from "@/components/FolderSelector";
 import AfterFirstPlayOperationsModal from "@/pages/file-processor/components/AfterFirstPlayOperationsModal";
 import { MdUnarchive } from "react-icons/md";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { Button, Tooltip } from "@/components/bakaui";
 import BulkDecompressionToolModal from "@/components/BulkDecompressionToolModal";
 
-const log = buildLogger("FileProcessor");
 const FileProcessorPage = () => {
   const { t } = useTranslation();
-
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
-  const [root, setRoot] = useState<RootEntry>();
-  const rootRef = useRef<RootEntry>();
-  const [selectedEntries, setSelectedEntries] = useState<Entry[]>([]);
-  const selectedEntriesRef = useRef<Entry[]>([]);
-  const [allSelected, setAllSelected] = useState(false);
 
   const optionsStore = useFileSystemOptionsStore((state) => state);
   const [rootPath, setRootPath] = useState<string>();
@@ -40,19 +26,9 @@ const FileProcessorPage = () => {
 
   const { createPortal } = useBakabaseContext();
 
-  useUpdateEffect(() => {
-    if (rootRef.current) {
-      rootRef.current!.dispose();
-    }
-    rootRef.current = root;
-    console.log("Root change to", root);
-  }, [root]);
-
   useEffect(() => {
     if (!rootPathInitialized && optionsStore.initialized) {
       const p = optionsStore.data.fileProcessor?.workingDirectory;
-
-      // console.log(123, p, optionsStore);
 
       if (p) {
         setRootPath(p);
@@ -64,54 +40,6 @@ const FileProcessorPage = () => {
   useEffect(() => {
     fpOptionsRef.current = optionsStore.data?.fileProcessor;
   }, [optionsStore]);
-
-  useEffect(() => {
-    return () => {
-      rootRef.current?.dispose();
-    };
-  }, []);
-
-  useEffect(() => {
-    selectedEntriesRef.current = selectedEntries;
-    console.log("SelectedEntries changed", selectedEntries);
-    const filteredEntries = rootRef.current?.filteredChildren || [];
-
-    console.log("Current selection", selectedEntries);
-    // console.log(selectedEntries, filteredEntries);
-    if (selectedEntries.length == filteredEntries.length) {
-      for (const se of selectedEntries) {
-        let exist = false;
-
-        for (const re of filteredEntries) {
-          if (se == re) {
-            exist = true;
-          }
-        }
-        if (!exist) {
-          console.log(se);
-        }
-      }
-      if (
-        selectedEntries.length > 0 &&
-        selectedEntries.every((e) => filteredEntries.some((a) => a == e))
-      ) {
-        console.log("all selected");
-        setAllSelected(true);
-      } else {
-        setAllSelected(false);
-      }
-    } else {
-      setAllSelected(false);
-    }
-  }, [selectedEntries]);
-
-  useEffect(() => {
-    console.log("set all selected", allSelected);
-  }, [allSelected]);
-
-  // console.log('render all selected', allSelected);
-
-  console.log('root path', rootPath, 'root ref', rootRef);
 
   return (
     <div className={"file-explorer-page"}>
@@ -153,13 +81,9 @@ const FileProcessorPage = () => {
         <div className="root relative overflow-hidden min-h-0 grow" tabIndex={0}>
           <div className={"absolute top-0 left-0 w-full h-full flex flex-col"}>
             {rootPathInitialized && (
-              <RootTreeEntry
+              <FileExplorer
                 expandable
                 afterPlayedFirstFile={(entry) => {
-                  // console.log(
-                  //   "afterPlayedFirstFile",
-                  //   optionsStore.data?.fileProcessor?.showOperationsAfterPlayingFirstFile,
-                  // );
                   if (fpOptionsRef.current?.showOperationsAfterPlayingFirstFile) {
                     createPortal(AfterFirstPlayOperationsModal, {
                       entry,
@@ -179,6 +103,7 @@ const FileProcessorPage = () => {
                   "delete-all-same-name",
                   "group",
                   "play-first-file",
+                  "create-directory"
                 ]}
                 rootPath={rootPath}
                 selectable={"multiple"}
@@ -213,5 +138,4 @@ const FileProcessorPage = () => {
 
 FileProcessorPage.displayName = "FileProcessorPage";
 
-// todo: optimize
 export default FileProcessorPage;

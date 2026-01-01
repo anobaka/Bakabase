@@ -7,8 +7,6 @@
   &.portal {
     z-index: 49;
     position: fixed;
-    left: 10px;
-    bottom: 20px;
     cursor: pointer;
     border-radius: 24px;
     box-shadow: rgba(6, 24, 44, 0.4) 0px 0px 0px 2px, rgba(6, 24, 44, 0.65) 0px 4px 6px -1px, rgba(255, 255, 255, 0.08) 0px 1px 0px inset;
@@ -16,7 +14,7 @@
     width: 48px;
     background: var(--theme-block-background);
 
-    transition: width 0.5s, left 0.3s;
+    transition: width 0.5s;
 
     &.AllDone {
       .tick {
@@ -25,8 +23,8 @@
     }
 
     &.Working {
-      .loader {
-        display: block;
+      .circular-progress-wrapper {
+        display: flex;
       }
     }
 
@@ -36,12 +34,28 @@
       }
     }
 
+    .circular-progress-wrapper {
+      display: none;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+
+      .task-count {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--heroui-primary);
+      }
+    }
+
     .failed {
       display: none;
-      color: red;
-      .iconfont {
-        font-size: 48px;
-      }
+      color: hsl(var(--heroui-danger));
     }
 
     .tick {
@@ -67,62 +81,37 @@
       }
     }
 
-    .loader {
-      height: 48px;
-      width: 48px;
-      position: relative;
-      display: none;
-
-      span {
-        display: block;
-        position: absolute;
-        top: 0; left: 0;
-        bottom: 0;
-        right: 0;
-        margin: auto;
-        height: 32px;
-        width: 32px;
-        color: gray;
-
-        &::before, &::after {
-          content: "";
-          display: block;
-          position: absolute;
-          top: 0;
-          left: 0;
-          bottom: 0;
-          right: 0;
-          margin: auto;
-          height: 32px;
-          width: 32px;
-          border: 2px solid #999;
-          border-radius: 50%;
-          opacity: 0;
-          -webkit-animation: loader-1 1.5s cubic-bezier(0.075, 0.820, 0.165, 1.000) infinite;
-          animation: loader-1 1.5s cubic-bezier(0.075, 0.820, 0.165, 1.000) infinite;
-        }
-
-        &::after {
-          -webkit-animation: loader-2 1.5s cubic-bezier(0.075, 0.820, 0.165, 1.000) .25s infinite;
-          animation: loader-2 1.5s cubic-bezier(0.075, 0.820, 0.165, 1.000) .25s infinite;
-        }
-      }
-    }
-    @-webkit-keyframes loader-1 {
-      0%   { -webkit-transform: translate3d(0, 0, 0) scale(0); opacity: 1; }
-      100% { -webkit-transform: translate3d(0, 0, 0) scale(1.5); opacity: 0; }
-    }
-    @keyframes loader-1 {
-      0%   { transform: translate3d(0, 0, 0) scale(0); opacity: 1; }
-      100% { transform: translate3d(0, 0, 0) scale(1.5); opacity: 0; }
-    }
-    @-webkit-keyframes loader-2 {
-      0%   { -webkit-transform: translate3d(0, 0, 0) scale(0); opacity: 1; }
-      100% { -webkit-transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
-    }
-    @keyframes loader-2 {
-      0%   { transform: translate3d(0, 0, 0) scale(0); opacity: 1; }
-      100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
-    }
   }
+}
+
+// Task table progress bar animation
+.task-progress-animated {
+  .progress-bar-indicator {
+    background-image: linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.15) 25%,
+      transparent 25%,
+      transparent 50%,
+      rgba(255, 255, 255, 0.15) 50%,
+      rgba(255, 255, 255, 0.15) 75%,
+      transparent 75%,
+      transparent
+    );
+    background-size: 1rem 1rem;
+    animation: progress-bar-stripes 1s linear infinite;
+  }
+}
+
+@keyframes progress-bar-stripes {
+  0% {
+    background-position: 1rem 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+// Error row highlight
+.task-row-error {
+  background-color: hsl(var(--heroui-danger) / 0.1) !important;
 }

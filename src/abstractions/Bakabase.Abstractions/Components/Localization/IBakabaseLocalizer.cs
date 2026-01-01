@@ -32,11 +32,15 @@ public interface IBakabaseLocalizer
     string MoveFile(string src, string dest);
     string MoveResourceDetail(string srcPath, string mediaLibraryName, string destPath);
     string MoveResource();
+    string CopyFiles();
+    string CopyFile(string src, string dest);
+    string? MessageOnInterruption_CopyFiles();
     string BTask_Name(string key);
     string? BTask_Description(string key);
     string? BTask_MessageOnInterruption(string key);
     string? MessageOnInterruption_MoveFiles();
     string BTask_FailedToRunTaskDueToConflict(string incomingTaskName, params string[] conflictTaskNames);
+    string BTask_FailedToRunTaskDueToDependency(string incomingTaskName, params string[] dependencyTaskNames);
     string BTask_FailedToRunTaskDueToUnknownTaskId(string id);
     string BTask_FailedToRunTaskDueToIdExisting(string id, string name);
     string BTask_CanNotReplaceAnActiveTask(string id, string name);
@@ -88,4 +92,15 @@ public interface IBakabaseLocalizer
     string Complete();
     string PlayableFiles();
     string BuildingData();
+
+    // PathMark Sync
+    string SyncPathMark_Collecting();
+    string SyncPathMark_Collected(int count);
+    string SyncPathMark_ProcessingResource(string path);
+    string SyncPathMark_ProcessingProperty(string path);
+    string SyncPathMark_ProcessingMediaLibrary(string path);
+    string SyncPathMark_FindingRelated();
+    string SyncPathMark_FoundRelated(int count);
+    string SyncPathMark_EstablishingRelationships();
+    string SyncPathMark_Complete();
 }

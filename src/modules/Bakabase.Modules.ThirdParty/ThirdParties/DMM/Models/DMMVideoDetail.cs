@@ -27,5 +27,6 @@ public record DMMVideoDetail : Bakabase.Abstractions.Models.Domain.IAvDetail
     public bool ImageDownload { get; set; }
     public string? ImageCut { get; set; }
     public string? Mosaic { get; set; }
+    public string? SearchUrl { get; set; }
     public string? Wanted { get; set; }
 }

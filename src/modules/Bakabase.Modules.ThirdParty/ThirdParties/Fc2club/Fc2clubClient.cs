@@ -91,7 +91,8 @@ public class Fc2clubClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
                 PosterUrl = "",
                 Website = realUrl,
                 Source = "fc2club",
-                Mosaic = mosaic
+                Mosaic = mosaic,
+                SearchUrl = realUrl
             };
 
             return detail;
