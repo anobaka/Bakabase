@@ -43,7 +43,8 @@ public static class MediaLibraryV2Extensions
         {
             try
             {
-                domain.Players = JsonConvert.DeserializeObject<List<MediaLibraryPlayer>>(dbModel.Players);
+                var dbPlayers = JsonConvert.DeserializeObject<List<MediaLibraryPlayerDbModel>>(dbModel.Players);
+                domain.Players = dbPlayers?.Select(p => p.ToDomainModel()).ToList();
             }
             catch (Exception e)
             {

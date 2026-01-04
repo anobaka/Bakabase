@@ -165,9 +165,9 @@ public class V220Migrator : AbstractMigrator
             return;
         }
 
-        // Get all MediaLibraryV2 with their templates
+        // Get all MediaLibraryV2 with their templates (convert to domain models)
         var mediaLibraries = (await dbCtx.MediaLibrariesV2.ToListAsync()).Select(x => x.ToDomainModel()).ToArray();
-        var templates = await dbCtx.MediaLibraryTemplates.ToListAsync();
+        var templates = (await dbCtx.MediaLibraryTemplates.ToListAsync()).Select(t => t.ToDomainModel()).ToArray();
         var templateMap = templates.ToDictionary(t => t.Id);
 
         var now = DateTime.UtcNow;
@@ -185,7 +185,7 @@ public class V220Migrator : AbstractMigrator
             }
 
             // Get template if exists
-            MediaLibraryTemplateDbModel? template = null;
+            MediaLibraryTemplate? template = null;
             if (library.TemplateId.HasValue && templateMap.TryGetValue(library.TemplateId.Value, out var t))
             {
                 template = t;
@@ -260,9 +260,7 @@ public class V220Migrator : AbstractMigrator
         }
 
         // Create ResourceProfiles from MediaLibraryV2 + templates
-        var mediaLibraryDbModels = await dbCtx.MediaLibrariesV2.ToListAsync();
-        var mediaLibraryDbMap = mediaLibraryDbModels.ToDictionary(m => m.Id);
-        await MigrateToResourceProfiles(dbCtx, mediaLibraries, templateMap, mediaLibraryDbMap);
+        await MigrateToResourceProfiles(dbCtx, mediaLibraries, templateMap);
     }
 
     /// <summary>
@@ -270,7 +268,7 @@ public class V220Migrator : AbstractMigrator
     /// ResourceProfiles contain enhancer settings, name template, playable file settings, and player settings.
     /// </summary>
     private async Task MigrateToResourceProfiles(BakabaseDbContext dbCtx, MediaLibraryV2[] mediaLibraries,
-        Dictionary<int, MediaLibraryTemplateDbModel> templateMap, Dictionary<int, MediaLibraryV2DbModel> mediaLibraryDbMap)
+        Dictionary<int, MediaLibraryTemplate> templateMap)
     {
         // Check if we already have ResourceProfiles (skip if already migrated)
         var existingProfilesCount = await dbCtx.ResourceProfiles.CountAsync();
@@ -285,20 +283,17 @@ public class V220Migrator : AbstractMigrator
 
         foreach (var library in mediaLibraries)
         {
-            MediaLibraryTemplateDbModel? template = null;
+            MediaLibraryTemplate? template = null;
             if (library.TemplateId.HasValue && templateMap.TryGetValue(library.TemplateId.Value, out var t))
             {
                 template = t;
             }
 
-            // Get raw DB model to access Players field
-            mediaLibraryDbMap.TryGetValue(library.Id, out var libraryDbModel);
-
-            // Extract all settings
+            // Extract all settings from domain models directly
             var enhancerOptions = template != null ? ExtractEnhancerOptions(template) : null;
             var nameTemplate = template?.DisplayNameTemplate;
             var playableFileOptions = template != null ? ExtractPlayableFileOptions(template) : null;
-            var playerOptions = libraryDbModel != null ? ExtractPlayerOptions(libraryDbModel) : null;
+            var playerOptions = library?.Players;
             var propertyOptions = template != null ? ExtractPropertyOptions(template) : null;
 
             // Skip if no settings to migrate
@@ -358,166 +353,91 @@ public class V220Migrator : AbstractMigrator
     }
 
     /// <summary>
-    /// Extract ResourceProfileEnhancerOptions from MediaLibraryTemplate.
+    /// Extract ResourceProfileEnhancerOptions from MediaLibraryTemplate domain model.
     /// </summary>
-    private ResourceProfileEnhancerOptions? ExtractEnhancerOptions(MediaLibraryTemplateDbModel template)
+    private ResourceProfileEnhancerOptions? ExtractEnhancerOptions(MediaLibraryTemplate template)
     {
-        if (string.IsNullOrEmpty(template.Enhancers))
+        if (template.Enhancers == null || !template.Enhancers.Any())
         {
             return null;
         }
 
-        try
+        return new ResourceProfileEnhancerOptions
         {
-            var enhancers = JsonConvert.DeserializeObject<List<EnhancerFullOptions>>(template.Enhancers);
-            if (enhancers == null || !enhancers.Any())
-            {
-                return null;
-            }
-
-            return new ResourceProfileEnhancerOptions
-            {
-                Enhancers = enhancers.Select(e => e).ToList()
-            };
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to parse Enhancers from template {Id}", template.Id);
-            return null;
-        }
+            Enhancers = template.Enhancers
+        };
     }
 
     /// <summary>
-    /// Extract ResourceProfilePlayableFileOptions from MediaLibraryTemplate.
+    /// Extract ResourceProfilePlayableFileOptions from MediaLibraryTemplate domain model.
     /// Converts MediaLibraryTemplatePlayableFileLocator to ResourceProfilePlayableFileOptions.
     /// </summary>
-    private ResourceProfilePlayableFileOptions? ExtractPlayableFileOptions(MediaLibraryTemplateDbModel template)
+    private ResourceProfilePlayableFileOptions? ExtractPlayableFileOptions(MediaLibraryTemplate template)
     {
-        if (string.IsNullOrEmpty(template.PlayableFileLocator))
+        var locator = template.PlayableFileLocator;
+        if (locator == null)
         {
             return null;
         }
 
-        try
+        // Collect all extensions from ExtensionGroups and Extensions
+        var allExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (locator.Extensions != null)
         {
-            var locator = JsonConvert.DeserializeObject<MediaLibraryTemplatePlayableFileLocator>(template.PlayableFileLocator);
-            if (locator == null)
+            foreach (var ext in locator.Extensions)
             {
-                return null;
+                allExtensions.Add(ext);
             }
+        }
 
-            // Collect all extensions from ExtensionGroups and Extensions
-            var allExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            if (locator.Extensions != null)
+        if (locator.ExtensionGroups != null)
+        {
+            foreach (var group in locator.ExtensionGroups)
             {
-                foreach (var ext in locator.Extensions)
+                if (group.Extensions != null)
                 {
-                    allExtensions.Add(ext);
-                }
-            }
-
-            if (locator.ExtensionGroups != null)
-            {
-                foreach (var group in locator.ExtensionGroups)
-                {
-                    if (group.Extensions != null)
+                    foreach (var ext in group.Extensions)
                     {
-                        foreach (var ext in group.Extensions)
-                        {
-                            allExtensions.Add(ext);
-                        }
+                        allExtensions.Add(ext);
                     }
                 }
             }
-
-            if (!allExtensions.Any())
-            {
-                return null;
-            }
-
-            return new ResourceProfilePlayableFileOptions
-            {
-                Extensions = allExtensions.ToList()
-            };
         }
-        catch (Exception ex)
+
+        if (!allExtensions.Any())
         {
-            Logger.LogWarning(ex, "Failed to parse PlayableFileLocator from template {Id}", template.Id);
             return null;
         }
+
+        return new ResourceProfilePlayableFileOptions
+        {
+            Extensions = allExtensions.ToList()
+        };
     }
 
     /// <summary>
-    /// Extract ResourceProfilePlayerOptions from MediaLibraryV2.
-    /// </summary>
-    private ResourceProfilePlayerOptions? ExtractPlayerOptions(MediaLibraryV2DbModel library)
-    {
-        if (string.IsNullOrEmpty(library.Players))
-        {
-            return null;
-        }
-
-        try
-        {
-            var players = JsonConvert.DeserializeObject<List<MediaLibraryPlayer>>(library.Players);
-            if (players == null || !players.Any())
-            {
-                return null;
-            }
-
-            return new ResourceProfilePlayerOptions
-            {
-                Players = players
-            };
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to parse Players from MediaLibraryV2 {Id}", library.Id);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Extract ResourceProfilePropertyOptions from MediaLibraryTemplate.
+    /// Extract ResourceProfilePropertyOptions from MediaLibraryTemplate domain model.
     /// Converts MediaLibraryTemplateProperty list to ResourceProfilePropertyOptions.
     /// </summary>
-    private ResourceProfilePropertyOptions? ExtractPropertyOptions(MediaLibraryTemplateDbModel template)
+    private ResourceProfilePropertyOptions? ExtractPropertyOptions(MediaLibraryTemplate template)
     {
-        if (string.IsNullOrEmpty(template.Properties))
+        if (template.Properties == null || !template.Properties.Any())
         {
             return null;
         }
 
-        try
+        return new ResourceProfilePropertyOptions
         {
-            var properties = JsonConvert.DeserializeObject<List<MediaLibraryTemplateProperty>>(template.Properties);
-            if (properties == null || !properties.Any())
-            {
-                return null;
-            }
-
-            return new ResourceProfilePropertyOptions
-            {
-                Properties = properties.Select(p => new ResourceProfilePropertyReference
-                {
-                    Pool = p.Pool,
-                    Id = p.Id
-                }).ToList()
-            };
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Failed to parse Properties from template {Id}", template.Id);
-            return null;
-        }
+            Properties = template.Properties.Select(p => new PropertyKey(p.Pool, p.Id)).ToList()
+        };
     }
 
     /// <summary>
-    /// Convert MediaLibraryTemplate to PathMark list.
+    /// Convert MediaLibraryTemplate domain model to PathMark list.
     /// Extracts resource filters and property extractors from template.
     /// </summary>
-    private List<PathMark> ConvertTemplateToMarks(MediaLibraryTemplateDbModel? template)
+    private List<PathMark> ConvertTemplateToMarks(MediaLibraryTemplate? template)
     {
         var marks = new List<PathMark>();
 
@@ -526,19 +446,8 @@ public class V220Migrator : AbstractMigrator
             return [];
         }
 
-        // Parse ResourceFilters from template
-        List<PathFilter>? resourceFilters = null;
-        if (!string.IsNullOrEmpty(template.ResourceFilters))
-        {
-            try
-            {
-                resourceFilters = JsonConvert.DeserializeObject<List<PathFilter>>(template.ResourceFilters);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "Failed to parse ResourceFilters for template {Id}", template.Id);
-            }
-        }
+        // Get ResourceFilters from domain model
+        var resourceFilters = template.ResourceFilters;
 
         // Create Resource marks from filters
         if (resourceFilters != null && resourceFilters.Any())
@@ -569,19 +478,8 @@ public class V220Migrator : AbstractMigrator
             return [];
         }
 
-        // Parse Properties from template
-        List<MediaLibraryTemplateProperty>? properties = null;
-        if (!string.IsNullOrEmpty(template.Properties))
-        {
-            try
-            {
-                properties = JsonConvert.DeserializeObject<List<MediaLibraryTemplateProperty>>(template.Properties);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogWarning(ex, "Failed to parse Properties for template {Id}", template.Id);
-            }
-        }
+        // Get Properties from domain model
+        var properties = template.Properties;
 
         // Create Property marks from template properties
         if (properties != null && properties.Any())
