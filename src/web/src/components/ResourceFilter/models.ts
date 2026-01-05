@@ -71,11 +71,13 @@ export interface FilterComponentRenderers {
    * @param currentSelection 当前选中的属性
    * @param onSelect 选择回调
    * @param onCancel 取消选择回调（关闭选择器但未选择）
+   * @param disabledProperties 禁用的属性列表（已选择的属性）
    */
   openPropertySelector: (
     currentSelection: { id: number; pool: PropertyPool } | undefined,
     onSelect: (property: IProperty, availableOperations: SearchOperation[]) => void,
-    onCancel?: () => void
+    onCancel?: () => void,
+    disabledProperties?: { id: number; pool: PropertyPool }[]
   ) => void;
 
   /**
@@ -93,6 +95,8 @@ export interface FilterComponentRenderers {
       isReadonly?: boolean;
       /** Search operation - used for determining single/multiple selection for some property types */
       operation?: SearchOperation;
+      /** When true, always show the editing UI without toggle */
+      isEditing?: boolean;
     }
   ) => ReactNode;
 }

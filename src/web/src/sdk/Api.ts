@@ -119,6 +119,12 @@ export type BakabaseAbstractionsModelsDomainConstantsAppNotificationSeverity = 0
 export type BakabaseAbstractionsModelsDomainConstantsEnhancementRecordStatus = 1 | 2;
 
 /**
+ * [1: Simple, 2: Advanced]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode = 1 | 2;
+
+/**
  * [1: NotAcceptTerms, 2: NeedRestart]
  * @format int32
  */
@@ -556,6 +562,13 @@ export interface BakabaseAbstractionsModelsDomainProperty {
   order: number;
 }
 
+export interface BakabaseAbstractionsModelsDomainPropertyKey {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+}
+
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
   fixedText?: string;
   /** @format int32 */
@@ -683,14 +696,7 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions {
-  properties?: BakabaseAbstractionsModelsDomainResourceProfilePropertyReference[];
-}
-
-export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyReference {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  id: number;
+  properties?: BakabaseAbstractionsModelsDomainPropertyKey[];
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -1286,6 +1292,8 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   id: string;
   search: BakabaseModulesSearchModelsDbResourceSearchDbModel;
   name: string;
+  /** [1: Simple, 2: Advanced] */
+  displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainResourceOptionsSynchronizationCategoryOptions {
@@ -2879,6 +2887,8 @@ export interface BakabaseServiceModelsInputResourceSearchInputModel {
 
 export interface BakabaseServiceModelsInputSavedSearchAddInputModel {
   search: BakabaseServiceModelsInputResourceSearchInputModel;
+  /** [1: Simple, 2: Advanced] */
+  displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
 export interface BakabaseServiceModelsViewBulkModificationDiffViewModel {
@@ -3208,6 +3218,8 @@ export interface BakabaseServiceModelsViewSavedSearchViewModel {
   id: string;
   search: BakabaseServiceModelsViewResourceSearchViewModel;
   name: string;
+  /** [1: Simple, 2: Advanced] */
+  displayMode: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode;
 }
 
 export interface BootstrapComponentsLoggingLogServiceModelsEntitiesLog {
@@ -6452,7 +6464,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name GetComponentDescriptors
      * @request GET:/component
-     * @deprecated
      */
     getComponentDescriptors: (
       query?: {
@@ -6506,7 +6517,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name GetComponentDescriptorByKey
      * @request GET:/component/key
-     * @deprecated
      */
     getComponentDescriptorByKey: (
       query?: {
@@ -6558,7 +6568,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name DiscoverDependentComponent
      * @request GET:/component/dependency/discovery
-     * @deprecated
      */
     discoverDependentComponent: (
       query?: {
@@ -6603,7 +6612,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name GetDependentComponentLatestVersion
      * @request GET:/component/dependency/latest-version
-     * @deprecated
      */
     getDependentComponentLatestVersion: (
       query?: {
@@ -6655,7 +6663,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @tags Component
      * @name InstallDependentComponent
      * @request POST:/component/dependency
-     * @deprecated
      */
     installDependentComponent: (
       query?: {
@@ -7997,6 +8004,53 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/saved-search`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PutSavedSearchDisplayMode
+     * @request PUT:/resource/saved-search/display-mode
+     */
+    putSavedSearchDisplayMode: (
+      data: BakabaseAbstractionsModelsDomainConstantsFilterDisplayMode,
+      query?: {
+        id?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/saved-search/display-mode`,
+        method: "PUT",
+        query: query,
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for putSavedSearchDisplayMode
+     * @name putSavedSearchDisplayModeUrl
+     */
+    putSavedSearchDisplayModeUrl: (query?: {
+        id?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/saved-search/display-mode`;
       
       // Build query string
       if (query) {

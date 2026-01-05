@@ -331,6 +331,7 @@ const Segments = ({
                                 }
                                 case PscPropertyType.CustomProperty: {
                                   createPortal(PropertySelector, {
+                                    v2: true,
                                     pool: PropertyPool.Custom,
                                     multiple: false,
                                     addable: true,

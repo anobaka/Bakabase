@@ -14,7 +14,9 @@ import PropertyContainer from "@/components/Resource/components/DetailModal/Prop
 import BApi from "@/sdk/BApi";
 import { buildLogger } from "@/components/utils";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
-import { Button } from "@/components/bakaui";
+import { Divider } from "@/components/bakaui";
+
+type ColumnCount = 1 | 2 | 3;
 
 type Props = {
   resource: Resource;
@@ -27,6 +29,7 @@ type Props = {
   propertyClassNames?: PropertyContainerProps["classNames"];
   noPropertyContent?: any;
   sortable?: boolean;
+  columns?: ColumnCount;
 };
 
 type PropertyRenderContext = {
@@ -52,6 +55,7 @@ const Properties = (props: Props) => {
     propertyClassNames,
     noPropertyContent,
     sortable = false,
+    columns = 2,
   } = props;
   const { t } = useTranslation();
   const forceUpdate = useUpdate();
@@ -60,7 +64,6 @@ const Properties = (props: Props) => {
   const [valueScopePriority, setValueScopePriority] = useState<PropertyValueScope[]>([]);
   const [builtinPropertyMap, setBuiltinPropertyMap] = useState<Record<number, IProperty>>({});
   const [customPropertyMap, setCustomPropertyMap] = useState<Record<number, IProperty>>({});
-  const [showInvisibleProperties, setShowInvisibleProperties] = useState(false);
 
   useEffect(() => {
     const c = resourceOptions.propertyValueScopePriority;
@@ -195,6 +198,7 @@ const Properties = (props: Props) => {
         classNames={propertyClassNames}
         hidePropertyName={hidePropertyName}
         isLinked={pCtx.visible}
+        layout="vertical"
         property={property}
         valueScopePriority={valueScopePriority}
         values={propertyValues.values}
@@ -227,46 +231,63 @@ const Properties = (props: Props) => {
   };
 
   const renderContext = buildRenderContext();
+  const visibleProperties = renderContext.filter((x) => x.visible);
+  const invisibleProperties = renderContext.filter((x) => !x.visible);
 
   // log(renderContext);
+
+  const gridStyle = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` };
 
   return (
     <div>
       {propertyInnerDirection == "hoz" ? (
-        <div
-          className={`grid gap-x-4 gap-y-1 ${className} items-center overflow-visible`}
-          style={{ gridTemplateColumns: "max(120px) minmax(0, 1fr)" }}
-        >
-          {renderContext
-            .filter((x) => showInvisibleProperties || x.visible)
-            .map((pCtx) => {
-              return renderProperty(pCtx);
-            })}
-        </div>
+        <>
+          <div
+            className={`grid gap-x-4 gap-y-2 ${className} items-start overflow-visible`}
+            style={gridStyle}
+          >
+            {visibleProperties.map((pCtx) => renderProperty(pCtx))}
+          </div>
+          {invisibleProperties.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 my-3 opacity-50">
+                <Divider className="flex-1" />
+                <span className="text-xs text-default-400 whitespace-nowrap">
+                  {t("The following properties are not bound to resource profiles")}
+                </span>
+                <Divider className="flex-1" />
+              </div>
+              <div
+                className={`grid gap-x-4 gap-y-2 ${className} items-start overflow-visible`}
+                style={gridStyle}
+              >
+                {invisibleProperties.map((pCtx) => renderProperty(pCtx))}
+              </div>
+            </>
+          )}
+        </>
       ) : (
         <div className={"flex flex-col gap-4"}>
-          {renderContext
-            .filter((x) => showInvisibleProperties || x.visible)
-            .map((pCtx) => {
-              return <div className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>;
-            })}
+          {visibleProperties.map((pCtx) => (
+            <div className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
+          ))}
+          {invisibleProperties.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 my-1 opacity-50">
+                <Divider className="flex-1" />
+                <span className="text-xs text-default-400 whitespace-nowrap">
+                  {t("The following properties are not bound to resource profiles")}
+                </span>
+                <Divider className="flex-1" />
+              </div>
+              {invisibleProperties.map((pCtx) => (
+                <div className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
+              ))}
+            </>
+          )}
         </div>
       )}
       {renderContext.length == 0 ? noPropertyContent : null}
-      {!showInvisibleProperties && renderContext.some((r) => !r.visible) && (
-        <div className={"flex items-center justify-center my-2"}>
-          <Button
-            color={"primary"}
-            size={"sm"}
-            variant={"light"}
-            onClick={() => {
-              setShowInvisibleProperties(true);
-            }}
-          >
-            {t<string>("Show properties not bound to resource profiles")}
-          </Button>
-        </div>
-      )}
     </div>
   );
 };

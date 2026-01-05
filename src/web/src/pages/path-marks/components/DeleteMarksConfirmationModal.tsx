@@ -63,11 +63,11 @@ const DeleteMarksConfirmationModal = ({
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
-          children: t("Delete"),
+          children: t("common.action.delete"),
           color: "danger",
         },
       }}
-      title={t("Confirm Delete Marks")}
+      title={t("pathMarks.modal.confirmDeleteTitle")}
       onDestroyed={onDestroyed}
       onOk={handleConfirm}
     >
@@ -77,17 +77,17 @@ const DeleteMarksConfirmationModal = ({
           <AiOutlineWarning className="text-danger text-xl flex-shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-danger-700 font-medium">
-              {t("You are about to delete {{count}} mark(s)", { count: totalMarksCount })}
+              {t("pathMarks.status.aboutToDeleteMarks", { count: totalMarksCount })}
             </p>
             <p className="text-danger-600 text-sm mt-1">
-              {t("This action cannot be undone.")}
+              {t("pathMarks.warning.cannotBeUndone")}
             </p>
           </div>
         </div>
 
         {/* Main path */}
         <div className="border border-default-200 rounded-lg p-3">
-          <div className="font-medium text-sm mb-2">{t("Main Path")}</div>
+          <div className="font-medium text-sm mb-2">{t("pathMarks.label.mainPath")}</div>
           <div className="flex items-start gap-2 text-sm">
             <div className="flex-1 min-w-0">
               <div className="font-mono text-xs break-all text-danger">{path}</div>
@@ -109,7 +109,7 @@ const DeleteMarksConfirmationModal = ({
                 onValueChange={setIncludeChildPaths}
               >
                 <span className="text-sm font-medium">
-                  {t("Also delete {{count}} mark(s) from {{pathCount}} child path(s)", {
+                  {t("pathMarks.checkbox.alsoDeleteChildMarks", {
                     count: childMarksCount,
                     pathCount: childPaths.length
                   })}

@@ -79,15 +79,15 @@ const getSyncStatusTooltip = (status?: number, t?: (key: string) => string) => {
 
   switch (status) {
     case PathMarkSyncStatus.Pending:
-      return translate("Pending Sync");
+      return translate("pathMarkConfig.status.pending");
     case PathMarkSyncStatus.Syncing:
-      return translate("Syncing...");
+      return translate("pathMarkConfig.status.syncing");
     case PathMarkSyncStatus.Synced:
-      return translate("Synced");
+      return translate("pathMarkConfig.status.synced");
     case PathMarkSyncStatus.Failed:
-      return translate("Sync Failed");
+      return translate("pathMarkConfig.status.failed");
     case PathMarkSyncStatus.PendingDelete:
-      return translate("Pending Delete");
+      return translate("pathMarkConfig.status.pendingDelete");
     default:
       return "";
   }
@@ -98,13 +98,13 @@ const getMarkTypeLabel = (type?: number, t?: (key: string) => string) => {
 
   switch (type) {
     case PathMarkType.Resource:
-      return translate("Resource");
+      return translate("common.label.resource");
     case PathMarkType.Property:
-      return translate("Property");
+      return translate("common.label.property");
     case PathMarkType.MediaLibrary:
-      return translate("Media Library");
+      return translate("common.label.mediaLibrary");
     default:
-      return translate("Unknown");
+      return translate("pathMarkConfig.status.unknown");
   }
 };
 
@@ -162,9 +162,9 @@ const PathMarkChip = ({
     setSyncing(true);
     try {
       await BApi.pathMark.startPathMarkSync([mark.id]);
-      toast.success(t("Sync started"));
+      toast.success(t("pathMarkConfig.success.syncStarted"));
     } catch (err) {
-      toast.danger(t("Failed to start sync"));
+      toast.danger(t("pathMarkConfig.error.syncFailed"));
     } finally {
       setSyncing(false);
     }
@@ -217,7 +217,7 @@ const PathMarkChip = ({
     <Tooltip
       content={
         <div className="flex flex-col gap-1">
-          <span>{t("Click to edit, right-click to delete")}</span>
+          <span>{t("pathMarkConfig.tip.clickToEditRightClickDelete")}</span>
           {mark.syncStatus !== undefined && (
             <span className="text-xs opacity-80">
               {getSyncStatusTooltip(mark.syncStatus, t)}
@@ -226,13 +226,13 @@ const PathMarkChip = ({
           )}
           {isTaskRunning && (
             <span className="text-xs opacity-80">
-              {t("Syncing")}: {Math.round(taskProgress)}%
+              {t("pathMarkConfig.status.syncProgress", { progress: Math.round(taskProgress) })}
             </span>
           )}
           {mark.expiresInSeconds != null && mark.expiresInSeconds > 0 && (
             <span className="text-xs opacity-80 flex items-center gap-1">
               <AiOutlineFieldTime className="text-base" />
-              {t("Re-check after")} {formatDuration(mark.expiresInSeconds, t)}
+              {t("pathMarkConfig.tip.recheckAfter")} {formatDuration(mark.expiresInSeconds, t)}
             </span>
           )}
           {canSync && (
@@ -245,7 +245,7 @@ const PathMarkChip = ({
               startContent={!syncing && <AiOutlineSync className="text-base" />}
               onPress={handleSyncMark}
             >
-              {t("Sync now")}
+              {t("pathMarkConfig.action.syncNow")}
             </Button>
           )}
         </div>

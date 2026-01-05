@@ -27,7 +27,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public List<SavedSearch> SavedSearches { get; set; } = [];
         public int[]? IdsOfMediaLibraryRecentlyMovedTo { get; set; }
         public List<ResourceFilter> RecentFilters { get; set; } = [];
-        public SynchronizationOptionsModel? SynchronizationOptions { get; set; }
+        public SynchronizationOptionsModel? SynchronizationOptions { get; set; } = new();
         /// <summary>
         /// When enabled, keep original resource identity when the folder path changes
         /// by writing a bakabase.json file containing the resource id and reusing it on next sync.
@@ -35,12 +35,13 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
         public bool KeepResourcesOnPathChange { get; set; }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="id"></param>
         /// <param name="translationOfSearch">Default to 'Search' (in english).</param>
         /// <param name="search"></param>
-        public SavedSearch BuildNewSavedSearch(string? id, string translationOfSearch, ResourceSearchDbModel? search)
+        /// <param name="displayMode"></param>
+        public SavedSearch BuildNewSavedSearch(string? id, string translationOfSearch, ResourceSearchDbModel? search, FilterDisplayMode displayMode = FilterDisplayMode.Simple)
         {
             id ??= Guid.NewGuid().ToString("N")[..6];
             var ss = SavedSearches.FirstOrDefault(x => x.Id == id);
@@ -56,7 +57,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
                 .Select(x => int.TryParse(x, out var no) ? no : 0).ToList();
             var nextNo = Math.Max((candidateNoList.Any() ? candidateNoList.Max() : 0) + 1, SavedSearches.Count);
 
-            return new SavedSearch { Id = id, Name = $"{translationOfSearch} {nextNo}", Search = search };
+            return new SavedSearch { Id = id, Name = $"{translationOfSearch} {nextNo}", Search = search, DisplayMode = displayMode };
         }
 
         public record ResourceFilter
@@ -118,6 +119,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain
             public string Id { get; set; } = Guid.NewGuid().ToString("N")[..6];
             public ResourceSearchDbModel Search { get; set; } = null!;
             public string Name { get; set; } = string.Empty;
+            public FilterDisplayMode DisplayMode { get; set; } = FilterDisplayMode.Simple;
         }
 
         public record SynchronizationOptionsModel

@@ -92,7 +92,7 @@ const DurationInput = ({
             isDisabled={isDisabled}
             onChange={(e) => handlePartChange("days", e.target.value)}
           />
-          <span className="text-default-500 text-sm">{t("d")}</span>
+          <span className="text-default-500 text-sm">{t("common.unit.days")}</span>
         </div>
       )}
       {showHours && (
@@ -107,7 +107,7 @@ const DurationInput = ({
             isDisabled={isDisabled}
             onChange={(e) => handlePartChange("hours", e.target.value)}
           />
-          <span className="text-default-500 text-sm">{t("h")}</span>
+          <span className="text-default-500 text-sm">{t("common.unit.hours")}</span>
         </div>
       )}
       {showMinutes && (
@@ -122,7 +122,7 @@ const DurationInput = ({
             isDisabled={isDisabled}
             onChange={(e) => handlePartChange("minutes", e.target.value)}
           />
-          <span className="text-default-500 text-sm">{t("m")}</span>
+          <span className="text-default-500 text-sm">{t("common.unit.minutes")}</span>
         </div>
       )}
       {showSeconds && (
@@ -137,7 +137,7 @@ const DurationInput = ({
             isDisabled={isDisabled}
             onChange={(e) => handlePartChange("seconds", e.target.value)}
           />
-          <span className="text-default-500 text-sm">{t("s")}</span>
+          <span className="text-default-500 text-sm">{t("common.unit.seconds")}</span>
         </div>
       )}
     </div>
@@ -154,22 +154,22 @@ export default DurationInput;
  * @returns Formatted string like "1d 2h 30m 15s" or "1 hour 30 minutes"
  */
 export const formatDuration = (seconds: number, t: (key: string) => string): string => {
-  if (seconds <= 0) return t("Never");
+  if (seconds <= 0) return t("common.state.never");
 
   const parts = secondsToParts(seconds);
   const result: string[] = [];
 
   if (parts.days > 0) {
-    result.push(`${parts.days}${t("d")}`);
+    result.push(`${parts.days}${t("common.unit.days")}`);
   }
   if (parts.hours > 0) {
-    result.push(`${parts.hours}${t("h")}`);
+    result.push(`${parts.hours}${t("common.unit.hours")}`);
   }
   if (parts.minutes > 0) {
-    result.push(`${parts.minutes}${t("m")}`);
+    result.push(`${parts.minutes}${t("common.unit.minutes")}`);
   }
   if (parts.seconds > 0 || result.length === 0) {
-    result.push(`${parts.seconds}${t("s")}`);
+    result.push(`${parts.seconds}${t("common.unit.seconds")}`);
   }
 
   return result.join(" ");

@@ -1,0 +1,19 @@
+{
+  "error.title": "Error",
+  "error.load.data": "Failed to load data",
+  "error.save.mark": "Failed to save mark",
+  "error.delete.mark": "Failed to delete mark",
+  "error.delete.marks": "Failed to delete marks",
+  "error.update.app": "Failed to update app",
+  "error.add.mediaLibrary": "Failed to add media library",
+  "error.remove.mediaLibrary": "Failed to remove media library",
+  "error.update.property": "Failed to update property",
+  "error.process.data": "Failed to process data",
+  "error.get.latestVersion": "Failed to get latest version",
+  "error.add.marks": "Failed to add marks",
+  "error.paste.marks": "Failed to paste marks",
+  "error.transfer.marks": "Failed to transfer marks",
+  "error.start.sync": "Failed to start sync",
+  "error.update.option": "Failed to update option",
+  "error.unknown": "Unknown error"
+}

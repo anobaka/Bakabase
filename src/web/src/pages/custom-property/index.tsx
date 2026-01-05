@@ -71,7 +71,7 @@ const CustomPropertyPage = () => {
               });
             }}
           >
-            {t<string>("Add")}
+            {t<string>("common.action.add")}
           </Button>
           <div>
             <Input
@@ -89,7 +89,7 @@ const CustomPropertyPage = () => {
               createPortal(TypeConversionRuleOverviewDialog, {});
             }}
           >
-            {t<string>("Check type conversion rules")}
+            {t<string>("customProperty.action.checkTypeConversionRules")}
           </Button>
           <Button
             color={"default"}
@@ -103,7 +103,7 @@ const CustomPropertyPage = () => {
             }}
           >
             <SortAscendingOutlined className={"text-base"} />
-            {t<string>("Adjust display orders")}
+            {t<string>("customProperty.action.adjustDisplayOrders")}
           </Button>
         </div>
         <div />

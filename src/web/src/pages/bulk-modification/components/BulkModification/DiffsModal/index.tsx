@@ -101,7 +101,7 @@ const DiffsModal = ({ bmId, onDestroyed }: Props) => {
         <div className={"flex items-center gap-8"}>
           <Input
             endContent={<Kbd keys={["enter"]} />}
-            placeholder={t<string>("Search")}
+            placeholder={t<string>("common.action.search")}
             size={"sm"}
             startContent={<SearchOutlined className={"text-base"} />}
             value={keyword}
@@ -119,27 +119,23 @@ const DiffsModal = ({ bmId, onDestroyed }: Props) => {
         data.length == 0 ? (
           <div className={"flex justify-center mt-4"}>
             <div>
-              <div>{t<string>("No data")}</div>
+              <div>{t<string>("bulkModification.empty.noData")}</div>
               <div>
                 1.{" "}
-                {t<string>(
-                  "Please ensure that the calculation operation has been executed.",
-                )}
+                {t<string>("bulkModification.info.ensureCalculation")}
               </div>
               <div>
                 2.{" "}
-                {t<string>(
-                  "If the calculation operation has been executed, there may be no resources that will be changed.",
-                )}
+                {t<string>("bulkModification.info.noResourcesToChange")}
               </div>
-              <div>3. {t<string>("Please check the search criteria.")}</div>
+              <div>3. {t<string>("bulkModification.error.checkCriteria")}</div>
             </div>
           </div>
         ) : (
           <Table removeWrapper>
             <TableHeader>
-              <TableColumn>{t<string>("Resource")}</TableColumn>
-              <TableColumn>{t<string>("Diffs")}</TableColumn>
+              <TableColumn>{t<string>("bulkModification.label.resource")}</TableColumn>
+              <TableColumn>{t<string>("bulkModification.label.diffs")}</TableColumn>
             </TableHeader>
             <TableBody>
               {data.map((d) => {

@@ -1,0 +1,12 @@
+{
+  "fileMover.status.enabled": "Enabled",
+  "fileMover.status.disabled": "Disabled",
+  "fileMover.label.delay": "Delay",
+  "fileMover.tip.delay": "Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.",
+  "fileMover.label.sources": "Sources",
+  "fileMover.action.addSource": "Add source",
+  "fileMover.action.addTarget": "Add target path",
+  "fileMover.empty.noSources": "No sources configured",
+  "fileMover.label.overwrite": "Overwrite",
+  "fileMover.tip.overwrite": "Overwrite files in target path"
+}

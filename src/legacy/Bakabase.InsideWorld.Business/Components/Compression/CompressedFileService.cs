@@ -19,6 +19,8 @@ using Bakabase.InsideWorld.Models.Extensions;
 using Microsoft.AspNetCore.Http;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Constants;
+using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
+using Bakabase.InsideWorld.Business.Components.Dependency.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Components.Compression
@@ -28,16 +30,24 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
         private readonly IWebHostEnvironment _env;
         private readonly SevenZipService? _sevenZipService;
         private readonly ILogger<CompressedFileService> _logger;
+        private readonly IDependencyLocalizer? _dependencyLocalizer;
+
+        // Compound formats that require two-stage extraction (e.g., .tar.gz -> .tar -> files)
+        private static readonly HashSet<string> CompoundFormats = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.Z", ".tar.lz", ".tar.lzma", ".tgz"
+        };
 
         public CompressedFileService(IWebHostEnvironment env, ILogger<CompressedFileService> logger,
-            SevenZipService? sevenZipService = null)
+            SevenZipService? sevenZipService = null, IDependencyLocalizer? dependencyLocalizer = null)
         {
             _env = env;
             _logger = logger;
             _sevenZipService = sevenZipService;
+            _dependencyLocalizer = dependencyLocalizer;
         }
 
-        private string? GetSevenZipExecutable()
+        protected virtual string? GetSevenZipExecutable()
         {
             // Use SevenZipService if available and installed
             if (_sevenZipService?.Status == DependentComponentStatus.Installed)
@@ -52,10 +62,28 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 }
             }
 
-            // No 7z available
+            // Log warning with current status
             _logger.LogWarning("7z executable not found. SevenZipService status: {Status}",
                 _sevenZipService?.Status.ToString() ?? "null");
             return null;
+        }
+
+        private Exception CreateDependencyNotInstalledException()
+        {
+            var sevenZipDisplayName = _sevenZipService?.DisplayName ?? "7-Zip";
+
+            // Check if 7z is currently being installed
+            if (_sevenZipService?.Status == DependentComponentStatus.Installing)
+            {
+                var message = _dependencyLocalizer?.Dependency_Installing_Message(sevenZipDisplayName)
+                    ?? $"{sevenZipDisplayName} is currently being installed. Please wait for it to complete.";
+                return new DependencyNotInstalledException("7z", sevenZipDisplayName, message);
+            }
+
+            // 7z is not installed
+            var notInstalledMessage = _dependencyLocalizer?.Dependency_NotInstalled_Message(sevenZipDisplayName)
+                ?? $"{sevenZipDisplayName} is required for archive extraction. Please install it in the system settings page.";
+            return new DependencyNotInstalledException("7z", sevenZipDisplayName, notInstalledMessage);
         }
 
         public async Task ExtractToCurrentDirectory(string compressedFilePath, bool overwrite, CancellationToken ct)
@@ -63,26 +91,88 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var sevenZipExe = GetSevenZipExecutable();
             if (sevenZipExe == null)
             {
-                throw new Exception("7z executable not found. Please install 7-Zip via SevenZipService.");
+                throw CreateDependencyNotInstalledException();
             }
 
+            var fileName = Path.GetFileName(compressedFilePath);
+
+            // Check if this is a compound format requiring two-stage extraction
+            var compoundExt = CompoundFormats
+                .FirstOrDefault(ext => fileName.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+
+            if (compoundExt != null)
+            {
+                await ExtractCompoundFormat(compressedFilePath, compoundExt, overwrite, ct);
+            }
+            else
+            {
+                await ExtractSingleStage(compressedFilePath, Path.GetDirectoryName(compressedFilePath)!, overwrite, ct);
+            }
+        }
+
+        private async Task ExtractSingleStage(string compressedFilePath, string outputDir, bool overwrite, CancellationToken ct)
+        {
+            var sevenZipExe = GetSevenZipExecutable()!;
             var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
-            var dir = Path.GetDirectoryName(compressedFilePath);
 
             var arguments = new List<string>
             {
+                "x",
+                compressedFilePath,
                 password.IsNotEmpty() ? $"-p{password}" : null!,
                 overwrite ? "-y" : null!,
-                $"-o{dir}",
-                "x", compressedFilePath
+                $"-o{outputDir}"
             }.Where(a => a.IsNotEmpty()).ToArray();
 
             var command = Cli.Wrap(sevenZipExe).WithArguments(arguments, true);
-
             var result = await command.ExecuteAsync(ct);
+
             if (result.ExitCode != 0)
             {
                 throw new Exception($"Got exit code: {result.ExitCode} while executing [{command}]");
+            }
+        }
+
+        private async Task ExtractCompoundFormat(string compressedFilePath, string compoundExt, bool overwrite, CancellationToken ct)
+        {
+            var targetDir = Path.GetDirectoryName(compressedFilePath)!;
+            var tempDir = Path.Combine(Path.GetTempPath(), $"bakabase_extract_{Guid.NewGuid():N}");
+
+            try
+            {
+                Directory.CreateDirectory(tempDir);
+
+                // Stage 1: Extract outer layer to temp directory (e.g., .tar.gz -> .tar)
+                await ExtractSingleStage(compressedFilePath, tempDir, true, ct);
+
+                // Find the intermediate file (should be the only file in temp dir)
+                var intermediateFiles = Directory.GetFiles(tempDir);
+                if (intermediateFiles.Length == 0)
+                {
+                    _logger.LogWarning("No intermediate file found after first extraction of '{CompressedFile}'", compressedFilePath);
+                    return;
+                }
+
+                // Stage 2: Extract inner layer to target directory
+                foreach (var intermediateFile in intermediateFiles)
+                {
+                    await ExtractSingleStage(intermediateFile, targetDir, overwrite, ct);
+                }
+            }
+            finally
+            {
+                // Clean up temp directory
+                try
+                {
+                    if (Directory.Exists(tempDir))
+                    {
+                        Directory.Delete(tempDir, true);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to clean up temp directory: {TempDir}", tempDir);
+                }
             }
         }
 
@@ -92,7 +182,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var sevenZipExe = GetSevenZipExecutable();
             if (sevenZipExe == null)
             {
-                throw new Exception("7z executable not found. Please install 7-Zip via SevenZipService.");
+                throw CreateDependencyNotInstalledException();
             }
 
             var password = compressedFilePath.GetPasswordsFromPath().FirstOrDefault();
@@ -144,8 +234,8 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
                 var sevenZipExe = GetSevenZipExecutable();
                 if (sevenZipExe == null)
                 {
-                    return ListResponseBuilder<CompressedFileEntry>.Build(ResponseCode.SystemError,
-                        "7z executable not found. Please install 7-Zip via SevenZipService.");
+                    var ex = CreateDependencyNotInstalledException();
+                    return ListResponseBuilder<CompressedFileEntry>.Build(ResponseCode.SystemError, ex.Message);
                 }
 
                 var password = compressFilePath.GetPasswordsFromPath().FirstOrDefault();
@@ -290,7 +380,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var sevenZipExe = GetSevenZipExecutable();
             if (sevenZipExe == null)
             {
-                throw new Exception("7z executable not found. Please install 7-Zip via SevenZipService.");
+                throw CreateDependencyNotInstalledException();
             }
 
             var osb = new StringBuilder();
@@ -389,7 +479,7 @@ namespace Bakabase.InsideWorld.Business.Components.Compression
             var sevenZipExe = GetSevenZipExecutable();
             if (sevenZipExe == null)
             {
-                throw new Exception("7z executable not found. Please install 7-Zip via SevenZipService.");
+                throw CreateDependencyNotInstalledException();
             }
 
             var osb = new StringBuilder();

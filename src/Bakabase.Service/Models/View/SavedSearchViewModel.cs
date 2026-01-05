@@ -1,3 +1,5 @@
-﻿namespace Bakabase.Service.Models.View;
+﻿using Bakabase.Abstractions.Models.Domain.Constants;
 
-public record SavedSearchViewModel(string Id, ResourceSearchViewModel Search, string Name);
+namespace Bakabase.Service.Models.View;
+
+public record SavedSearchViewModel(string Id, ResourceSearchViewModel Search, string Name, FilterDisplayMode DisplayMode);

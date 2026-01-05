@@ -342,14 +342,14 @@ const DashboardPage = () => {
         <StatCard
           color="primary"
           icon={<AiOutlineDatabase className="text-2xl" />}
-          label={t<string>("Total Resources")}
-          subValue={t<string>("{{count}} libraries", { count: libraryCount })}
+          label={t<string>("dashboard.stat.totalResources")}
+          subValue={t<string>("dashboard.stat.libraryCount", { count: libraryCount })}
           value={totalResources.toLocaleString()}
         />
         <StatCard
           color="success"
           icon={<AiOutlineFolderOpen className="text-2xl" />}
-          label={t<string>("This Week")}
+          label={t<string>("dashboard.stat.thisWeek")}
           subValue={
             Number(weekGrowth) >= 0 ? `↑ ${weekGrowth}%` : `↓ ${Math.abs(Number(weekGrowth))}%`
           }
@@ -360,9 +360,9 @@ const DashboardPage = () => {
             <AiOutlineRise className="text-2xl" />
           </div>
           <div className="flex flex-col flex-1">
-            <span className="text-sm text-[var(--theme-text-subtle)]">{t<string>("Trend")}</span>
+            <span className="text-sm text-[var(--theme-text-subtle)]">{t<string>("dashboard.stat.trend")}</span>
             <div className="flex items-center justify-between">
-              <span className="text-lg font-semibold">{t<string>("12 weeks")}</span>
+              <span className="text-lg font-semibold">{t<string>("dashboard.stat.weeks")}</span>
               <TrendChart />
             </div>
           </div>
@@ -370,7 +370,7 @@ const DashboardPage = () => {
         <StatCard
           color="secondary"
           icon={<div className="text-xl font-bold">{propertyCoverage}%</div>}
-          label={t<string>("Data Completeness")}
+          label={t<string>("dashboard.stat.dataCompleteness")}
           value={`${property?.totalFilledPropertyValueCount ?? 0} / ${property?.totalExpectedPropertyValueCount ?? 0}`}
         />
       </section>
@@ -379,13 +379,13 @@ const DashboardPage = () => {
       <section className="flex gap-3">
         <Button className="flex-1" variant="flat" onPress={() => navigate("/resource")}>
           <AiOutlineSearch className="text-lg" />
-          {t<string>("Search")}
+          {t<string>("dashboard.action.search")}
         </Button>
         <Dropdown>
           <DropdownTrigger>
             <Button className="flex-1" variant="flat">
               <AiOutlineFolderOpen className="text-lg" />
-              {t<string>("Browse Libraries")}
+              {t<string>("dashboard.action.browseLibraries")}
             </Button>
           </DropdownTrigger>
           <DropdownMenu
@@ -412,7 +412,7 @@ const DashboardPage = () => {
         </Dropdown>
         <Button className="flex-1" variant="flat" onPress={() => navigate("/bulk-modification")}>
           <AiOutlineEdit className="text-lg" />
-          {t<string>("Bulk Operations")}
+          {t<string>("dashboard.action.bulkOperations")}
         </Button>
         <Button
           className="flex-1"
@@ -422,7 +422,7 @@ const DashboardPage = () => {
           onPress={handleRandomPlay}
         >
           <AiOutlineThunderbolt className="text-lg" />
-          {t<string>("Random Pick")}
+          {t<string>("dashboard.action.randomPick")}
         </Button>
       </section>
 
@@ -433,24 +433,24 @@ const DashboardPage = () => {
             <TabButton
               count={recentlyAdded.length}
               icon={<AiOutlineClockCircle />}
-              label={t<string>("Recently Added")}
+              label={t<string>("dashboard.tab.recentlyAdded")}
               tab="added"
             />
             <TabButton
               count={recentlyPlayed.length}
               icon={<AiOutlinePlayCircle />}
-              label={t<string>("Recently Played")}
+              label={t<string>("dashboard.tab.recentlyPlayed")}
               tab="played"
             />
             <TabButton
               count={pinnedResources.length}
               icon={<AiOutlinePushpin />}
-              label={t<string>("Pinned")}
+              label={t<string>("dashboard.tab.pinned")}
               tab="pinned"
             />
           </div>
           <Button size="sm" variant="light" onPress={() => navigate("/resource")}>
-            {t<string>("View all")}
+            {t<string>("dashboard.action.viewAll")}
             <AiOutlineArrowRight className="ml-1" />
           </Button>
         </div>
@@ -461,13 +461,13 @@ const DashboardPage = () => {
             {activeTab === "played" && <AiOutlinePlayCircle className="text-5xl" />}
             {activeTab === "pinned" && <AiOutlinePushpin className="text-5xl" />}
             <p>
-              {activeTab === "added" && t<string>("No resources yet")}
-              {activeTab === "played" && t<string>("No play history")}
-              {activeTab === "pinned" && t<string>("No pinned resources")}
+              {activeTab === "added" && t<string>("dashboard.empty.noResources")}
+              {activeTab === "played" && t<string>("dashboard.empty.noPlayHistory")}
+              {activeTab === "pinned" && t<string>("dashboard.empty.noPinned")}
             </p>
             {activeTab === "added" && (
               <Button color="primary" variant="flat" onPress={() => navigate("/media-library")}>
-                {t<string>("Add your resources")}
+                {t<string>("dashboard.action.addResources")}
               </Button>
             )}
           </div>
@@ -499,7 +499,7 @@ const DashboardPage = () => {
         {/* Library Distribution */}
         {(data.mediaLibraryResourceCounts ?? []).length > 0 && (
           <div className="bg-[var(--theme-block-background)] rounded-xl p-5">
-            <h3 className="text-lg font-semibold mb-3">{t<string>("Library Distribution")}</h3>
+            <h3 className="text-lg font-semibold mb-3">{t<string>("dashboard.section.libraryDistribution")}</h3>
             <div className="flex flex-wrap gap-2">
               {data.mediaLibraryResourceCounts?.map((lib) => (
                 <div

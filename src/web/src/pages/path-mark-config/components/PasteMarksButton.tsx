@@ -68,7 +68,7 @@ const PasteMarksButton = ({
       startContent={<AiOutlineSnippets />}
       onPress={handlePaste}
     >
-      {t("Paste {{count}} marks", { count: newMarks.length })}
+      {t("pathMarkConfig.action.pasteMarks", { count: newMarks.length })}
     </Button>
   );
 
@@ -76,7 +76,7 @@ const PasteMarksButton = ({
   if (existingCount > 0) {
     return (
       <Tooltip
-        content={t("{{count}} marks already exist", { count: existingCount })}
+        content={t("pathMarkConfig.tip.marksAlreadyExist", { count: existingCount })}
       >
         {button}
       </Tooltip>

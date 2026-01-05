@@ -13,6 +13,7 @@ using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg.Models;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Resources;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
@@ -36,6 +37,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Ff
         public override bool IsRequired => false;
 
         protected override IDiscoverer Discoverer { get; } = new FfMpegDiscoverer(loggerFactory);
+
+        /// <summary>
+        /// FfMpeg depends on 7z for extracting downloaded archives during installation
+        /// </summary>
+        protected override IEnumerable<Type> Dependencies => new[] { typeof(SevenZipService) };
 
         private const string HttpApi = "https://ffbinaries.com/api/v1/version/latest";
 

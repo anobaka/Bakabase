@@ -22,7 +22,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     return (
       <div className="flex items-center gap-2 text-sm text-default-500 py-2">
         <Spinner size="sm" />
-        <span>{t("Loading preview...")}</span>
+        <span>{t("pathMarkConfig.status.loadingPreview")}</span>
       </div>
     );
   }
@@ -36,7 +36,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
   if (results.length === 0) {
     return (
       <div className="bg-warning-50 text-warning-600 rounded p-2 text-xs">
-        {t("No matches found. Please check your configuration.")}
+        {t("pathMarkConfig.warning.noMatches")}
       </div>
     );
   }
@@ -45,7 +45,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
     if (!showSubdirectoriesSuffix) return null;
     return (
       <span className="text-primary-500 italic ml-1">
-        {t("and all subdirectories")}
+        {t("pathMarkConfig.label.andAllSubdirectories")}
       </span>
     );
   };
@@ -106,7 +106,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
                 variant="flat"
                 className="flex-shrink-0"
               >
-                <span className="font-semibold">{t("Property Value")}: <span className="font-bold">{result.propertyValue}</span></span>
+                <span className="font-semibold">{t("pathMarkConfig.label.propertyValue")}: <span className="font-bold">{result.propertyValue}</span></span>
               </Chip>
             )}
           </div>
@@ -130,7 +130,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
                 variant="flat"
                 className="flex-shrink-0"
               >
-                <span className="font-semibold">{t("Media Library")}: <span className="font-bold">{result.propertyValue}</span></span>
+                <span className="font-semibold">{t("common.label.mediaLibrary")}: <span className="font-bold">{result.propertyValue}</span></span>
               </Chip>
             )}
           </div>
@@ -153,7 +153,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
   if (isMultiplePaths && resultsByPath && resultsByPath.length > 0) {
     return (
       <div className="bg-default-100 rounded p-2">
-        <div className="text-xs text-default-500 mb-1">{t("Preview matches")}:</div>
+        <div className="text-xs text-default-500 mb-1">{t("pathMarkConfig.label.previewMatches")}:</div>
         <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
           {resultsByPath.map((group, groupIdx) => (
             <div key={groupIdx} className="border-l-2 border-primary-200 pl-2">
@@ -172,7 +172,7 @@ const PreviewResults = ({ loading, results, resultsByPath, isMultiplePaths, erro
 
   return (
     <div className="bg-default-100 rounded p-2">
-      <div className="text-xs text-default-500 mb-1">{t("Preview matches")}:</div>
+      <div className="text-xs text-default-500 mb-1">{t("pathMarkConfig.label.previewMatches")}:</div>
       <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
         {results.map((result, idx) => renderResult(result, idx))}
       </div>

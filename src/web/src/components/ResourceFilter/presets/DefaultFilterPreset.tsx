@@ -6,8 +6,7 @@ import type { IProperty } from "@/components/Property/models";
 import BApi from "@/sdk/BApi";
 import PropertySelector from "@/components/PropertySelector";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
-import ParentResourceValueRenderer from "../components/ParentResourceValueRenderer";
-import { PropertyPool, InternalProperty } from "@/sdk/constants";
+import { PropertyPool } from "@/sdk/constants";
 
 /**
  * 创建默认的 Filter 配置
@@ -52,7 +51,7 @@ export function createDefaultFilterConfig(
     },
 
     renderers: {
-      openPropertySelector: (currentSelection, onSelect, onCancel) => {
+      openPropertySelector: (currentSelection, onSelect, onCancel, disabledProperties) => {
         createPortal(PropertySelector, {
           v2: true,
           selection: currentSelection
@@ -74,27 +73,13 @@ export function createDefaultFilterConfig(
           pool: PropertyPool.All,
           addable: false,
           editable: false,
+          isDisabled: disabledProperties?.length
+            ? (p: IProperty) => disabledProperties.some(dp => dp.id === p.id && dp.pool === p.pool)
+            : undefined,
         });
       },
 
       renderValueInput: (property, dbValue, bizValue, onValueChange, options) => {
-        // Special handling for ParentResource property
-        if (property.pool === PropertyPool.Internal && property.id === InternalProperty.ParentResource) {
-          return (
-            <ParentResourceValueRenderer
-              property={property}
-              bizValue={bizValue}
-              dbValue={dbValue}
-              defaultEditing={options?.defaultEditing}
-              operation={options?.operation}
-              size={options?.size ?? "sm"}
-              variant={options?.variant ?? "light"}
-              onValueChange={options?.isReadonly ? undefined : onValueChange}
-              isReadonly={options?.isReadonly}
-            />
-          );
-        }
-
         return (
           <PropertyValueRenderer
             bizValue={bizValue}
@@ -103,7 +88,9 @@ export function createDefaultFilterConfig(
             property={property}
             size={options?.size ?? "sm"}
             variant={options?.variant ?? "light"}
-            onValueChange={options?.isReadonly ? undefined : onValueChange}
+            onValueChange={onValueChange}
+            isReadonly={options?.isReadonly}
+            isEditing={options?.isEditing}
           />
         );
       },

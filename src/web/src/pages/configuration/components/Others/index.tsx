@@ -46,11 +46,11 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
 
   const proxies = [
     {
-      label: t("Do not use proxy"),
+      label: t("configuration.others.proxy.doNotUse"),
       value: ProxyMode.DoNotUse.toString(),
     },
     {
-      label: t("Use system proxy"),
+      label: t("configuration.others.proxy.useSystem"),
       value: ProxyMode.UseSystem.toString(),
     },
     ...(networkOptions.customProxies?.map((c) => ({
@@ -75,8 +75,8 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
 
   const otherSettings = [
     {
-      label: "Proxy",
-      tip: "You can set a proxy for network requests, such as socks5://127.0.0.1:18888",
+      label: "configuration.others.proxy",
+      tip: "configuration.others.proxy.tip",
       renderValue: () => {
         return (
           <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
                   }
                   BApi.options.patchNetworkOptions(patches).then((x) => {
                     if (!x.code) {
-                      toast.success(t("Saved"));
+                      toast.success(t("common.success.saved"));
                     }
                   });
                 }}
@@ -129,18 +129,16 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
                 createPortal(Modal, {
                   defaultVisible: true,
                   size: "lg",
-                  title: t("Add a proxy"),
+                  title: t("configuration.others.proxy.addModal.title"),
                   children: (
                     <Input
-                      placeholder={t(
-                        "You can set a proxy for network requests, such as socks5://127.0.0.1:18888",
-                      )}
+                      placeholder={t("configuration.others.proxy.tip")}
                       onValueChange={(v) => (p = v)}
                     />
                   ),
                   onOk: async () => {
                     if (p === undefined || p.length === 0) {
-                      toast.error(t("Invalid Data"));
+                      toast.error(t("common.error.invalidData"));
                       throw new Error("Invalid data");
                     }
                     await BApi.options.patchNetworkOptions({
@@ -153,15 +151,15 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
                 });
               }}
             >
-              {t("Add")}
+              {t("common.action.add")}
             </Button>
           </div>
         );
       },
     },
     {
-      label: "Enable pre-release channel",
-      tip: "Prefer pre-release version which has new features but less stability",
+      label: "configuration.others.enablePreRelease",
+      tip: "configuration.others.enablePreRelease.tip",
       renderValue: () => {
         return (
           <Switch
@@ -178,8 +176,8 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "Enable anonymous data tracking",
-      tip: "We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.",
+      label: "configuration.others.enableTracking",
+      tip: "configuration.others.enableTracking.tip",
       renderValue: () => {
         return (
           <Switch
@@ -196,8 +194,8 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "Max parallelism",
-      tip: "Maximum degree of parallelism for CPU-intensive operations. Set to 1 to disable parallelism. Leave empty for default (half of CPU cores).",
+      label: "configuration.others.maxParallelism",
+      tip: "configuration.others.maxParallelism.tip",
       renderValue: () => {
         return (
           <Input
@@ -244,7 +242,7 @@ const Others: React.FC<OthersProps> = ({ applyPatches }) => {
         <Table removeWrapper>
           <TableHeader>
             <TableColumn width={200}>
-              {t("Other settings")}
+              {t("configuration.others.title")}
             </TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>

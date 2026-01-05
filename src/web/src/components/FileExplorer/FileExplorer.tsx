@@ -589,7 +589,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
           </Button>
           <Button
             isIconOnly
-            isDisabled={!root?.path}
+            isDisabled={getStandardParentPath(root?.path) === undefined}
             radius={"none"}
             size={"sm"}
             variant={"light"}
@@ -597,7 +597,7 @@ const FileExplorer = forwardRef<FileExplorerRef, FileExplorerProps>(
               if (root) {
                 const newRootPath = getStandardParentPath(root.path);
 
-                if (newRootPath) {
+                if (newRootPath !== undefined) {
                   initialize(newRootPath);
                 }
               }

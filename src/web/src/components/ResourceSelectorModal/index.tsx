@@ -2,7 +2,7 @@
 
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { Resource as ResourceModel } from "@/core/models/Resource";
-import type { SearchCriteria } from "@/components/ResourceFilter/components/ResourceSearchPanel";
+import type { SearchCriteria } from "@/components/ResourceFilter";
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -171,7 +171,6 @@ const ResourceSelectorModal: React.FC<ResourceSelectorModalProps> = ({
             compact
             criteria={criteria}
             showKeyword={false}
-            showQuickFilters={false}
             showRecentFilters={false}
             showTags
             onChange={handleCriteriaChange}

@@ -42,7 +42,7 @@ const CookieValidator = ({
       <div>
         <Textarea
           description={description}
-          label={t("Cookie validator")}
+          label={t("cookieValidator.label.cookieValidator")}
           size={"sm"}
           value={cookie}
           onValueChange={(v) => {
@@ -78,7 +78,7 @@ const CookieValidator = ({
             }
           }}
         >
-          {t<string>("Validate")}
+          {t<string>("common.action.validate")}
         </Button>
         {renderStatus()}
       </div>

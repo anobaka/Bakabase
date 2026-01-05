@@ -51,6 +51,12 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             ? Path.Combine(Context.Location!, name)
             : throw new Exception($"{DisplayName} is not ready");
 
+        /// <summary>
+        /// Override this property to declare dependencies that must be installed before this component.
+        /// The dependencies will be automatically installed during the installation process.
+        /// </summary>
+        protected virtual IEnumerable<Type> Dependencies => Enumerable.Empty<Type>();
+
         protected abstract Task InstallCore(CancellationToken ct);
 
         public virtual async Task Install(CancellationToken ct)
@@ -58,6 +64,33 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency
             if (Status == DependentComponentStatus.Installing)
             {
                 return;
+            }
+
+            // Check and install dependencies first
+            var dependencyLocalizer = _globalServiceProvider.GetRequiredService<IDependencyLocalizer>();
+            foreach (var dependencyType in Dependencies)
+            {
+                var dependencyService = _globalServiceProvider.GetRequiredService(dependencyType) as IDependentComponentService;
+                if (dependencyService == null)
+                {
+                    throw new InvalidOperationException($"Dependency type {dependencyType.Name} is not a valid IDependentComponentService");
+                }
+
+                if (dependencyService.Status == DependentComponentStatus.Installing)
+                {
+                    var message = dependencyLocalizer.Dependency_Installing_Message(dependencyService.DisplayName);
+                    Logger.LogWarning(message);
+                    throw new InvalidOperationException(message);
+                }
+
+                if (dependencyService.Status != DependentComponentStatus.Installed)
+                {
+                    var message = dependencyLocalizer.Dependency_Required_Message(dependencyService.DisplayName, DisplayName);
+                    Logger.LogInformation(message);
+
+                    // Automatically install the dependency
+                    await dependencyService.Install(ct);
+                }
             }
 
             Status = DependentComponentStatus.Installing;

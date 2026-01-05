@@ -18,19 +18,36 @@ type NumberValueRendererProps = ValueRendererProps<number, number> & {
 
 const log = buildLogger("NumberValueRenderer");
 const NumberValueRenderer = (props: NumberValueRendererProps) => {
-  const { value, precision, editor, variant, suffix, as, size, ...otherProps } =
+  const { value, precision, editor, variant, suffix, as, size, isReadonly: propsIsReadonly, isEditing, ...otherProps } =
     props;
 
   log(props);
 
+  // Default isReadonly to true if no editor is provided
+  const isReadonly = propsIsReadonly ?? !editor;
+
   const [editing, setEditing] = useState(false);
 
-  const startEditing = editor ? () => setEditing(true) : undefined;
+  const startEditing = !isReadonly && editor ? () => setEditing(true) : undefined;
+
+  // Direct editing mode: always show input without toggle
+  if (isEditing && !isReadonly && editor) {
+    return (
+      <NumberValueEditor
+        value={value}
+        size={size}
+        onValueChange={(dbValue, bizValue) => {
+          editor.onValueChange?.(dbValue, bizValue);
+        }}
+      />
+    );
+  }
 
   if (editing) {
     return (
       <NumberValueEditor
         value={value}
+        size={size}
         onValueChange={(dbValue, bizValue) => {
           editor?.onValueChange?.(dbValue, bizValue);
           setEditing(false);
@@ -45,7 +62,7 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
 
   if (variant == "light" || as == "number") {
     return (
-      <span onClick={startEditing}>
+      <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>
         {value}
         {suffix}
       </span>

@@ -71,10 +71,10 @@ const RecentlyPlayedDrawer = ({ isOpen, onClose }: IProps) => {
     >
       <DrawerContent>
         <DrawerHeader className="flex flex-col gap-1">
-          {t("Recently played")}
+          {t("resource.recentlyPlayed.title")}
           {totalCount > 0 && (
             <span className="text-sm text-default-500">
-              {t("{{count}} resources", { count: totalCount })}
+              {t("resource.recentlyPlayed.count", { count: totalCount })}
             </span>
           )}
         </DrawerHeader>
@@ -85,7 +85,7 @@ const RecentlyPlayedDrawer = ({ isOpen, onClose }: IProps) => {
             </div>
           ) : resources.length === 0 ? (
             <div className="flex justify-center items-center h-full text-default-500">
-              {t("No recently played resources")}
+              {t("resource.recentlyPlayed.empty")}
             </div>
           ) : (
             <div className="flex flex-col gap-4">

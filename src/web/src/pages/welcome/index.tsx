@@ -33,9 +33,7 @@ const WelcomePage = () => {
           </span>
         </div>
         <div className={"flex items-center gap-1"}>
-          {t<string>(
-            "Please read terms and conditions carefully before you start to use this app",
-          )}
+          {t<string>("welcome.info.termsNotice")}
           <Popover
             trigger={
               <Button
@@ -44,13 +42,11 @@ const WelcomePage = () => {
                 radius={"sm"}
                 variant={"light"}
               >
-                {t<string>("Click to check")}
+                {t<string>("welcome.action.clickToCheck")}
               </Button>
             }
           >
-            {t<string>(
-              "We are using Microsoft Clarity to track anonymous data, which will help us to improve our product experience.",
-            )}
+            {t<string>("welcome.info.clarityNotice")}
           </Popover>
         </div>
         <div className={"flex justify-center"}>
@@ -62,7 +58,7 @@ const WelcomePage = () => {
               });
             }}
           >
-            {t<string>("Accept and start to use")}
+            {t<string>("welcome.action.acceptAndStart")}
           </Button>
         </div>
       </div>

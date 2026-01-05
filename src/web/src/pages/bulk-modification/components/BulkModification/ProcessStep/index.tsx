@@ -12,13 +12,12 @@ import React, { useState } from "react";
 import { DeleteOutlined } from "@ant-design/icons";
 import { useUpdateEffect } from "react-use";
 
-import { StringValueProcessDemonstrator } from "../Processes/StringValueProcess";
-import { ListStringValueProcessDemonstrator } from "../Processes/ListStringValueProcess";
+import StepDemonstrator from "../StepDemonstrator";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ProcessStepModal from "@/pages/bulk-modification/components/BulkModification/ProcessStepModal";
-import { type BulkModificationProcessorValueType, PropertyType } from "@/sdk/constants";
+import type { BulkModificationProcessorValueType } from "@/sdk/constants";
 
 type Props = {
   no: any;
@@ -50,47 +49,7 @@ const ProcessStep = ({
   }, [propsStep]);
 
   const renderDemonstrator = () => {
-    switch (property.type) {
-      case PropertyType.SingleLineText:
-      case PropertyType.MultilineText:
-      case PropertyType.Formula:
-      case PropertyType.SingleChoice:
-        return (
-          <StringValueProcessDemonstrator
-            operation={step.operation}
-            options={step.options}
-            variables={variables}
-          />
-        );
-      case PropertyType.MultipleChoice:
-      case PropertyType.Attachment:
-        return (
-          <ListStringValueProcessDemonstrator
-            operation={step.operation}
-            options={step.options}
-            property={property}
-            variables={variables}
-          />
-        );
-      case PropertyType.Number:
-      case PropertyType.Percentage:
-      case PropertyType.Rating:
-        break;
-      case PropertyType.Boolean:
-        break;
-      case PropertyType.Link:
-        break;
-      case PropertyType.Date:
-      case PropertyType.DateTime:
-      case PropertyType.Time:
-        break;
-      case PropertyType.Multilevel:
-        break;
-      case PropertyType.Tags:
-        break;
-    }
-
-    return t<string>("Not supported");
+    return <StepDemonstrator property={property} step={step} variables={variables} />;
   };
 
   return (
@@ -132,8 +91,8 @@ const ProcessStep = ({
         onClick={() => {
           createPortal(Modal, {
             defaultVisible: true,
-            title: t<string>("Delete a process step"),
-            children: t<string>("Are you sure you want to delete this process step?"),
+            title: t<string>("bulkModification.action.deleteStep"),
+            children: t<string>("bulkModification.confirm.deleteStep"),
             onOk: async () => {
               onDelete();
             },

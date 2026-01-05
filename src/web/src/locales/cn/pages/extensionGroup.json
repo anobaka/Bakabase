@@ -1,0 +1,7 @@
+{
+  "extensionGroup.action.editGroup": "编辑扩展组",
+  "extensionGroup.action.addGroup": "添加组",
+  "extensionGroup.label.extensions": "扩展名",
+  "extensionGroup.input.separatePlaceholder": "用空格或换行分隔",
+  "extensionGroup.confirm.deleteTitle": "确定要删除吗？"
+}

@@ -95,7 +95,7 @@ const TreeNodeComponent = ({
 
   const handleCopyPath = useCallback(() => {
     navigator.clipboard.writeText(node.fullPath);
-    toast.success(t("Path copied to clipboard"));
+    toast.success(t("pathMarks.success.pathCopied"));
   }, [node.fullPath, t]);
 
   const handleConfigureSubPathMarks = useCallback(() => {
@@ -136,9 +136,9 @@ const TreeNodeComponent = ({
     setSyncing(true);
     try {
       await BApi.pathMark.startPathMarkSyncByPath({ path: node.fullPath });
-      toast.success(t("Sync started"));
+      toast.success(t("pathMarks.success.syncStarted"));
     } catch (e) {
-      toast.danger(t("Failed to start sync"));
+      toast.danger(t("pathMarks.error.failedToStartSync"));
     } finally {
       setSyncing(false);
     }
@@ -220,7 +220,7 @@ const TreeNodeComponent = ({
         )}
 
         {/* Path name - click to copy */}
-        <Tooltip content={t("Click to copy full path")}>
+        <Tooltip content={t("pathMarks.tip.clickToCopyFullPath")}>
           <span
             className={`font-mono text-sm cursor-pointer hover:text-primary ${isInvalid ? "text-danger line-through" : ""}`}
             onClick={handleCopyPath}
@@ -231,7 +231,7 @@ const TreeNodeComponent = ({
 
         {/* Invalid indicator */}
         {isInvalid && (
-          <span className="text-xs text-danger ml-2">({t("Invalid")})</span>
+          <span className="text-xs text-danger ml-2">({t("pathMarks.label.invalid")})</span>
         )}
 
         {/* Add mark and copy buttons - right after path name */}
@@ -255,20 +255,20 @@ const TreeNodeComponent = ({
                 onAction={(key) => handleAddMark(Number(key) as PathMarkType)}
               >
                 <DropdownItem key={PathMarkType.Resource} className="text-success">
-                  {t("Resource Mark")}
+                  {t("pathMarks.label.resourceMark")}
                 </DropdownItem>
                 <DropdownItem key={PathMarkType.Property} className="text-primary">
-                  {t("Property Mark")}
+                  {t("pathMarks.label.propertyMark")}
                 </DropdownItem>
                 <DropdownItem key={PathMarkType.MediaLibrary} className="text-warning">
-                  {t("MediaLibrary Mark")}
+                  {t("pathMarks.label.mediaLibraryMark")}
                 </DropdownItem>
               </DropdownMenu>
             </Dropdown>
 
             {/* Copy marks button - only for paths with marks */}
             {hasMarks && (
-              <Tooltip content={t("Copy marks from this path")}>
+              <Tooltip content={t("pathMarks.tip.copyMarksFromThisPath")}>
                 <Button
                   isIconOnly
                   className="min-w-0 w-5 h-5"
@@ -314,14 +314,14 @@ const TreeNodeComponent = ({
               isDisabled={selectedMarkIds.length === 0}
               onPress={handleConfirmCopy}
             >
-              {t("Confirm selection")} ({selectedMarkIds.length}/{node.marks.length})
+              {t("pathMarks.action.confirmSelection")} ({selectedMarkIds.length}/{node.marks.length})
             </Button>
             <Button
               size="sm"
               variant="light"
               onPress={handleCancelCopy}
             >
-              {t("Cancel")}
+              {t("common.action.cancel")}
             </Button>
           </div>
         )}
@@ -331,7 +331,7 @@ const TreeNodeComponent = ({
           <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
             {/* Configure sub-path marks button - only for valid paths */}
             {!isInvalid && (
-              <Tooltip content={t("Configure sub-path marks")}>
+              <Tooltip content={t("pathMarks.tip.configureSubPathMarks")}>
                 <Button
                   isIconOnly
                   className="min-w-0 w-6 h-6"
@@ -347,7 +347,7 @@ const TreeNodeComponent = ({
 
             {/* Sync button - only for paths with marks */}
             {hasMarks && (
-              <Tooltip content={t("Sync all marks on this path")}>
+              <Tooltip content={t("pathMarks.tip.syncAllMarksOnThisPath")}>
                 <Button
                   isIconOnly
                   className="min-w-0 w-6 h-6"
@@ -367,11 +367,11 @@ const TreeNodeComponent = ({
               <Tooltip
                 content={
                   pasteInfo.existingCount > 0
-                    ? t("Paste {{count}} marks ({{existing}} already exist)", {
+                    ? t("pathMarks.action.pasteMarksWithExisting", {
                         count: pasteInfo.newMarks.length,
                         existing: pasteInfo.existingCount,
                       })
-                    : t("Paste {{count}} marks", { count: pasteInfo.newMarks.length })
+                    : t("pathMarks.action.pasteMarks", { count: pasteInfo.newMarks.length })
                 }
               >
                 <Button
@@ -388,7 +388,7 @@ const TreeNodeComponent = ({
             )}
 
             {/* Delete button - for all paths */}
-            <Tooltip content={t("Delete all marks on this path")}>
+            <Tooltip content={t("pathMarks.tip.deleteAllMarksOnThisPath")}>
               <Button
                 isIconOnly
                 className="min-w-0 w-6 h-6"

@@ -45,12 +45,12 @@ const PropertyChangeConfirmDialog: React.FC<PropertyChangeConfirmDialogProps> = 
   return (
     <Modal
       size="lg"
-      title={t("Confirm property change")}
+      title={t("property.modal.confirmPropertyChange")}
       visible={visible}
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
-          children: t("Confirm"),
+          children: t("common.action.confirm"),
           isLoading: confirming,
           color: "primary",
         },
@@ -61,16 +61,16 @@ const PropertyChangeConfirmDialog: React.FC<PropertyChangeConfirmDialogProps> = 
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <span className="text-sm">{t("Setting")}</span>
+          <span className="text-sm">{t("common.label.setting")}</span>
           <BriefProperty fields={["pool", "name"]} property={property} />
-          <span className="text-sm">{t("to")}</span>
+          <span className="text-sm">{t("common.label.to")}</span>
           <Chip size="sm" color="primary" variant="flat">
-            {newBizValue || `(${t("empty")})`}
+            {newBizValue || `(${t("common.state.empty")})`}
           </Chip>
         </div>
         <div className="text-sm text-warning flex items-center gap-2">
           <ExclamationCircleOutlined />
-          {t("This will override different values on {{count}} resources", { count: affectedResources.length })}
+          {t("property.warning.willOverrideValues", { count: affectedResources.length })}
         </div>
         <div
           className="max-h-[300px] overflow-auto border rounded p-3"
@@ -85,17 +85,17 @@ const PropertyChangeConfirmDialog: React.FC<PropertyChangeConfirmDialogProps> = 
                 <span className="truncate max-w-[200px]">{resource.resourceName}</span>
                 <span className="text-default-400">:</span>
                 <span className="text-default-400 truncate max-w-[150px]">
-                  {resource.oldBizValue || `(${t("empty")})`}
+                  {resource.oldBizValue || `(${t("common.state.empty")})`}
                 </span>
                 <span>→</span>
                 <span className="text-primary truncate max-w-[150px]">
-                  {newBizValue || `(${t("empty")})`}
+                  {newBizValue || `(${t("common.state.empty")})`}
                 </span>
               </div>
             ))}
             {affectedResources.length > 20 && (
               <div className="text-sm text-default-400">
-                ... {t("and {{count}} more", { count: affectedResources.length - 20 })}
+                ... {t("common.label.andCountMore", { count: affectedResources.length - 20 })}
               </div>
             )}
           </div>

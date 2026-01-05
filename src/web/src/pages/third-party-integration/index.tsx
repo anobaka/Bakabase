@@ -14,7 +14,7 @@ const ThirdPartyIntegrationPage = () => {
       <AccordionItem key="SoulPlus" title="SoulPlus">
         <div>
           <div className={"flex items-center gap-2"}>
-            <div>{t<string>("Tampermonkey script")}</div>
+            <div>{t<string>("thirdPartyIntegration.label.tampermonkeyScript")}</div>
             <Button
               color={"primary"}
               variant={"light"}
@@ -25,17 +25,17 @@ const ThirdPartyIntegrationPage = () => {
               }}
             >
               <GrInstallOption className={"text-base"} />
-              {t<string>("One-click installation")}
+              {t<string>("thirdPartyIntegration.action.oneClickInstall")}
             </Button>
           </div>
           <Alert
             color={'default'}
             variant={'flat'}
-            title={t<string>('This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.')}
+            title={t<string>("thirdPartyIntegration.tip.scriptModifies")}
             // hideIcon
             description={(
               <div>
-                <div>1. {t<string>('Left-clicking on covers or post titles will trigger the creation of a post parsing task on Bakabase. You can still use the middle button to open posts.')}</div>
+                <div>1. {t<string>("thirdPartyIntegration.tip.soulPlusClick")}</div>
               </div>
           )}
           />
@@ -44,7 +44,7 @@ const ThirdPartyIntegrationPage = () => {
       <AccordionItem key="ExHentai" title="ExHentai">
         <div>
           <div className={"flex items-center gap-2"}>
-            <div>{t<string>("Tampermonkey script")}</div>
+            <div>{t<string>("thirdPartyIntegration.label.tampermonkeyScript")}</div>
             <Button
               color={"primary"}
               variant={"light"}
@@ -55,17 +55,17 @@ const ThirdPartyIntegrationPage = () => {
               }}
             >
               <GrInstallOption className={"text-base"} />
-              {t<string>("One-click installation")}
+              {t<string>("thirdPartyIntegration.action.oneClickInstall")}
             </Button>
           </div>
           <Alert
             color={'default'}
             variant={'flat'}
-            title={t<string>('This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.')}
+            title={t<string>("thirdPartyIntegration.tip.scriptModifies")}
             // hideIcon
             description={(
               <div>
-                <div>1. {t<string>('Left-clicking on covers will trigger the creation of a torrent download task on Bakabase. You can still use the middle button to open posts.')}</div>
+                <div>1. {t<string>("thirdPartyIntegration.tip.exHentaiClick")}</div>
               </div>
             )}
           />

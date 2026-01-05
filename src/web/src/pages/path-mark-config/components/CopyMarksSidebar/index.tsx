@@ -52,7 +52,7 @@ const CopyMarksSidebar = () => {
     <div className="flex-shrink-0 w-[280px] border-l border-default-200 flex flex-col bg-background">
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-default-200">
-        <h3 className="text-sm font-medium">{t("Copied marks")}</h3>
+        <h3 className="text-sm font-medium">{t("pathMarkConfig.label.copiedMarks")}</h3>
         <Button
           isIconOnly
           size="sm"
@@ -67,8 +67,8 @@ const CopyMarksSidebar = () => {
       <div className="flex-1 overflow-y-auto p-3 space-y-2">
         {candidateGroups.length === 0 ? (
           <div className="text-center text-default-400 py-8">
-            <p className="text-sm">{t("No copied marks")}</p>
-            <p className="text-xs mt-1">{t("Select marks to copy from an entry")}</p>
+            <p className="text-sm">{t("pathMarkConfig.empty.noCopiedMarks")}</p>
+            <p className="text-xs mt-1">{t("pathMarkConfig.tip.selectMarksToCopy")}</p>
           </div>
         ) : (
           candidateGroups.map((group) => (
@@ -94,7 +94,7 @@ const CopyMarksSidebar = () => {
             className="w-full"
             onPress={clearAllGroups}
           >
-            {t("Clear all")}
+            {t("common.action.clearAll")}
           </Button>
         </div>
       )}

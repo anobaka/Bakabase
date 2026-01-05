@@ -1,7 +1,8 @@
 "use client";
 
 import type { SearchFilter, SearchFilterGroup } from "../../models";
-import { ResourceTag } from "@/sdk/constants";
+import type { FilterLayout } from "../Filter";
+import { FilterDisplayMode } from "@/sdk/constants";
 
 import { useMemo, useState } from "react";
 import { SearchOutlined } from "@ant-design/icons";
@@ -13,19 +14,12 @@ import FilterAddPopoverContent from "../FilterAddPopoverContent";
 import { FilterProvider } from "../../context/FilterContext";
 import { createDefaultFilterConfig } from "../../presets/DefaultFilterPreset";
 import { GroupCombinator } from "../../models";
+import type { SearchCriteria } from "../../hooks/useFilterCriteria";
 
 import { Button, Input, Popover } from "@/components/bakaui";
 import { resourceTags } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-
-/**
- * 搜索条件数据结构，与后端 SearchCriteria 对应
- */
-export interface SearchCriteria {
-  group?: SearchFilterGroup;
-  keyword?: string;
-  tags?: ResourceTag[];
-}
+import { getEnumKey } from "@/i18n";
 
 interface ResourceSearchPanelProps {
   /** 当前搜索条件 */
@@ -36,14 +30,20 @@ interface ResourceSearchPanelProps {
   showKeyword?: boolean;
   /** 是否显示特殊标签筛选 */
   showTags?: boolean;
-  /** 是否显示快捷筛选 */
-  showQuickFilters?: boolean;
   /** 是否显示最近使用的筛选器 */
   showRecentFilters?: boolean;
   /** 是否显示筛选器分组预览 */
   showFilterGroupPreview?: boolean;
   /** 是否紧凑模式（用于 Modal 内） */
   compact?: boolean;
+  /** Filter display mode - Simple hides operation selector */
+  filterDisplayMode?: FilterDisplayMode;
+  /** Filter layout - horizontal or vertical */
+  filterLayout?: FilterLayout;
+  /** Index of filter that should auto-trigger property selector (set from external) */
+  externalNewFilterIndex?: number | null;
+  /** Called when external new filter index is consumed */
+  onExternalNewFilterConsumed?: () => void;
 }
 
 /**
@@ -55,14 +55,20 @@ const ResourceSearchPanelInner = ({
   onChange,
   showKeyword = false,
   showTags = true,
-  showQuickFilters = true,
   showRecentFilters = true,
   showFilterGroupPreview = true,
   compact = false,
+  filterDisplayMode,
+  filterLayout,
+  externalNewFilterIndex,
+  onExternalNewFilterConsumed,
 }: ResourceSearchPanelProps) => {
   const { t } = useTranslation();
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [newFilterIndex, setNewFilterIndex] = useState<number | null>(null);
+  const [internalNewFilterIndex, setInternalNewFilterIndex] = useState<number | null>(null);
+
+  // Combine internal and external new filter index
+  const newFilterIndex = internalNewFilterIndex ?? externalNewFilterIndex ?? null;
 
   const addFilter = (filter: SearchFilter, autoTriggerPropertySelector = false) => {
     const newGroup: SearchFilterGroup = criteria.group ?? {
@@ -78,7 +84,7 @@ const ResourceSearchPanelInner = ({
 
     // Track the index if we need to auto-trigger property selector
     if (autoTriggerPropertySelector) {
-      setNewFilterIndex(newGroup.filters.length);
+      setInternalNewFilterIndex(newGroup.filters.length);
     }
 
     newGroup.filters.push(filter);
@@ -113,6 +119,9 @@ const ResourceSearchPanelInner = ({
     ((criteria.group.filters && criteria.group.filters.length > 0) ||
       (criteria.group.groups && criteria.group.groups.length > 0));
 
+  // Check if we should show the add filter button
+  const showAddFilterButton = showRecentFilters || showTags;
+
   return (
     <div className="flex gap-3 flex-wrap">
       {/* 关键词搜索 */}
@@ -129,46 +138,54 @@ const ResourceSearchPanelInner = ({
         />
       )}
 
-      {/* 筛选器添加按钮 */}
-      <div className="flex items-center gap-2">
-        <Popover
-          showArrow
-          placement="bottom"
-          isOpen={popoverOpen}
-          onOpenChange={setPopoverOpen}
-          trigger={
-            <Button isIconOnly size={compact ? "md" : "md"}>
-              <TbFilterPlus className="text-lg" />
-            </Button>
-          }
-        >
-          <FilterAddPopoverContent
-            showQuickFilters={showQuickFilters}
-            showTags={showTags}
-            selectedTags={criteria.tags}
-            onTagsChange={(tags) => {
-              onChange({
-                ...criteria,
-                tags: tags.length > 0 ? tags : undefined,
-              });
-            }}
-            showRecentFilters={showRecentFilters}
-            onAddFilter={(autoTrigger) => addFilter({ disabled: false }, autoTrigger)}
-            onAddFilterGroup={addFilterGroup}
-            onSelectFilter={addFilter}
-            onClose={() => setPopoverOpen(false)}
-          />
-        </Popover>
-      </div>
+      {/* 筛选器添加按钮 - only show if any content would be displayed */}
+      {showAddFilterButton && (
+        <div className="flex items-center gap-2">
+          <Popover
+            showArrow
+            placement="bottom"
+            isOpen={popoverOpen}
+            onOpenChange={setPopoverOpen}
+            trigger={
+              <Button isIconOnly size={compact ? "md" : "md"}>
+                <TbFilterPlus className="text-lg" />
+              </Button>
+            }
+          >
+            <FilterAddPopoverContent
+              showTags={showTags}
+              selectedTags={criteria.tags}
+              onTagsChange={(tags) => {
+                onChange({
+                  ...criteria,
+                  tags: tags.length > 0 ? tags : undefined,
+                });
+              }}
+              showRecentFilters={showRecentFilters}
+              onAddFilter={(autoTrigger) => addFilter({ disabled: false }, autoTrigger)}
+              onAddFilterGroup={addFilterGroup}
+              onSelectFilters={(filters) => {
+                filters.forEach(filter => addFilter(filter));
+              }}
+              onClose={() => setPopoverOpen(false)}
+            />
+          </Popover>
+        </div>
+      )}
 
       {/* 筛选器分组预览 */}
       {showFilterGroupPreview && hasFilters && criteria.group && (
-        <div className="border border-default-200 rounded px-1 py-1">
+        <div className={`${filterDisplayMode === FilterDisplayMode.Simple ? "" : "border border-default-200 rounded"} w-full`}>
           <FilterGroup
             isRoot
             group={criteria.group}
+            filterDisplayMode={filterDisplayMode}
+            filterLayout={filterLayout}
             externalNewFilterIndex={newFilterIndex}
-            onExternalNewFilterConsumed={() => setNewFilterIndex(null)}
+            onExternalNewFilterConsumed={() => {
+              setInternalNewFilterIndex(null);
+              onExternalNewFilterConsumed?.();
+            }}
             onChange={(group) => {
               onChange({ ...criteria, group });
             }}
@@ -190,7 +207,7 @@ const ResourceSearchPanelInner = ({
                 });
               }}
             >
-              {t<string>(`ResourceTag.${resourceTags.find((rt) => rt.value === tag)?.label}`)} &times;
+              {t<string>(getEnumKey('ResourceTag', resourceTags.find((rt) => rt.value === tag)?.label!))} &times;
             </span>
           ))}
         </div>

@@ -1,0 +1,73 @@
+{
+  "pathMarks.title": "路径标记",
+  "pathMarks.label.beta": "测试版",
+  "pathMarks.tip.description": "查看和管理所有媒体库中的路径标记。点击路径可在配置页面中编辑标记。",
+  "pathMarks.warning.invalidPaths": "{{count}} 个路径在文件系统中不再存在",
+  "pathMarks.label.showOnlyInvalid": "仅显示无效",
+  "pathMarks.success.markUpdated": "标记更新成功",
+  "pathMarks.success.markAdded": "标记添加成功",
+  "pathMarks.error.saveMark": "保存标记失败",
+  "pathMarks.confirm.deleteTitle": "确认删除标记",
+  "pathMarks.confirm.deleteQuestion": "确定要删除此标记吗？",
+  "pathMarks.success.markDeleted": "标记删除成功",
+  "pathMarks.error.deleteMark": "删除标记失败",
+  "pathMarks.warning.noMarksToDelete": "没有可删除的标记",
+  "pathMarks.success.deletedCount": "成功删除 {{count}} 个标记",
+  "pathMarks.error.deleteMarks": "删除标记失败",
+  "pathMarks.success.pastedCount": "成功粘贴 {{count}} 个标记",
+  "pathMarks.error.pasteMarks": "粘贴标记失败",
+
+  "pathMarks.modal.confirmDeleteTitle": "确认删除标记",
+  "pathMarks.modal.transferMarksTitle": "转移标记",
+  "pathMarks.modal.confirmTransferTitle": "确认转移",
+  "pathMarks.modal.configurePathMarksTitle": "配置路径标记",
+
+  "pathMarks.label.mainPath": "主路径",
+  "pathMarks.label.invalid": "无效",
+  "pathMarks.label.resourceMark": "资源标记",
+  "pathMarks.label.propertyMark": "属性标记",
+  "pathMarks.label.mediaLibraryMark": "媒体库标记",
+
+  "pathMarks.tip.clickToCopyFullPath": "点击复制完整路径",
+  "pathMarks.tip.clickOnFoldersToNavigate": "点击文件夹进行导航。使用添加标记按钮或右键单击查看标记选项。",
+  "pathMarks.tip.copyMarksFromThisPath": "从此路径复制标记",
+  "pathMarks.tip.configureSubPathMarks": "配置子路径标记",
+  "pathMarks.tip.syncAllMarksOnThisPath": "同步此路径上的所有标记",
+  "pathMarks.tip.deleteAllMarksOnThisPath": "删除此路径上的所有标记",
+  "pathMarks.tip.transferMarksToThisPath": "将标记转移到此路径",
+  "pathMarks.tip.browseAndClickTransfer": "浏览并点击「转移到此处」选择目标路径",
+
+  "pathMarks.status.aboutToDeleteMarks": "您即将删除 {{count}} 个标记",
+  "pathMarks.status.aboutToTransferMarks": "您即将转移 {{count}} 个标记",
+  "pathMarks.status.transferredSuccessfully": "成功转移 {{count}} 个标记",
+
+  "pathMarks.action.transfer": "转移",
+  "pathMarks.action.confirmTransfer": "确认转移",
+  "pathMarks.action.confirmSelection": "确认选择",
+  "pathMarks.action.transferHere": "转移到此处",
+  "pathMarks.action.pasteMarks": "粘贴 {{count}} 个标记",
+  "pathMarks.action.pasteMarksWithExisting": "粘贴 {{count}} 个标记（{{existing}} 个已存在）",
+
+  "pathMarks.checkbox.alsoDeleteChildMarks": "同时从 {{pathCount}} 个子路径删除 {{count}} 个标记",
+  "pathMarks.checkbox.includeChildPaths": "包含 {{count}} 个带有标记的子路径",
+  "pathMarks.checkbox.childPathsAvailableForTransfer": "+ {{count}} 个带有标记的子路径也可转移",
+
+  "pathMarks.warning.cannotBeUndone": "此操作无法撤销。",
+  "pathMarks.warning.cannotTransferToSamePath": "无法转移到相同路径",
+
+  "pathMarks.error.failedToTransfer": "转移标记失败",
+  "pathMarks.error.failedToStartSync": "启动同步失败",
+
+  "pathMarks.success.pathCopied": "路径已复制到剪贴板",
+  "pathMarks.success.syncStarted": "同步已启动",
+
+  "pathMarks.empty.noPathMarks": "未找到路径标记",
+  "pathMarks.empty.goToConfigPage": "前往路径标记配置页添加标记",
+
+  "pathMarks.info.transferringFrom": "正在从以下路径转移标记：",
+  "pathMarks.info.transferTo": "转移到：",
+  "pathMarks.action.configureMarks": "配置标记",
+
+  "pathMarks.label.resourceProfileHint": "下一步：配置资源扩展，定义增强器、播放器等资源处理设置",
+  "pathMarks.action.goToResourceProfile": "配置资源扩展"
+}

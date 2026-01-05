@@ -42,7 +42,7 @@ const Dependency = () => {
         <Table removeWrapper>
           <TableHeader>
             <TableColumn width={200}>
-              {t<string>("Dependent components")}
+              {t<string>("configuration.dependency.title")}
             </TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
@@ -70,7 +70,7 @@ const Dependency = () => {
                         >
                           {c.description && <pre>{c.description}</pre>}
                           <div className={"flex items-center gap-2"}>
-                            {t<string>("Default location")}
+                            {t<string>("configuration.dependency.defaultLocation")}
                             <Snippet
                               hideSymbol
                               size={"sm"}
@@ -93,7 +93,7 @@ const Dependency = () => {
               key={componentContexts.length}
               className={"hover:bg-[var(--bakaui-overlap-background)]"}
             >
-              <TableCell>{t<string>("curl executable")}</TableCell>
+              <TableCell>{t<string>("configuration.dependency.curlExecutable")}</TableCell>
               <TableCell>
                 <EditableValue<
                   string,
@@ -116,7 +116,7 @@ const Dependency = () => {
                     ) : null
                   }
                   editorProps={{
-                    placeholder: t<string>("path/to/curl.exe"),
+                    placeholder: t<string>("configuration.dependency.curlPlaceholder"),
                     size: "sm",
                   }}
                   value={thirdPartyOptions.curlExecutable}
@@ -133,7 +133,7 @@ const Dependency = () => {
               key={componentContexts.length + 1}
               className={"hover:bg-[var(--bakaui-overlap-background)]"}
             >
-              <TableCell>{t<string>("Ollama endpoint")}</TableCell>
+              <TableCell>{t<string>("configuration.dependency.ollamaEndpoint")}</TableCell>
               <TableCell>
                 <EditableValue<
                   string,
@@ -149,7 +149,7 @@ const Dependency = () => {
                     ) : null
                   }
                   editorProps={{
-                    placeholder: t<string>("http://localhost:11434"),
+                    placeholder: "http://localhost:11434",
                     size: "sm",
                   }}
                   value={aiOptions.ollamaEndpoint}

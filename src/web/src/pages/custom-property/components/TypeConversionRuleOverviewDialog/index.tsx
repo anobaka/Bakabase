@@ -25,6 +25,8 @@ import {
 import { PropertyType, propertyTypes } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { getEnumKey } from "@/i18n";
+
 const TypeConversionRuleOverviewDialog = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -44,9 +46,9 @@ const TypeConversionRuleOverviewDialog = () => {
   >();
 
   const columns = [
-    // <TableColumn>{t<string>('Source type')}</TableColumn>,
-    <TableColumn>{t<string>("Target type")}</TableColumn>,
-    <TableColumn>{t<string>("Rules")}</TableColumn>,
+    // <TableColumn>{t<string>('typeConversion.sourceType')}</TableColumn>,
+    <TableColumn>{t<string>("typeConversion.targetType")}</TableColumn>,
+    <TableColumn>{t<string>("typeConversion.rules")}</TableColumn>,
   ];
 
   useEffect(() => {
@@ -75,8 +77,8 @@ const TypeConversionRuleOverviewDialog = () => {
 
       rows.push(
         <TableRow key={fromType}>
-          {/* <TableCell>{t<string>(PropertyType[fromType])}</TableCell> */}
-          <TableCell>{t<string>(PropertyType[toType])}</TableCell>
+          {/* <TableCell>{t<string>(getEnumKey('PropertyType', PropertyType[fromType]))}</TableCell> */}
+          <TableCell>{t<string>(getEnumKey('PropertyType', PropertyType[toType]))}</TableCell>
           <TableCell>
             <div className={"flex flex-wrap gap-1"}>
               {rules.map((r) => {
@@ -110,13 +112,13 @@ const TypeConversionRuleOverviewDialog = () => {
       footer={{
         actions: ["cancel"],
         cancelProps: {
-          children: t<string>("Close"),
+          children: t<string>("common.action.close"),
         },
       }}
       size={"xl"}
       title={
         <div className={"flex items-center gap-2"}>
-          {t<string>("Type conversion rules")}
+          {t<string>("typeConversion.title")}
           <Button
             color={"secondary"}
             size={"sm"}
@@ -125,20 +127,20 @@ const TypeConversionRuleOverviewDialog = () => {
               createPortal(TypeConversionExampleDialog, {});
             }}
           >
-            {t<string>("Check examples")}
+            {t<string>("typeConversion.checkExamples")}
           </Button>
         </div>
       }
     >
       <div>
         <Tabs isVertical disabledKeys={["title"]}>
-          <Tab key={"title"} title={t<string>("Source type")} />
+          <Tab key={"title"} title={t<string>("typeConversion.sourceType")} />
           {propertyTypes.map((cpt) => {
             return (
               <Tab
                 key={cpt.value}
                 className={"w-full"}
-                title={t<string>(PropertyType[cpt.value])}
+                title={t<string>(getEnumKey('PropertyType', PropertyType[cpt.value]))}
               >
                 <Table isCompact isHeaderSticky isStriped removeWrapper>
                   <TableHeader>{columns}</TableHeader>

@@ -4,9 +4,9 @@ import type { PropertyPool, PropertyType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
 
-import PropertyPoolIcon from "@/components/Property/components/PropertyPoolIcon";
+import PropertyPoolIcon, { getPropertyPoolColor } from "@/components/Property/components/PropertyPoolIcon";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
-import { Chip } from "@/components/bakaui";
+import { Chip, type ChipProps } from "@/components/bakaui";
 
 type Property = {
   name: string;
@@ -18,13 +18,16 @@ type Field = "pool" | "type" | "name";
 
 type Props = {
   property: Property;
-
   fields?: Field[];
+  showPoolChip?: boolean;
+  chipProps?: Omit<ChipProps, "children">;
 };
-const BriefProperty = ({ property, fields }: Props) => {
+const BriefProperty = ({ property, fields, showPoolChip = true, chipProps }: Props) => {
   const { t } = useTranslation();
 
   fields ??= ["pool", "type", "name"];
+
+  const nameColor = showPoolChip ? "default" : getPropertyPoolColor(property?.pool);
 
   return (
     <div className="flex items-center gap-1">
@@ -32,12 +35,12 @@ const BriefProperty = ({ property, fields }: Props) => {
         ? fields.map((f) => {
             switch (f) {
               case "pool":
-                return <PropertyPoolIcon pool={property.pool} />;
+                return showPoolChip ? <PropertyPoolIcon key={f} pool={property.pool} /> : null;
               case "type":
-                return <PropertyTypeIcon type={property.type} />;
+                return <PropertyTypeIcon key={f} type={property.type} />;
               case "name":
                 return (
-                  <Chip radius={"sm"} size="sm" variant={"flat"}>
+                  <Chip key={f} color={nameColor} radius={"sm"} size="sm" variant="flat" {...chipProps}>
                     {property.name}
                   </Chip>
                 );

@@ -1,0 +1,23 @@
+{
+  "postParser.action.addTasks": "Add tasks",
+  "postParser.input.postLinks": "Post links in {{source}}",
+  "postParser.tip.otherSitesSupport": "Support for other sites",
+  "postParser.action.configuration": "Configuration",
+  "postParser.label.automaticallyParsing": "Automatically parsing",
+  "postParser.action.instructions": "Instructions for use",
+  "postParser.tip.curlVersion": "This feature internally uses curl. If your system-level curl version is lower than 8.14, please configure the correct curl path in the system settings.",
+  "postParser.tip.requestInterval": "The request interval configuration is temporarily unavailable. The built-in default interval is 3 seconds.",
+  "postParser.label.curl": "curl",
+  "postParser.tip.ollamaRequired": "This feature internally uses Ollama. You need to install and run Ollama first, and install at least one model. Then configure the Ollama API address in the system settings.",
+  "postParser.tip.ollamaModel": "This feature will prioritize the largest model in the Ollama model list.",
+  "postParser.tip.ollamaTested": "Currently, deepseek-r1:14b and 32b have been tested and can be used safely.",
+  "postParser.label.ollama": "ollama",
+  "postParser.tip.browserIntegration": "Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the \"Third-Party Integrations\" section.",
+  "postParser.label.browserIntegrations": "browser integrations",
+  "postParser.table.id": "#",
+  "postParser.table.target": "Target",
+  "postParser.table.items": "Items",
+  "postParser.table.parsedAt": "ParsedAt",
+  "postParser.label.accessCode": "Access code",
+  "postParser.label.decompressionPassword": "Decompression password"
+}

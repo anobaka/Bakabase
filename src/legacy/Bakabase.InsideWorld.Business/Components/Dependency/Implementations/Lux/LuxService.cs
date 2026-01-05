@@ -17,6 +17,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.Models.Co
 using Bakabase.InsideWorld.Business.Components.Dependency.Discovery;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux.Models;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bootstrap.Components.Storage;
 using Bootstrap.Components.Tasks;
 using Bootstrap.Components.Terminal.Cmd;
@@ -43,6 +44,11 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
         private const string LatestReleaseApiUrl = "https://api.github.com/repos/iawia002/lux/releases/latest";
         protected FfMpegService FfMpegService => serviceProvider.GetRequiredService<FfMpegService>();
 
+        /// <summary>
+        /// Lux depends on 7z for extracting downloaded archives during installation
+        /// </summary>
+        protected override IEnumerable<Type> Dependencies => new[] { typeof(SevenZipService) };
+
         protected string LuxBin => GetExecutableWithValidation("lux");
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
@@ -54,7 +60,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lu
             var targetOs = AppService.OsPlatform switch
             {
                 OsPlatform.Windows => "Windows",
-                OsPlatform.Osx => "Linux",
+                OsPlatform.Osx => "Darwin",
                 OsPlatform.Linux => "Linux",
                 OsPlatform.FreeBsd => "Freebsd",
                 _ => throw new ArgumentOutOfRangeException($"Current OS [{AppService.OsPlatform}] is not supported.")

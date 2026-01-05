@@ -32,3 +32,12 @@ export function useFilterConfig(): FilterConfig {
   }
   return context.config;
 }
+
+/**
+ * Returns true if currently inside a FilterProvider, false otherwise.
+ * Useful for components that need to conditionally create their own provider.
+ */
+export function useHasFilterContext(): boolean {
+  const context = useContext(FilterContext);
+  return context !== null;
+}

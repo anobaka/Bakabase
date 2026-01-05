@@ -17,17 +17,20 @@ type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
 
 const log = buildLogger("DateTimeValueRenderer");
 const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
-  const { value: propsValue, format, as, variant, editor, size } = props;
+  const { value: propsValue, format, as, variant, editor, size, isEditing, isReadonly: propsIsReadonly } = props;
 
   log(props);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(propsValue);
 
+  // Default isReadonly to true if no editor is provided
+  const isReadonly = propsIsReadonly ?? !editor;
+
   useEffect(() => {
     setValue(propsValue);
   }, [propsValue]);
 
-  const startEditing = editor
+  const startEditing = !isReadonly && editor
     ? () => {
         setEditing(true);
       }
@@ -40,12 +43,29 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
         : "YYYY-MM-DD"
       : format;
 
+  // Direct editing mode: always show date picker without toggle
+  if (isEditing && !isReadonly && editor) {
+    return (
+      <DateInput
+        granularity={as == "datetime" ? "second" : "day"}
+        isReadOnly={false}
+        value={value}
+        size={size}
+        onChange={(d) => {
+          log("OnChange", d);
+          setValue(d);
+          editor.onValueChange?.(d, d);
+        }}
+      />
+    );
+  }
+
   if (!editing) {
     if (value == undefined) {
       return <NotSet onClick={startEditing} />;
     }
 
-    return <span onClick={startEditing}>{value?.format(f)}</span>;
+    return <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>{value?.format(f)}</span>;
   }
 
   // console.log(as);

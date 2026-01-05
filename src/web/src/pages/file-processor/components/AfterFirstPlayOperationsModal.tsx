@@ -24,21 +24,21 @@ const AfterFirstPlayOperationsModal = ({ entry, onDestroyed }: Props) => {
       footer={false}
       onClose={() => setVisible(false)}
       size="lg"
-      title={t("We noticed that you played the first file in this path. Would you like to proceed with the following actions?")}
+      title={t("fileProcessor.modal.afterFirstPlayTitle")}
       style={{ maxWidth: '85vw' }}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <Chip variant="flat">
-            {t("Current Path")}
+            {t("fileProcessor.label.currentPath")}
           </Chip>
           <Snippet symbol={false} size="sm">{entry.path}</Snippet>
         </div>
         <div className="grid gap-3" style={{ gridTemplateColumns: 'auto auto' }}>
           <Card className="border border-default-200 dark:border-default-100 rounded-md">
             <CardBody>
-              <div className="mb-2 font-medium">{t("You can move it to another path.")}</div>
+              <div className="mb-2 font-medium">{t("fileProcessor.tip.moveToAnotherPath")}</div>
               <FolderSelectorInner
                 sources={["media library", "custom"]}
                 onSelect={async (path) => {
@@ -50,15 +50,15 @@ const AfterFirstPlayOperationsModal = ({ entry, onDestroyed }: Props) => {
           </Card>
           <Card className="border border-default-200 dark:border-default-100 rounded-md">
             <CardBody className="flex flex-col gap-2">
-              <div className="mb-2 font-medium">{t('Or delete it?')}</div>
+              <div className="mb-2 font-medium">{t("fileProcessor.tip.orDeleteIt")}</div>
               <Button
                 color="danger"
                 onPress={async () => {
                   createPortal(Modal, {
-                    title: t("Delete this file/folder?"),
+                    title: t("common.confirm.deleteFileTitle"),
                     defaultVisible: true,
                     children: (
-                      <div>{t("Are you sure you want to delete this file/folder?")}</div>
+                      <div>{t("common.confirm.deleteFile")}</div>
                     ),
                     footer: {
                       actions: ["ok", "cancel"],
@@ -73,7 +73,7 @@ const AfterFirstPlayOperationsModal = ({ entry, onDestroyed }: Props) => {
                   });
                 }}
               >
-                {t("Delete")}
+                {t("common.action.delete")}
               </Button>
             </CardBody>
           </Card>

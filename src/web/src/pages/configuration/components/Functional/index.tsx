@@ -88,7 +88,7 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
         <Table removeWrapper>
           <TableHeader>
             <TableColumn width={200}>
-              {t<string>("Functional configurations")}
+              {t<string>("configuration.functional.title")}
             </TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>

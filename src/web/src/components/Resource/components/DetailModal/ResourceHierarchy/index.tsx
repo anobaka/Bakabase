@@ -132,7 +132,7 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
                   onClick={handleChildrenClick}
                 >
                   <TiFlowChildren className="text-sm" />
-                  {t("Children")}
+                  {t("common.label.children")}
                   {childrenCount !== undefined && ` (${childrenCount})`}
                 </span>
               </BreadcrumbItem>
@@ -144,7 +144,7 @@ const ResourceHierarchy: React.FC<Props> = ({ resource, onReload }) => {
 
       {/* Description text */}
       <div className="text-xs text-default-500">
-        {t("Resource relationships are determined by physical path structure.")}
+        {t("resource.tip.hierarchyDescription")}
       </div>
     </div>
   );

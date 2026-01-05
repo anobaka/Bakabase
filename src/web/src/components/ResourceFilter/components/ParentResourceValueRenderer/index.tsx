@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Button, Chip } from "@/components/bakaui";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import ResourceSelectorModal from "@/components/ResourceSelectorModal";
-import { SearchOperation, ResourceTag, StandardValueType } from "@/sdk/constants";
+import { ResourceTag, StandardValueType } from "@/sdk/constants";
 import { deserializeStandardValue, serializeStandardValue } from "@/components/StandardValue";
 import { getDbValueType, getBizValueType } from "@/components/Property/PropertySystem";
 
@@ -20,8 +20,6 @@ interface ParentResourceValueRendererProps {
   dbValue?: string;
   /** Current bizValue (serialized) */
   bizValue?: string;
-  /** Search operation - determines if single or multiple selection */
-  operation?: SearchOperation;
   /** Called when value changes */
   onValueChange?: (dbValue?: string, bizValue?: string) => void;
   /** Whether to start in editing mode */
@@ -38,14 +36,16 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
   property,
   dbValue,
   bizValue,
-  operation,
   onValueChange,
   defaultEditing,
   size = "sm",
   variant = "light",
-  isReadonly,
+  isReadonly: isReadonlyProp,
 }) => {
   const { t } = useTranslation();
+
+  // If isReadonly is not provided, default to !onValueChange for backward compatibility
+  const isReadonly = isReadonlyProp ?? !onValueChange;
   const { createPortal } = useBakabaseContext();
   const [isModalOpen, setIsModalOpen] = useState(defaultEditing && !dbValue);
 

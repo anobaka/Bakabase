@@ -14,15 +14,13 @@ const AllowDuplicateField = ({ isDuplicateAllowed, onChange }: Props) => {
 
   return (
     <CheckboxGroup
-      description={t<string>(
-        "In general, it's not necessary to create identical tasks.",
-      )}
-      label={t<string>("Allow duplicate submission")}
+      description={t<string>("downloader.tip.allowDuplicateDesc")}
+      label={t<string>("downloader.label.allowDuplicate")}
       orientation="horizontal"
       size="sm"
     >
       <Checkbox isSelected={isDuplicateAllowed} onValueChange={onChange}>
-        {t("Yes")}
+        {t("common.label.yes")}
       </Checkbox>
     </CheckboxGroup>
   );

@@ -17,19 +17,39 @@ const TimeValueRenderer = ({
   variant,
   editor,
   size,
+  isEditing,
+  isReadonly: propsIsReadonly,
   ...props
 }: TimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
   const editingValueRef = useRef<Duration>();
 
+  // Default isReadonly to true if no editor is provided
+  const isReadonly = propsIsReadonly ?? !editor;
+
   const f = format == undefined ? "HH:mm:ss" : format;
 
-  const startEditing = editor
+  const startEditing = !isReadonly && editor
     ? () => {
         editingValueRef.current = value;
         setEditing(true);
       }
     : undefined;
+
+  // Direct editing mode: always show time picker without toggle
+  if (isEditing && !isReadonly && editor) {
+    return (
+      <TimeInput
+        isReadOnly={false}
+        value={value}
+        size={size}
+        onChange={(x) => {
+          editingValueRef.current = x;
+          editor.onValueChange?.(x, x);
+        }}
+      />
+    );
+  }
 
   if (editing) {
     return (
@@ -52,7 +72,7 @@ const TimeValueRenderer = ({
   if (value == undefined) {
     return <NotSet onClick={startEditing} size={size} />;
   } else {
-    return <span onClick={startEditing}>{value?.format(f)}</span>;
+    return <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>{value?.format(f)}</span>;
   }
 };
 

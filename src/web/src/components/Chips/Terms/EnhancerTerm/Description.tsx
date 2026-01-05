@@ -8,7 +8,7 @@ export const EnhancerDescription = () => {
 
   return (
     <div className="space-y-2">
-      <p>{t("Term.Enhancer.Description")}</p>
+      <p>{t("term.enhancer.description")}</p>
     </div>
   );
 };

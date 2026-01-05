@@ -3,12 +3,22 @@
 import type { BulkModification as BulkModificationModel } from "@/pages/bulk-modification/components/BulkModification";
 
 import { useTranslation } from "react-i18next";
-import { DeleteOutlined, EditOutlined } from "@ant-design/icons";
-import { useCallback, useEffect, useState } from "react";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  QuestionCircleOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useUpdate } from "react-use";
 import toast from "react-hot-toast";
+import { AiOutlineInbox } from "react-icons/ai";
 
 import BulkModification from "./components/BulkModification";
+import {
+  BulkModificationGuideModal,
+  useBulkModificationGuide,
+} from "./components/BulkModificationGuide";
 
 import {
   Accordion,
@@ -22,69 +32,212 @@ import {
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { useBulkModificationInternalsStore } from "@/stores/bulkModificationInternals";
-import { StandardValueType } from "@/sdk/constants";
+import BetaChip from "@/components/Chips/BetaChip";
+
 const BulkModification2Page = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
+  const { showGuide, completeGuide, resetGuide } = useBulkModificationGuide();
 
-  const bmInternals = useBulkModificationInternalsStore.getState();
-
-  const [expandedKeys, setExpandedKeys] = useState<string[]>(["4"]);
-
+  const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
   const [bulkModifications, setBulkModifications] = useState<BulkModificationModel[]>();
+  const isFirstLoad = useRef(true);
 
   const loadAllBulkModifications = useCallback(async () => {
     const r = await BApi.bulkModification.getAllBulkModifications();
     const bms = r.data || [];
 
-    // setExpandedKeys(bms.map(b => b.id.toString()));
     setBulkModifications(bms);
+    if (isFirstLoad.current) {
+      setExpandedKeys(bms.map((bm) => bm.id.toString()));
+      isFirstLoad.current = false;
+    }
   }, []);
 
   useEffect(() => {
     loadAllBulkModifications();
   }, []);
 
-  console.log(expandedKeys);
+  const handleAdd = () => {
+    BApi.bulkModification.addBulkModification().then(() => {
+      loadAllBulkModifications();
+    });
+  };
 
-  return (
-    <div>
-      <div className={"flex items-center gap-2"}>
+  const renderEmptyState = () => (
+    <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <AiOutlineInbox className="text-6xl text-default-300" />
+      <div className="text-default-500 text-center">
+        <p className="text-lg mb-2">{t<string>("bulkModification.empty.noData")}</p>
+        <p className="text-sm text-default-400">
+          {t<string>("bulkModificationGuide.welcome.description")}
+        </p>
+      </div>
+      <Button color="primary" startContent={<PlusOutlined />} onPress={handleAdd}>
+        {t<string>("bulkModification.action.add")}
+      </Button>
+    </div>
+  );
+
+  const renderAccordionTitle = (bm: BulkModificationModel, isExpanded: boolean) => (
+    <div className="flex items-center justify-between w-full">
+      {/* Left section: Name & Stats */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <span className="font-medium">{bm.name}</span>
+          {isExpanded && (
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              onPress={() => {
+                let newName = bm.name;
+
+                createPortal(Modal, {
+                  defaultVisible: true,
+                  size: "lg",
+                  title: t<string>("bulkModification.action.editName"),
+                  children: (
+                    <Input
+                      isRequired
+                      defaultValue={bm.name}
+                      onValueChange={(v) => (newName = v.trim())}
+                    />
+                  ),
+                  onOk: async () => {
+                    if (newName.length === 0) {
+                      toast.error(t<string>("bulkModification.error.nameEmpty"));
+                      throw new Error("Name cannot be empty");
+                    }
+                    BApi.bulkModification
+                      .patchBulkModification(bm.id, { name: newName })
+                      .then((r) => {
+                        if (!r.code) {
+                          bm.name = newName;
+                          forceUpdate();
+                        }
+                      });
+                  },
+                });
+              }}
+            >
+              <EditOutlined className="text-base" />
+            </Button>
+          )}
+        </div>
+        <Chip size="sm" variant="flat">
+          {t<string>("bulkModification.label.resourceCount", {
+            count: bm.filteredResourceIds?.length || 0,
+          })}
+        </Chip>
+        {bm.resourceDiffCount > 0 && (
+          <Chip color="warning" size="sm" variant="flat">
+            {bm.resourceDiffCount} {t<string>("bulkModification.label.diffs")}
+          </Chip>
+        )}
+      </div>
+
+      {/* Right section: Actions */}
+      <div className="flex items-center gap-1">
+        <Chip className="text-default-400" size="sm" variant="light">
+          {bm.createdAt}
+        </Chip>
+        <Tooltip
+          content={t<string>(
+            bm.isActive
+              ? "bulkModification.action.clickToDisable"
+              : "bulkModification.action.clickToEnable",
+          )}
+        >
+          <Chip
+            className="cursor-pointer"
+            color={bm.isActive ? "success" : "default"}
+            size="sm"
+            variant={bm.isActive ? "flat" : "bordered"}
+            onClick={() => {
+              BApi.bulkModification
+                .patchBulkModification(bm.id, { isActive: !bm.isActive })
+                .then(() => loadAllBulkModifications());
+            }}
+          >
+            {t<string>(
+              bm.isActive ? "bulkModification.status.enabled" : "bulkModification.status.disabled",
+            )}
+          </Chip>
+        </Tooltip>
         <Button
-          color={"primary"}
-          size={"sm"}
+          size="sm"
+          variant="light"
           onPress={() => {
-            BApi.bulkModification.addBulkModification().then((r) => {
+            BApi.bulkModification.duplicateBulkModification(bm.id).then(() => {
               loadAllBulkModifications();
             });
           }}
         >
-          {t<string>("Add a bulk modification")}
+          {t<string>("bulkModification.action.duplicate")}
         </Button>
-        <div className={"flex items-center gap-1"}>
-          {t<string>("Under development, currently supported data types")}
-          {bmInternals.supportedStandardValueTypes?.map((x) => {
-            return (
-              <Chip radius={"sm"} size={"sm"}>
-                {t<string>(`StandardValueType.${StandardValueType[x]}`)}
-              </Chip>
-            );
-          })}
-        </div>
+        <Button
+          isIconOnly
+          color="danger"
+          size="sm"
+          variant="light"
+          onPress={() => {
+            createPortal(Modal, {
+              defaultVisible: true,
+              title: t<string>("bulkModification.action.delete"),
+              children: t<string>("bulkModification.confirm.delete"),
+              onOk: async () => {
+                await BApi.bulkModification.deleteBulkModification(bm.id);
+                loadAllBulkModifications();
+              },
+            });
+          }}
+        >
+          <DeleteOutlined className="text-base" />
+        </Button>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button color="primary" size="sm" startContent={<PlusOutlined />} onPress={handleAdd}>
+            {t<string>("bulkModification.action.add")}
+          </Button>
+          <BetaChip />
+          {bulkModifications && bulkModifications.length > 0 && (
+            <span className="text-sm text-default-400">
+              {t<string>("bulkModification.label.count")}: {bulkModifications.length}
+            </span>
+          )}
+        </div>
+        <Button
+          color="primary"
+          size="sm"
+          startContent={<QuestionCircleOutlined className="text-base" />}
+          variant="light"
+          onPress={resetGuide}
+        >
+          {t<string>("bulkModificationGuide.action.showGuide")}
+        </Button>
+      </div>
+
+      <BulkModificationGuideModal visible={showGuide} onComplete={completeGuide} />
+
+      {/* Content */}
       {bulkModifications ? (
-        bulkModifications.length == 0 ? (
-          <div className={"flex items-center justify-center min-h-[400px]"}>
-            {t<string>("No data")}
-          </div>
+        bulkModifications.length === 0 ? (
+          renderEmptyState()
         ) : (
           <Accordion
-            className={"p-0 pt-1"}
+            className="p-0"
             selectedKeys={expandedKeys}
-            selectionMode={"multiple"}
-            variant={"splitted"}
+            selectionMode="multiple"
+            variant="splitted"
             onSelectionChange={(keys) => {
               if (!keys) {
                 setExpandedKeys([]);
@@ -92,146 +245,16 @@ const BulkModification2Page = () => {
               setExpandedKeys(Array.from(keys).map((x) => x as string));
             }}
           >
-            {bulkModifications.map((bm, i) => {
+            {bulkModifications.map((bm) => {
               const isExpanded = expandedKeys.includes(bm.id.toString());
 
-              console.log(expandedKeys, isExpanded, bm.id.toString());
-
               return (
-                <AccordionItem
-                  key={bm.id.toString()}
-                  //   subtitle={(
-                  //     <div>
-                  //       123
-                  //     </div>
-                  // )}
-                  title={
-                    <div className={"flex items-center justify-between"}>
-                      <div className={"flex items-center gap-1"}>
-                        <div className={"flex items-center gap-1"}>
-                          {bm.name}
-                          {isExpanded && (
-                            <Button
-                              isIconOnly
-                              size={"sm"}
-                              variant={"light"}
-                              onPress={(e) => {
-                                let newName = bm.name;
-
-                                createPortal(Modal, {
-                                  defaultVisible: true,
-                                  size: "lg",
-                                  title: t<string>("Edit name of bulk modification"),
-                                  children: (
-                                    <Input
-                                      isRequired
-                                      defaultValue={bm.name}
-                                      onValueChange={(v) => (newName = v.trim())}
-                                    />
-                                  ),
-                                  onOk: async () => {
-                                    if (newName.length == 0) {
-                                      toast.error(t<string>("Name cannot be empty"));
-                                      throw new Error("Name cannot be empty");
-                                    }
-                                    BApi.bulkModification
-                                      .patchBulkModification(bm.id, {
-                                        name: newName,
-                                      })
-                                      .then((r) => {
-                                        if (!r.code) {
-                                          bm.name = newName;
-                                          forceUpdate();
-                                        }
-                                      });
-                                  },
-                                });
-                              }}
-                            >
-                              <EditOutlined className={"text-base"} />
-                            </Button>
-                          )}
-                        </div>
-                        <Chip size={"sm"}>
-                          {t<string>("{{count}} resources related", {
-                            count: bm.filteredResourceIds?.length || 0,
-                          })}
-                        </Chip>
-                        {/* <Button */}
-                        {/*   size={'sm'} */}
-                        {/*   variant={'light'} */}
-                        {/*   color={'primary'} */}
-                        {/* > */}
-                        {/*   {t<string>('How does this work?')} */}
-                        {/* </Button> */}
-                      </div>
-                      <div className={"flex items-center gap-1"}>
-                        <Chip
-                          size={"sm"}
-                          variant={"light"}
-                          // color={'secondary'}
-                        >
-                          {bm.createdAt}
-                        </Chip>
-                        <Button
-                          size={"sm"}
-                          variant={"bordered"}
-                          onClick={() => {
-                            BApi.bulkModification.duplicateBulkModification(bm.id).then((r) => {
-                              loadAllBulkModifications();
-                            });
-                          }}
-                        >
-                          {t<string>("Duplicate")}
-                        </Button>
-                        <Tooltip
-                          content={t<string>(`Click to ${bm.isActive ? "disable" : "enable"}`)}
-                        >
-                          <Button
-                            color={bm.isActive ? "success" : "warning"}
-                            size={"sm"}
-                            variant={"light"}
-                            onClick={() => {
-                              BApi.bulkModification
-                                .patchBulkModification(bm.id, {
-                                  isActive: !bm.isActive,
-                                })
-                                .then((r) => {
-                                  loadAllBulkModifications();
-                                });
-                            }}
-                          >
-                            {t<string>(bm.isActive ? "Enabled" : "Disabled")}
-                          </Button>
-                        </Tooltip>
-                        <Button
-                          isIconOnly
-                          color={"danger"}
-                          size={"sm"}
-                          variant={"light"}
-                          onClick={() => {
-                            createPortal(Modal, {
-                              defaultVisible: true,
-                              title: t<string>("Delete bulk modification"),
-                              children: t<string>("Are you sure to delete this bulk modification?"),
-                              onOk: async () => {
-                                await BApi.bulkModification.deleteBulkModification(bm.id);
-                                loadAllBulkModifications();
-                              },
-                            });
-                          }}
-                        >
-                          <DeleteOutlined className={"text-base"} />
-                        </Button>
-                      </div>
-                    </div>
-                  }
-                >
+                <AccordionItem key={bm.id.toString()} title={renderAccordionTitle(bm, isExpanded)}>
                   <BulkModification
                     bm={bm}
                     onChange={(newBm) =>
                       setBulkModifications(
-                        bulkModifications.map((b) => (b.id == newBm.id ? newBm : b)),
+                        bulkModifications.map((b) => (b.id === newBm.id ? newBm : b)),
                       )
                     }
                   />
@@ -241,8 +264,8 @@ const BulkModification2Page = () => {
           </Accordion>
         )
       ) : (
-        <div className={"flex items-center justify-center min-h-[400px]"}>
-          <Spinner size={"lg"} />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Spinner size="lg" />
         </div>
       )}
     </div>

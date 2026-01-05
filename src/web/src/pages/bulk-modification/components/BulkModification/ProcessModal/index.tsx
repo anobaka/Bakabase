@@ -9,9 +9,7 @@ import type {
 import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
 import { CardHeader } from "@heroui/react";
-import { QuestionCircleOutlined } from "@ant-design/icons";
-
-import { Button, Card, CardBody, Modal, Tooltip } from "@/components/bakaui";
+import { Button, Card, CardBody, Modal } from "@/components/bakaui";
 import PropertySelector from "@/components/PropertySelector";
 import { BulkModificationProcessorValueType, PropertyPool } from "@/sdk/constants";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -51,7 +49,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
         },
       }}
       size={"xl"}
-      title={t<string>("Setting process")}
+      title={t<string>("bulkModification.label.settingProcess")}
       onDestroyed={onDestroyed}
       onOk={() => {
         if (!validate(process)) {
@@ -63,7 +61,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
       <Card>
         <CardBody>
           <div className={"grid items-center gap-2"} style={{ gridTemplateColumns: "auto 1fr" }}>
-            <div className={"text-right"}>{t<string>("Property")}</div>
+            <div className={"text-right"}>{t<string>("bulkModification.label.property")}</div>
             <div>
               <Button
                 color={"primary"}
@@ -71,6 +69,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
                 variant={"light"}
                 onClick={() => {
                   createPortal(PropertySelector, {
+                    v2: true,
                     pool: PropertyPool.All,
                     isDisabled: (p) =>
                       bmInternals.disabledPropertyKeys?.[p.pool]?.includes(p.id) ||
@@ -92,7 +91,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
                 {process?.property ? (
                   <PropertyLabel showPool property={process.property} />
                 ) : (
-                  t<string>("Select a property")
+                  t<string>("bulkModification.select.property")
                 )}
               </Button>
             </div>
@@ -100,19 +99,11 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
         </CardBody>
       </Card>
       <Card>
-        <CardHeader>
-          <div className={"flex items-center gap-1"}>
-            <div>{t<string>("Steps")}</div>
-            <Tooltip
-              content={
-                <div>
-                  <div>{t<string>("You can add multiple preprocessing steps.")}</div>
-                </div>
-              }
-            >
-              <QuestionCircleOutlined className={"text-base"} />
-            </Tooltip>
-          </div>
+        <CardHeader className="flex-col items-start gap-0.5">
+          <div className="font-medium">{t<string>("bulkModification.label.steps")}</div>
+          <p className="text-xs text-default-400">
+            {t<string>("bulkModification.info.addPreprocessSteps")}
+          </p>
         </CardHeader>
         <CardBody>
           {process?.steps && process.steps.length > 0 && (
@@ -171,7 +162,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
                 }
               }}
             >
-              {t<string>("Add a preprocess")}
+              {t<string>("bulkModification.action.addPreprocess")}
             </Button>
           </div>
         </CardBody>

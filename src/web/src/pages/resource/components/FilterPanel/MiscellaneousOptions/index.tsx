@@ -85,13 +85,13 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
         <Modal
           footer={false}
           size="4xl"
-          title={t<string>("Display options")}
+          title={t<string>("resource.display.title")}
           visible={visible}
           onClose={() => setVisible(false)}
         >
           <div className={"flex flex-col gap-1"}>
             <div className={"flex items-center gap-1"}>
-              <div className={"text-sm"}>{t<string>("Column count")}</div>
+              <div className={"text-sm"}>{t<string>("resource.display.columnCount")}</div>
               <div className={"flex flex-wrap gap-1"}>
                 <ButtonGroup>
                   {Array.from(
@@ -121,7 +121,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <FullscreenOutlined className={"text-base"} />
-                  {t<string>("Fill cover")}
+                  {t<string>("resource.display.fillCover")}
                 </div>
               </Checkbox>
             </div>
@@ -134,7 +134,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <ZoomInOutlined className={"text-base"} />
-                  {t<string>("Show larger cover on mouse hover")}
+                  {t<string>("resource.display.hoverLargeCover")}
                 </div>
               </Checkbox>
             </div>
@@ -147,7 +147,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <PlayCircleOutlined className={"text-base"} />
-                  {t<string>("Preview files of a resource on mouse hover")}
+                  {t<string>("resource.display.previewFiles")}
                 </div>
               </Checkbox>
             </div>
@@ -160,7 +160,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <PlayCircleOutlined className={"text-base"} />
-                  {t<string>("Auto-select first file if multiple playable files exist")}
+                  {t<string>("resource.display.autoSelectFile")}
                 </div>
               </Checkbox>
             </div>
@@ -173,13 +173,11 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <ImEmbed className={"text-base"} />
-                  {t<string>("Inline display name and tags")}
+                  {t<string>("resource.display.inlineNameTags")}
                 </div>
               </Checkbox>
               <div className={"opacity-60 text-sm"}>
-                {t<string>(
-                  "Inline the display name and tags will place them inside the bottom area of the resource cover, rather than below the cover.",
-                )}
+                {t<string>("resource.display.inlineNameTagsDesc")}
               </div>
             </div>
 
@@ -191,14 +189,12 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <DatabaseOutlined className={"text-base"} />
-                  {t<string>("Use cache")}
+                  {t<string>("resource.display.useCache")}
                 </div>
               </Checkbox>
               <div>
                 <span className={"opacity-60 text-sm"}>
-                  {t<string>(
-                    "Enabling cache can improve loading speed, but your covers and playable files will not be updated in time unless you clear or disable cache manually.",
-                  )}
+                  {t<string>("resource.display.useCacheDesc")}
                 </span>
                 <Button
                   color="primary"
@@ -208,7 +204,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                     navigate("/cache");
                   }}
                 >
-                  {t<string>("Manage cache")}
+                  {t<string>("resource.display.manageCache")}
                 </Button>
               </div>
             </div>
@@ -221,7 +217,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <BiCarousel className={"text-base"} />
-                  {t<string>("Cover carousel")}
+                  {t<string>("resource.display.coverCarousel")}
                 </div>
               </Checkbox>
             </div>
@@ -234,7 +230,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               >
                 <div className={"flex items-center gap-1"}>
                   <AiOutlineFieldNumber className={"text-base"} />
-                  {t<string>("Display resource ID")}
+                  {t<string>("resource.display.showResourceId")}
                 </div>
               </Checkbox>
             </div>
@@ -243,7 +239,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
 
             <div className={"flex flex-col gap-2"}>
               <div className={"text-sm font-medium"}>
-                {t<string>("Display operations")}
+                {t<string>("resource.display.operations")}
               </div>
               <div className={"flex flex-wrap gap-2"}>
                 <Checkbox
@@ -269,7 +265,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 >
                   <div className={"flex items-center gap-1"}>
                     <ProductOutlined className={"text-base"} />
-                    {t<string>("Aggregate button")}
+                    {t<string>("resource.display.aggregateButton")}
                   </div>
                 </Checkbox>
                 <Checkbox
@@ -290,7 +286,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 >
                   <div className={"flex items-center gap-1"}>
                     <PushpinOutlined className={"text-base"} />
-                    {t<string>("Pin/Unpin")}
+                    {t<string>("resource.display.pinUnpin")}
                   </div>
                 </Checkbox>
                 <Checkbox
@@ -313,7 +309,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 >
                   <div className={"flex items-center gap-1"}>
                     <FolderOpenOutlined className={"text-base"} />
-                    {t<string>("Open folder")}
+                    {t<string>("resource.display.openFolder")}
                   </div>
                 </Checkbox>
                 <Checkbox
@@ -336,7 +332,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 >
                   <div className={"flex items-center gap-1"}>
                     <FireOutlined className={"text-base"} />
-                    {t<string>("Enhancements")}
+                    {t<string>("resource.display.enhancements")}
                   </div>
                 </Checkbox>
                 <Checkbox
@@ -359,7 +355,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 >
                   <div className={"flex items-center gap-1"}>
                     <AiOutlinePicture className={"text-base"} />
-                    {t<string>("Preview")}
+                    {t<string>("resource.display.preview")}
                   </div>
                 </Checkbox>
                 <Checkbox
@@ -382,7 +378,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                 >
                   <div className={"flex items-center gap-1"}>
                     <VideoCameraAddOutlined className={"text-base"} />
-                    {t<string>("Add to playlist")}
+                    {t<string>("resource.display.addToPlaylist")}
                   </div>
                 </Checkbox>
               </div>
@@ -392,9 +388,9 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
             <div className={"flex flex-col gap-1"}>
               <div className={"flex items-center gap-2"}>
                 <AppstoreAddOutlined className={"text-base"} />
-                <div className={"text-sm"}>{t<string>("Display properties")}</div>
+                <div className={"text-sm"}>{t<string>("resource.display.properties")}</div>
                 <div className={"text-sm text-default-500"}>
-                  {t<string>("Selected")}: {resourceUiOptions?.displayProperties?.length ?? 0}
+                  {t<string>("resource.display.selectedProperties")}: {resourceUiOptions?.displayProperties?.length ?? 0}
                 </div>
                 <Button
                   size={"sm"}
@@ -406,6 +402,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                     }));
 
                     createPortal(PropertySelector, {
+                      v2: true,
                       selection,
                       multiple: true,
                       pool: PropertyPool.All,
@@ -417,7 +414,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                     });
                   }}
                 >
-                  {t<string>("Select properties")}
+                  {t<string>("resource.display.selectProperties")}
                 </Button>
               </div>
               <div className={"flex items-center flex-wrap gap-1"}>
@@ -433,7 +430,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                       {property ? (
                         <PropertyLabel property={property} showPool={true} />
                       ) : (
-                        <Chip>{t("Unknown property")}</Chip>
+                        <Chip>{t("common.label.unknownProperty")}</Chip>
                       )}
                       <Button
                         isIconOnly

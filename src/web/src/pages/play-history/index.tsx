@@ -88,8 +88,8 @@ const PlayHistoryPage = () => {
             topContent={renderPagination()}
           >
             <TableHeader>
-              <TableColumn width="240">{t<string>("Played at")}</TableColumn>
-              <TableColumn>{t<string>("Item")}</TableColumn>
+              <TableColumn width="240">{t<string>("playHistory.label.playedAt")}</TableColumn>
+              <TableColumn>{t<string>("playHistory.label.item")}</TableColumn>
             </TableHeader>
             <TableBody>
               {playHistories.map((a) => {
@@ -104,7 +104,7 @@ const PlayHistoryPage = () => {
           </Table>
         </div>
       ) : (
-        <div>{t<string>("No play history")}</div>
+        <div>{t<string>("playHistory.empty.noHistory")}</div>
       )}
     </div>
   );

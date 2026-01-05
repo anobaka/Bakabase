@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import React from "react";
 import _ from "lodash";
 
-import { PropertyType, StandardValueType } from "@/sdk/constants";
+import { PropertyType, StandardValueType, PropertyPool, InternalProperty } from "@/sdk/constants";
 import { getDbValueType, getBizValueType } from "@/components/Property/PropertySystem";
 import {
   AttachmentValueRenderer,
@@ -32,6 +32,7 @@ import {
   serializeStandardValue,
 } from "@/components/StandardValue";
 import { buildLogger } from "@/components/utils";
+import ParentResourceValueRenderer from "@/components/ResourceFilter/components/ParentResourceValueRenderer";
 
 export type DataPool = {};
 
@@ -52,6 +53,11 @@ export type Props = {
   variant?: "default" | "light";
   defaultEditing?: boolean;
   size?: "sm" | "md" | "lg";
+  isReadonly?: boolean;
+  /**
+   * When true, always show the editing UI without toggle
+   */
+  isEditing?: boolean;
 };
 
 const log = buildLogger("PropertyValueRenderer");
@@ -64,8 +70,13 @@ const PropertyValueRenderer = (props: Props) => {
     bizValue,
     defaultEditing,
     size = "md",
+    isReadonly: isReadonlyProp,
+    isEditing,
   } = props;
   const { t } = useTranslation();
+
+  // If isReadonly is not provided, default to !onValueChange for backward compatibility
+  const isReadonly = isReadonlyProp ?? !onValueChange;
 
   // Use PropertySystem for type-safe value type access
   const dbValueType = getDbValueType(property.type);
@@ -76,9 +87,10 @@ const PropertyValueRenderer = (props: Props) => {
 
   log(props, bv, dv);
 
+  // Use isReadonly to determine if editing is allowed
   const simpleOnValueChange:
     | ((dbValue?: any, bizValue?: any) => any)
-    | undefined = onValueChange
+    | undefined = !isReadonly && onValueChange
     ? (dv, bv) => {
         const sdv = serializeStandardValue(dv ?? null, dbValueType);
         const sbv = serializeStandardValue(bv ?? null, bizValueType);
@@ -97,6 +109,22 @@ const PropertyValueRenderer = (props: Props) => {
       }
     : undefined;
 
+  // Special handling for ParentResource internal property
+  if (property.pool === PropertyPool.Internal && property.id === InternalProperty.ParentResource) {
+    return (
+      <ParentResourceValueRenderer
+        property={property}
+        bizValue={bizValue}
+        dbValue={dbValue}
+        defaultEditing={defaultEditing}
+        size={size}
+        variant={variant}
+        onValueChange={onValueChange}
+        isReadonly={isReadonly}
+      />
+    );
+  }
+
   switch (property.type!) {
     case PropertyType.SingleLineText: {
       const typedDv = dv as string;
@@ -109,6 +137,8 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -126,6 +156,8 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -178,6 +210,7 @@ const PropertyValueRenderer = (props: Props) => {
           valueAttributes={vas}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -205,6 +238,7 @@ const PropertyValueRenderer = (props: Props) => {
           valueAttributes={vas}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -219,6 +253,9 @@ const PropertyValueRenderer = (props: Props) => {
           editor={simpleEditor}
           value={typedBv}
           variant={variant}
+          size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -235,6 +272,8 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -249,6 +288,8 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -263,6 +304,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -277,6 +319,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -291,6 +334,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -307,6 +351,8 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -321,6 +367,8 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
+          isEditing={isEditing}
         />
       );
     }
@@ -335,6 +383,7 @@ const PropertyValueRenderer = (props: Props) => {
           value={typedBv}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -363,6 +412,7 @@ const PropertyValueRenderer = (props: Props) => {
           valueAttributes={vas}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }
@@ -394,6 +444,7 @@ const PropertyValueRenderer = (props: Props) => {
           valueAttributes={vas}
           variant={variant}
           size={size}
+          isReadonly={isReadonly}
         />
       );
     }

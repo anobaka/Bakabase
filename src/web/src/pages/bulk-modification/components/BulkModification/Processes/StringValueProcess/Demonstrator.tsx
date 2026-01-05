@@ -43,8 +43,8 @@ const Demonstrator = (props: Props) => {
           values={{
             direction:
               operation == TextProcessingOperation.AddToStart
-                ? t<string>("Position.Beginning")
-                : t<string>("Position.End"),
+                ? t<string>("bulkModification.position.beginning")
+                : t<string>("bulkModification.position.end"),
             value: options?.value,
           }}
         >
@@ -60,8 +60,8 @@ const Demonstrator = (props: Props) => {
           i18nKey={"BulkModification.Processor.Demonstrator.Operation.AddToAnyPosition"}
           values={{
             direction: options?.isPositioningDirectionReversed
-              ? t<string>("Position.End")
-              : t<string>("Position.Beginning"),
+              ? t<string>("bulkModification.position.end")
+              : t<string>("bulkModification.position.beginning"),
             position: options?.index,
             value: options?.value,
           }}
@@ -83,8 +83,8 @@ const Demonstrator = (props: Props) => {
             values={{
               direction:
                 operation == TextProcessingOperation.RemoveFromStart
-                  ? t<string>("Position.Beginning")
-                  : t<string>("Position.End"),
+                  ? t<string>("bulkModification.position.beginning")
+                  : t<string>("bulkModification.position.end"),
               count: options?.count,
             }}
           >
@@ -98,13 +98,13 @@ const Demonstrator = (props: Props) => {
     case TextProcessingOperation.RemoveFromAnyPosition: {
       const texts = {
         direction: options?.isPositioningDirectionReversed
-          ? t<string>("Position.End")
-          : t<string>("Position.Beginning"),
+          ? t<string>("bulkModification.position.end")
+          : t<string>("bulkModification.position.beginning"),
         position: options?.index,
         count: options?.count,
         removeDirection: options?.isOperationDirectionReversed
-          ? t<string>("TextOperation.Backward")
-          : t<string>("TextOperation.Forward"),
+          ? t<string>("bulkModification.textOperation.backward")
+          : t<string>("bulkModification.textOperation.forward"),
       };
 
       return (
@@ -131,8 +131,8 @@ const Demonstrator = (props: Props) => {
       const texts = {
         direction:
           operation == TextProcessingOperation.ReplaceFromEnd
-            ? t<string>("Position.End")
-            : t<string>("Position.Beginning"),
+            ? t<string>("bulkModification.position.end")
+            : t<string>("bulkModification.position.beginning"),
         find: options?.find,
       };
 
@@ -206,10 +206,10 @@ const Demonstrator = (props: Props) => {
       );
     }
     case TextProcessingOperation.Delete: {
-      return <div className={"primary"}>{t<string>("Delete")}</div>;
+      return <div className={"primary"}>{t<string>("common.action.delete")}</div>;
     }
     default:
-      return <>{t<string>("Unsupported value")}</>;
+      return <>{t<string>("bulkModification.error.unsupportedValue")}</>;
   }
 };
 

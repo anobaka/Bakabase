@@ -49,7 +49,7 @@ const ExtensionGroupPage = () => {
   return (
     <div>
       <Modal
-        title={t<string>("Editing extension group")}
+        title={t<string>("extensionGroup.action.editGroup")}
         visible={!!editingGroup}
         onClose={() => setEditingGroup(undefined)}
         onOk={async () => {
@@ -80,7 +80,7 @@ const ExtensionGroupPage = () => {
       >
         <Input
           isRequired
-          label={t<string>("Name")}
+          label={t<string>("common.label.name")}
           value={editingGroup?.name}
           onValueChange={(v) => {
             setEditingGroup({
@@ -92,9 +92,9 @@ const ExtensionGroupPage = () => {
         <div>
           <Textarea
             fullWidth
-            label={t<string>("Extensions")}
+            label={t<string>("extensionGroup.label.extensions")}
             minRows={4}
-            placeholder={t<string>("Separate by space or newline")}
+            placeholder={t<string>("extensionGroup.input.separatePlaceholder")}
             value={editingExtensionsText}
             onValueChange={(v) => {
               setEditingExtensionsText(v);
@@ -128,14 +128,14 @@ const ExtensionGroupPage = () => {
             });
           }}
         >
-          {t<string>("Add a group")}
+          {t<string>("extensionGroup.action.addGroup")}
         </Button>
       </div>
       <Table isStriped removeWrapper className={"mt-2"}>
         <TableHeader>
-          <TableColumn>{t<string>("Name")}</TableColumn>
-          <TableColumn>{t<string>("Extensions")}</TableColumn>
-          <TableColumn>{t<string>("Operations")}</TableColumn>
+          <TableColumn>{t<string>("common.label.name")}</TableColumn>
+          <TableColumn>{t<string>("extensionGroup.label.extensions")}</TableColumn>
+          <TableColumn>{t<string>("common.label.operations")}</TableColumn>
         </TableHeader>
         <TableBody>
           {groups.map((eg, i) => {
@@ -185,10 +185,8 @@ const ExtensionGroupPage = () => {
                       onPress={() => {
                         createPortal(Modal, {
                           defaultVisible: true,
-                          title: t<string>("Sure to delete?"),
-                          children: t<string>(
-                            "Be careful, this operation can not be undone",
-                          ),
+                          title: t<string>("extensionGroup.confirm.deleteTitle"),
+                          children: t<string>("common.confirm.irreversibleWarning"),
                           onOk: async () => {
                             await BApi.extensionGroup.deleteExtensionGroup(
                               eg.id,

@@ -240,6 +240,7 @@ const TargetRow = (props: Props) => {
               variant={"light"}
               onClick={() => {
                 createPortal(PropertySelector, {
+                  v2: true,
                   addable: true,
                   editable: true,
                   pool: PropertyPool.Custom | PropertyPool.Reserved,

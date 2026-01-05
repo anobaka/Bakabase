@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useLocalStorage } from "react-use";
 
 import "./index.scss";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ import {
 } from "@ant-design/icons";
 import { MdCalendarMonth } from "react-icons/md";
 import { TiFlowChildren } from "react-icons/ti";
+import { TbColumns1, TbColumns2, TbColumns3 } from "react-icons/tb";
 
 import ChildrenModal from "../ChildrenModal";
 
@@ -33,6 +35,7 @@ import {
   Button,
   ButtonGroup,
   Chip,
+  Divider,
   Listbox,
   ListboxItem,
   Modal,
@@ -52,6 +55,9 @@ import PlayableFiles from "@/components/Resource/components/PlayableFiles";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import { useUiOptionsStore } from "@/stores/options";
 
+type ColumnCount = 1 | 2 | 3;
+const PROPERTIES_COLUMNS_KEY = "bakabase:properties:columns";
+
 interface Props extends DestroyableProps {
   id: number;
   initialResource?: ResourceModel;
@@ -63,6 +69,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const [resource, setResource] = useState<ResourceModel | undefined>(initialResource);
   const [loading, setLoading] = useState(!initialResource);
   const uiOptions = useUiOptionsStore((state) => state.data);
+  const [columns, setColumns] = useLocalStorage<ColumnCount>(PROPERTIES_COLUMNS_KEY, 2);
 
   const loadResource = async () => {
     // @ts-ignore
@@ -134,44 +141,67 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 </Button>
               }
             >
-              <Listbox
-                aria-label="Actions"
-                onAction={(key) => {
-                  switch (key) {
-                    case "AdjustPropertyScopePriority": {
-                      if (resource) {
-                        createPortal(PropertyValueScopePicker, {
-                          resource,
+              <div className="flex flex-col gap-2 p-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-default-500">{t("Columns")}</span>
+                  <ButtonGroup size="sm">
+                    {([
+                      { col: 1 as const, icon: <TbColumns1 /> },
+                      { col: 2 as const, icon: <TbColumns2 /> },
+                      { col: 3 as const, icon: <TbColumns3 /> },
+                    ]).map(({ col, icon }) => (
+                      <Button
+                        key={col}
+                        isIconOnly
+                        color={columns === col ? "primary" : "default"}
+                        variant={columns === col ? "solid" : "flat"}
+                        onPress={() => setColumns(col)}
+                      >
+                        {icon}
+                      </Button>
+                    ))}
+                  </ButtonGroup>
+                </div>
+                <Divider />
+                <Listbox
+                  aria-label="Actions"
+                  onAction={(key) => {
+                    switch (key) {
+                      case "AdjustPropertyScopePriority": {
+                        if (resource) {
+                          createPortal(PropertyValueScopePicker, {
+                            resource,
+                          });
+                        }
+                        break;
+                      }
+                      case "SortPropertiesGlobally": {
+                        BApi.customProperty.getAllCustomProperties().then((r) => {
+                          const properties = (r.data || []).sort((a, b) => a.order - b.order);
+
+                          createPortal(CustomPropertySortModal, {
+                            properties,
+                            onDestroyed: loadResource,
+                          });
                         });
                       }
-                      break;
                     }
-                    case "SortPropertiesGlobally": {
-                      BApi.customProperty.getAllCustomProperties().then((r) => {
-                        const properties = (r.data || []).sort((a, b) => a.order - b.order);
-
-                        createPortal(CustomPropertySortModal, {
-                          properties,
-                          onDestroyed: loadResource,
-                        });
-                      });
-                    }
-                  }
-                }}
-              >
-                <ListboxItem
-                  key="AdjustPropertyScopePriority"
-                  startContent={<AppstoreOutlined className={"text-small"} />}
+                  }}
                 >
-                  {t<string>("Adjust the display priority of property scopes")}
-                </ListboxItem>
-                <ListboxItem
-                  key="SortPropertiesGlobally"
-                  startContent={<ProfileOutlined className={"text-small"} />}
-                >
-                  {t<string>("Adjust orders of properties globally")}
-                </ListboxItem>
-              </Listbox>
+                  <ListboxItem
+                    key="AdjustPropertyScopePriority"
+                    startContent={<AppstoreOutlined className={"text-small"} />}
+                  >
+                    {t<string>("resource.action.adjustPropertyScopePriority")}
+                  </ListboxItem>
+                  <ListboxItem
+                    key="SortPropertiesGlobally"
+                    startContent={<ProfileOutlined className={"text-small"} />}
+                  >
+                    {t<string>("resource.action.sortPropertiesGlobally")}
+                  </ListboxItem>
+                </Listbox>
+              </div>
             </Popover>
           </div>
         </div>
@@ -180,7 +210,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
     >
       {resource && (
         <>
-          <div className="flex gap-4">
+          <div className="flex gap-4 pb-2">
             <div className="min-w-[400px] w-[400px] max-w-[400px] flex flex-col gap-4">
               <div
                 className={
@@ -204,7 +234,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                   <ButtonGroup size={"sm"}>
                     <PlayableFiles
                       PortalComponent={({ onClick }) => (
-                        <Tooltip content={t("Play")}>
+                        <Tooltip content={t("common.action.play")}>
                           <Button isIconOnly color="primary" onPress={onClick}>
                             <PlayCircleOutlined className="text-lg" />
                           </Button>
@@ -212,10 +242,11 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                       )}
                       resource={resource}
                     />
-                    <Tooltip content={t("Open folder")}>
+                    <Tooltip content={t("common.action.openFolder")}>
                       <Button
                         isIconOnly
                         color="default"
+                        variant="light"
                         onPress={() => {
                           BApi.resource.openResourceDirectory({
                             id: resource.id,
@@ -226,7 +257,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                       </Button>
                     </Tooltip>
                     {resource.hasChildren && (
-                      <Tooltip content={t("View Children")}>
+                      <Tooltip content={t("common.action.viewChildren")}>
                         <Button
                           isIconOnly
                           color="default"
@@ -241,7 +272,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                         </Button>
                       </Tooltip>
                     )}
-                    <Tooltip content={hideTimeInfo ? t("Show time info") : t("Hide time info")}>
+                    <Tooltip content={hideTimeInfo ? t("common.action.showTimeInfo") : t("common.action.hideTimeInfo")}>
                       <Button
                         isIconOnly
                         className={hideTimeInfo ? "opacity-40" : undefined}
@@ -263,22 +294,20 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                   </ButtonGroup>
                 </div>
               </div>
-              <IntroductionSummary resource={resource} onReload={loadResource} />
               {!hideTimeInfo && <BasicInfo resource={resource} />}
             </div>
             <div className="overflow-auto relative grow">
               {loading ? (
                 <div className="flex items-center justify-center h-full min-h-[200px]">
-                  <Spinner label={t<string>("Loading properties...")} />
+                  <Spinner label={t<string>("common.state.loadingProperties")} />
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
                   <ResourceHierarchy resource={resource} onReload={loadResource} />
-                  <div className={"flex flex-col gap-1 mb-2"}>
+                  <IntroductionSummary resource={resource} onReload={loadResource} />
+                  <div className={"flex flex-col gap-1"}>
                     <Properties
-                      propertyClassNames={{
-                        name: "justify-end",
-                      }}
+                      columns={columns}
                       reload={loadResource}
                       resource={resource}
                       restrictedPropertyIds={[ReservedProperty.Cover]}
@@ -297,11 +326,11 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                           radius={"sm"}
                           size={"sm"}
                         >
-                          {t<string>("Last played at")}
+                          {t<string>("resource.label.lastPlayedAt")}
                         </Chip>
                         <div className={"flex items-center gap-1"}>
                           {resource.playedAt}
-                          <Tooltip content={t<string>("Mark as not played")}>
+                          <Tooltip content={t<string>("resource.action.markAsNotPlayed")}>
                             <Button
                               isIconOnly
                               size={"sm"}
@@ -322,17 +351,15 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                     )}
                   </div>
                   <Properties
+                    columns={columns}
                     noPropertyContent={
                       <div className={"flex flex-col items-center gap-2 justify-center"}>
                         <div className={"w-4/5"}>
                           <DisconnectOutlined className={"text-base mr-1"} />
-                          {t<string>("No custom property bound. You can bind them in resource profile")}
+                          {t<string>("resource.empty.noCustomPropertyBound")}
                         </div>
                       </div>
                     }
-                    propertyClassNames={{
-                      name: "justify-end",
-                    }}
                     reload={loadResource}
                     resource={resource}
                     restrictedPropertyPool={PropertyPool.Custom}

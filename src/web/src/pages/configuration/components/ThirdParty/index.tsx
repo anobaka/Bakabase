@@ -137,9 +137,9 @@ const ThirdParty = ({
       })
       .then((r) => {
         if (r.code) {
-          toast.danger(`${t<string>("Invalid cookie")}:${r.message}`);
+          toast.danger(`${t<string>("configuration.thirdParty.invalidCookie")}:${r.message}`);
         } else {
-          toast.success(t<string>("Cookie is good"));
+          toast.success(t<string>("configuration.thirdParty.cookieValid"));
         }
       })
       .finally(() => {
@@ -253,7 +253,7 @@ const ThirdParty = ({
             applyPatches(saveApi, options);
           }}
         >
-          {t<string>("Save")}
+          {t<string>("common.action.save")}
         </Button>
         {options.cookie && (
           <Button
@@ -276,7 +276,7 @@ const ThirdParty = ({
               }
             }}
           >
-            {t<string>("Validate cookie")}
+            {t<string>("configuration.thirdParty.validateCookie")}
           </Button>
         )}
       </div>
@@ -361,7 +361,7 @@ const ThirdParty = ({
                 );
               }}
             >
-              {t<string>("Save")}
+              {t<string>("common.action.save")}
             </Button>
           </div>
         </div>
@@ -447,7 +447,7 @@ const ThirdParty = ({
                 );
               }}
             >
-              {t<string>("Save")}
+              {t<string>("common.action.save")}
             </Button>
           </div>
         </div>
@@ -598,7 +598,7 @@ const ThirdParty = ({
                 applyPatches(BApi.options.patchTmdbOptions, tmpTmdbOptions);
               }}
             >
-              {t<string>("Save")}
+              {t<string>("common.action.save")}
             </Button>
           </div>
         </div>
@@ -612,7 +612,7 @@ const ThirdParty = ({
         <Table removeWrapper>
           <TableHeader>
             <TableColumn width={200}>
-              {t<string>("Third Party Configurations")}
+              {t<string>("configuration.thirdParty.title")}
               &nbsp;
               <BetaChip />
             </TableColumn>

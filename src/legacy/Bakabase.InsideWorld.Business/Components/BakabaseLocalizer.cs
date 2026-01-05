@@ -423,5 +423,14 @@ namespace Bakabase.InsideWorld.Business.Components
         public string SyncPathMark_FoundRelated(int count) => this[nameof(SyncPathMark_FoundRelated), count];
         public string SyncPathMark_EstablishingRelationships() => this[nameof(SyncPathMark_EstablishingRelationships)];
         public string SyncPathMark_Complete() => this[nameof(SyncPathMark_Complete)];
+
+        public string Dependency_NotInstalled_Message(string dependencyDisplayName) =>
+            this[nameof(Dependency_NotInstalled_Message), dependencyDisplayName];
+
+        public string Dependency_Installing_Message(string dependencyDisplayName) =>
+            this[nameof(Dependency_Installing_Message), dependencyDisplayName];
+
+        public string Dependency_Required_Message(string dependencyDisplayName, string requiredByDisplayName) =>
+            this[nameof(Dependency_Required_Message), dependencyDisplayName, requiredByDisplayName];
     }
 }

@@ -310,8 +310,8 @@ const Editor = (props: Props) => {
                   variant="bordered"
                 >
                   {value.editorPropertyType
-                    ? `${t<string>("Use {{any}}", { any: `${t<string>(PropertyType[value.editorPropertyType])} ${t<string>("editor")}` })}`
-                    : t<string>("Choose a property value editor")}
+                    ? t<string>("bulkModification.label.useEditor", { editor: t<string>(`PropertyType.${PropertyType[value.editorPropertyType]}`) })
+                    : t<string>("bulkModification.label.choosePropertyValueEditor")}
                 </Button>
               </DropdownTrigger>
               <DropdownMenu

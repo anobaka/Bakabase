@@ -18,6 +18,7 @@ using Bakabase.Modules.BulkModification.Models.Input;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Extensions;
+using Bakabase.Abstractions.Services;
 using Bakabase.Service.Models.Input;
 using Bakabase.Service.Models.View;
 using Bootstrap.Extensions;
@@ -37,6 +38,29 @@ public static class BulkModificationExtensions
             IsActive = domainModel.IsActive,
             Name = domainModel.Name,
             Search = domainModel.Search?.ToViewModel(propertyLocalizer),
+            Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
+            AppliedAt = domainModel.AppliedAt,
+            ResourceDiffCount = domainModel.ResourceDiffCount
+        };
+    }
+
+    /// <summary>
+    /// Async version that populates ParentResource property options with resource display names.
+    /// </summary>
+    public static async Task<BulkModificationViewModel> ToViewModelAsync(this BulkModification domainModel,
+        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService resourceService)
+    {
+        return new BulkModificationViewModel
+        {
+            Id = domainModel.Id,
+            CreatedAt = domainModel.CreatedAt,
+            FilteredResourceIds = domainModel.FilteredResourceIds,
+            IsActive = domainModel.IsActive,
+            Name = domainModel.Name,
+            Search = domainModel.Search != null
+                ? await domainModel.Search.ToViewModelAsync(propertyService, propertyLocalizer, resourceService)
+                : null,
             Processes = domainModel.Processes?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             Variables = domainModel.Variables?.Select(p => p.ToViewModel(propertyLocalizer)).ToList(),
             AppliedAt = domainModel.AppliedAt,

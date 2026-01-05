@@ -1,0 +1,19 @@
+{
+  "error.title": "错误",
+  "error.load.data": "加载数据失败",
+  "error.save.mark": "保存标记失败",
+  "error.delete.mark": "删除标记失败",
+  "error.delete.marks": "删除标记失败",
+  "error.update.app": "更新应用失败",
+  "error.add.mediaLibrary": "添加媒体库失败",
+  "error.remove.mediaLibrary": "移除媒体库失败",
+  "error.update.property": "更新属性失败",
+  "error.process.data": "处理数据失败",
+  "error.get.latestVersion": "获取最新版本失败",
+  "error.add.marks": "添加标记失败",
+  "error.paste.marks": "粘贴标记失败",
+  "error.transfer.marks": "转移标记失败",
+  "error.start.sync": "启动同步失败",
+  "error.update.option": "更新选项失败",
+  "error.unknown": "未知错误"
+}

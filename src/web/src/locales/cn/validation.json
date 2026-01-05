@@ -1,0 +1,12 @@
+{
+  "validation.name.required": "名称为必填项",
+  "validation.name.notEmpty": "名称不能为空",
+  "validation.executablePath.required": "可执行文件路径为必填项",
+  "validation.path.required": "路径为必填项",
+  "validation.value.required": "值为必填项",
+  "validation.selection.required": "请选择一个选项",
+  "validation.file.notFolder": "请选择文件，而非文件夹",
+  "validation.path.notExist": "{{count}} 个路径在文件系统中不存在",
+  "validation.ports.tooMany": "端口数量过多，最多支持 {{max}} 个端口。",
+  "validation.data.invalid": "无效数据"
+}

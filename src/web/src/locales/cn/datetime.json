@@ -1,0 +1,26 @@
+{
+  "datetime.format.date": "YYYY-MM-DD",
+  "datetime.format.dateTime": "YYYY-MM-DD HH:mm:ss",
+  "datetime.format.timeShort": "HH:mm",
+  "datetime.format.time": "HH:mm:ss",
+  "datetime.format.timeMs": "HH:mm:ss.SSS",
+
+  "datetime.duration.day": "天",
+  "datetime.duration.hour": "时",
+  "datetime.duration.minute": "分",
+  "datetime.duration.second": "秒",
+
+  "datetime.label.date": "日期",
+  "datetime.label.time": "时间",
+  "datetime.label.nextRun": "下次运行",
+  "datetime.label.estimatedCompletion": "预计完成时间",
+  "datetime.label.createdAt": "创建于",
+
+  "datetime.relative.justNow": "刚刚播放",
+  "datetime.relative.minutesAgo": "{{n}} 分钟前播放",
+  "datetime.relative.hoursAgo": "{{n}} 小时前播放",
+  "datetime.relative.daysAgo": "{{n}} 天前播放",
+
+  "datetime.action.hideTimeInfo": "隐藏时间信息",
+  "datetime.action.showTimeInfo": "显示时间信息"
+}

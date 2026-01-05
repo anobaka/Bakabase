@@ -54,6 +54,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
 
   const handleSelectProperty = () => {
     createPortal(PropertySelector, {
+      v2: true,
       pool: PropertyPool.Custom | PropertyPool.Reserved,
       multiple: false,
       onSubmit: async (properties: IProperty[]) => {
@@ -73,7 +74,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
     <>
       {/* Explanatory text */}
       <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
-        {t("PathMark.Property.Explanation")}
+        {t("pathMark.property.explanation")}
       </div>
 
       <MatchModeSelector
@@ -95,13 +96,13 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       />
 
       <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">{t("Property Settings")}</span>
-        <div className="text-xs text-default-400 mt-1">{t("PathMark.Property.SettingsDescription")}</div>
+        <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.propertySettings")}</span>
+        <div className="text-xs text-default-400 mt-1">{t("pathMark.property.settingsDescription")}</div>
       </div>
 
       {/* Property Selector */}
       <div className="flex flex-col gap-1">
-        <span className="text-sm">{t("Target Property")}</span>
+        <span className="text-sm">{t("pathMarkConfig.label.targetProperty")}</span>
         <div className="flex items-center gap-2">
           {selectedProperty ? (
             <Chip
@@ -115,7 +116,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
               {selectedProperty.name}
             </Chip>
           ) : (
-            <span className="text-sm text-default-400">{t("No property selected")}</span>
+            <span className="text-sm text-default-400">{t("pathMarkConfig.empty.noPropertySelected")}</span>
           )}
           <Button
             size="sm"
@@ -123,14 +124,14 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
             startContent={<EditOutlined />}
             onPress={handleSelectProperty}
           >
-            {selectedProperty ? t("Change") : t("Select Property")}
+            {selectedProperty ? t("common.action.change") : t("pathMarkConfig.action.selectProperty")}
           </Button>
         </div>
       </div>
 
       {/* Value Type - Radio Group */}
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t("Value Type")}</span>
+        <span className="text-sm font-medium">{t("pathMarkConfig.label.valueType")}</span>
         <RadioGroup
           value={String(config.valueType ?? PropertyValueType.Fixed)}
           onValueChange={(value) => updateConfig({ valueType: Number(value) })}
@@ -138,17 +139,17 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
           orientation="horizontal"
         >
           <Radio value={String(PropertyValueType.Fixed)}>
-            {t("Fixed")}
+            {t("pathMarkConfig.label.fixed")}
           </Radio>
           <Radio value={String(PropertyValueType.Dynamic)}>
-            {t("Dynamic")}
+            {t("pathMarkConfig.label.dynamic")}
           </Radio>
         </RadioGroup>
       </div>
 
       {config.valueType === PropertyValueType.Fixed ? (
         <Input
-          label={t("Fixed Value")}
+          label={t("pathMarkConfig.label.fixedValue")}
           size="sm"
           value={config.fixedValue ?? ""}
           onValueChange={(v) => updateConfig({ fixedValue: v })}
@@ -157,7 +158,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         <>
           {/* Value Match Mode - Radio Group */}
           <div className="flex flex-col gap-1">
-            <span className="text-sm font-medium">{t("Value Extraction Mode")}</span>
+            <span className="text-sm font-medium">{t("pathMarkConfig.label.valueExtractionMode")}</span>
             <RadioGroup
               value={String(config.valueMatchMode ?? PathMatchMode.Layer)}
               onValueChange={(value) => updateConfig({ valueMatchMode: Number(value) })}
@@ -165,26 +166,26 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
               orientation="horizontal"
             >
               <Radio value={String(PathMatchMode.Layer)}>
-                {t("Layer")}
+                {t("pathMarkConfig.label.layer")}
               </Radio>
               <Radio value={String(PathMatchMode.Regex)}>
-                {t("Regex")}
+                {t("pathMarkConfig.label.regex")}
               </Radio>
             </RadioGroup>
           </div>
 
           {config.valueMatchMode === PathMatchMode.Layer ? (
             <NumberInput
-              label={t("Value Layer")}
-              description={t("0 = matched item")}
+              label={t("pathMarkConfig.label.valueLayer")}
+              description={t("pathMarkConfig.tip.zeroEqualsMatchedItem")}
               size="sm"
               value={config.valueLayer ?? 0}
               onValueChange={(v) => updateConfig({ valueLayer: v })}
             />
           ) : (
             <Input
-              label={t("Value Regex")}
-              placeholder={t("e.g., \\[(.+?)\\]")}
+              label={t("pathMarkConfig.label.valueRegex")}
+              placeholder={t("pathMarkConfig.tip.regexExample")}
               size="sm"
               value={config.valueRegex ?? ""}
               onValueChange={(v) => updateConfig({ valueRegex: v })}
@@ -196,8 +197,8 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       {/* Priority at the bottom */}
       <div className="border-t border-default-200 pt-2">
         <NumberInput
-          label={t("Priority")}
-          description={t("PathMark.Priority.Description")}
+          label={t("common.label.priority")}
+          description={t("pathMark.priority.description")}
           size="sm"
           value={priority}
           onValueChange={(v) => onPriorityChange(v ?? 10)}

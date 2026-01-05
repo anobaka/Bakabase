@@ -23,10 +23,10 @@ export const ResourceDescription = () => {
 
   return (
     <div className="space-y-2">
-      <p>{t("Term.Resource.Description")}</p>
-      <p>{t("Term.Resource.Usage")}</p>
+      <p>{t("term.resource.description")}</p>
+      <p>{t("term.resource.usage")}</p>
       <p className="text-small text-warning-500">
-        {t("Term.Resource.Tip")}
+        {t("term.resource.tip")}
       </p>
     </div>
   );
@@ -47,7 +47,7 @@ const ResourceTerm = ({
       className={className}
       color={color}
       description={<ResourceDescription />}
-      label={t("Resource")}
+      label={t("common.label.resource")}
       size={size}
       variant={variant}
     />

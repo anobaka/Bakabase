@@ -1,0 +1,9 @@
+{
+  "fileProcessor.action.bulkDecompression": "Bulk decompression all decompressed files in current folder",
+  "fileProcessor.tip.operationsAfterPlay": "Usually this will work fine if you are categorizing files.",
+  "fileProcessor.label.showOperationsAfterPlay": "Show operations after playing first file",
+  "fileProcessor.modal.afterFirstPlayTitle": "We noticed that you played the first file in this path. Would you like to proceed with the following actions?",
+  "fileProcessor.label.currentPath": "Current Path",
+  "fileProcessor.tip.moveToAnotherPath": "You can move it to another path.",
+  "fileProcessor.tip.orDeleteIt": "Or delete it?"
+}

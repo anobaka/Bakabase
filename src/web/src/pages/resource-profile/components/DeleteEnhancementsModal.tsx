@@ -43,7 +43,7 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
 
   const selectDataSource = useMemo(() => {
     const options = [
-      { value: "all", label: t("All enhancers") },
+      { value: "all", label: t("resourceProfile.label.allEnhancers") },
     ];
 
     enhancerOptions.forEach((opt: BakabaseAbstractionsModelsDomainEnhancerFullOptions) => {
@@ -87,12 +87,12 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
     <Modal
       defaultVisible
       size="md"
-      title={t<string>("Delete Enhancements")}
+      title={t<string>("resourceProfile.modal.deleteEnhancementsTitle")}
       onDestroyed={onDestroyed}
       footer={(
         <div className="flex justify-end gap-2">
           <Button variant="light" onPress={() => onDestroyed?.()}>
-            {t<string>("Cancel")}
+            {t<string>("common.action.cancel")}
           </Button>
           <Button
             color="danger"
@@ -100,20 +100,20 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
             startContent={<DeleteOutlined />}
             onPress={handleDelete}
           >
-            {t<string>("Delete")}
+            {t<string>("common.action.delete")}
           </Button>
         </div>
       )}
     >
       <div className="flex flex-col gap-4">
         <div className="text-sm">
-          {t("Delete enhancements for resources matching profile")}:{" "}
+          {t("resourceProfile.tip.deleteEnhancementsForProfile")}:{" "}
           <Chip color="primary" size="sm" variant="flat">{profile.name}</Chip>
         </div>
 
         {enhancerOptions.length > 0 ? (
           <div>
-            <label className="text-sm font-medium mb-2 block">{t("Select enhancer")}</label>
+            <label className="text-sm font-medium mb-2 block">{t("resourceProfile.label.selectEnhancer")}</label>
             <Select
               selectedKeys={[selectedEnhancerId]}
               dataSource={selectDataSource}
@@ -125,7 +125,7 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
           </div>
         ) : (
           <div className="text-sm text-warning">
-            {t("This profile has no enhancers configured. All enhancements for matching resources will be deleted.")}
+            {t("resourceProfile.tip.noEnhancersConfigured")}
           </div>
         )}
 
@@ -134,15 +134,15 @@ const DeleteEnhancementsModal = ({ profile, onDeleted, onDestroyed }: Props) => 
           onValueChange={setDeleteEmptyOnly}
         >
           <div className="flex flex-col">
-            <span>{t("Delete empty records only")}</span>
+            <span>{t("resourceProfile.label.deleteEmptyRecordsOnly")}</span>
             <span className="text-xs text-default-400">
-              {t("Only delete enhancement records that have no actual enhancement data")}
+              {t("resourceProfile.tip.deleteEmptyRecordsOnlyDescription")}
             </span>
           </div>
         </Checkbox>
 
         <div className="text-sm text-danger">
-          {t("Warning: This action cannot be undone.")}
+          {t("resourceProfile.warning.cannotBeUndone")}
         </div>
       </div>
     </Modal>

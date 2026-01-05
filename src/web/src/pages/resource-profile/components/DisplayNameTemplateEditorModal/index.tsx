@@ -11,6 +11,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { Chip, Modal, Textarea, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi.tsx";
 import { builtinPropertyForDisplayNames, PropertyType, SpecialTextType } from "@/sdk/constants.ts";
+import { getEnumKey } from "@/i18n";
 
 type Props = DestroyableProps & {
   template?: string;
@@ -125,7 +126,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
     // Add builtin properties
     builtinPropertyForDisplayNames.forEach((v) => {
       items.push({
-        name: t(`BuiltinPropertyForDisplayName.${v.label}`),
+        name: t(getEnumKey('BuiltinPropertyForDisplayName', v.label)),
         type: "builtin",
       });
     });
@@ -185,19 +186,19 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
   // Build type filters dynamically based on available types
   const typeFilters = useMemo(() => {
     const filters: Array<{ key: "all" | "builtin" | PropertyType; label: string }> = [
-      { key: "all", label: t("All") },
+      { key: "all", label: t("common.label.all") },
     ];
 
     // Add builtin if exists
     if (availableTypes.has("builtin")) {
-      filters.push({ key: "builtin", label: t("Builtin") });
+      filters.push({ key: "builtin", label: t("common.label.builtin") });
     }
 
     // Add property types that exist
     Object.entries(propertyTypeLabels).forEach(([key, label]) => {
       const typeKey = Number(key) as PropertyType;
       if (availableTypes.has(typeKey)) {
-        filters.push({ key: typeKey, label: t(`PropertyType.${label}`) });
+        filters.push({ key: typeKey, label: t(getEnumKey('PropertyType', label)) });
       }
     });
 
@@ -208,7 +209,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
     <Modal
       defaultVisible
       size="2xl"
-      title={t("Edit display name template for resources")}
+      title={t("resourceProfile.modal.editDisplayNameTemplateTitle")}
       onDestroyed={props.onDestroyed}
       onOk={() => onSubmit?.(templateValue)}
     >
@@ -216,7 +217,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
         {/* Properties Section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium">{t("Available Properties")}</div>
+            <div className="text-sm font-medium">{t("resourceProfile.label.availableProperties")}</div>
           </div>
           {/* Type filters */}
           <div className="flex flex-wrap gap-1 mb-2">
@@ -249,7 +250,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
                 </Chip>
               ))}
               {filteredProperties.length === 0 && (
-                <span className="text-default-400 text-sm">{t("No properties available")}</span>
+                <span className="text-default-400 text-sm">{t("resourceProfile.empty.noPropertiesAvailable")}</span>
               )}
             </div>
           </div>
@@ -258,7 +259,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
         {/* Wrappers Section */}
         {wrappers.length > 0 && (
           <div>
-            <div className="text-sm font-medium mb-2">{t("Wrappers")}</div>
+            <div className="text-sm font-medium mb-2">{t("resourceProfile.label.wrappers")}</div>
             <div className="flex flex-wrap gap-1">
               {wrappers.map((w) => (
                 <Chip
@@ -275,7 +276,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
             </div>
             <div className="text-xs text-default-400 mt-1">
               <InfoCircleOutlined className="mr-1" />
-              {t("Wrappers around empty property values will be removed automatically.")}
+              {t("resourceProfile.tip.wrappersRemovedAutomatically")}
             </div>
           </div>
         )}
@@ -284,10 +285,10 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
 
         {/* Input */}
         <div>
-          <div className="text-sm font-medium mb-2">{t("Template")}</div>
+          <div className="text-sm font-medium mb-2">{t("resourceProfile.label.template")}</div>
           <Textarea
             ref={textareaRef}
-            placeholder={t("Enter template or click properties above to insert...")}
+            placeholder={t("resourceProfile.input.templatePlaceholder")}
             value={templateValue}
             onValueChange={setTemplateValue}
             minRows={2}
@@ -298,14 +299,14 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
           />
           <div className="text-xs text-default-400 mt-1">
             <InfoCircleOutlined className="mr-1" />
-            {t("Leave empty to use filename as display name.")}
+            {t("resourceProfile.tip.leaveEmptyForFilename")}
           </div>
         </div>
 
         {/* Preview */}
         {templateValue && (
           <div>
-            <div className="text-sm font-medium mb-2">{t("Preview")}</div>
+            <div className="text-sm font-medium mb-2">{t("resourceProfile.label.preview")}</div>
             <div className="p-3 bg-default-100 rounded-lg flex flex-wrap items-center gap-0.5">
               {previewSegments.map((seg, idx) => {
                 if (seg.type === "text") {

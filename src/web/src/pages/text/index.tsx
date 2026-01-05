@@ -124,11 +124,11 @@ const TextPage = () => {
     return (
       <div className="grid grid-cols-2 gap-4">
         <div className="border border-default-200 rounded-md p-2 whitespace-pre-wrap break-words text-sm">
-          <div className="font-medium mb-2">{t<string>("Original")}</div>
+          <div className="font-medium mb-2">{t<string>("text.label.original")}</div>
           <div>{left}</div>
         </div>
         <div className="border border-default-200 rounded-md p-2 whitespace-pre-wrap break-words text-sm">
-          <div className="font-medium mb-2">{t<string>("Pretreated")}</div>
+          <div className="font-medium mb-2">{t<string>("text.label.pretreated")}</div>
           <div>{right}</div>
         </div>
       </div>
@@ -188,10 +188,10 @@ const TextPage = () => {
     <div className="text-page" title="Text">
       <Table isStriped removeWrapper>
         <TableHeader>
-          <TableColumn>{t<string>("Type")}</TableColumn>
-          <TableColumn>{t<string>("Applied to")}</TableColumn>
-          <TableColumn>{t<string>("Texts")}</TableColumn>
-          <TableColumn>{t<string>("Opt")}</TableColumn>
+          <TableColumn>{t<string>("common.label.type")}</TableColumn>
+          <TableColumn>{t<string>("text.label.appliedTo")}</TableColumn>
+          <TableColumn>{t<string>("text.label.texts")}</TableColumn>
+          <TableColumn>{t<string>("text.label.opt")}</TableColumn>
         </TableHeader>
         <TableBody>
           {Object.keys(textsMap).map((typeStr) => {
@@ -236,7 +236,7 @@ const TextPage = () => {
                           variant={"bordered"}
                           onClose={() => {
                             createPortal(Modal, {
-                              title: t<string>("Sure to delete?"),
+                              title: t<string>("text.confirm.deleteTitle"),
                               defaultVisible: true,
                               onOk: async () => {
                                 await BApi.specialText.deleteSpecialText(c.id);
@@ -269,7 +269,7 @@ const TextPage = () => {
                       })
                     }
                   >
-                    {t<string>("Add")}
+                    {t<string>("common.action.add")}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -290,15 +290,15 @@ const TextPage = () => {
             });
           }}
         >
-          {t<string>("Add prefabs")}
+          {t<string>("text.action.addPrefabs")}
         </Button>
       </div>
       <Divider className="my-4" />
       <div className="mt-2">
-        <div className="font-medium mb-2">{t<string>("Pretreatment test")}</div>
+        <div className="font-medium mb-2">{t<string>("text.label.pretreatmentTest")}</div>
         <Textarea
           minRows={3}
-          placeholder={t<string>("Enter text")}
+          placeholder={t<string>("text.input.enterText")}
           value={testInput}
           onValueChange={(v) => {
             setTestInput(v);
@@ -320,7 +320,7 @@ const TextPage = () => {
               }
             }}
           >
-            {t<string>("Run pretreatment")}
+            {t<string>("text.action.runPretreatment")}
           </Button>
         </div>
         <div className="mt-3">
@@ -328,7 +328,7 @@ const TextPage = () => {
             hasDiff ? (
               renderDiffChunks(testInput, testResult)
             ) : (
-              <div className="text-default-500 text-sm">{t<string>("No changes")}</div>
+              <div className="text-default-500 text-sm">{t<string>("text.label.noChanges")}</div>
             )
           )}
         </div>

@@ -6,21 +6,20 @@ import type { ResourceTag } from "@/sdk/constants";
 import { useTranslation } from "react-i18next";
 import { AppstoreOutlined, FilterOutlined } from "@ant-design/icons";
 
-import QuickFilters from "../ResourceSearchPanel/QuickFilters";
 import RecentFilters from "../RecentFilters";
 
 import { Button, Checkbox, CheckboxGroup, Divider } from "@/components/bakaui";
 import { resourceTags, ResourceTag as ResourceTagEnum } from "@/sdk/constants";
+import { TbSwitch2 } from "react-icons/tb";
+import { getEnumKey } from "@/i18n";
 
 export interface FilterAddPopoverContentProps {
   /** Called when adding a new empty filter */
   onAddFilter: (autoTriggerPropertySelector?: boolean) => void;
   /** Called when adding a filter group */
   onAddFilterGroup: () => void;
-  /** Called when selecting a quick filter or recent filter */
-  onSelectFilter: (filter: SearchFilter) => void;
-  /** Whether to show quick filters */
-  showQuickFilters?: boolean;
+  /** Called when selecting filters (may be multiple for range types) */
+  onSelectFilters: (filters: SearchFilter[]) => void;
   /** Whether to show tags selection */
   showTags?: boolean;
   /** Current selected tags (only used when showTags is true) */
@@ -31,18 +30,20 @@ export interface FilterAddPopoverContentProps {
   showRecentFilters?: boolean;
   /** Called to close the popover */
   onClose?: () => void;
+  /** Called to switch to Simple mode (only shown when provided) */
+  onSwitchToSimpleMode?: () => void;
 }
 
 const FilterAddPopoverContent = ({
   onAddFilter,
   onAddFilterGroup,
-  onSelectFilter,
-  showQuickFilters = true,
+  onSelectFilters,
   showTags = false,
   selectedTags,
   onTagsChange,
   showRecentFilters = true,
   onClose,
+  onSwitchToSimpleMode,
 }: FilterAddPopoverContentProps) => {
   const { t } = useTranslation();
 
@@ -51,20 +52,7 @@ const FilterAddPopoverContent = ({
       className="grid items-center gap-2 my-3 mx-1 max-w-[480px]"
       style={{ gridTemplateColumns: "auto auto" }}
     >
-      {showQuickFilters && (
-        <>
-          <QuickFilters
-            onAdded={(filter) => {
-              onClose?.();
-              onSelectFilter(filter);
-            }}
-          />
-          <div />
-          <Divider orientation="horizontal" />
-        </>
-      )}
-
-      <div>{t<string>("Advance filter")}</div>
+      <div>{t<string>("resourceFilter.advanceFilter")}</div>
       <div className="flex items-center gap-2">
         <Button
           size="sm"
@@ -74,7 +62,7 @@ const FilterAddPopoverContent = ({
           }}
         >
           <FilterOutlined className="text-base" />
-          {t<string>("Filter")}
+          {t<string>("resourceFilter.filter")}
         </Button>
         <Button
           size="sm"
@@ -84,7 +72,7 @@ const FilterAddPopoverContent = ({
           }}
         >
           <AppstoreOutlined className="text-base" />
-          {t<string>("Filter group")}
+          {t<string>("resourceFilter.filterGroup")}
         </Button>
       </div>
 
@@ -92,7 +80,7 @@ const FilterAddPopoverContent = ({
         <>
           <div />
           <Divider orientation="horizontal" />
-          <div>{t<string>("Special filters")}</div>
+          <div>{t<string>("resourceFilter.specialFilters")}</div>
           <div>
             <CheckboxGroup
               size="sm"
@@ -110,7 +98,7 @@ const FilterAddPopoverContent = ({
                 )
                 .map((rt) => (
                   <Checkbox key={rt.value} value={rt.value.toString()}>
-                    {t<string>(`ResourceTag.${rt.label}`)}
+                    {t<string>(getEnumKey('ResourceTag', rt.label))}
                   </Checkbox>
                 ))}
             </CheckboxGroup>
@@ -122,14 +110,36 @@ const FilterAddPopoverContent = ({
         <>
           <div />
           <Divider />
-          <div>{t<string>("Recent filters")}</div>
+          <div>{t<string>("resourceFilter.recentFilters")}</div>
           <div>
             <RecentFilters
               onSelectFilter={(filter) => {
                 onClose?.();
-                onSelectFilter(filter);
+                onSelectFilters([filter]);
               }}
             />
+          </div>
+        </>
+      )}
+
+      {onSwitchToSimpleMode && (
+        <>
+          <div />
+          <Divider />
+          <div />
+          <div className="flex justify-end">
+            <Button
+              size="sm"
+              variant="light"
+              color="primary"
+              onPress={() => {
+                onClose?.();
+                onSwitchToSimpleMode();
+              }}
+            >
+              <TbSwitch2 className="text-lg" />
+              {t<string>("resourceFilter.switchToSimpleMode")}
+            </Button>
           </div>
         </>
       )}

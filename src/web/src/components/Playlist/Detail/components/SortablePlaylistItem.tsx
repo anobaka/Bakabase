@@ -65,7 +65,7 @@ export default SortableElement<SortablePlaylistItemProps>(
       if (resource?.displayName) {
         return resource.displayName;
       }
-      return t("Unknown Resource");
+      return t("playlist.label.unknownResource");
     }, [resource, t]);
 
     const handleOpenFile = useCallback(() => {

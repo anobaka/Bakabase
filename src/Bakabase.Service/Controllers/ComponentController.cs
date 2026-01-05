@@ -15,7 +15,6 @@ using ComponentDescriptor = Bakabase.Abstractions.Models.Domain.ComponentDescrip
 
 namespace Bakabase.Service.Controllers
 {
-    [Obsolete]
     [Route("~/component")]
     public class ComponentController : Controller
     {

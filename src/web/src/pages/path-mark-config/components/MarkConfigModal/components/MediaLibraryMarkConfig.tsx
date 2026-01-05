@@ -77,7 +77,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
     <>
       {/* Explanatory text */}
       <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
-        {t("PathMark.MediaLibrary.Explanation")}
+        {t("pathMark.mediaLibrary.explanation")}
       </div>
 
       <MatchModeSelector
@@ -99,13 +99,13 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
       />
 
       <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">{t("Media Library Settings")}</span>
-        <div className="text-xs text-default-400 mt-1">{t("PathMark.MediaLibrary.SettingsDescription")}</div>
+        <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.mediaLibrarySettings")}</span>
+        <div className="text-xs text-default-400 mt-1">{t("pathMark.mediaLibrary.settingsDescription")}</div>
       </div>
 
       {/* Value Type - Radio Group */}
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium">{t("Value Type")}</span>
+        <span className="text-sm font-medium">{t("pathMarkConfig.label.valueType")}</span>
         <RadioGroup
           value={String(valueType)}
           onValueChange={(value) => updateConfig({ mediaLibraryValueType: Number(value) })}
@@ -113,10 +113,10 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
           orientation="horizontal"
         >
           <Radio value={String(PropertyValueType.Fixed)}>
-            {t("Fixed")}
+            {t("pathMarkConfig.label.fixed")}
           </Radio>
           <Radio value={String(PropertyValueType.Dynamic)}>
-            {t("Dynamic")}
+            {t("pathMarkConfig.label.dynamic")}
           </Radio>
         </RadioGroup>
       </div>
@@ -125,7 +125,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
         <>
           {/* Fixed Mode: Media Library Selector using MediaLibrarySelectorV2 */}
           <div className="flex flex-col gap-1">
-            <span className="text-sm">{t("Target Media Library")}</span>
+            <span className="text-sm">{t("pathMarkConfig.label.targetMediaLibrary")}</span>
             <div className="flex items-center gap-2">
               {selectedLibrary ? (
                 <Chip
@@ -139,7 +139,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
                   {selectedLibrary.name}
                 </Chip>
               ) : (
-                <span className="text-sm text-default-400">{t("No media library selected")}</span>
+                <span className="text-sm text-default-400">{t("pathMarkConfig.empty.noMediaLibrarySelected")}</span>
               )}
               <Button
                 size="sm"
@@ -147,35 +147,35 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
                 startContent={<EditOutlined />}
                 onPress={handleSelectLibrary}
               >
-                {selectedLibrary ? t("Change") : t("Select Media Library")}
+                {selectedLibrary ? t("common.action.change") : t("pathMarkConfig.action.selectMediaLibrary")}
               </Button>
             </div>
           </div>
 
           {/* Description for Fixed mode */}
           <div className="text-xs text-default-400 mt-2">
-            {t("Resources matched by this mark will be associated with the selected media library.")}
+            {t("pathMarkConfig.tip.fixedMediaLibraryDescription")}
           </div>
         </>
       ) : (
         <>
           {/* Dynamic Mode: Layer or Regex to extract media library name */}
           <div className="text-xs text-default-400">
-            {t("Extract the media library name from the path. If the media library does not exist, it will be created automatically.")}
+            {t("pathMarkConfig.tip.dynamicMediaLibraryDescription")}
           </div>
 
           <NumberInput
-            label={t("Layer to Media Library")}
-            description={t("Which layer's directory name to use as media library name. 0 = matched item, 1 = parent, etc.")}
+            label={t("pathMarkConfig.label.layerToMediaLibrary")}
+            description={t("pathMarkConfig.tip.layerToMediaLibraryDescription")}
             size="sm"
             value={config.layerToMediaLibrary ?? 0}
             onValueChange={(v) => updateConfig({ layerToMediaLibrary: v })}
           />
 
           <Input
-            label={t("Regex to Media Library (Optional)")}
-            description={t("Optional regex to extract media library name. Uses first capture group or full match.")}
-            placeholder={t("e.g., \\[(.+?)\\]")}
+            label={t("pathMarkConfig.label.regexToMediaLibrary")}
+            description={t("pathMarkConfig.tip.regexToMediaLibraryDescription")}
+            placeholder={t("pathMarkConfig.tip.regexExample")}
             size="sm"
             value={config.regexToMediaLibrary ?? ""}
             onValueChange={(v) => updateConfig({ regexToMediaLibrary: v })}
@@ -186,8 +186,8 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
       {/* Priority at the bottom */}
       <div className="border-t border-default-200 pt-2">
         <NumberInput
-          label={t("Priority")}
-          description={t("PathMark.Priority.Description")}
+          label={t("common.label.priority")}
+          description={t("pathMark.priority.description")}
           size="sm"
           value={priority}
           onValueChange={(v) => onPriorityChange(v ?? 10)}

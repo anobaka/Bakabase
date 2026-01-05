@@ -1,0 +1,60 @@
+{
+  "onboarding": {
+    "skip": "跳过",
+    "previous": "上一步",
+    "next": "下一步",
+    "start": "开始使用",
+    "viewAgain": "再次查看引导",
+    "welcome": {
+      "title": "欢迎使用 Bakabase",
+      "description": "让我们快速了解一下 Bakabase 的核心功能,帮助你更好地管理和浏览你的媒体资源。"
+    },
+    "pathMark": {
+      "title": "路径标记",
+      "subtitle": "连接你的媒体库,开始管理资源",
+      "point1": "添加媒体文件夹作为路径标记",
+      "point2": "为不同类型的资源设置标签",
+      "point3": "自动扫描并索引你的媒体文件"
+    },
+    "resourceProfile": {
+      "title": "资源扩展",
+      "subtitle": "自定义资源的展示和处理方式",
+      "point1": "为不同类型的资源创建配置方案",
+      "point2": "设置资源的元数据增强规则",
+      "point3": "配置资源的播放和预览选项"
+    },
+    "resourceBrowsing": {
+      "title": "资源浏览",
+      "subtitle": "强大的搜索和筛选功能",
+      "point1": "使用多种条件筛选资源",
+      "point2": "在列表视图和网格视图间切换",
+      "point3": "快速查找和访问你的资源"
+    },
+    "fileProcessor": {
+      "title": "文件处理器",
+      "subtitle": "自动化处理你的媒体文件",
+      "point1": "自动解压缩文件",
+      "point2": "定期同步和更新资源",
+      "point3": "批量处理文件操作"
+    },
+    "downloader": {
+      "title": "下载器",
+      "subtitle": "增强资源的元数据和封面",
+      "point1": "自动下载视频预览",
+      "point2": "获取高质量封面图片",
+      "point3": "同步第三方平台的元数据"
+    },
+    "fileMover": {
+      "title": "文件移动器",
+      "subtitle": "智能整理你的文件结构",
+      "point1": "根据规则自动移动文件",
+      "point2": "自定义文件命名格式",
+      "point3": "批量重组文件夹结构"
+    },
+    "completion": {
+      "title": "准备就绪!",
+      "description": "你已经了解了 Bakabase 的主要功能。现在可以开始添加你的第一个路径标记,开始管理你的媒体资源了!",
+      "hint": "你可以随时在设置中再次查看本指南"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "property.empty.noPropertiesAvailable": "No properties available",
+  "property.empty.noPropertiesFound": "No properties found",
+  "property.action.addProperty": "Add a property",
+  "property.action.searchProperties": "Search properties",
+  "property.modal.selectProperties": "Select properties",
+  "property.modal.selectProperty": "Select a property",
+  "property.modal.adjustPropertyOrderTitle": "Adjust orders of properties",
+  "property.tip.clickToEditOrder": "Click to edit order",
+  "property.tip.orderEditInstructions": "Click on the order number to edit directly, or use the buttons to move to top/bottom",
+  "property.modal.bulkEditProperties": "Bulk edit properties",
+  "property.modal.confirmPropertyChange": "Confirm property change",
+  "property.success.propertyUpdatedSuccessfully": "Property updated successfully",
+  "property.error.failedToUpdateProperty": "Failed to update property",
+  "property.warning.willOverrideValues": "This will override different values on {{count}} resources"
+}

@@ -127,6 +127,7 @@ export default function EnhancerOptionsModal({
             variant={"light"}
             onPress={async () => {
               createPortal(PropertySelector, {
+                v2: true,
                 pool: PropertyPool.All,
                 multiple: false,
                 isDisabled: (p) =>

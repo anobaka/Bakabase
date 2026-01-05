@@ -1,0 +1,9 @@
+{
+  "fileProcessor.action.bulkDecompression": "批量解压当前文件夹中的所有压缩文件",
+  "fileProcessor.tip.operationsAfterPlay": "通常在分类文件时这个功能很有用。",
+  "fileProcessor.label.showOperationsAfterPlay": "播放第一个文件后显示操作",
+  "fileProcessor.modal.afterFirstPlayTitle": "我们注意到您播放了此路径中的第一个文件。您想要执行以下操作吗？",
+  "fileProcessor.label.currentPath": "当前路径",
+  "fileProcessor.tip.moveToAnotherPath": "您可以将其移动到其他路径。",
+  "fileProcessor.tip.orDeleteIt": "或者删除它？"
+}

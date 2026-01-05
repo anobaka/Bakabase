@@ -670,7 +670,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
         get: operations["GetComponentDescriptors"];
         put?: never;
         post?: never;
@@ -687,7 +686,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
         get: operations["GetComponentDescriptorByKey"];
         put?: never;
         post?: never;
@@ -704,7 +702,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
         get: operations["DiscoverDependentComponent"];
         put?: never;
         post?: never;
@@ -721,7 +718,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @deprecated */
         get: operations["GetDependentComponentLatestVersion"];
         put?: never;
         post?: never;
@@ -740,7 +736,6 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @deprecated */
         post: operations["InstallDependentComponent"];
         delete?: never;
         options?: never;
@@ -3598,6 +3593,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/saved-search/display-mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["PutSavedSearchDisplayMode"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/search": {
         parameters: {
             query?: never;
@@ -4465,6 +4476,12 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.EnhancementRecordStatus": 1 | 2;
         /**
          * Format: int32
+         * @description [1: Simple, 2: Advanced]
+         * @enum {integer}
+         */
+        "Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode": 1 | 2;
+        /**
+         * Format: int32
          * @description [1: NotAcceptTerms, 2: NeedRestart]
          * @enum {integer}
          */
@@ -4808,6 +4825,11 @@ export interface components {
             /** Format: int32 */
             order: number;
         };
+        "Bakabase.Abstractions.Models.Domain.PropertyKey": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
+        };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
             /** Format: int32 */
@@ -4925,12 +4947,7 @@ export interface components {
             players?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions": {
-            properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyReference"][];
-        };
-        "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyReference": {
-            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
-            /** Format: int32 */
-            id: number;
+            properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyKey"][];
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -5435,6 +5452,7 @@ export interface components {
             id: string;
             search: components["schemas"]["Bakabase.Modules.Search.Models.Db.ResourceSearchDbModel"];
             name: string;
+            displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SynchronizationCategoryOptions": {
             deleteResourcesWithUnknownPath?: boolean;
@@ -6664,6 +6682,7 @@ export interface components {
         };
         "Bakabase.Service.Models.Input.SavedSearchAddInputModel": {
             search: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
         };
         "Bakabase.Service.Models.View.BulkModificationDiffViewModel": {
             /** Format: int32 */
@@ -6943,6 +6962,7 @@ export interface components {
             id: string;
             search: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
             name: string;
+            displayMode: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
         };
         "Bootstrap.Components.Logging.LogService.Models.Entities.Log": {
             /** Format: int32 */
@@ -16027,6 +16047,37 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PutSavedSearchDisplayMode: {
+        parameters: {
+            query?: {
+                id?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+                "application/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+                "text/json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+                "application/*+json": components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.FilterDisplayMode"];
+            };
+        };
         responses: {
             /** @description OK */
             200: {

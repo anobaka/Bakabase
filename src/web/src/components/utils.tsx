@@ -551,17 +551,46 @@ export function standardizePath(path?: string): string | undefined {
 }
 
 export function getStandardParentPath(path?: string): string | undefined {
-  if (path == undefined) {
+  // 1. 如果路径本身就是 undefined，直接返回
+  if (path === undefined) {
     return undefined;
   }
+  
+  // 2. 如果路径已经是空字符串（代表在“我的电脑”/设备列表层级），则没有上级了
+  if (path === "") {
+    return undefined;
+  }
+
   const stdPath = standardizePath(path)!;
   const segments = splitPathIntoSegments(stdPath)!;
-  const suffix = segments.slice(0, -1).join(BusinessConstants.pathSeparator);
-  if (suffix.length == 0) {
-    return undefined;
+
+  // 3. 【核心优化】检测是否已经在根节点
+  // 如果当前没有任何分段（例如 "/"）或者只有一个分段（例如 "C:" 或 "Drivers"）
+  // 这意味着再往上就是“设备列表”了，应该返回空字符串 ""
+  if (segments.length <= 1) {
+    // 这里我们要处理一种特殊情况：
+    // 如果是 Linux 风格的 absolute path (如 /usr)，segments 是 ['usr']，prefix 是 '/'
+    // 这种情况下，上级应该是 '/' 而不是 ''
+    // 所以我们需要结合 prefix 判断
+    const match = stdPath.match(/^([\\/]+)(.*)/);
+    const prefix = match ? match[1] : "";
+    
+    // 如果有前缀且只有一段（例如 /usr），且当前路径不仅仅是前缀本身
+    if (prefix && segments.length === 1 && stdPath !== prefix) {
+        return prefix; // 返回根目录 "/"
+    }
+    
+    // 其他情况（如 "C:" 或 "/"），返回空字符串触发获取 Drivers
+    return "";
   }
+
+  // 4. 标准的截断逻辑
+  const suffix = segments.slice(0, -1).join(BusinessConstants.pathSeparator);
+  
   const match = stdPath.match(/^([\\/]+)(.*)/);
   const prefix = match ? match[1] : "";
+  
+  // 5. 组合
   return `${prefix}${suffix}`;
 }
 

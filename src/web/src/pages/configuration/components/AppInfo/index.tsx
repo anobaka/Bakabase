@@ -55,7 +55,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
       case UpdaterStatus.UpToDate:
         return (
           <Chip radius="sm" variant="light" color="default">
-            {t("Up-to-date")}
+            {t("configuration.appInfo.upToDate")}
           </Chip>
         );
       case UpdaterStatus.Idle:
@@ -91,7 +91,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
                         });
                       }}
                     >
-                      {t("Change log")}
+                      {t("configuration.appInfo.changelog")}
                     </Button>
                   </>
                 )}
@@ -104,7 +104,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
                     BApi.updater.startUpdatingApp();
                   }}
                 >
-                  {t("Click to auto-update")}
+                  {t("configuration.appInfo.clickToAutoUpdate")}
                 </Button>
                 {newVersion.installers?.length > 0 ? (
                   <>
@@ -112,7 +112,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
                     <Popover
                       trigger={
                         <Button color="primary" size="sm" variant="light">
-                          {t("Auto-Update Fails? Click to download complete installers")}
+                          {t("configuration.appInfo.autoUpdateFails")}
                         </Button>
                       }
                     >
@@ -131,12 +131,12 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
           } else {
             return (
               <Chip radius="sm" variant="light" color="default">
-                {t("Up-to-date")}
+                {t("configuration.appInfo.upToDate")}
               </Chip>
             );
           }
         } else {
-          return t("Failed to get latest version");
+          return t("configuration.appInfo.failedToGetLatestVersion");
         }
       case UpdaterStatus.Running:
         return (
@@ -145,7 +145,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
             className="w-[200px] pl-3"
             size="sm"
             value={appUpdaterState.percentage}
-            label={`${t("Downloading")} ${newVersion?.version ?? ""}`}
+            label={`${t("configuration.appInfo.downloading")} ${newVersion?.version ?? ""}`}
           />
         );
       case UpdaterStatus.PendingRestart:
@@ -157,13 +157,13 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
               BApi.updater.restartAndUpdateApp();
             }}
           >
-            {t("Restart to update")}
+            {t("configuration.appInfo.restartToUpdate")}
           </Button>
         );
       case UpdaterStatus.Failed:
         return (
           <>
-            {t("Failed to update app")}: {t(appUpdaterState.error!)}
+            {t("configuration.appInfo.failedToUpdateApp")}: {t(appUpdaterState.error!)}
             &nbsp;
             <Button
               variant="light"
@@ -172,7 +172,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
                 BApi.updater.startUpdatingApp();
               }}
             >
-              {t("Click here to retry")}
+              {t("configuration.appInfo.clickToRetry")}
             </Button>
           </>
         );
@@ -206,41 +206,35 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
   const buildAppInfoDataSource = () => {
     const items: { label: string; value: React.ReactNode }[] = [
       {
-        label: "App Data Path",
+        label: "configuration.appInfo.appDataPath",
         value: renderPathValue(
           appInfo.appDataPath,
-          t(
-            "This is where core data files stored and DO NOT change them if not necessary. The logs in [System] - [Logs] are saved in bootstrap_log.* files, they can be safely deleted.",
-          ),
+          t("configuration.appInfo.tip.appDataPath"),
         ),
       },
       {
-        label: "Temporary files path",
+        label: "configuration.appInfo.tempFilesPath",
         value: renderPathValue(
           appInfo.tempFilesPath,
-          t("It's a directory where temporary files stored, such as cover files, etc."),
+          t("configuration.appInfo.tip.tempFilesPath"),
         ),
       },
       {
-        label: "Log Path",
+        label: "configuration.appInfo.logPath",
         value: renderPathValue(
           appInfo.logPath,
-          t(
-            "Detailed information which describing the running states of app. You can send log files to developer if the app is not running normally, and you can delete them also if everything is ok.",
-          ),
+          t("configuration.appInfo.tip.logPath"),
         ),
       },
       {
-        label: "Backup Path",
+        label: "configuration.appInfo.backupPath",
         value: renderPathValue(
           appInfo.backupPath,
-          t(
-            "A data backup will be created when using the new version of app first time, you can delete them if everything is ok. You can download the corresponding version of the app and use the backup files to overwrite the App Data Path for data recovery.",
-          ),
+          t("configuration.appInfo.tip.backupPath"),
         ),
       },
       {
-        label: "Core Version",
+        label: "configuration.appInfo.coreVersion",
         value: (
           <Chip radius="sm" variant="light">
             {appInfo.coreVersion}
@@ -248,7 +242,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
         ),
       },
       {
-        label: "Latest version",
+        label: "configuration.appInfo.latestVersion",
         value: renderNewVersion(),
       },
     ];
@@ -261,7 +255,7 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
       <div className="settings">
         <Table isCompact removeWrapper>
           <TableHeader>
-            <TableColumn width={200}>{t("System information")}</TableColumn>
+            <TableColumn width={200}>{t("configuration.appInfo.title")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>

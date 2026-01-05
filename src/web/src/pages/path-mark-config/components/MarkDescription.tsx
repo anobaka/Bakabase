@@ -61,24 +61,24 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         const layer = config.layer ?? 0;
         if (layer === 0) {
           if (includesSubdirs) {
-            parts.push(t("MarkDescription.Layer.CurrentAndSubdirs"));
+            parts.push(t("markDescription.layer.currentAndSubdirs"));
           } else {
-            parts.push(t("MarkDescription.Layer.Current"));
+            parts.push(t("markDescription.layer.current"));
           }
         } else if (layer > 0) {
-          const layerText = `+${layer}${t("MarkDescription.Layer.Suffix")}`;
-          parts.push(includesSubdirs ? `${layerText}${t("MarkDescription.AndSubdirs")}` : layerText);
+          const layerText = `+${layer}${t("markDescription.layer.suffix")}`;
+          parts.push(includesSubdirs ? `${layerText}${t("markDescription.andSubdirs")}` : layerText);
         } else {
-          const layerText = `${layer}${t("MarkDescription.Layer.Suffix")}`;
-          parts.push(includesSubdirs ? `${layerText}${t("MarkDescription.AndSubdirs")}` : layerText);
+          const layerText = `${layer}${t("markDescription.layer.suffix")}`;
+          parts.push(includesSubdirs ? `${layerText}${t("markDescription.andSubdirs")}` : layerText);
         }
       } else if (matchMode === PathMatchMode.Regex) {
         const regex = config.regex ?? "";
-        const regexText = t("MarkDescription.Regex", { regex });
-        parts.push(includesSubdirs ? `${regexText}${t("MarkDescription.AndSubdirs")}` : regexText);
+        const regexText = t("markDescription.regex", { regex });
+        parts.push(includesSubdirs ? `${regexText}${t("markDescription.andSubdirs")}` : regexText);
       } else if (includesSubdirs) {
         // No match mode but has subdirs scope
-        parts.push(t("MarkDescription.Layer.CurrentAndSubdirs"));
+        parts.push(t("markDescription.layer.currentAndSubdirs"));
       }
 
       // For property marks - value info
@@ -97,15 +97,15 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
           if (valueLayer !== undefined && valueLayer !== null) {
             // Layer-based extraction
             if (valueLayer === 0) {
-              parts.push(t("MarkDescription.ValueLayer.Current"));
+              parts.push(t("markDescription.valueLayer.current"));
             } else if (valueLayer > 0) {
-              parts.push(`${t("MarkDescription.ValueFrom")}+${valueLayer}${t("MarkDescription.Layer.Suffix")}`);
+              parts.push(`${t("markDescription.valueFrom")}+${valueLayer}${t("markDescription.layer.suffix")}`);
             } else {
-              parts.push(`${t("MarkDescription.ValueFrom")}${valueLayer}${t("MarkDescription.Layer.Suffix")}`);
+              parts.push(`${t("markDescription.valueFrom")}${valueLayer}${t("markDescription.layer.suffix")}`);
             }
           } else if (valueRegex) {
             // Regex-based extraction
-            parts.push(t("MarkDescription.ValueRegex", { regex: valueRegex }));
+            parts.push(t("markDescription.valueRegex", { regex: valueRegex }));
           }
         }
       }
@@ -123,15 +123,15 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
           if (layerToMediaLibrary !== undefined && layerToMediaLibrary !== null) {
             // Layer-based extraction
             if (layerToMediaLibrary === 0) {
-              parts.push(t("MarkDescription.MediaLibraryLayer.Current"));
+              parts.push(t("markDescription.mediaLibraryLayer.current"));
             } else if (layerToMediaLibrary > 0) {
-              parts.push(`${t("MarkDescription.MediaLibraryFrom")}+${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+              parts.push(`${t("markDescription.mediaLibraryFrom")}+${layerToMediaLibrary}${t("markDescription.layer.suffix")}`);
             } else {
-              parts.push(`${t("MarkDescription.MediaLibraryFrom")}${layerToMediaLibrary}${t("MarkDescription.Layer.Suffix")}`);
+              parts.push(`${t("markDescription.mediaLibraryFrom")}${layerToMediaLibrary}${t("markDescription.layer.suffix")}`);
             }
           } else if (regexToMediaLibrary) {
             // Regex-based extraction
-            parts.push(t("MarkDescription.MediaLibraryRegex", { regex: regexToMediaLibrary }));
+            parts.push(t("markDescription.mediaLibraryRegex", { regex: regexToMediaLibrary }));
           }
         }
       }
@@ -140,9 +140,9 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
       if (mark.type === PathMarkType.Resource) {
         const fsTypeFilter = config.fsTypeFilter;
         if (fsTypeFilter === 1) {
-          parts.push(t("MarkDescription.FileOnly"));
+          parts.push(t("markDescription.fileOnly"));
         } else if (fsTypeFilter === 2) {
-          parts.push(t("MarkDescription.DirOnly"));
+          parts.push(t("markDescription.dirOnly"));
         }
 
         const extensions = config.extensions;
@@ -151,10 +151,10 @@ const MarkDescription = ({ mark, className, label, priority }: Props) => {
         }
       }
 
-      return parts.length > 0 ? parts.join(" | ") : t("MarkDescription.Empty");
+      return parts.length > 0 ? parts.join(" | ") : t("markDescription.empty");
     } catch (error) {
       console.error("Failed to parse mark config:", error);
-      return t("MarkDescription.Invalid");
+      return t("markDescription.invalid");
     }
   };
 

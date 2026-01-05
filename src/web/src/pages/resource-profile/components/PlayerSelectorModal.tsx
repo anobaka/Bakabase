@@ -84,9 +84,9 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
   );
 
   const getPlayerName = (path: string) => {
-    if (!path) return t("New Player");
+    if (!path) return t("resourceProfile.label.newPlayer");
     const segments = splitPathIntoSegments(path);
-    return segments[segments.length - 1] || t("New Player");
+    return segments[segments.length - 1] || t("resourceProfile.label.newPlayer");
   };
 
   const copyCommand = async (index: number, command: string) => {
@@ -106,7 +106,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
         isDisabled: hasInvalidPlayers,
       }}
       size="2xl"
-      title={t("Configure Players")}
+      title={t("resourceProfile.modal.configurePlayersTitle")}
       onDestroyed={onDestroyed}
       onOk={handleSubmit}
     >
@@ -115,8 +115,8 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
         <div className="flex items-center justify-between">
           <div className="text-sm text-default-500">
             {players.length > 0
-              ? t("{{count}} player(s) configured", { count: players.length })
-              : t("No players configured")}
+              ? t("resourceProfile.status.playersConfigured", { count: players.length })
+              : t("resourceProfile.status.noPlayersConfigured")}
           </div>
           <Button
             color="primary"
@@ -124,7 +124,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
             startContent={<AiOutlinePlus />}
             onPress={addPlayer}
           >
-            {t("Add Player")}
+            {t("resourceProfile.action.addPlayer")}
           </Button>
         </div>
 
@@ -132,7 +132,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
           <div className="text-center py-12 bg-default-50 rounded-lg">
             <BsController className="text-4xl text-default-300 mx-auto mb-3" />
             <p className="text-default-400">
-              {t("No players configured. Click 'Add Player' to get started.")}
+              {t("resourceProfile.empty.noPlayersConfiguredGetStarted")}
             </p>
           </div>
         ) : (
@@ -161,12 +161,12 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                         <span className="font-medium">{playerName}</span>
                         {(player.extensions?.length ?? 0) > 0 && (
                           <Chip size="sm" variant="flat" color="default">
-                            {player.extensions?.length} {t("extensions")}
+                            {player.extensions?.length} {t("resourceProfile.label.extensions")}
                           </Chip>
                         )}
                         {isInvalid && (
                           <Chip size="sm" variant="flat" color="danger">
-                            {t("Invalid")}
+                            {t("resourceProfile.label.invalid")}
                           </Chip>
                         )}
                       </div>
@@ -182,7 +182,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                           startContent={<AiOutlineDelete />}
                           onPress={() => removePlayer(index)}
                         >
-                          {t("Delete")}
+                          {t("common.action.delete")}
                         </Button>
                       </div>
 
@@ -190,15 +190,15 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                         isRequired
                         errorMessage={
                           player.executablePath.trim() === ""
-                            ? t("Executable path is required")
+                            ? t("resourceProfile.error.executablePathRequired")
                             : player.pathType !== "file"
-                            ? t("Please select a file, not a folder")
+                            ? t("resourceProfile.error.selectFileNotFolder")
                             : ""
                         }
                         isInvalid={isInvalid}
-                        label={t("Executable Path")}
+                        label={t("resourceProfile.label.executablePath")}
                         pathType="file"
-                        placeholder={t("Path to the player executable")}
+                        placeholder={t("resourceProfile.tip.pathToPlayerExecutable")}
                         value={player.executablePath}
                         onChange={(value, type) =>
                           updatePlayer(index, {
@@ -210,7 +210,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
 
                       <div>
                         <Input
-                          label={t("Command Template")}
+                          label={t("resourceProfile.label.commandTemplate")}
                           placeholder="{0}"
                           value={player.command}
                           onValueChange={(value) =>
@@ -219,14 +219,14 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                         />
                         <div className="text-xs text-default-400 mt-1">
                           <InfoCircleOutlined className="mr-1" />
-                          {t("Use {0} as placeholder for the file path. Example: --fullscreen {0}")}
+                          {t("resourceProfile.tip.commandTemplatePlaceholder")}
                         </div>
                       </div>
 
                       <div>
                         <ExtensionsInput
                           defaultValue={player.extensions}
-                          label={t("Supported Extensions")}
+                          label={t("resourceProfile.label.supportedExtensions")}
                           onValueChange={(extensions) =>
                             updatePlayer(index, { extensions })
                           }
@@ -234,7 +234,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                         />
                         <div className="text-xs text-default-400 mt-1">
                           <InfoCircleOutlined className="mr-1" />
-                          {t("This player will be used for files with these extensions")}
+                          {t("resourceProfile.tip.playerExtensionUsage")}
                         </div>
                       </div>
 
@@ -245,12 +245,12 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                           <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-2">
                               <BsTerminal className="text-lg text-primary" />
-                              <span className="font-medium text-sm">{t("Command Preview & Test")}</span>
+                              <span className="font-medium text-sm">{t("resourceProfile.label.commandPreviewTest")}</span>
                             </div>
 
                             <PathAutocomplete
-                              label={t("Test File Path")}
-                              placeholder={t("Enter a file path to preview the command")}
+                              label={t("resourceProfile.label.testFilePath")}
+                              placeholder={t("resourceProfile.tip.enterFilePathPreview")}
                               value={player.testFilePath || ""}
                               onChange={(value, type) =>
                                 updatePlayer(index, {
@@ -262,7 +262,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
 
                             {player.testFilePath && (
                               <div className="flex flex-col gap-2">
-                                <div className="text-xs text-default-500">{t("Generated Command")}:</div>
+                                <div className="text-xs text-default-500">{t("resourceProfile.label.generatedCommand")}:</div>
                                 <div className="flex items-start gap-2">
                                   <code className="flex-1 p-2 bg-default-100 rounded text-xs font-mono break-all">
                                     {generateCommand(
@@ -271,7 +271,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                                       player.testFilePath
                                     )}
                                   </code>
-                                  <Tooltip content={copiedIndex === index ? t("Copied!") : t("Copy to clipboard")}>
+                                  <Tooltip content={copiedIndex === index ? t("resourceProfile.action.copied") : t("resourceProfile.action.copyToClipboard")}>
                                     <Button
                                       isIconOnly
                                       size="sm"
@@ -299,7 +299,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
                                 {player.testFilePathType === "folder" && (
                                   <div className="text-xs text-warning">
                                     <InfoCircleOutlined className="mr-1" />
-                                    {t("Note: The test path is a folder, not a file")}
+                                    {t("resourceProfile.tip.testPathIsFolder")}
                                   </div>
                                 )}
                               </div>
@@ -318,7 +318,7 @@ const PlayerSelectorModal = ({ players: propPlayers, onSubmit, onDestroyed }: Pr
         {hasInvalidPlayers && (
           <div className="text-danger text-sm flex items-center gap-1">
             <InfoCircleOutlined />
-            {t("Please fill in all executable paths before saving.")}
+            {t("resourceProfile.error.fillAllExecutablePaths")}
           </div>
         )}
       </div>

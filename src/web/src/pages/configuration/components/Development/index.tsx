@@ -66,25 +66,25 @@ const Development: React.FC = () => {
             description={
               <div>
                 <div>
-                  {t("Current listening port count is {{port}}", {
+                  {t("configuration.development.tip.currentListeningPortCount", {
                     port: appOptions.autoListeningPortCount === 0
-                      ? t("Auto")
+                      ? t("configuration.development.auto")
                       : appOptions.autoListeningPortCount,
                   })}
                 </div>
                 <div>
-                  {t("The configurable port range is {{min}}-{{max}}. And you can set it to 0 for auto count.", { min, max })}
+                  {t("configuration.development.tip.configurablePortRange", { min, max })}
                 </div>
-                <div>{t("Changes will take effect after restarting the application")}</div>
+                <div>{t("configuration.development.tip.changesAfterRestart")}</div>
                 <div>
-                  {t("Please be careful when setting this value, if you set it to a value that is already in use by another application, our application will not be able to start.")}
+                  {t("configuration.development.tip.portWarning")}
                 </div>
               </div>
             }
             formatOptions={{ useGrouping: false }}
             max={max}
             min={min}
-            placeholder={t("Count")}
+            placeholder={t("configuration.development.count")}
             {...props}
           />
         )}
@@ -96,14 +96,14 @@ const Development: React.FC = () => {
               variant="flat"
               {...props}
             >
-              {value === 0 ? t("Auto") : value}
+              {value === 0 ? t("configuration.development.auto") : value}
             </Chip>
           ) : null
         }
         value={appOptions.autoListeningPortCount}
         onSubmit={async (v) => {
           await BApi.options.patchAppOptions({ autoListeningPortCount: v });
-          toast.success(t("Saved"));
+          toast.success(t("common.success.saved"));
         }}
       />
     );
@@ -120,14 +120,14 @@ const Development: React.FC = () => {
             className="max-w-[420px]"
             description={
               <div>
-                <div>{t("Enter ports separated by commas, e.g. 34567, 34568")}</div>
-                <div>{t("Changes will take effect after restarting the application")}</div>
+                <div>{t("configuration.development.tip.portsInput")}</div>
+                <div>{t("configuration.development.tip.changesAfterRestart")}</div>
                 <div>
-                  {t("Please be careful when setting this value, if you set it to a value that is already in use by another application, our application will not be able to start.")}
+                  {t("configuration.development.tip.portWarning")}
                 </div>
               </div>
             }
-            placeholder={t("e.g. 34567, 34568")}
+            placeholder={t("configuration.development.input.portsPlaceholder")}
             {...props}
           />
         )}
@@ -155,11 +155,11 @@ const Development: React.FC = () => {
         onSubmit={async (text) => {
           const ports = parsePorts(text);
           if (ports.length > max) {
-            toast.error(t("Too many ports. Up to {{max}} ports are supported.", { max }));
+            toast.error(t("configuration.development.error.tooManyPorts", { max }));
             throw new Error("invalid");
           }
           await BApi.options.patchAppOptions({ listeningPorts: ports });
-          toast.success(t("Saved"));
+          toast.success(t("common.success.saved"));
         }}
       />
     );
@@ -167,7 +167,7 @@ const Development: React.FC = () => {
 
   const items: { label: string; value: React.ReactNode }[] = [
     {
-      label: "API endpoints",
+      label: "configuration.development.apiEndpoints",
       value: appContext.apiEndpoints && (
         <div className="flex flex-wrap gap-1 items-center">
           {appContext.apiEndpoints?.map((x, idx) => (
@@ -179,7 +179,7 @@ const Development: React.FC = () => {
       ),
     },
     {
-      label: "API document",
+      label: "configuration.development.apiDocument",
       value: apiDocumentUrl && (
         <ExternalLink href={apiDocumentUrl}>{apiDocumentUrl}</ExternalLink>
       ),
@@ -190,11 +190,11 @@ const Development: React.FC = () => {
   if (appContext.runtimeMode === RuntimeMode.Dev || appContext.runtimeMode === RuntimeMode.WinForms) {
     items.push(
       {
-        label: "Listening port count",
+        label: "configuration.development.listeningPortCount",
         value: renderListeningPortCount(),
       },
       {
-        label: "Listening ports",
+        label: "configuration.development.listeningPorts",
         value: renderListeningPorts(),
       },
     );
@@ -203,7 +203,7 @@ const Development: React.FC = () => {
   return (
     <Table isCompact removeWrapper>
       <TableHeader>
-        <TableColumn width={200}>{t("Development")}</TableColumn>
+        <TableColumn width={200}>{t("configuration.development.title")}</TableColumn>
         <TableColumn>&nbsp;</TableColumn>
       </TableHeader>
       <TableBody>

@@ -1,0 +1,10 @@
+{
+  "fileExplorer.error.noFilesUnderPath": "此路径下没有文件",
+  "fileExplorer.modal.multipleFileTypesFound": "发现多种文件类型",
+  "fileExplorer.tip.pleaseSelectOneToOpen": "请选择一个打开",
+  "fileExplorer.success.movedItems": "已移动 {{count}} 个项目",
+  "fileExplorer.error.failedToMoveItems": "移动项目失败",
+  "fileExplorer.tip.quickPreviewUsingDefaultApp": "使用默认应用快速预览",
+  "fileExplorer.tip.openInMediaPlayer": "在媒体播放器中打开",
+  "fileExplorer.empty.noContent": "无内容"
+}

@@ -84,7 +84,7 @@ export default function LogPage() {
       <div className="flex flex-wrap gap-4 items-center mb-4">
         <div className="flex items-center gap-1 min-w-[260px]">
           <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("Time")}
+            {t<string>("log.filter.time")}
           </span>
           <DateRangePicker
             className="flex-1"
@@ -94,11 +94,11 @@ export default function LogPage() {
         </div>
         <div className="flex items-center gap-1 min-w-[100px]">
           <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("Level")}
+            {t<string>("log.filter.level")}
           </span>
           <Select
             className="min-w-[100px]"
-            placeholder={t<string>("All")}
+            placeholder={t<string>("log.filter.all")}
             selectedKeys={
               form.level !== undefined
                 ? new Set([String(form.level)])
@@ -119,11 +119,11 @@ export default function LogPage() {
         </div>
         <div className="flex items-center gap-1 min-w-[120px]">
           <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("Logger")}
+            {t<string>("log.filter.logger")}
           </span>
           <Input
             className="min-w-[120px]"
-            placeholder={t<string>("Logger")}
+            placeholder={t<string>("log.filter.logger")}
             size="sm"
             value={form.logger}
             onChange={(e) => patchForm({ logger: e.target.value })}
@@ -131,11 +131,11 @@ export default function LogPage() {
         </div>
         <div className="flex items-center gap-1 min-w-[120px]">
           <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("Event")}
+            {t<string>("log.filter.event")}
           </span>
           <Input
             className="min-w-[120px]"
-            placeholder={t<string>("Event")}
+            placeholder={t<string>("log.filter.event")}
             size="sm"
             value={form.event}
             onChange={(e) => patchForm({ event: e.target.value })}
@@ -143,11 +143,11 @@ export default function LogPage() {
         </div>
         <div className="flex items-center gap-1 min-w-[120px]">
           <span className="font-medium mr-2 min-w-[60px]">
-            {t<string>("Message")}
+            {t<string>("log.filter.message")}
           </span>
           <Input
             className="min-w-[120px]"
-            placeholder={t<string>("Message")}
+            placeholder={t<string>("log.filter.message")}
             size="sm"
             value={form.message}
             onChange={(e) => patchForm({ message: e.target.value })}
@@ -159,7 +159,7 @@ export default function LogPage() {
             type="button"
             onClick={() => BApi.log.clearAllLog().then(() => setLogs([]))}
           >
-            {t<string>("Clear all")}
+            {t<string>("log.action.clearAll")}
           </Button>
         </div>
       </div>
@@ -171,11 +171,11 @@ export default function LogPage() {
         size="sm"
       >
         <TableHeader>
-          <TableColumn>{t<string>("Time")}</TableColumn>
-          <TableColumn>{t<string>("Level")}</TableColumn>
-          <TableColumn>{t<string>("Logger")}</TableColumn>
-          <TableColumn>{t<string>("Event")}</TableColumn>
-          <TableColumn>{t<string>("Message")}</TableColumn>
+          <TableColumn>{t<string>("log.filter.time")}</TableColumn>
+          <TableColumn>{t<string>("log.filter.level")}</TableColumn>
+          <TableColumn>{t<string>("log.filter.logger")}</TableColumn>
+          <TableColumn>{t<string>("log.filter.event")}</TableColumn>
+          <TableColumn>{t<string>("log.filter.message")}</TableColumn>
         </TableHeader>
         <TableBody items={logs}>
           {(item) => (
@@ -211,7 +211,7 @@ export default function LogPage() {
                       onPress={() =>
                         createPortal(Modal, {
                           size: "xl",
-                          title: t("Log"),
+                          title: t("log.label.log"),
                           defaultVisible: true,
                           children: (
                             <pre className="whitespace-pre-wrap break-all">
@@ -221,7 +221,7 @@ export default function LogPage() {
                         })
                       }
                     >
-                      {t<string>("Expand")}
+                      {t<string>("log.action.expand")}
                     </Button>
                   </pre>
                 ) : (
@@ -241,7 +241,7 @@ export default function LogPage() {
       </div>
       {expandedMsg && (
         <Modal
-          title={t<string>("Full Message")}
+          title={t<string>("log.label.fullMessage")}
           onClose={() => setExpandedMsg(null)}
         >
           <pre className="whitespace-pre-wrap break-all">{expandedMsg}</pre>

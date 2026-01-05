@@ -1,7 +1,6 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import type Queue from "queue";
 import type { IResourceCoverRef } from "@/components/Resource/components/ResourceCover";
 import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
 import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
@@ -68,7 +67,6 @@ type TooltipPlacement =
 
 type Props = {
   resource: ResourceModel;
-  queue?: Queue;
   biggerCoverPlacement?: TooltipPlacement;
   searchEngines?: SimpleSearchEngine[] | null;
   ct?: AbortSignal;
@@ -90,7 +88,6 @@ const Resource = React.forwardRef((props: Props, ref) => {
   const {
     resource,
     onTagClick = (propertyId: number, value: TagValue) => {},
-    queue,
     ct = new AbortController().signal,
     biggerCoverPlacement,
     style: propStyle = {},
@@ -196,17 +193,17 @@ const Resource = React.forwardRef((props: Props, ref) => {
         <div className={"absolute top-1 left-1 flex gap-1 items-center"}>
           {resource.tags.includes(ResourceTag.Pinned) && <PushpinOutlined />}
           {resource.tags.includes(ResourceTag.IsParent) && (
-            <Tooltip content={t<string>("This is a parent resource")}>
+            <Tooltip content={t<string>("resource.tip.isParentResource")}>
               <ApartmentOutlined className={""} />
             </Tooltip>
           )}
           {resource.tags.includes(ResourceTag.PathDoesNotExist) && (
-            <Tooltip content={t<string>("File does not exist")}>
+            <Tooltip content={t<string>("resource.tip.fileNotExist")}>
               <FileUnknownOutlined className={"text-warning"} />
             </Tooltip>
           )}
           {resource.tags.includes(ResourceTag.UnknownMediaLibrary) && (
-            <Tooltip content={t<string>("Unknown media library")}>
+            <Tooltip content={t<string>("resource.tip.unknownMediaLibrary")}>
               <DisconnectOutlined className={"text-warning"} />
             </Tooltip>
           )}
@@ -222,20 +219,20 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   const diffDays = now.diff(playedMoment, "days");
 
                   if (diffMinutes < 1) {
-                    return t("Played just now");
+                    return t("resource.label.playedJustNow");
                   } else if (diffMinutes < 60) {
-                    return t("Played {{n}} minutes ago", { n: diffMinutes });
+                    return t("resource.label.playedMinutesAgo", { n: diffMinutes });
                   } else if (diffHours < 24) {
-                    return t("Played {{n}} hours ago", { n: diffHours });
+                    return t("resource.label.playedHoursAgo", { n: diffHours });
                   } else {
-                    return t("Played {{n}} days ago", { n: diffDays });
+                    return t("resource.label.playedDaysAgo", { n: diffDays });
                   }
                 })()}
               </div>
             </Chip>
           )}
           {uiOptions.resource?.displayResourceId && (
-            <Tooltip content={t<string>("Resource ID")}>
+            <Tooltip content={t<string>("resource.label.resourceId")}>
               <Chip radius={"sm"} size={"sm"} variant={"flat"}>
                 {resource.id}
               </Chip>
@@ -364,7 +361,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         <PlayableFiles
           PortalComponent={({ onClick }) => (
             <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
-              <Tooltip content={t<string>("Play")}>
+              <Tooltip content={t<string>("common.action.play")}>
                 <Button
                   onPress={onClick}
                   // variant={'light'}

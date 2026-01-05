@@ -62,7 +62,7 @@ const CachePage = () => {
                       <div>
                         <div className="text-md">{item.mediaLibraryName}</div>
                         <div className="text-small text-default-500">
-                          {t<string>("Resource count")}: {item.resourceCount}
+                          {t<string>("cache.label.resourceCount")}: {item.resourceCount}
                         </div>
                       </div>
                     </CardHeader>
@@ -78,7 +78,7 @@ const CachePage = () => {
                               className={"flex items-center gap-2"}
                             >
                               <Chip radius={"sm"} size={"sm"}>
-                                {t<string>("Cached")}{" "}
+                                {t<string>("cache.label.cached")}{" "}
                                 {t<string>(ResourceCacheType[type])}
                               </Chip>
                               {item.resourceCacheCountMap[type]}
@@ -125,10 +125,10 @@ const CachePage = () => {
                 <CardHeader>
                   <div>
                     <div className="text-md">
-                      {t<string>("Unassociated Resources")}
+                      {t<string>("cache.label.unassociatedResources")}
                     </div>
                     <div className="text-small text-default-500">
-                      {t<string>("Resource count")}:{" "}
+                      {t<string>("cache.label.resourceCount")}:{" "}
                       {cacheOverview.unassociatedCaches.resourceCount}
                     </div>
                   </div>
@@ -143,7 +143,7 @@ const CachePage = () => {
                     return (
                       <div key={idx} className={"flex items-center gap-2"}>
                         <Chip radius={"sm"} size={"sm"}>
-                          {t<string>("Cached")}{" "}
+                          {t<string>("cache.label.cached")}{" "}
                           {t<string>(ResourceCacheType[type])}
                         </Chip>
                         {cacheOverview.unassociatedCaches!.resourceCacheCountMap[type]}

@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Bootstrap.Components.Configuration.Abstractions;
 
@@ -23,5 +24,10 @@ public class TestBOptionsManager<TOptions> : IBOptionsManager<TOptions> where TO
     {
         _value = options;
         return Task.CompletedTask;
+    }
+
+    public Task SaveAsync(Action<TOptions> modify)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -1,0 +1,31 @@
+{
+  "mediaLibrary.title": "媒体库",
+  "mediaLibrary.action.add": "添加媒体库",
+  "mediaLibrary.action.delete": "删除",
+  "mediaLibrary.action.cancel": "取消",
+  "mediaLibrary.action.continue": "继续",
+  "mediaLibrary.action.createFirst": "创建你的第一个媒体库",
+  "mediaLibrary.action.goToPathMarkConfig": "配置路径标记",
+  "mediaLibrary.action.searchResources": "搜索此媒体库中的资源",
+
+  "mediaLibrary.confirm.title": "确认",
+  "mediaLibrary.confirm.delete": "确定要删除此媒体库吗？",
+  "mediaLibrary.confirm.leavePage": "这将跳转到资源页面，是否继续？",
+
+  "mediaLibrary.error.nameEmpty": "名称不能为空",
+
+  "mediaLibrary.warning.irreversible": "注意，此操作不可撤销",
+  "mediaLibrary.tooltip.delete": "删除此媒体库",
+  "mediaLibrary.tooltip.resourceLoaded": "此媒体库中已加载 {{count}} 个资源。",
+  "mediaLibrary.tooltip.noResource": "此媒体库中没有加载资源，您可以点击同步按钮来加载资源。",
+
+  "mediaLibrary.label.resources": "个资源",
+  "mediaLibrary.label.listDescription": "在此管理您的媒体库",
+  "mediaLibrary.label.pathMarkConfigHint": "下一步：前往路径标记配置页面，选择文件或目录，配置资源类型并关联到媒体库",
+
+  "mediaLibrary.emptyState.title": "暂无媒体库",
+  "mediaLibrary.emptyState.description": "创建媒体库来组织和管理您的资源",
+  "mediaLibrary.emptyState.feature1": "按分类组织资源",
+  "mediaLibrary.emptyState.feature2": "应用增强器提取元数据",
+  "mediaLibrary.emptyState.feature3": "同步和管理多个根路径"
+}

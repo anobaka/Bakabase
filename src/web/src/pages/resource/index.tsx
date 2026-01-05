@@ -11,6 +11,7 @@ import { usePendingSearchStore } from "@/stores/pendingSearch";
 import BApi from "@/sdk/BApi.tsx";
 import ResourceTabContent from "@/pages/resource/components/ResourceTabContent";
 import RecentlyPlayedDrawer from "@/pages/resource/components/RecentlyPlayedDrawer";
+import { MdSavedSearch } from "react-icons/md";
 
 type SavedSearch =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ResourceOptions+SavedSearch"];
@@ -44,6 +45,8 @@ const ResourcePage = () => {
   const changeTab = useCallback((searchId: string) => {
     activatedSearchIds.current.add(searchId);
     setActiveSearchId(searchId);
+    // Save to localStorage for persistence across page refreshes
+    localStorage.setItem("resource-active-tab-id", searchId);
   }, []);
 
   // Handle initial options loading
@@ -58,7 +61,13 @@ const ResourcePage = () => {
         searchInNewTab({ page: 1, pageSize: 50 });
       } else {
         setSavedSearches(ss1);
-        changeTab(ss1[0].id);
+
+        // Try to restore the previously active tab from localStorage
+        const savedActiveTabId = localStorage.getItem("resource-active-tab-id");
+        const savedTabExists = savedActiveTabId && ss1.some(s => s.id === savedActiveTabId);
+
+        // Use saved tab if it exists, otherwise default to first tab
+        changeTab(savedTabExists ? savedActiveTabId : ss1[0].id);
       }
       optionsInitialized.current = true;
     }
@@ -139,8 +148,15 @@ const ResourcePage = () => {
       const prev = savedSearches[idx - 1];
       const next = savedSearches[idx + 1];
 
-      setSavedSearches((prev) => prev.filter((s) => s.id != id));
-      changeTab((prev ?? next)?.id);
+      setSavedSearches((prevSearches) => prevSearches.filter((s) => s.id != id));
+
+      const newActiveTab = (prev ?? next)?.id;
+      if (newActiveTab) {
+        changeTab(newActiveTab);
+      } else {
+        // If no tabs left, clear the saved active tab
+        localStorage.removeItem("resource-active-tab-id");
+      }
     } finally {
       setRemovingTabId(null);
     }
@@ -177,6 +193,7 @@ const ResourcePage = () => {
                     }
                   }}
                 >
+                  <MdSavedSearch className="text-lg" />
                   <div className="relative">
                     <span
                       className={`text-sm font-medium max-w-[150px] truncate block ${isEditing ? "invisible" : ""}`}
@@ -243,7 +260,7 @@ const ResourcePage = () => {
         const isActive = s.id == activeSearchId;
 
         return (
-          <div key={s.id} className={`grow ${isActive ? "" : "hidden"}`}>
+          <div key={s.id} className={`grow min-h-0 ${isActive ? "" : "hidden"}`}>
             {activatedSearchIds.current.has(s.id) && (
               <ResourceTabContent
                 activated={isActive}

@@ -52,11 +52,11 @@ const FileProcessorPage = () => {
                 createPortal(BulkDecompressionToolModal, { paths: [rootPath] });
               }}>
                 <MdUnarchive className="text-lg" />
-                {t("Bulk decompression all decompressed files in current folder")}
+                {t("fileProcessor.action.bulkDecompression")}
               </Button>
             )}
             <Tooltip
-              content={t("Usually this will work fine if you are categorizing files.")}
+              content={t("fileProcessor.tip.operationsAfterPlay")}
               placement="bottom"
             >
               <Checkbox
@@ -73,7 +73,7 @@ const FileProcessorPage = () => {
                   });
                 }}
               >
-                {t("Show operations after playing first file")}
+                {t("fileProcessor.label.showOperationsAfterPlay")}
               </Checkbox>
             </Tooltip>
           </div>

@@ -34,7 +34,7 @@ const EnhancerTerm = ({
       className={className}
       color={color}
       description={<EnhancerDescription />}
-      label={t("Enhancer")}
+      label={t("common.label.enhancer")}
       size={size}
       variant={variant}
     />

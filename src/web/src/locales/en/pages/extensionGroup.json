@@ -1,0 +1,7 @@
+{
+  "extensionGroup.action.editGroup": "Editing extension group",
+  "extensionGroup.action.addGroup": "Add a group",
+  "extensionGroup.label.extensions": "Extensions",
+  "extensionGroup.input.separatePlaceholder": "Separate by space or newline",
+  "extensionGroup.confirm.deleteTitle": "Sure to delete?"
+}

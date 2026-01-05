@@ -38,19 +38,19 @@ const PathMarkSettingsButton = ({
         const confirmed = await new Promise<boolean>((resolve) => {
           const modal = createPortal(Modal, {
             defaultVisible: true,
-            title: t("Enable Sync Immediately"),
+            title: t("pathMarkConfig.modal.enableSyncImmediatelyTitle"),
             children: (
               <div className="flex flex-col gap-2">
-                <p>{t("When enabled, marks will be synced immediately after being set.")}</p>
+                <p>{t("pathMarkConfig.tip.syncImmediately")}</p>
                 <p className="text-warning">
-                  {t("Note: If there is a lot of data, synchronization may take several minutes.")}
+                  {t("pathMarkConfig.warning.syncDataNote")}
                 </p>
               </div>
             ),
             footer: {
               actions: ["cancel", "ok"],
               okProps: {
-                children: t("Enable"),
+                children: t("pathMarkConfig.action.enable"),
               },
             },
             onOk: () => {
@@ -77,7 +77,7 @@ const PathMarkSettingsButton = ({
         });
       } catch (error) {
         console.error("Failed to update sync option", error);
-        toast.danger(t("Failed to update option"));
+        toast.danger(t("pathMarkConfig.error.updateOption"));
       }
     },
     [createPortal, resourceOptionsStore.data?.synchronizationOptions, t],
@@ -99,7 +99,7 @@ const PathMarkSettingsButton = ({
         <Modal
           footer={false}
           size="sm"
-          title={t("Path Marks Settings")}
+          title={t("pathMarkConfig.modal.settingsTitle")}
           visible={visible}
           onClose={() => setVisible(false)}
         >
@@ -110,9 +110,9 @@ const PathMarkSettingsButton = ({
               onValueChange={handleToggleSyncImmediately}
             >
               <div className="flex flex-col">
-                <span>{t("Sync immediately")}</span>
+                <span>{t("pathMarkConfig.label.syncImmediately")}</span>
                 <span className="text-xs text-default-500">
-                  {t("When enabled, marks will be synced immediately after being set.")}
+                  {t("pathMarkConfig.tip.syncImmediately")}
                 </span>
               </div>
             </Checkbox>

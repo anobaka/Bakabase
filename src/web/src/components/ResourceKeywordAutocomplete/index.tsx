@@ -3,6 +3,7 @@
 import type { AutocompleteProps } from "@heroui/react";
 
 import React, { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useDebounce } from "react-use";
 
 import { Autocomplete, AutocompleteItem } from "@/components/bakaui";
@@ -26,8 +27,10 @@ export default function ResourceKeywordAutocomplete({
   onSelectionChange,
   maxResults = 10,
   debounceDelay = 300,
+  placeholder,
   ...autocompleteProps
 }: ResourceKeywordAutocompleteProps) {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
   const [candidates, setCandidates] = useState<string[]>([]);
   const lastSearchedRef = useRef<string | undefined>(undefined);
@@ -74,9 +77,12 @@ export default function ResourceKeywordAutocomplete({
     }
   };
 
+  console.log(autocompleteProps)
+
   return (
     <Autocomplete
       aria-label={"Resource Keyword"}
+      placeholder={placeholder ?? t<string>("resource.placeholder.searchAnyKeyword")}
       {...autocompleteProps}
       allowsCustomValue={true}
       inputValue={value ?? ""}

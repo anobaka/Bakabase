@@ -138,7 +138,7 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<SavedSearchViewModel>> SaveNewSearch([FromBody] SavedSearchAddInputModel model)
         {
             model.Search.StandardPageable();
-            var ss = resourceOptionsManager.Value.BuildNewSavedSearch(null, localizer.Search(), model.Search.ToDbModel());
+            var ss = resourceOptionsManager.Value.BuildNewSavedSearch(null, localizer.Search(), model.Search.ToDbModel(), model.DisplayMode);
             await resourceOptionsManager.SaveAsync(x =>
             {
                 x.SavedSearches.Add(ss);
@@ -162,6 +162,22 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpPut("saved-search/display-mode")]
+        [SwaggerOperation(OperationId = "PutSavedSearchDisplayMode")]
+        public async Task<BaseResponse> PutSavedSearchDisplayMode(string id, [FromBody] FilterDisplayMode displayMode)
+        {
+            var searches = resourceOptionsManager.Value.SavedSearches;
+            var search = searches.FirstOrDefault(x => x.Id == id);
+            if (search == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Can't find search with id: {id}");
+            }
+
+            search.DisplayMode = displayMode;
+            await resourceOptionsManager.SaveAsync(x => { x.SavedSearches = searches; });
+            return BaseResponseBuilder.Ok;
+        }
+
         [HttpGet("saved-search")]
         [SwaggerOperation(OperationId = "GetSavedSearch")]
         public async Task<SingletonResponse<SavedSearchViewModel>> GetSavedSearch(string id)
@@ -175,7 +191,7 @@ namespace Bakabase.Service.Controllers
                 
             var dbModels = new[] { search.Search };
             var viewModels = await dbModels.ToViewModels(propertyService, propertyLocalizer, service);
-            return new SingletonResponse<SavedSearchViewModel>(new SavedSearchViewModel(id, viewModels[0], search.Name));
+            return new SingletonResponse<SavedSearchViewModel>(new SavedSearchViewModel(id, viewModels[0], search.Name, search.DisplayMode));
         }
 
         [HttpDelete("saved-search")]

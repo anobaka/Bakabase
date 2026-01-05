@@ -76,7 +76,7 @@ export interface RouteMenuItem {
 
 export const routesMenuConfig: RouteMenuItem[] = [
   {
-    name: "Dashboard",
+    name: "menu.dashboard",
     path: "/",
     component: DashboardPage,
     icon: AiOutlineDashboard,
@@ -84,7 +84,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: false, // 首页不在菜单中
   },
   {
-    name: "Resource",
+    name: "menu.resource",
     path: "/resource",
     component: ResourcePage,
     icon: AiOutlinePicture,
@@ -92,7 +92,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
   },
   {
-    name: "Media library",
+    name: "menu.mediaLibrary",
     path: "/media-library",
     component: MediaLibraryPage,
     icon: MdVideoLibrary,
@@ -100,7 +100,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
   },
   {
-    name: "Media library configuration",
+    name: "menu.mediaLibraryConfiguration",
     path: "/path-mark-config",
     component: PathRuleConfigPage,
     icon: AiOutlineControl,
@@ -109,7 +109,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     isBeta: true,
   },
   {
-    name: "Path marks",
+    name: "menu.pathMarks",
     path: "/path-marks",
     component: PathMarksPage,
     icon: AiOutlineTags,
@@ -118,7 +118,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     isBeta: true,
   },
   {
-    name: "Resource Profile",
+    name: "menu.resourceProfile",
     path: "/resource-profile",
     component: ResourceProfilePage,
     icon: AiOutlineFilter,
@@ -127,12 +127,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
     isBeta: true,
   },
   {
-    name: "Data",
+    name: "menu.data",
     icon: AiOutlineDatabase,
     menu: true,
     children: [
       {
-        name: "Custom property",
+        name: "menu.customProperty",
         path: "/customproperty",
         component: CustomPropertyPage,
         icon: AiOutlineRadarChart,
@@ -140,7 +140,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Extension group",
+        name: "menu.extensionGroup",
         path: "/extension-group",
         component: ExtensionGroup,
         icon: AiOutlineUngroup,
@@ -148,7 +148,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Cache",
+        name: "menu.cache",
         path: "/cache",
         component: CachePage,
         icon: AiOutlineHdd,
@@ -156,7 +156,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Alias",
+        name: "menu.alias",
         path: "/alias",
         component: AliasPage,
         icon: AiOutlineBranches,
@@ -164,7 +164,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Special text",
+        name: "menu.specialText",
         path: "/text",
         component: TextPage,
         icon: AiOutlineFieldString,
@@ -172,7 +172,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Play history",
+        name: "menu.playHistory",
         path: "/play-history",
         component: PlayHistoryPage,
         icon: AiOutlineHistory,
@@ -180,7 +180,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Bulk modification",
+        name: "menu.bulkModification",
         path: "/bulk-modification",
         component: BulkModification2Page,
         icon: AiOutlineForm,
@@ -189,7 +189,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         isBeta: true,
       },
       {
-        name: "Media library",
+        name: "menu.mediaLibrary",
         path: "/media-library",
         isDeprecated: true,
         component: LegacyMediaLibraryPage,
@@ -198,7 +198,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Media library template",
+        name: "menu.mediaLibraryTemplate",
         path: "/media-library-template",
         component: MediaLibraryTemplatePage,
         icon: AiOutlineAppstoreAdd,
@@ -207,7 +207,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         isDeprecated: true,
       },
       {
-        name: "Synchronization options",
+        name: "menu.synchronizationOptions",
         path: "/synchronization-options",
         component: SynchronizationOptionsPage,
         icon: AiOutlineSync,
@@ -218,12 +218,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
     ],
   },
   {
-    name: "Tools",
+    name: "menu.tools",
     icon: AiOutlineTool,
     menu: true,
     children: [
       {
-        name: "File Processor",
+        name: "menu.fileProcessor",
         path: "/file-processor",
         component: FileProcessorPage,
         icon: AiOutlineCode,
@@ -231,7 +231,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Downloader",
+        name: "menu.downloader",
         path: "/downloader",
         component: DownloaderPage,
         icon: AiOutlineDownload,
@@ -239,7 +239,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "File Mover",
+        name: "menu.fileMover",
         path: "/file-mover",
         component: FileMoverPage,
         icon: AiOutlineSwap,
@@ -247,7 +247,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "File name modifier",
+        name: "menu.fileNameModifier",
         path: "/file-name-modifier",
         component: FileNameModifier,
         icon: AiOutlineEdit,
@@ -256,7 +256,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Migration",
+        name: "menu.migration",
         path: "/migration",
         // component: Migration,
         icon: AiOutlineExperiment,
@@ -266,12 +266,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
     ],
   },
   {
-    name: "Experimental",
+    name: "menu.experimental",
     icon: AiOutlineExperiment,
     menu: true,
     children: [
       {
-        name: "Third party integration",
+        name: "menu.thirdPartyIntegration",
         path: "/third-party-integration",
         component: ThirdPartyIntegrationPage,
         icon: TbToolsKitchen,
@@ -279,7 +279,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Post parser",
+        name: "menu.postParser",
         path: "/post-parser",
         component: PostParserPage,
         icon: MdOutlineArticle,
@@ -289,12 +289,12 @@ export const routesMenuConfig: RouteMenuItem[] = [
     ],
   },
   {
-    name: "System",
+    name: "menu.system",
     icon: AiOutlineSetting,
     menu: true,
     children: [
       {
-        name: "Configuration",
+        name: "menu.configuration",
         path: "/configuration",
         component: Configuration,
         icon: AiOutlineAppstore,
@@ -302,7 +302,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Third party",
+        name: "menu.thirdParty",
         path: "/third-party-configuration",
         component: ThirdPartyConfiguration,
         icon: TbToolsKitchen,
@@ -310,7 +310,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Background Task",
+        name: "menu.backgroundTask",
         path: "/background-task",
         component: BackgroundTaskPage,
         icon: AiOutlineInteraction,
@@ -318,7 +318,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Performance Profiler",
+        name: "menu.performanceProfiler",
         path: "/profiler",
         component: ProfilerPage,
         icon: AiOutlineRadarChart,
@@ -326,7 +326,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "Log",
+        name: "menu.log",
         path: "/log",
         component: Log,
         icon: AiOutlineFileText,
@@ -336,7 +336,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     ],
   },
   {
-    name: "Test",
+    name: "menu.test",
     path: "/test",
     component: Test,
     icon: AiOutlineBug,

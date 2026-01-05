@@ -34,7 +34,7 @@ const ConfigurationPage: React.FC = () => {
   ) => {
     api(patches).then((a) => {
       if (!a.code) {
-        toast.success(t("Saved"));
+        toast.success(t("common.success.saved"));
         success?.(a);
       }
     });

@@ -166,7 +166,7 @@ const FloatingAssistant = () => {
         >
           {/* Working - CircularProgress with task count */}
           <Tooltip
-            content={`${runningTasks.length} ${t("tasks running")} (${overallProgress}%)`}
+            content={`${runningTasks.length} ${t("floatingAssistant.status.tasksRunning")} (${overallProgress}%)`}
             placement="right"
             className="working-tooltip"
           >
@@ -218,7 +218,7 @@ const FloatingAssistant = () => {
           </div>
           {/* Failed */}
           <Tooltip
-            content={t("Some tasks failed")}
+            content={t("floatingAssistant.status.someTasksFailed")}
             placement="right"
             color="danger"
           >
@@ -236,7 +236,7 @@ const FloatingAssistant = () => {
         <Divider orientation={"horizontal"} />
         <div className="flex items-center gap-2 flex-wrap">
           {runningTasks.length > 0 && (
-            <Tooltip content={t("Pause all running tasks")}>
+            <Tooltip content={t("floatingAssistant.tip.pauseAllRunningTasks")}>
               <Button
                 size={"sm"}
                 variant={"ghost"}
@@ -244,12 +244,12 @@ const FloatingAssistant = () => {
                 onPress={handlePauseAll}
               >
                 <PauseOutlined className={"text-base"} />
-                {t("Pause all")}
+                {t("common.action.pauseAll")}
               </Button>
             </Tooltip>
           )}
           {pausedTasks.length > 0 && (
-            <Tooltip content={t("Resume all paused tasks")}>
+            <Tooltip content={t("floatingAssistant.tip.resumeAllPausedTasks")}>
               <Button
                 size={"sm"}
                 variant={"ghost"}
@@ -257,12 +257,12 @@ const FloatingAssistant = () => {
                 onPress={handleResumeAll}
               >
                 <CaretRightOutlined className={"text-base"} />
-                {t("Resume all")}
+                {t("common.action.resumeAll")}
               </Button>
             </Tooltip>
           )}
           {clearableTasks.length > 0 && (
-            <Tooltip content={t("Remove completed, failed, and cancelled tasks from list")}>
+            <Tooltip content={t("floatingAssistant.tip.clearInactiveTasks")}>
               <Button
                 size={"sm"}
                 variant={"ghost"}
@@ -271,7 +271,7 @@ const FloatingAssistant = () => {
                 }
               >
                 <ClearOutlined className={"text-base"} />
-                {t("Clear inactive tasks")}
+                {t("floatingAssistant.action.clearInactiveTasks")}
               </Button>
             </Tooltip>
           )}

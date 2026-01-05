@@ -1,0 +1,12 @@
+{
+  "log.filter.time": "Time",
+  "log.filter.level": "Level",
+  "log.filter.all": "All",
+  "log.filter.logger": "Logger",
+  "log.filter.event": "Event",
+  "log.filter.message": "Message",
+  "log.action.clearAll": "Clear all",
+  "log.label.log": "Log",
+  "log.action.expand": "Expand",
+  "log.label.fullMessage": "Full Message"
+}

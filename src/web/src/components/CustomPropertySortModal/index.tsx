@@ -114,7 +114,7 @@ const SortableRow = ({
             onValueChange={onEditingValueChange}
           />
         ) : (
-          <Tooltip content={t("Click to edit order")}>
+          <Tooltip content={t("property.tip.clickToEditOrder")}>
             <div
               className="cursor-pointer px-2 py-1 rounded hover:bg-default-200 inline-block min-w-[40px] text-center"
               onClick={() => {
@@ -136,7 +136,7 @@ const SortableRow = ({
         />
       </div>
       <div className="flex gap-1">
-        <Tooltip content={t("Move to top")}>
+        <Tooltip content={t("common.action.moveToTop")}>
           <Button
             isDisabled={globalIndex === 1}
             isIconOnly
@@ -147,7 +147,7 @@ const SortableRow = ({
             <VerticalAlignTopOutlined className="text-base" />
           </Button>
         </Tooltip>
-        <Tooltip content={t("Move to bottom")}>
+        <Tooltip content={t("common.action.moveToBottom")}>
           <Button
             isDisabled={globalIndex === totalCount}
             isIconOnly
@@ -189,7 +189,7 @@ const CustomPropertySortModal = ({ properties, onDestroyed }: Props) => {
     async (newItems: PropertyLike[]) => {
       const ids = newItems.map((item) => item.id);
       await BApi.customProperty.sortCustomProperties({ ids });
-      toast.success(t<string>("Saved"));
+      toast.success(t<string>("common.state.saved"));
     },
     [t]
   );
@@ -292,21 +292,21 @@ const CustomPropertySortModal = ({ properties, onDestroyed }: Props) => {
       footer={{
         actions: ["cancel"],
         cancelProps: {
-          text: t<string>("Close"),
+          text: t<string>("common.action.close"),
         },
       }}
       size={"3xl"}
-      title={t<string>("Adjust orders of properties")}
+      title={t<string>("property.modal.adjustPropertyOrderTitle")}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="text-sm text-default-500">
-            {t("Click on the order number to edit directly, or use the buttons to move to top/bottom")}
+            {t("property.tip.orderEditInstructions")}
           </div>
           <Input
             className="w-64"
-            placeholder={t<string>("Search properties...")}
+            placeholder={t<string>("property.action.searchProperties")}
             size="sm"
             value={searchText}
             onValueChange={setSearchText}
@@ -325,13 +325,13 @@ const CustomPropertySortModal = ({ properties, onDestroyed }: Props) => {
             <div className="border border-default-200 rounded-lg">
               <div className="flex items-center gap-2 py-2 px-2 bg-default-100 font-medium border-b border-default-200">
                 <div className="w-8" />
-                <div className="w-16">{t("Order")}</div>
-                <div className="flex-1">{t("Property")}</div>
-                <div className="w-24">{t("Actions")}</div>
+                <div className="w-16">{t("common.label.order")}</div>
+                <div className="flex-1">{t("common.label.property")}</div>
+                <div className="w-24">{t("common.label.actions")}</div>
               </div>
               {filteredItems.length === 0 ? (
                 <div className="py-8 text-center text-default-500">
-                  {t<string>("No properties found")}
+                  {t<string>("property.empty.noPropertiesFound")}
                 </div>
               ) : (
                 filteredItems.map((item, index) => {

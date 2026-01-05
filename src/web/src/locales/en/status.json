@@ -1,0 +1,21 @@
+{
+  "status.completed": "Completed",
+  "status.running": "Running",
+  "status.paused": "Paused",
+  "status.stopped": "Stopped",
+  "status.pending": "Pending",
+  "status.failed": "Failed",
+  "status.success": "Success",
+  "status.downloading": "Downloading",
+  "status.syncing": "Syncing",
+  "status.started": "Started",
+  "status.resumed": "Resumed",
+  "status.upToDate": "Up-to-date",
+  "status.unknown": "Unknown",
+  "status.invalid": "Invalid",
+  "status.valid": "Valid",
+  "status.active": "Active",
+  "status.inactive": "Inactive",
+  "status.enabled": "Enabled",
+  "status.disabled": "Disabled"
+}

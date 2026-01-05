@@ -12,6 +12,7 @@ using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property;
@@ -769,7 +770,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         // Evaluate filters
         if (group.Filters != null)
         {
-            foreach (var filter in group.Filters.Where(f => !f.Disabled))
+            foreach (var filter in group.Filters.Where(f => f.IsValid() && !f.Disabled))
             {
                 var result = EvaluateFilter(filter);
                 results.Add(result);

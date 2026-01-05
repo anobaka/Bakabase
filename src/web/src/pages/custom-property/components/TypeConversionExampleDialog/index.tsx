@@ -21,6 +21,7 @@ import { propertyTypes } from "@/sdk/constants";
 import StandardValueRenderer from "@/components/StandardValue/ValueRenderer";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
 import BApi from "@/sdk/BApi";
+import { getEnumKey } from "@/i18n";
 
 type Result = {
   type: PropertyType;
@@ -38,10 +39,10 @@ const TypeConversionExampleDialog = () => {
   const [results, setResults] = useState<Result[]>([]);
 
   const columns = [
-    // <TableColumn>{t<string>('Type to be converted')}</TableColumn>,
-    <TableColumn>{t<string>("Value to be converted")}</TableColumn>,
+    // <TableColumn>{t<string>('typeConversion.sourceType')}</TableColumn>,
+    <TableColumn>{t<string>("typeConversion.valueToBeConverted")}</TableColumn>,
     ...propertyTypes.map((cpt) => {
-      return <TableColumn>{t<string>(PropertyType[cpt.value])}</TableColumn>;
+      return <TableColumn>{t<string>(getEnumKey('PropertyType', PropertyType[cpt.value]))}</TableColumn>;
     }),
   ];
 
@@ -58,15 +59,15 @@ const TypeConversionExampleDialog = () => {
       footer={{
         actions: ["cancel"],
         cancelProps: {
-          children: t<string>("Close"),
+          children: t<string>("common.action.close"),
         },
       }}
       size={"full"}
-      title={t<string>("Type conversion examples")}
+      title={t<string>("typeConversion.examplesTitle")}
     >
       <div>
         <Tabs isVertical disabledKeys={["title"]}>
-          <Tab key={"title"} title={t<string>("Source type")} />
+          <Tab key={"title"} title={t<string>("typeConversion.sourceType")} />
           {propertyTypes.map((cpt) => {
             const filteredResults =
               results?.filter((x) => x.type == cpt.value) || [];
@@ -75,7 +76,7 @@ const TypeConversionExampleDialog = () => {
               <Tab
                 key={cpt.value}
                 className={"w-full"}
-                title={t<string>(PropertyType[cpt.value])}
+                title={t<string>(getEnumKey('PropertyType', PropertyType[cpt.value]))}
               >
                 <Table isCompact isHeaderSticky isStriped removeWrapper>
                   <TableHeader>{columns}</TableHeader>

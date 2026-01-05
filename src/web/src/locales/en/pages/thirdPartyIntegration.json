@@ -1,0 +1,7 @@
+{
+  "thirdPartyIntegration.label.tampermonkeyScript": "Tampermonkey script",
+  "thirdPartyIntegration.action.oneClickInstall": "One-click installation",
+  "thirdPartyIntegration.tip.scriptModifies": "This script modifies some interactive behaviors of the target website. You can manually enable or disable the script in Tampermonkey.",
+  "thirdPartyIntegration.tip.soulPlusClick": "Left-clicking on covers or post titles will trigger the creation of a post parsing task on Bakabase. You can still use the middle button to open posts.",
+  "thirdPartyIntegration.tip.exHentaiClick": "Left-clicking on covers will trigger the creation of a torrent download task on Bakabase. You can still use the middle button to open posts."
+}

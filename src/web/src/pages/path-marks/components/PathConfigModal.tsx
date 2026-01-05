@@ -29,12 +29,12 @@ const PathConfigModal = ({
       defaultVisible
       footer={false}
       size="5xl"
-      title={t("Configure Path Marks")}
+      title={t("pathMarks.modal.configurePathMarksTitle")}
       onDestroyed={onDestroyed}
     >
       <div className="flex flex-col h-full p-4">
         <div className="text-sm text-default-500 mb-4">
-          {t("Click on folders to navigate. Use the Add Mark button or right-click for mark options.")}
+          {t("pathMarks.tip.clickOnFoldersToNavigate")}
         </div>
         <div className="flex-1 min-h-0 overflow-hidden border border-default-200 rounded-lg">
           <PathMarkTreeView

@@ -34,7 +34,9 @@ namespace Bakabase.Service.Controllers
         public async Task<SingletonResponse<BulkModificationViewModel?>> Get(int id)
         {
             var domainModel = await service.Get(id);
-            var viewModel = domainModel?.ToViewModel(propertyLocalizer);
+            var viewModel = domainModel != null
+                ? await domainModel.ToViewModelAsync(propertyService, propertyLocalizer, resourceService)
+                : null;
             return new SingletonResponse<BulkModificationViewModel?>(viewModel);
         }
 
@@ -43,7 +45,8 @@ namespace Bakabase.Service.Controllers
         public async Task<ListResponse<BulkModificationViewModel>> GetAll()
         {
             var domainModels = await service.GetAll();
-            var viewModels = domainModels.Select(x => x.ToViewModel(propertyLocalizer));
+            var viewModels = await Task.WhenAll(
+                domainModels.Select(x => x.ToViewModelAsync(propertyService, propertyLocalizer, resourceService)));
             return new ListResponse<BulkModificationViewModel>(viewModels);
         }
 

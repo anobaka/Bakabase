@@ -1,0 +1,26 @@
+{
+  "datetime.format.date": "YYYY-MM-DD",
+  "datetime.format.dateTime": "YYYY-MM-DD HH:mm:ss",
+  "datetime.format.timeShort": "HH:mm",
+  "datetime.format.time": "HH:mm:ss",
+  "datetime.format.timeMs": "HH:mm:ss.SSS",
+
+  "datetime.duration.day": "d",
+  "datetime.duration.hour": "h",
+  "datetime.duration.minute": "m",
+  "datetime.duration.second": "s",
+
+  "datetime.label.date": "Date",
+  "datetime.label.time": "Time",
+  "datetime.label.nextRun": "Next run",
+  "datetime.label.estimatedCompletion": "Estimated completion",
+  "datetime.label.createdAt": "Created at",
+
+  "datetime.relative.justNow": "Played just now",
+  "datetime.relative.minutesAgo": "Played {{n}} minutes ago",
+  "datetime.relative.hoursAgo": "Played {{n}} hours ago",
+  "datetime.relative.daysAgo": "Played {{n}} days ago",
+
+  "datetime.action.hideTimeInfo": "Hide time info",
+  "datetime.action.showTimeInfo": "Show time info"
+}

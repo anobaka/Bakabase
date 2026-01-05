@@ -139,15 +139,15 @@ const DownloaderPage = () => {
       createPortal(Modal, {
         defaultVisible: true,
         size: "lg",
-        title: t<string>("Found some conflicted tasks"),
+        title: t<string>("downloader.confirm.conflictedTasks"),
         children: rsp.message,
         footer: {
           actions: ["ok", "cancel"],
           okProps: {
-            children: t<string>("Download selected tasks firstly"),
+            children: t<string>("downloader.action.downloadSelectedFirst"),
           },
           cancelProps: {
-            children: t<string>("Add selected tasks to the queue"),
+            children: t<string>("downloader.action.addToQueue"),
           },
         },
         onOk: async () => {
@@ -198,11 +198,11 @@ const DownloaderPage = () => {
           <MdPlayCircle />
           {moreThanOne && (
             <>
-              {t<string>("Bulk")}
+              {t<string>("downloader.action.bulk")}
               &nbsp;
             </>
           )}
-          {t<string>("Start")}
+          {t<string>("downloader.action.start")}
         </MenuItem>
         <MenuItem
           className={"flex items-center gap-2"}
@@ -211,18 +211,18 @@ const DownloaderPage = () => {
           <MdAccessTime />
           {moreThanOne && (
             <>
-              {t<string>("Bulk")}
+              {t<string>("downloader.action.bulk")}
               &nbsp;
             </>
           )}
-          {t<string>("Stop")}
+          {t<string>("downloader.action.stop")}
         </MenuItem>
         <MenuItem
           className={"flex items-center gap-2 danger"}
           onClick={() => {
             createPortal(Modal, {
               defaultVisible: true,
-              title: t<string>("Deleting {{count}} download tasks", {
+              title: t<string>("downloader.confirm.deleteTasks", {
                 count: selectedTaskIdsRef.current.length,
               }),
               onOk: async () => {
@@ -236,11 +236,11 @@ const DownloaderPage = () => {
           <MdDelete />
           {moreThanOne && (
             <>
-              {t<string>("Bulk")}
+              {t<string>("downloader.action.bulk")}
               &nbsp;
             </>
           )}
-          {t<string>("Delete")}
+          {t<string>("common.action.delete")}
         </MenuItem>
         <MenuItem
           className={"flex items-center gap-2"}
@@ -250,7 +250,7 @@ const DownloaderPage = () => {
             createPortal(Modal, {
               defaultVisible: true,
               title: t<string>(
-                ids.length > 1 ? "Clear checkpoints for {{count}} tasks" : "Clear checkpoint",
+                ids.length > 1 ? "downloader.confirm.clearCheckpoints" : "downloader.confirm.clearCheckpoint",
                 { count: ids.length },
               ),
               onOk: async () => {
@@ -268,11 +268,11 @@ const DownloaderPage = () => {
           <AiOutlineWarning />
           {moreThanOne && (
             <>
-              {t<string>("Bulk")}
+              {t<string>("downloader.action.bulk")}
               &nbsp;
             </>
           )}
-          {t<string>("Clear checkpoints")}
+          {t<string>("downloader.action.clearCheckpoints")}
         </MenuItem>
       </ControlledMenu>
     );
@@ -370,7 +370,7 @@ const DownloaderPage = () => {
         className="grid gap-x-4 gap-y-1 items-center"
         style={{ gridTemplateColumns: "auto 1fr" }}
       >
-        <div>{t<string>("Source")}</div>
+        <div>{t<string>("downloader.filter.source")}</div>
         <div className="flex items-center gap-2">
           <ButtonGroup size={"sm"}>
             {sortedThirdPartyIds.map((s) => {
@@ -412,7 +412,7 @@ const DownloaderPage = () => {
             })}
           </ButtonGroup>
         </div>
-        <div>{t<string>("Status")}</div>
+        <div>{t<string>("downloader.filter.status")}</div>
         <div className="flex items-center gap-2">
           <ButtonGroup size={"sm"}>
             {downloadTaskStatuses.map((s) => {
@@ -450,7 +450,7 @@ const DownloaderPage = () => {
             })}
           </ButtonGroup>
         </div>
-        <div>{t<string>("Keyword")}</div>
+        <div>{t<string>("downloader.filter.keyword")}</div>
         <div>
           <Input
             className={"w-[320px]"}
@@ -477,7 +477,7 @@ const DownloaderPage = () => {
           >
             <>
               <AiOutlinePlusCircle className={"text-base"} />
-              {t<string>("Create task")}
+              {t<string>("downloader.action.createTask")}
             </>
           </Button>
           <Button
@@ -489,7 +489,7 @@ const DownloaderPage = () => {
             }}
           >
             <AiOutlinePlayCircle className={"text-base"} />
-            {t<string>("Start all")}
+            {t<string>("downloader.action.startAll")}
           </Button>
           <Button
             color={"warning"}
@@ -500,7 +500,7 @@ const DownloaderPage = () => {
             }}
           >
             <AiOutlineStop className={"text-base"} />
-            {t<string>("Stop all")}
+            {t<string>("downloader.action.stopAll")}
           </Button>
         </div>
         <div className="flex items-center gap-1">
@@ -508,7 +508,7 @@ const DownloaderPage = () => {
             <DropdownTrigger>
               <Button size={"sm"} variant={"flat"}>
                 <AiOutlineDelete className={"text-base"} />
-                {t<string>("Cleanup")}
+                {t<string>("downloader.action.cleanup")}
               </Button>
             </DropdownTrigger>
             <DropdownMenu
@@ -522,7 +522,7 @@ const DownloaderPage = () => {
                     if (ids.length === 0) return;
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>("Deleting {{count}} download tasks", { count: ids.length }),
+                      title: t<string>("downloader.confirm.deleteTasks", { count: ids.length }),
                       onOk: async () => {
                         await BApi.downloadTask.deleteDownloadTasks({ ids });
                       },
@@ -537,7 +537,7 @@ const DownloaderPage = () => {
                     if (ids.length === 0) return;
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>("Deleting {{count}} download tasks", { count: ids.length }),
+                      title: t<string>("downloader.confirm.deleteTasks", { count: ids.length }),
                       onOk: async () => {
                         await BApi.downloadTask.deleteDownloadTasks({ ids });
                       },
@@ -551,14 +551,14 @@ const DownloaderPage = () => {
                 key="delete_completed"
                 startContent={<AiOutlineDelete className={"text-base"} />}
               >
-                {t<string>("Delete all completed tasks")}
+                {t<string>("downloader.action.deleteCompleted")}
               </DropdownItem>
               <DropdownItem
                 key="delete_failed"
                 color={"danger"}
                 startContent={<AiOutlineDelete className={"text-base"} />}
               >
-                {t<string>("Delete all failed tasks")}
+                {t<string>("downloader.action.deleteFailed")}
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>
@@ -573,7 +573,7 @@ const DownloaderPage = () => {
             }}
           >
             <AiOutlineExport className={"text-base"} />
-            {t<string>("Export all tasks")}
+            {t<string>("downloader.action.exportAll")}
           </Button>
           <Button
             color={"secondary"}
@@ -584,7 +584,7 @@ const DownloaderPage = () => {
             }}
           >
             <AiOutlineSetting className={"text-base"} />
-            {t<string>("Configurations")}
+            {t<string>("downloader.action.configurations")}
           </Button>
         </div>
       </div>
@@ -601,7 +601,7 @@ const DownloaderPage = () => {
             isVirtualized
             className={"p-0"}
             // color={"primary"}
-            emptyContent={t<string>("No tasks found")}
+            emptyContent={t<string>("downloader.empty.noTasks")}
             label={"Select from 1000 items"}
             // selectionMode={"multiple"}
             variant={"flat"}
@@ -651,12 +651,12 @@ const DownloaderPage = () => {
                           <span className={"opacity-60"}>{task.name && task.key}</span>
                           {task.nextStartDt && (
                             <Chip color={"default"} size={"sm"}>
-                              {t<string>("Next start time")}:
+                              {t<string>("downloader.label.nextStartTime")}:
                               {moment(task.nextStartDt).format("YYYY-MM-DD HH:mm:ss")}
                             </Chip>
                           )}
                           <Chip color="default" size="sm">
-                            {t('Created at')}
+                            {t("downloader.label.createdAt")}
                             &nbsp;
                             {moment(task.createdAt).format("YYYY-MM-DD HH:mm:ss")}
                             </Chip>
@@ -684,7 +684,7 @@ const DownloaderPage = () => {
                                   createPortal(Modal, {
                                     defaultVisible: true,
                                     size: "xl",
-                                    title: t<string>("Error"),
+                                    title: t<string>("common.label.error"),
                                     children: <pre>{task.message}</pre>,
                                   });
                                 }
@@ -780,7 +780,7 @@ const DownloaderPage = () => {
                                 case "delete":
                                   createPortal(Modal, {
                                     defaultVisible: true,
-                                    title: t<string>("Are you sure to delete it?"),
+                                    title: t<string>("downloader.confirm.deleteTask"),
                                     onOk: () =>
                                       BApi.downloadTask.deleteDownloadTasks({
                                         ids: [task.id],
@@ -795,7 +795,7 @@ const DownloaderPage = () => {
                               color={"danger"}
                               startContent={<AiOutlineDelete className={"text-lg"} />}
                             >
-                              {t<string>("Delete")}
+                              {t<string>("common.action.delete")}
                             </DropdownItem>
                           </DropdownMenu>
                         </Dropdown>
