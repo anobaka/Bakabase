@@ -56,17 +56,17 @@ const getSyncStatusLabel = (status?: PathMarkSyncStatusType, t?: (key: string) =
   const translate = t || ((key: string) => key);
   switch (status) {
     case PathMarkSyncStatus.Pending:
-      return translate("Pending");
+      return translate("pathMarkConfig.status.pending");
     case PathMarkSyncStatus.Syncing:
-      return translate("Syncing...");
+      return translate("pathMarkConfig.status.syncing");
     case PathMarkSyncStatus.Synced:
-      return translate("Synced");
+      return translate("pathMarkConfig.status.synced");
     case PathMarkSyncStatus.Failed:
-      return translate("Failed");
+      return translate("pathMarkConfig.status.failed");
     case PathMarkSyncStatus.PendingDelete:
-      return translate("Pending Delete");
+      return translate("pathMarkConfig.status.pendingDelete");
     default:
-      return translate("Unknown");
+      return translate("pathMarkConfig.status.unknown");
   }
 };
 
@@ -210,7 +210,7 @@ const PendingSyncListModal = ({
       size="lg"
       title={
         <div className="flex items-center gap-2">
-          <span>{t("Pending Sync Marks")}</span>
+          <span>{t("pathMarkConfig.modal.pendingSyncMarks")}</span>
           {totalPending > 0 && (
             <Chip color="warning" size="sm" variant="flat">
               {totalPending}
@@ -226,10 +226,10 @@ const PendingSyncListModal = ({
             isDisabled={pendingMarks.length === 0 || loading}
             onPress={handleSyncAll}
           >
-            {t("Sync All")}
+            {t("pathMarkConfig.action.syncAll")}
           </Button>
           <Button color="default" variant="light" onPress={handleClose}>
-            {t("Close")}
+            {t("common.action.close")}
           </Button>
         </div>
       }
@@ -244,7 +244,7 @@ const PendingSyncListModal = ({
         ) : pendingMarks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-default-500">
             <AiOutlineCheck className="text-4xl text-success mb-2" />
-            <span>{t("All marks are synced!")}</span>
+            <span>{t("pathMarkConfig.status.allSynced")}</span>
           </div>
         ) : (
           groupedMarks.map((group) => (

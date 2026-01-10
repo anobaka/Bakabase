@@ -104,14 +104,14 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
     >
       <ModalContent>
         <ModalHeader className="flex flex-col gap-1">
-          {t("Synchronizing Marks")}
+          {t("pathMarkConfig.modal.syncProgress")}
         </ModalHeader>
         <ModalBody>
           <div className="flex flex-col gap-4">
             {/* Progress */}
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between text-sm">
-                <span>{t("Progress")}</span>
+                <span>{t("pathMarkConfig.label.progress")}</span>
                 <span className="text-default-500">
                   {Math.round(progress)}%
                 </span>
@@ -128,7 +128,7 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
             {/* Current process */}
             {currentProcess && (isSyncing || isPaused) && (
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-default-500">{t("Currently syncing")}:</span>
+                <span className="text-sm text-default-500">{t("pathMarkConfig.label.currentlySyncing")}:</span>
                 <span className="text-sm truncate" title={currentProcess}>
                   {currentProcess}
                 </span>
@@ -138,7 +138,7 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
             {/* Error message */}
             {isError && error && (
               <div className="flex flex-col gap-1">
-                <span className="text-sm text-danger">{t("Error")}:</span>
+                <span className="text-sm text-danger">{t("pathMarkConfig.label.error")}:</span>
                 <span className="text-sm text-danger truncate" title={error}>
                   {error}
                 </span>
@@ -148,35 +148,35 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
             {/* Paused message */}
             {isPaused && (
               <div className="text-sm text-warning">
-                {t("Synchronization paused")}
+                {t("pathMarkConfig.status.paused")}
               </div>
             )}
 
             {/* Cancelled message */}
             {isCancelled && (
               <div className="text-sm text-warning">
-                {t("Synchronization cancelled")}
+                {t("pathMarkConfig.status.cancelled")}
               </div>
             )}
 
             {/* Completed summary */}
             {isCompleted && data && (
               <div className="flex flex-col gap-2">
-                <span className="text-sm text-success">{t("Synchronization completed!")}</span>
+                <span className="text-sm text-success">{t("pathMarkConfig.status.completed")}</span>
                 <div className="flex items-center gap-4 text-sm">
                   {data.resourcesCreated !== undefined && (
                     <Chip color="success" size="sm" variant="flat">
-                      {t("Resources")}: {data.resourcesCreated}
+                      {t("pathMarkConfig.label.resources")}: {data.resourcesCreated}
                     </Chip>
                   )}
                   {data.propertiesApplied !== undefined && (
                     <Chip color="primary" size="sm" variant="flat">
-                      {t("Properties")}: {data.propertiesApplied}
+                      {t("pathMarkConfig.label.properties")}: {data.propertiesApplied}
                     </Chip>
                   )}
                   {(data.failedMarks || 0) > 0 && (
                     <Chip color="danger" size="sm" variant="flat">
-                      {t("Failed")}: {data.failedMarks}
+                      {t("pathMarkConfig.status.failed")}: {data.failedMarks}
                     </Chip>
                   )}
                 </div>
@@ -193,7 +193,7 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
                 startContent={<AiOutlinePause />}
                 onPress={handlePause}
               >
-                {t("Pause")}
+                {t("pathMarkConfig.action.pause")}
               </Button>
               <Button
                 color="danger"
@@ -201,7 +201,7 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
                 startContent={<AiOutlineStop />}
                 onPress={handleStop}
               >
-                {t("Stop")}
+                {t("pathMarkConfig.action.stop")}
               </Button>
             </div>
           ) : isPaused ? (
@@ -212,7 +212,7 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
                 startContent={<AiOutlinePlayCircle />}
                 onPress={handleResume}
               >
-                {t("Resume")}
+                {t("pathMarkConfig.action.resume")}
               </Button>
               <Button
                 color="danger"
@@ -220,12 +220,12 @@ const SyncProgressModal = ({ visible = true, onClose, onComplete, onDestroyed }:
                 startContent={<AiOutlineStop />}
                 onPress={handleStop}
               >
-                {t("Stop")}
+                {t("pathMarkConfig.action.stop")}
               </Button>
             </div>
           ) : (
             <Button color="primary" onPress={handleClose}>
-              {t("Close")}
+              {t("common.action.close")}
             </Button>
           )}
         </ModalFooter>

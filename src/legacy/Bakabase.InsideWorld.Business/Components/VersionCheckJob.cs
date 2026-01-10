@@ -3,11 +3,14 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.View;
+using Bakabase.Infrastructures.Components.App;
+using Bakabase.Infrastructures.Components.App.Upgrade;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Gui;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Semver;
 
 namespace Bakabase.InsideWorld.Business.Components
 {
@@ -17,18 +20,18 @@ namespace Bakabase.InsideWorld.Business.Components
     public class VersionCheckJob : BackgroundService
     {
         private readonly ILogger<VersionCheckJob> _logger;
-        private readonly BakabaseUpdaterService _bakabaseUpdater;
+        private readonly AppUpdater _appUpdater;
         private readonly IHubContext<WebGuiHub, IWebGuiClient> _hubContext;
         private readonly BakabaseLocalizer _localizer;
 
         public VersionCheckJob(
             ILogger<VersionCheckJob> logger,
-            BakabaseUpdaterService bakabaseUpdater,
+            AppUpdater appUpdater,
             IHubContext<WebGuiHub, IWebGuiClient> hubContext,
             BakabaseLocalizer localizer)
         {
             _logger = logger;
-            _bakabaseUpdater = bakabaseUpdater;
+            _appUpdater = appUpdater;
             _hubContext = hubContext;
             _localizer = localizer;
         }
@@ -50,32 +53,44 @@ namespace Bakabase.InsideWorld.Business.Components
                 _logger.LogInformation("Starting version check");
 
                 // Get latest version
-                var latestVersion = await _bakabaseUpdater.GetLatestVersion(stoppingToken);
+                var latestVersion = await _appUpdater.CheckNewVersion();
 
-                if (latestVersion.CanUpdate)
+                if (latestVersion == null)
                 {
-                    _logger.LogInformation($"New version available: {latestVersion.Version}");
-
-                    // Send notification to frontend
-                    var notification = new AppNotificationMessageViewModel
-                    {
-                        Title = _localizer.VersionCheck_NewVersionAvailableTitle(),
-                        Message = _localizer.VersionCheck_NewVersionAvailableMessage(latestVersion.Version),
-                        Severity = AppNotificationSeverity.Info,
-                        Behavior = AppNotificationBehavior.Persistent,
-                        Metadata = new System.Collections.Generic.Dictionary<string, object>
-                        {
-                            { "version", latestVersion.Version }
-                        }
-                    };
-
-                    await _hubContext.Clients.All.OnNotification(notification);
-                    _logger.LogInformation("Version update notification sent to frontend");
+                    _logger.LogInformation("No new version available");
+                    return;
                 }
-                else
+
+                if (!SemVersion.TryParse(latestVersion.Version, SemVersionStyles.Any, out var sv))
+                {
+                    _logger.LogError("Invalid version format: {Version}", latestVersion.Version);
+                    return;
+                }
+
+                if (sv.ComparePrecedenceTo(AppService.CoreVersion) <= 0)
                 {
                     _logger.LogInformation("Application is up to date");
+                    return;
                 }
+
+                _logger.LogInformation($"New version available: {latestVersion.Version}, current version: {AppService.CoreVersion}");
+
+                // Send notification to frontend
+                var notification = new AppNotificationMessageViewModel
+                {
+                    Title = _localizer.VersionCheck_NewVersionAvailableTitle(),
+                    Message = _localizer.VersionCheck_NewVersionAvailableMessage(latestVersion.Version),
+                    Severity = AppNotificationSeverity.Info,
+                    Behavior = AppNotificationBehavior.Persistent,
+                    Metadata = new System.Collections.Generic.Dictionary<string, object>
+                    {
+                        { "version", latestVersion.Version }
+                    }
+                };
+
+                await _hubContext.Clients.All.OnNotification(notification);
+                _logger.LogInformation("Version update notification sent to frontend");
+                
             }
             catch (Exception ex)
             {

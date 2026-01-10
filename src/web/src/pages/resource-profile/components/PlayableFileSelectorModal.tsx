@@ -51,14 +51,14 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
     <Modal
       defaultVisible
       size="xl"
-      title={t("Playable File Options")}
+      title={t("resourceProfile.modal.playableFileOptionsTitle")}
       onDestroyed={onDestroyed}
       onOk={() => onSubmit?.(options)}
     >
       <div className="flex flex-col gap-4">
         {/* Quick presets */}
         <div>
-          <div className="text-sm font-medium mb-2">{t("Quick Add Presets")}</div>
+          <div className="text-sm font-medium mb-2">{t("resourceProfile.label.quickAddPresets")}</div>
           <div className="flex flex-wrap gap-2">
             <Chip
               size="sm"
@@ -67,7 +67,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
               className="cursor-pointer hover:opacity-80"
               onClick={() => addPresetExtensions("video")}
             >
-              {t("Video")}
+              {t("resourceProfile.label.video")}
             </Chip>
             <Chip
               size="sm"
@@ -76,7 +76,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
               className="cursor-pointer hover:opacity-80"
               onClick={() => addPresetExtensions("audio")}
             >
-              {t("Audio")}
+              {t("resourceProfile.label.audio")}
             </Chip>
             <Chip
               size="sm"
@@ -85,7 +85,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
               className="cursor-pointer hover:opacity-80"
               onClick={() => addPresetExtensions("image")}
             >
-              {t("Image")}
+              {t("resourceProfile.label.image")}
             </Chip>
             <Chip
               size="sm"
@@ -94,7 +94,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
               className="cursor-pointer hover:opacity-80"
               onClick={() => addPresetExtensions("document")}
             >
-              {t("Document")}
+              {t("resourceProfile.label.document")}
             </Chip>
             <Chip
               size="sm"
@@ -103,7 +103,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
               className="cursor-pointer hover:opacity-80"
               onClick={() => addPresetExtensions("archive")}
             >
-              {t("Archive")}
+              {t("resourceProfile.label.archive")}
             </Chip>
             {(options.extensions?.length ?? 0) > 0 && (
               <Chip
@@ -113,7 +113,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
                 className="cursor-pointer hover:opacity-80"
                 onClick={clearExtensions}
               >
-                {t("Clear All")}
+                {t("resourceProfile.action.clearAll")}
               </Chip>
             )}
           </div>
@@ -126,7 +126,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
           <ExtensionsInput
             key={options.extensions?.join(",") ?? ""}
             defaultValue={options.extensions}
-            label={t("File Extensions")}
+            label={t("resourceProfile.label.fileExtensions")}
             onValueChange={(v) => {
               setOptions({
                 ...options,
@@ -136,15 +136,15 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
           />
           <div className="text-xs text-default-400 mt-1">
             <InfoCircleOutlined className="mr-1" />
-            {t("Files with these extensions will be considered playable")}
+            {t("resourceProfile.tip.filesWithExtensionsPlayable")}
           </div>
         </div>
 
         {/* File name pattern */}
         <div>
           <Input
-            label={t("File Name Pattern")}
-            placeholder={t("e.g., .*\\.(mp4|mkv|avi)$")}
+            label={t("resourceProfile.label.fileNamePattern")}
+            placeholder={t("resourceProfile.input.fileNamePatternPlaceholder")}
             value={options.fileNamePattern || ""}
             onValueChange={(v) => {
               setOptions({
@@ -155,7 +155,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
           />
           <div className="text-xs text-default-400 mt-1">
             <InfoCircleOutlined className="mr-1" />
-            {t("Regex pattern to match playable file names (optional, leave empty for extension-only matching)")}
+            {t("resourceProfile.tip.regexPatternPlayable")}
           </div>
         </div>
 
@@ -164,11 +164,11 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
           <>
             <Divider />
             <div>
-              <div className="text-sm font-medium mb-2">{t("Current Configuration")}</div>
+              <div className="text-sm font-medium mb-2">{t("resourceProfile.label.currentConfiguration")}</div>
               <div className="p-3 bg-default-100 rounded-lg">
                 {(options.extensions?.length ?? 0) > 0 && (
                   <div className="flex flex-wrap gap-1 mb-2">
-                    <span className="text-sm text-default-500 mr-2">{t("Extensions")}:</span>
+                    <span className="text-sm text-default-500 mr-2">{t("resourceProfile.label.extensionsLabel")}:</span>
                     {options.extensions?.map((ext) => (
                       <Chip key={ext} size="sm" color="secondary" variant="flat">
                         .{ext}
@@ -178,7 +178,7 @@ const PlayableFileSelectorModal = ({ options: propOptions, onSubmit, onDestroyed
                 )}
                 {options.fileNamePattern && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-default-500">{t("Pattern")}:</span>
+                    <span className="text-sm text-default-500">{t("resourceProfile.label.pattern")}:</span>
                     <Chip size="sm" color="warning" variant="flat">
                       {options.fileNamePattern}
                     </Chip>

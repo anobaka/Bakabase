@@ -200,7 +200,7 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
                 startContent={<AiOutlineAim className="text-lg" />}
                 variant="light"
               >
-                {t("Add Mark")}
+                {t("pathMarkConfig.action.addMark")}
               </Button>
             </DropdownTrigger>
             <DropdownMenu
@@ -213,21 +213,21 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
                 className="text-success"
                 description={<ResourceDescription />}
               >
-                {t("Resource")}
+                {t("common.label.resource")}
               </DropdownItem>
               <DropdownItem
                 key={PathMarkType.Property}
                 className="text-primary"
                 description={<PropertyDescription />}
               >
-                {t("Property")}
+                {t("common.label.property")}
               </DropdownItem>
               <DropdownItem
                 key={PathMarkType.MediaLibrary}
                 className="text-secondary"
                 description={<MediaLibraryDescription />}
               >
-                {t("Media Library")}
+                {t("common.label.mediaLibrary")}
               </DropdownItem>
             </DropdownMenu>
           </Dropdown>
@@ -250,7 +250,7 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
           variant="light"
           onPress={handleEnterCopyMode}
         >
-          {t("Copy marks")}
+          {t("pathMarkConfig.action.copy")}
         </Button>
       )}
 
@@ -263,14 +263,14 @@ const PathMarks = ({ entry, marks = [], onSaveMark, onDeleteMark, onTaskComplete
             isDisabled={selectedMarkIds.length === 0}
             onPress={handleConfirmCopy}
           >
-            {t("Confirm selection")} ({selectedMarkIds.length}/{allMarks.length})
+            {t("pathMarkConfig.action.confirmSelection")} ({selectedMarkIds.length}/{allMarks.length})
           </Button>
           <Button
             size="sm"
             variant="light"
             onPress={handleCancelCopy}
           >
-            {t("Cancel")}
+            {t("common.action.cancel")}
           </Button>
         </div>
       )}

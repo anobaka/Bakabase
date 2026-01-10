@@ -72,7 +72,7 @@ const FileMoverPage = () => {
         fileMover: options,
       })
       .then(() => {
-        toast.success(t<string>("Saved"));
+        toast.success(t<string>("common.state.saved"));
         cb && cb();
       });
   };
@@ -174,7 +174,7 @@ const FileMoverPage = () => {
                   onPress={() => {
                     createPortal(Modal, {
                       defaultVisible: true,
-                      title: t<string>("Error"),
+                      title: t<string>("common.label.error"),
                       size: "lg",
                       children: <pre>{progress.error}</pre>,
                       footer: { actions: ["ok"] },
@@ -241,13 +241,13 @@ const FileMoverPage = () => {
               >
                 {target.path}
               </Button>
-              <Tooltip content={t<string>("Overwrite files in target path")}>
+              <Tooltip content={t<string>("fileMover.tip.overwrite")}>
                 <Checkbox
                   isSelected={target.overwrite}
                   size="sm"
                   onValueChange={(v) => setOverwrite(target.path, v)}
                 >
-                  {t<string>("Overwrite")}
+                  {t<string>("fileMover.label.overwrite")}
                 </Checkbox>
               </Tooltip>
             </div>
@@ -270,7 +270,7 @@ const FileMoverPage = () => {
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="flex items-center text-xs text-default-500">
-                {t<string>("Sources")}
+                {t<string>("fileMover.label.sources")}
                 {(target.sources ?? []).length > 0 && (
                   <Chip size="sm" variant="flat" className="ml-2">
                     {(target.sources ?? []).length}
@@ -291,7 +291,7 @@ const FileMoverPage = () => {
                   });
                 }}
               >
-                {t<string>("Add source")}
+                {t<string>("fileMover.action.addSource")}
               </Button>
             </div>
 
@@ -306,7 +306,7 @@ const FileMoverPage = () => {
               </div>
             ) : (
               <div className="p-2.5 text-center text-xs text-default-400 bg-default-50 rounded-md">
-                {t<string>("No sources configured")}
+                {t<string>("fileMover.empty.noSources")}
               </div>
             )}
           </div>
@@ -335,7 +335,7 @@ const FileMoverPage = () => {
                 });
               }}
             >
-              {t<string>("Add target path")}
+              {t<string>("fileMover.action.addTarget")}
             </Button>
           </CardBody>
         </Card>
@@ -356,7 +356,7 @@ const FileMoverPage = () => {
             }}
           >
             <span className={`text-sm font-medium transition-colors ${enabled ? "text-success" : "text-default-500"}`}>
-              {t<string>(enabled ? "Enabled" : "Disabled")}
+              {t<string>(enabled ? "fileMover.status.enabled" : "fileMover.status.disabled")}
             </span>
           </Switch>
         </div>
@@ -365,12 +365,10 @@ const FileMoverPage = () => {
 
         <div className="flex items-center">
           <Tooltip
-            content={t<string>(
-              "Files or directories will be moved after the delayed time from the time they are created here. The delay is working for the first layer entries only.",
-            )}
+            content={t<string>("fileMover.tip.delay")}
           >
             <div className="flex items-center gap-2">
-              <span className="text-sm text-default-600 whitespace-nowrap">{t<string>("Delay")}</span>
+              <span className="text-sm text-default-600 whitespace-nowrap">{t<string>("fileMover.label.delay")}</span>
               <TimeInput
                 size="sm"
                 hideTimeZone

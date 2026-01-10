@@ -445,6 +445,94 @@ public static class ResourceSearchExtensions
         };
     }
 
+    /// <summary>
+    /// Async version that populates ParentResource property options with resource display names.
+    /// </summary>
+    public static async Task<ResourceSearchViewModel> ToViewModelAsync(this ResourceSearch domainModel,
+        IPropertyService propertyService, IPropertyLocalizer propertyLocalizer, IResourceService resourceService)
+    {
+        // Extract all filters from the search group
+        var validFilters = domainModel.Group?.ExtractFilters() ?? [];
+
+        // Build property map
+        var propertyPools = validFilters.Aggregate<ResourceSearchFilter, PropertyPool>(default,
+            (current, f) => current | f.PropertyPool);
+
+        if (propertyPools == default)
+        {
+            return domainModel.ToViewModel(propertyLocalizer);
+        }
+
+        var propertyMap = (await propertyService.GetProperties(propertyPools)).GroupBy(d => d.Pool)
+            .ToDictionary(d => d.Key, d => d.ToDictionary(a => a.Id, a => a));
+
+        // Build ParentResource property with choices if needed
+        if (propertyMap.TryGetValue(PropertyPool.Internal, out var internalProps) &&
+            internalProps.TryGetValue((int)InternalProperty.ParentResource, out var parentResourceProperty))
+        {
+            var filterData = validFilters
+                .Where(f => f.PropertyPool == PropertyPool.Internal && f.PropertyId == (int)InternalProperty.ParentResource)
+                .Select(f => new FilterData(f.PropertyPool, f.PropertyId,
+                    f.DbValue?.SerializeAsStandardValue(f.Property.Type.GetDbValueType()), f.Operation));
+
+            var parentResourcePropertyWithChoices = await filterData.BuildParentResourcePropertyWithChoices(
+                parentResourceProperty, resourceService);
+
+            if (parentResourcePropertyWithChoices != null)
+            {
+                internalProps[(int)InternalProperty.ParentResource] = parentResourcePropertyWithChoices;
+            }
+        }
+
+        return new ResourceSearchViewModel
+        {
+            Group = domainModel.Group?.ToViewModel(propertyMap, propertyLocalizer),
+            Keyword = null,
+            Orders = domainModel.Orders,
+            Page = domainModel.PageIndex,
+            PageSize = domainModel.PageSize,
+            Tags = domainModel.Tags
+        };
+    }
+
+    private static ResourceSearchFilterGroupViewModel ToViewModel(this ResourceSearchFilterGroup domainModel,
+        Dictionary<PropertyPool, Dictionary<int, Property>> propertyMap, IPropertyLocalizer propertyLocalizer)
+    {
+        return new ResourceSearchFilterGroupViewModel
+        {
+            Combinator = domainModel.Combinator,
+            Disabled = domainModel.Disabled,
+            Filters = domainModel.Filters?.Select(f =>
+            {
+                var property = propertyMap.GetValueOrDefault(f.PropertyPool)?.GetValueOrDefault(f.PropertyId);
+                return f.ToViewModel(property ?? f.Property, propertyLocalizer);
+            }).ToList(),
+            Groups = domainModel.Groups?.Select(g => g.ToViewModel(propertyMap, propertyLocalizer)).ToList()
+        };
+    }
+
+    private static ResourceSearchFilterViewModel ToViewModel(this ResourceSearchFilter domainModel,
+        Property property, IPropertyLocalizer propertyLocalizer)
+    {
+        var valueProperty = property.ConvertPropertyIfNecessary(domainModel.Operation);
+
+        var filter = new ResourceSearchFilterViewModel
+        {
+            PropertyId = domainModel.PropertyId,
+            PropertyPool = domainModel.PropertyPool,
+            Operation = domainModel.Operation,
+            Disabled = domainModel.Disabled,
+            DbValue = domainModel.DbValue?.SerializeAsStandardValue(valueProperty.Type.GetDbValueType()),
+            ValueProperty = valueProperty.ToViewModel(propertyLocalizer),
+            Property = property.ToViewModel(propertyLocalizer),
+            BizValue = PropertySystem.Property.TryGetDescriptor(valueProperty.Type)?.GetBizValue(valueProperty, domainModel.DbValue)
+                ?.SerializeAsStandardValue(valueProperty.Type.GetBizValueType()),
+            AvailableOperations = PropertySystem.Property.TryGetSearchHandler(property.Type)?.SearchOperations.Keys.ToList()
+        };
+
+        return filter;
+    }
+
     public static ResourceProfileViewModel ToViewModel(this ResourceProfile profile,
         IPropertyLocalizer propertyLocalizer)
     {

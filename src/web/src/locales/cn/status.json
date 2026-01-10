@@ -1,0 +1,21 @@
+{
+  "status.completed": "已完成",
+  "status.running": "运行中",
+  "status.paused": "已暂停",
+  "status.stopped": "已停止",
+  "status.pending": "待处理",
+  "status.failed": "失败",
+  "status.success": "成功",
+  "status.downloading": "下载中",
+  "status.syncing": "同步中",
+  "status.started": "已启动",
+  "status.resumed": "已恢复",
+  "status.upToDate": "已是最新版本",
+  "status.unknown": "未知",
+  "status.invalid": "无效",
+  "status.valid": "有效",
+  "status.active": "活跃",
+  "status.inactive": "非活跃",
+  "status.enabled": "已启用",
+  "status.disabled": "已禁用"
+}

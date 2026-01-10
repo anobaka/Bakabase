@@ -4,7 +4,8 @@ import type { BakabaseAbstractionsModelsDomainPathMark } from "@/sdk/Api";
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineWarning } from "react-icons/ai";
+import { useNavigate } from "react-router-dom";
+import { AiOutlineWarning, AiOutlineControl } from "react-icons/ai";
 
 import PathTree from "./components/PathTree";
 import PathConfigModal from "./components/PathConfigModal";
@@ -16,13 +17,16 @@ import PathMarkSettingsButton from "@/pages/path-mark-config/components/PathMark
 import PendingSyncButton from "@/pages/path-mark-config/components/PendingSyncButton";
 import type { PendingSyncButtonRef } from "@/pages/path-mark-config/components/PendingSyncButton";
 import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
+import { PathMarkGuideModal, usePathMarkGuide } from "@/pages/path-mark-config/components/PathMarkGuide";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Chip, toast, Modal, Spinner, Switch } from "@/components/bakaui";
+import { Button, Chip, toast, Modal, Spinner, Switch } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 
 const PathMarksPage = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
+  const { showGuide, completeGuide } = usePathMarkGuide();
 
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
@@ -60,12 +64,12 @@ const PathMarksPage = () => {
           });
         }
 
-        toast.success(t(oldMark ? "Mark updated successfully" : "Mark added successfully"));
+        toast.success(t(oldMark ? "pathMarks.success.markUpdated" : "pathMarks.success.markAdded"));
         loadAllMarks();
         refreshPendingSyncCount();
       } catch (error) {
         console.error("Failed to save mark", error);
-        toast.danger(t("Failed to save mark"));
+        toast.danger(t("pathMarks.error.saveMark"));
       }
     },
     [t, loadAllMarks, refreshPendingSyncCount],
@@ -83,15 +87,15 @@ const PathMarksPage = () => {
       const confirmed = await new Promise<boolean>((resolve) => {
         const modal = createPortal(Modal, {
           defaultVisible: true,
-          title: t("Confirm Delete Mark"),
+          title: t("pathMarks.confirm.deleteTitle"),
           children: (
             <div>
-              <p>{t("Are you sure you want to delete this mark?")}</p>
+              <p>{t("pathMarks.confirm.deleteQuestion")}</p>
               <p className="text-sm text-default-500 mt-2">
-                {t("Path")}: {path}
+                {t("common.label.path")}: {path}
               </p>
               <p className="text-sm text-default-500">
-                {t("Priority")}: {mark.priority}
+                {t("common.label.priority")}: {mark.priority}
               </p>
             </div>
           ),
@@ -99,7 +103,7 @@ const PathMarksPage = () => {
             actions: ["cancel", "ok"],
             okProps: {
               color: "danger",
-              children: t("Delete"),
+              children: t("common.action.delete"),
             },
           },
           onOk: () => {
@@ -115,12 +119,12 @@ const PathMarksPage = () => {
       if (confirmed) {
         try {
           await BApi.pathMark.softDeletePathMark(markId);
-          toast.success(t("Mark deleted successfully"));
+          toast.success(t("pathMarks.success.markDeleted"));
           loadAllMarks();
           refreshPendingSyncCount();
         } catch (error) {
           console.error("Failed to delete mark", error);
-          toast.danger(t("Failed to delete mark"));
+          toast.danger(t("pathMarks.error.deleteMark"));
         }
       }
     },
@@ -149,7 +153,7 @@ const PathMarksPage = () => {
       const marks = group?.marks || [];
 
       if (marks.length === 0) {
-        toast.warning(t("No marks to delete"));
+        toast.warning(t("pathMarks.warning.noMarksToDelete"));
         return;
       }
 
@@ -192,12 +196,12 @@ const PathMarksPage = () => {
             }
 
             const totalCount = marks.length + (includeChildPaths ? childPaths.reduce((sum, c) => sum + c.marks.length, 0) : 0);
-            toast.success(t("Deleted {{count}} mark(s) successfully", { count: totalCount }));
+            toast.success(t("pathMarks.success.deletedCount", { count: totalCount }));
             loadAllMarks();
             refreshPendingSyncCount();
           } catch (error) {
             console.error("Failed to delete marks", error);
-            toast.danger(t("Failed to delete marks"));
+            toast.danger(t("pathMarks.error.deleteMarks"));
           }
         },
       });
@@ -219,12 +223,12 @@ const PathMarksPage = () => {
           } as BakabaseAbstractionsModelsDomainPathMark);
         }
 
-        toast.success(t("Pasted {{count}} marks successfully", { count: marks.length }));
+        toast.success(t("pathMarks.success.pastedCount", { count: marks.length }));
         loadAllMarks();
         refreshPendingSyncCount();
       } catch (error) {
         console.error("Failed to paste marks", error);
-        toast.danger(t("Failed to paste marks"));
+        toast.danger(t("pathMarks.error.pasteMarks"));
       }
     },
     [t, loadAllMarks, refreshPendingSyncCount],
@@ -232,18 +236,28 @@ const PathMarksPage = () => {
 
   return (
     <div className="path-marks-page h-full flex flex-col">
-      <div className="flex flex-col gap-4 p-4 flex-1 min-h-0">
+      <div className="flex flex-col gap-4 p-2 flex-1 min-h-0">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold">{t("Path Marks")}</h2>
+            <h2 className="text-xl font-semibold">{t("pathMarks.title")}</h2>
             <Chip color="primary" size="sm" variant="flat">
-              {t("Beta")}
+              {t("pathMarks.label.beta")}
             </Chip>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            {/* Configure marks button */}
+            <Button
+              size="sm"
+              startContent={<AiOutlineControl />}
+              variant="flat"
+              onPress={() => navigate("/path-mark-config")}
+            >
+              {t("pathMarks.action.configureMarks")}
+            </Button>
+
             {/* Pending sync button */}
             <PendingSyncButton ref={pendingSyncButtonRef} onSyncComplete={loadAllMarks} />
 
@@ -254,7 +268,7 @@ const PathMarksPage = () => {
 
         {/* Description */}
         <div className="text-sm text-default-500">
-          {t("View and manage all path marks across your media libraries. Click on a path to edit marks in the config page.")}
+          {t("pathMarks.tip.description")}
         </div>
 
         {/* Invalid paths warning */}
@@ -263,11 +277,11 @@ const PathMarksPage = () => {
             <AiOutlineWarning className="text-warning text-xl flex-shrink-0" />
             <div className="flex-1">
               <span className="text-warning-700">
-                {t("{{count}} path(s) no longer exist on the file system", { count: invalidPathsCount })}
+                {t("pathMarks.warning.invalidPaths", { count: invalidPathsCount })}
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-default-600">{t("Show only invalid")}</span>
+              <span className="text-sm text-default-600">{t("pathMarks.label.showOnlyInvalid")}</span>
               <Switch
                 isSelected={showOnlyInvalid}
                 size="sm"
@@ -300,7 +314,23 @@ const PathMarksPage = () => {
           {/* Copy Marks Sidebar */}
           <CopyMarksSidebar />
         </div>
+
+        {/* Resource profile config hint */}
+        <div className="flex items-center justify-center gap-2 p-3 bg-default-50 rounded-lg">
+          <span className="text-sm text-default-500">{t("pathMarks.label.resourceProfileHint")}</span>
+          <Button
+            color="secondary"
+            size="sm"
+            variant="flat"
+            onPress={() => navigate("/resource-profile")}
+          >
+            {t("pathMarks.action.goToResourceProfile")}
+          </Button>
+        </div>
       </div>
+
+      {/* First-time user guide */}
+      <PathMarkGuideModal visible={showGuide} onComplete={completeGuide} />
     </div>
   );
 };

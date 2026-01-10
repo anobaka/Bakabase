@@ -54,7 +54,7 @@ const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
         {!compact && (
           <div className="flex items-center gap-1 text-sm text-default-500 shrink-0">
             <ProfileOutlined />
-            <span>{t("Resource Profiles")}</span>
+            <span>{t("resource.label.resourceProfiles")}</span>
           </div>
         )}
         <Spinner size="sm" />
@@ -72,19 +72,19 @@ const ResourceProfiles = ({ resourceId, onClose, compact = false }: Props) => {
       {!compact && (
         <div className="flex items-center gap-1 text-sm text-default-500 shrink-0 pt-0.5">
           <ProfileOutlined />
-          <span>{t("Resource Profiles")}</span>
+          <span>{t("resource.label.resourceProfiles")}</span>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-1 flex-1">
         {profiles.length === 0 ? (
           <span className="text-sm text-default-400">
-            {t("None")}
+            {t("common.label.none")}
           </span>
         ) : (
           profiles.map((profile) => (
             <Tooltip
               key={profile.id}
-              content={t("Click to view and edit this profile")}
+              content={t("resource.tip.clickToViewEditProfile")}
             >
               <Chip
                 className="cursor-pointer"

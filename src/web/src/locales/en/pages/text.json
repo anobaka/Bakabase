@@ -1,0 +1,13 @@
+{
+  "text.label.appliedTo": "Applied to",
+  "text.label.texts": "Texts",
+  "text.label.opt": "Opt",
+  "text.label.original": "Original",
+  "text.label.pretreated": "Pretreated",
+  "text.action.addPrefabs": "Add prefabs",
+  "text.label.pretreatmentTest": "Pretreatment test",
+  "text.input.enterText": "Enter text",
+  "text.action.runPretreatment": "Run pretreatment",
+  "text.label.noChanges": "No changes",
+  "text.confirm.deleteTitle": "Sure to delete?"
+}

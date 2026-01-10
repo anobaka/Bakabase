@@ -315,8 +315,8 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
         size={"xl"}
         title={
           isAdding
-            ? t<string>("Creating download task")
-            : t<string>("Download task")
+            ? t<string>("downloader.modal.creatingTask")
+            : t<string>("downloader.modal.taskDetail")
         }
         onDestroyed={onDestroyed}
         onOk={async () => {
@@ -343,7 +343,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           className={"grid gap-2 items-center"}
           style={{ gridTemplateColumns: "auto 1fr" }}
         >
-          <div>{t<string>("Site")}</div>
+          <div>{t<string>("downloader.label.site")}</div>
           <div>
             <ButtonGroup size={"sm"}>
               {availableThirdParties.map((thirdParty) => {
@@ -374,7 +374,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
           {form.thirdPartyId &&
             (availableTaskTypes.length > 0 ? (
               <>
-                <div>{t<string>("Task type")}</div>
+                <div>{t<string>("downloader.label.taskType")}</div>
                 <div>
                   <ButtonGroup size={"sm"}>
                     {availableTaskTypes.map((taskType) => {
@@ -405,7 +405,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                 </div>
               </>
             ) : (
-              t<string>("Not available")
+              t<string>("downloader.status.notAvailable")
             ))}
         </div>
         {form.thirdPartyId && form.type && (

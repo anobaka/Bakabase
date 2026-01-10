@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { AppstoreOutlined } from "@ant-design/icons";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
@@ -50,6 +51,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
   onDestroyed,
 }) => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { createPortal } = useBakabaseContext();
 
   const [visible, setVisible] = useState(true);
@@ -107,7 +109,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
       }
     } catch (error) {
       console.error("Failed to load bulk editor data:", error);
-      toast.error(t("Failed to load data"));
+      toast.error(t("common.error.failedToLoadData"));
     } finally {
       setLoading(false);
     }
@@ -164,7 +166,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
       setAggregatedValues(aggValues);
     } catch (error) {
       console.error("Failed to process data:", error);
-      toast.error(t("Failed to process data"));
+      toast.error(t("common.error.failedToProcessData"));
     }
   };
 
@@ -370,10 +372,10 @@ const BulkPropertyEditor: React.FC<Props> = ({
       });
 
       setHasAnyChanges(true);
-      toast.success(t("Property updated successfully"));
+      toast.success(t("property.success.propertyUpdatedSuccessfully"));
     } catch (error) {
       console.error("Failed to update property:", error);
-      toast.danger(t("Failed to update property"));
+      toast.danger(t("property.error.failedToUpdateProperty"));
     } finally {
       setUpdatingProperty(null);
     }
@@ -384,6 +386,28 @@ const BulkPropertyEditor: React.FC<Props> = ({
       onSubmitted?.();
     }
     setVisible(false);
+  };
+
+  const handleNavigateToBulkModification = () => {
+    createPortal(Modal, {
+      title: t("common.message.confirmLeave"),
+      children: t("bulkModification.message.navigateToPageConfirmation"),
+      footer: {
+        actions: ["cancel", "ok"],
+        okProps: {
+          children: t("common.action.leave"),
+          autoFocus: true,
+        },
+        cancelProps: {
+          children: t("common.action.stay"),
+        },
+      },
+      defaultVisible: true,
+      onOk: () => {
+        setVisible(false);
+        navigate("/bulk-modification");
+      },
+    });
   };
 
   // Group properties by pool for display
@@ -462,7 +486,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
               color={aggValue.state === "mixed" ? "warning" : "default"}
               onPress={() => setEditingProperty(key)}
             >
-              {aggValue.state === "mixed" ? t("Multiple values") : t("Partially set")}
+              {aggValue.state === "mixed" ? t("common.state.multipleValues") : t("common.state.partiallySet")}
             </Button>
           );
       }
@@ -504,17 +528,29 @@ const BulkPropertyEditor: React.FC<Props> = ({
   return (
     <Modal
       size="5xl"
-      title={t("Bulk edit properties")}
+      title={t("property.modal.bulkEditProperties")}
       visible={visible}
-      footer={{
-        actions: ["ok"],
-        okProps: {
-          children: t("Close"),
-        },
-      }}
+      footer={
+        <div className="flex items-center justify-between w-full">
+          <div className="text-sm text-default-500">
+            {t("bulkModification.tip.forMorePowerfulModification")}
+            <Button
+              size="sm"
+              variant="light"
+              color="primary"
+              className="ml-1"
+              onPress={handleNavigateToBulkModification}
+            >
+              {t("bulkModification.action.goToBulkModificationPage")}
+            </Button>
+          </div>
+          <Button color="primary" onPress={handleClose}>
+            {t("common.action.close")}
+          </Button>
+        </div>
+      }
       onClose={handleClose}
       onDestroyed={onDestroyed}
-      onOk={handleClose}
       className="max-w-7xl"
     >
       {loading ? (
@@ -527,7 +563,7 @@ const BulkPropertyEditor: React.FC<Props> = ({
           <div className="w-2/3 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-1">
               <div className="text-xs text-default-500">
-                {t("{{count}} resources selected", { count: resources.length })}
+                {t("resource.label.resourcesSelected", { count: resources.length })}
               </div>
               <div className="flex items-center gap-1">
                 <AppstoreOutlined className="text-default-400" />
@@ -562,23 +598,23 @@ const BulkPropertyEditor: React.FC<Props> = ({
 
           {/* Right panel: Property editor */}
           <div className="flex-1 flex flex-col min-w-0">
-            <div className="text-sm font-medium mb-1">{t("Properties")}</div>
+            <div className="text-sm font-medium mb-1">{t("common.label.properties")}</div>
             <div
               className="flex-1 overflow-auto border rounded"
               style={{ borderColor: "var(--bakaui-overlap-background)" }}
             >
               <div className="flex flex-col gap-0.5 py-1">
-                {renderPropertySection(t("Media Library"), groupedProperties.internal)}
+                {renderPropertySection(t("common.label.mediaLibrary"), groupedProperties.internal)}
                 {groupedProperties.internal.length > 0 && groupedProperties.reserved.length > 0 && (
                   <Divider className="my-0.5" />
                 )}
-                {renderPropertySection(t("Reserved Properties"), groupedProperties.reserved)}
+                {renderPropertySection(t("common.label.reservedProperties"), groupedProperties.reserved)}
                 {(groupedProperties.internal.length > 0 || groupedProperties.reserved.length > 0) &&
                   groupedProperties.custom.length > 0 && <Divider className="my-0.5" />}
-                {renderPropertySection(t("Custom Properties"), groupedProperties.custom)}
+                {renderPropertySection(t("common.label.customProperties"), groupedProperties.custom)}
                 {propertyMap.size === 0 && (
                   <div className="text-center text-default-400 py-4">
-                    {t("No properties available")}
+                    {t("property.empty.noPropertiesAvailable")}
                   </div>
                 )}
               </div>

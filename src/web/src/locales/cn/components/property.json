@@ -1,0 +1,16 @@
+{
+  "property.empty.noPropertiesAvailable": "没有可用的属性",
+  "property.empty.noPropertiesFound": "未找到属性",
+  "property.action.addProperty": "添加属性",
+  "property.action.searchProperties": "搜索属性",
+  "property.modal.selectProperties": "选择属性",
+  "property.modal.selectProperty": "选择一个属性",
+  "property.modal.adjustPropertyOrderTitle": "调整属性顺序",
+  "property.tip.clickToEditOrder": "点击编辑顺序",
+  "property.tip.orderEditInstructions": "点击顺序编号直接编辑，或使用按钮移动到顶部/底部",
+  "property.modal.bulkEditProperties": "批量编辑属性",
+  "property.modal.confirmPropertyChange": "确认属性更改",
+  "property.success.propertyUpdatedSuccessfully": "属性更新成功",
+  "property.error.failedToUpdateProperty": "更新属性失败",
+  "property.warning.willOverrideValues": "这将覆盖 {{count}} 个资源上的不同值"
+}

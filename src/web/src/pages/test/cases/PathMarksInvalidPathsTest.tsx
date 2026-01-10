@@ -184,7 +184,7 @@ const PathMarksInvalidPathsTest = () => {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold">{t("Path Marks")} - Mock Test</h2>
+            <h2 className="text-xl font-semibold">{t("pathMarks.title")} - Mock Test</h2>
           </div>
         </div>
 
@@ -204,7 +204,7 @@ const PathMarksInvalidPathsTest = () => {
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-default-600">{t("Show only invalid")}</span>
+              <span className="text-sm text-default-600">{t("pathMarks.label.showOnlyInvalid")}</span>
               <Switch
                 isSelected={showOnlyInvalid}
                 size="sm"

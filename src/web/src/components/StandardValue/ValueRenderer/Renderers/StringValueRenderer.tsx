@@ -18,21 +18,48 @@ type StringValueRendererProps = ValueRendererProps<string> & {
 
 const log = buildLogger("StringValueRenderer");
 const StringValueRenderer = (props: StringValueRendererProps) => {
-  const { value: propsValue, multiline, variant, editor } = props;
+  const {
+    value: propsValue,
+    multiline,
+    variant,
+    editor,
+    size,
+    isReadonly: propsIsReadonly,
+    defaultEditing,
+    isEditing,
+  } = props;
   const { t } = useTranslation();
-  const [editing, setEditing] = useState(false);
+  // Start in editing mode if defaultEditing is true and not readonly
+  const [editing, setEditing] = useState(defaultEditing && !propsIsReadonly && !!editor);
   const [value, setValue] = useState(propsValue);
+
+  // Default isReadonly to true if no editor is provided
+  const isReadonly = propsIsReadonly ?? !editor;
 
   useUpdateEffect(() => {
     setValue(propsValue);
   }, [propsValue]);
 
-  const startEditing = editor
+  const startEditing = !isReadonly && editor
     ? () => {
       log("Start editing");
       setEditing(true);
     }
     : undefined;
+
+  // Direct editing mode: always show input/textarea without toggle
+  if (isEditing && !isReadonly && editor) {
+    const handleChange = (newValue: string) => {
+      setValue(newValue);
+      editor.onValueChange?.(newValue, newValue);
+    };
+
+    if (multiline) {
+      return <Textarea size={size} value={value ?? ""} minRows={2} onValueChange={handleChange} />;
+    } else {
+      return <Input size={size} value={value ?? ""} onValueChange={handleChange} />;
+    }
+  }
 
   if (!editing) {
     if (value == undefined || value.length == 0) {
@@ -40,34 +67,40 @@ const StringValueRenderer = (props: StringValueRendererProps) => {
     }
   }
 
-  // log(props);
-
   const completeEditing = () => {
     editor?.onValueChange?.(value, value);
     setEditing(false);
   };
 
   if (variant == "light" && !editing) {
-    return <span onClick={startEditing}>{value}</span>;
+    return (
+      <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>
+        {value}
+      </span>
+    );
   }
 
   if (editing) {
     if (multiline) {
-      return <Textarea size={props.size} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
+      return <Textarea size={size} minRows={2} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
     } else {
-      return <Input size={props.size} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
+      return <Input size={size} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
     }
   } else {
     if (multiline) {
       return (
         <pre
           dangerouslySetInnerHTML={{ __html: value! }}
-          className={"whitespace-pre-wrap"}
+          className={`whitespace-pre-wrap ${startEditing ? "cursor-pointer" : ""}`}
           onClick={startEditing}
         />
       );
     } else {
-      return <span onClick={startEditing}>{value}</span>;
+      return (
+        <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>
+          {value}
+        </span>
+      );
     }
   }
 };

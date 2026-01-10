@@ -30,7 +30,7 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
     <>
       {/* Explanatory text */}
       <div className="bg-primary-50 text-primary-700 rounded p-2 text-xs">
-        {t("PathMark.Resource.Explanation")}
+        {t("pathMark.resource.explanation")}
       </div>
 
       <MatchModeSelector
@@ -40,16 +40,16 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       />
 
       <div className="border-t border-default-200 pt-2">
-        <span className="text-sm font-medium text-default-600">{t("Resource Filters (Optional)")}</span>
+        <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.resourceFilters")}</span>
       </div>
 
       <div className="flex gap-2">
         <Select
-          label={t("File Type Filter")}
+          label={t("pathMarkConfig.label.fileTypeFilter")}
           size="sm"
           className="flex-1"
           dataSource={[
-            { label: t("All"), value: "" },
+            { label: t("common.label.all"), value: "" },
             ...pathFilterFsTypes.map(t => ({ label: t.label, value: String(t.value) })),
           ]}
           selectedKeys={config.fsTypeFilter ? [String(config.fsTypeFilter)] : [""]}
@@ -71,7 +71,7 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       {(config.fsTypeFilter === undefined || config.fsTypeFilter === PathFilterFsType.File) && (
         <ExtensionsInput
           defaultValue={config.extensions}
-          label={t("Limit file extensions")}
+          label={t("pathMarkConfig.label.limitExtensions")}
           onValueChange={(v) => updateConfig({ extensions: v })}
           minRows={1}
           size="sm"
@@ -98,8 +98,8 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
           onValueChange={(v) => updateConfig({ isResourceBoundary: v })}
         >
           <div className="flex flex-col">
-            <span className="text-sm">{t("PathMark.Resource.IsResourceBoundary")}</span>
-            <span className="text-xs text-default-400">{t("PathMark.Resource.IsResourceBoundary.Description")}</span>
+            <span className="text-sm">{t("pathMark.resource.isResourceBoundary")}</span>
+            <span className="text-xs text-default-400">{t("pathMark.resource.isResourceBoundary.description")}</span>
           </div>
         </Switch>
       </div>
@@ -107,8 +107,8 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
       {/* Priority at the bottom */}
       <div className="border-t border-default-200 pt-2">
         <NumberInput
-          label={t("Priority")}
-          description={t("PathMark.Priority.Description")}
+          label={t("common.label.priority")}
+          description={t("pathMark.priority.description")}
           size="sm"
           value={priority}
           onValueChange={(v) => onPriorityChange(v ?? 10)}

@@ -12,6 +12,8 @@ import {
   AiOutlinePlayCircle,
   AiOutlineAppstore,
   AiOutlineOrderedList,
+  AiOutlineLink,
+  AiOutlinePushpin,
 } from "react-icons/ai";
 import { BsController } from "react-icons/bs";
 
@@ -24,7 +26,7 @@ interface ResourceProfileGuideModalProps {
   onComplete: () => void;
 }
 
-const TOTAL_SLIDES = 4;
+const TOTAL_SLIDES = 5;
 
 const ResourceProfileGuideModal = ({ visible, onComplete }: ResourceProfileGuideModalProps) => {
   const { t } = useTranslation();
@@ -56,22 +58,18 @@ const ResourceProfileGuideModal = ({ visible, onComplete }: ResourceProfileGuide
 
   return (
     <Modal
-      size="4xl"
-      visible={visible}
-      footer={false}
-      isDismissable={false}
-      isKeyboardDismissDisabled={true}
+      hideCloseButton
       classNames={{
         base: "max-w-[800px]",
       }}
+      footer={false}
+      isDismissable={false}
+      isKeyboardDismissDisabled={true}
+      size="4xl"
+      visible={visible}
     >
       <div className="flex flex-col">
-        <Carousel
-          ref={carouselRef}
-          dots={false}
-          infinite={false}
-          afterChange={handleSlideChange}
-        >
+        <Carousel ref={carouselRef} afterChange={handleSlideChange} dots={false} infinite={false}>
           {/* Slide 1: Welcome / Introduction */}
           <div>
             <div className="flex flex-col items-center justify-center p-8 min-h-[400px]">
@@ -204,6 +202,42 @@ const ResourceProfileGuideModal = ({ visible, onComplete }: ResourceProfileGuide
               </ul>
             </div>
           </div>
+
+          {/* Slide 5: Property Binding */}
+          <div>
+            <div className="flex flex-col items-center p-8 min-h-[400px]">
+              <div className="w-20 h-20 mb-6 flex items-center justify-center rounded-2xl bg-primary/10">
+                <AiOutlineLink className="text-5xl text-primary" />
+              </div>
+
+              <h2 className="text-2xl font-bold mb-2 text-center">
+                {t("resourceProfileGuide.binding.title")}
+              </h2>
+
+              <p className="text-default-500 text-center mb-6 max-w-md">
+                {t("resourceProfileGuide.binding.subtitle")}
+              </p>
+
+              <ul className="space-y-4 max-w-md w-full">
+                <li className="flex items-start gap-3 p-3 rounded-lg bg-default-100">
+                  <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <AiOutlineLink className="text-xl" />
+                  </div>
+                  <span className="text-default-700 pt-1">
+                    {t("resourceProfileGuide.binding.point1")}
+                  </span>
+                </li>
+                <li className="flex items-start gap-3 p-3 rounded-lg bg-default-100">
+                  <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <AiOutlinePushpin className="text-xl" />
+                  </div>
+                  <span className="text-default-700 pt-1">
+                    {t("resourceProfileGuide.binding.point2")}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
         </Carousel>
 
         {/* Progress dots */}
@@ -212,9 +246,7 @@ const ResourceProfileGuideModal = ({ visible, onComplete }: ResourceProfileGuide
             <div
               key={index}
               className={`w-2 h-2 rounded-full transition-all ${
-                index === currentSlide
-                  ? "bg-primary w-6"
-                  : "bg-default-300"
+                index === currentSlide ? "bg-primary w-6" : "bg-default-300"
               }`}
             />
           ))}
@@ -222,24 +254,14 @@ const ResourceProfileGuideModal = ({ visible, onComplete }: ResourceProfileGuide
 
         {/* Navigation buttons */}
         <div className="flex justify-between items-center px-6 pb-6">
-          <Button
-            variant="light"
-            onPress={handleSkip}
-          >
+          <Button variant="light" onPress={handleSkip}>
             {t("resourceProfileGuide.skip")}
           </Button>
           <div className="flex gap-2">
-            <Button
-              variant="flat"
-              onPress={handlePrev}
-              isDisabled={isFirst}
-            >
+            <Button isDisabled={isFirst} variant="flat" onPress={handlePrev}>
               {t("resourceProfileGuide.previous")}
             </Button>
-            <Button
-              color="primary"
-              onPress={handleNext}
-            >
+            <Button color="primary" onPress={handleNext}>
               {isLast ? t("resourceProfileGuide.getStarted") : t("resourceProfileGuide.next")}
             </Button>
           </div>

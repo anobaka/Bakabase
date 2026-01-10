@@ -478,7 +478,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
             createPortal(Modal, {
               defaultVisible: true,
               size: "xl",
-              title: t<string>("Error"),
+              title: t<string>("common.label.error"),
               children: <pre>{text}</pre>,
             });
           }}
@@ -536,7 +536,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
     const files = rsp.data ?? [];
 
     if (files.length == 0) {
-      toast.danger(t<string>("No files under this path"));
+      toast.danger(t<string>("fileExplorer.error.noFilesUnderPath"));
     } else {
       if (files.length == 1) {
         await BApi.tool.openFile({ path: files[0] });
@@ -545,10 +545,10 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
         const modal = createPortal(Modal, {
           size: "lg",
           defaultVisible: true,
-          title: t("Multiple file types are found"),
+          title: t("fileExplorer.modal.multipleFileTypesFound"),
           children: (
             <div className="flex flex-col gap-2">
-              <div>{t<string>("Please select one to open")}</div>
+              <div>{t<string>("fileExplorer.tip.pleaseSelectOneToOpen")}</div>
               <div className="flex flex-wrap gap-1">
                 {files.map((x) => {
                   const segments = x.split(".");
@@ -646,9 +646,9 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                     destDir: entryRef.current.path,
                     entryPaths: paths,
                   }).then(() => {
-                    toast.success(t<string>("Moved {{count}} items", { count: paths.length }));
+                    toast.success(t<string>("fileExplorer.success.movedItems", { count: paths.length }));
                   }).catch((err) => {
-                    toast.danger(t<string>("Failed to move items"));
+                    toast.danger(t<string>("fileExplorer.error.failedToMoveItems"));
                     log("Move entries failed", err);
                   });
                 }
@@ -716,7 +716,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                 &nbsp;
                 {((entry.childrenCount && entry.childrenCount > 0) || !entry.isDirectoryOrDrive) &&
                   capabilities?.includes("play-first-file") && (
-                    <Tooltip content={t<string>("Quick preview using the default application")}>
+                    <Tooltip content={t<string>("fileExplorer.tip.quickPreviewUsingDefaultApp")}>
                       <OperationButton
                         isIconOnly
                         onClick={async (e) => {
@@ -728,7 +728,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
                       </OperationButton>
                     </Tooltip>
                   )}
-                <Tooltip content={t<string>("Open in media player")}>
+                <Tooltip content={t<string>("fileExplorer.tip.openInMediaPlayer")}>
                   <OperationButton
                     isIconOnly
                     color={"success"}
@@ -810,7 +810,7 @@ const FileExplorerEntry = (props: FileExplorerEntryProps) => {
         ) : (
           <div className="flex justify-center items-center gap-2 opacity-70 py-2">
             <InfoCircleOutlined />
-            <div>{t<string>("No content")}</div>
+            <div>{t<string>("fileExplorer.empty.noContent")}</div>
           </div>
         ))}
     </div>

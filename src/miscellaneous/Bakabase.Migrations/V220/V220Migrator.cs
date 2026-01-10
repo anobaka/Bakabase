@@ -168,6 +168,39 @@ public class V220Migrator : AbstractMigrator
         // Get all MediaLibraryV2 with their templates (convert to domain models)
         var mediaLibraries = (await dbCtx.MediaLibrariesV2.ToListAsync()).Select(x => x.ToDomainModel()).ToArray();
         var templates = (await dbCtx.MediaLibraryTemplates.ToListAsync()).Select(t => t.ToDomainModel()).ToArray();
+
+        // Get all ExtensionGroups and populate them in templates
+        var extensionGroups = (await dbCtx.ExtensionGroups.ToListAsync())
+            .Select(e => e.ToDomainModel())
+            .ToDictionary(e => e.Id);
+
+        foreach (var template in templates)
+        {
+            // Populate ExtensionGroups for PlayableFileLocator
+            if (template.PlayableFileLocator?.ExtensionGroupIds != null)
+            {
+                template.PlayableFileLocator.ExtensionGroups = template.PlayableFileLocator.ExtensionGroupIds
+                    .Select(id => extensionGroups.GetValueOrDefault(id))
+                    .OfType<ExtensionGroup>()
+                    .ToList();
+            }
+
+            // Populate ExtensionGroups for ResourceFilters
+            if (template.ResourceFilters != null)
+            {
+                foreach (var rf in template.ResourceFilters)
+                {
+                    if (rf.ExtensionGroupIds != null)
+                    {
+                        rf.ExtensionGroups = rf.ExtensionGroupIds
+                            .Select(id => extensionGroups.GetValueOrDefault(id))
+                            .OfType<ExtensionGroup>()
+                            .ToList();
+                    }
+                }
+            }
+        }
+
         var templateMap = templates.ToDictionary(t => t.Id);
 
         var now = DateTime.UtcNow;

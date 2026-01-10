@@ -1,0 +1,10 @@
+{
+  "fileExplorer.error.noFilesUnderPath": "No files under this path",
+  "fileExplorer.modal.multipleFileTypesFound": "Multiple file types are found",
+  "fileExplorer.tip.pleaseSelectOneToOpen": "Please select one to open",
+  "fileExplorer.success.movedItems": "Moved {{count}} items",
+  "fileExplorer.error.failedToMoveItems": "Failed to move items",
+  "fileExplorer.tip.quickPreviewUsingDefaultApp": "Quick preview using the default application",
+  "fileExplorer.tip.openInMediaPlayer": "Open in media player",
+  "fileExplorer.empty.noContent": "No content"
+}

@@ -133,7 +133,7 @@ const AliasPage = () => {
       <div className={"flex items-center justify-between"}>
         <div className="flex items-center gap-2">
           <Input
-            placeholder={t<string>("Press enter to search")}
+            placeholder={t<string>("alias.input.searchPlaceholder")}
             startContent={<SearchOutlined className={"text-sm"} />}
             value={form.fuzzyText}
             onKeyDown={(e) => {
@@ -149,9 +149,7 @@ const AliasPage = () => {
             }
           />
           <div className="text-xs text-default-500">
-            {t<string>(
-              "Alias is used to replace the original text of property values in UI, such as translations, etc.",
-            )}
+            {t<string>("alias.info.description")}
           </div>
         </div>
         <div className={"flex items-center gap-2"}>
@@ -164,7 +162,7 @@ const AliasPage = () => {
               createPortal(Modal, {
                 defaultVisible: true,
                 size: "lg",
-                title: t<string>("Add an alias"),
+                title: t<string>("alias.action.add"),
                 children: (
                   <Input
                     classNames={{
@@ -183,7 +181,7 @@ const AliasPage = () => {
             }}
           >
             <PlusCircleOutlined className={"text-base"} />
-            {t<string>("Add an alias")}
+            {t<string>("alias.action.add")}
           </Button>
           <Button
             color={"secondary"}
@@ -193,7 +191,7 @@ const AliasPage = () => {
                 onSelected: (e) => {
                   const modal = createPortal(Modal, {
                     visible: true,
-                    title: t<string>("Importing, please wait..."),
+                    title: t<string>("alias.label.importing"),
                     footer: false,
                     closeButton: false,
                   });
@@ -208,7 +206,7 @@ const AliasPage = () => {
             }}
           >
             <UploadOutlined className={"text-base"} />
-            {t<string>("Import")}
+            {t<string>("alias.action.import")}
           </Button>
           <Button
             size={"sm"}
@@ -219,7 +217,7 @@ const AliasPage = () => {
             }}
           >
             <DownloadOutlined className={"text-base"} />
-            {t<string>("Export")}
+            {t<string>("alias.action.export")}
           </Button>
         </div>
       </div>
@@ -229,15 +227,12 @@ const AliasPage = () => {
           <Card>
             <CardHeader>
               <div className={"text-md flex items-center gap-2"}>
-                {t<string>("Bulk operations")}
+                {t<string>("alias.label.bulkOperations")}
                 <Tooltip
                   classNames={{
                     content: "max-w-md break-all whitespace-normal",
                   }}
-                  content={t<string>(
-                    "{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text.",
-                    { text: bulkOperationContext.preferredTexts[0] },
-                  )}
+                  content={t<string>("alias.tip.preferredText", { text: bulkOperationContext.preferredTexts[0] })}
                 >
                   <Button
                     color={"secondary"}
@@ -248,17 +243,14 @@ const AliasPage = () => {
                         defaultVisible: true,
                         title: (
                           <div className="break-all whitespace-normal">
-                            {t<string>("Merging alias groups: {{texts}}", {
+                            {t<string>("alias.confirm.mergeTitle", {
                               texts: bulkOperationContext.preferredTexts.join(", "),
                             })}
                           </div>
                         ),
                         children: (
                           <div className="break-all whitespace-normal">
-                            {t<string>(
-                              "All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?",
-                              { preferred: bulkOperationContext.preferredTexts[0] },
-                            )}
+                            {t<string>("alias.confirm.mergeDescription", { preferred: bulkOperationContext.preferredTexts[0] })}
                           </div>
                         ),
                         onOk: async () => {
@@ -271,7 +263,7 @@ const AliasPage = () => {
                       });
                     }}
                   >
-                    {t<string>("Merge")}
+                    {t<string>("alias.action.merge")}
                   </Button>
                 </Tooltip>
                 <Button
@@ -283,16 +275,14 @@ const AliasPage = () => {
                       defaultVisible: true,
                       title: (
                         <div className="break-all whitespace-normal">
-                          {t<string>("Deleting alias groups: {{texts}}", {
+                          {t<string>("alias.confirm.deleteTitle", {
                             texts: bulkOperationContext.preferredTexts.join(", "),
                           })}
                         </div>
                       ),
                       children: (
                         <div className="break-all whitespace-normal">
-                          {t<string>(
-                            "All selected alias groups and its candidates will be delete and there is no way back, are you sure?",
-                          )}
+                          {t<string>("alias.confirm.deleteDescription")}
                         </div>
                       ),
                       onOk: async () => {
@@ -305,7 +295,7 @@ const AliasPage = () => {
                     });
                   }}
                 >
-                  {t<string>("Delete")}
+                  {t<string>("common.action.delete")}
                 </Button>
                 <Button
                   color={"default"}
@@ -315,7 +305,7 @@ const AliasPage = () => {
                     resetBulkOperationContext();
                   }}
                 >
-                  {t<string>("Exit")}
+                  {t<string>("alias.action.exit")}
                 </Button>
               </div>
             </CardHeader>
@@ -401,8 +391,8 @@ const AliasPage = () => {
             }}
           >
             <TableHeader>
-              <TableColumn>{t<string>("Preferred")}</TableColumn>
-              <TableColumn>{t<string>("Candidates")}</TableColumn>
+              <TableColumn>{t<string>("alias.label.preferred")}</TableColumn>
+              <TableColumn>{t<string>("alias.label.candidates")}</TableColumn>
             </TableHeader>
             <TableBody>
               {aliases.map((a) => {
@@ -442,7 +432,7 @@ const AliasPage = () => {
                                         });
                                     }}
                                   >
-                                    {t<string>("Set as preferred")}
+                                    {t<string>("alias.action.setAsPreferred")}
                                   </Button>
                                 </div>
                               }
@@ -456,13 +446,13 @@ const AliasPage = () => {
                                 onClose={() => {
                                   createPortal(Modal, {
                                     defaultVisible: true,
-                                    title: t<string>("Deleting an alias"),
+                                    title: t<string>("alias.confirm.deleteSingle"),
                                     children: (
                                       <div className="break-all whitespace-normal">
-                                        <div>{t("We are deleting")}</div>
+                                        <div>{t("alias.confirm.weAreDeleting")}</div>
                                         <div className="font-semibold my-2">{c}</div>
                                         <div>
-                                          {t<string>("There is no way back, are you sure?")}
+                                          {t<string>("alias.confirm.noWayBack")}
                                         </div>
                                       </div>
                                     ),

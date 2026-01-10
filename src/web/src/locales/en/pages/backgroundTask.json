@@ -1,0 +1,21 @@
+{
+  "backgroundTask.column.name": "Name",
+  "backgroundTask.column.status": "Status",
+  "backgroundTask.column.progress": "Progress",
+  "backgroundTask.column.startedAt": "Started At",
+  "backgroundTask.column.interval": "Interval",
+  "backgroundTask.column.nextTimeStartAt": "Next time start at",
+  "backgroundTask.column.elapsed": "Elapsed",
+  "backgroundTask.column.enableAfter": "Enable after",
+
+  "backgroundTask.label.notSupported": "Not supported",
+  "backgroundTask.label.notSet": "Not set",
+  "backgroundTask.label.willStartAt": "Will start at",
+
+  "backgroundTask.status.notStarted": "Not Started",
+  "backgroundTask.status.running": "Running",
+  "backgroundTask.status.paused": "Paused",
+  "backgroundTask.status.error": "Error",
+  "backgroundTask.status.completed": "Completed",
+  "backgroundTask.status.cancelled": "Cancelled"
+}

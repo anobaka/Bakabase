@@ -108,7 +108,7 @@ const PendingSyncButton = forwardRef<PendingSyncButtonRef, PendingSyncButtonProp
             variant="flat"
             onPress={() => setShowPendingSyncModal(true)}
           >
-            {t("Pending Sync")}
+            {t("pathMarkConfig.action.pendingSync")}
           </Button>
         </Badge>
 

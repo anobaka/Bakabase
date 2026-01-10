@@ -73,7 +73,7 @@ const MediaLibraryPage = () => {
       })
       .filter((n) => !isNaN(n));
     const no = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
-    const name = `${t("Media library")} ${no}`;
+    const name = `${t("mediaLibrary.title")} ${no}`;
 
     await BApi.mediaLibraryV2.addMediaLibraryV2({
       name,
@@ -85,12 +85,12 @@ const MediaLibraryPage = () => {
   const deleteMediaLibrary = (ml: MediaLibrary) => {
     createPortal(Modal, {
       defaultVisible: true,
-      title: t("MediaLibrary.Confirm"),
+      title: t("mediaLibrary.confirm.title"),
       children: (
         <div>
-          {t("MediaLibrary.DeleteConfirm")}
+          {t("mediaLibrary.confirm.delete")}
           <br />
-          <span className="text-danger">{t("Be careful, this operation can not be undone")}</span>
+          <span className="text-danger">{t("mediaLibrary.warning.irreversible")}</span>
         </div>
       ),
       onOk: async () => {
@@ -100,12 +100,12 @@ const MediaLibraryPage = () => {
       footer: {
         actions: ["ok", "cancel"],
         okProps: {
-          children: t("Delete"),
+          children: t("mediaLibrary.action.delete"),
           color: "danger",
           autoFocus: true,
         },
         cancelProps: {
-          children: t("MediaLibrary.Cancel"),
+          children: t("mediaLibrary.action.cancel"),
         },
       },
     });
@@ -113,8 +113,8 @@ const MediaLibraryPage = () => {
 
   const searchResources = (ml: MediaLibrary) => {
     createPortal(Modal, {
-      title: t("MediaLibrary.Confirm"),
-      children: t("MediaLibrary.LeavePageConfirm"),
+      title: t("mediaLibrary.confirm.title"),
+      children: t("mediaLibrary.confirm.leavePage"),
       defaultVisible: true,
       onOk: async () => {
         const valuePropertyResponse = await BApi.resource.getFilterValueProperty({
@@ -148,10 +148,10 @@ const MediaLibraryPage = () => {
       footer: {
         actions: ["ok", "cancel"],
         okProps: {
-          children: t("MediaLibrary.Continue"),
+          children: t("mediaLibrary.action.continue"),
         },
         cancelProps: {
-          children: t("MediaLibrary.Cancel"),
+          children: t("mediaLibrary.action.cancel"),
         },
       },
     });
@@ -169,10 +169,10 @@ const MediaLibraryPage = () => {
           {/* Title with MediaLibraryTerm */}
           <div className="space-y-2">
             <h2 className="text-xl font-semibold flex items-center justify-center gap-2">
-              {t("MediaLibrary.EmptyState.Title")}
+              {t("mediaLibrary.emptyState.title")}
             </h2>
             <div className="text-default-500 text-sm leading-relaxed">
-              {t("MediaLibrary.EmptyState.Description")}
+              {t("mediaLibrary.emptyState.description")}
             </div>
           </div>
 
@@ -183,7 +183,7 @@ const MediaLibraryPage = () => {
                 <span className="text-secondary text-xs font-bold">1</span>
               </div>
               <div className="text-sm text-default-600">
-                {t("MediaLibrary.EmptyState.Feature1")}
+                {t("mediaLibrary.emptyState.feature1")}
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -191,7 +191,7 @@ const MediaLibraryPage = () => {
                 <span className="text-secondary text-xs font-bold">2</span>
               </div>
               <div className="text-sm text-default-600">
-                {t("MediaLibrary.EmptyState.Feature2")}
+                {t("mediaLibrary.emptyState.feature2")}
               </div>
             </div>
             <div className="flex items-start gap-3">
@@ -199,7 +199,7 @@ const MediaLibraryPage = () => {
                 <span className="text-secondary text-xs font-bold">3</span>
               </div>
               <div className="text-sm text-default-600">
-                {t("MediaLibrary.EmptyState.Feature3")}
+                {t("mediaLibrary.emptyState.feature3")}
               </div>
             </div>
           </div>
@@ -212,7 +212,7 @@ const MediaLibraryPage = () => {
               startContent={<AiOutlinePlusCircle className="text-lg" />}
               onPress={addMediaLibrary}
             >
-              {t("MediaLibrary.CreateFirst")}
+              {t("mediaLibrary.action.createFirst")}
             </Button>
             <Button
               color="default"
@@ -221,7 +221,7 @@ const MediaLibraryPage = () => {
               variant="light"
               onPress={() => navigate("/path-mark-config")}
             >
-              {t("MediaLibrary.GoToPathMarkConfig")}
+              {t("mediaLibrary.action.goToPathMarkConfig")}
             </Button>
           </div>
         </div>
@@ -241,12 +241,9 @@ const MediaLibraryPage = () => {
     return (
       <Card
         key={ml.id}
-        className="group hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group hover:shadow-md hover:scale-[1.02] transition-all duration-300"
         shadow="sm"
       >
-        {/* Top color bar */}
-        <div className="h-1.5 w-full" style={{ backgroundColor: libraryColor }} />
-
         <CardBody className="p-4 flex flex-col gap-3">
           {/* Header: Name + Color picker */}
           <div className="flex items-center justify-between gap-2">
@@ -271,7 +268,7 @@ const MediaLibraryPage = () => {
               value={ml.name}
               onSubmit={async (v) => {
                 if (v == undefined || v.length == 0) {
-                  toast.danger(t("Name cannot be empty"));
+                  toast.danger(t("mediaLibrary.error.nameEmpty"));
 
                   return;
                 }
@@ -302,32 +299,19 @@ const MediaLibraryPage = () => {
           </div>
 
           {/* Stats: Large number + description */}
-          <Tooltip
-            content={
-              ml.resourceCount > 0
-                ? t("{{count}} resource(s) loaded in this media library.", {
-                    count: ml.resourceCount,
-                  })
-                : t(
-                    "No resource loaded in this media library, you can click the synchronize button to load resources.",
-                  )
-            }
-            placement="top"
-          >
-            <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-default-50">
-              <AiOutlineProduct className="text-base text-default-400" />
-              <span className="text-xl font-semibold" style={{ color: libraryColor }}>
-                {ml.resourceCount.toLocaleString()}
-              </span>
-              <span className="text-sm text-default-500">{t("resources")}</span>
-            </div>
-          </Tooltip>
+          <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-default-100/50">
+            <AiOutlineProduct className="text-base text-default-400" />
+            <span className="text-xl font-semibold text-foreground">
+              {ml.resourceCount.toLocaleString()}
+            </span>
+            <span className="text-sm text-default-500">{t("mediaLibrary.label.resources")}</span>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center justify-between pt-2 mt-auto border-t border-default-100">
             {/* Search button */}
             {ml.resourceCount > 0 ? (
-              <Tooltip content={t("MediaLibrary.SearchResources")} delay={500} placement="top">
+              <Tooltip content={t("mediaLibrary.action.searchResources")} delay={500} placement="top">
                 <Button
                   isIconOnly
                   color="default"
@@ -343,7 +327,7 @@ const MediaLibraryPage = () => {
             )}
 
             {/* Delete button */}
-            <Tooltip content={t("Delete this media library")} placement="top">
+            <Tooltip content={t("mediaLibrary.tooltip.delete")} placement="top">
               <Button
                 isIconOnly
                 className="text-danger opacity-0 group-hover:opacity-100 transition-opacity"
@@ -375,40 +359,27 @@ const MediaLibraryPage = () => {
     }
 
     return (
-      <div className="flex flex-col gap-4 mt-4">
+      <div className="flex flex-col gap-4 mt-4 grow">
         {/* Header info */}
         <div className="flex items-center gap-2 text-sm text-default-500">
           <MediaLibraryTerm />
           <span>·</span>
-          <span>{t("MediaLibrary.ListDescription")}</span>
+          <span>{t("mediaLibrary.label.listDescription")}</span>
         </div>
 
         {/* Media library cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
           {mediaLibraries.map((ml) => renderMediaLibraryCard(ml))}
         </div>
-
-        {/* Path mark config hint */}
-        <div className="flex items-center justify-center gap-2 mt-4 p-3 bg-default-50 rounded-lg">
-          <span className="text-sm text-default-500">{t("MediaLibrary.PathMarkConfigHint")}</span>
-          <Button
-            color="secondary"
-            size="sm"
-            variant="flat"
-            onPress={() => navigate("/path-mark-config")}
-          >
-            {t("MediaLibrary.GoToPathMarkConfig")}
-          </Button>
-        </div>
       </div>
     );
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col p-2">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{t("Media Library")}</h1>
+        <h1 className="text-lg font-semibold">{t("mediaLibrary.title")}</h1>
         {mediaLibraries.length > 0 && (
           <Button
             color="primary"
@@ -416,12 +387,25 @@ const MediaLibraryPage = () => {
             startContent={<AiOutlinePlusCircle className="text-lg" />}
             onPress={addMediaLibrary}
           >
-            {t("MediaLibrary.Add")}
+            {t("mediaLibrary.action.add")}
           </Button>
         )}
       </div>
 
       {renderContent()}
+
+      {/* Path mark config hint */}
+      <div className="flex items-center justify-center gap-2 p-3 bg-default-50 rounded-lg">
+        <span className="text-sm text-default-500">{t("mediaLibrary.label.pathMarkConfigHint")}</span>
+        <Button
+          color="secondary"
+          size="sm"
+          variant="flat"
+          onPress={() => navigate("/path-mark-config")}
+        >
+          {t("mediaLibrary.action.goToPathMarkConfig")}
+        </Button>
+      </div>
     </div>
   );
 };

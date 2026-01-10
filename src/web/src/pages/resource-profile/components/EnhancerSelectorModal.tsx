@@ -91,7 +91,7 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
       defaultVisible
       classNames={{ base: "max-w-[80vw]" }}
       size={"2xl"}
-      title={t<string>("Select Enhancers")}
+      title={t<string>("resourceProfile.modal.selectEnhancersTitle")}
       onDestroyed={onDestroyed}
       onOk={() => onSubmit?.(enhancerOptions)}
     >
@@ -119,7 +119,7 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
                 </div>
                 <div className={"opacity-60"}>{e.description}</div>
                 <div className={"flex flex-wrap gap-1"}>
-                  <div className={"font-bold"}>{t<string>("Enhance properties")}:&nbsp;</div>
+                  <div className={"font-bold"}>{t<string>("resourceProfile.label.enhanceProperties")}:&nbsp;</div>
                   {visibleTargets.map((target) => {
                     if (target.description) {
                       return (
@@ -166,7 +166,7 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
                       }
                     >
                       <Chip color={"primary"} radius={"sm"} size={"sm"} variant={"flat"}>
-                        +{hiddenTargets.length} {t<string>("more")}
+                        +{hiddenTargets.length} {t<string>("resourceProfile.label.more")}
                       </Chip>
                     </Tooltip>
                   )}
@@ -183,7 +183,7 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
                         openEnhancerOptions(e);
                       }}
                     >
-                      {t<string>("Configure")}
+                      {t<string>("resourceProfile.action.configure")}
                     </Button>
                   </div>
                 )}
@@ -191,7 +191,7 @@ const EnhancerSelectorModal = ({ enhancerOptions: propEnhancerOptions, onSubmit,
               {selected && (
                 <div className={"absolute top-2 right-2"}>
                   <Chip color={"success"} radius={"sm"} size={"sm"} variant={"solid"}>
-                    {t<string>("Selected")}
+                    {t<string>("resourceProfile.label.selected")}
                   </Chip>
                 </div>
               )}

@@ -45,19 +45,35 @@ export interface ModalProps
  * @returns 
  */
 const Modal = (props: ModalProps) => {
+  const {
+    title,
+    children,
+    defaultVisible,
+    visible: visibleProp,
+    footer,
+    onClose: onCloseProp,
+    onOk,
+    size: sizeProp,
+    okProps,
+    className: classNameProp,
+    classNames: classNamesProp,
+    onDestroyed,
+    ...restProps
+  } = props;
+
   const { t } = useTranslation();
-  const [visible, setVisible] = useState(props.defaultVisible ?? props.visible);
+  const [visible, setVisible] = useState(defaultVisible ?? visibleProp);
 
   const [size, setSize] = useState<NextUIModalProps["size"]>();
 
   const [okLoading, setOkLoading] = useState(false);
   const domRef = useRef<HTMLElement | null>(null);
-  const isOpen = props.visible != undefined ? props.visible : visible;
+  const isOpen = visibleProp != undefined ? visibleProp : visible;
 
   const autoFocused = useRef(false);
 
   let classNameParts: string[] = [];
-  switch (props.size) {
+  switch (sizeProp) {
     case "5xl":
       classNameParts.push("max-w-5xl");
       break;
@@ -71,8 +87,8 @@ const Modal = (props: ModalProps) => {
       break;
   }
 
-  if (props.className) {
-    classNameParts.push(props.className);
+  if (classNameProp) {
+    classNameParts.push(classNameProp);
   }
   const className = classNameParts.join(" ");
 
@@ -81,7 +97,7 @@ const Modal = (props: ModalProps) => {
   }, []);
 
   useEffect(() => {
-    switch (props.size) {
+    switch (sizeProp) {
       case "sm":
         setSize("sm");
         break;
@@ -114,29 +130,29 @@ const Modal = (props: ModalProps) => {
       default:
         setSize(undefined);
     }
-  }, [props.size]);
+  }, [sizeProp]);
 
   const onClose = () => {
     setVisible(false);
-    props.onClose?.();
+    onCloseProp?.();
   };
 
   const renderFooter = () => {
-    if (props.footer === false) {
+    if (footer === false) {
       return null;
     }
 
     const simpleFooter: ISimpleFooter | undefined =
-      props.footer === undefined || props.footer === true
+      footer === undefined || footer === true
         ? {
             actions: ["ok", "cancel"],
           }
-        : props.footer?.["actions"]
-          ? (props.footer as ISimpleFooter)
+        : footer?.["actions"]
+          ? (footer as ISimpleFooter)
           : undefined;
 
     if (simpleFooter == undefined) {
-      return <ModalFooter>{props.footer}</ModalFooter>;
+      return <ModalFooter>{footer}</ModalFooter>;
     }
 
     const elements: any[] = [];
@@ -160,7 +176,7 @@ const Modal = (props: ModalProps) => {
     if (simpleFooter.actions.includes("ok")) {
       const { children, ref, autoFocus, ...otherProps } = {
         ...simpleFooter.okProps,
-        ...props.okProps,
+        ...okProps,
       };
 
       elements.push(
@@ -184,7 +200,7 @@ const Modal = (props: ModalProps) => {
           color="primary"
           isLoading={okLoading}
           onPress={async (e) => {
-            const r = (props.onOk ?? otherProps.onPress)?.(e);
+            const r = (onOk ?? otherProps.onPress)?.(e);
 
             if (r instanceof Promise) {
               setOkLoading(true);
@@ -212,10 +228,10 @@ const Modal = (props: ModalProps) => {
     return <ModalFooter>{elements}</ModalFooter>;
   };
 
-  const classNames: ModalProps["classNames"] = _.merge({}, props.classNames);
+  const classNames: ModalProps["classNames"] = _.merge({}, classNamesProp);
 
-  if (props.size == "2xl") {
-    const propsBaseClassName = props.classNames?.["base"] ?? "";
+  if (sizeProp == "2xl") {
+    const propsBaseClassName = classNamesProp?.["base"] ?? "";
 
     classNames["base"] = propsBaseClassName
       ? `max-w-[80vw] ${propsBaseClassName}`
@@ -229,25 +245,23 @@ const Modal = (props: ModalProps) => {
         if (domRef.current && !r && !isOpen) {
           // closed
           // there is no such a method likes onDestroyed in nextui v2.3.0
-          // console.log('after close', props.onDestroyed);
-          props.onDestroyed?.();
+          // console.log('after close', onDestroyed);
+          onDestroyed?.();
         }
         domRef.current = r;
       }}
+      {...restProps}
       className={className}
       classNames={classNames}
       size={size}
-      style={props.style}
       isOpen={isOpen}
       // onOpenChange={v => console.log('123456', v)}
       onClose={onClose}
       scrollBehavior={'inside'}
-      // isDismissable={props.isDismissable ?? false}
-      isKeyboardDismissDisabled={props.isKeyboardDismissDisabled ?? true}
     >
       <ModalContent>
-        <ModalHeader className="flex flex-col gap-1">{props.title}</ModalHeader>
-        <ModalBody>{props.children}</ModalBody>
+        <ModalHeader className="flex flex-col gap-1">{title}</ModalHeader>
+        <ModalBody>{children}</ModalBody>
         {renderFooter()}
       </ModalContent>
     </NextUiModal>

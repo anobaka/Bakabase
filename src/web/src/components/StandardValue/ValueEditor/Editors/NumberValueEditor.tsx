@@ -4,7 +4,7 @@ import type { ValueEditorProps } from "../models";
 
 import { useRef } from "react";
 
-import { Input } from "@/components/bakaui";
+import { NumberInput } from "@/components/bakaui";
 
 type NumberValueEditorProps = ValueEditorProps<number | undefined> & {
   label?: string;
@@ -22,10 +22,15 @@ const NumberValueEditor = ({
   const valueRef = useRef(value);
 
   return (
-    <Input
+    <NumberInput
+      fullWidth={false}
       size={size}
-      autoFocus
-      defaultValue={valueRef.current?.toString()}
+      hideStepper
+      labelPlacement="outside"
+      classNames={{
+        input: "text-center",
+      }}
+      defaultValue={valueRef.current}
       label={label}
       placeholder={placeholder}
       onBlur={() => {
@@ -37,11 +42,7 @@ const NumberValueEditor = ({
         }
       }}
       onValueChange={(v) => {
-        const nStr = v?.match(/[\d,]+(\.\d+)?/)?.[0];
-        const n = Number(nStr);
-
-        valueRef.current = Number.isNaN(n) ? undefined : n;
-        // console.log('NumberValueEditor', r, v, nStr, v?.match(/[\d,]+(\.\d+)?/));
+        valueRef.current = Number.isNaN(v) ? undefined : v;
       }}
     />
   );

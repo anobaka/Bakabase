@@ -1,0 +1,60 @@
+{
+  "onboarding": {
+    "skip": "Skip",
+    "previous": "Previous",
+    "next": "Next",
+    "start": "Get Started",
+    "viewAgain": "View Guide Again",
+    "welcome": {
+      "title": "Welcome to Bakabase",
+      "description": "Let's take a quick tour of Bakabase's core features to help you manage and browse your media resources effectively."
+    },
+    "pathMark": {
+      "title": "Path Marks",
+      "subtitle": "Connect your media library and start managing resources",
+      "point1": "Add media folders as path marks",
+      "point2": "Set tags for different types of resources",
+      "point3": "Automatically scan and index your media files"
+    },
+    "resourceProfile": {
+      "title": "Resource Profiles",
+      "subtitle": "Customize how resources are displayed and processed",
+      "point1": "Create profile schemes for different resource types",
+      "point2": "Configure metadata enhancement rules",
+      "point3": "Set up playback and preview options"
+    },
+    "resourceBrowsing": {
+      "title": "Resource Browsing",
+      "subtitle": "Powerful search and filtering capabilities",
+      "point1": "Filter resources with multiple conditions",
+      "point2": "Switch between list and grid views",
+      "point3": "Quickly find and access your resources"
+    },
+    "fileProcessor": {
+      "title": "File Processor",
+      "subtitle": "Automate your media file processing",
+      "point1": "Automatically decompress files",
+      "point2": "Periodically sync and update resources",
+      "point3": "Batch process file operations"
+    },
+    "downloader": {
+      "title": "Downloader",
+      "subtitle": "Enhance resources with metadata and covers",
+      "point1": "Automatically download video previews",
+      "point2": "Fetch high-quality cover images",
+      "point3": "Sync metadata from third-party platforms"
+    },
+    "fileMover": {
+      "title": "File Mover",
+      "subtitle": "Intelligently organize your file structure",
+      "point1": "Automatically move files based on rules",
+      "point2": "Customize file naming formats",
+      "point3": "Batch reorganize folder structures"
+    },
+    "completion": {
+      "title": "You're All Set!",
+      "description": "You've learned about Bakabase's main features. Now you can start by adding your first path mark and begin managing your media resources!",
+      "hint": "You can view this guide again anytime in settings"
+    }
+  }
+}

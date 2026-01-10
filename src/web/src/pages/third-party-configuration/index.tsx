@@ -33,7 +33,7 @@ export default function ThirdPartyConfigurationPage() {
   ) => {
     API(patches).then((a: any) => {
       if (!a.code) {
-        toast.success(t<string>("Saved"));
+        toast.success(t<string>("thirdPartyConfig.success.saved"));
         success(a);
       }
     });
@@ -129,9 +129,9 @@ export default function ThirdPartyConfigurationPage() {
       .validateCookie({ cookie, target })
       .then((r: any) => {
         if (r.code) {
-          toast.danger(`${t<string>("Invalid cookie")}:${r.message}`);
+          toast.danger(`${t<string>("thirdPartyConfig.error.invalidCookie")}:${r.message}`);
         } else {
-          toast.success(t<string>("Cookie is good"));
+          toast.success(t<string>("thirdPartyConfig.success.cookieValid"));
         }
       })
       .finally(() => {
@@ -148,7 +148,7 @@ export default function ThirdPartyConfigurationPage() {
     <div className="space-y-4">
       <div>
         <Textarea
-          label={t<string>("Cookie")}
+          label={t<string>("thirdPartyConfig.label.cookie")}
           size="sm"
           value={options.cookie || ""}
           onValueChange={(v) => {
@@ -161,7 +161,7 @@ export default function ThirdPartyConfigurationPage() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label={t<string>("Max Concurrency")}
+          label={t<string>("thirdPartyConfig.label.maxConcurrency")}
           size="sm"
           type="number"
           value={String(options.maxConcurrency || 1)}
@@ -173,7 +173,7 @@ export default function ThirdPartyConfigurationPage() {
           }}
         />
         <Input
-          label={t<string>("Request Interval (ms)")}
+          label={t<string>("thirdPartyConfig.label.requestInterval")}
           size="sm"
           type="number"
           value={String(options.requestInterval || 1000)}
@@ -187,7 +187,7 @@ export default function ThirdPartyConfigurationPage() {
       </div>
       <div>
         <Input
-          label={t<string>("Default Path")}
+          label={t<string>("thirdPartyConfig.label.defaultPath")}
           size="sm"
           value={options.defaultPath || ""}
           onValueChange={(v) => {
@@ -200,7 +200,7 @@ export default function ThirdPartyConfigurationPage() {
       </div>
       <div>
         <Input
-          label={t<string>("Naming Convention")}
+          label={t<string>("thirdPartyConfig.label.namingConvention")}
           size="sm"
           value={options.namingConvention || ""}
           onValueChange={(v) => {
@@ -213,7 +213,7 @@ export default function ThirdPartyConfigurationPage() {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <Input
-          label={t<string>("Max Retries")}
+          label={t<string>("thirdPartyConfig.label.maxRetries")}
           size="sm"
           type="number"
           value={String(options.maxRetries || 0)}
@@ -225,7 +225,7 @@ export default function ThirdPartyConfigurationPage() {
           }}
         />
         <Input
-          label={t<string>("Request Timeout (ms)")}
+          label={t<string>("thirdPartyConfig.label.requestTimeout")}
           size="sm"
           type="number"
           value={String(options.requestTimeout || 0)}
@@ -245,7 +245,7 @@ export default function ThirdPartyConfigurationPage() {
             applyPatches(saveApi, options);
           }}
         >
-          {t<string>("Save")}
+          {t<string>("thirdPartyConfig.action.save")}
         </Button>
         {options.cookie && (
           <Button
@@ -267,7 +267,7 @@ export default function ThirdPartyConfigurationPage() {
               }
             }}
           >
-            {t<string>("Validate cookie")}
+            {t<string>("thirdPartyConfig.action.validateCookie")}
           </Button>
         )}
       </div>
@@ -279,7 +279,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "bilibili",
         label: "Bilibili",
-        tip: "Configure Bilibili downloader settings including cookie authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.bilibili",
         content: renderDownloaderOptions(
           tmpBilibiliOptions,
           setTmpBilibiliOptions,
@@ -290,7 +290,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "exhentai",
         label: "ExHentai",
-        tip: "Configure ExHentai downloader settings. Cookie is required for authentication.",
+        tip: "thirdPartyConfig.tip.exhentai",
         content: renderDownloaderOptions(
           tmpExHentaiOptions,
           setTmpExHentaiOptions,
@@ -301,7 +301,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "pixiv",
         label: "Pixiv",
-        tip: "Configure Pixiv downloader settings including authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.pixiv",
         content: renderDownloaderOptions(
           tmpPixivOptions,
           setTmpPixivOptions,
@@ -312,12 +312,12 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "soulplus",
         label: "SoulPlus",
-        tip: "Configure SoulPlus settings including cookie authentication and auto-buy threshold.",
+        tip: "thirdPartyConfig.tip.soulplus",
         content: (
           <div className="space-y-4">
             <div>
               <Input
-                label={t<string>("Cookie")}
+                label={t<string>("thirdPartyConfig.label.cookie")}
                 size="sm"
                 value={tmpSoulPlusOptions.cookie || ""}
                 onValueChange={(v) => {
@@ -330,7 +330,7 @@ export default function ThirdPartyConfigurationPage() {
             </div>
             <div>
               <Input
-                label={t<string>("Auto Buy Threshold")}
+                label={t<string>("thirdPartyConfig.label.autoBuyThreshold")}
                 size="sm"
                 type="number"
                 value={String(tmpSoulPlusOptions.autoBuyThreshold || 0)}
@@ -353,7 +353,7 @@ export default function ThirdPartyConfigurationPage() {
                   );
                 }}
               >
-                {t<string>("Save")}
+                {t<string>("thirdPartyConfig.action.save")}
               </Button>
             </div>
           </div>
@@ -362,12 +362,12 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "bangumi",
         label: "Bangumi",
-        tip: "Configure Bangumi settings including request parameters and authentication.",
+        tip: "thirdPartyConfig.tip.bangumi",
         content: (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label={t<string>("Max Concurrency")}
+                label={t<string>("thirdPartyConfig.label.maxConcurrency")}
                 size="sm"
                 type="number"
                 value={String(tmpBangumiOptions.maxConcurrency || 1)}
@@ -379,7 +379,7 @@ export default function ThirdPartyConfigurationPage() {
                 }}
               />
               <Input
-                label={t<string>("Request Interval (ms)")}
+                label={t<string>("thirdPartyConfig.label.requestInterval")}
                 size="sm"
                 type="number"
                 value={String(tmpBangumiOptions.requestInterval || 1000)}
@@ -393,7 +393,7 @@ export default function ThirdPartyConfigurationPage() {
             </div>
             <div>
               <Input
-                label={t<string>("Cookie")}
+                label={t<string>("thirdPartyConfig.label.cookie")}
                 size="sm"
                 value={tmpBangumiOptions.cookie || ""}
                 onValueChange={(v) => {
@@ -406,7 +406,7 @@ export default function ThirdPartyConfigurationPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label={t<string>("User Agent")}
+                label={t<string>("thirdPartyConfig.label.userAgent")}
                 size="sm"
                 value={tmpBangumiOptions.userAgent || ""}
                 onValueChange={(v) => {
@@ -417,7 +417,7 @@ export default function ThirdPartyConfigurationPage() {
                 }}
               />
               <Input
-                label={t<string>("Referer")}
+                label={t<string>("thirdPartyConfig.label.referer")}
                 size="sm"
                 value={tmpBangumiOptions.referer || ""}
                 onValueChange={(v) => {
@@ -439,7 +439,7 @@ export default function ThirdPartyConfigurationPage() {
                   );
                 }}
               >
-                {t<string>("Save")}
+                {t<string>("thirdPartyConfig.action.save")}
               </Button>
             </div>
           </div>
@@ -448,7 +448,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "cien",
         label: "Cien",
-        tip: "Configure Cien downloader settings including authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.cien",
         content: renderDownloaderOptions(
           tmpCienOptions,
           setTmpCienOptions,
@@ -459,7 +459,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "dlsite",
         label: "DLsite",
-        tip: "Configure DLsite downloader settings including authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.dlsite",
         content: renderDownloaderOptions(
           tmpDLsiteOptions,
           setTmpDLsiteOptions,
@@ -470,7 +470,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "fanbox",
         label: "Fanbox",
-        tip: "Configure Fanbox downloader settings including authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.fanbox",
         content: renderDownloaderOptions(
           tmpFanboxOptions,
           setTmpFanboxOptions,
@@ -481,7 +481,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "fantia",
         label: "Fantia",
-        tip: "Configure Fantia downloader settings including authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.fantia",
         content: renderDownloaderOptions(
           tmpFantiaOptions,
           setTmpFantiaOptions,
@@ -492,7 +492,7 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "patreon",
         label: "Patreon",
-        tip: "Configure Patreon downloader settings including authentication and download parameters.",
+        tip: "thirdPartyConfig.tip.patreon",
         content: renderDownloaderOptions(
           tmpPatreonOptions,
           setTmpPatreonOptions,
@@ -503,12 +503,12 @@ export default function ThirdPartyConfigurationPage() {
       {
         key: "tmdb",
         label: "TMDB",
-        tip: "Configure TMDB (The Movie Database) settings including API key and request parameters.",
+        tip: "thirdPartyConfig.tip.tmdb",
         content: (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label={t<string>("Max Concurrency")}
+                label={t<string>("thirdPartyConfig.label.maxConcurrency")}
                 size="sm"
                 type="number"
                 value={String(tmpTmdbOptions.maxConcurrency || 1)}
@@ -520,7 +520,7 @@ export default function ThirdPartyConfigurationPage() {
                 }}
               />
               <Input
-                label={t<string>("Request Interval (ms)")}
+                label={t<string>("thirdPartyConfig.label.requestInterval")}
                 size="sm"
                 type="number"
                 value={String(tmpTmdbOptions.requestInterval || 1000)}
@@ -534,7 +534,7 @@ export default function ThirdPartyConfigurationPage() {
             </div>
             <div>
               <Input
-                label={t<string>("API Key")}
+                label={t<string>("thirdPartyConfig.label.apiKey")}
                 size="sm"
                 value={tmpTmdbOptions.apiKey || ""}
                 onValueChange={(v) => {
@@ -547,7 +547,7 @@ export default function ThirdPartyConfigurationPage() {
             </div>
             <div>
               <Textarea
-                label={t<string>("Cookie")}
+                label={t<string>("thirdPartyConfig.label.cookie")}
                 size="sm"
                 value={tmpTmdbOptions.cookie || ""}
                 onValueChange={(v) => {
@@ -560,7 +560,7 @@ export default function ThirdPartyConfigurationPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label={t<string>("User Agent")}
+                label={t<string>("thirdPartyConfig.label.userAgent")}
                 size="sm"
                 value={tmpTmdbOptions.userAgent || ""}
                 onValueChange={(v) => {
@@ -571,7 +571,7 @@ export default function ThirdPartyConfigurationPage() {
                 }}
               />
               <Input
-                label={t<string>("Referer")}
+                label={t<string>("thirdPartyConfig.label.referer")}
                 size="sm"
                 value={tmpTmdbOptions.referer || ""}
                 onValueChange={(v) => {
@@ -590,7 +590,7 @@ export default function ThirdPartyConfigurationPage() {
                   applyPatches(BApi.options.patchTmdbOptions, tmpTmdbOptions);
                 }}
               >
-                {t<string>("Save")}
+                {t<string>("thirdPartyConfig.action.save")}
               </Button>
             </div>
           </div>

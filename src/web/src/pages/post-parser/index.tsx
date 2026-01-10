@@ -61,7 +61,7 @@ const PostParserPage = () => {
               createPortal(Modal, {
                 defaultVisible: true,
                 size: 'xl',
-                title: t<string>('Add tasks'),
+                title: t<string>("postParser.action.addTasks"),
                 children: (
                   <div>
                     {postParserSources.map(s => {
@@ -70,7 +70,7 @@ const PostParserPage = () => {
                           onValueChange={v => {
                             linksTextMap[s.value] = v;
                           }}
-                          label={t<string>('Post links in {{source}}', { source: s.label })}
+                          label={t<string>("postParser.input.postLinks", { source: s.label })}
                           minRows={10}
                           placeholder={`https://xxxxxxx
 https://xxxxxxx
@@ -78,7 +78,7 @@ https://xxxxxxx
                         />
                       );
                     })}
-                    <FeatureStatusTip status={'developing'} name={t<string>('Support for other sites')} />
+                    <FeatureStatusTip status={'developing'} name={t<string>("postParser.tip.otherSitesSupport")} />
                   </div>
                 ),
                 onOk: async () => {
@@ -101,7 +101,7 @@ https://xxxxxxx
             }}
           >
             <AiOutlineSetting className={"text-base"} />
-            {t<string>("Configuration")}
+            {t<string>("postParser.action.configuration")}
           </Button>
         </div>
         <div className={"flex items-center gap-2"}>
@@ -117,7 +117,7 @@ https://xxxxxxx
             // variant={'flat'}
             color={'secondary'}
           >
-            {t<string>("Automatically parsing")}
+            {t<string>("postParser.label.automaticallyParsing")}
           </Checkbox>
           <Button
             color={"success"}
@@ -127,60 +127,48 @@ https://xxxxxxx
               createPortal(Modal, {
                 defaultVisible: true,
                 size: "xl",
-                title: t<string>("Instructions for use"),
+                title: t<string>("postParser.action.instructions"),
                 children: (
                   <div>
                     <Alert
                       description={
                         <div>
                           <div>
-                            {t<string>(
-                              "This feature internally uses curl. If your system-level curl version is lower than 8.14, please configure the correct curl path in the system settings.",
-                            )}
+                            {t<string>("postParser.tip.curlVersion")}
                           </div>
                           <div>
-                            {t<string>(
-                              "The request interval configuration is temporarily unavailable. The built-in default interval is 3 seconds.",
-                            )}
+                            {t<string>("postParser.tip.requestInterval")}
                           </div>
                         </div>
                       }
-                      title={t<string>("curl")}
+                      title={t<string>("postParser.label.curl")}
                     />
                     <Alert
                       description={
                         <div>
                           <div>
-                            {t<string>(
-                              "This feature internally uses Ollama. You need to install and run Ollama first, and install at least one model. Then configure the Ollama API address in the system settings.",
-                            )}
+                            {t<string>("postParser.tip.ollamaRequired")}
                           </div>
                           <div>
-                            {t<string>(
-                              "This feature will prioritize the largest model in the Ollama model list.",
-                            )}
+                            {t<string>("postParser.tip.ollamaModel")}
                           </div>
                           <div>
-                            {t<string>(
-                              "Currently, deepseek-r1:14b and 32b have been tested and can be used safely.",
-                            )}
+                            {t<string>("postParser.tip.ollamaTested")}
                           </div>
                         </div>
                       }
-                      title={t<string>("ollama")}
+                      title={t<string>("postParser.label.ollama")}
                     />
                     <Alert
                       color={"success"}
                       description={
                         <div>
                           <div>
-                            {t<string>(
-                              'Some sites can integrate quick actions through the browser (such as one-click task creation). You can check the "Third-Party Integrations" section.',
-                            )}
+                            {t<string>("postParser.tip.browserIntegration")}
                           </div>
                         </div>
                       }
-                      title={t<string>("browser integrations")}
+                      title={t<string>("postParser.label.browserIntegrations")}
                       variant={"flat"}
                     />
                   </div>
@@ -192,19 +180,19 @@ https://xxxxxxx
             }}
           >
             <AiOutlineQuestionCircle className={"text-base"} />
-            {t<string>("Instructions for use")}
+            {t<string>("postParser.action.instructions")}
           </Button>
         </div>
       </div>
       <div className={"mt-2"}>
         <Table isStriped removeWrapper className={"break-all"}>
           <TableHeader>
-            <TableColumn>{t<string>("#")}</TableColumn>
-            <TableColumn>{t<string>("Target")}</TableColumn>
+            <TableColumn>{t<string>("postParser.table.id")}</TableColumn>
+            <TableColumn>{t<string>("postParser.table.target")}</TableColumn>
             {/* <TableColumn>{t<string>('Content')}</TableColumn> */}
-            <TableColumn>{t<string>("Items")}</TableColumn>
-            <TableColumn>{t<string>("ParsedAt")}</TableColumn>
-            <TableColumn>{t<string>("Operations")}</TableColumn>
+            <TableColumn>{t<string>("postParser.table.items")}</TableColumn>
+            <TableColumn>{t<string>("postParser.table.parsedAt")}</TableColumn>
+            <TableColumn>{t<string>("common.label.operations")}</TableColumn>
           </TableHeader>
           <TableBody>
             {tasks.map((task) => {
@@ -304,7 +292,7 @@ https://xxxxxxx
                               {item.accessCode && (
                                 <Snippet
                                   size={"sm"}
-                                  symbol={t<string>("Access code")}
+                                  symbol={t<string>("postParser.label.accessCode")}
                                 >
                                   {item.accessCode}
                                 </Snippet>
@@ -312,7 +300,7 @@ https://xxxxxxx
                               {item.decompressionPassword && (
                                 <Snippet
                                   size={"sm"}
-                                  symbol={t<string>("Decompression password")}
+                                  symbol={t<string>("postParser.label.decompressionPassword")}
                                 >
                                   {}
                                 </Snippet>

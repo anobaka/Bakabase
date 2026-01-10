@@ -37,7 +37,7 @@ const CustomPathSelectorInner = (props: Props) => {
                       variant="light"
                       onPress={() => {
                         navigator.clipboard.writeText(p);
-                        toast.success(t<string>("Path copied to clipboard"));
+                        toast.success(t<string>("common.tip.pathCopied"));
                       }}
                     >
                       <AiOutlineCopy className="text-lg" />
@@ -74,7 +74,7 @@ const CustomPathSelectorInner = (props: Props) => {
       <div className="flex items-center gap-2">
         <PathAutocomplete
           pathType="folder"
-          placeholder={t("Manually enter a path")}
+          placeholder={t("folderSelector.placeholder.manuallyEnterPath")}
           size="sm"
           value={manualPath}
           onChange={setManualPath}

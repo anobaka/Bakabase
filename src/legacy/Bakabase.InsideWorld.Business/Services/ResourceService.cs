@@ -1074,12 +1074,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _resourceCacheOrm.DbContext.DetachAll(caches.Concat(newCaches));
             
             var fullCacheType = (ResourceCacheType) SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int) x);
-
-            if (!_optionsManager.Value.KeepResourcesOnPathChange)
-            {
-                fullCacheType &= ~ResourceCacheType.ResourceMarkers;
-            }
-            
+            fullCacheType &= ~ResourceCacheType.ResourceMarkers;
             var percentage = 0m;
 
             var tbdCaches = await _resourceCacheOrm.GetAll(x => x.CachedTypes != fullCacheType);
@@ -1100,7 +1095,7 @@ namespace Bakabase.InsideWorld.Business.Services
                         {
                             foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
                             {
-                                if (!cache.CachedTypes.HasFlag(cacheType))
+                                if (fullCacheType.HasFlag(cacheType) && !cache.CachedTypes.HasFlag(cacheType))
                                 {
                                     await pt.WaitWhilePausedAsync(ct);
                                     switch (cacheType)

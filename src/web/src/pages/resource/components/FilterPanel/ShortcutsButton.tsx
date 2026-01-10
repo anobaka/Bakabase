@@ -44,7 +44,7 @@ const ShortcutsButton = ({ className }: Props) => {
     createPortal(Modal, {
       defaultVisible: true,
       size: "sm",
-      title: t<string>("Shortcuts"),
+      title: t<string>("resource.shortcut.title"),
       footer: { actions: ["cancel"] },
       children: (
         <div className="flex flex-col gap-3">
@@ -64,7 +64,7 @@ const ShortcutsButton = ({ className }: Props) => {
   };
 
   return (
-    <Tooltip content={t<string>("Shortcuts")}>
+    <Tooltip content={t<string>("resource.shortcut.title")}>
       <Button
         isIconOnly
         className={className}

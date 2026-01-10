@@ -624,4 +624,19 @@
   <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
     <value>路径标记同步正在进行中；强制中断可能导致同步不完整。</value>
   </data>
+  <data name="Dependency_NotInstalled_Message" xml:space="preserve">
+    <value>{0} 尚未安装，请前往系统设置页面进行安装。</value>
+  </data>
+  <data name="Dependency_Installing_Message" xml:space="preserve">
+    <value>{0} 正在安装中，请等待安装完成。</value>
+  </data>
+  <data name="Dependency_Required_Message" xml:space="preserve">
+    <value>{1} 需要依赖 {0}，正在自动安装 {0}...</value>
+  </data>
+  <data name="Dependency_Component_7z_Name" xml:space="preserve">
+    <value>7-Zip</value>
+  </data>
+  <data name="Dependency_Component_7z_Description" xml:space="preserve">
+    <value>该组件用于压缩包的压缩和解压。它是 ffmpeg、lux 等组件安装过程中所必需的依赖。</value>
+  </data>
 </root>

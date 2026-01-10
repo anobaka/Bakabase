@@ -136,8 +136,8 @@ const PathTree = ({
     return (
       <div className="flex flex-col items-center justify-center h-64 text-default-500">
         <AiOutlineFolder className="text-4xl mb-2" />
-        <p>{t("No path marks found")}</p>
-        <p className="text-sm">{t("Go to path mark config page to add marks")}</p>
+        <p>{t("pathMarks.empty.noPathMarks")}</p>
+        <p className="text-sm">{t("pathMarks.empty.goToConfigPage")}</p>
       </div>
     );
   }

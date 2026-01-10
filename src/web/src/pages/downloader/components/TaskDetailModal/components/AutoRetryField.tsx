@@ -14,15 +14,13 @@ const AutoRetryField = ({ autoRetry, onChange }: Props) => {
 
   return (
     <CheckboxGroup
-      description={t<string>(
-        "Retry automatically when the downloading task failed.",
-      )}
-      label={t<string>("Auto retry")}
+      description={t<string>("downloader.tip.autoRetryDesc")}
+      label={t<string>("downloader.label.autoRetry")}
       orientation="horizontal"
       size="sm"
     >
       <Checkbox defaultSelected isSelected={autoRetry} onValueChange={onChange}>
-        {t("Yes")}
+        {t("common.label.yes")}
       </Checkbox>
     </CheckboxGroup>
   );

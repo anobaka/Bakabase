@@ -1,0 +1,12 @@
+{
+  "log.filter.time": "时间",
+  "log.filter.level": "级别",
+  "log.filter.all": "全部",
+  "log.filter.logger": "日志器",
+  "log.filter.event": "事件",
+  "log.filter.message": "消息",
+  "log.action.clearAll": "清除全部",
+  "log.label.log": "日志",
+  "log.action.expand": "展开",
+  "log.label.fullMessage": "完整消息"
+}

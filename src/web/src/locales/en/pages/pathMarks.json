@@ -1,0 +1,73 @@
+{
+  "pathMarks.title": "Path Marks",
+  "pathMarks.label.beta": "Beta",
+  "pathMarks.tip.description": "View and manage all path marks across your media libraries. Click on a path to edit marks in the config page.",
+  "pathMarks.warning.invalidPaths": "{{count}} path(s) no longer exist on the file system",
+  "pathMarks.label.showOnlyInvalid": "Show only invalid",
+  "pathMarks.success.markUpdated": "Mark updated successfully",
+  "pathMarks.success.markAdded": "Mark added successfully",
+  "pathMarks.error.saveMark": "Failed to save mark",
+  "pathMarks.confirm.deleteTitle": "Confirm Delete Mark",
+  "pathMarks.confirm.deleteQuestion": "Are you sure you want to delete this mark?",
+  "pathMarks.success.markDeleted": "Mark deleted successfully",
+  "pathMarks.error.deleteMark": "Failed to delete mark",
+  "pathMarks.warning.noMarksToDelete": "No marks to delete",
+  "pathMarks.success.deletedCount": "Deleted {{count}} mark(s) successfully",
+  "pathMarks.error.deleteMarks": "Failed to delete marks",
+  "pathMarks.success.pastedCount": "Pasted {{count}} marks successfully",
+  "pathMarks.error.pasteMarks": "Failed to paste marks",
+
+  "pathMarks.modal.confirmDeleteTitle": "Confirm Delete Marks",
+  "pathMarks.modal.transferMarksTitle": "Transfer Marks",
+  "pathMarks.modal.confirmTransferTitle": "Confirm Transfer",
+  "pathMarks.modal.configurePathMarksTitle": "Configure Path Marks",
+
+  "pathMarks.label.mainPath": "Main Path",
+  "pathMarks.label.invalid": "Invalid",
+  "pathMarks.label.resourceMark": "Resource Mark",
+  "pathMarks.label.propertyMark": "Property Mark",
+  "pathMarks.label.mediaLibraryMark": "MediaLibrary Mark",
+
+  "pathMarks.tip.clickToCopyFullPath": "Click to copy full path",
+  "pathMarks.tip.clickOnFoldersToNavigate": "Click on folders to navigate. Use the Add Mark button or right-click for mark options.",
+  "pathMarks.tip.copyMarksFromThisPath": "Copy marks from this path",
+  "pathMarks.tip.configureSubPathMarks": "Configure sub-path marks",
+  "pathMarks.tip.syncAllMarksOnThisPath": "Sync all marks on this path",
+  "pathMarks.tip.deleteAllMarksOnThisPath": "Delete all marks on this path",
+  "pathMarks.tip.transferMarksToThisPath": "Transfer marks to this path",
+  "pathMarks.tip.browseAndClickTransfer": "Browse and click \"Transfer here\" to select destination path",
+
+  "pathMarks.status.aboutToDeleteMarks": "You are about to delete {{count}} mark(s)",
+  "pathMarks.status.aboutToTransferMarks": "You are about to transfer {{count}} mark(s)",
+  "pathMarks.status.transferredSuccessfully": "Transferred {{count}} mark(s) successfully",
+
+  "pathMarks.action.transfer": "Transfer",
+  "pathMarks.action.confirmTransfer": "Confirm Transfer",
+  "pathMarks.action.confirmSelection": "Confirm selection",
+  "pathMarks.action.transferHere": "Transfer here",
+  "pathMarks.action.pasteMarks": "Paste {{count}} marks",
+  "pathMarks.action.pasteMarksWithExisting": "Paste {{count}} marks ({{existing}} already exist)",
+
+  "pathMarks.checkbox.alsoDeleteChildMarks": "Also delete {{count}} mark(s) from {{pathCount}} child path(s)",
+  "pathMarks.checkbox.includeChildPaths": "Include {{count}} child path(s) with marks",
+  "pathMarks.checkbox.childPathsAvailableForTransfer": "+ {{count}} child path(s) with marks will also be available for transfer",
+
+  "pathMarks.warning.cannotBeUndone": "This action cannot be undone.",
+  "pathMarks.warning.cannotTransferToSamePath": "Cannot transfer to the same path",
+
+  "pathMarks.error.failedToTransfer": "Failed to transfer marks",
+  "pathMarks.error.failedToStartSync": "Failed to start sync",
+
+  "pathMarks.success.pathCopied": "Path copied to clipboard",
+  "pathMarks.success.syncStarted": "Sync started",
+
+  "pathMarks.empty.noPathMarks": "No path marks found",
+  "pathMarks.empty.goToConfigPage": "Go to path mark config page to add marks",
+
+  "pathMarks.info.transferringFrom": "Transferring marks from:",
+  "pathMarks.info.transferTo": "Transfer to:",
+  "pathMarks.action.configureMarks": "Configure Marks",
+
+  "pathMarks.label.resourceProfileHint": "Next step: Configure Resource Profiles to define enhancers, players, and other resource processing settings",
+  "pathMarks.action.goToResourceProfile": "Configure Resource Profiles"
+}

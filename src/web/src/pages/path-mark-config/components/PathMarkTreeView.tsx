@@ -66,11 +66,11 @@ const PathMarkTreeView = ({
           });
         }
 
-        toast.success(t(oldMark ? "Mark updated successfully" : "Mark added successfully"));
+        toast.success(t(oldMark ? "pathMarkConfig.success.markUpdated" : "pathMarkConfig.success.markAdded"));
         notifyMarksChanged();
       } catch (error) {
         console.error("Failed to save mark", error);
-        toast.danger(t("Failed to save mark"));
+        toast.danger(t("pathMarkConfig.error.saveMark"));
       }
     },
     [t, notifyMarksChanged],
@@ -88,15 +88,15 @@ const PathMarkTreeView = ({
       const confirmed = await new Promise<boolean>((resolve) => {
         const modal = createPortal(Modal, {
           defaultVisible: true,
-          title: t("Confirm Delete Mark"),
+          title: t("pathMarkConfig.confirm.deleteMarkTitle"),
           children: (
             <div>
-              <p>{t("Are you sure you want to delete this mark?")}</p>
+              <p>{t("pathMarkConfig.confirm.deleteMarkQuestion")}</p>
               <p className="text-sm text-default-500 mt-2">
-                {t("Path")}: {entry.path}
+                {t("common.label.path")}: {entry.path}
               </p>
               <p className="text-sm text-default-500">
-                {t("Priority")}: {mark.priority}
+                {t("common.label.priority")}: {mark.priority}
               </p>
             </div>
           ),
@@ -104,7 +104,7 @@ const PathMarkTreeView = ({
             actions: ["cancel", "ok"],
             okProps: {
               color: "danger",
-              children: t("Delete"),
+              children: t("common.action.delete"),
             },
           },
           onOk: () => {
@@ -120,11 +120,11 @@ const PathMarkTreeView = ({
       if (confirmed) {
         try {
           await BApi.pathMark.softDeletePathMark(markId);
-          toast.success(t("Mark deleted successfully"));
+          toast.success(t("pathMarkConfig.success.markDeleted"));
           notifyMarksChanged();
         } catch (error) {
           console.error("Failed to delete mark", error);
-          toast.danger(t("Failed to delete mark"));
+          toast.danger(t("pathMarkConfig.error.deleteMark"));
         }
       }
     },
@@ -160,11 +160,11 @@ const PathMarkTreeView = ({
           });
         }
 
-        toast.success(t("Mark added successfully to {{count}} paths", { count: entries.length }));
+        toast.success(t("pathMarkConfig.success.markAddedToCount", { count: entries.length }));
         notifyMarksChanged();
       } catch (error) {
         console.error("Failed to add marks", error);
-        toast.danger(t("Failed to add marks"));
+        toast.danger(t("pathMarkConfig.error.addMarks"));
       }
     },
     [t, notifyMarksChanged],
@@ -184,11 +184,11 @@ const PathMarkTreeView = ({
           } as BakabaseAbstractionsModelsDomainPathMark);
         }
 
-        toast.success(t("Pasted {{count}} marks successfully", { count: marks.length }));
+        toast.success(t("pathMarkConfig.success.pastedCount", { count: marks.length }));
         notifyMarksChanged();
       } catch (error) {
         console.error("Failed to paste marks", error);
-        toast.danger(t("Failed to paste marks"));
+        toast.danger(t("pathMarkConfig.error.pasteMarks"));
       }
     },
     [t, notifyMarksChanged],
@@ -248,7 +248,7 @@ const PathMarkTreeView = ({
           >
             <div className="flex items-center gap-2">
               <AiOutlineAim className="text-base text-success" />
-              {t("Add Resource Mark ({{count}} paths)", { count: entries.length })}
+              {t("pathMarkConfig.action.addResourceMark", { count: entries.length })}
             </div>
           </MenuItem>
           <MenuItem
@@ -264,7 +264,7 @@ const PathMarkTreeView = ({
           >
             <div className="flex items-center gap-2">
               <AiOutlineAim className="text-base text-primary" />
-              {t("Add Property Mark ({{count}} paths)", { count: entries.length })}
+              {t("pathMarkConfig.action.addPropertyMark", { count: entries.length })}
             </div>
           </MenuItem>
           <MenuItem
@@ -280,7 +280,7 @@ const PathMarkTreeView = ({
           >
             <div className="flex items-center gap-2">
               <AiOutlineAim className="text-base text-warning" />
-              {t("Add MediaLibrary Mark ({{count}} paths)", { count: entries.length })}
+              {t("pathMarkConfig.action.addMediaLibraryMark", { count: entries.length })}
             </div>
           </MenuItem>
           {canCopyMarks && (
@@ -291,7 +291,7 @@ const PathMarkTreeView = ({
             >
               <div className="flex items-center gap-2">
                 <AiOutlineCopy className="text-base text-default-500" />
-                {t("Copy marks from this path")}
+                {t("pathMarkConfig.action.copyMarks")}
               </div>
             </MenuItem>
           )}

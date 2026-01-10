@@ -22,29 +22,29 @@ const MatchModeSelector = ({ config, updateConfig, t }: Props) => {
           onValueChange={(value) => updateConfig({ matchMode: Number(value) })}
           size="sm"
           orientation="horizontal"
-          label={t("Match Mode")}
+          label={t("pathMarkConfig.label.matchMode")}
         >
           <Radio value={String(PathMatchMode.Layer)}>
-            {t("Layer")}
+            {t("pathMarkConfig.label.layer")}
           </Radio>
           <Radio value={String(PathMatchMode.Regex)}>
-            {t("Regex")}
+            {t("pathMarkConfig.label.regex")}
           </Radio>
         </RadioGroup>
       </div>
 
       {isLayerMode ? (
         <NumberInput
-          label={t("Layer")}
-          description={t("PathMark.Layer.Description")}
+          label={t("pathMarkConfig.label.layer")}
+          description={t("pathMark.layer.description")}
           size="sm"
           value={config.layer ?? 0}
           onChange={(e) => updateConfig({ layer: typeof e === "number" ? e : (e.target.value ? parseInt(e.target.value, 10) : 0) })}
         />
       ) : (
         <Input
-          label={t("Regex Pattern")}
-          description={t("PathMark.Regex.Description")}
+          label={t("pathMarkConfig.label.regexPattern")}
+          description={t("pathMark.regex.description")}
           size="sm"
           value={config.regex ?? ""}
           onValueChange={(v) => updateConfig({ regex: v })}
@@ -56,20 +56,20 @@ const MatchModeSelector = ({ config, updateConfig, t }: Props) => {
           value={String(currentApplyScope)}
           onValueChange={(value) => updateConfig({ applyScope: Number(value) as PathMarkApplyScope })}
           size="sm"
-          label={t("Apply Scope")}
+          label={t("pathMarkConfig.label.applyScope")}
           orientation="horizontal"
         >
           <Radio
             value={String(PathMarkApplyScope.MatchedOnly)}
-            description={t("PathMark.ApplyScope.MatchedOnly.Description")}
+            description={t("pathMark.applyScope.matchedOnly.description")}
           >
-            {t("MatchedOnly")}
+            {t("pathMarkConfig.label.matchedOnly")}
           </Radio>
           <Radio
             value={String(PathMarkApplyScope.MatchedAndSubdirectories)}
-            description={t("PathMark.ApplyScope.MatchedAndSubdirectories.Description")}
+            description={t("pathMark.applyScope.matchedAndSubdirectories.description")}
           >
-            {t("MatchedAndSubdirectories")}
+            {t("pathMarkConfig.label.matchedAndSubdirectories")}
           </Radio>
         </RadioGroup>
       </div>

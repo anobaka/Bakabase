@@ -37,35 +37,35 @@ const BackgroundTaskPage = () => {
   const columns = [
     {
       key: "name",
-      label: "Name",
+      label: t("backgroundTask.column.name"),
     },
     {
       key: "status",
-      label: "Status",
+      label: t("backgroundTask.column.status"),
     },
     {
       key: "progress",
-      label: "Progress",
+      label: t("backgroundTask.column.progress"),
     },
     {
       key: "startedAt",
-      label: "Started At",
+      label: t("backgroundTask.column.startedAt"),
     },
     {
       key: "interval",
-      label: "Interval",
+      label: t("backgroundTask.column.interval"),
     },
     {
       key: "nextTimeStartAt",
-      label: "Next time start at",
+      label: t("backgroundTask.column.nextTimeStartAt"),
     },
     {
       key: "elapsed",
-      label: "Elapsed",
+      label: t("backgroundTask.column.elapsed"),
     },
     {
       key: "enableAfter",
-      label: "Enable after",
+      label: t("backgroundTask.column.enableAfter"),
     },
   ];
 
@@ -83,13 +83,13 @@ const BackgroundTaskPage = () => {
           };
         }),
     });
-    toast.success(t<string>("Saved"));
+    toast.success(t<string>("common.state.saved"));
     setEditingOptions({});
   };
 
   const renderInterval = (task: BTask) => {
     if (!task.isPersistent) {
-      return t<string>("Not supported");
+      return t<string>("backgroundTask.label.notSupported");
     }
 
     const editingInterval = editingOptions[task.id]?.interval;
@@ -137,14 +137,14 @@ const BackgroundTaskPage = () => {
                 ? dayjs
                     .duration(moment.duration(task.interval).asMilliseconds())
                     .format("HH:mm:ss")
-                : t<string>("Not set")}
+                : t<string>("backgroundTask.label.notSet")}
             </Button>
           </div>
           {task.interval && (
             <Tooltip
               content={
                 <div>
-                  {t<string>("Will start at")}
+                  {t<string>("backgroundTask.label.willStartAt")}
                   &nbsp;
                   {dayjs(task.nextTimeStartAt).format("YYYY-MM-DD HH:mm:ss")}
                 </div>
@@ -160,7 +160,7 @@ const BackgroundTaskPage = () => {
 
   const renderEnableAfter = (task: BTask) => {
     if (!task.isPersistent) {
-      return t<string>("Not supported");
+      return t<string>("backgroundTask.label.notSupported");
     }
 
     const format = "YYYY-MM-DD HH:mm:ss";
@@ -205,7 +205,7 @@ const BackgroundTaskPage = () => {
         >
           {task.enableAfter
             ? dayjs(task.enableAfter).format(format)
-            : t<string>("Not set")}
+            : t<string>("backgroundTask.label.notSet")}
         </Button>
       );
     }
@@ -235,7 +235,7 @@ const BackgroundTaskPage = () => {
                 </div>
               </TableCell>
               <TableCell>
-                {t<string>(BTaskStatus[task.status])}
+                {t<string>(`backgroundTask.status.${BTaskStatus[task.status].toLowerCase()}`)}
                 {task.error && (
                   <Tooltip color={"danger"} content={task.error}>
                     <QuestionCircleOutlined />

@@ -5,10 +5,6 @@ import type { CarouselRef } from "antd/es/carousel";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import Modal from "@/components/bakaui/components/Modal";
-import Carousel from "@/components/bakaui/components/Carousel";
-import { Button } from "@/components/bakaui";
-
 import WelcomeSlide from "./slides/WelcomeSlide";
 import PathMarkSlide from "./slides/PathMarkSlide";
 import ResourceProfileSlide from "./slides/ResourceProfileSlide";
@@ -17,6 +13,10 @@ import FileProcessorSlide from "./slides/FileProcessorSlide";
 import DownloaderSlide from "./slides/DownloaderSlide";
 import FileMoverSlide from "./slides/FileMoverSlide";
 import CompletionSlide from "./slides/CompletionSlide";
+
+import { Button } from "@/components/bakaui";
+import Carousel from "@/components/bakaui/components/Carousel";
+import Modal from "@/components/bakaui/components/Modal";
 
 interface OnboardingModalProps {
   visible: boolean;
@@ -55,22 +55,18 @@ const OnboardingModal = ({ visible, onComplete }: OnboardingModalProps) => {
 
   return (
     <Modal
-      size="4xl"
-      visible={visible}
-      footer={false}
-      isDismissable={false}
-      isKeyboardDismissDisabled={true}
+      hideCloseButton
       classNames={{
         base: "max-w-[800px]",
       }}
+      footer={false}
+      isDismissable={false}
+      isKeyboardDismissDisabled={true}
+      size="4xl"
+      visible={visible}
     >
       <div className="flex flex-col">
-        <Carousel
-          ref={carouselRef}
-          dots={false}
-          infinite={false}
-          afterChange={handleSlideChange}
-        >
+        <Carousel ref={carouselRef} afterChange={handleSlideChange} dots={false} infinite={false}>
           <WelcomeSlide />
           <PathMarkSlide />
           <ResourceProfileSlide />
@@ -87,9 +83,7 @@ const OnboardingModal = ({ visible, onComplete }: OnboardingModalProps) => {
             <div
               key={index}
               className={`w-2 h-2 rounded-full transition-all ${
-                index === currentSlide
-                  ? "bg-primary w-6"
-                  : "bg-default-300"
+                index === currentSlide ? "bg-primary w-6" : "bg-default-300"
               }`}
             />
           ))}
@@ -97,24 +91,14 @@ const OnboardingModal = ({ visible, onComplete }: OnboardingModalProps) => {
 
         {/* Navigation buttons */}
         <div className="flex justify-between items-center px-6 pb-6">
-          <Button
-            variant="light"
-            onPress={handleSkip}
-          >
+          <Button variant="light" onPress={handleSkip}>
             {t("onboarding.skip")}
           </Button>
           <div className="flex gap-2">
-            <Button
-              variant="flat"
-              onPress={handlePrev}
-              isDisabled={isFirst}
-            >
+            <Button isDisabled={isFirst} variant="flat" onPress={handlePrev}>
               {t("onboarding.previous")}
             </Button>
-            <Button
-              color="primary"
-              onPress={handleNext}
-            >
+            <Button color="primary" onPress={handleNext}>
               {isLast ? t("onboarding.start") : t("onboarding.next")}
             </Button>
           </div>

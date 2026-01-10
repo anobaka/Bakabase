@@ -160,6 +160,21 @@ export const FileExtensionGroupLabel: Record<FileExtensionGroup, string> = {
   [FileExtensionGroup.Archive]: 'Archive'
 };
 
+export enum FilterDisplayMode {
+  Simple = 1,
+  Advanced = 2
+}
+
+export const filterDisplayModes = [
+  { label: 'Simple', value: FilterDisplayMode.Simple },
+  { label: 'Advanced', value: FilterDisplayMode.Advanced }
+] as const;
+
+export const FilterDisplayModeLabel: Record<FilterDisplayMode, string> = {
+  [FilterDisplayMode.Simple]: 'Simple',
+  [FilterDisplayMode.Advanced]: 'Advanced'
+};
+
 export enum InitializationContentType {
   NotAcceptTerms = 1,
   NeedRestart = 2
@@ -3346,6 +3361,39 @@ export const BulkModificationProcessorOptionsItemsFilterByLabel: Record<BulkModi
   [BulkModificationProcessorOptionsItemsFilterBy.Matching]: 'Matching'
 };
 
+export enum BulkModificationTimeProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  AddHours = 3,
+  SubtractHours = 4,
+  AddMinutes = 5,
+  SubtractMinutes = 6,
+  AddSeconds = 7,
+  SubtractSeconds = 8
+}
+
+export const bulkModificationTimeProcessOperations = [
+  { label: 'Delete', value: BulkModificationTimeProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationTimeProcessOperation.SetWithFixedValue },
+  { label: 'AddHours', value: BulkModificationTimeProcessOperation.AddHours },
+  { label: 'SubtractHours', value: BulkModificationTimeProcessOperation.SubtractHours },
+  { label: 'AddMinutes', value: BulkModificationTimeProcessOperation.AddMinutes },
+  { label: 'SubtractMinutes', value: BulkModificationTimeProcessOperation.SubtractMinutes },
+  { label: 'AddSeconds', value: BulkModificationTimeProcessOperation.AddSeconds },
+  { label: 'SubtractSeconds', value: BulkModificationTimeProcessOperation.SubtractSeconds }
+] as const;
+
+export const BulkModificationTimeProcessOperationLabel: Record<BulkModificationTimeProcessOperation, string> = {
+  [BulkModificationTimeProcessOperation.Delete]: 'Delete',
+  [BulkModificationTimeProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationTimeProcessOperation.AddHours]: 'AddHours',
+  [BulkModificationTimeProcessOperation.SubtractHours]: 'SubtractHours',
+  [BulkModificationTimeProcessOperation.AddMinutes]: 'AddMinutes',
+  [BulkModificationTimeProcessOperation.SubtractMinutes]: 'SubtractMinutes',
+  [BulkModificationTimeProcessOperation.AddSeconds]: 'AddSeconds',
+  [BulkModificationTimeProcessOperation.SubtractSeconds]: 'SubtractSeconds'
+};
+
 export enum BulkModificationStringProcessOperation {
   Delete = 1,
   SetWithFixedValue = 2,
@@ -3391,6 +3439,30 @@ export const BulkModificationStringProcessOperationLabel: Record<BulkModificatio
   [BulkModificationStringProcessOperation.ReplaceWithRegex]: 'ReplaceWithRegex'
 };
 
+export enum BulkModificationListTagProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  Append = 3,
+  Prepend = 4,
+  Remove = 5
+}
+
+export const bulkModificationListTagProcessOperations = [
+  { label: 'Delete', value: BulkModificationListTagProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationListTagProcessOperation.SetWithFixedValue },
+  { label: 'Append', value: BulkModificationListTagProcessOperation.Append },
+  { label: 'Prepend', value: BulkModificationListTagProcessOperation.Prepend },
+  { label: 'Remove', value: BulkModificationListTagProcessOperation.Remove }
+] as const;
+
+export const BulkModificationListTagProcessOperationLabel: Record<BulkModificationListTagProcessOperation, string> = {
+  [BulkModificationListTagProcessOperation.Delete]: 'Delete',
+  [BulkModificationListTagProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationListTagProcessOperation.Append]: 'Append',
+  [BulkModificationListTagProcessOperation.Prepend]: 'Prepend',
+  [BulkModificationListTagProcessOperation.Remove]: 'Remove'
+};
+
 export enum BulkModificationListStringProcessOperation {
   SetWithFixedValue = 1,
   Append = 2,
@@ -3413,6 +3485,147 @@ export const BulkModificationListStringProcessOperationLabel: Record<BulkModific
   [BulkModificationListStringProcessOperation.Prepend]: 'Prepend',
   [BulkModificationListStringProcessOperation.Modify]: 'Modify',
   [BulkModificationListStringProcessOperation.Delete]: 'Delete'
+};
+
+export enum BulkModificationListListStringProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  Append = 3,
+  Prepend = 4,
+  Remove = 5
+}
+
+export const bulkModificationListListStringProcessOperations = [
+  { label: 'Delete', value: BulkModificationListListStringProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationListListStringProcessOperation.SetWithFixedValue },
+  { label: 'Append', value: BulkModificationListListStringProcessOperation.Append },
+  { label: 'Prepend', value: BulkModificationListListStringProcessOperation.Prepend },
+  { label: 'Remove', value: BulkModificationListListStringProcessOperation.Remove }
+] as const;
+
+export const BulkModificationListListStringProcessOperationLabel: Record<BulkModificationListListStringProcessOperation, string> = {
+  [BulkModificationListListStringProcessOperation.Delete]: 'Delete',
+  [BulkModificationListListStringProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationListListStringProcessOperation.Append]: 'Append',
+  [BulkModificationListListStringProcessOperation.Prepend]: 'Prepend',
+  [BulkModificationListListStringProcessOperation.Remove]: 'Remove'
+};
+
+export enum BulkModificationLinkProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  SetText = 3,
+  SetUrl = 4,
+  ModifyText = 5,
+  ModifyUrl = 6
+}
+
+export const bulkModificationLinkProcessOperations = [
+  { label: 'Delete', value: BulkModificationLinkProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationLinkProcessOperation.SetWithFixedValue },
+  { label: 'SetText', value: BulkModificationLinkProcessOperation.SetText },
+  { label: 'SetUrl', value: BulkModificationLinkProcessOperation.SetUrl },
+  { label: 'ModifyText', value: BulkModificationLinkProcessOperation.ModifyText },
+  { label: 'ModifyUrl', value: BulkModificationLinkProcessOperation.ModifyUrl }
+] as const;
+
+export const BulkModificationLinkProcessOperationLabel: Record<BulkModificationLinkProcessOperation, string> = {
+  [BulkModificationLinkProcessOperation.Delete]: 'Delete',
+  [BulkModificationLinkProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationLinkProcessOperation.SetText]: 'SetText',
+  [BulkModificationLinkProcessOperation.SetUrl]: 'SetUrl',
+  [BulkModificationLinkProcessOperation.ModifyText]: 'ModifyText',
+  [BulkModificationLinkProcessOperation.ModifyUrl]: 'ModifyUrl'
+};
+
+export enum BulkModificationDecimalProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  Add = 3,
+  Subtract = 4,
+  Multiply = 5,
+  Divide = 6,
+  Round = 7,
+  Ceil = 8,
+  Floor = 9
+}
+
+export const bulkModificationDecimalProcessOperations = [
+  { label: 'Delete', value: BulkModificationDecimalProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationDecimalProcessOperation.SetWithFixedValue },
+  { label: 'Add', value: BulkModificationDecimalProcessOperation.Add },
+  { label: 'Subtract', value: BulkModificationDecimalProcessOperation.Subtract },
+  { label: 'Multiply', value: BulkModificationDecimalProcessOperation.Multiply },
+  { label: 'Divide', value: BulkModificationDecimalProcessOperation.Divide },
+  { label: 'Round', value: BulkModificationDecimalProcessOperation.Round },
+  { label: 'Ceil', value: BulkModificationDecimalProcessOperation.Ceil },
+  { label: 'Floor', value: BulkModificationDecimalProcessOperation.Floor }
+] as const;
+
+export const BulkModificationDecimalProcessOperationLabel: Record<BulkModificationDecimalProcessOperation, string> = {
+  [BulkModificationDecimalProcessOperation.Delete]: 'Delete',
+  [BulkModificationDecimalProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationDecimalProcessOperation.Add]: 'Add',
+  [BulkModificationDecimalProcessOperation.Subtract]: 'Subtract',
+  [BulkModificationDecimalProcessOperation.Multiply]: 'Multiply',
+  [BulkModificationDecimalProcessOperation.Divide]: 'Divide',
+  [BulkModificationDecimalProcessOperation.Round]: 'Round',
+  [BulkModificationDecimalProcessOperation.Ceil]: 'Ceil',
+  [BulkModificationDecimalProcessOperation.Floor]: 'Floor'
+};
+
+export enum BulkModificationDateTimeProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  AddDays = 3,
+  SubtractDays = 4,
+  AddMonths = 5,
+  SubtractMonths = 6,
+  AddYears = 7,
+  SubtractYears = 8,
+  SetToNow = 9
+}
+
+export const bulkModificationDateTimeProcessOperations = [
+  { label: 'Delete', value: BulkModificationDateTimeProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationDateTimeProcessOperation.SetWithFixedValue },
+  { label: 'AddDays', value: BulkModificationDateTimeProcessOperation.AddDays },
+  { label: 'SubtractDays', value: BulkModificationDateTimeProcessOperation.SubtractDays },
+  { label: 'AddMonths', value: BulkModificationDateTimeProcessOperation.AddMonths },
+  { label: 'SubtractMonths', value: BulkModificationDateTimeProcessOperation.SubtractMonths },
+  { label: 'AddYears', value: BulkModificationDateTimeProcessOperation.AddYears },
+  { label: 'SubtractYears', value: BulkModificationDateTimeProcessOperation.SubtractYears },
+  { label: 'SetToNow', value: BulkModificationDateTimeProcessOperation.SetToNow }
+] as const;
+
+export const BulkModificationDateTimeProcessOperationLabel: Record<BulkModificationDateTimeProcessOperation, string> = {
+  [BulkModificationDateTimeProcessOperation.Delete]: 'Delete',
+  [BulkModificationDateTimeProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationDateTimeProcessOperation.AddDays]: 'AddDays',
+  [BulkModificationDateTimeProcessOperation.SubtractDays]: 'SubtractDays',
+  [BulkModificationDateTimeProcessOperation.AddMonths]: 'AddMonths',
+  [BulkModificationDateTimeProcessOperation.SubtractMonths]: 'SubtractMonths',
+  [BulkModificationDateTimeProcessOperation.AddYears]: 'AddYears',
+  [BulkModificationDateTimeProcessOperation.SubtractYears]: 'SubtractYears',
+  [BulkModificationDateTimeProcessOperation.SetToNow]: 'SetToNow'
+};
+
+export enum BulkModificationBooleanProcessOperation {
+  Delete = 1,
+  SetWithFixedValue = 2,
+  Toggle = 3
+}
+
+export const bulkModificationBooleanProcessOperations = [
+  { label: 'Delete', value: BulkModificationBooleanProcessOperation.Delete },
+  { label: 'SetWithFixedValue', value: BulkModificationBooleanProcessOperation.SetWithFixedValue },
+  { label: 'Toggle', value: BulkModificationBooleanProcessOperation.Toggle }
+] as const;
+
+export const BulkModificationBooleanProcessOperationLabel: Record<BulkModificationBooleanProcessOperation, string> = {
+  [BulkModificationBooleanProcessOperation.Delete]: 'Delete',
+  [BulkModificationBooleanProcessOperation.SetWithFixedValue]: 'SetWithFixedValue',
+  [BulkModificationBooleanProcessOperation.Toggle]: 'Toggle'
 };
 
 export enum BulkModificationDiffType {

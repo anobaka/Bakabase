@@ -6,12 +6,21 @@ import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 import { FaSortAmountDownAlt, FaSortAmountUpAlt } from "react-icons/fa";
+import { MdOutlineCreateNewFolder, MdEditNote, MdSortByAlpha, MdLibraryAdd, MdPlayCircleOutline } from "react-icons/md";
 
 import {
   resourceSearchSortableProperties,
-  type ResourceSearchSortableProperty,
+  ResourceSearchSortableProperty,
 } from "@/sdk/constants";
 import { Button, ButtonGroup, Select, Tooltip } from "@/components/bakaui";
+
+const sortPropertyIcons: Record<ResourceSearchSortableProperty, React.ReactNode> = {
+  [ResourceSearchSortableProperty.FileCreateDt]: <MdOutlineCreateNewFolder className="text-base" />,
+  [ResourceSearchSortableProperty.FileModifyDt]: <MdEditNote className="text-base" />,
+  [ResourceSearchSortableProperty.Filename]: <MdSortByAlpha className="text-base" />,
+  [ResourceSearchSortableProperty.AddDt]: <MdLibraryAdd className="text-base" />,
+  [ResourceSearchSortableProperty.PlayedAt]: <MdPlayCircleOutline className="text-base" />,
+};
 
 interface IProps extends React.ComponentPropsWithoutRef<any> {
   value?: SearchFormOrderModel[];
@@ -29,8 +38,14 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
   const propertyDataSource = useMemo(
     () =>
       resourceSearchSortableProperties.map((x) => ({
-        label: t<string>(x.label),
+        label: (
+          <div className="flex items-center gap-2">
+            {sortPropertyIcons[x.value]}
+            <span>{t<string>(x.label)}</span>
+          </div>
+        ),
         value: x.value.toString(),
+        textValue: t<string>(x.label),
       })),
     [t],
   );
@@ -53,15 +68,27 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
       style={otherProps?.style}
     >
       <Select
-        aria-label={t<string>("Orders")}
+        aria-label={t<string>("resource.order.label")}
         dataSource={propertyDataSource}
-        placeholder={t<string>("Select orders")}
+        placeholder={t<string>("resource.order.placeholder")}
         selectedKeys={[currentProperty.toString()]}
         selectionMode={"single"}
         size={"sm"}
         style={{
           maxWidth: 320,
           minWidth: 180,
+        }}
+        renderValue={(items) => {
+          const selected = items[0];
+          if (!selected?.data) return null;
+          const data = selected.data as { value: string; textValue: string };
+          const prop = parseInt(data.value, 10) as ResourceSearchSortableProperty;
+          return (
+            <div className="flex items-center gap-2">
+              {sortPropertyIcons[prop]}
+              <span>{data.textValue}</span>
+            </div>
+          );
         }}
         onSelectionChange={(keys) => {
           const first = Array.from((keys as Set<string>) || [])[0];
@@ -84,7 +111,7 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
         })()}
       />
       <ButtonGroup>
-        <Tooltip content={t<string>("Asc")}>
+        <Tooltip content={t<string>("resource.order.asc")}>
           <Button
             isIconOnly
             color={currentAsc ? "primary" : "default"}
@@ -102,7 +129,7 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
             <FaSortAmountUpAlt className={"text-base"} />
           </Button>
         </Tooltip>
-        <Tooltip content={t<string>("Desc")}>
+        <Tooltip content={t<string>("resource.order.desc")}>
           <Button
             isIconOnly
             color={!currentAsc ? "primary" : "default"}

@@ -624,4 +624,19 @@ The version of lux is not limited.</value>
   <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
     <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
   </data>
+  <data name="Dependency_NotInstalled_Message" xml:space="preserve">
+    <value>{0} is not installed. Please install it in the system settings page.</value>
+  </data>
+  <data name="Dependency_Installing_Message" xml:space="preserve">
+    <value>{0} is currently being installed. Please wait for it to complete.</value>
+  </data>
+  <data name="Dependency_Required_Message" xml:space="preserve">
+    <value>{0} is required for {1}. Installing {0} automatically...</value>
+  </data>
+  <data name="Dependency_Component_7z_Name" xml:space="preserve">
+    <value>7-Zip</value>
+  </data>
+  <data name="Dependency_Component_7z_Description" xml:space="preserve">
+    <value>This component is used for archive compression and extraction. It is required by other components such as ffmpeg and lux for their installation.</value>
+  </data>
 </root>

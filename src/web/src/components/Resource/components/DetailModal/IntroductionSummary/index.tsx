@@ -91,13 +91,13 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                   </p>
                   {isTruncated && (
                     <p className="text-xs text-primary mt-1">
-                      {t("Click to view full introduction")}
+                      {t("resource.tip.clickToViewFullIntroduction")}
                     </p>
                   )}
                 </>
               ) : (
                 <p className="text-sm text-default-400 italic">
-                  {t("Click to add introduction")}
+                  {t("resource.tip.clickToAddIntroduction")}
                 </p>
               )}
             </div>
@@ -118,7 +118,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
           <DrawerHeader>
             <div className="flex items-center gap-2">
               <FileTextOutlined />
-              {t("Introduction")}
+              {t("common.label.introduction")}
             </div>
           </DrawerHeader>
           <DrawerBody>
@@ -127,7 +127,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                 <Textarea
                   className="flex-1"
                   minRows={10}
-                  placeholder={t<string>("Enter introduction...")}
+                  placeholder={t<string>("resource.placeholder.enterIntroduction")}
                   value={editValue}
                   onValueChange={setEditValue}
                 />
@@ -139,14 +139,14 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                       setEditValue(introduction || "");
                     }}
                   >
-                    {t("Cancel")}
+                    {t("common.action.cancel")}
                   </Button>
                   <Button
                     color="primary"
                     isLoading={isSaving}
                     onPress={handleSave}
                   >
-                    {t("Save")}
+                    {t("common.action.save")}
                   </Button>
                 </div>
               </div>
@@ -155,7 +155,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                 <div className="flex-1 whitespace-pre-wrap text-default-700">
                   {introduction || (
                     <span className="text-default-400 italic">
-                      {t("No introduction yet")}
+                      {t("resource.state.noIntroductionYet")}
                     </span>
                   )}
                 </div>
@@ -169,7 +169,7 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
                       setIsEditing(true);
                     }}
                   >
-                    {t("Edit")}
+                    {t("common.action.edit")}
                   </Button>
                 </div>
               </div>

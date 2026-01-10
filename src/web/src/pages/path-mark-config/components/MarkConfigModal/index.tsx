@@ -76,9 +76,9 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
     setSyncing(true);
     try {
       await BApi.pathMark.startPathMarkSync([mark.id]);
-      toast.success(t("Sync started"));
+      toast.success(t("pathMarkConfig.success.syncStarted"));
     } catch (e) {
-      toast.danger(t("Failed to start sync"));
+      toast.danger(t("pathMarkConfig.error.syncFailed"));
     } finally {
       setSyncing(false);
     }
@@ -120,12 +120,12 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
               type: markType === PathMarkType.Resource ? <ResourceTerm size="lg" /> :
                     markType === PathMarkType.Property ? <PropertyTerm size="lg" /> :
                     markType === PathMarkType.MediaLibrary ? <MediaLibraryTerm size="lg" /> :
-                    <span>{t("Unknown")}</span>,
+                    <span>{t("pathMarkConfig.status.unknown")}</span>,
             }}
           />
           {pathCount > 1 && (
             <span className="text-default-400 text-sm ml-2">
-              ({t("{{count}} paths", { count: pathCount })})
+              ({t("pathMarkConfig.label.pathCount", { count: pathCount })})
             </span>
           )}
         </span>
@@ -133,7 +133,7 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
-          children: t("Save"),
+          children: t("common.action.save"),
           startContent: <SaveOutlined />,
         },
         startContent: mark?.id ? (
@@ -145,7 +145,7 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
             startContent={<SyncOutlined />}
             onClick={handleSyncNow}
           >
-            {t("Sync Now")}
+            {t("pathMarkConfig.action.syncNow")}
           </Button>
         ) : undefined,
       }}
@@ -200,10 +200,10 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
                   }
                 }}
               />
-              <span className="text-sm font-medium">{t("Enable expiration")}</span>
+              <span className="text-sm font-medium">{t("pathMarkConfig.label.enableExpiration")}</span>
             </div>
             <div className="text-xs text-default-400 ml-10 mb-2">
-              {t("After sync completes, the mark will be re-synced after the specified time. If set too short, it may cause frequent re-syncing and affect performance.")}
+              {t("pathMarkConfig.tip.expirationDescription")}
             </div>
             {enableExpiration && (
               <div className="ml-10">
@@ -226,7 +226,7 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
           >
             <div className="flex items-center gap-1 text-xs text-primary-500 animate-bounce">
               <DownOutlined />
-              <span>{t("Scroll for more")}</span>
+              <span>{t("pathMarkConfig.label.scrollForMore")}</span>
               <DownOutlined />
             </div>
           </div>

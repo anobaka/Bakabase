@@ -1,0 +1,25 @@
+{
+  "alias.info.description": "别名用于在界面中替换属性值的原始文本，例如翻译等。",
+  "alias.input.searchPlaceholder": "按回车搜索",
+  "alias.action.add": "添加别名",
+  "alias.action.import": "导入",
+  "alias.action.export": "导出",
+  "alias.action.merge": "合并",
+  "alias.action.exit": "退出",
+  "alias.action.setAsPreferred": "设为首选",
+
+  "alias.label.bulkOperations": "批量操作",
+  "alias.label.preferred": "首选",
+  "alias.label.candidates": "候选",
+  "alias.label.importing": "正在导入，请稍候...",
+
+  "alias.confirm.mergeTitle": "合并别名组: {{texts}}",
+  "alias.confirm.mergeDescription": "所有选中的别名组将合并为一个，最终首选为 {{preferred}}，确定吗？",
+  "alias.confirm.deleteTitle": "删除别名组: {{texts}}",
+  "alias.confirm.deleteDescription": "所有选中的别名组及其候选项将被删除，此操作不可撤销，确定吗？",
+  "alias.confirm.deleteSingle": "删除别名",
+  "alias.confirm.weAreDeleting": "我们正在删除",
+  "alias.confirm.noWayBack": "此操作不可撤销，确定吗？",
+
+  "alias.tip.preferredText": "{{text}} 将是合并组中的首选文本，您可以通过点击文本来更改首选。"
+}

@@ -101,7 +101,7 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       })
       .catch((err) => {
         console.error("Failed to search children:", err);
-        setError(t<string>("Failed to load children"));
+        setError(t<string>("resource.error.failedToLoadChildren"));
       });
   };
 
@@ -127,8 +127,8 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
       size="7xl"
       title={(
         <div className="flex items-center gap-2">
-          <span>{t<string>("Resource Children")}</span>
-          <Tooltip content={t("View children in new resource tab")}>
+          <span>{t<string>("resource.modal.resourceChildren")}</span>
+          <Tooltip content={t("resource.tip.viewChildrenInNewTab")}>
             <Button
               isIconOnly
               size="sm"
@@ -146,18 +146,18 @@ const ChildrenModal: React.FC<ChildrenModalProps> = ({
         {loading ? (
           <div className="flex justify-center items-center h-32">
             <Spinner size="lg" />
-            <span className="ml-2">{t<string>("Loading children...")}</span>
+            <span className="ml-2">{t<string>("resource.state.loadingChildren")}</span>
           </div>
         ) : error ? (
           <div className="text-center text-red-500 p-4">{error}</div>
         ) : children.length === 0 ? (
           <div className="text-center text-gray-500 p-4">
-            {t<string>("No children found")}
+            {t<string>("resource.empty.noChildrenFound")}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             <div>
-              {t<string>("Found {{count}} children", {
+              {t<string>("resource.label.foundChildrenCount", {
                 count: response?.totalCount ?? children.length,
               })}
             </div>

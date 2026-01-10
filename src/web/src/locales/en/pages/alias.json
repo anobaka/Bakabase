@@ -1,0 +1,25 @@
+{
+  "alias.info.description": "Alias is used to replace the original text of property values in UI, such as translations, etc.",
+  "alias.input.searchPlaceholder": "Press enter to search",
+  "alias.action.add": "Add an alias",
+  "alias.action.import": "Import",
+  "alias.action.export": "Export",
+  "alias.action.merge": "Merge",
+  "alias.action.exit": "Exit",
+  "alias.action.setAsPreferred": "Set as preferred",
+
+  "alias.label.bulkOperations": "Bulk operations",
+  "alias.label.preferred": "Preferred",
+  "alias.label.candidates": "Candidates",
+  "alias.label.importing": "Importing, please wait...",
+
+  "alias.confirm.mergeTitle": "Merging alias groups: {{texts}}",
+  "alias.confirm.mergeDescription": "All selected alias groups will be merged into one, and the final preferred is {{preferred}}, are you sure?",
+  "alias.confirm.deleteTitle": "Deleting alias groups: {{texts}}",
+  "alias.confirm.deleteDescription": "All selected alias groups and its candidates will be delete and there is no way back, are you sure?",
+  "alias.confirm.deleteSingle": "Deleting an alias",
+  "alias.confirm.weAreDeleting": "We are deleting",
+  "alias.confirm.noWayBack": "There is no way back, are you sure?",
+
+  "alias.tip.preferredText": "{{text}} will be the preferred text in merged groups, you can change the preferred text by clicking the text."
+}

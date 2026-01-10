@@ -1,0 +1,25 @@
+{
+  "dashboard.stat.totalResources": "Total Resources",
+  "dashboard.stat.libraryCount": "{{count}} libraries",
+  "dashboard.stat.thisWeek": "This Week",
+  "dashboard.stat.trend": "Trend",
+  "dashboard.stat.weeks": "12 weeks",
+  "dashboard.stat.dataCompleteness": "Data Completeness",
+
+  "dashboard.action.search": "Search",
+  "dashboard.action.browseLibraries": "Browse Libraries",
+  "dashboard.action.bulkOperations": "Bulk Operations",
+  "dashboard.action.randomPick": "Random Pick",
+  "dashboard.action.viewAll": "View all",
+  "dashboard.action.addResources": "Add your resources",
+
+  "dashboard.tab.recentlyAdded": "Recently Added",
+  "dashboard.tab.recentlyPlayed": "Recently Played",
+  "dashboard.tab.pinned": "Pinned",
+
+  "dashboard.empty.noResources": "No resources yet",
+  "dashboard.empty.noPlayHistory": "No play history",
+  "dashboard.empty.noPinned": "No pinned resources",
+
+  "dashboard.section.libraryDistribution": "Library Distribution"
+}

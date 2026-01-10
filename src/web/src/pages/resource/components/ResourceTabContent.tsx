@@ -6,16 +6,19 @@ import type { SearchForm } from "@/pages/resource/models";
 import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { usePrevious, useUpdate } from "react-use";
-import { DisconnectOutlined } from "@ant-design/icons";
+import { SearchOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { MdVideoLibrary } from "react-icons/md";
+import { AiOutlineControl } from "react-icons/ai";
 
 import Resources from "./Resources";
 import FilterPanel from "./FilterPanel";
 
 import BApi from "@/sdk/BApi";
+import ResizablePanelDivider from "@/components/ResizablePanelDivider";
 import ResourceCard from "@/components/Resource";
 import { useResourceOptionsStore, useUiOptionsStore } from "@/stores/options";
 import BusinessConstants from "@/components/BusinessConstants";
-import { Button, Card, CardBody, Chip, Link, Pagination, Spinner } from "@/components/bakaui";
+import { Button, Card, CardBody, Link, Pagination, Spinner } from "@/components/bakaui";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
@@ -266,6 +269,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     ) => {
       console.trace();
 
+      // Prevent concurrent searches
+      if (searchingRef.current) {
+        log("Search already in progress, skipping");
+        return;
+      }
+
+      searchingRef.current = true;
+
       const baseForm = replaceSearchCriteria ? {} : searchFormRef.current;
 
       const newForm = {
@@ -287,11 +298,16 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       // Use the progressive search hook for two-phase loading
       // Pageable will be automatically updated via the searchResponse effect
-      return await progressiveSearch(newForm, {
-        saveSearch: save,
-        searchId: props.searchId,
-        mode: renderMode,
-      });
+      try {
+        return await progressiveSearch(newForm, {
+          saveSearch: save,
+          searchId: props.searchId,
+          mode: renderMode,
+        });
+      } finally {
+        // Always reset searching flag after search completes
+        searchingRef.current = false;
+      }
     },
     [progressiveSearch, props.searchId],
   );
@@ -394,14 +410,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     return null;
   }
 
-  return (
-    <div
-      ref={(r) => {
-        containerRef.current = r;
-        pageContainerRef.current = r?.parentElement;
-      }}
-      className="flex flex-col h-full max-h-full relative"
-    >
+  const leftPanelContent = (
+    <div className="h-full pr-2">
       <FilterPanel
         rearrangeResources={rearrangeResources}
         reloadResources={reloadResources}
@@ -413,32 +423,37 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         onSearch={onSearch}
         onSelectAllChange={onSelectAllChange}
       />
-      {columnCount > 0 && resources.length > 0 && (
-        <>
-          {pageable && (
-            <div className={"flex items-center justify-end py-2"}>
-              <Pagination
-                showControls
-                boundaries={3}
-                page={pageable.page}
-                size={"sm"}
-                total={
-                  pageable.pageSize == undefined
-                    ? 0
-                    : Math.ceil(pageable.totalCount / pageable.pageSize)
-                }
-                onChange={(p) => {
-                  search(
-                    {
-                      page: p,
-                    },
-                    "replace",
-                  );
-                }}
-              />
-            </div>
-          )}
-          <Resources
+    </div>
+  );
+
+  const rightPanelContent = (
+    <div className="flex flex-col h-full overflow-hidden">
+        {columnCount > 0 && resources.length > 0 && (
+          <>
+            {pageable && (
+              <div className={"flex items-center justify-end py-2"}>
+                <Pagination
+                  showControls
+                  boundaries={3}
+                  page={pageable.page}
+                  size={"sm"}
+                  total={
+                    pageable.pageSize == undefined
+                      ? 0
+                      : Math.ceil(pageable.totalCount / pageable.pageSize)
+                  }
+                  onChange={(p) => {
+                    search(
+                      {
+                        page: p,
+                      },
+                      "replace",
+                    );
+                  }}
+                />
+              </div>
+            )}
+            <Resources
             ref={(r) => {
               resourcesComponentRef.current = r;
             }}
@@ -450,7 +465,6 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 return;
               }
               if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
-                searchingRef.current = true;
                 const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
 
                 if (
@@ -527,46 +541,98 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         {searching ? (
           <Card>
             <CardBody className={"w-[120px]"}>
-              <Spinner label={t<string>("Searching...")} />
+              <Spinner label={t<string>("resource.search.searching")} />
             </CardBody>
           </Card>
         ) : (
           resources.length == 0 && (
-            <div className={"flex flex-col gap-2"}>
-              <div className={"mb-2 flex items-center gap-1"}>
-                <DisconnectOutlined className={"text-base"} />
-                <Chip variant={"light"}>
-                  {t<string>("Resource Not Found. You can try the following solutions:")}
-                </Chip>
-              </div>
-              <div className={"flex flex-col gap-2"}>
-                <div className={"flex items-center gap-1"}>
-                  {t<string>("1. Please check if the search criteria is correct.")}
-                  <Button
-                    color={"primary"}
-                    radius={"sm"}
-                    size={"sm"}
-                    variant={"light"}
-                    onClick={() => {
-                      search({ page: 1 }, "replace", true);
-                    }}
-                  >
-                    {t<string>("Reset search criteria")}
-                  </Button>
+            <Card className="w-[520px]">
+              <CardBody className="gap-5 p-6">
+                <div className="flex items-center gap-3">
+                  <FolderOpenOutlined className="text-2xl text-default-400" />
+                  <span className="text-lg font-medium">{t("resource.empty.title")}</span>
                 </div>
-                <div className={"flex items-center gap-1"}>
-                  {t<string>(
-                    "2. Please ensure that media libraries are created, bound to a template, and fully synchronized.",
-                  )}
-                  <Link isBlock href={"#/media-library"} size={"sm"} underline={"none"}>
-                    {t<string>("Go to media library page")}
-                  </Link>
+                <div className="flex flex-col gap-4">
+                  <div className="p-4 rounded-xl bg-default-100 hover:bg-default-200 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <SearchOutlined className="text-xl text-primary" />
+                      <span className="font-medium">{t("resource.empty.checkCriteria")}</span>
+                    </div>
+                    <p className="text-sm text-default-500 mb-3 ml-8">
+                      {t("resource.empty.checkCriteriaDesc")}
+                    </p>
+                    <div className="ml-8">
+                      <Button
+                        color="primary"
+                        radius="sm"
+                        size="sm"
+                        variant="flat"
+                        onClick={() => {
+                          search({ page: 1 }, "replace", true);
+                        }}
+                      >
+                        {t("resource.empty.resetCriteria")}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-default-100 hover:bg-default-200 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <MdVideoLibrary className="text-xl text-primary" />
+                      <span className="font-medium">{t("resource.empty.addToLibrary")}</span>
+                    </div>
+                    <p className="text-sm text-default-500 mb-3 ml-8">
+                      {t("resource.empty.addToLibraryDesc")}
+                    </p>
+                    <div className="ml-8">
+                      <Link href="#/media-library" underline="none">
+                        <Button color="primary" radius="sm" size="sm" variant="flat">
+                          {t("resource.empty.goToLibrary")}
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-default-100 hover:bg-default-200 transition-colors">
+                    <div className="flex items-center gap-3 mb-2">
+                      <AiOutlineControl className="text-xl text-primary" />
+                      <span className="font-medium">{t("resource.empty.configurePathMark")}</span>
+                    </div>
+                    <p className="text-sm text-default-500 mb-3 ml-8">
+                      {t("resource.empty.configurePathMarkDesc")}
+                    </p>
+                    <div className="ml-8">
+                      <Link href="#/path-mark-config" underline="none">
+                        <Button color="primary" radius="sm" size="sm" variant="flat">
+                          {t("resource.empty.goToPathMarkConfig")}
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </CardBody>
+            </Card>
           )
         )}
       </div>
+    </div>
+  );
+
+  return (
+    <div
+      ref={(r) => {
+        containerRef.current = r;
+        pageContainerRef.current = r?.parentElement;
+      }}
+      className="h-full max-h-full relative"
+    >
+      <ResizablePanelDivider
+        defaultWidth={320}
+        minWidth={250}
+        maxWidth={500}
+        storageKey="resource-filter-panel-width"
+        className="h-full"
+        leftPanel={leftPanelContent}
+        rightPanel={rightPanelContent}
+      />
     </div>
   );
 });

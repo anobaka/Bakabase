@@ -61,6 +61,7 @@ const PropertyMatcher = ({
             variant={"light"}
             onPress={() => {
               createPortal(PropertySelector, {
+                v2: true,
                 pool: PropertyPool.Custom | PropertyPool.Reserved,
                 multiple: false,
                 onSubmit: async (selection) => {
@@ -157,6 +158,7 @@ const PropertyMatcher = ({
                           onPress={() => {
                             modal.destroy();
                             createPortal(PropertySelector, {
+                              v2: true,
                               pool: PropertyPool.Custom | PropertyPool.Reserved,
                               multiple: false,
                               onSubmit: async (selection) => {

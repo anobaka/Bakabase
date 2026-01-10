@@ -71,7 +71,7 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
       size="3xl"
       title={
         <div className="flex items-center gap-2">
-          {t("Test Search Criteria")}
+          {t("resourceProfile.modal.testSearchCriteriaTitle")}
           <Chip size="sm" variant="flat" color="primary">
             {profile.name}
           </Chip>
@@ -85,12 +85,12 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
           <div className="text-sm">
             {matchCount !== null && (
               <span>
-                {t("Total matching resources")}: <strong>{matchCount}</strong>
+                {t("resourceProfile.label.totalMatchingResources")}: <strong>{matchCount}</strong>
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm text-default-500">{t("Show limit")}:</span>
+            <span className="text-sm text-default-500">{t("resourceProfile.label.showLimit")}:</span>
             <Button
               size="sm"
               variant={limit === 50 ? "solid" : "flat"}
@@ -117,7 +117,7 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
 
         <Input
           size="sm"
-          placeholder={t("Filter results...")}
+          placeholder={t("resourceProfile.input.filterResults")}
           value={keyword}
           onValueChange={setKeyword}
           className="max-w-sm"
@@ -126,11 +126,11 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <LoadingOutlined className="text-2xl mr-2" />
-            <span>{t("Testing criteria...")}</span>
+            <span>{t("resourceProfile.status.testingCriteria")}</span>
           </div>
         ) : filteredResources.length === 0 ? (
           <div className="text-center text-default-400 py-8">
-            {keyword ? t("No resources match your filter") : t("No resources matched by this criteria")}
+            {keyword ? t("resourceProfile.empty.noResourcesMatchFilter") : t("resourceProfile.empty.noResourcesMatchedByCriteria")}
           </div>
         ) : (
           <div className="max-h-[400px] overflow-y-auto border-divider border rounded-lg">
@@ -142,7 +142,7 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
                 <FileOutlined className="text-default-400" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" title={resource.name}>
-                    {resource.displayName || t("Unnamed")}
+                    {resource.displayName || t("resourceProfile.label.unnamed")}
                   </div>
                   <div className="text-xs text-default-400 font-mono truncate" title={resource.path}>
                     {resource.path}
@@ -158,7 +158,7 @@ const ResourceProfileTestModal = ({ profile, onDestroyed }: Props) => {
 
         {!loading && matchCount !== null && matchCount > limit && (
           <div className="text-center text-sm text-default-400">
-            {t("Showing {{shown}} of {{total}} matching resources", {
+            {t("resourceProfile.status.showingOfTotal", {
               shown: Math.min(limit, matchCount),
               total: matchCount,
             })}

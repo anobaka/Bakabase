@@ -1,0 +1,25 @@
+{
+  "dashboard.stat.totalResources": "资源总数",
+  "dashboard.stat.libraryCount": "{{count}} 个媒体库",
+  "dashboard.stat.thisWeek": "本周",
+  "dashboard.stat.trend": "趋势",
+  "dashboard.stat.weeks": "12 周",
+  "dashboard.stat.dataCompleteness": "数据完整度",
+
+  "dashboard.action.search": "搜索",
+  "dashboard.action.browseLibraries": "浏览媒体库",
+  "dashboard.action.bulkOperations": "批量操作",
+  "dashboard.action.randomPick": "随机播放",
+  "dashboard.action.viewAll": "查看全部",
+  "dashboard.action.addResources": "添加资源",
+
+  "dashboard.tab.recentlyAdded": "最近添加",
+  "dashboard.tab.recentlyPlayed": "最近播放",
+  "dashboard.tab.pinned": "已固定",
+
+  "dashboard.empty.noResources": "暂无资源",
+  "dashboard.empty.noPlayHistory": "暂无播放记录",
+  "dashboard.empty.noPinned": "暂无固定资源",
+
+  "dashboard.section.libraryDistribution": "媒体库分布"
+}

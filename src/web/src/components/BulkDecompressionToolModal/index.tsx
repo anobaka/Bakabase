@@ -266,17 +266,17 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
           title: (
             <div className="flex items-center gap-2 text-warning">
               <AiOutlineWarning className="text-2xl" />
-              {t("Warning")}
+              {t("common.label.warning")}
             </div>
           ),
           footer: {
             actions: ['ok', 'cancel'],
             okProps: {
-              children: t("Continue anyway"),
+              children: t("common.confirm.continueAnyway"),
               color: "danger",
             },
             cancelProps: {
-              children: t("Cancel"),
+              children: t("common.action.cancel"),
               color: "default",
               variant: "light",
             }
@@ -291,23 +291,23 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
             <div className="flex flex-col gap-3">
               <p className="text-base">
                 {t(
-                  "You have set 'Move to parent directory' without 'Extract to new directory' for {{count}} item(s). This is a dangerous combination that may cause unexpected behavior:",
+                  "bulkDecompression.warning.dangerousOperation",
                   { count: dangerousItems.length }
                 )}
               </p>
               <ul className="list-disc list-inside space-y-1 text-sm text-danger">
-                <li>{t("All file system entries in the same directory will be moved to parent folder")}</li>
-                <li>{t("Pending compressed files may be moved before decompression, causing failures")}</li>
-                <li>{t("The final file structure may be completely messed up")}</li>
+                <li>{t("bulkDecompression.warning.allEntriesWillBeMoved")}</li>
+                <li>{t("bulkDecompression.warning.pendingFilesMayBeMoved")}</li>
+                <li>{t("bulkDecompression.warning.fileStructureMayBeMessed")}</li>
               </ul>
               <div className="bg-primary-50 dark:bg-primary-900/20 border-l-4 border-primary p-3 rounded">
                 <p className="text-sm text-foreground-600">
-                  <span className="font-semibold">{t("Tip:")}</span>{" "}
-                  {t("However, for some cases we recommend users to make this choice. Please make sure you clearly understand what will happen.")}
+                  <span className="font-semibold">{t("common.label.tip")}:</span>{" "}
+                  {t("bulkDecompression.tip.recommendation")}
                 </p>
               </div>
               <p className="text-base font-semibold">
-                {t("Are you sure you want to continue?")}
+                {t("common.confirm.continue")}
               </p>
             </div>
           )
@@ -429,7 +429,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
         }
       }
 
-      toast.success(t("Decompression task completed"));
+      toast.success(t("bulkDecompression.success.decompressionCompleted"));
     } catch (e) {
       if (e instanceof Error && e.name !== "AbortError") {
         toast.danger(e.message);
@@ -575,16 +575,16 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
         <div className="flex items-center gap-0">
           {showTooltip ? (
             <>
-              <Tooltip className="max-w-[320px]" color="primary" content={t("Extract to new directory(we will use file name without extension as the new directory name)")}>
+              <Tooltip className="max-w-[320px]" color="primary" content={t("bulkDecompression.tip.extractToNewDirectory")}>
                 {decompressToNewFolderBtn}
               </Tooltip>
-              <Tooltip className="max-w-[320px]" color="danger" content={t("Delete the source file after decompression")}>
+              <Tooltip className="max-w-[320px]" color="danger" content={t("bulkDecompression.tip.deleteSourceAfterDecompression")}>
                 {deleteAfterDecompressionBtn}
               </Tooltip>
-              <Tooltip className="max-w-[320px]" color="success" content={t("Move all files and folders located in the extraction target directory to the parent directory of the compressed file. Note that any files or folders not contained in the compressed file, but present in the directory where the compressed file is being extracted, will also be moved to the parent directory.")}>
+              <Tooltip className="max-w-[320px]" color="success" content={t("bulkDecompression.tip.moveToParentDirectory")}>
                 {moveToParentBtn}
               </Tooltip>
-              <Tooltip className="max-w-[320px]" color="warning" content={t("Overwrite existing files")}>
+              <Tooltip className="max-w-[320px]" color="warning" content={t("bulkDecompression.tip.overwriteExistingFiles")}>
                 {overwriteExistFilesBtn}
               </Tooltip>
             </>
@@ -615,14 +615,14 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
       size={"xl"}
       title={(
         <div className="flex items-center gap-1">
-          {t<string>("Compressed files handling")}
+          {t<string>("bulkDecompression.modal.title")}
           <BetaChip />
         </div>
       )}
       visible={visible}
       onClose={() => {
         if (detecting || abortDecompressingRef.current) {
-          if (!confirm(t<string>("A task is running. Close and cancel it?"))) return;
+          if (!confirm(t<string>("bulkDecompression.confirm.closeWhileRunning"))) return;
           stopDetecting();
           abortDecompressingRef.current?.abort();
           abortDecompressingRef.current = null;
@@ -652,14 +652,14 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                 }
               }}
             >
-              {t<string>("Include unknown extensions")}
+              {t<string>("bulkDecompression.label.includeUnknownExtensions")}
             </Checkbox>
             <NumberInput
               isClearable
               className={"w-[400px]"}
               isDisabled={!includeUnknownFiles}
-              label={t<string>("Unknown extensions min size (MB)")}
-              placeholder={t<string>("Optional")}
+              label={t<string>("bulkDecompression.label.unknownExtensionsMinSize")}
+              placeholder={t<string>("bulkDecompression.placeholder.optional")}
               size="sm"
               value={unknownFilesMinMb}
               onValueChange={(v) => {
@@ -684,12 +684,12 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   startDetecting();
                 }}
               >
-                {t("Detect compressed files")}
+                {t("bulkDecompression.action.detectCompressedFiles")}
               </Button>
             ) : (
               <Button color="danger" variant="light" onPress={stopDetecting}>
                 <LoadingOutlined className="text-lg" />
-                {t("Stop")}
+                {t("common.action.stop")}
               </Button>
             )}
           </div>
@@ -706,7 +706,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                 height={height}
                 noRowsRenderer={() => (
                   <div className="flex items-center justify-center h-full text-gray-500">
-                    {t<string>("No compressed files detected")}
+                    {t<string>("bulkDecompression.empty.noCompressedFilesDetected")}
                   </div>
                 )}
                 rowClassName={({ index }) =>
@@ -728,7 +728,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   dataKey="index"
                   headerClassName="flex items-center justify-center"
                   label={
-                    <div className="h-8 flex items-center justify-center">{t<string>("#")}</div>
+                    <div className="h-8 flex items-center justify-center">{t<string>("bulkDecompression.label.index")}</div>
                   }
                   width={60}
                 />
@@ -829,7 +829,8 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                                                 />
                                                 {restFileCount > 0
                                                   ? t<string>(
-                                                    "{{sampleFilesText}} and {{restFileCount}} more",
+                                                    "bulkDecompression.label.sampleFilesAndMore",
+                                                    { sampleFilesText, restFileCount }
                                                   )
                                                   : sampleFilesText}
                                               </div>
@@ -849,7 +850,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   dataKey="files"
                   flexGrow={1}
                   headerClassName="flex items-center justify-start"
-                  label={<div className="h-8 flex items-center">{t<string>("Files")}</div>}
+                  label={<div className="h-8 flex items-center">{t<string>("bulkDecompression.label.files")}</div>}
                   width={width * 0.4}
                 />
                 <Column
@@ -874,7 +875,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   )}
                   dataKey="password"
                   headerClassName="flex items-center justify-start"
-                  label={<div className="h-8 flex items-center">{t<string>("Password")}</div>}
+                  label={<div className="h-8 flex items-center">{t<string>("bulkDecompression.label.password")}</div>}
                   width={150}
                 />
                 <Column
@@ -890,7 +891,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                             createPortal(Modal, {
                               defaultVisible: true,
                               size: "xl",
-                              title: t("Message"),
+                              title: t("common.label.message"),
                               children: <pre className="whitespace-pre-wrap">{result.detectionMessage}</pre>,
                             });
                           }}
@@ -904,7 +905,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   headerClassName="flex items-center justify-center"
                   label={
                     <div className="h-8 flex items-center justify-center">
-                      {t<string>("Detection")}
+                      {t<string>("bulkDecompression.label.detection")}
                     </div>
                   }
                   width={120}
@@ -922,7 +923,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                             createPortal(Modal, {
                               defaultVisible: true,
                               size: "xl",
-                              title: t("Message"),
+                              title: t("common.label.message"),
                               children: <pre className="whitespace-pre-wrap">{result.decompressionMessage}</pre>,
                             });
                           }}
@@ -936,7 +937,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
                   headerClassName="flex items-center justify-center"
                   label={
                     <div className="h-8 flex items-center justify-center">
-                      {t<string>("Decompression")}
+                      {t<string>("bulkDecompression.label.decompression")}
                     </div>
                   }
                   width={120}
@@ -1060,7 +1061,7 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
               type="checkbox"
               onChange={(e) => setOnFailureContinue(e.currentTarget.checked)}
             >
-              {t<string>("Continue on failure")}
+              {t<string>("bulkDecompression.label.continueOnFailure")}
             </Checkbox>
           </div>
           <div>
@@ -1073,10 +1074,10 @@ const DetectCompressedFilesModal = ({ paths = [], onDestroyed }: Props) => {
               }}
             >
               {detecting
-                ? t("Waiting for detection to complete...")
+                ? t("bulkDecompression.status.waitingForDetection")
                 : detectedItems.length == 0
-                  ? t("No compressed files detected")
-                  : t("Decompress all successfully detected")}
+                  ? t("bulkDecompression.empty.noCompressedFilesDetected")
+                  : t("bulkDecompression.action.decompressAllDetected")}
             </Button>
           </div>
         </div>

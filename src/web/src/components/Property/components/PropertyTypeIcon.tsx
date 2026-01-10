@@ -25,6 +25,7 @@ import { AiOutlineQuestionCircle } from "react-icons/ai";
 
 import { Tooltip } from "@/components/bakaui";
 import { PropertyType } from "@/sdk/constants";
+import { getEnumKey } from "@/i18n";
 
 type Props = {
   type?: PropertyType;
@@ -56,7 +57,7 @@ const PropertyTypeIcon = ({
 }: Props) => {
   const { t } = useTranslation();
   const Icon = type ? PropertyTypeIconMap[type] : AiOutlineQuestionCircle;
-  const typeName = type ? t<string>(PropertyType[type]) : t<string>("Unknown");
+  const typeName = type ? t<string>(getEnumKey('PropertyType', PropertyType[type])) : t<string>("common.state.unknown");
 
   switch (textVariant!) {
     case "none":

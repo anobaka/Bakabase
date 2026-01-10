@@ -80,13 +80,13 @@ const RequestStatistics = () => {
             footer: {
               actions: ["ok"],
             },
-            title: t<string>("Requests overview"),
+            title: t<string>("downloader.label.requestsOverview"),
           });
         }}
       >
         <div className="flex items-center gap-1">
           <AiOutlineBarChart className={"text-base"} />
-          {t<string>("Requests overview")}
+          {t<string>("downloader.label.requestsOverview")}
           {requestStatistics?.map((rs) => {
             let successCount = 0;
             let failureCount = 0;
@@ -107,7 +107,7 @@ const RequestStatistics = () => {
             return (
               <div className="flex items-center">
                 <ThirdPartyIcon size={"sm"} thirdPartyId={rs.id} />
-                <BakauiTooltip content={t<string>("Success")}>
+                <BakauiTooltip content={t<string>("downloader.label.success")}>
                   <Chip
                     className={"p-0"}
                     color={"success"}
@@ -118,7 +118,7 @@ const RequestStatistics = () => {
                   </Chip>
                 </BakauiTooltip>
                 /
-                <BakauiTooltip content={t<string>("Failure")}>
+                <BakauiTooltip content={t<string>("downloader.label.failure")}>
                   <Chip
                     className={"p-0"}
                     color={"danger"}
@@ -182,7 +182,7 @@ const BizChartsChart = ({
   if (!Array.isArray(data) || data.length === 0) {
     return (
       <div className="flex justify-center py-4 text-gray-500">
-        {t("No data")}
+        {t("common.state.noData")}
       </div>
     );
   }

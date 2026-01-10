@@ -212,7 +212,7 @@ const PropertySelector = (props: IProps) => {
     if (filters.length > 0) {
       return (
         <div className="flex gap-1 items-center flex-wrap">
-          <span className="text-default-500 text-sm">{t<string>("Filtering")}</span>
+          <span className="text-default-500 text-sm">{t<string>("common.state.filtering")}</span>
           {filters}
         </div>
       );
@@ -289,7 +289,7 @@ const PropertySelector = (props: IProps) => {
     if (totalCount === 0) {
       return (
         <div className="flex flex-col items-center justify-center gap-2 py-8">
-          <span className="text-default-400">{t<string>("No properties available")}</span>
+          <span className="text-default-400">{t<string>("property.empty.noPropertiesAvailable")}</span>
           {addable && (
             <Button
               color="primary"
@@ -301,7 +301,7 @@ const PropertySelector = (props: IProps) => {
                 });
               }}
             >
-              {t<string>("Add a property")}
+              {t<string>("property.action.addProperty")}
             </Button>
           )}
         </div>
@@ -312,11 +312,11 @@ const PropertySelector = (props: IProps) => {
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
         {/* Internal Properties */}
         {(pool & PropertyPool.Internal) !== 0 && internalProperties.length > 0 &&
-          renderPropertyGroup(t("Internal Properties"), internalProperties, false)}
+          renderPropertyGroup(t("common.label.internalProperties"), internalProperties, false)}
 
         {/* Reserved Properties */}
         {(pool & PropertyPool.Reserved) !== 0 && reservedProperties.length > 0 &&
-          renderPropertyGroup(t("Reserved Properties"), reservedProperties, false)}
+          renderPropertyGroup(t("common.label.reservedProperties"), reservedProperties, false)}
 
         {/* Custom Properties grouped by type */}
         {(pool & PropertyPool.Custom) !== 0 &&
@@ -337,7 +337,7 @@ const PropertySelector = (props: IProps) => {
       classNames={{ base: "max-w-[70vw]" }}
       footer={multiple && filteredProperties.length > 0 ? true : <Spacer />}
       size="3xl"
-      title={title ?? t<string>(multiple ? "Select properties" : "Select a property")}
+      title={title ?? t<string>(multiple ? "property.modal.selectProperties" : "property.modal.selectProperty")}
       visible={visible}
       onClose={() => {
         setVisible(false);
@@ -365,7 +365,7 @@ const PropertySelector = (props: IProps) => {
         <div className="flex items-center justify-between">
           <Input
             size="sm"
-            placeholder={t<string>("Search properties")}
+            placeholder={t<string>("property.action.searchProperties")}
             startContent={<SearchOutlined className="text-small" />}
             value={keyword}
             onValueChange={setKeyword}
@@ -373,7 +373,7 @@ const PropertySelector = (props: IProps) => {
           />
           <div className="flex items-center gap-4">
             <div className="text-sm text-default-500">
-              {t("Selected")}: {selection.length}
+              {t("common.state.selected")}: {selection.length}
             </div>
             {addable && (
               <Button
@@ -386,7 +386,7 @@ const PropertySelector = (props: IProps) => {
                   });
                 }}
               >
-                {t<string>("Add a property")}
+                {t<string>("property.action.addProperty")}
               </Button>
             )}
           </div>

@@ -23,10 +23,10 @@ export const MediaLibraryDescription = () => {
 
   return (
     <div className="space-y-2">
-      <p>{t("Associate matched resources with a media library")}</p>
-      <p>{t("Resources will be linked to the selected media library for organization")}</p>
+      <p>{t("term.mediaLibrary.description")}</p>
+      <p>{t("term.mediaLibrary.usage")}</p>
       <p className="text-secondary text-xs pt-1 border-t border-default-200">
-        {t("MediaLibrary.Term.Suggestion")}
+        {t("term.mediaLibrary.suggestion")}
       </p>
     </div>
   );
@@ -47,7 +47,7 @@ const MediaLibraryTerm = ({
       className={className}
       color={color}
       description={<MediaLibraryDescription />}
-      label={t("Media Library")}
+      label={t("common.label.mediaLibrary")}
       size={size}
       variant={variant}
     />

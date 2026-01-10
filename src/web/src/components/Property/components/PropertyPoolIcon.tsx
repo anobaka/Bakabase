@@ -7,28 +7,26 @@ import { useTranslation } from "react-i18next";
 import { Chip, Tooltip } from "@/components/bakaui";
 import { PropertyPool } from "@/sdk/constants";
 
+export const getPropertyPoolColor = (pool?: PropertyPool): ChipProps["color"] => {
+  switch (pool) {
+    case PropertyPool.Internal:
+      return "default";
+    case PropertyPool.Reserved:
+      return "secondary";
+    case PropertyPool.Custom:
+      return "primary";
+    default:
+      return "warning";
+  }
+};
+
 type Props = {
   pool?: PropertyPool;
 };
 const PropertyPoolIcon = ({ pool }: Props) => {
   const { t } = useTranslation();
 
-  let color: ChipProps["color"] = "default";
-
-  switch (pool) {
-    case PropertyPool.Internal:
-      color = "default";
-      break;
-    case PropertyPool.Reserved:
-      color = "secondary";
-      break;
-    case PropertyPool.Custom:
-      color = "primary";
-      break;
-    default:
-      color = "warning";
-      break;
-  }
+  const color = getPropertyPoolColor(pool);
 
   const poolName = pool
     ? t<string>(`PropertyPool.${PropertyPool[pool]}`)

@@ -65,7 +65,7 @@ const TransferMarksModal = ({
   // Handle clicking "Transfer here" button
   const handleSelectDestination = useCallback((entry: Entry) => {
     if (entry.path === fromPath) {
-      toast.warning(t("Cannot transfer to the same path"));
+      toast.warning(t("pathMarks.warning.cannotTransferToSamePath"));
       return;
     }
     setSelectedDestination(entry.path);
@@ -115,12 +115,12 @@ const TransferMarksModal = ({
           }
 
           const totalCount = marks.length + (includeChildPaths ? invalidChildPaths.reduce((sum, c) => sum + c.marks.length, 0) : 0);
-          toast.success(t("Transferred {{count}} mark(s) successfully", { count: totalCount }));
+          toast.success(t("pathMarks.status.transferredSuccessfully", { count: totalCount }));
           onTransferComplete?.();
           onDestroyed?.();
         } catch (error) {
           console.error("Failed to transfer marks", error);
-          toast.danger(t("Failed to transfer marks"));
+          toast.danger(t("pathMarks.error.failedToTransfer"));
         } finally {
           setTransferring(false);
         }
@@ -137,7 +137,7 @@ const TransferMarksModal = ({
       return (
         <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {!isSamePath && (
-            <Tooltip content={t("Transfer marks to this path")}>
+            <Tooltip content={t("pathMarks.tip.transferMarksToThisPath")}>
               <Button
                 className={`min-w-0 px-2 h-6 ${isSelected ? "bg-primary text-white" : ""}`}
                 color={isSelected ? "primary" : "default"}
@@ -146,7 +146,7 @@ const TransferMarksModal = ({
                 variant={isSelected ? "solid" : "flat"}
                 onPress={() => handleSelectDestination(entry)}
               >
-                {isSelected ? t("Selected") : t("Transfer here")}
+                {isSelected ? t("common.label.selected") : t("pathMarks.action.transferHere")}
               </Button>
             </Tooltip>
           )}
@@ -167,11 +167,11 @@ const TransferMarksModal = ({
         actions: ["cancel", "ok"],
         okProps: {
           isDisabled: !canTransfer || transferring,
-          children: transferring ? <Spinner size="sm" /> : t("Transfer"),
+          children: transferring ? <Spinner size="sm" /> : t("pathMarks.action.transfer"),
           color: "primary",
         },
       }}
-      title={t("Transfer Marks")}
+      title={t("pathMarks.modal.transferMarksTitle")}
       onDestroyed={onDestroyed}
       onOk={handleConfirm}
     >
@@ -182,7 +182,7 @@ const TransferMarksModal = ({
             <AiOutlineWarning className="text-warning text-xl flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="font-medium">
-                {t("Transferring marks from:")}
+                {t("pathMarks.info.transferringFrom")}
               </p>
               <code className="text-sm text-danger line-through">{fromPath}</code>
               <div className="flex flex-wrap gap-1 mt-2">
@@ -192,7 +192,7 @@ const TransferMarksModal = ({
               </div>
               {invalidChildPaths.length > 0 && (
                 <p className="text-sm text-warning-600 mt-2">
-                  {t("+ {{count}} child path(s) with marks will also be available for transfer", { count: invalidChildPaths.length })}
+                  {t("pathMarks.checkbox.childPathsAvailableForTransfer", { count: invalidChildPaths.length })}
                 </p>
               )}
             </div>
@@ -201,13 +201,13 @@ const TransferMarksModal = ({
           {/* Selected destination preview */}
           {selectedDestination && (
             <div className="mt-3 pt-3 border-t border-default-200">
-              <p className="text-sm font-medium">{t("Transfer to:")}</p>
+              <p className="text-sm font-medium">{t("pathMarks.info.transferTo")}</p>
               <code className="text-sm text-success">{selectedDestination}</code>
             </div>
           )}
 
           <p className="text-sm text-default-500 mt-3">
-            {t("Browse and click \"Transfer here\" to select destination path")}
+            {t("pathMarks.tip.browseAndClickTransfer")}
           </p>
         </div>
 
@@ -268,11 +268,11 @@ const TransferConfirmationModal = ({
       footer={{
         actions: ["cancel", "ok"],
         okProps: {
-          children: t("Confirm Transfer"),
+          children: t("pathMarks.action.confirmTransfer"),
           color: "primary",
         },
       }}
-      title={t("Confirm Transfer")}
+      title={t("pathMarks.modal.confirmTransferTitle")}
       onDestroyed={onDestroyed}
       onOk={handleConfirm}
     >
@@ -281,14 +281,14 @@ const TransferConfirmationModal = ({
         <div className="flex items-start gap-3 p-3 bg-primary-50 border border-primary-200 rounded-lg">
           <div className="flex-1">
             <p className="text-primary-700 font-medium">
-              {t("You are about to transfer {{count}} mark(s)", { count: totalMarksCount })}
+              {t("pathMarks.status.aboutToTransferMarks", { count: totalMarksCount })}
             </p>
           </div>
         </div>
 
         {/* Main path transfer */}
         <div className="border border-default-200 rounded-lg p-3">
-          <div className="font-medium text-sm mb-2">{t("Main Path")}</div>
+          <div className="font-medium text-sm mb-2">{t("pathMarks.label.mainPath")}</div>
           <div className="flex items-start gap-2 text-sm">
             <div className="flex-1 min-w-0">
               <div className="text-danger line-through font-mono text-xs break-all">{fromPath}</div>
@@ -314,7 +314,7 @@ const TransferConfirmationModal = ({
                 onValueChange={setIncludeChildPaths}
               >
                 <span className="text-sm font-medium">
-                  {t("Include {{count}} child path(s) with marks", { count: childPathMappings.length })}
+                  {t("pathMarks.checkbox.includeChildPaths", { count: childPathMappings.length })}
                 </span>
               </Checkbox>
             </div>

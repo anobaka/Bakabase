@@ -75,7 +75,7 @@ const components = {
   Properties: <PropertiesPage />,
   BulkModification: <ProcessValueEditor valueType={StandardValueType.Boolean} />,
   ResourceTransfer: <ResourceTransferPage />,
-  Filter: <ResourceFilterPage />,
+  ResourceFilter: <ResourceFilterPage />,
   VirtualList: <VirtualListPage />,
   CategoryEnhancerOptions: <CategoryEnhancerOptionsDialogTest />,
   Psc: <PscPage />,

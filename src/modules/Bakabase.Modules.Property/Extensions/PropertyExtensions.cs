@@ -77,7 +77,7 @@ public static class PropertyExtensions
             var pd = PropertySystem.Property.TryGetDescriptor(dbModel.Type);
             if (pd?.OptionsType != null)
             {
-                p.Options = System.Text.Json.JsonSerializer.Deserialize(dbModel.Options, pd.OptionsType);
+                p.Options = JsonConvert.DeserializeObject(dbModel.Options, pd.OptionsType);
             }
         }
 

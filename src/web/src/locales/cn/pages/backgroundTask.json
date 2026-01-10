@@ -1,0 +1,21 @@
+{
+  "backgroundTask.column.name": "名称",
+  "backgroundTask.column.status": "状态",
+  "backgroundTask.column.progress": "进度",
+  "backgroundTask.column.startedAt": "开始时间",
+  "backgroundTask.column.interval": "间隔",
+  "backgroundTask.column.nextTimeStartAt": "下次开始时间",
+  "backgroundTask.column.elapsed": "已用时间",
+  "backgroundTask.column.enableAfter": "启用时间",
+
+  "backgroundTask.label.notSupported": "不支持",
+  "backgroundTask.label.notSet": "未设置",
+  "backgroundTask.label.willStartAt": "将于以下时间开始",
+
+  "backgroundTask.status.notStarted": "未开始",
+  "backgroundTask.status.running": "运行中",
+  "backgroundTask.status.paused": "已暂停",
+  "backgroundTask.status.error": "错误",
+  "backgroundTask.status.completed": "已完成",
+  "backgroundTask.status.cancelled": "已取消"
+}

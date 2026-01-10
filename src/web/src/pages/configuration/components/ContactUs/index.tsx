@@ -52,7 +52,7 @@ const ContactUs = () => {
       <div className="settings">
         <Table isCompact removeWrapper>
           <TableHeader>
-            <TableColumn width={200}>{t<string>("Contact us")}</TableColumn>
+            <TableColumn width={200}>{t<string>("configuration.contact.title")}</TableColumn>
             <TableColumn>&nbsp;</TableColumn>
           </TableHeader>
           <TableBody>

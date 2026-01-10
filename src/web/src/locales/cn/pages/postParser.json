@@ -1,0 +1,23 @@
+{
+  "postParser.action.addTasks": "添加任务",
+  "postParser.input.postLinks": "{{source}} 中的帖子链接",
+  "postParser.tip.otherSitesSupport": "支持其他站点",
+  "postParser.action.configuration": "配置",
+  "postParser.label.automaticallyParsing": "自动解析",
+  "postParser.action.instructions": "使用说明",
+  "postParser.tip.curlVersion": "此功能内部使用 curl。如果您的系统级 curl 版本低于 8.14，请在系统设置中配置正确的 curl 路径。",
+  "postParser.tip.requestInterval": "请求间隔配置暂时不可用。内置默认间隔为 3 秒。",
+  "postParser.label.curl": "curl",
+  "postParser.tip.ollamaRequired": "此功能内部使用 Ollama。您需要先安装并运行 Ollama，并安装至少一个模型。然后在系统设置中配置 Ollama API 地址。",
+  "postParser.tip.ollamaModel": "此功能将优先使用 Ollama 模型列表中最大的模型。",
+  "postParser.tip.ollamaTested": "目前，deepseek-r1:14b 和 32b 已经过测试，可以安全使用。",
+  "postParser.label.ollama": "ollama",
+  "postParser.tip.browserIntegration": "某些站点可以通过浏览器集成快速操作（例如一键创建任务）。您可以查看「第三方集成」部分。",
+  "postParser.label.browserIntegrations": "浏览器集成",
+  "postParser.table.id": "#",
+  "postParser.table.target": "目标",
+  "postParser.table.items": "项目",
+  "postParser.table.parsedAt": "解析时间",
+  "postParser.label.accessCode": "访问码",
+  "postParser.label.decompressionPassword": "解压密码"
+}

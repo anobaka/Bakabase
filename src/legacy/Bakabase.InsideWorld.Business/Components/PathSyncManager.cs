@@ -48,16 +48,27 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
     /// <summary>
     /// Enqueue mark IDs for synchronization.
+    /// If markIds is empty, loads all pending marks from the database.
     /// </summary>
-    public Task EnqueueSync(params int[] markIds)
+    public async Task EnqueueSync(params int[] markIds)
     {
+        if (markIds.Length == 0)
+        {
+            // Load all pending marks from the database
+            await using var scope = _serviceProvider.CreateAsyncScope();
+            var pathMarkService = scope.ServiceProvider.GetRequiredService<IPathMarkService>();
+            var pendingMarks = await pathMarkService.GetPendingMarks();
+            markIds = pendingMarks.Select(m => m.Id).ToArray();
+
+            _logger.LogDebug("No mark IDs specified, loaded {Count} pending mark(s) from database", markIds.Length);
+        }
+
         foreach (var id in markIds)
         {
             _pendingMarkIds.Enqueue(id);
         }
 
         _logger.LogDebug("Enqueued {Count} mark IDs for synchronization", markIds.Length);
-        return Task.CompletedTask;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

@@ -15,6 +15,7 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
 import { useCoverDiscovery } from "@/hooks/useResourceDiscovery";
+import { useCoverLoadQueue } from "@/components/ContextProvider/CoverLoadQueueContext";
 
 type TooltipPlacement =
   | "top"
@@ -54,6 +55,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     coverFit = CoverFit.Contain,
     disableCarousel = false,
   } = props;
+
+  // Use global cover load queue for controlled concurrent loading
+  const coverLoadQueue = useCoverLoadQueue();
 
   const log = buildLogger(`ResourceCover:${resource.id}|${resource.path}`);
 
@@ -138,25 +142,40 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     setBlobUrls(new Map());
     setFailureUrls(new Set());
 
+    // Create abort controllers for all fetch requests
+    const abortControllers = new Map<string, AbortController>();
+
     // Load each image
     urls.forEach((url) => {
+      const controller = new AbortController();
+      abortControllers.set(url, controller);
+
       const loadImage = async () => {
         if (!mountedRef.current) return;
         try {
-          const response = await fetch(url);
-          if (!response.ok) throw new Error("Failed to load");
-          const blob = await response.blob();
+          // Use global queue for controlled concurrent loading
+          const blobUrl = await coverLoadQueue.loadCover(url, controller.signal);
+
           if (!mountedRef.current) return;
-          const blobUrl = URL.createObjectURL(blob);
           setBlobUrls((prev) => new Map(prev).set(url, blobUrl));
-        } catch (e) {
+        } catch (e: any) {
           if (!mountedRef.current) return;
+          // Don't treat aborted requests as failures
+          if (e.name === "AbortError") {
+            log("fetch aborted for url", url);
+            return;
+          }
           setFailureUrls((prev) => new Set(prev).add(url));
           log("failed to load url", url);
         }
       };
       loadImage();
     });
+
+    // Cleanup function to abort all pending requests
+    return () => {
+      abortControllers.forEach((controller) => controller.abort());
+    };
   }, [urls]);
 
   // Reset state when resource changes

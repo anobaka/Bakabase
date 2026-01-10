@@ -213,7 +213,7 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
     <Modal
       defaultVisible
       size={"xl"}
-      title={t<string>("Configurations")}
+      title={t<string>("downloader.modal.configurations")}
       onDestroyed={onDestroyed}
       onOk={handleSubmit}
     >

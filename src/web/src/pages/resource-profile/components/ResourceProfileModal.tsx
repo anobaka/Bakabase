@@ -1,26 +1,27 @@
 "use client";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
-import type { BakabaseAbstractionsModelsDomainResourceProfile } from "@/sdk/Api";
+import type { BakabaseServiceModelsViewResourceProfileViewModel } from "@/sdk/Api";
 
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Modal, Input } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { toSearchInputModel } from "@/components/ResourceFilter";
 
-type ResourceProfile = BakabaseAbstractionsModelsDomainResourceProfile;
+type ResourceProfile = BakabaseServiceModelsViewResourceProfileViewModel;
 
 type Props = {
   profile?: ResourceProfile;
   existingNames?: string[];
   onSaved?: () => void;
+  /** For editing existing profiles - uses parent's update logic to preserve all fields */
+  onUpdate?: (profileId: number, updates: Partial<ResourceProfile>) => Promise<void>;
 } & DestroyableProps;
 
 // Generate default name like "资源档案 1", "资源档案 2", etc.
 const generateDefaultName = (existingNames: string[], t: (key: string) => string): string => {
-  const baseNameKey = "Resource Profile";
+  const baseNameKey = "resourceProfile.label.resourceProfile";
   const baseName = t(baseNameKey);
   let n = 1;
   while (existingNames.includes(`${baseName} ${n}`)) {
@@ -29,7 +30,7 @@ const generateDefaultName = (existingNames: string[], t: (key: string) => string
   return `${baseName} ${n}`;
 };
 
-const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onDestroyed }: Props) => {
+const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onUpdate, onDestroyed }: Props) => {
   const { t } = useTranslation();
   const isEdit = !!profile?.id;
 
@@ -47,21 +48,15 @@ const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onDestroye
 
     setSaving(true);
     try {
-      // Build input model with proper search format
-      const inputModel = {
-        name,
-        priority,
-        // Convert search to input model format (with serialized dbValue)
-        search: profile?.search ? toSearchInputModel(profile.search) : undefined,
-        nameTemplate: profile?.nameTemplate,
-        enhancerOptions: profile?.enhancerOptions,
-        playableFileOptions: profile?.playableFileOptions,
-        playerOptions: profile?.playerOptions,
-      };
-
-      if (isEdit && profile?.id) {
-        await BApi.resourceProfile.updateResourceProfile(profile.id, inputModel as any);
+      if (isEdit && profile?.id && onUpdate) {
+        // Use onUpdate callback which preserves all fields via profilesRef
+        await onUpdate(profile.id, { name, priority });
       } else {
+        // For creating new profile, only need name and priority
+        const inputModel = {
+          name,
+          priority,
+        };
         await BApi.resourceProfile.addResourceProfile(inputModel as any);
       }
       onSaved?.();
@@ -83,23 +78,23 @@ const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onDestroye
         isLoading: saving,
       }}
       size="md"
-      title={isEdit ? t("Edit Resource Profile") : t("Add Resource Profile")}
+      title={isEdit ? t("resourceProfile.modal.editResourceProfileTitle") : t("resourceProfile.modal.addResourceProfileTitle")}
       onDestroyed={onDestroyed}
       onOk={handleSubmit}
     >
       <div className="flex flex-col gap-4">
         <Input
           isRequired
-          errorMessage={!name.trim() ? t("Name is required") : ""}
+          errorMessage={!name.trim() ? t("resourceProfile.error.nameRequired") : ""}
           isInvalid={!name.trim()}
-          label={t("Name")}
-          placeholder={t("Profile name")}
+          label={t("resourceProfile.label.name")}
+          placeholder={t("resourceProfile.label.profileName")}
           value={name}
           onValueChange={setName}
         />
         <Input
-          description={t("Higher priority profiles take precedence")}
-          label={t("Priority")}
+          description={t("resourceProfile.tip.higherPriorityPrecedence")}
+          label={t("resourceProfile.label.priority")}
           placeholder="0"
           type="number"
           value={String(priority)}
@@ -107,7 +102,7 @@ const ResourceProfileModal = ({ profile, existingNames = [], onSaved, onDestroye
         />
         {!isEdit && (
           <p className="text-xs text-default-400">
-            {t("Other settings can be configured directly in the table after creation.")}
+            {t("resourceProfile.tip.otherSettingsAfterCreation")}
           </p>
         )}
       </div>

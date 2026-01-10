@@ -6,7 +6,7 @@ import { usePrevious } from "react-use";
 import { CheckCircleOutlined } from "@ant-design/icons";
 import { MdError } from "react-icons/md";
 
-import { Button, Icon } from "@/components/bakaui";
+import { Button, Icon, Spinner } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
 import { DependentComponentStatus } from "@/sdk/constants";
@@ -97,7 +97,7 @@ const Component = ({ id }: { id: string }) => {
             onPress={() => {
               createPortal(Modal, {
                 defaultVisible: true,
-                title: t<string>("Failed to get information of new version"),
+                title: t<string>("configuration.dependency.failedToGetVersion"),
                 children: <pre>{latestVersion.error}</pre>,
                 size: "lg",
               });
@@ -111,14 +111,14 @@ const Component = ({ id }: { id: string }) => {
           if (context?.status != DependentComponentStatus.Installing) {
             elements.push(
               <Button
-                text
-                size={"small"}
-                type={"primary"}
+                size={"sm"}
+                color={"primary"}
+                variant={"light"}
                 onClick={() => {
                   BApi.component.installDependentComponent({ id });
                 }}
               >
-                {t<string>("Click to update to version")}:{" "}
+                {t<string>("configuration.dependency.clickToUpdate")}:{" "}
                 {latestVersion.version}
               </Button>,
             );
@@ -132,11 +132,7 @@ const Component = ({ id }: { id: string }) => {
     } else {
       if (findingNewVersion) {
         elements.push(
-          <Icon
-            size={"small"}
-            title={t<string>("Checking new version")}
-            type={"loading"}
-          />,
+          <Spinner size="sm" />
         );
       }
     }
@@ -145,8 +141,8 @@ const Component = ({ id }: { id: string }) => {
     if (context && context.status == DependentComponentStatus.Installing) {
       elements.push(
         <>
-          {t<string>("Updating")}: {context.installationProgress}%
-          <Icon size={"small"} type={"loading"} />
+          {t<string>("configuration.dependency.updating")}: {context.installationProgress}%
+          <Spinner size="sm" />
         </>,
       );
     }
@@ -160,7 +156,7 @@ const Component = ({ id }: { id: string }) => {
           onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
-              title: t<string>("Error"),
+              title: t<string>("error.title"),
               children: <pre>{context.error}</pre>,
               size: "lg",
             });
@@ -185,14 +181,14 @@ const Component = ({ id }: { id: string }) => {
     >
       <div className={"installed"}>
         {discovering ? (
-          <Icon size={"small"} type={"loading"} />
+          <Spinner size="sm" />
         ) : (
           <Chip
             radius={"sm"}
             size={"sm"}
             title={context?.location ?? undefined}
           >
-            {context?.version ?? t<string>("Not installed")}
+            {context?.version ?? t<string>("configuration.dependency.notInstalled")}
           </Chip>
         )}
       </div>

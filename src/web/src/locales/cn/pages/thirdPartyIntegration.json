@@ -1,0 +1,7 @@
+{
+  "thirdPartyIntegration.label.tampermonkeyScript": "油猴脚本",
+  "thirdPartyIntegration.action.oneClickInstall": "一键安装",
+  "thirdPartyIntegration.tip.scriptModifies": "此脚本修改了目标网站的一些交互行为。您可以在油猴中手动启用或禁用脚本。",
+  "thirdPartyIntegration.tip.soulPlusClick": "左键点击封面或帖子标题将触发在Bakabase上创建帖子解析任务。您仍然可以使用中键打开帖子。",
+  "thirdPartyIntegration.tip.exHentaiClick": "左键点击封面将触发在Bakabase上创建种子下载任务。您仍然可以使用中键打开帖子。"
+}

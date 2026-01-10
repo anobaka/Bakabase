@@ -5,12 +5,11 @@ import type { BulkModificationVariable } from "@/pages/bulk-modification/compone
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import { CardHeader } from "@heroui/react";
-import { QuestionCircleOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
 
-import { Button, Card, CardBody, Input, Modal, Select, Tooltip } from "@/components/bakaui";
+import { Button, Card, CardBody, Input, Modal, Select } from "@/components/bakaui";
 import PropertySelector from "@/components/PropertySelector";
 import { PropertyPool, propertyValueScopes } from "@/sdk/constants";
 import ProcessStep from "@/pages/bulk-modification/components/BulkModification/ProcessStep";
@@ -18,7 +17,6 @@ import ProcessStepModal from "@/pages/bulk-modification/components/BulkModificat
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { buildLogger } from "@/components/utils";
 import { useBulkModificationInternalsStore } from "@/stores/bulkModificationInternals";
-import { PropertyValueScopeSelectorLabel } from "@/components/Labels";
 import { PropertyLabel } from "@/components/Property";
 
 type Props = {
@@ -54,7 +52,7 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
         },
       }}
       size={"xl"}
-      title={t<string>("Setting variable")}
+      title={t<string>("bulkModification.label.settingVariable")}
       onDestroyed={onDestroyed}
       onOk={() => {
         if (!validate(variable)) {
@@ -65,15 +63,16 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
     >
       <Card>
         <CardBody>
-          <div className={"grid items-center gap-2"} style={{ gridTemplateColumns: "auto 1fr" }}>
-            <div className={"text-right"}>{t<string>("Property")}</div>
-            <div className={"flex items-center gap-2"}>
+          <div className={"flex flex-col gap-4"}>
+            <div className={"flex items-center gap-1"}>
+              <div className={"text-sm"}>{t<string>("bulkModification.label.property")}</div>
               <Button
                 color={"primary"}
                 size="sm"
                 variant={"flat"}
                 onClick={() => {
                   createPortal(PropertySelector, {
+                    v2: true,
                     pool: PropertyPool.All,
                     multiple: false,
                     selection: variable?.property
@@ -102,83 +101,58 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
                 {variable?.property ? (
                   <PropertyLabel showPool property={variable.property} />
                 ) : (
-                  t<string>("Select a property")
+                  t<string>("bulkModification.select.property")
                 )}
               </Button>
-              {/* {variable?.property && ( */}
-              {/*   <Chip */}
-              {/*     size={'sm'} */}
-              {/*     radius={'sm'} */}
-              {/*     isDisabled */}
-              {/*   > */}
-              {/*     {t<string>(`PropertyType.${PropertyType[variable.property.type]}`)} */}
-              {/*   </Chip> */}
-              {/* )} */}
             </div>
-            <div className={"text-right"}>
-              <PropertyValueScopeSelectorLabel />
-            </div>
-            <div>
-              <Select
-                disallowEmptySelection
-                dataSource={propertyValueScopes.map((s) => ({
-                  label: t<string>(`PropertyValueScope.${s.label}`),
-                  value: s.value,
-                }))}
-                placeholder={t<string>("Select a scope for property value")}
-                selectedKeys={
-                  variable?.scope == undefined ? undefined : [variable.scope.toString()]
-                }
-                selectionMode={"single"}
-                size="sm"
-                onSelectionChange={(v) => {
-                  const scope = Array.from(v ?? [])[0] as number;
+            <Select
+              disallowEmptySelection
+              dataSource={propertyValueScopes.map((s) => ({
+                label: t<string>(`PropertyValueScope.${s.label}`),
+                value: s.value,
+              }))}
+              description={t<string>("bulkModification.label.scopeDescription")}
+              label={t<string>("bulkModification.label.scope")}
+              // labelPlacement="outside"
+              placeholder={t<string>("bulkModification.select.scope")}
+              selectedKeys={
+                variable?.scope == undefined ? undefined : [variable.scope.toString()]
+              }
+              selectionMode={"single"}
+              size="sm"
+              onSelectionChange={(v) => {
+                const scope = Array.from(v ?? [])[0] as number;
 
-                  setVariable({
-                    ...variable,
-                    scope,
-                  });
-                }}
-              />
-            </div>
-            <div className={"text-right"}>{t<string>("Name")}</div>
-            <div>
-              <Input
-                isClearable
-                isRequired
-                placeholder={t<string>("Set a name for this variable")}
-                size={"sm"}
-                value={variable?.name}
-                onValueChange={(v) => {
-                  setVariable({
-                    ...variable,
-                    name: v,
-                  });
-                }}
-              />
-            </div>
+                setVariable({
+                  ...variable,
+                  scope,
+                });
+              }}
+            />
+            <Input
+              isClearable
+              isRequired
+              label={t<string>("bulkModification.label.name")}
+              // labelPlacement="outside"
+              placeholder={t<string>("bulkModification.input.setVariableName")}
+              size={"sm"}
+              value={variable?.name}
+              onValueChange={(v) => {
+                setVariable({
+                  ...variable,
+                  name: v,
+                });
+              }}
+            />
           </div>
         </CardBody>
       </Card>
       <Card>
-        <CardHeader>
-          <div className={"flex items-center gap-1"}>
-            <div>{t<string>("Preprocessing")}</div>
-            <Tooltip
-              content={
-                <div>
-                  <div>
-                    {t<string>(
-                      "If a preprocessing procedure is set, the variables will be preprocessed first before being used.",
-                    )}
-                  </div>
-                  <div>{t<string>("You can add multiple preprocessing steps.")}</div>
-                </div>
-              }
-            >
-              <QuestionCircleOutlined className={"text-base"} />
-            </Tooltip>
-          </div>
+        <CardHeader className="flex-col items-start gap-0.5">
+          <div className="font-medium">{t<string>("bulkModification.label.preprocessing")}</div>
+          <p className="text-xs text-default-400">
+            {t<string>("bulkModification.info.preprocessUsage")}
+          </p>
         </CardHeader>
         <CardBody>
           {variable?.preprocesses && variable.preprocesses.length > 0 && (
@@ -233,7 +207,7 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
                 }
               }}
             >
-              {t<string>("Add a preprocess")}
+              {t<string>("bulkModification.action.addPreprocess")}
             </Button>
           </div>
         </CardBody>

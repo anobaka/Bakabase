@@ -1,0 +1,13 @@
+{
+  "text.label.appliedTo": "应用于",
+  "text.label.texts": "文本",
+  "text.label.opt": "操作",
+  "text.label.original": "原始",
+  "text.label.pretreated": "处理后",
+  "text.action.addPrefabs": "添加预设",
+  "text.label.pretreatmentTest": "预处理测试",
+  "text.input.enterText": "输入文本",
+  "text.action.runPretreatment": "运行预处理",
+  "text.label.noChanges": "无变化",
+  "text.confirm.deleteTitle": "确定要删除吗？"
+}

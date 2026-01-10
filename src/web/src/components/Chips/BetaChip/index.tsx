@@ -31,9 +31,7 @@ const BetaChip = ({
 
   const defaultTooltipContent = (
     <>
-      {t<string>(
-        "This feature is in beta and may be unstable. Please report any issues you encounter.",
-      )}
+      {t<string>("BetaFeature.UnstableWarning")}
       <br />
       {t<string>("BetaFeature.BackupWarning")}
     </>

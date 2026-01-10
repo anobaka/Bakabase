@@ -1,14 +1,14 @@
 "use client";
 
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useState } from "react";
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined, ClearOutlined, MoreOutlined, InfoCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, CopyOutlined, ExperimentOutlined, ClearOutlined, MoreOutlined, InfoCircleOutlined, QuestionCircleOutlined, CheckOutlined } from "@ant-design/icons";
 import { BsController } from "react-icons/bs";
 
 import BApi from "@/sdk/BApi";
 import type {
-  BakabaseAbstractionsModelsDomainResourceProfile,
-  BakabaseAbstractionsModelsDomainResourceSearch,
+  BakabaseServiceModelsViewResourceProfileViewModel,
+  BakabaseServiceModelsViewResourceSearchFilterGroupViewModel,
   BakabaseAbstractionsModelsDomainEnhancerFullOptions,
   BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions,
   BakabaseAbstractionsModelsDomainMediaLibraryPlayer,
@@ -26,8 +26,9 @@ import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
 import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
 import PropertySelector from "@/components/PropertySelector";
-import { FilterGroup, FilterProvider, createDefaultFilterConfig, toSearchInputModel, toFilterGroupInputModel } from "@/components/ResourceFilter";
+import { FilterGroupWithContext, toSearchInputModel, toFilterGroupInputModel } from "@/components/ResourceFilter";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
+import { getEnumKey } from "@/i18n";
 import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
 import { PropertyPool, resourceTags, builtinPropertyForDisplayNames } from "@/sdk/constants";
 import { splitPathIntoSegments } from "@/components/utils";
@@ -65,21 +66,25 @@ const parseTemplateSegments = (
   return segments;
 };
 
-type ResourceProfile = BakabaseAbstractionsModelsDomainResourceProfile;
+type ResourceProfile = BakabaseServiceModelsViewResourceProfileViewModel;
 
 /**
  * Convert ResourceProfile to API input model format
  * This ensures search.group.filters[].dbValue is serialized string
+ *
+ * IMPORTANT: We use explicit null for optional fields to ensure they are included in JSON.
+ * If we use undefined, JSON.stringify will omit the field, and the backend will
+ * interpret missing fields as null, potentially clearing existing data unexpectedly.
  */
 const toProfileInputModel = (profile: Partial<ResourceProfile>) => {
   return {
     name: profile.name ?? "",
-    search: profile.search ? toSearchInputModel(profile.search) : undefined,
-    nameTemplate: profile.nameTemplate,
-    enhancerOptions: profile.enhancerOptions,
-    playableFileOptions: profile.playableFileOptions,
-    playerOptions: profile.playerOptions,
-    propertyOptions: profile.propertyOptions,
+    search: profile.search ? toSearchInputModel(profile.search) : null,
+    nameTemplate: profile.nameTemplate ?? null,
+    enhancerOptions: profile.enhancerOptions ?? null,
+    playableFileOptions: profile.playableFileOptions ?? null,
+    playerOptions: profile.playerOptions ?? null,
+    propertyOptions: profile.propertyOptions ?? null,
     priority: profile.priority ?? 0,
   };
 };
@@ -88,12 +93,16 @@ const ResourceProfilePage = () => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const { showGuide, completeGuide, resetGuide } = useResourceProfileGuide();
-  const filterConfig = useMemo(() => createDefaultFilterConfig(createPortal), [createPortal]);
   const [profiles, setProfiles] = useState<ResourceProfile[]>([]);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(true);
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [enhancerDescriptors, setEnhancerDescriptors] = useState<EnhancerDescriptor[]>([]);
+  const [editingProfileIds, setEditingProfileIds] = useState<Set<number>>(new Set());
+
+  // Use ref to always access the latest profiles in callbacks (avoids stale closure issues)
+  const profilesRef = useRef<ResourceProfile[]>(profiles);
+  profilesRef.current = profiles;
 
   const loadProfiles = async () => {
     setLoading(true);
@@ -124,7 +133,7 @@ const ResourceProfilePage = () => {
   );
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t("Are you sure you want to delete this resource profile?"))) {
+    if (!window.confirm(t("resourceProfile.confirm.delete"))) {
       return;
     }
     try {
@@ -154,11 +163,18 @@ const ResourceProfilePage = () => {
     });
   };
 
-  const updateProfile = async (profile: ResourceProfile, updates: Partial<ResourceProfile>) => {
+  const updateProfile = async (profileOrId: ResourceProfile | number, updates: Partial<ResourceProfile>) => {
     try {
-      const merged = { ...profile, ...updates };
+      const id = typeof profileOrId === 'number' ? profileOrId : profileOrId.id;
+      // Always get the latest profile from ref to avoid stale closure issues
+      const currentProfile = profilesRef.current.find(p => p.id === id);
+      if (!currentProfile) {
+        console.error("Profile not found", id);
+        return;
+      }
+      const merged = { ...currentProfile, ...updates };
       const inputModel = toProfileInputModel(merged);
-      await BApi.resourceProfile.updateResourceProfile(profile.id, inputModel as any);
+      await BApi.resourceProfile.updateResourceProfile(id, inputModel as any);
       loadProfiles();
     } catch (e) {
       console.error("Failed to update resource profile", e);
@@ -194,7 +210,7 @@ const ResourceProfilePage = () => {
 
     // Build valid property names set
     const builtinNames = builtinPropertyForDisplayNames.map((v) =>
-      t(`BuiltinPropertyForDisplayName.${v.label}`)
+      t(getEnumKey('BuiltinPropertyForDisplayName', v.label))
     );
     const customNames = properties.map((p) => p.name!);
     const validPropertyNames = new Set([...builtinNames, ...customNames]);
@@ -251,7 +267,7 @@ const ResourceProfilePage = () => {
 
     if (!hasEnhancers) {
       return (
-        <Tooltip content={t("Click to configure enhancers")}>
+        <Tooltip content={t("resourceProfile.tip.configureEnhancers")}>
           <Button
             size="sm"
             variant="light"
@@ -444,6 +460,7 @@ const ResourceProfilePage = () => {
 
     const openModal = () => {
       createPortal(PropertySelector, {
+        v2: true,
         pool: PropertyPool.Reserved | PropertyPool.Custom,
         multiple: true,
         selection: propertyRefs.map((ref) => ({ pool: ref.pool!, id: ref.id! })),
@@ -505,43 +522,70 @@ const ResourceProfilePage = () => {
   const columns = [
     {
       key: "priority",
-      label: t("Priority"),
-      description: t("Higher priority profiles are matched first. When multiple profiles match a resource, the one with highest priority takes effect."),
+      label: t("resourceProfile.label.priority"),
+      description: t("resourceProfile.tip.priority"),
       width: 80,
     },
     {
       key: "name",
-      label: t("Name"),
-      description: t("A unique name to identify this profile."),
+      label: t("resourceProfile.label.name"),
+      description: t("resourceProfile.tip.name"),
       width: 150,
     },
     {
       key: "search",
-      label: t("Search Criteria"),
-      description: t("Define which resources this profile applies to. Resources matching these criteria will use this profile's settings."),
+      label: t("resourceProfile.label.searchCriteria"),
+      description: t("resourceProfile.tip.searchCriteria"),
       render: (profile: ResourceProfile) => {
         const group = profile.search?.group ?? { combinator: 1, disabled: false };
+        const isEditing = editingProfileIds.has(profile.id!);
+
         return (
           <div className="flex flex-col gap-1">
-            <FilterProvider config={filterConfig}>
-              <FilterGroup
-                isRoot
-                group={group as SearchFilterGroup}
-                onChange={(newGroup) => {
-                  updateProfile(profile, {
-                    search: {
-                      ...profile.search,
-                      group: newGroup as BakabaseAbstractionsModelsDomainResourceSearch["group"],
-                    },
-                  });
-                }}
-              />
-            </FilterProvider>
+            <div className="flex items-start gap-2">
+              <div className="flex-1">
+                <FilterGroupWithContext
+                  group={group as SearchFilterGroup}
+                  onChange={(newGroup) => {
+                    updateProfile(profile, {
+                      search: {
+                        ...profile.search,
+                        group: newGroup as BakabaseServiceModelsViewResourceSearchFilterGroupViewModel,
+                      },
+                    });
+                  }}
+                  filterDisplayMode={1}
+                  filterLayout="vertical"
+                  isReadonly={!isEditing}
+                />
+              </div>
+              <Tooltip content={isEditing ? "Save" : "Edit"}>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  color={isEditing ? "success" : "default"}
+                  onPress={() => {
+                    setEditingProfileIds((prev) => {
+                      const next = new Set(prev);
+                      if (isEditing) {
+                        next.delete(profile.id!);
+                      } else {
+                        next.add(profile.id!);
+                      }
+                      return next;
+                    });
+                  }}
+                >
+                  {isEditing ? <CheckOutlined /> : <EditOutlined />}
+                </Button>
+              </Tooltip>
+            </div>
             {profile.search?.tags && profile.search.tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {profile.search.tags.map((tag) => (
                   <Chip key={tag} size="sm" variant="flat" color="warning">
-                    {t(`ResourceTag.${resourceTags.find((rt) => rt.value === tag)?.label}`)}
+                    {t(getEnumKey('ResourceTag', resourceTags.find((rt) => rt.value === tag)?.label!))}
                   </Chip>
                 ))}
               </div>
@@ -552,45 +596,45 @@ const ResourceProfilePage = () => {
     },
     {
       key: "nameTemplate",
-      label: t("Name Template"),
-      description: t("Customize how resource names are displayed using property placeholders like {Name}. Leave empty to use the original filename."),
+      label: t("resourceProfile.label.nameTemplate"),
+      description: t("resourceProfile.tip.nameTemplate"),
       render: renderNameTemplate,
     },
     {
       key: "enhancers",
-      label: t("Enhancers"),
+      label: t("resourceProfile.label.enhancers"),
       description: <EnhancerDescription />,
       width: 130,
       render: renderEnhancers,
     },
     {
       key: "playableFiles",
-      label: t("Playable Files"),
-      description: t("Rules to identify which files within a resource are playable. Configure by file extension or filename pattern."),
+      label: t("resourceProfile.label.playableFiles"),
+      description: t("resourceProfile.tip.playableFiles"),
       width: 130,
       render: renderPlayableFiles,
     },
     {
       key: "players",
-      label: t("Players"),
-      description: t("External applications to open playable files. You can assign different players for different file extensions."),
+      label: t("resourceProfile.label.players"),
+      description: t("resourceProfile.tip.players"),
       width: 200,
       render: renderPlayers,
     },
     {
       key: "properties",
-      label: t("Properties"),
-      description: t("Select which properties should be displayed or editable for resources matching this profile."),
+      label: t("resourceProfile.label.properties"),
+      description: t("resourceProfile.tip.properties"),
       width: 200,
       render: renderProperties,
     },
     {
       key: "actions",
-      label: t("Actions"),
+      label: t("resourceProfile.label.actions"),
       width: 180,
       render: (profile: ResourceProfile) => (
         <div className="flex gap-1">
-          <Tooltip content={t("Test criteria")}>
+          <Tooltip content={t("resourceProfile.action.testCriteria")}>
             <Button
               isIconOnly
               size="sm"
@@ -600,7 +644,7 @@ const ResourceProfilePage = () => {
               <ExperimentOutlined />
             </Button>
           </Tooltip>
-          <Tooltip content={t("Edit basic info")}>
+          <Tooltip content={t("resourceProfile.action.editBasicInfo")}>
             <Button
               isIconOnly
               size="sm"
@@ -609,13 +653,14 @@ const ResourceProfilePage = () => {
                 createPortal(ResourceProfileModal, {
                   profile,
                   onSaved: loadProfiles,
+                  onUpdate: updateProfile,
                 });
               }}
             >
               <EditOutlined />
             </Button>
           </Tooltip>
-          <Tooltip content={t("Duplicate")}>
+          <Tooltip content={t("resourceProfile.action.duplicate")}>
             <Button
               isIconOnly
               size="sm"
@@ -653,7 +698,7 @@ const ResourceProfilePage = () => {
                 startContent={<ClearOutlined />}
                 color="warning"
               >
-                {t("Delete enhancements")}
+                {t("resourceProfile.action.deleteEnhancements")}
               </ListboxItem>
               <ListboxItem
                 key="delete"
@@ -661,7 +706,7 @@ const ResourceProfilePage = () => {
                 color="danger"
                 className="text-danger"
               >
-                {t("Delete")}
+                {t("common.action.delete")}
               </ListboxItem>
             </Listbox>
           </Popover>
@@ -671,7 +716,7 @@ const ResourceProfilePage = () => {
   ];
 
   return (
-    <div>
+    <div className="p-2">
       <ResourceProfileGuideModal
         visible={showGuide}
         onComplete={completeGuide}
@@ -690,7 +735,7 @@ const ResourceProfilePage = () => {
               });
             }}
           >
-            {t("Add Resource Profile")}
+            {t("resourceProfile.action.addProfile")}
           </Button>
           <Tooltip content={t("resourceProfileGuide.viewAgain")}>
             <Button
@@ -704,7 +749,7 @@ const ResourceProfilePage = () => {
           </Tooltip>
           <Input
             size="sm"
-            placeholder={t("Search by name")}
+            placeholder={t("resourceProfile.action.searchByName")}
             startContent={<SearchOutlined className="text-small" />}
             value={keyword}
             onValueChange={setKeyword}
@@ -712,7 +757,7 @@ const ResourceProfilePage = () => {
           />
         </div>
         <div className="text-sm text-default-500">
-          {t("Total")}: {filteredProfiles.length}
+          {t("resourceProfile.label.total")}: {filteredProfiles.length}
         </div>
       </div>
 
@@ -743,7 +788,7 @@ const ResourceProfilePage = () => {
             </TableColumn>
           ))}
         </TableHeader>
-        <TableBody isLoading={loading} loadingContent={<Spinner label={t("Loading...")} />} emptyContent={t("No profiles found")}>
+        <TableBody isLoading={loading} loadingContent={<Spinner label={t("resourceProfile.status.loading")} />} emptyContent={t("resourceProfile.empty.noProfiles")}>
           {filteredProfiles.map((profile) => (
             <TableRow key={profile.id}>
               {columns.map((column) => (

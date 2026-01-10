@@ -216,6 +216,11 @@ public class PathMarkController(IPathMarkService service, IPathMarkSyncService s
     [SwaggerOperation(OperationId = "StartPathMarkSync")]
     public async Task<BaseResponse> StartSync([FromBody] int[] markIds)
     {
+        if (markIds.Length == 0)
+        {
+            return BaseResponseBuilder.Ok;
+        }
+
         await syncService.EnqueueSync(markIds);
         return BaseResponseBuilder.Ok;
     }

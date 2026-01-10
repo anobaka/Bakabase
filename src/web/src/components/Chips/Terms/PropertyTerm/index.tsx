@@ -23,8 +23,8 @@ export const PropertyDescription = () => {
 
   return (
     <div className="space-y-2">
-      <p>{t("Term.Property.Description")}</p>
-      <p>{t("Term.Property.Usage")}</p>
+      <p>{t("term.property.description")}</p>
+      <p>{t("term.property.usage")}</p>
     </div>
   );
 };
@@ -44,7 +44,7 @@ const PropertyTerm = ({
       className={className}
       color={color}
       description={<PropertyDescription />}
-      label={t("Property")}
+      label={t("common.label.property")}
       size={size}
       variant={variant}
     />

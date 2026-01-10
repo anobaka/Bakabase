@@ -10,6 +10,13 @@ import { useTranslation } from "react-i18next";
 
 import { StringValueProcessEditor } from "../Processes/StringValueProcess";
 import { ListStringValueProcessEditor } from "../Processes/ListStringValueProcess";
+import { DecimalValueProcessEditor } from "../Processes/DecimalValueProcess";
+import { BooleanValueProcessEditor } from "../Processes/BooleanValueProcess";
+import { DateTimeValueProcessEditor } from "../Processes/DateTimeValueProcess";
+import { TimeValueProcessEditor } from "../Processes/TimeValueProcess";
+import { LinkValueProcessEditor } from "../Processes/LinkValueProcess";
+import { ListListStringValueProcessEditor } from "../Processes/ListListStringValueProcess";
+import { ListTagValueProcessEditor } from "../Processes/ListTagValueProcess";
 
 import { Modal } from "@/components/bakaui";
 import { BulkModificationProcessorValueType } from "@/sdk/constants";
@@ -82,22 +89,114 @@ const ProcessStepModal = ({
       case PropertyType.Number:
       case PropertyType.Percentage:
       case PropertyType.Rating:
-        break;
+        return (
+          <DecimalValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
       case PropertyType.Boolean:
-        break;
+        return (
+          <BooleanValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
       case PropertyType.Link:
-        break;
+        return (
+          <LinkValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
       case PropertyType.Date:
       case PropertyType.DateTime:
+        return (
+          <DateTimeValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
       case PropertyType.Time:
-        break;
+        return (
+          <TimeValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
       case PropertyType.Multilevel:
-        break;
+        return (
+          <ListListStringValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
       case PropertyType.Tags:
-        break;
+        return (
+          <ListTagValueProcessEditor
+            availableValueTypes={availableValueTypes}
+            operation={operation}
+            options={options}
+            propertyType={property.type}
+            variables={variables}
+            onChange={(operation, options, error) => {
+              setOperation(operation);
+              setOptions(options);
+              setError(error);
+            }}
+          />
+        );
+      default:
+        return t<string>("bulkModification.empty.notSupported");
     }
-
-    return t<string>("Not supported");
   };
 
   return (
@@ -121,7 +220,7 @@ const ProcessStepModal = ({
       {renderOptions()}
       {error && (
         <div className={"whitespace-break-spaces text-danger"}>
-          {t<string>("ERROR")}: {error}
+          {t<string>("bulkModification.error.title")}: {error}
         </div>
       )}
     </Modal>

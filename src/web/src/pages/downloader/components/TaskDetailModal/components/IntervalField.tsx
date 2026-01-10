@@ -12,10 +12,8 @@ const IntervalField = ({ interval, onChange }: Props) => {
 
   return (
     <NumberInput
-      description={t<string>(
-        "The interval (in seconds) after download completion or failure before restarting the task. Generally used for downloading content that updates periodically.",
-      )}
-      label={t("Check interval(s)")}
+      description={t<string>("downloader.tip.checkIntervalDesc")}
+      label={t("downloader.label.checkInterval")}
       value={interval}
       onValueChange={(value) => onChange(value)}
     />

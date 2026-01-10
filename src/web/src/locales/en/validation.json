@@ -1,0 +1,12 @@
+{
+  "validation.name.required": "Name is required",
+  "validation.name.notEmpty": "Name cannot be empty",
+  "validation.executablePath.required": "Executable path is required",
+  "validation.path.required": "Path is required",
+  "validation.value.required": "Value is required",
+  "validation.selection.required": "Please select an option",
+  "validation.file.notFolder": "Please select a file, not a folder",
+  "validation.path.notExist": "{{count}} path(s) no longer exist on the file system",
+  "validation.ports.tooMany": "Too many ports. Up to {{max}} ports are supported.",
+  "validation.data.invalid": "Invalid Data"
+}

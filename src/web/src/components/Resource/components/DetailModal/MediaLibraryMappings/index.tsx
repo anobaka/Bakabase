@@ -78,13 +78,13 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
           resourceId,
           createDt: new Date().toISOString(),
         });
-        toast.success(t("Media library added"));
+        toast.success(t("resource.success.mediaLibraryAdded"));
         await loadData();
         onMappingsChange?.();
         setAddPopoverOpen(false);
       } catch (error) {
         console.error("Failed to add mapping:", error);
-        toast.danger(t("Failed to add media library"));
+        toast.danger(t("resource.error.failedToAddMediaLibrary"));
       }
     },
     [resourceId, t, loadData, onMappingsChange]
@@ -96,12 +96,12 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
         await BApi.mediaLibraryResourceMapping.deleteMediaLibraryResourceMapping(
           mappingId,
         );
-        toast.success(t("Media library removed"));
+        toast.success(t("resource.success.mediaLibraryRemoved"));
         await loadData();
         onMappingsChange?.();
       } catch (error) {
         console.error("Failed to remove mapping:", error);
-        toast.danger(t("Failed to remove media library"));
+        toast.danger(t("resource.error.failedToRemoveMediaLibrary"));
       }
     },
     [t, loadData, onMappingsChange]
@@ -118,7 +118,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
         {!compact && (
           <div className="flex items-center gap-1 text-sm text-default-500 shrink-0">
             <LinkOutlined className="text-base" />
-            <span>{t("Media Libraries")}</span>
+            <span>{t("common.label.mediaLibraries")}</span>
           </div>
         )}
         <Spinner size="sm" />
@@ -136,13 +136,13 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
       {!compact && (
         <div className="flex items-center gap-1 text-sm text-default-500 shrink-0 pt-0.5">
           <LinkOutlined className="text-base" />
-          <span>{t("Media Libraries")}</span>
+          <span>{t("common.label.mediaLibraries")}</span>
         </div>
       )}
       <div className="flex flex-wrap items-center gap-1 flex-1">
         {mappings.length === 0 ? (
           <span className="text-sm text-default-400">
-            {t("None")}
+            {t("common.label.none")}
           </span>
         ) : (
           mappings.map((mapping) => (
@@ -157,7 +157,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
                 color: mapping.mediaLibrary?.color,
               }}
               endContent={
-                <Tooltip content={t("Remove from this media library")}>
+                <Tooltip content={t("resource.tip.removeFromMediaLibrary")}>
                   <Button
                     className=""
                     isIconOnly
@@ -173,7 +173,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
                 </Tooltip>
               }
             >
-              <span>{mapping.mediaLibrary?.name || t("Unknown")}</span>
+              <span>{mapping.mediaLibrary?.name || t("common.state.unknown")}</span>
             </Chip>
           ))
         )}
@@ -196,7 +196,7 @@ const MediaLibraryMappings: React.FC<Props> = ({ resourceId, onMappingsChange, c
         >
           <div className="max-h-60 overflow-y-auto min-w-[200px]">
             <Listbox
-              aria-label={t("Select media library")}
+              aria-label={t("resource.modal.selectMediaLibrary")}
               onAction={(key) => {
                 const id = parseInt(key as string, 10);
                 handleAddMapping(id);
