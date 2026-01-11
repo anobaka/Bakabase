@@ -32,14 +32,14 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase
         IStandardValueService standardValueService,
         IServiceProvider serviceProvider
         )
-        : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, object?>(loggerFactory,
+        : AbstractKeywordEnhancer<BakabaseEnhancerTarget, BakabaseEnhancerContext, IKeywordEnhancerOptions>(loggerFactory,
             fileManager, standardValueService, specialTextService, serviceProvider)
     {
         protected override EnhancerId TypedId => EnhancerId.Bakabase;
         private readonly IBakabaseLocalizer _localizer = localizer;
 
         protected override async Task<BakabaseEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
-            EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
+            IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var name = keyword;
             if (name.IsNullOrEmpty())

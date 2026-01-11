@@ -10,8 +10,10 @@ import {
   CloseCircleOutlined,
   DisconnectOutlined,
   FolderOpenOutlined,
+  LoadingOutlined,
   PlayCircleOutlined,
   ProfileOutlined,
+  QuestionCircleOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
 import { MdCalendarMonth } from "react-icons/md";
@@ -51,7 +53,8 @@ import { PropertyPool, ReservedProperty, ResourceAdditionalItem } from "@/sdk/co
 import { convertFromApiValue } from "@/components/StandardValue/helpers";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import PropertyValueScopePicker from "@/components/Resource/components/DetailModal/PropertyValueScopePicker";
-import PlayableFiles from "@/components/Resource/components/PlayableFiles";
+import PlayControl from "@/components/Resource/components/PlayControl";
+import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
 import { useUiOptionsStore } from "@/stores/options";
 
@@ -232,11 +235,22 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 />
                 <div className="flex-1 flex justify-end">
                   <ButtonGroup size={"sm"}>
-                    <PlayableFiles
-                      PortalComponent={({ onClick }) => (
-                        <Tooltip content={t("common.action.play")}>
-                          <Button isIconOnly color="primary" onPress={onClick}>
-                            <PlayCircleOutlined className="text-lg" />
+                    <PlayControl
+                      PortalComponent={({ status, onClick, tooltipContent }: PlayControlPortalProps) => (
+                        <Tooltip content={tooltipContent ?? t("common.action.play")}>
+                          <Button
+                            isIconOnly
+                            color="primary"
+                            onPress={onClick}
+                            isDisabled={status === "loading"}
+                          >
+                            {status === "loading" ? (
+                              <LoadingOutlined className="text-lg" spin />
+                            ) : status === "not-found" ? (
+                              <QuestionCircleOutlined className="text-lg text-warning" />
+                            ) : (
+                              <PlayCircleOutlined className="text-lg" />
+                            )}
                           </Button>
                         </Tooltip>
                       )}

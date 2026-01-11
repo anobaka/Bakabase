@@ -1,6 +1,7 @@
 "use client";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
+import type { DiscoverySource } from "@/hooks/useResourceDiscovery";
 
 import { FolderOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
@@ -13,10 +14,24 @@ import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
 import { useUiOptionsStore } from "@/stores/options";
 import { usePlayableFilesDiscovery } from "@/hooks/useResourceDiscovery";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+
+import NoPlayableFilesModal from "./NoPlayableFilesModal";
+
+// Play control status for UI rendering
+export type PlayControlStatus = "hidden" | "loading" | "ready" | "not-found";
+
+export type PlayControlPortalProps = {
+  status: PlayControlStatus;
+  source: DiscoverySource;
+  cacheEnabled: boolean;
+  onClick: () => void;
+  tooltipContent?: string;
+};
 
 type Props = {
   resource: ResourceModel;
-  PortalComponent: React.FC<{ onClick: () => any }>;
+  PortalComponent: React.FC<PlayControlPortalProps>;
   afterPlaying?: () => any;
 };
 
@@ -77,21 +92,23 @@ const splitIntoDirs = (paths: string[], prefix: string): Directory[] => {
 
 const DefaultVisibleFileCount = 5;
 
-export type PlayableFilesRef = {
-  // No longer needed - discovery happens automatically
-};
+export type PlayControlRef = {};
 
-const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles(
+const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   { resource, PortalComponent, afterPlaying },
   ref,
 ) {
   const { t } = useTranslation();
-  const log = buildLogger(`ResourcePlayableFiles:${resource.id}|${resource.path}`);
+  const { createPortal } = useBakabaseContext();
+  const log = buildLogger(`PlayControl:${resource.id}|${resource.path}`);
   const uiOptionsStore = useUiOptionsStore();
   const resourceUiOptions = uiOptionsStore.data?.resource;
 
+  // Get cache enabled status from UI options
+  const cacheEnabled = !resourceUiOptions?.disableCache;
+
   // Use SSE-based discovery for playable files
-  const discoveryState = usePlayableFilesDiscovery(resource);
+  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled);
 
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
@@ -103,6 +120,45 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
         hasMore: discoveryState.hasMorePlayableFiles ?? false,
       }
     : null;
+
+  // Compute status for PortalComponent
+  const computeStatus = (): PlayControlStatus => {
+    if (discoveryState.status === "loading") {
+      return "loading";
+    }
+
+    if (discoveryState.status === "error") {
+      return "not-found";
+    }
+
+    if (discoveryState.status === "ready") {
+      if (portalCtx?.files && portalCtx.files.length > 0) {
+        return "ready";
+      }
+      return "not-found";
+    }
+
+    return "hidden";
+  };
+
+  // Compute tooltip content based on status and source
+  const computeTooltipContent = (): string | undefined => {
+    if (discoveryState.status === "loading") {
+      if (discoveryState.cacheEnabled) {
+        return t("resource.playControl.tooltip.cachePreparing");
+      }
+      return t("resource.playControl.tooltip.loading");
+    }
+
+    if (computeStatus() === "not-found") {
+      return t("resource.playControl.tooltip.notFound");
+    }
+
+    return undefined;
+  };
+
+  const status = computeStatus();
+  const tooltipContent = computeTooltipContent();
 
   // Update dirs when discovery completes
   useEffect(() => {
@@ -130,39 +186,45 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
         }
       });
 
-  // Loading state
-  if (discoveryState.status === "loading") {
-    return null;
-  }
+  const handleClick = useCallback(() => {
+    // If not found, show the NoPlayableFilesModal
+    if (status === "not-found") {
+      createPortal(NoPlayableFilesModal, {
+        resourceId: resource.id,
+      });
+      return;
+    }
 
-  // Error state
-  if (discoveryState.status === "error") {
-    log("Discovery error:", discoveryState.error);
-    return null;
-  }
+    // If loading, do nothing
+    if (status === "loading") {
+      return;
+    }
 
-  // No playable files
-  if (!portalCtx?.files || portalCtx.files.length === 0) {
-    return null;
-  }
+    // If ready, play or show file selection modal
+    if (portalCtx?.files && portalCtx.files.length > 0) {
+      if (portalCtx.files.length === 1 && !portalCtx.hasMore) {
+        play(portalCtx.files[0]!);
+      } else if (
+        resourceUiOptions?.autoSelectFirstPlayableFile &&
+        portalCtx.files.length > 0
+      ) {
+        play(portalCtx.files[0]!);
+      } else {
+        if (dirs) {
+          setModalVisible(true);
+        }
+      }
+    }
+  }, [status, portalCtx, dirs, resourceUiOptions?.autoSelectFirstPlayableFile]);
 
   return (
     <>
       <PortalComponent
-        onClick={() => {
-          if (portalCtx.files.length === 1 && !portalCtx.hasMore) {
-            play(portalCtx.files[0]!);
-          } else if (
-            resourceUiOptions?.autoSelectFirstPlayableFile &&
-            portalCtx.files.length > 0
-          ) {
-            play(portalCtx.files[0]!);
-          } else {
-            if (dirs) {
-              setModalVisible(true);
-            }
-          }
-        }}
+        status={status}
+        source={discoveryState.source}
+        cacheEnabled={discoveryState.cacheEnabled}
+        onClick={handleClick}
+        tooltipContent={tooltipContent}
       />
       <Modal
         footer={false}
@@ -239,7 +301,7 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
             );
           })}
         </div>
-        {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx?.files.length > 1 && (
+        {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx && portalCtx.files.length > 1 && (
           <div className={"pt-3 border-t mt-3"}>
             <Button
               color={"primary"}
@@ -269,6 +331,6 @@ const PlayableFiles = forwardRef<PlayableFilesRef, Props>(function PlayableFiles
   );
 });
 
-PlayableFiles.displayName = "PlayableFiles";
+PlayControl.displayName = "PlayControl";
 
-export default PlayableFiles;
+export default PlayControl;

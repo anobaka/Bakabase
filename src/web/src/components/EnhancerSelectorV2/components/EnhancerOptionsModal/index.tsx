@@ -4,6 +4,7 @@ import type { EnhancerDescriptor } from "@/components/EnhancerSelectorV2/models"
 import type { EnhancerFullOptions } from "@/components/EnhancerSelectorV2/components/CategoryEnhancerOptionsDialog/models";
 import type { IProperty } from "@/components/Property/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
+import type { BangumiSubjectType } from "@/sdk/constants";
 
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -16,6 +17,7 @@ import FixedTargets from "./components/FixedTargets";
 
 import { Button, Chip, Modal, Select, Switch, Textarea } from "@/components/bakaui";
 import {
+  bangumiSubjectTypes,
   EnhancerId,
   EnhancerTag,
   InternalProperty,
@@ -144,7 +146,6 @@ export default function EnhancerOptionsModal({
 
                   return Promise.resolve();
                 },
-                v2: true,
               });
             }}
           >
@@ -254,6 +255,46 @@ export default function EnhancerOptionsModal({
     );
   };
 
+  const renderBangumiPrioritySubjectType = () => {
+    if (enhancer.id !== EnhancerId.Bangumi) {
+      return null;
+    }
+
+    return (
+      <Select
+        isClearable
+        dataSource={bangumiSubjectTypes.map((e) => ({
+          label: t<string>(`BangumiSubjectType.${e.label}`),
+          value: e.value.toString(),
+        }))}
+        description={
+          <div>
+            <div>{t<string>("enhancer.bangumi.prioritySubjectType.description")}</div>
+            <div>{t<string>("enhancer.bangumi.prioritySubjectType.hint")}</div>
+          </div>
+        }
+        label={t<string>("enhancer.bangumi.prioritySubjectType.label")}
+        selectedKeys={
+          options.bangumiPrioritySubjectType != null
+            ? [options.bangumiPrioritySubjectType.toString()]
+            : []
+        }
+        size="sm"
+        onSelectionChange={(keys) => {
+          const arr = Array.from(keys);
+
+          if (arr.length === 0) {
+            setOptions({ ...options, bangumiPrioritySubjectType: undefined });
+          } else {
+            const val = parseInt(arr[0] as string, 10) as BangumiSubjectType;
+
+            setOptions({ ...options, bangumiPrioritySubjectType: val });
+          }
+        }}
+      />
+    );
+  };
+
   const expressions = options?.expressions || [];
   const captureGroups = extractCaptureGroups(expressions);
   const prerequisiteEnhancers = options.requirements?.map((r) => r.toString());
@@ -317,6 +358,8 @@ export default function EnhancerOptionsModal({
 
         {renderKeywordProperty()}
 
+        {renderBangumiPrioritySubjectType()}
+
         {enhancer.tags.includes(EnhancerTag.UseRegex) && (
           <div>
             <Textarea
@@ -327,7 +370,7 @@ export default function EnhancerOptionsModal({
                       {t<string>("Available capture groups:")}
                       {captureGroups.map((g) => {
                         return (
-                          <Chip size={"sm"} variant={"light"}>
+                          <Chip size={"sm"} key={g} variant={"light"}>
                             {g}
                           </Chip>
                         );

@@ -26,6 +26,7 @@ import {
   AiOutlineBug,
   AiOutlineTags,
   AiOutlineFilter,
+  AiOutlineDiff,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -58,6 +59,7 @@ import ResourceProfilePage from "@/pages/resource-profile";
 import PathRuleConfigPage from "@/pages/path-mark-config";
 import PathMarksPage from "@/pages/path-marks";
 import ProfilerPage from "@/pages/profiler";
+import ComparisonPage from "@/pages/comparison";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -171,19 +173,28 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
       },
-      {
-        name: "menu.playHistory",
-        path: "/play-history",
-        component: PlayHistoryPage,
-        icon: AiOutlineHistory,
-        layout: "basic",
-        menu: true,
-      },
+      // {
+      //   name: "menu.playHistory",
+      //   path: "/play-history",
+      //   component: PlayHistoryPage,
+      //   icon: AiOutlineHistory,
+      //   layout: "basic",
+      //   menu: true,
+      // },
       {
         name: "menu.bulkModification",
         path: "/bulk-modification",
         component: BulkModification2Page,
         icon: AiOutlineForm,
+        layout: "basic",
+        menu: true,
+        isBeta: true,
+      },
+      {
+        name: "menu.comparison",
+        path: "/comparison",
+        component: ComparisonPage,
+        icon: AiOutlineDiff,
         layout: "basic",
         menu: true,
         isBeta: true,

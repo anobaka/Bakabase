@@ -23,26 +23,26 @@ export const buildFakeProperty = (
 
 export const validate = (value?: Partial<BulkModificationProcessValue>): string | undefined => {
   if (!value) {
-    return "Please provide a valid value";
+    return "bulkModification.validation.invalidValue";
   }
 
   if (value.type == undefined) {
-    return "Please provide a valid value type";
+    return "bulkModification.validation.invalidValueType";
   }
 
   switch (value.type) {
     case BulkModificationProcessorValueType.ManuallyInput: {
       if (value.editorPropertyType == undefined) {
-        return "Please provide a valid property type";
+        return "bulkModification.validation.invalidPropertyType";
       }
       if (value.value == undefined || value.value.length == 0) {
-        return "Please provide a valid value";
+        return "bulkModification.validation.invalidValue";
       }
       break;
     }
     case BulkModificationProcessorValueType.Variable:
       if (value.value == undefined) {
-        return "Please provide a valid variable";
+        return "bulkModification.validation.invalidVariable";
       }
       break;
   }

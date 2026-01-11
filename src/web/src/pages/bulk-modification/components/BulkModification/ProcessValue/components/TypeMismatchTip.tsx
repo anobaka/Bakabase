@@ -27,7 +27,7 @@ const TypeMismatchTip = (props: Props) => {
         <div className={"flex flex-col gap-1"}>
           <div>
             {t<string>(
-              "We will automatically convert the value from {{fromType}} to {{toType}}.",
+              "bulkModification.info.typeConversion",
               {
                 fromType: t<string>(`PropertyType.${PropertyType[fromType]}`),
                 toType: t<string>(`PropertyType.${PropertyType[toType]}`),
@@ -43,7 +43,7 @@ const TypeMismatchTip = (props: Props) => {
                 createPortal(TypeConversionRuleOverviewDialog, {});
               }}
             >
-              {t<string>("You can check type conversion rules here")}
+              {t<string>("bulkModification.info.checkTypeRules")}
             </Button>
           </div>
         </div>
@@ -60,7 +60,7 @@ const TypeMismatchTip = (props: Props) => {
         variant={"light"}
       >
         <WarningOutlined className={"text-base"} />
-        {t<string>("Type transformation")}
+        {t<string>("bulkModification.label.typeTransformation")}
       </Chip>
     </Tooltip>
   );

@@ -167,5 +167,7 @@
   "pathMarkGuide.getStarted": "Get Started",
 
   "pathMarkConfig.label.nextStepHint": "Next step: View all configured marks, or configure Resource Profiles to define enhancers, players, and other settings",
-  "pathMarkConfig.action.goToResourceProfile": "Configure Resource Profiles"
+  "pathMarkConfig.action.goToResourceProfile": "Configure Resource Profiles",
+  "pathMarkConfig.label.keepResourcesOnPathChange": "Keep resource identity on path change",
+  "pathMarkConfig.tip.keepResourcesOnPathChange": "Normally, a resource record is created for each resource path. When enabled, a marker file (bakabase.json) will be generated in resource folders. During the next sync, if the resource path has changed, the system will not create a new resource record for the new path. Instead, it will use the marker file to locate the original resource record and update its path."
 }

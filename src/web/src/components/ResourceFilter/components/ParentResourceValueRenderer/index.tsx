@@ -92,7 +92,7 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
       multiple: isMultiple,
       defaultSelectedIds: currentValues.map(v => v.id),
       defaultCriteria: { tags: [ResourceTag.IsParent] },
-      title: t<string>(isMultiple ? "Select Parent Resources" : "Select Parent Resource"),
+      title: t<string>(isMultiple ? "common.label.selectParentResources" : "common.label.selectParentResource"),
       onConfirm: (selectedResources: ResourceSelectorValue[]) => {
         if (selectedResources.length === 0) {
           onValueChange?.(undefined, undefined);
@@ -142,7 +142,7 @@ const ParentResourceValueRenderer: React.FC<ParentResourceValueRendererProps> = 
           onPress={handleOpenModal}
           isDisabled={isReadonly}
         >
-          {t<string>("Select...")}
+          {t<string>("common.action.select")}
         </Button>
       );
     }

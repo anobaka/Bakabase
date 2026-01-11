@@ -17,6 +17,7 @@ type Data = {
   value: Key;
   textValue?: string;
   isDisabled?: boolean;
+  description?: string;
 };
 
 export interface SelectProps extends Omit<NextUISelectProps, "children"> {
@@ -73,6 +74,7 @@ const Select: React.FC<SelectProps> = ({ dataSource = [], ...props }) => {
             <HeroSelectItem
               key={data.value}
               aria-label={data.label?.toString()}
+              description={data.description}
               textValue={data.textValue ?? data.label?.toString()}
             >
               {data.label}

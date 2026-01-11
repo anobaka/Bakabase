@@ -997,6 +997,8 @@ namespace Bakabase.InsideWorld.Business.Services
                 return [];
             }
 
+            string[] playableFiles = [];
+
             // Use ResourceProfile to get effective playable file options
             var playableFileOptions = await ResourceProfileService.GetEffectivePlayableFileOptions(r);
             if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
@@ -1021,10 +1023,33 @@ namespace Bakabase.InsideWorld.Business.Services
                     }
                 }
 
-                return result.Select(f => f.StandardizePath()!).ToArray();
+                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
             }
 
-            return [];
+            // Save to cache
+            var cache = await _resourceCacheOrm.GetByKey(id, true);
+            var isNewCache = cache == null;
+            cache ??= new ResourceCacheDbModel { ResourceId = id };
+
+            var serializedPlayableFiles = new ListStringValueBuilder(playableFiles.Length == 0 ? null : playableFiles.ToList()).Value
+                ?.SerializeAsStandardValue(StandardValueType.ListString);
+
+            if (cache.PlayableFilePaths != serializedPlayableFiles ||
+                !cache.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles))
+            {
+                cache.PlayableFilePaths = serializedPlayableFiles;
+                cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+                if (isNewCache)
+                {
+                    await _resourceCacheOrm.Add(cache);
+                }
+                else
+                {
+                    await _resourceCacheOrm.Update(cache);
+                }
+            }
+
+            return playableFiles;
         }
 
         public async Task<BaseResponse> PlayRandomResource()
@@ -1058,7 +1083,8 @@ namespace Bakabase.InsideWorld.Business.Services
             return (await _orm.AddRange(resources.ToList())).Data;
         }
 
-        public async Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange, PauseToken pt, CancellationToken ct)
+        public async Task PrepareCache(Func<int, Task>? onProgressChange, Func<string, Task>? onProcessChange,
+            PauseToken pt, CancellationToken ct)
         {
             var caches = await _resourceCacheOrm.GetAll();
             var cachedResourceIds = caches.Select(c => c.ResourceId).ToList();
@@ -1072,35 +1098,62 @@ namespace Bakabase.InsideWorld.Business.Services
             var badCaches = caches.Where(c => badCachedResourceIds.Contains(c.ResourceId)).ToList();
             await _resourceCacheOrm.RemoveRange(badCaches);
             _resourceCacheOrm.DbContext.DetachAll(caches.Concat(newCaches));
-            
-            var fullCacheType = (ResourceCacheType) SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int) x);
-            fullCacheType &= ~ResourceCacheType.ResourceMarkers;
+
+            // Calculate fullCacheType based on KeepResourcesOnPathChange option
+            // When enabled: include ResourceMarkers (resources should have markers)
+            // When disabled: exclude ResourceMarkers (resources should not have markers)
+            var keepResourcesOnPathChange = _optionsManager.Value.KeepResourcesOnPathChange;
+            var fullCacheType = (ResourceCacheType)SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int)x);
+            if (!keepResourcesOnPathChange)
+            {
+                fullCacheType &= ~ResourceCacheType.ResourceMarkers;
+            }
+
             var percentage = 0m;
 
+            // All caches where CachedTypes != fullCacheType need processing
             var tbdCaches = await _resourceCacheOrm.GetAll(x => x.CachedTypes != fullCacheType);
             var estimateCount = tbdCaches.Count;
             var itemPercentage = estimateCount == 0 ? 0 : 100m / estimateCount;
             var doneCount = 0;
 
+            if (onProcessChange != null)
+            {
+                await onProcessChange(string.Empty);
+            }
+
             foreach (var tbdCache in tbdCaches)
             {
                 ct.ThrowIfCancellationRequested();
+
+                // Re-check option state at each iteration (user might toggle during long operation)
+                var currentKeepResourcesOnPathChange = _optionsManager.Value.KeepResourcesOnPathChange;
+                var currentFullCacheType =
+                    (ResourceCacheType)SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int)x);
+                if (!currentKeepResourcesOnPathChange)
+                {
+                    currentFullCacheType &= ~ResourceCacheType.ResourceMarkers;
+                }
+
                 try
                 {
                     var cache = await _resourceCacheOrm.GetByKey(tbdCache.ResourceId);
-                    if (cache != null && cache.CachedTypes != fullCacheType)
+                    if (cache != null && cache.CachedTypes != currentFullCacheType)
                     {
                         var resource = await Get(cache.ResourceId, ResourceAdditionalItem.None);
                         if (resource != null)
                         {
                             foreach (var cacheType in SpecificEnumUtils<ResourceCacheType>.Values)
                             {
-                                if (fullCacheType.HasFlag(cacheType) && !cache.CachedTypes.HasFlag(cacheType))
+                                ct.ThrowIfCancellationRequested();
+                                await pt.WaitWhilePausedAsync(ct);
+
+                                switch (cacheType)
                                 {
-                                    await pt.WaitWhilePausedAsync(ct);
-                                    switch (cacheType)
+                                    case ResourceCacheType.Covers:
                                     {
-                                        case ResourceCacheType.Covers:
+                                        // Skip if already cached
+                                        if (!cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
                                         {
                                             var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
                                             cache.CoverPaths = coverPath.IsNotEmpty()
@@ -1108,75 +1161,158 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     ?.SerializeAsStandardValue(
                                                         StandardValueType.ListString)
                                                 : null;
-                                            cache.CachedTypes |= ResourceCacheType.Covers;
+                                        }
+
+                                        cache.CachedTypes |= ResourceCacheType.Covers;
+                                        break;
+                                    }
+                                    case ResourceCacheType.PlayableFiles:
+                                    {
+                                        // Skip if already cached
+                                        if (cache.CachedTypes.HasFlag(ResourceCacheType.PlayableFiles))
+                                        {
                                             break;
                                         }
-                                        case ResourceCacheType.PlayableFiles:
+
+                                        string[]? playableFiles = null;
+
+                                        // Use ResourceProfile to get effective playable file options
+                                        var playableFileOptions =
+                                            await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
+                                        if (playableFileOptions?.Extensions is { Count: > 0 })
                                         {
-                                            string[]? playableFiles = null;
+                                            var extensions =
+                                                playableFileOptions.Extensions.ToHashSet(StringComparer
+                                                    .OrdinalIgnoreCase);
+                                            var files = resource.IsFile
+                                                ? File.Exists(resource.Path) ? new List<string> { resource.Path } : []
+                                                : Directory.Exists(resource.Path)
+                                                    ? Directory.EnumerateFiles(resource.Path, "*",
+                                                        SearchOption.AllDirectories)
+                                                    : [];
 
-                                            // Use ResourceProfile to get effective playable file options
-                                            var playableFileOptions = await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
-                                            if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
+                                            var result = files.Where(f =>
+                                                extensions.Contains(Path.GetExtension(f))).ToArray();
+
+                                            // Apply file name pattern filter if configured
+                                            if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
                                             {
-                                                var extensions = playableFileOptions.Extensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                                                var files = resource.IsFile
-                                                    ? new List<string> { resource.Path }
-                                                    : Directory.EnumerateFiles(resource.Path, "*",
-                                                        SearchOption.AllDirectories);
-
-                                                IEnumerable<string> result = files.Where(f =>
-                                                    extensions.Contains(Path.GetExtension(f)));
-
-                                                // Apply file name pattern filter if configured
-                                                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
+                                                try
                                                 {
-                                                    try
+                                                    var regex = new System.Text.RegularExpressions.Regex(
+                                                        playableFileOptions.FileNamePattern,
+                                                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                                    result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToArray();
+                                                }
+                                                catch
+                                                {
+                                                    // Invalid regex, ignore the filter
+                                                }
+                                            }
+
+                                            playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
+                                        }
+
+                                        if (playableFiles?.Any() == true)
+                                        {
+                                            var trimmedPlayableFiles = playableFiles
+                                                .GroupBy(d =>
+                                                    $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                                                .SelectMany(x =>
+                                                    x.Take(InternalOptions
+                                                        .MaxPlayableFilesPerTypeAndSubDir))
+                                                .ToList();
+                                            cache.PlayableFilePaths =
+                                                trimmedPlayableFiles.SerializeAsStandardValue(
+                                                    StandardValueType
+                                                        .ListString);
+                                            cache.HasMorePlayableFiles =
+                                                trimmedPlayableFiles.Count < playableFiles.Length;
+                                        }
+
+                                        cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+
+                                        break;
+                                    }
+                                    case ResourceCacheType.ResourceMarkers:
+                                    {
+                                        var keepResourcesOnPathChangeInternal =
+                                            _optionsManager.Value.KeepResourcesOnPathChange;
+
+                                        // File resources can't have marker files, just update cache flag accordingly
+                                        if (resource.IsFile)
+                                        {
+                                            if (keepResourcesOnPathChangeInternal)
+                                                cache.CachedTypes |= ResourceCacheType.ResourceMarkers;
+                                            else
+                                                cache.CachedTypes &= ~ResourceCacheType.ResourceMarkers;
+                                            break;
+                                        }
+
+                                        // For folder resources, create or delete marker file based on option
+                                        if (keepResourcesOnPathChangeInternal)
+                                        {
+                                            // Option enabled: ensure marker exists
+                                            if (!cache.CachedTypes.HasFlag(ResourceCacheType.ResourceMarkers))
+                                            {
+                                                try
+                                                {
+                                                    if (Directory.Exists(resource.Path))
                                                     {
-                                                        var regex = new System.Text.RegularExpressions.Regex(
-                                                            playableFileOptions.FileNamePattern,
-                                                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f)));
-                                                    }
-                                                    catch
-                                                    {
-                                                        // Invalid regex, ignore the filter
+                                                        var markerPath = Path.Combine(resource.Path,
+                                                            InternalOptions.ResourceMarkerFileName);
+                                                        var content = System.Text.Json.JsonSerializer.Serialize(new
+                                                            { ids = new[] { resource.Id } });
+                                                        await File.WriteAllTextAsync(markerPath, content);
+                                                        File.SetAttributes(markerPath,
+                                                            File.GetAttributes(markerPath) | FileAttributes.Hidden);
                                                     }
                                                 }
-
-                                                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
+                                                catch (Exception e)
+                                                {
+                                                    _logger.LogWarning(e,
+                                                        $"Failed to create resource marker for {resource.Path}");
+                                                }
                                             }
 
-                                            if (playableFiles?.Any() == true)
-                                            {
-                                                var trimmedPlayableFiles = playableFiles
-                                                    .GroupBy(d =>
-                                                        $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
-                                                    .SelectMany(x =>
-                                                        x.Take(InternalOptions
-                                                            .MaxPlayableFilesPerTypeAndSubDir))
-                                                    .ToList();
-                                                cache.PlayableFilePaths =
-                                                    trimmedPlayableFiles.SerializeAsStandardValue(
-                                                        StandardValueType
-                                                            .ListString);
-                                                cache.HasMorePlayableFiles =
-                                                    trimmedPlayableFiles.Count < playableFiles.Length;
-                                            }
-
-                                            cache.CachedTypes |= ResourceCacheType.PlayableFiles;
-
-                                            break;
+                                            // Always set flag (even if file operation failed, to avoid infinite retry)
+                                            cache.CachedTypes |= ResourceCacheType.ResourceMarkers;
                                         }
-                                        default:
-                                            throw new ArgumentOutOfRangeException();
+                                        else
+                                        {
+                                            // Option disabled: ensure marker is removed
+                                            if (cache.CachedTypes.HasFlag(ResourceCacheType.ResourceMarkers))
+                                            {
+                                                try
+                                                {
+                                                    var markerPath = Path.Combine(resource.Path,
+                                                        InternalOptions.ResourceMarkerFileName);
+                                                    if (File.Exists(markerPath))
+                                                    {
+                                                        File.Delete(markerPath);
+                                                    }
+                                                }
+                                                catch (Exception e)
+                                                {
+                                                    _logger.LogWarning(e,
+                                                        $"Failed to delete resource marker at {resource.Path}");
+                                                }
+                                            }
+
+                                            // Always clear flag (even if file operation failed, to avoid infinite retry)
+                                            cache.CachedTypes &= ~ResourceCacheType.ResourceMarkers;
+                                        }
+
+                                        break;
                                     }
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
                                 }
                             }
-
-                            await _resourceCacheOrm.Update(cache);
-                            _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
                         }
+
+                        await _resourceCacheOrm.Update(cache);
+                        _logger.LogInformation($"Cache for {cache.ResourceId} has been prepared.");
                     }
                 }
                 catch (Exception e)

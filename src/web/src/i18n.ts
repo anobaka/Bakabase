@@ -36,6 +36,7 @@ import enText from "@/locales/en/pages/text.json";
 import enPostParser from "@/locales/en/pages/postParser.json";
 import enPathMarks from "@/locales/en/pages/pathMarks.json";
 import enPathMarkConfig from "@/locales/en/pages/pathMarkConfig.json";
+import enComparison from "@/locales/en/pages/comparison.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -46,6 +47,7 @@ import enMediaPlayer from "@/locales/en/components/mediaPlayer.json";
 import enOnboarding from "@/locales/en/components/onboarding.json";
 import enResourceComponent from "@/locales/en/components/resource.json";
 import enFloatingAssistant from "@/locales/en/components/floatingAssistant.json";
+import enCookieValidator from "@/locales/en/components/cookieValidator.json";
 
 // New modular imports - Chinese
 import cnCommon from "@/locales/cn/common.json";
@@ -82,6 +84,7 @@ import cnText from "@/locales/cn/pages/text.json";
 import cnPostParser from "@/locales/cn/pages/postParser.json";
 import cnPathMarks from "@/locales/cn/pages/pathMarks.json";
 import cnPathMarkConfig from "@/locales/cn/pages/pathMarkConfig.json";
+import cnComparison from "@/locales/cn/pages/comparison.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -92,6 +95,7 @@ import cnMediaPlayer from "@/locales/cn/components/mediaPlayer.json";
 import cnOnboarding from "@/locales/cn/components/onboarding.json";
 import cnResourceComponent from "@/locales/cn/components/resource.json";
 import cnFloatingAssistant from "@/locales/cn/components/floatingAssistant.json";
+import cnCookieValidator from "@/locales/cn/components/cookieValidator.json";
 
 // Merge all English resources
 const enResources = {
@@ -128,6 +132,7 @@ const enResources = {
   ...enPostParser,
   ...enPathMarks,
   ...enPathMarkConfig,
+  ...enComparison,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -137,6 +142,7 @@ const enResources = {
   ...enOnboarding,
   ...enResourceComponent,
   ...enFloatingAssistant,
+  ...enCookieValidator,
 };
 
 // Merge all Chinese resources
@@ -174,6 +180,7 @@ const cnResources = {
   ...cnPostParser,
   ...cnPathMarks,
   ...cnPathMarkConfig,
+  ...cnComparison,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,
@@ -183,6 +190,7 @@ const cnResources = {
   ...cnOnboarding,
   ...cnResourceComponent,
   ...cnFloatingAssistant,
+  ...cnCookieValidator,
 };
 
 // 只初始化一次，防止热更新或多次 import 时重复初始化

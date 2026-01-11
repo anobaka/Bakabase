@@ -15,7 +15,7 @@
   "resourceProfile.tip.searchCriteria": "定义此配置适用于哪些资源。匹配这些条件的资源将使用此配置的设置。",
   "resourceProfile.tip.nameTemplate": "使用属性占位符（如 {Name}）自定义资源名称的显示方式。留空则使用原始文件名。",
   "resourceProfile.tip.playableFiles": "识别资源中哪些文件可播放的规则。可按文件扩展名或文件名模式配置。",
-  "resourceProfile.tip.players": "用于打开可播放文件的外部应用程序。可为不同的文件扩展名指定不同的播放器。",
+  "resourceProfile.tip.players": "用于打开可播放文件的外部应用程序。可为不同的文件扩展名指定不同的播放器。默认情况下我们使用系统自带的方式打开可播放文件。",
   "resourceProfile.tip.properties": "选择匹配此配置的资源应显示或可编辑哪些属性。",
   "resourceProfile.tip.configureEnhancers": "点击配置增强器",
   "resourceProfile.action.testCriteria": "测试条件",

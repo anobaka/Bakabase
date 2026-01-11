@@ -85,9 +85,6 @@ public class BTaskEventHandler : IBTaskEventHandler, IDisposable
                     allTasks = _pendingAllTasks;
                     _hasAllTasksUpdate = false;
                     _pendingAllTasks = null;
-
-                    // 清空增量队列，因为全量更新包含了所有数据
-                    _pendingIncrementalTasks.Clear();
                 }
             }
             finally
@@ -97,6 +94,27 @@ public class BTaskEventHandler : IBTaskEventHandler, IDisposable
 
             if (shouldSendAll && allTasks != null)
             {
+                // 合并增量更新到全量数据中，因为增量数据可能比全量快照更新
+                // Merge incremental updates into full data, as incremental data may be newer than the snapshot
+                if (!_pendingIncrementalTasks.IsEmpty)
+                {
+                    var taskList = allTasks.ToList();
+                    foreach (var incrementalTask in _pendingIncrementalTasks.Values)
+                    {
+                        var idx = taskList.FindIndex(t => t.Id == incrementalTask.Id);
+                        if (idx >= 0)
+                        {
+                            taskList[idx] = incrementalTask;
+                        }
+                        else
+                        {
+                            taskList.Add(incrementalTask);
+                        }
+                    }
+                    allTasks = taskList;
+                    _pendingIncrementalTasks.Clear();
+                }
+
                 await _uiHub.Clients.All.GetData("BTask", allTasks);
                 return;
             }

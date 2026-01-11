@@ -3,7 +3,7 @@
 import type { ValueRendererProps } from "../models";
 import type { LinkValue } from "../../models";
 
-import { EditOutlined } from "@ant-design/icons";
+import { EditOutlined, FileTextOutlined, LinkOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 
@@ -44,9 +44,7 @@ const LinkValueRenderer = ({
       <span className={"flex items-center gap-2"}>
         {inner}
         <Popover
-          isKeyboardDismissDisabled
           isOpen={!!editingValue}
-          shouldCloseOnBlur={false}
           trigger={
             <Button isIconOnly size={"sm"}>
               <EditOutlined className={"text-base"} />
@@ -55,13 +53,17 @@ const LinkValueRenderer = ({
           onOpenChange={(isOpen) => {
             if (isOpen) {
               setEditingValue({ ...value });
+            } else {
+              setEditingValue(undefined);
             }
           }}
         >
-          <div className={"flex flex-col gap-1"}>
+          <div className={"flex flex-col gap-3 min-w-[320px] p-1"}>
             <Input
-              label={t<string>("Text")}
+              placeholder={t<string>("Text")}
               size={size}
+              variant="bordered"
+              startContent={<FileTextOutlined className="text-default-400" />}
               value={editingValue?.text}
               onValueChange={(text) => {
                 setEditingValue({
@@ -71,8 +73,10 @@ const LinkValueRenderer = ({
               }}
             />
             <Input
-              label={t<string>("Link")}
+              placeholder={t<string>("Link")}
               size={size}
+              variant="bordered"
+              startContent={<LinkOutlined className="text-default-400" />}
               value={editingValue?.url}
               onValueChange={(url) => {
                 setEditingValue({
@@ -81,7 +85,16 @@ const LinkValueRenderer = ({
                 });
               }}
             />
-            <div className={"flex items-center gap-2 justify-center"}>
+            <div className={"flex items-center gap-2 justify-end"}>
+              <Button
+                size={size}
+                variant="light"
+                onClick={() => {
+                  setEditingValue(undefined);
+                }}
+              >
+                {t<string>("Cancel")}
+              </Button>
               <Button
                 color={"primary"}
                 size={size}
@@ -91,14 +104,6 @@ const LinkValueRenderer = ({
                 }}
               >
                 {t<string>("Submit")}
-              </Button>
-              <Button
-                size={size}
-                onClick={() => {
-                  setEditingValue(undefined);
-                }}
-              >
-                {t<string>("Cancel")}
               </Button>
             </div>
           </div>

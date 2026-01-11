@@ -212,14 +212,19 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
   return (
     <Modal
       defaultVisible
-      size={"xl"}
+      size={"5xl"}
       title={t<string>("downloader.modal.configurations")}
       onDestroyed={onDestroyed}
       onOk={handleSubmit}
     >
       <Tabs
+        isVertical
+        disableAnimation
         selectedKey={selectedTab?.toString()}
         onSelectionChange={(key) => handleTabChange(key as string)}
+        classNames={{
+          tab: "justify-start"
+        }}
       >
         {Object.entries(thirdPartyGroups).map(([thirdPartyIdStr]) => {
           const thirdPartyId = parseInt(thirdPartyIdStr, 10) as ThirdPartyId;
@@ -235,7 +240,7 @@ const ConfigurationsModal = ({ onSubmitted, onDestroyed }: Props) => {
             <Tab
               key={thirdPartyId}
               title={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-start">
                   <ThirdPartyIcon thirdPartyId={thirdPartyId} />
                   {t<string>(thirdPartyName)}
                   {isDeveloping && <DevelopingChip size="sm" />}

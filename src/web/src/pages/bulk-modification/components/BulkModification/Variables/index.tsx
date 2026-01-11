@@ -30,64 +30,43 @@ const Variables = ({ variables: propsVariable, onChange }: Props) => {
   const renderVariable = (v: BulkModificationVariable, index: number) => {
     const hasPreprocesses = v.preprocesses && v.preprocesses.length > 0;
 
-    if (!hasPreprocesses) {
-      return (
-        <Chip
-          className={"cursor-pointer"}
-          radius={"sm"}
-          size={"sm"}
-          variant={"bordered"}
-          onClick={() => {
-            createPortal(VariableModal, {
-              variable: v,
-              onChange: (v) => {
-                variables[index] = v;
-                const nvs = [...variables];
+    const openEditModal = () => {
+      createPortal(VariableModal, {
+        variable: v,
+        onChange: (updatedVar) => {
+          variables[index] = updatedVar;
+          const nvs = [...variables];
 
-                setVariables(nvs);
-                onChange?.(nvs);
-              },
-            });
-          }}
-          onClose={() => {
-            createPortal(Modal, {
-              defaultVisible: true,
-              title: t<string>("bulkModification.action.deleteVariable"),
-              children: t<string>("bulkModification.confirm.deleteVariable", {
-                name: v.name,
-              }),
-              onOk: () => {
-                const nvs = variables.filter((_, idx) => idx != index);
+          setVariables(nvs);
+          onChange?.(nvs);
+        },
+      });
+    };
 
-                setVariables(nvs);
-                onChange?.(nvs);
-              },
-            });
-          }}
-        >
-          {v.name}
-        </Chip>
-      );
-    }
+    const openDeleteModal = () => {
+      createPortal(Modal, {
+        defaultVisible: true,
+        title: t<string>("bulkModification.action.deleteVariable"),
+        children: t<string>("bulkModification.confirm.deleteVariable", {
+          name: v.name,
+        }),
+        onOk: () => {
+          const nvs = variables.filter((_, idx) => idx != index);
 
+          setVariables(nvs);
+          onChange?.(nvs);
+        },
+      });
+    };
+
+    // Use consistent Card layout for both cases
     return (
       <Card
         isPressable
         className={"cursor-pointer hover:bg-[var(--bakaui-overlap-background)]"}
         radius={"sm"}
         shadow={"none"}
-        onPress={() => {
-          createPortal(VariableModal, {
-            variable: v,
-            onChange: (v) => {
-              variables[index] = v;
-              const nvs = [...variables];
-
-              setVariables(nvs);
-              onChange?.(nvs);
-            },
-          });
-        }}
+        onPress={openEditModal}
       >
         <CardBody className={"p-2 gap-1"}>
           <div className={"flex items-center gap-2"}>
@@ -97,34 +76,24 @@ const Variables = ({ variables: propsVariable, onChange }: Props) => {
               size={"sm"}
               variant={"bordered"}
               onClose={(e) => {
-                createPortal(Modal, {
-                  defaultVisible: true,
-                  title: t<string>("bulkModification.action.deleteVariable"),
-                  children: t<string>("bulkModification.confirm.deleteVariable", {
-                    name: v.name,
-                  }),
-                  onOk: () => {
-                    const nvs = variables.filter((_, idx) => idx != index);
-
-                    setVariables(nvs);
-                    onChange?.(nvs);
-                  },
-                });
+                openDeleteModal();
               }}
             >
               {v.name}
             </Chip>
           </div>
-          <div className={"flex flex-col gap-1 pl-2"}>
-            {v.preprocesses!.map((step, stepIndex) => (
-              <div key={stepIndex} className={"flex items-center gap-1 flex-wrap"}>
-                <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                  {stepIndex + 1}
-                </Chip>
-                <StepDemonstrator property={v.property} step={step} variables={variables} />
-              </div>
-            ))}
-          </div>
+          {hasPreprocesses && (
+            <div className={"flex flex-col gap-1 pl-2"}>
+              {v.preprocesses!.map((step, stepIndex) => (
+                <div key={stepIndex} className={"flex items-center gap-1 flex-wrap"}>
+                  <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                    {stepIndex + 1}
+                  </Chip>
+                  <StepDemonstrator property={v.property} step={step} variables={variables} />
+                </div>
+              ))}
+            </div>
+          )}
         </CardBody>
       </Card>
     );

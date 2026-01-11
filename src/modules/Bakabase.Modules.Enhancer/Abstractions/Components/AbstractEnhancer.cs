@@ -44,9 +44,9 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
 
         public async Task<object?> BuildContext(Resource resource, EnhancerFullOptions options,
             EnhancementLogCollector logCollector, CancellationToken ct) =>
-            await BuildContextInternal(resource, options, logCollector, ct);
+            await BuildContextInternal(resource, (TEnhancerOptions)(object)options, logCollector, ct);
 
-        protected abstract Task<TContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
+        protected abstract Task<TContext?> BuildContextInternal(Resource resource, TEnhancerOptions options,
             EnhancementLogCollector logCollector, CancellationToken ct);
 
         public int Id => (int) TypedId;
@@ -75,7 +75,7 @@ namespace Bakabase.Modules.Enhancer.Abstractions.Components
             TContext? context;
             try
             {
-                context = await BuildContextInternal(resource, options, logCollector, ct);
+                context = await BuildContextInternal(resource, (TEnhancerOptions)(object)options, logCollector, ct);
                 if (context == null)
                 {
                     logCollector.LogWarning(EnhancementLogEvent.ContextBuilt,

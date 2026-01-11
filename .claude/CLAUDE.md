@@ -33,4 +33,7 @@ cd Bakabase/src/web && yarn run gen-sdk  # Regenerate API SDK
 # Backend
 dotnet build                              # Build solution
 dotnet run --project Bakabase/src/Bakabase  # Run desktop app
+
+# Database Migration (NEVER create migration files manually, always use this command)
+dotnet ef migrations add {MigrationName} --verbose --project src/legacy/Bakabase.InsideWorld.Business --startup-project src/Bakabase.Service --context BakabaseDbContext
 ```

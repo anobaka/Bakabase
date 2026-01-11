@@ -19,6 +19,7 @@ export interface EnhancerFullOptions {
     scope: PropertyValueScope;
   };
   pretreatKeyword?: boolean;
+  bangumiPrioritySubjectType?: number;
 }
 
 export interface EnhancerTargetFullOptions {

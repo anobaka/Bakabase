@@ -3,6 +3,7 @@
 import type { ValueRendererProps } from "../models";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import NumberValueEditor from "../../ValueEditor/Editors/NumberValueEditor";
 
@@ -20,6 +21,7 @@ const log = buildLogger("NumberValueRenderer");
 const NumberValueRenderer = (props: NumberValueRendererProps) => {
   const { value, precision, editor, variant, suffix, as, size, isReadonly: propsIsReadonly, isEditing, ...otherProps } =
     props;
+  const { t } = useTranslation();
 
   log(props);
 
@@ -36,6 +38,7 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
       <NumberValueEditor
         value={value}
         size={size}
+        placeholder={t("Number")}
         onValueChange={(dbValue, bizValue) => {
           editor.onValueChange?.(dbValue, bizValue);
         }}
@@ -48,6 +51,7 @@ const NumberValueRenderer = (props: NumberValueRendererProps) => {
       <NumberValueEditor
         value={value}
         size={size}
+        placeholder={t("Number")}
         onValueChange={(dbValue, bizValue) => {
           editor?.onValueChange?.(dbValue, bizValue);
           setEditing(false);

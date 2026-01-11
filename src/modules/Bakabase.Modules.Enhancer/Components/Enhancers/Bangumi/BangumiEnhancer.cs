@@ -9,6 +9,7 @@ using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi;
+using Bakabase.Modules.ThirdParty.ThirdParties.Bangumi.Models;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Logging;
 
@@ -21,22 +22,67 @@ public class BangumiEnhancer(
     IStandardValueService standardValueService,
     ISpecialTextService specialTextService,
     IServiceProvider serviceProvider)
-    : AbstractKeywordEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, object?>(loggerFactory, fileManager,
+    : AbstractKeywordEnhancer<BangumiEnhancerTarget, BangumiEnhancerContext, IBangumiEnhancerOptions>(loggerFactory, fileManager,
         standardValueService, specialTextService, serviceProvider)
 {
-    protected override async Task<BangumiEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
-        EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
+    private static string? GetCategoryString(BangumiSubjectType? type) => type switch
     {
-        var searchUrl = BangumiUrlBuilder.Search(keyword).ToString();
-        logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
-            $"Searching Bangumi",
-            new { Url = searchUrl, Keyword = keyword });
+        BangumiSubjectType.All => null,
+        BangumiSubjectType.Anime => "anime",
+        BangumiSubjectType.Book => "book",
+        BangumiSubjectType.Music => "music",
+        BangumiSubjectType.Game => "game",
+        BangumiSubjectType.Real => "real",
+        _ => null
+    };
 
-        var detail = await client.SearchAndParseFirst(keyword);
+    protected override async Task<BangumiEnhancerContext?> BuildContextInternal(string keyword, Resource resource,
+        IBangumiEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
+    {
+        BangumiDetail? detail = null;
+        var priorityType = options.BangumiPrioritySubjectType.HasValue
+            ? (BangumiSubjectType)options.BangumiPrioritySubjectType.Value
+            : (BangumiSubjectType?)null;
+        var priorityCategory = GetCategoryString(priorityType);
 
-        logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
-            detail != null ? $"Found Bangumi entry: {detail.Name}" : "No Bangumi entry found",
-            new { Url = searchUrl, Found = detail != null, Name = detail?.Name });
+        // If a priority category is set, try searching with it first
+        if (!string.IsNullOrEmpty(priorityCategory))
+        {
+            var prioritySearchUrl = BangumiUrlBuilder.Search(keyword, priorityCategory).ToString();
+            logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                $"Searching Bangumi with priority category: {priorityCategory}",
+                new { Url = prioritySearchUrl, Keyword = keyword, Category = priorityCategory });
+
+            detail = await client.SearchAndParseFirst(keyword, priorityCategory);
+
+            if (detail != null)
+            {
+                logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                    $"Found Bangumi entry with priority category: {detail.Name}",
+                    new { Url = prioritySearchUrl, Found = true, Name = detail.Name, Category = priorityCategory });
+            }
+            else
+            {
+                logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                    $"No results with priority category '{priorityCategory}', falling back to all categories",
+                    new { Url = prioritySearchUrl, Found = false, Category = priorityCategory });
+            }
+        }
+
+        // If no priority category or no results found with priority category, search all
+        if (detail == null)
+        {
+            var searchUrl = BangumiUrlBuilder.Search(keyword).ToString();
+            logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
+                $"Searching Bangumi (all categories)",
+                new { Url = searchUrl, Keyword = keyword });
+
+            detail = await client.SearchAndParseFirst(keyword);
+
+            logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
+                detail != null ? $"Found Bangumi entry: {detail.Name}" : "No Bangumi entry found",
+                new { Url = searchUrl, Found = detail != null, Name = detail?.Name });
+        }
 
         if (detail != null)
         {

@@ -1433,6 +1433,183 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("BulkModificationDiffs");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.Comparison.Models.Db.ComparisonPlanDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastRunAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SearchJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Threshold")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("ComparisonPlans");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Comparison.Models.Db.ComparisonResultGroupDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsHidden")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("MemberCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberCount");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("PlanId", "MemberCount");
+
+                    b.ToTable("ComparisonResultGroups");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Comparison.Models.Db.ComparisonResultGroupMemberDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsSuggestedPrimary")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("GroupId", "ResourceId")
+                        .IsUnique();
+
+                    b.ToTable("ComparisonResultGroupMembers");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Comparison.Models.Db.ComparisonResultPairDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("GroupId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Resource1Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Resource2Id")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RuleScoresJson")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("TotalScore")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("Resource1Id", "Resource2Id");
+
+                    b.HasIndex("GroupId", "Resource1Id", "Resource2Id")
+                        .IsUnique();
+
+                    b.ToTable("ComparisonResultPairs");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.Comparison.Models.Db.ComparisonRuleDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("BothNullBehavior")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsVeto")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Normalize")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("OneNullBehavior")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Parameter")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PropertyPool")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("PropertyValueScope")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("VetoThreshold")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Weight")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("PlanId", "Order");
+
+                    b.ToTable("ComparisonRules");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.Property.Abstractions.Models.Db.CustomPropertyDbModel", b =>
                 {
                     b.Property<int>("Id")

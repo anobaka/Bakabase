@@ -30,6 +30,10 @@ const PathMarkSettingsButton = ({
   const syncMarksImmediately =
     resourceOptionsStore.data?.synchronizationOptions?.syncMarksImmediately ?? false;
 
+  // Get keep resources on path change option
+  const keepResourcesOnPathChange =
+    resourceOptionsStore.data?.keepResourcesOnPathChange ?? false;
+
   // Toggle sync immediately option
   const handleToggleSyncImmediately = useCallback(
     async (checked: boolean) => {
@@ -83,6 +87,21 @@ const PathMarkSettingsButton = ({
     [createPortal, resourceOptionsStore.data?.synchronizationOptions, t],
   );
 
+  // Toggle keep resources on path change option
+  const handleToggleKeepResourcesOnPathChange = useCallback(
+    async (checked: boolean) => {
+      try {
+        await BApi.options.patchResourceOptions({
+          keepResourcesOnPathChange: checked,
+        });
+      } catch (error) {
+        console.error("Failed to update option", error);
+        toast.danger(t("pathMarkConfig.error.updateOption"));
+      }
+    },
+    [t],
+  );
+
   return (
     <>
       <Button
@@ -98,7 +117,7 @@ const PathMarkSettingsButton = ({
       {visible && (
         <Modal
           footer={false}
-          size="sm"
+          size="md"
           title={t("pathMarkConfig.modal.settingsTitle")}
           visible={visible}
           onClose={() => setVisible(false)}
@@ -113,6 +132,19 @@ const PathMarkSettingsButton = ({
                 <span>{t("pathMarkConfig.label.syncImmediately")}</span>
                 <span className="text-xs text-default-500">
                   {t("pathMarkConfig.tip.syncImmediately")}
+                </span>
+              </div>
+            </Checkbox>
+
+            <Checkbox
+              isSelected={keepResourcesOnPathChange}
+              size="sm"
+              onValueChange={handleToggleKeepResourcesOnPathChange}
+            >
+              <div className="flex flex-col">
+                <span>{t("pathMarkConfig.label.keepResourcesOnPathChange")}</span>
+                <span className="text-xs text-default-500">
+                  {t("pathMarkConfig.tip.keepResourcesOnPathChange")}
                 </span>
               </div>
             </Checkbox>

@@ -663,6 +663,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/comparison/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllComparisonPlans"];
+        put?: never;
+        post: operations["CreateComparisonPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetComparisonPlan"];
+        put?: never;
+        post?: never;
+        delete: operations["DeleteComparisonPlan"];
+        options?: never;
+        head?: never;
+        patch: operations["UpdateComparisonPlan"];
+        trace?: never;
+    };
+    "/comparison/plan/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DuplicateComparisonPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ExecuteComparisonPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{planId}/results": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchComparisonResults"];
+        put?: never;
+        post?: never;
+        delete: operations["ClearComparisonResults"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{planId}/results/{groupId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetComparisonResultGroup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{planId}/results/{groupId}/resource-ids": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetComparisonResultGroupResourceIds"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{planId}/results/{groupId}/pairs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetComparisonResultGroupPairs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/comparison/plan/{planId}/results/{groupId}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["HideComparisonResultGroup"];
+        post?: never;
+        delete: operations["UnhideComparisonResultGroup"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/component": {
         parameters: {
             query?: never;
@@ -4630,6 +4774,8 @@ export interface components {
             requirements?: number[];
             keywordProperty?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ScopePropertyKey"];
             pretreatKeyword?: boolean;
+            /** Format: int32 */
+            bangumiPrioritySubjectType?: number;
         };
         "Bakabase.Abstractions.Models.Domain.EnhancerTargetFullOptions": {
             /** Format: int32 */
@@ -4948,6 +5094,32 @@ export interface components {
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions": {
             properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyKey"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearch": {
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            readonly skipCount: number;
+            group?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"];
+            orders?: components["schemas"]["Bakabase.Abstractions.Models.Input.ResourceSearchOrderInputModel"][];
+            tags?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceTag"][];
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearchFilter": {
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            operation: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchOperation"];
+            dbValue?: unknown;
+            property: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
+            disabled: boolean;
+        };
+        "Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup": {
+            combinator: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.SearchCombinator"];
+            groups?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilterGroup"][];
+            filters?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearchFilter"][];
+            disabled: boolean;
         };
         "Bakabase.Abstractions.Models.Domain.ScopePropertyKey": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
@@ -6355,6 +6527,163 @@ export interface components {
             text?: string;
             isPreferred: boolean;
         };
+        "Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            search?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ResourceSearch"];
+            /** Format: double */
+            threshold: number;
+            rules: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.ComparisonRule"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastRunAt?: string;
+        };
+        "Bakabase.Modules.Comparison.Models.Domain.ComparisonRule": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            planId: number;
+            /** Format: int32 */
+            order: number;
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            propertyValueScope?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
+            mode: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.ComparisonMode"];
+            parameter?: string;
+            normalize: boolean;
+            /** Format: int32 */
+            weight: number;
+            isVeto: boolean;
+            /** Format: double */
+            vetoThreshold: number;
+            oneNullBehavior: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior"];
+            bothNullBehavior: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior"];
+        };
+        /**
+         * Format: int32
+         * @description [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Comparison.Models.Domain.Constants.ComparisonMode": 0 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+        /**
+         * Format: int32
+         * @description [0: Skip, 1: Fail, 2: Pass]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior": 0 | 1 | 2;
+        "Bakabase.Modules.Comparison.Models.Input.ComparisonRuleInputModel": {
+            /** Format: int32 */
+            order: number;
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            propertyValueScope?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
+            mode: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.ComparisonMode"];
+            parameter?: unknown;
+            normalize: boolean;
+            /** Format: int32 */
+            weight: number;
+            isVeto: boolean;
+            /** Format: double */
+            vetoThreshold: number;
+            oneNullBehavior: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior"];
+            bothNullBehavior: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior"];
+        };
+        "Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupMemberViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            groupId: number;
+            /** Format: int32 */
+            resourceId: number;
+            isSuggestedPrimary: boolean;
+        };
+        "Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            planId: number;
+            /** Format: int32 */
+            memberCount: number;
+            isHidden: boolean;
+            members?: components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupMemberViewModel"][];
+            previewCovers?: string[];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        "Bakabase.Modules.Comparison.Models.View.ComparisonResultPairViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            groupId: number;
+            /** Format: int32 */
+            resource1Id: number;
+            /** Format: int32 */
+            resource2Id: number;
+            /** Format: double */
+            totalScore: number;
+            ruleScores?: components["schemas"]["Bakabase.Modules.Comparison.Models.View.RuleScoreDetailViewModel"][];
+        };
+        "Bakabase.Modules.Comparison.Models.View.ComparisonResultPairsResponse": {
+            pairs: components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultPairViewModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            isTruncated: boolean;
+            /** Format: int32 */
+            limit: number;
+        };
+        "Bakabase.Modules.Comparison.Models.View.ComparisonResultSearchResponse": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            pageIndex: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            hiddenCount: number;
+        };
+        "Bakabase.Modules.Comparison.Models.View.ComparisonRuleViewModel": {
+            /** Format: int32 */
+            id: number;
+            /** Format: int32 */
+            order: number;
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            propertyId: number;
+            propertyName?: string;
+            propertyValueScope?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"];
+            mode: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.ComparisonMode"];
+            parameter?: unknown;
+            normalize: boolean;
+            /** Format: int32 */
+            weight: number;
+            isVeto: boolean;
+            /** Format: double */
+            vetoThreshold: number;
+            oneNullBehavior: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior"];
+            bothNullBehavior: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.Constants.NullValueBehavior"];
+        };
+        "Bakabase.Modules.Comparison.Models.View.RuleScoreDetailViewModel": {
+            /** Format: int32 */
+            ruleId: number;
+            /** Format: int32 */
+            order: number;
+            /** Format: double */
+            score: number;
+            /** Format: double */
+            weight: number;
+            value1?: string;
+            value2?: string;
+            isSkipped: boolean;
+            isVetoed: boolean;
+        };
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancementConverter": Record<string, never>;
         "Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor": {
             /** Format: int32 */
@@ -6591,6 +6920,20 @@ export interface components {
         "Bakabase.Service.Models.Input.CategoryCustomPropertySortInputModel": {
             orderedPropertyIds: number[];
         };
+        "Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel": {
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            /** Format: double */
+            threshold: number;
+            rules: components["schemas"]["Bakabase.Modules.Comparison.Models.Input.ComparisonRuleInputModel"][];
+        };
+        "Bakabase.Service.Models.Input.ComparisonPlanPatchInputModel": {
+            name?: string;
+            search?: components["schemas"]["Bakabase.Service.Models.Input.ResourceSearchInputModel"];
+            /** Format: double */
+            threshold?: number;
+            rules?: components["schemas"]["Bakabase.Modules.Comparison.Models.Input.ComparisonRuleInputModel"][];
+        };
         "Bakabase.Service.Models.Input.CompressedFileDetectionInputModel": {
             paths: string[];
             includeUnknownFiles: boolean;
@@ -6753,6 +7096,21 @@ export interface components {
             id: number;
             name: string;
             type: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
+        };
+        "Bakabase.Service.Models.View.ComparisonPlanViewModel": {
+            /** Format: int32 */
+            id: number;
+            name: string;
+            search?: components["schemas"]["Bakabase.Service.Models.View.ResourceSearchViewModel"];
+            /** Format: double */
+            threshold: number;
+            rules: components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonRuleViewModel"][];
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            lastRunAt?: string;
+            /** Format: int32 */
+            resultGroupCount?: number;
         };
         "Bakabase.Service.Models.View.CompressedFileDetectionResultViewModel": {
             key: string;
@@ -7123,6 +7481,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CategoryViewModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ComparisonPlanViewModel"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.CustomPropertyViewModel]": {
             /** Format: int32 */
@@ -7568,6 +7932,18 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Presets.Abstractions.Models.MediaLibraryTemplatePresetDataPool]": {
             /** Format: int32 */
             code: number;
@@ -7615,6 +7991,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CategoryViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.ComparisonPlanViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.CustomPropertyViewModel]": {
             /** Format: int32 */
@@ -9677,6 +10059,364 @@ export interface operations {
             header?: never;
             path: {
                 id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAllComparisonPlans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]"];
+                };
+            };
+        };
+    };
+    CreateComparisonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanCreateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]"];
+                };
+            };
+        };
+    };
+    GetComparisonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ComparisonPlanViewModel]"];
+                };
+            };
+        };
+    };
+    DeleteComparisonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UpdateComparisonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanPatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanPatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanPatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Service.Models.Input.ComparisonPlanPatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DuplicateComparisonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]"];
+                };
+            };
+        };
+    };
+    ExecuteComparisonPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    SearchComparisonResults: {
+        parameters: {
+            query?: {
+                pageIndex?: number;
+                pageSize?: number;
+                minMemberCount?: number;
+                includeHidden?: boolean;
+            };
+            header?: never;
+            path: {
+                planId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultSearchResponse"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultSearchResponse"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultSearchResponse"];
+                };
+            };
+        };
+    };
+    ClearComparisonResults: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetComparisonResultGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: number;
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.View.ComparisonResultGroupViewModel]"];
+                };
+            };
+        };
+    };
+    GetComparisonResultGroupResourceIds: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: number;
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.Int32]"];
+                };
+            };
+        };
+    };
+    GetComparisonResultGroupPairs: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                planId: number;
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultPairsResponse"];
+                    "application/json": components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultPairsResponse"];
+                    "text/json": components["schemas"]["Bakabase.Modules.Comparison.Models.View.ComparisonResultPairsResponse"];
+                };
+            };
+        };
+    };
+    HideComparisonResultGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: number;
+                groupId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    UnhideComparisonResultGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                planId: number;
+                groupId: number;
             };
             cookie?: never;
         };

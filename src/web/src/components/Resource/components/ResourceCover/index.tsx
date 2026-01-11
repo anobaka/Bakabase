@@ -2,14 +2,16 @@
 
 import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useUpdate, useUpdateEffect } from "react-use";
+import { useTranslation } from "react-i18next";
 
 import envConfig from "@/config/env";
 import { buildLogger, uuidv4 } from "@/components/utils";
 import MediaPreviewerPage from "@/components/MediaPreviewer";
 import "./index.scss";
 import { useAppContextStore } from "@/stores/appContext";
+import { useUiOptionsStore } from "@/stores/options";
 import { CoverFit } from "@/sdk/constants";
-import { Carousel, Tooltip, Image } from "@/components/bakaui";
+import { Carousel, Tooltip, Image, Spinner } from "@/components/bakaui";
 
 import type { Resource as ResourceModel } from "@/core/models/Resource";
 
@@ -56,6 +58,8 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     disableCarousel = false,
   } = props;
 
+  const { t } = useTranslation();
+
   // Use global cover load queue for controlled concurrent loading
   const coverLoadQueue = useCoverLoadQueue();
 
@@ -63,8 +67,12 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const forceUpdate = useUpdate();
 
+  // Get cache enabled status from UI options
+  const resourceUiOptions = useUiOptionsStore((state) => state.data?.resource);
+  const cacheEnabled = !resourceUiOptions?.disableCache;
+
   // Use SSE-based discovery for covers
-  const discoveryState = useCoverDiscovery(resource);
+  const discoveryState = useCoverDiscovery(resource, cacheEnabled);
 
   const [previewerVisible, setPreviewerVisible] = useState(false);
   const previewerHoverTimerRef = useRef<any>();
@@ -212,11 +220,26 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
   }, [propsOnClick]);
 
+  // Compute tooltip content for loading state
+  const loadingTooltipContent = useMemo(() => {
+    if (discoveryState.status === "loading") {
+      if (discoveryState.cacheEnabled) {
+        return t("resource.cover.tooltip.cachePreparing");
+      }
+      return t("resource.cover.tooltip.loading");
+    }
+    return undefined;
+  }, [discoveryState.status, discoveryState.cacheEnabled, t]);
+
   const renderCover = useCallback(() => {
-    // Show loading state
+    // Show loading state with tooltip
     if (discoveryState.status === "loading" || !urls) {
       return (
-        <div className="w-full h-full bg-default-100 animate-pulse" />
+        <Tooltip content={loadingTooltipContent} isDisabled={!loadingTooltipContent}>
+          <div className="w-full h-full flex items-center justify-center bg-default-100">
+            <Spinner size="sm" />
+          </div>
+        </Tooltip>
       );
     }
 
@@ -312,7 +335,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         })}
       </Carousel>
     );
-  }, [urls, coverFit, disableCarousel, blobUrls, failureUrls, discoveryState.status]);
+  }, [urls, coverFit, disableCarousel, blobUrls, failureUrls, discoveryState.status, loadingTooltipContent]);
 
   const renderContainer = () => {
     return (

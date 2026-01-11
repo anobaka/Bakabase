@@ -629,6 +629,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
         minWidth={250}
         maxWidth={500}
         storageKey="resource-filter-panel-width"
+        collapsible
+        collapsedStorageKey="resource-filter-panel-collapsed"
         className="h-full"
         leftPanel={leftPanelContent}
         rightPanel={rightPanelContent}

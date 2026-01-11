@@ -15,8 +15,10 @@ import {
   DisconnectOutlined,
   FileUnknownOutlined,
   HistoryOutlined,
+  LoadingOutlined,
   PlayCircleOutlined,
   PushpinOutlined,
+  QuestionCircleOutlined,
 } from "@ant-design/icons";
 import { ControlledMenu } from "@szhsin/react-menu";
 import { AiOutlineSync } from "react-icons/ai";
@@ -41,9 +43,49 @@ import {
   StandardValueType,
 } from "@/sdk/constants";
 import { useUiOptionsStore } from "@/stores/options";
-import PlayableFiles from "@/components/Resource/components/PlayableFiles";
+import PlayControl from "@/components/Resource/components/PlayControl";
+import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
+
+// PlayButton component defined outside Resource to maintain stable reference
+const PlayButton: React.FC<PlayControlPortalProps> = ({ status, onClick, tooltipContent, cacheEnabled }) => {
+  // Hidden status - don't render anything
+  if (status === "hidden") return null;
+
+  // Only show tooltip when preparing cache (loading + cacheEnabled)
+  const showTooltip = status === "loading" && cacheEnabled;
+
+  // Button size: ~22% of container (between 1/4 and 1/5), min 32px, max 64px
+  // Using cqw (container query width) units for proper sizing relative to container
+  const iconClass = "text-lg @[150px]:text-xl @[250px]:text-3xl";
+  const buttonClass = "!w-[22cqw] !h-[22cqw] !min-w-8 !min-h-8 !max-w-16 !max-h-16 !p-0";
+
+  const button = (
+    <Button
+      onPress={onClick}
+      isIconOnly
+      isDisabled={status === "loading"}
+      className={buttonClass}
+    >
+      {status === "loading" ? (
+        <LoadingOutlined className={iconClass} spin />
+      ) : status === "not-found" ? (
+        <QuestionCircleOutlined className={`${iconClass} text-warning`} />
+      ) : (
+        <PlayCircleOutlined className={iconClass} />
+      )}
+    </Button>
+  );
+
+  return (
+    <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+      <Tooltip content={tooltipContent} isDisabled={!showTooltip}>
+        {button}
+      </Tooltip>
+    </div>
+  );
+};
 
 export interface IResourceHandler {
   id: number;
@@ -174,7 +216,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
     return (
       <div
-        className="resource-cover-rectangle w-full max-w-full min-w-full pb-[100%] relative rounded group/cover"
+        className="resource-cover-rectangle w-full max-w-full min-w-full pb-[100%] relative rounded group/cover @container [container-type:inline-size]"
         id={elementId}
       >
         <div className="absolute inset-0">
@@ -190,7 +232,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           />
         </div>
         {/* lef-top */}
-        <div className={"absolute top-1 left-1 flex gap-1 items-center"}>
+        <div className={"absolute top-1 left-1 right-1 flex gap-1 items-center flex-wrap"}>
           {resource.tags.includes(ResourceTag.Pinned) && <PushpinOutlined />}
           {resource.tags.includes(ResourceTag.IsParent) && (
             <Tooltip content={t<string>("resource.tip.isParentResource")}>
@@ -208,7 +250,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Tooltip>
           )}
           {resource.playedAt && (
-            <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+            <Chip radius={"sm"} size={"sm"} variant={"flat"} className="whitespace-break-spaces h-auto">
               <div className={"flex items-center gap-1"}>
                 <HistoryOutlined />
                 {(() => {
@@ -358,20 +400,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
             {uiOptions.resource?.inlineDisplayName && renderDisplayNameAndTags(true)}
           </div>
         )}
-        <PlayableFiles
-          PortalComponent={({ onClick }) => (
-            <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
-              <Tooltip content={t<string>("common.action.play")}>
-                <Button
-                  onPress={onClick}
-                  // variant={'light'}
-                  isIconOnly
-                >
-                  <PlayCircleOutlined className={"text-2xl"} />
-                </Button>
-              </Tooltip>
-            </div>
-          )}
+        <PlayControl
+          PortalComponent={PlayButton}
           afterPlaying={reload}
           resource={resource}
         />

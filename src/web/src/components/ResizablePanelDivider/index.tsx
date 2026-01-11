@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { LeftOutlined, RightOutlined } from "@ant-design/icons";
 
 interface Props {
   /** Default width in pixels */
@@ -19,6 +20,12 @@ interface Props {
   className?: string;
   /** Storage key for persisting width */
   storageKey?: string;
+  /** Enable collapse functionality */
+  collapsible?: boolean;
+  /** Storage key for persisting collapsed state */
+  collapsedStorageKey?: string;
+  /** Callback when collapsed state changes */
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
 /**
@@ -34,6 +41,9 @@ const ResizablePanelDivider: React.FC<Props> = ({
   rightPanel,
   className = "",
   storageKey,
+  collapsible = false,
+  collapsedStorageKey,
+  onCollapsedChange,
 }) => {
   const [panelWidth, setPanelWidth] = useState<number>(() => {
     if (storageKey && typeof window !== "undefined") {
@@ -46,6 +56,14 @@ const ResizablePanelDivider: React.FC<Props> = ({
       }
     }
     return defaultWidth;
+  });
+
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (collapsedStorageKey && typeof window !== "undefined") {
+      const stored = localStorage.getItem(collapsedStorageKey);
+      return stored === "true";
+    }
+    return false;
   });
 
   const isDragging = useRef(false);
@@ -89,6 +107,18 @@ const ResizablePanelDivider: React.FC<Props> = ({
     onWidthChange?.(panelWidth);
   }, [panelWidth, onWidthChange, storageKey]);
 
+  const toggleCollapse = useCallback(() => {
+    const newCollapsed = !collapsed;
+    setCollapsed(newCollapsed);
+
+    // Save to localStorage if collapsedStorageKey is provided
+    if (collapsedStorageKey) {
+      localStorage.setItem(collapsedStorageKey, newCollapsed.toString());
+    }
+
+    onCollapsedChange?.(newCollapsed);
+  }, [collapsed, collapsedStorageKey, onCollapsedChange]);
+
   useEffect(() => {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
@@ -103,19 +133,40 @@ const ResizablePanelDivider: React.FC<Props> = ({
     <div ref={containerRef} className={`flex flex-row h-full ${className}`}>
       {/* Left Panel */}
       <div
-        className="flex-shrink-0 h-full overflow-hidden"
-        style={{ width: panelWidth }}
+        className={`flex-shrink-0 h-full overflow-hidden transition-all duration-300 ${collapsed ? "w-0" : ""}`}
+        style={{ width: collapsed ? 0 : panelWidth }}
       >
-        {leftPanel}
+        {!collapsed && leftPanel}
       </div>
 
-      {/* Divider */}
-      <div
-        className="flex-shrink-0 w-1 cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors relative group"
-        onMouseDown={handleMouseDown}
-      >
-        {/* Visual indicator on hover */}
-        <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
+      {/* Divider with collapse button */}
+      <div className="flex-shrink-0 relative">
+        {/* Draggable divider bar */}
+        {!collapsed && (
+          <div
+            className="w-1 h-full cursor-col-resize hover:bg-primary/30 active:bg-primary/50 transition-colors group"
+            onMouseDown={handleMouseDown}
+          >
+            {/* Visual indicator on hover */}
+            <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
+          </div>
+        )}
+
+        {/* Collapse/Expand button */}
+        {collapsible && (
+          <button
+            type="button"
+            className={`absolute top-1/2 -translate-y-1/2 z-10 w-5 h-10 flex items-center justify-center bg-default-100 hover:bg-default-200 border border-default-300 rounded-r-md transition-colors ${collapsed ? "left-0" : "right-0"}`}
+            onClick={toggleCollapse}
+            title={collapsed ? "Expand panel" : "Collapse panel"}
+          >
+            {collapsed ? (
+              <RightOutlined className="text-xs text-default-600" />
+            ) : (
+              <LeftOutlined className="text-xs text-default-600" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Right Panel */}

@@ -26,3 +26,14 @@ cd Bakabase/src/web && yarn run gen-sdk
 ```
 
 Commit the generated SDK files together with the API changes.
+
+## i18n (Internationalization)
+
+- Use **token-based keys** for translations
+- Key format: `namespace.component.element.type`
+- Examples:
+  - `enhancer.bangumi.prioritySubjectType.label`
+  - `enhancer.bangumi.prioritySubjectType.description`
+  - `BangumiSubjectType.Anime`
+- **DO NOT** use full text as translation keys
+- Translation files location: `Bakabase/src/web/src/locales/{en,cn}/`

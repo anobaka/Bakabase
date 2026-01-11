@@ -17,6 +17,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { Chip, Button } from "@/components/bakaui";
 import { autoBackgroundColor, buildLogger } from "@/components/utils";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
+import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type Data = { label: string; value: string; color?: string };
 
@@ -35,6 +36,7 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
   const [dataSource, setDataSource] = useState<Data[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [optionsThreshold] = useFilterOptionsThreshold();
 
   // Default isReadonly to true if no editor is provided
   const isReadonly = propsIsReadonly ?? !editor;
@@ -94,11 +96,11 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
 
   // Build visible options using shared utility
   const visibleOptions = useMemo(
-    () => buildVisibleOptions(dataSource, (item) => selectedValues.includes(item.value)),
-    [dataSource, selectedValues]
+    () => buildVisibleOptions(dataSource, (item) => selectedValues.includes(item.value), optionsThreshold),
+    [dataSource, selectedValues, optionsThreshold]
   );
 
-  const hasMore = hasMoreOptions(dataSource.length);
+  const hasMore = hasMoreOptions(dataSource.length, optionsThreshold);
   const remainingCount = getRemainingCount(dataSource.length, visibleOptions.length);
 
   // Editable mode: show inline options with toggle

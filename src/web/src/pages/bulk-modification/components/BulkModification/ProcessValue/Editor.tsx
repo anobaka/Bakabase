@@ -10,7 +10,7 @@ import type { PropertyPool, StandardValueType } from "@/sdk/constants";
 import type { IProperty } from "@/components/Property/models";
 
 import { useTranslation } from "react-i18next";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 
 import {
@@ -21,12 +21,9 @@ import {
 import {
   Button,
   Checkbox,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
+  Radio,
+  RadioGroup,
   Select,
-  Spacer,
   Tooltip,
 } from "@/components/bakaui";
 import PropertyValueRenderer from "@/components/Property/components/PropertyValueRenderer";
@@ -34,6 +31,9 @@ import { buildLogger } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import TypeMismatchTip from "@/pages/bulk-modification/components/BulkModification/ProcessValue/components/TypeMismatchTip";
 import { deserializeStandardValue } from "@/components/StandardValue/helpers";
+import PropertySelector from "@/components/PropertySelector";
+import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
+import { PropertyLabel } from "@/components/Property";
 
 type Props = {
   onChange?: (value: BulkModificationProcessValue) => any;
@@ -55,6 +55,7 @@ type PropertyTypeForManuallySettingValue = {
 };
 
 const log = buildLogger("BulkModificationProcessValueEditor");
+
 const Editor = (props: Props) => {
   const {
     onChange,
@@ -65,6 +66,7 @@ const Editor = (props: Props) => {
     availableValueTypes,
   } = props;
   const { t } = useTranslation();
+  const { createPortal } = useBakabaseContext();
 
   const [propertyTypesForManuallySettingValue, setPropertyTypesForManuallySettingValue] = useState<
     PropertyTypeForManuallySettingValue[]
@@ -75,7 +77,6 @@ const Editor = (props: Props) => {
     },
   );
   const valueRef = useRef(value);
-  const [error, setError] = useState<string>();
 
   useEffect(() => {
     valueRef.current = value;
@@ -86,7 +87,6 @@ const Editor = (props: Props) => {
   useEffect(() => {
     BApi.property.getAvailablePropertyTypesForManuallySettingValue().then((r) => {
       const pvs = r.data || [];
-
       setPropertyTypesForManuallySettingValue(pvs);
     });
   }, []);
@@ -124,9 +124,6 @@ const Editor = (props: Props) => {
           break;
         }
         case BulkModificationProcessorValueType.Variable: {
-          // if (!nv.value && variables && variables.length > 0) {
-          //   nv.value = variables[0].key;
-          // }
           break;
         }
       }
@@ -179,287 +176,225 @@ const Editor = (props: Props) => {
     changeValue({ ...value });
   };
 
-  const renderEditor = () => {
-    if (!value.editorPropertyType) {
-      return null;
-    }
+  const valueTypes: BulkModificationProcessorValueType[] =
+    availableValueTypes ?? bulkModificationProcessorValueTypes.map((x) => x.value);
 
-    const pv = propertyTypesForManuallySettingValue.find(
-      (pt) => pt.type == value.editorPropertyType,
+  // Get current property type info
+  const currentPropertyTypeInfo = propertyTypesForManuallySettingValue.find(
+    (pt) => pt.type == value.editorPropertyType,
+  );
+  const isReferenceType = currentPropertyTypeInfo?.isReferenceValueType ?? false;
+
+  // Open PropertySelector modal for reference types
+  const openPropertySelector = () => {
+    if (!currentPropertyTypeInfo?.properties) return;
+
+    const validPropertyIds = new Set(
+      currentPropertyTypeInfo.properties.map((p) => `${p.pool}-${p.id}`),
     );
 
-    if (!pv || !pv.isAvailable) {
-      return null;
-    }
+    createPortal(PropertySelector, {
+      v2: true,
+      pool: (1 | 2 | 4) as PropertyPool, // All pools
+      multiple: false,
+      types: value.editorPropertyType ? [value.editorPropertyType] : undefined,
+      selection:
+        value.propertyId && value.propertyPool
+          ? [{ id: value.propertyId, pool: value.propertyPool }]
+          : undefined,
+      isDisabled: (p) => !validPropertyIds.has(`${p.pool}-${p.id}`),
+      onSubmit: async (selectedProperties) => {
+        const prop = selectedProperties[0];
+        if (prop) {
+          changeValue({
+            propertyPool: prop.pool,
+            propertyId: prop.id,
+            property: prop,
+            value: undefined,
+            followPropertyChanges: currentPropertyTypeInfo?.isReferenceValueType,
+          });
+        }
+      },
+    });
+  };
 
-    return (
-      <>
-        {value.property && (
-          <>
-            <Spacer x={2} />
+  // Get type mismatch info
+  const getSelectedType = (): PropertyType | undefined => {
+    switch (value.type) {
+      case BulkModificationProcessorValueType.ManuallyInput:
+        return value.editorPropertyType;
+      case BulkModificationProcessorValueType.Variable:
+        return variables?.find((v) => v.key == value.value)?.property.type;
+    }
+  };
+
+  const selectedType = getSelectedType();
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Row 1: Value Source Selection */}
+      {valueTypes.length > 1 && (
+        <RadioGroup
+          label={t<string>("bulkModification.valueSource.label")}
+          orientation="horizontal"
+          value={String(value.type)}
+          onValueChange={(v) => {
+            const type = parseInt(v, 10) as BulkModificationProcessorValueType;
+            changeValue({ type });
+          }}
+        >
+          {valueTypes.includes(BulkModificationProcessorValueType.ManuallyInput) && (
+            <Radio value={String(BulkModificationProcessorValueType.ManuallyInput)}>
+              {t<string>("bulkModification.valueType.manuallyInput")}
+            </Radio>
+          )}
+          {valueTypes.includes(BulkModificationProcessorValueType.Variable) && (
+            <Radio value={String(BulkModificationProcessorValueType.Variable)}>
+              {t<string>("bulkModification.valueType.variable")}
+            </Radio>
+          )}
+        </RadioGroup>
+      )}
+
+      {/* Row 2: Type/Variable Selection */}
+      {value.type === BulkModificationProcessorValueType.ManuallyInput ? (
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select
+            className="max-w-xs"
+            label={t<string>("bulkModification.valueType.label")}
+            dataSource={propertyTypesForManuallySettingValue.map((pt) => ({
+              label: (
+                <div className="flex items-center gap-2">
+                  {t<string>(`PropertyType.${PropertyType[pt.type]}`)}
+                  {!pt.isAvailable && (
+                    <Tooltip
+                      className="max-w-[400px]"
+                      color="warning"
+                      content={pt.unavailableReason}
+                    >
+                      <ExclamationCircleOutlined className="text-base" />
+                    </Tooltip>
+                  )}
+                </div>
+              ),
+              textValue: t<string>(`PropertyType.${PropertyType[pt.type]}`),
+              value: String(pt.type),
+              isDisabled: !pt.isAvailable,
+            }))}
+            selectedKeys={value.editorPropertyType ? [value.editorPropertyType.toString()] : []}
+            selectionMode="single"
+            onSelectionChange={(keys) => {
+              const editorPropertyType = parseInt(
+                Array.from(keys)[0] as string,
+                10,
+              ) as PropertyType;
+
+              changeValue({
+                editorPropertyType,
+                property: undefined,
+                propertyId: undefined,
+                propertyPool: undefined,
+                value: undefined,
+                followPropertyChanges: undefined,
+              });
+            }}
+          />
+          {selectedType && <TypeMismatchTip fromType={selectedType} toType={baseValueType} />}
+        </div>
+      ) : (
+        (!variables || variables.length === 0) ? (
+          <span className="text-default-400">
+            {t<string>("bulkModification.label.noVariablesAvailable")}
+          </span>
+        ) : (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select
+              className="max-w-xs"
+              isRequired
+              label={t<string>("bulkModification.select.variable")}
+              dataSource={variables.map((v) => ({
+                label: v.name,
+                value: v.key,
+              }))}
+              placeholder={t<string>("bulkModification.select.variable")}
+              selectedKeys={value.value ? [value.value] : []}
+              selectionMode="single"
+              onSelectionChange={(keys) => {
+                const key = Array.from(keys)[0] as string;
+                changeValue({
+                  value: key,
+                  editorPropertyType: undefined,
+                  property: undefined,
+                  propertyId: undefined,
+                  propertyPool: undefined,
+                  followPropertyChanges: undefined,
+                });
+              }}
+            />
+            {selectedType && <TypeMismatchTip fromType={selectedType} toType={baseValueType} />}
+          </div>
+        )
+      )}
+
+      {/* Row 3: Property Selection (for reference types only) */}
+      {value.type === BulkModificationProcessorValueType.ManuallyInput &&
+        isReferenceType &&
+        currentPropertyTypeInfo?.isAvailable && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-default-500">
+              {t<string>("bulkModification.dataSource.label")}
+            </span>
+            <Button variant="bordered" onPress={openPropertySelector}>
+              {value.property
+                ? <PropertyLabel showPool property={value.property} />
+                : t<string>("bulkModification.dataSource.clickToSelect")}
+            </Button>
+            {value.property && (
+              <Tooltip
+                color="secondary"
+                content={
+                  <div className="flex flex-col gap-1 max-w-[400px]">
+                    <p>{t<string>("bulkModification.label.followPropertyChangesDescription1")}</p>
+                    <p>{t<string>("bulkModification.label.followPropertyChangesDescription2")}</p>
+                    <p>{t<string>("bulkModification.label.followPropertyChangesDescription3")}</p>
+                  </div>
+                }
+              >
+                <Checkbox
+                  defaultSelected
+                  isSelected={value.followPropertyChanges}
+                  onValueChange={onFollowPropertyChanges}
+                >
+                  {t<string>("bulkModification.label.followPropertyChanges")}
+                </Checkbox>
+              </Tooltip>
+            )}
+          </div>
+        )}
+
+      {/* Row 4: Value Input */}
+      {value.type === BulkModificationProcessorValueType.ManuallyInput &&
+        value.property &&
+        currentPropertyTypeInfo?.isAvailable && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm text-default-500">
+              {t<string>("bulkModification.label.setValue")}
+            </span>
             <PropertyValueRenderer
               bizValue={value.followPropertyChanges ? undefined : value.value}
               dbValue={value.followPropertyChanges ? value.value : undefined}
+              isEditing
               property={value.property}
+              variant="light"
               onValueChange={(dv, bv) => {
                 changeValue({
                   value: value.followPropertyChanges ? dv : bv,
                 });
               }}
+              size="sm"
             />
-          </>
+          </div>
         )}
-        {pv.isReferenceValueType && value.property && (
-          <Tooltip
-            color={"secondary"}
-            content={
-              <div className={"flex flex-col gap-1 max-w-[400px]"}>
-                {[
-                  "By enabling this options data will be changed according to the changes in dynamic properties (single choice, multiple choice, multilevel data, etc.).",
-                  "For example, if you use the 'actor' from the multiple-choice data as the change result, then in the future, if you modify 'actor' to 'actor1', the current data will also be changed to 'actor1' after next time processing. However, if this options is not enabled, the current data will be changed to 'actor' after next time processing.",
-                  "For properties(such as text, numbers, dates, etc.) without reference values, there is no difference between statuses of this options.",
-                ].map((p) => {
-                  return <p>{t<string>(p)}</p>;
-                })}
-              </div>
-            }
-          >
-            <Checkbox
-              defaultSelected
-              className={"ml-2"}
-              isSelected={value.followPropertyChanges}
-              onValueChange={onFollowPropertyChanges}
-            >
-              {t<string>("Follow property changes")}
-            </Checkbox>
-          </Tooltip>
-        )}
-      </>
-    );
-  };
-
-  const renderPropertyCandidates = () => {
-    if (value.editorPropertyType) {
-      const pts = propertyTypesForManuallySettingValue.find(
-        (pt) => pt.type == value.editorPropertyType,
-      );
-
-      if (pts?.properties && pts.isReferenceValueType) {
-        const property = pts.properties.find(
-          (p) => p.id == value.propertyId && p.pool == value.propertyPool,
-        );
-
-        return (
-          <Dropdown>
-            <DropdownTrigger>
-              <Button
-                // size={'sm'}
-                variant="bordered"
-              >
-                {property
-                  ? `(${property.poolName})${property.name}`
-                  : t<string>("Choose a property")}
-              </Button>
-            </DropdownTrigger>
-            <DropdownMenu
-              aria-label="Static Actions"
-              selectionMode={"single"}
-              onSelectionChange={(keys) => {
-                const key = Array.from(keys)[0] as string;
-                const segments = key.split("-");
-                const pool = parseInt(segments[0], 10) as PropertyPool;
-                const id = parseInt(segments[1], 10);
-
-                changeValue({
-                  propertyPool: pool,
-                  propertyId: id,
-                  property,
-                  value: undefined,
-                  followPropertyChanges: pts?.isReferenceValueType,
-                });
-              }}
-            >
-              {pts.properties.map((s) => {
-                return (
-                  <DropdownItem key={`${s.pool}-${s.id}`}>
-                    <div className={"flex items-center gap-2"}>{`(${s.poolName})${s.name}`}</div>
-                  </DropdownItem>
-                );
-              })}
-            </DropdownMenu>
-          </Dropdown>
-        );
-      }
-    }
-
-    return null;
-  };
-
-  const renderByValueType = (valueType?: BulkModificationProcessorValueType) => {
-    if (!valueType) {
-      return null;
-    }
-    switch (valueType) {
-      case BulkModificationProcessorValueType.ManuallyInput:
-        return (
-          <>
-            <Dropdown>
-              <DropdownTrigger>
-                <Button
-                  // size={'sm'}
-                  variant="bordered"
-                >
-                  {value.editorPropertyType
-                    ? t<string>("bulkModification.label.useEditor", { editor: t<string>(`PropertyType.${PropertyType[value.editorPropertyType]}`) })
-                    : t<string>("bulkModification.label.choosePropertyValueEditor")}
-                </Button>
-              </DropdownTrigger>
-              <DropdownMenu
-                aria-label="Static Actions"
-                className={"max-h-[40vh] overflow-y-auto"}
-                selectionMode={"single"}
-                onSelectionChange={(keys) => {
-                  const editorPropertyType = parseInt(
-                    Array.from(keys)[0] as string,
-                    10,
-                  ) as PropertyType;
-
-                  changeValue({
-                    editorPropertyType,
-                    property: undefined,
-                    propertyId: undefined,
-                    propertyPool: undefined,
-                    value: undefined,
-                    followPropertyChanges: undefined,
-                  });
-                }}
-              >
-                {propertyTypesForManuallySettingValue.map((pt) => {
-                  return (
-                    <DropdownItem
-                      key={pt.type}
-                      className={pt.isAvailable ? "" : "text-gray-400 cursor-not-allowed"}
-                      isReadOnly={!pt.isAvailable}
-                    >
-                      <div className={"flex items-center gap-2"}>
-                        {t<string>(`PropertyType.${PropertyType[pt.type]}`)}
-                        {!pt.isAvailable && (
-                          <Tooltip
-                            className={"max-w-[400px]"}
-                            color={"warning"}
-                            content={pt.unavailableReason}
-                          >
-                            <ExclamationCircleOutlined className={"text-base"} />
-                          </Tooltip>
-                        )}
-                      </div>
-                    </DropdownItem>
-                  );
-                })}
-              </DropdownMenu>
-            </Dropdown>
-            {renderPropertyCandidates()}
-            {renderEditor()}
-          </>
-        );
-      case BulkModificationProcessorValueType.Variable:
-        if (!variables || variables.length == 0) {
-          return t<string>("No variables available");
-        }
-
-        return (
-          <Select
-            isRequired
-            dataSource={variables.map((v) => ({
-              label: v.name,
-              value: v.key,
-            }))}
-            placeholder={t<string>("Please select a variable")}
-            selectedKeys={value.value ? [value.value] : undefined}
-            selectionMode={"single"}
-            onSelectionChange={(keys) => {
-              const key = Array.from(keys)[0] as string;
-
-              changeValue({
-                value: key,
-                editorPropertyType: undefined,
-                property: undefined,
-                propertyId: undefined,
-                propertyPool: undefined,
-                followPropertyChanges: undefined,
-              });
-            }}
-          />
-        );
-    }
-  };
-
-  const renderTypeMismatchTip = () => {
-    let selectedType: PropertyType | undefined;
-
-    switch (value.type) {
-      case BulkModificationProcessorValueType.ManuallyInput:
-        selectedType = value.editorPropertyType;
-        break;
-      case BulkModificationProcessorValueType.Variable:
-        selectedType = variables?.find((v) => v.key == value.value)?.property.type;
-        break;
-    }
-
-    if (!selectedType) {
-      return null;
-    }
-
-    return <TypeMismatchTip fromType={selectedType} toType={baseValueType} />;
-  };
-
-  const valueTypes: BulkModificationProcessorValueType[] =
-    availableValueTypes ?? bulkModificationProcessorValueTypes.map((x) => x.value);
-
-  return (
-    <div>
-      <div className={"flex items-center gap-1"}>
-        <Dropdown isDisabled={valueTypes.length == 1}>
-          <DropdownTrigger>
-            <Button
-              // size={'sm'}
-              variant="bordered"
-            >
-              {t<string>(
-                `BulkModificationProcessorValueType.${BulkModificationProcessorValueType[value.type]}`,
-              )}
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Static Actions"
-            selectionMode={"single"}
-            variant={"flat"}
-            onSelectionChange={(keys) => {
-              const type = parseInt(
-                Array.from(keys)[0] as string,
-                10,
-              ) as BulkModificationProcessorValueType;
-
-              changeValue({ type });
-            }}
-          >
-            {valueTypes.map((s) => {
-              return (
-                <DropdownItem key={s}>
-                  <div className={"flex items-center gap-2"}>
-                    {t<string>(
-                      `BulkModificationProcessorValueType.${BulkModificationProcessorValueType[s]}`,
-                    )}
-                  </div>
-                </DropdownItem>
-              );
-            })}
-          </DropdownMenu>
-        </Dropdown>
-        {renderByValueType(value.type)}
-        {renderTypeMismatchTip()}
-      </div>
-      {error && <div className={"text-danger"}>{t<string>(error)}</div>}
     </div>
   );
 };

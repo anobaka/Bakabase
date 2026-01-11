@@ -1,6 +1,7 @@
 {
   "bulkModification.action.add": "Add a bulk modification",
   "bulkModification.action.addPreprocess": "Add a preprocess",
+  "bulkModification.action.addStep": "Add a step",
   "bulkModification.action.apply": "Apply bulk modification",
   "bulkModification.action.applyChanges": "Apply changes",
   "bulkModification.action.calculate": "Calculate changes",
@@ -46,6 +47,8 @@
   "bulkModification.label.preprocessing": "Preprocessing",
   "bulkModification.label.settingProcess": "Setting process",
   "bulkModification.label.settingVariable": "Setting variable",
+  "bulkModification.title.processForProperty": "Process flow for {{property}}",
+  "bulkModification.title.preprocessForProperty": "Preprocess flow for {{property}}",
   "bulkModification.label.typeTransformation": "Type transformation",
   "bulkModification.label.startsFromZero": "Starts from 0",
 
@@ -75,7 +78,9 @@
 
   "bulkModification.input.setVariableName": "Set a name for this variable",
   "bulkModification.info.addPreprocessSteps": "You can add multiple preprocessing steps.",
+  "bulkModification.info.addProcessSteps": "You can add multiple process steps.",
   "bulkModification.info.checkTypeRules": "You can check type conversion rules here",
+  "bulkModification.info.typeConversion": "We will automatically convert the value from {{fromType}} to {{toType}}.",
   "bulkModification.info.underDevelopment": "Under development, currently supported data types",
   "bulkModification.info.ensureCalculation": "Please ensure that the calculation operation has been executed.",
   "bulkModification.info.noResourcesToChange": "If the calculation operation has been executed, there may be no resources that will be changed.",
@@ -235,12 +240,24 @@
   "bulkModification.valueType.manuallyInput": "Manually input",
   "bulkModification.valueType.variable": "Variable",
 
+  "bulkModification.valueSource.label": "Value source",
+  "bulkModification.valueType.label": "Value type",
+  "bulkModification.dataSource.label": "Data source",
+  "bulkModification.dataSource.clickToSelect": "Click to select property",
+
   "bulkModification.validation.valueRequired": "Value is required",
   "bulkModification.validation.valueAndIndexRequired": "Value and index are required",
   "bulkModification.validation.countRequired": "Count is required",
   "bulkModification.validation.countAndIndexRequired": "Count and index are required",
   "bulkModification.validation.findAndReplaceRequired": "Find and replace are required",
   "bulkModification.validation.optionsRequired": "Please provide valid options",
+  "bulkModification.validation.modifyOptionsRequired": "Modify options are required",
+  "bulkModification.validation.filterValueRequired": "Filter value is required",
+  "bulkModification.validation.operationRequired": "Operation is required",
+  "bulkModification.validation.invalidValue": "Please provide a valid value",
+  "bulkModification.validation.invalidValueType": "Please provide a valid value type",
+  "bulkModification.validation.invalidPropertyType": "Please provide a valid property type",
+  "bulkModification.validation.invalidVariable": "Please provide a valid variable",
 
   "bulkModification.label.scope": "Scope",
   "bulkModification.label.scopeDescription": "A property may have multiple dimensional values, and you can choose one of the dimensions as the base data.",
@@ -253,5 +270,14 @@
   "bulkModification.label.followPropertyChangesDescription2": "For example, if you use the 'actor' from the multiple-choice data as the change result, then in the future, if you modify 'actor' to 'actor1', the current data will also be changed to 'actor1' after next time processing. However, if this option is not enabled, the current data will be changed to 'actor' after next time processing.",
   "bulkModification.label.followPropertyChangesDescription3": "For properties (such as text, numbers, dates, etc.) without reference values, there is no difference between statuses of this option.",
   "bulkModification.label.clickToSet": "Click to set",
-  "bulkModification.label.notSet": "Not set"
+  "bulkModification.label.notSet": "Not set",
+  "bulkModification.label.amount": "Amount",
+  "bulkModification.label.decimalPlaces": "Decimal places",
+  "bulkModification.label.text": "Text",
+  "bulkModification.label.url": "URL",
+  "bulkModification.label.stringOperation": "String operation",
+  "bulkModification.label.setValue": "Set value",
+
+  "bulkModification.placeholder.inputKeyword": "Please input keyword",
+  "bulkModification.placeholder.inputRegex": "Please input a regular expression"
 }

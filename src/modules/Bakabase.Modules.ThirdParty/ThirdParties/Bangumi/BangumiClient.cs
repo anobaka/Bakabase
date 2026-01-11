@@ -114,9 +114,9 @@ public class BangumiClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
         return ctx;
     }
 
-    public async Task<BangumiDetail?> SearchAndParseFirst(string keyword)
+    public async Task<BangumiDetail?> SearchAndParseFirst(string keyword, string? category = null)
     {
-        var searchUrl = BangumiUrlBuilder.Search(keyword);
+        var searchUrl = BangumiUrlBuilder.Search(keyword, category ?? "all");
         var searchHtml = await HttpClient.GetStringAsync(searchUrl);
         var searchCq = new CQ(searchHtml);
 

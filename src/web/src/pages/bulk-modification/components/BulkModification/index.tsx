@@ -155,17 +155,15 @@ const BulkModification = ({ bm, onChange }: Props) => {
           <Variables
             variables={bm.variables}
             onChange={(vs) => {
-              bm.variables = vs;
-              BApi.bulkModification
-                .patchBulkModification(bm.id, {
-                  variables: vs.map((v) => ({
-                    ...v,
-                    preprocesses: JSON.stringify(v.preprocesses),
-                  })),
-                })
-                .then(() => {
-                  reload();
-                });
+              // Update local state immediately (avoid reload to prevent losing local data)
+              onChange({ ...bm, variables: vs });
+              // Save to server (don't reload to avoid server's incomplete data overwriting local state)
+              BApi.bulkModification.patchBulkModification(bm.id, {
+                variables: vs.map((v) => ({
+                  ...v,
+                  preprocesses: JSON.stringify(v.preprocesses),
+                })),
+              });
             }}
           />
         );
@@ -176,17 +174,15 @@ const BulkModification = ({ bm, onChange }: Props) => {
             processes={bm.processes}
             variables={bm.variables}
             onChange={(ps) => {
-              bm.processes = ps;
-              BApi.bulkModification
-                .patchBulkModification(bm.id, {
-                  processes: ps.map((v) => ({
-                    ...v,
-                    steps: JSON.stringify(v.steps),
-                  })),
-                })
-                .then(() => {
-                  reload();
-                });
+              // Update local state immediately (avoid reload to prevent losing local data)
+              onChange({ ...bm, processes: ps });
+              // Save to server (don't reload to avoid server's incomplete data overwriting local state)
+              BApi.bulkModification.patchBulkModification(bm.id, {
+                processes: ps.map((v) => ({
+                  ...v,
+                  steps: JSON.stringify(v.steps),
+                })),
+              });
             }}
           />
         );

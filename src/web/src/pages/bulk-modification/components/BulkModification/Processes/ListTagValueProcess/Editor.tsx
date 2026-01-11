@@ -68,16 +68,13 @@ const Editor = ({
       case BulkModificationListTagProcessOperation.Prepend:
       case BulkModificationListTagProcessOperation.Remove:
         return (
-          <>
-            <div>{t("bulkModification.label.value")}</div>
-            <ProcessValueEditor
-              availableValueTypes={availableValueTypes}
-              baseValueType={propertyType}
-              value={options.value}
-              variables={variables}
-              onChange={(value) => changeOptions({ value })}
-            />
-          </>
+          <ProcessValueEditor
+            availableValueTypes={availableValueTypes}
+            baseValueType={propertyType}
+            value={options.value}
+            variables={variables}
+            onChange={(value) => changeOptions({ value })}
+          />
         );
       default:
         return null;
@@ -85,12 +82,9 @@ const Editor = ({
   };
 
   return (
-    <div
-      className="grid items-center gap-2"
-      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
-    >
-      <div>{t("bulkModification.label.operation")}</div>
+    <div className="flex flex-col gap-3">
       <Select
+        label={t("bulkModification.label.operation")}
         dataSource={bulkModificationListTagProcessOperations.map((op) => ({
           label: t(getEnumKey('BulkModificationListTagProcessOperation', op.label)),
           value: op.value,

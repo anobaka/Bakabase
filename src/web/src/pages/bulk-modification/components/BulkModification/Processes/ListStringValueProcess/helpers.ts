@@ -16,7 +16,7 @@ export const validate = (
   }
 
   if (!options) {
-    return "Please provide valid options";
+    return "bulkModification.validation.optionsRequired";
   }
 
   const { value, valueType, isOperationDirectionReversed, modifyOptions } =
@@ -27,12 +27,12 @@ export const validate = (
     case BulkModificationListStringProcessOperation.Append:
     case BulkModificationListStringProcessOperation.Prepend:
       if (!value) {
-        return "Value is required";
+        return "bulkModification.validation.valueRequired";
       }
       break;
     case BulkModificationListStringProcessOperation.Modify:
       if (modifyOptions == undefined) {
-        return "Modify options are required";
+        return "bulkModification.validation.modifyOptionsRequired";
       }
 
       if (
@@ -41,11 +41,11 @@ export const validate = (
         (modifyOptions.filterValue == undefined ||
           modifyOptions.filterValue.length == 0)
       ) {
-        return "Filter value is required";
+        return "bulkModification.validation.filterValueRequired";
       }
 
       if (modifyOptions.operation == undefined) {
-        return "Operation is required";
+        return "bulkModification.validation.operationRequired";
       }
 
       return validateStringValueProcessOptions(

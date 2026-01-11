@@ -40,8 +40,8 @@
   "enum.searchOperation.lessThanOrEquals": "小于等于",
   "enum.searchOperation.isNull": "为空",
   "enum.searchOperation.isNotNull": "不为空",
-  "enum.searchOperation.in": "在列表中",
-  "enum.searchOperation.notIn": "不在列表中",
+  "enum.searchOperation.in": "在选项中",
+  "enum.searchOperation.notIn": "不在选项中",
   "enum.searchOperation.matches": "正则匹配",
   "enum.searchOperation.notMatches": "正则不匹配",
 
@@ -203,5 +203,20 @@
 
   "enum.bulkModificationBooleanProcessOperation.delete": "删除",
   "enum.bulkModificationBooleanProcessOperation.setWithFixedValue": "设置为固定值",
-  "enum.bulkModificationBooleanProcessOperation.toggle": "切换"
+  "enum.bulkModificationBooleanProcessOperation.toggle": "切换",
+
+  "enum.bulkModificationProcessorOptionsItemsFilterBy.all": "全部",
+  "enum.bulkModificationProcessorOptionsItemsFilterBy.containing": "包含",
+  "enum.bulkModificationProcessorOptionsItemsFilterBy.matching": "匹配",
+
+  "BangumiSubjectType.All": "全部",
+  "BangumiSubjectType.Anime": "动画",
+  "BangumiSubjectType.Book": "书籍",
+  "BangumiSubjectType.Music": "音乐",
+  "BangumiSubjectType.Game": "游戏",
+  "BangumiSubjectType.Real": "三次元",
+
+  "enhancer.bangumi.prioritySubjectType.label": "优先类别",
+  "enhancer.bangumi.prioritySubjectType.description": "如果设置了此选项，Bangumi 将首先使用该类别进行搜索。如果没有找到结果，则会回退到搜索全部类别。",
+  "enhancer.bangumi.prioritySubjectType.hint": "留空则默认搜索全部类别。"
 }

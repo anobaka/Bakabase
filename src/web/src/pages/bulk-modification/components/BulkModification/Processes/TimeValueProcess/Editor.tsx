@@ -65,16 +65,13 @@ const Editor = ({
         return null;
       case BulkModificationTimeProcessOperation.SetWithFixedValue:
         return (
-          <>
-            <div>{t("bulkModification.label.value")}</div>
-            <ProcessValueEditor
-              availableValueTypes={availableValueTypes}
-              baseValueType={propertyType}
-              value={options.value}
-              variables={variables}
-              onChange={(value) => changeOptions({ value })}
-            />
-          </>
+          <ProcessValueEditor
+            availableValueTypes={availableValueTypes}
+            baseValueType={propertyType}
+            value={options.value}
+            variables={variables}
+            onChange={(value) => changeOptions({ value })}
+          />
         );
       case BulkModificationTimeProcessOperation.AddHours:
       case BulkModificationTimeProcessOperation.SubtractHours:
@@ -83,14 +80,12 @@ const Editor = ({
       case BulkModificationTimeProcessOperation.AddSeconds:
       case BulkModificationTimeProcessOperation.SubtractSeconds:
         return (
-          <>
-            <div>{t("bulkModification.label.amount")}</div>
-            <NumberInput
-              min={0}
-              value={options.amount}
-              onValueChange={(amount) => changeOptions({ amount })}
-            />
-          </>
+          <NumberInput
+            label={t("bulkModification.label.amount")}
+            min={0}
+            value={options.amount}
+            onValueChange={(amount) => changeOptions({ amount })}
+          />
         );
       default:
         return null;
@@ -98,12 +93,9 @@ const Editor = ({
   };
 
   return (
-    <div
-      className="grid items-center gap-2"
-      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
-    >
-      <div>{t("bulkModification.label.operation")}</div>
+    <div className="flex flex-col gap-3">
       <Select
+        label={t("bulkModification.label.operation")}
         dataSource={bulkModificationTimeProcessOperations.map((op) => ({
           label: t(getEnumKey('BulkModificationTimeProcessOperation', op.label)),
           value: op.value,

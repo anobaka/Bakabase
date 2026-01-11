@@ -203,5 +203,20 @@
 
   "enum.bulkModificationBooleanProcessOperation.delete": "Delete",
   "enum.bulkModificationBooleanProcessOperation.setWithFixedValue": "Set with fixed value",
-  "enum.bulkModificationBooleanProcessOperation.toggle": "Toggle"
+  "enum.bulkModificationBooleanProcessOperation.toggle": "Toggle",
+
+  "enum.bulkModificationProcessorOptionsItemsFilterBy.all": "All",
+  "enum.bulkModificationProcessorOptionsItemsFilterBy.containing": "Containing",
+  "enum.bulkModificationProcessorOptionsItemsFilterBy.matching": "Matching",
+
+  "BangumiSubjectType.All": "All",
+  "BangumiSubjectType.Anime": "Anime",
+  "BangumiSubjectType.Book": "Book",
+  "BangumiSubjectType.Music": "Music",
+  "BangumiSubjectType.Game": "Game",
+  "BangumiSubjectType.Real": "Real",
+
+  "enhancer.bangumi.prioritySubjectType.label": "Priority subject type",
+  "enhancer.bangumi.prioritySubjectType.description": "If set, Bangumi will first search with this type. If no results found, it will fall back to searching all types.",
+  "enhancer.bangumi.prioritySubjectType.hint": "Leave empty to search all types by default."
 }

@@ -49,7 +49,9 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
         },
       }}
       size={"xl"}
-      title={t<string>("bulkModification.label.settingProcess")}
+      title={process?.property
+        ? t<string>("bulkModification.title.processForProperty", { property: process.property.name })
+        : t<string>("bulkModification.label.settingProcess")}
       onDestroyed={onDestroyed}
       onOk={() => {
         if (!validate(process)) {
@@ -102,7 +104,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
         <CardHeader className="flex-col items-start gap-0.5">
           <div className="font-medium">{t<string>("bulkModification.label.steps")}</div>
           <p className="text-xs text-default-400">
-            {t<string>("bulkModification.info.addPreprocessSteps")}
+            {t<string>("bulkModification.info.addProcessSteps")}
           </p>
         </CardHeader>
         <CardBody>
@@ -162,7 +164,7 @@ const ProcessModal = ({ onDestroyed, process: propsProcess, onSubmit, variables 
                 }
               }}
             >
-              {t<string>("bulkModification.action.addPreprocess")}
+              {t<string>("bulkModification.action.addStep")}
             </Button>
           </div>
         </CardBody>

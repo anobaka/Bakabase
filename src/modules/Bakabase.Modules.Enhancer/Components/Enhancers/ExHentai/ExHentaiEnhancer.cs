@@ -28,14 +28,14 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai
         IFileManager fileManager,
         IStandardValueService standardValueService,
         IServiceProvider serviceProvider)
-        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
+        : AbstractKeywordEnhancer<ExHentaiEnhancerTarget, ExHentaiEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
     {
         private readonly ExHentaiClient _exHentaiClient = exHentaiClient;
         private readonly IServiceProvider _services = services;
         private readonly ISpecialTextService _specialTextService = specialTextService;
         private const string UrlKeywordRegex = "[a-zA-Z0-9]{10,}";
 
-        protected override async Task<ExHentaiEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
+        protected override async Task<ExHentaiEnhancerContext?> BuildContextInternal(string keyword, Resource resource, IKeywordEnhancerOptions options, EnhancementLogCollector logCollector, CancellationToken ct)
         {
             var name = keyword;
             var urlKeywords = new HashSet<string>();

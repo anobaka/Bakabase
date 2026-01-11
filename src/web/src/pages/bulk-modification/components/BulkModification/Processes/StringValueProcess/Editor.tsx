@@ -6,6 +6,7 @@ import type { BulkModificationVariable } from "@/pages/bulk-modification/compone
 
 import { Trans, useTranslation } from "react-i18next";
 import React, { useEffect, useState } from "react";
+import { getEnumKey } from "@/i18n";
 
 import { validate } from "./helpers";
 
@@ -96,7 +97,7 @@ const Editor = ({
     switch (operation) {
       case BulkModificationStringProcessOperation.SetWithFixedValue:
         components.push({
-          label: t<string>("bulkModification.label.value"),
+          label: "",
           comp: renderValueCell(),
         });
         break;
@@ -105,13 +106,13 @@ const Editor = ({
       case BulkModificationStringProcessOperation.AddToStart:
       case BulkModificationStringProcessOperation.AddToEnd:
         components.push({
-          label: t<string>("bulkModification.label.value"),
+          label: "",
           comp: renderValueCell(),
         });
         break;
       case BulkModificationStringProcessOperation.AddToAnyPosition:
         components.push({
-          label: t<string>("bulkModification.label.value"),
+          label: "",
           comp: (
             <div className={"flex items-center gap-1 whitespace-nowrap"}>
               <Trans
@@ -150,10 +151,11 @@ const Editor = ({
       case BulkModificationStringProcessOperation.RemoveFromStart:
       case BulkModificationStringProcessOperation.RemoveFromEnd:
         components.push({
-          label: t<string>("bulkModification.label.count"),
+          label: "",
           comp: (
             <NumberInput
               className={"w-auto"}
+              label={t<string>("bulkModification.label.count")}
               style={{ width: 100 }}
               value={options.count}
               onValueChange={(count) => changeOptions({ count })}
@@ -164,7 +166,7 @@ const Editor = ({
       case BulkModificationStringProcessOperation.RemoveFromAnyPosition:
         // delete 6 characters forward from the fifth character from the end
         components.push({
-          label: t<string>("bulkModification.label.value"),
+          label: "",
           comp: (
             <div className={"flex items-center gap-1 whitespace-nowrap"}>
               <Trans
@@ -218,7 +220,7 @@ const Editor = ({
       case BulkModificationStringProcessOperation.ReplaceFromAnyPosition:
       case BulkModificationStringProcessOperation.ReplaceWithRegex:
         components.push({
-          label: t<string>("bulkModification.label.value"),
+          label: "",
           comp: (
             <div className={"flex items-center gap-1 whitespace-nowrap"}>
               <Trans i18nKey={"BulkModification.Processor.Editor.Operation.Replace"}>
@@ -237,25 +239,20 @@ const Editor = ({
         break;
     }
 
-    return components.map((c, i) => {
-      return (
-        <>
-          <div>{c.label}</div>
-          <div>{c.comp}</div>
-        </>
-      );
-    });
+    return components.map((c, i) => (
+      <div key={i} className="flex flex-col gap-1">
+        {c.label && <span className="text-sm text-default-500">{c.label}</span>}
+        <div>{c.comp}</div>
+      </div>
+    ));
   };
 
   return (
-    <div
-      className={"grid items-center gap-2"}
-      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
-    >
-      <div>{t<string>("bulkModification.label.operation")}</div>
+    <div className={"flex flex-col gap-3"}>
       <Select
+        label={t<string>("bulkModification.label.operation")}
         dataSource={bulkModificationStringProcessOperations.map((tpo) => ({
-          label: t<string>(tpo.label),
+          label: t(getEnumKey("BulkModificationStringProcessOperation", tpo.label)),
           value: tpo.value,
         }))}
         selectedKeys={operation == undefined ? undefined : [operation.toString()]}

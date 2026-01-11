@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BTask_Name_Comparison" xml:space="preserve">
+    <value>Comparison Task</value>
+  </data>
+  <data name="BTask_Description_Comparison" xml:space="preserve">
+    <value>Execute resource comparison plan</value>
+  </data>
+  <data name="ComparisonMode_StrictEqual" xml:space="preserve">
+    <value>Strict Equal</value>
+  </data>
+  <data name="ComparisonMode_NormalizedText" xml:space="preserve">
+    <value>Normalized Text</value>
+  </data>
+  <data name="ComparisonMode_TextSimilarity" xml:space="preserve">
+    <value>Text Similarity</value>
+  </data>
+  <data name="ComparisonMode_RegexExtractNumber" xml:space="preserve">
+    <value>Regex Extract Number</value>
+  </data>
+  <data name="ComparisonMode_FixedTolerance" xml:space="preserve">
+    <value>Fixed Tolerance</value>
+  </data>
+  <data name="ComparisonMode_RelativeTolerance" xml:space="preserve">
+    <value>Relative Tolerance</value>
+  </data>
+  <data name="ComparisonMode_SetIntersection" xml:space="preserve">
+    <value>Set Intersection</value>
+  </data>
+  <data name="ComparisonMode_Subset" xml:space="preserve">
+    <value>Subset</value>
+  </data>
+  <data name="ComparisonMode_TimeWindow" xml:space="preserve">
+    <value>Time Window</value>
+  </data>
+  <data name="ComparisonMode_SameDay" xml:space="preserve">
+    <value>Same Day</value>
+  </data>
+  <data name="ComparisonMode_ExtensionMap" xml:space="preserve">
+    <value>Extension Map</value>
+  </data>
+  <data name="NullValueBehavior_Skip" xml:space="preserve">
+    <value>Skip</value>
+  </data>
+  <data name="NullValueBehavior_Fail" xml:space="preserve">
+    <value>Fail</value>
+  </data>
+  <data name="NullValueBehavior_Pass" xml:space="preserve">
+    <value>Pass</value>
+  </data>
+</root>

@@ -100,11 +100,11 @@ public class AvEnhancer(
     ThePornDBClient thePornDbClient,
     ThePornDBMoviesClient thePornDbMoviesClient,
     XcityClient xcityClient, IStandardValueService standardValueService, ISpecialTextService specialTextService, IServiceProvider serviceProvider)
-    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, object?>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
+    : AbstractKeywordEnhancer<AvEnhancerTarget, AvEnhancerContext, IKeywordEnhancerOptions>(loggerFactory, fileManager, standardValueService, specialTextService, serviceProvider)
 {
     protected override EnhancerId TypedId => EnhancerId.Av;
 
-    protected override async Task<AvEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
+    protected override async Task<AvEnhancerContext?> BuildContextInternal(string keyword, Resource resource, IKeywordEnhancerOptions options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
         try
