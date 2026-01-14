@@ -330,6 +330,8 @@ export interface BakabaseAbstractionsModelsDomainEnhancerFullOptions {
   requirements?: number[];
   keywordProperty?: BakabaseAbstractionsModelsDomainScopePropertyKey;
   pretreatKeyword?: boolean;
+  /** @format int32 */
+  bangumiPrioritySubjectType?: number;
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
@@ -697,6 +699,42 @@ export interface BakabaseAbstractionsModelsDomainResourceProfilePlayerOptions {
 
 export interface BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions {
   properties?: BakabaseAbstractionsModelsDomainPropertyKey[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearch {
+  /** @format int32 */
+  pageIndex: number;
+  /**
+   * @format int32
+   * @min 0
+   * @max 100
+   */
+  pageSize: number;
+  /** @format int32 */
+  skipCount: number;
+  group?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup;
+  orders?: BakabaseAbstractionsModelsInputResourceSearchOrderInputModel[];
+  tags?: BakabaseAbstractionsModelsDomainConstantsResourceTag[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchFilter {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  /** [1: Equals, 2: NotEquals, 3: Contains, 4: NotContains, 5: StartsWith, 6: NotStartsWith, 7: EndsWith, 8: NotEndsWith, 9: GreaterThan, 10: LessThan, 11: GreaterThanOrEquals, 12: LessThanOrEquals, 13: IsNull, 14: IsNotNull, 15: In, 16: NotIn, 17: Matches, 18: NotMatches] */
+  operation: BakabaseAbstractionsModelsDomainConstantsSearchOperation;
+  dbValue?: any;
+  property: BakabaseAbstractionsModelsDomainProperty;
+  disabled: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
+  /** [1: And, 2: Or] */
+  combinator: BakabaseAbstractionsModelsDomainConstantsSearchCombinator;
+  groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[];
+  filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[];
+  disabled: boolean;
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -2384,6 +2422,198 @@ export interface BakabaseModulesAliasModelsInputAliasPatchInputModel {
   isPreferred: boolean;
 }
 
+export interface BakabaseModulesComparisonModelsDomainComparisonPlan {
+  /** @format int32 */
+  id: number;
+  name: string;
+  search?: BakabaseAbstractionsModelsDomainResourceSearch;
+  /** @format double */
+  threshold: number;
+  rules: BakabaseModulesComparisonModelsDomainComparisonRule[];
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  lastRunAt?: string;
+}
+
+export interface BakabaseModulesComparisonModelsDomainComparisonRule {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  planId: number;
+  /** @format int32 */
+  order: number;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
+  /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
+  mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
+  parameter?: string;
+  normalize: boolean;
+  /** @format int32 */
+  weight: number;
+  isVeto: boolean;
+  /** @format double */
+  vetoThreshold: number;
+  /** [0: Skip, 1: Fail, 2: Pass] */
+  oneNullBehavior: BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior;
+  /** [0: Skip, 1: Fail, 2: Pass] */
+  bothNullBehavior: BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior;
+}
+
+/**
+ * [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap]
+ * @format int32
+ */
+export type BakabaseModulesComparisonModelsDomainConstantsComparisonMode =
+  | 0
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10;
+
+/**
+ * [0: Skip, 1: Fail, 2: Pass]
+ * @format int32
+ */
+export type BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior = 0 | 1 | 2;
+
+export interface BakabaseModulesComparisonModelsInputComparisonRuleInputModel {
+  /** @format int32 */
+  order: number;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
+  /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
+  mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
+  parameter?: any;
+  normalize: boolean;
+  /** @format int32 */
+  weight: number;
+  isVeto: boolean;
+  /** @format double */
+  vetoThreshold: number;
+  /** [0: Skip, 1: Fail, 2: Pass] */
+  oneNullBehavior: BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior;
+  /** [0: Skip, 1: Fail, 2: Pass] */
+  bothNullBehavior: BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior;
+}
+
+export interface BakabaseModulesComparisonModelsViewComparisonResultGroupMemberViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  groupId: number;
+  /** @format int32 */
+  resourceId: number;
+  isSuggestedPrimary: boolean;
+}
+
+export interface BakabaseModulesComparisonModelsViewComparisonResultGroupViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  planId: number;
+  /** @format int32 */
+  memberCount: number;
+  isHidden: boolean;
+  members?: BakabaseModulesComparisonModelsViewComparisonResultGroupMemberViewModel[];
+  previewCovers?: string[];
+  /** @format date-time */
+  createdAt: string;
+}
+
+export interface BakabaseModulesComparisonModelsViewComparisonResultPairViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  groupId: number;
+  /** @format int32 */
+  resource1Id: number;
+  /** @format int32 */
+  resource2Id: number;
+  /** @format double */
+  totalScore: number;
+  ruleScores?: BakabaseModulesComparisonModelsViewRuleScoreDetailViewModel[];
+}
+
+export interface BakabaseModulesComparisonModelsViewComparisonResultPairsResponse {
+  pairs: BakabaseModulesComparisonModelsViewComparisonResultPairViewModel[];
+  /** @format int32 */
+  totalCount: number;
+  isTruncated: boolean;
+  /** @format int32 */
+  limit: number;
+}
+
+export interface BakabaseModulesComparisonModelsViewComparisonResultSearchResponse {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesComparisonModelsViewComparisonResultGroupViewModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+  /** @format int32 */
+  hiddenCount: number;
+}
+
+export interface BakabaseModulesComparisonModelsViewComparisonRuleViewModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  order: number;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  propertyId: number;
+  propertyName?: string;
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
+  /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
+  mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
+  parameter?: any;
+  normalize: boolean;
+  /** @format int32 */
+  weight: number;
+  isVeto: boolean;
+  /** @format double */
+  vetoThreshold: number;
+  /** [0: Skip, 1: Fail, 2: Pass] */
+  oneNullBehavior: BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior;
+  /** [0: Skip, 1: Fail, 2: Pass] */
+  bothNullBehavior: BakabaseModulesComparisonModelsDomainConstantsNullValueBehavior;
+}
+
+export interface BakabaseModulesComparisonModelsViewRuleScoreDetailViewModel {
+  /** @format int32 */
+  ruleId: number;
+  /** @format int32 */
+  order: number;
+  /** @format double */
+  score: number;
+  /** @format double */
+  weight: number;
+  value1?: string;
+  value2?: string;
+  isSkipped: boolean;
+  isVetoed: boolean;
+}
+
 export type BakabaseModulesEnhancerAbstractionsComponentsIEnhancementConverter = object;
 
 export interface BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -2773,6 +3003,22 @@ export interface BakabaseServiceModelsInputCategoryCustomPropertySortInputModel 
   orderedPropertyIds: number[];
 }
 
+export interface BakabaseServiceModelsInputComparisonPlanCreateInputModel {
+  name: string;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
+  /** @format double */
+  threshold: number;
+  rules: BakabaseModulesComparisonModelsInputComparisonRuleInputModel[];
+}
+
+export interface BakabaseServiceModelsInputComparisonPlanPatchInputModel {
+  name?: string;
+  search?: BakabaseServiceModelsInputResourceSearchInputModel;
+  /** @format double */
+  threshold?: number;
+  rules?: BakabaseModulesComparisonModelsInputComparisonRuleInputModel[];
+}
+
 export interface BakabaseServiceModelsInputCompressedFileDetectionInputModel {
   paths: string[];
   includeUnknownFiles: boolean;
@@ -2971,6 +3217,22 @@ export interface BakabaseServiceModelsViewCategoryViewModelCustomPropertyViewMod
   name: string;
   /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
   type: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+}
+
+export interface BakabaseServiceModelsViewComparisonPlanViewModel {
+  /** @format int32 */
+  id: number;
+  name: string;
+  search?: BakabaseServiceModelsViewResourceSearchViewModel;
+  /** @format double */
+  threshold: number;
+  rules: BakabaseModulesComparisonModelsViewComparisonRuleViewModel[];
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  lastRunAt?: string;
+  /** @format int32 */
+  resultGroupCount?: number;
 }
 
 export interface BakabaseServiceModelsViewCompressedFileDetectionResultViewModel {
@@ -3407,6 +3669,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModels
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCategoryViewModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewComparisonPlanViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewComparisonPlanViewModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewCustomPropertyViewModel {
@@ -3922,6 +4191,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesComparisonModelsDomainComparisonPlan;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsViewComparisonResultGroupViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesComparisonModelsViewComparisonResultGroupViewModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPool {
   /** @format int32 */
   code: number;
@@ -3976,6 +4259,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCategoryViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewComparisonPlanViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewComparisonPlanViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewCustomPropertyViewModel {
@@ -6453,6 +6743,294 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/category/${id}/synchronization`,
         method: "PUT",
+        format: "json",
+        ...params,
+      }),
+  };
+  comparison = {
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name GetAllComparisonPlans
+     * @request GET:/comparison/plan
+     */
+    getAllComparisonPlans: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseServiceModelsViewComparisonPlanViewModel,
+        any
+      >({
+        path: `/comparison/plan`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllComparisonPlans
+     * @name getAllComparisonPlansUrl
+     */
+    getAllComparisonPlansUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/comparison/plan`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name CreateComparisonPlan
+     * @request POST:/comparison/plan
+     */
+    createComparisonPlan: (
+      data: BakabaseServiceModelsInputComparisonPlanCreateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan,
+        any
+      >({
+        path: `/comparison/plan`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for createComparisonPlan
+     * @name createComparisonPlanUrl
+     */
+    createComparisonPlanUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/comparison/plan`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name GetComparisonPlan
+     * @request GET:/comparison/plan/{id}
+     */
+    getComparisonPlan: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewComparisonPlanViewModel,
+        any
+      >({
+        path: `/comparison/plan/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name UpdateComparisonPlan
+     * @request PATCH:/comparison/plan/{id}
+     */
+    updateComparisonPlan: (
+      id: number,
+      data: BakabaseServiceModelsInputComparisonPlanPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/comparison/plan/${id}`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name DeleteComparisonPlan
+     * @request DELETE:/comparison/plan/{id}
+     */
+    deleteComparisonPlan: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/comparison/plan/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name DuplicateComparisonPlan
+     * @request POST:/comparison/plan/{id}/duplicate
+     */
+    duplicateComparisonPlan: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan,
+        any
+      >({
+        path: `/comparison/plan/${id}/duplicate`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name ExecuteComparisonPlan
+     * @request POST:/comparison/plan/{id}/execute
+     */
+    executeComparisonPlan: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/comparison/plan/${id}/execute`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name SearchComparisonResults
+     * @request GET:/comparison/plan/{planId}/results
+     */
+    searchComparisonResults: (
+      planId: number,
+      query?: {
+        /** @format int32 */
+        pageIndex?: number;
+        /** @format int32 */
+        pageSize?: number;
+        /** @format int32 */
+        minMemberCount?: number;
+        includeHidden?: boolean;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesComparisonModelsViewComparisonResultSearchResponse, any>({
+        path: `/comparison/plan/${planId}/results`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name ClearComparisonResults
+     * @request DELETE:/comparison/plan/{planId}/results
+     */
+    clearComparisonResults: (planId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/comparison/plan/${planId}/results`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name GetComparisonResultGroup
+     * @request GET:/comparison/plan/{planId}/results/{groupId}
+     */
+    getComparisonResultGroup: (planId: number, groupId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsViewComparisonResultGroupViewModel,
+        any
+      >({
+        path: `/comparison/plan/${planId}/results/${groupId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name GetComparisonResultGroupResourceIds
+     * @request GET:/comparison/plan/{planId}/results/{groupId}/resource-ids
+     */
+    getComparisonResultGroupResourceIds: (
+      planId: number,
+      groupId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemInt32, any>({
+        path: `/comparison/plan/${planId}/results/${groupId}/resource-ids`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name GetComparisonResultGroupPairs
+     * @request GET:/comparison/plan/{planId}/results/{groupId}/pairs
+     */
+    getComparisonResultGroupPairs: (
+      planId: number,
+      groupId: number,
+      query?: {
+        /**
+         * @format int32
+         * @default 1000
+         */
+        limit?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BakabaseModulesComparisonModelsViewComparisonResultPairsResponse, any>({
+        path: `/comparison/plan/${planId}/results/${groupId}/pairs`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name HideComparisonResultGroup
+     * @request PUT:/comparison/plan/{planId}/results/{groupId}/hide
+     */
+    hideComparisonResultGroup: (planId: number, groupId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/comparison/plan/${planId}/results/${groupId}/hide`,
+        method: "PUT",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Comparison
+     * @name UnhideComparisonResultGroup
+     * @request DELETE:/comparison/plan/{planId}/results/{groupId}/hide
+     */
+    unhideComparisonResultGroup: (planId: number, groupId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/comparison/plan/${planId}/results/${groupId}/hide`,
+        method: "DELETE",
         format: "json",
         ...params,
       }),

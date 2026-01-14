@@ -24,10 +24,10 @@ public abstract class
         IServiceProvider serviceProvider)
     : AbstractEnhancer<TEnumTarget, TContext,
         TEnhancerOptions>(loggerFactory, fileManager, serviceProvider) where TEnumTarget : Enum
-    where TEnhancerOptions : class?
+    where TEnhancerOptions : class?, IKeywordEnhancerOptions
     where TContext : class?
 {
-    protected override async Task<TContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
+    protected override async Task<TContext?> BuildContextInternal(Resource resource, TEnhancerOptions options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
         string? keyword = null;
@@ -137,6 +137,6 @@ public abstract class
     }
 
     protected abstract Task<TContext?> BuildContextInternal(string keyword, Resource resource,
-        EnhancerFullOptions options, EnhancementLogCollector logCollector,
+        TEnhancerOptions options, EnhancementLogCollector logCollector,
         CancellationToken ct);
 }

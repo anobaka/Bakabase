@@ -39,6 +39,7 @@ using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Presets.Extensions;
 using Bakabase.Modules.Property.Extensions;
 using Bakabase.Modules.StandardValue.Extensions;
+using Bakabase.Modules.Comparison.Extensions;
 using Bakabase.Modules.ThirdParty.Extensions;
 using Bakabase.Modules.ThirdParty.Services;
 using Bootstrap.Components.DependencyInjection;
@@ -148,6 +149,7 @@ namespace Bakabase.Service.Extensions
             services.AddDownloaders();
 
             services.AddBulkModification<BakabaseDbContext>();
+            services.AddComparison<BakabaseDbContext>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();

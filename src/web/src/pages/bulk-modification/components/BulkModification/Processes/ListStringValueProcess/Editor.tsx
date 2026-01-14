@@ -9,6 +9,7 @@ import type {
 
 import { useTranslation } from "react-i18next";
 import React, { useEffect, useState } from "react";
+import { getEnumKey } from "@/i18n";
 
 import { StringValueProcessEditor } from "../StringValueProcess";
 
@@ -111,7 +112,7 @@ const Editor = ({
       case BulkModificationListStringProcessOperation.Append:
       case BulkModificationListStringProcessOperation.Prepend:
         components.push({
-          label: t<string>("Value"),
+          label: "",
           comp: renderValueCell(),
         });
         break;
@@ -119,13 +120,13 @@ const Editor = ({
         const filterBy = options?.modifyOptions?.filterBy;
 
         components.push({
-          label: t<string>("Filter by"),
+          label: t<string>("bulkModification.filter.filterBy"),
           comp: (
             <div className={"flex items-center gap-2"}>
               <div className={"w-2/5"}>
                 <Select
                   dataSource={bulkModificationProcessorOptionsItemsFilterBies.map((fb) => ({
-                    label: t<string>(fb.label),
+                    label: t(getEnumKey("BulkModificationProcessorOptionsItemsFilterBy", fb.label)),
                     value: fb.value,
                   }))}
                   selectionMode={"single"}
@@ -153,8 +154,8 @@ const Editor = ({
                         <Input
                           placeholder={t<string>(
                             filterBy == BulkModificationProcessorOptionsItemsFilterBy.Containing
-                              ? "Please input keyword"
-                              : "Please input a regular expression",
+                              ? "bulkModification.placeholder.inputKeyword"
+                              : "bulkModification.placeholder.inputRegex",
                           )}
                           onValueChange={(v) => {
                             changeOptions({
@@ -173,7 +174,7 @@ const Editor = ({
         });
 
         components.push({
-          label: t<string>("For each filtered item"),
+          label: t<string>("bulkModification.filter.forEachItem"),
           comp: (
             <StringValueProcessEditor
               availableValueTypes={availableValueTypes}
@@ -209,25 +210,20 @@ const Editor = ({
         break;
     }
 
-    return components.map((c, i) => {
-      return (
-        <>
-          <div>{c.label}</div>
-          <div>{c.comp}</div>
-        </>
-      );
-    });
+    return components.map((c, i) => (
+      <div key={i} className="flex flex-col gap-1">
+        {c.label && <span className="text-sm text-default-500">{c.label}</span>}
+        <div>{c.comp}</div>
+      </div>
+    ));
   };
 
   return (
-    <div
-      className={"grid items-center gap-2"}
-      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
-    >
-      <div>{t<string>("Operation")}</div>
+    <div className={"flex flex-col gap-3"}>
       <Select
+        label={t<string>("bulkModification.label.operation")}
         dataSource={bulkModificationListStringProcessOperations.map((tpo) => ({
-          label: t<string>(tpo.label),
+          label: t(getEnumKey("BulkModificationListStringProcessOperation", tpo.label)),
           value: tpo.value,
         }))}
         selectedKeys={operation == undefined ? undefined : [operation.toString()]}

@@ -18,6 +18,7 @@ import NoChoicesAvailable from "@/components/StandardValue/ValueRenderer/Rendere
 import SelectableChip from "@/components/Chips/SelectableChip";
 import { autoBackgroundColor, buildLogger } from "@/components/utils";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
+import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
 type FlattenedOption = {
   path: string[];
@@ -50,6 +51,7 @@ const MultilevelValueRenderer = ({
   const { createPortal } = useBakabaseContext();
   const [dataSource, setDataSource] = useState<MultilevelData<string>[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [optionsThreshold] = useFilterOptionsThreshold();
 
   // Default isReadonly to true if no editor is provided
   const isReadonly = propsIsReadonly ?? !editor;
@@ -150,11 +152,11 @@ const MultilevelValueRenderer = ({
 
   // Build visible options using shared utility
   const visibleOptions = useMemo(
-    () => buildVisibleOptions(flattenedOptions, (opt) => isPathSelected(opt.path)),
-    [flattenedOptions, selectedValues]
+    () => buildVisibleOptions(flattenedOptions, (opt) => isPathSelected(opt.path), optionsThreshold),
+    [flattenedOptions, selectedValues, optionsThreshold]
   );
 
-  const hasMore = hasMoreOptions(flattenedOptions.length);
+  const hasMore = hasMoreOptions(flattenedOptions.length, optionsThreshold);
   const remainingCount = getRemainingCount(flattenedOptions.length, visibleOptions.length);
 
   // Editable mode: show inline options with toggle

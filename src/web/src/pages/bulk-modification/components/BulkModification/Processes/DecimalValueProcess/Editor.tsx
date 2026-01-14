@@ -71,27 +71,22 @@ const Editor = ({
       case BulkModificationDecimalProcessOperation.Multiply:
       case BulkModificationDecimalProcessOperation.Divide:
         return (
-          <>
-            <div>{t("bulkModification.label.value")}</div>
-            <ProcessValueEditor
-              availableValueTypes={availableValueTypes}
-              baseValueType={propertyType}
-              value={options.value}
-              variables={variables}
-              onChange={(value) => changeOptions({ value })}
-            />
-          </>
+          <ProcessValueEditor
+            availableValueTypes={availableValueTypes}
+            baseValueType={propertyType}
+            value={options.value}
+            variables={variables}
+            onChange={(value) => changeOptions({ value })}
+          />
         );
       case BulkModificationDecimalProcessOperation.Round:
         return (
-          <>
-            <div>{t("bulkModification.label.decimalPlaces")}</div>
-            <NumberInput
-              min={0}
-              value={options.decimalPlaces}
-              onValueChange={(decimalPlaces) => changeOptions({ decimalPlaces })}
-            />
-          </>
+          <NumberInput
+            label={t("bulkModification.label.decimalPlaces")}
+            min={0}
+            value={options.decimalPlaces}
+            onValueChange={(decimalPlaces) => changeOptions({ decimalPlaces })}
+          />
         );
       default:
         return null;
@@ -99,12 +94,9 @@ const Editor = ({
   };
 
   return (
-    <div
-      className="grid items-center gap-2"
-      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
-    >
-      <div>{t("bulkModification.label.operation")}</div>
+    <div className="flex flex-col gap-3">
       <Select
+        label={t("bulkModification.label.operation")}
         dataSource={bulkModificationDecimalProcessOperations.map((op) => ({
           label: t(getEnumKey('BulkModificationDecimalProcessOperation', op.label)),
           value: op.value,

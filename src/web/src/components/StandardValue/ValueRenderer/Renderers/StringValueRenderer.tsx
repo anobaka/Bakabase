@@ -55,9 +55,9 @@ const StringValueRenderer = (props: StringValueRendererProps) => {
     };
 
     if (multiline) {
-      return <Textarea size={size} value={value ?? ""} minRows={2} onValueChange={handleChange} />;
+      return <Textarea size={size} value={value ?? ""} minRows={2} placeholder={t("Input")} onValueChange={handleChange} />;
     } else {
-      return <Input size={size} value={value ?? ""} onValueChange={handleChange} />;
+      return <Input size={size} value={value ?? ""} placeholder={t("Input")} onValueChange={handleChange} />;
     }
   }
 
@@ -82,9 +82,9 @@ const StringValueRenderer = (props: StringValueRendererProps) => {
 
   if (editing) {
     if (multiline) {
-      return <Textarea size={size} minRows={2} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
+      return <Textarea size={size} minRows={2} autoFocus value={value} placeholder={t("Input")} onBlur={completeEditing} onValueChange={setValue} />;
     } else {
-      return <Input size={size} autoFocus value={value} onBlur={completeEditing} onValueChange={setValue} />;
+      return <Input size={size} autoFocus value={value} placeholder={t("Input")} onBlur={completeEditing} onValueChange={setValue} />;
     }
   } else {
     if (multiline) {

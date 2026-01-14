@@ -123,12 +123,22 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
     const key = uuidv4();
 
-    setPortals((prev) => [...prev, { key, component: <C {...props} />, persistent: false }]);
-
     const destroy = () => {
       console.log("[createPortal] destroy", key);
       setPortals((prev) => prev.filter((p) => p.key !== key));
     };
+
+    const component = (
+      <C
+        {...props}
+        onDestroyed={() => {
+          props.onDestroyed?.();
+          destroy();
+        }}
+      />
+    );
+
+    setPortals((prev) => [...prev, { key, component, persistent: false }]);
 
     return { key, destroy };
   };

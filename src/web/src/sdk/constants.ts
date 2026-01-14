@@ -1732,6 +1732,63 @@ export const TagGroupAdditionalItemLabel: Record<TagGroupAdditionalItem, string>
   [TagGroupAdditionalItem.TagNamePreferredAlias]: 'TagNamePreferredAlias'
 };
 
+export enum ComparisonMode {
+  StrictEqual = 0,
+  TextSimilarity = 2,
+  RegexExtractNumber = 3,
+  FixedTolerance = 4,
+  RelativeTolerance = 5,
+  SetIntersection = 6,
+  Subset = 7,
+  TimeWindow = 8,
+  SameDay = 9,
+  ExtensionMap = 10
+}
+
+export const comparisonModes = [
+  { label: 'StrictEqual', value: ComparisonMode.StrictEqual },
+  { label: 'TextSimilarity', value: ComparisonMode.TextSimilarity },
+  { label: 'RegexExtractNumber', value: ComparisonMode.RegexExtractNumber },
+  { label: 'FixedTolerance', value: ComparisonMode.FixedTolerance },
+  { label: 'RelativeTolerance', value: ComparisonMode.RelativeTolerance },
+  { label: 'SetIntersection', value: ComparisonMode.SetIntersection },
+  { label: 'Subset', value: ComparisonMode.Subset },
+  { label: 'TimeWindow', value: ComparisonMode.TimeWindow },
+  { label: 'SameDay', value: ComparisonMode.SameDay },
+  { label: 'ExtensionMap', value: ComparisonMode.ExtensionMap }
+] as const;
+
+export const ComparisonModeLabel: Record<ComparisonMode, string> = {
+  [ComparisonMode.StrictEqual]: 'StrictEqual',
+  [ComparisonMode.TextSimilarity]: 'TextSimilarity',
+  [ComparisonMode.RegexExtractNumber]: 'RegexExtractNumber',
+  [ComparisonMode.FixedTolerance]: 'FixedTolerance',
+  [ComparisonMode.RelativeTolerance]: 'RelativeTolerance',
+  [ComparisonMode.SetIntersection]: 'SetIntersection',
+  [ComparisonMode.Subset]: 'Subset',
+  [ComparisonMode.TimeWindow]: 'TimeWindow',
+  [ComparisonMode.SameDay]: 'SameDay',
+  [ComparisonMode.ExtensionMap]: 'ExtensionMap'
+};
+
+export enum NullValueBehavior {
+  Skip = 0,
+  Fail = 1,
+  Pass = 2
+}
+
+export const nullValueBehaviors = [
+  { label: 'Skip', value: NullValueBehavior.Skip },
+  { label: 'Fail', value: NullValueBehavior.Fail },
+  { label: 'Pass', value: NullValueBehavior.Pass }
+] as const;
+
+export const NullValueBehaviorLabel: Record<NullValueBehavior, string> = {
+  [NullValueBehavior.Skip]: 'Skip',
+  [NullValueBehavior.Fail]: 'Fail',
+  [NullValueBehavior.Pass]: 'Pass'
+};
+
 export enum CaptchaType {
   Image = 1,
   SmsMessage = 2
@@ -3884,6 +3941,33 @@ export const ExHentaiConnectionStatusLabel: Record<ExHentaiConnectionStatus, str
   [ExHentaiConnectionStatus.InvalidCookie]: 'InvalidCookie',
   [ExHentaiConnectionStatus.IpBanned]: 'IpBanned',
   [ExHentaiConnectionStatus.UnknownError]: 'UnknownError'
+};
+
+export enum BangumiSubjectType {
+  All = 0,
+  Anime = 1,
+  Book = 2,
+  Music = 3,
+  Game = 4,
+  Real = 5
+}
+
+export const bangumiSubjectTypes = [
+  { label: 'All', value: BangumiSubjectType.All },
+  { label: 'Anime', value: BangumiSubjectType.Anime },
+  { label: 'Book', value: BangumiSubjectType.Book },
+  { label: 'Music', value: BangumiSubjectType.Music },
+  { label: 'Game', value: BangumiSubjectType.Game },
+  { label: 'Real', value: BangumiSubjectType.Real }
+] as const;
+
+export const BangumiSubjectTypeLabel: Record<BangumiSubjectType, string> = {
+  [BangumiSubjectType.All]: 'All',
+  [BangumiSubjectType.Anime]: 'Anime',
+  [BangumiSubjectType.Book]: 'Book',
+  [BangumiSubjectType.Music]: 'Music',
+  [BangumiSubjectType.Game]: 'Game',
+  [BangumiSubjectType.Real]: 'Real'
 };
 
 export enum ThirdPartyRequestResultType {

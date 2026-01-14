@@ -15,7 +15,7 @@
   "resourceProfile.tip.searchCriteria": "Define which resources this profile applies to. Resources matching these criteria will use this profile's settings.",
   "resourceProfile.tip.nameTemplate": "Customize how resource names are displayed using property placeholders like {Name}. Leave empty to use the original filename.",
   "resourceProfile.tip.playableFiles": "Rules to identify which files within a resource are playable. Configure by file extension or filename pattern.",
-  "resourceProfile.tip.players": "External applications to open playable files. You can assign different players for different file extensions.",
+  "resourceProfile.tip.players": "External applications to open playable files. You can assign different players for different file extensions. By default, the system's default application is used to open playable files.",
   "resourceProfile.tip.properties": "Select which properties should be displayed or editable for resources matching this profile.",
   "resourceProfile.tip.configureEnhancers": "Click to configure enhancers",
   "resourceProfile.action.testCriteria": "Test criteria",

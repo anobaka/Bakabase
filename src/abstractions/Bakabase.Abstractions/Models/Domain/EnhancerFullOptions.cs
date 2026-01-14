@@ -1,9 +1,10 @@
 ﻿namespace Bakabase.Abstractions.Models.Domain;
 
 /// <summary>
-/// To be simple, we put all possible options into one model for now, even they may be not suitable for current enhancer.
+/// Contains all possible options for enhancers. Implements specific option interfaces
+/// to provide type-safe access for different enhancer types.
 /// </summary>
-public record EnhancerFullOptions
+public record EnhancerFullOptions : IRegexEnhancerOptions, IBangumiEnhancerOptions
 {
     public int EnhancerId { get; set; }
     public List<EnhancerTargetFullOptions>? TargetOptions { get; set; }
@@ -23,6 +24,14 @@ public record EnhancerFullOptions
     /// The property used to generate the search keyword for enhancers that need it.
     /// </summary>
     public ScopePropertyKey? KeywordProperty { get; set; }
-    
+
     public bool? PretreatKeyword { get; set; }
+
+    /// <summary>
+    /// Priority subject type for Bangumi search.
+    /// If set, the enhancer will first search with this type;
+    /// if no results found, it will fall back to searching all types.
+    /// Values correspond to BangumiSubjectType enum.
+    /// </summary>
+    public int? BangumiPrioritySubjectType { get; set; }
 }

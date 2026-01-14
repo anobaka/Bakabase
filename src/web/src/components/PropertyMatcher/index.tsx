@@ -67,7 +67,6 @@ const PropertyMatcher = ({
                 onSubmit: async (selection) => {
                   onValueChange(selection[0]!);
                 },
-                v2: true,
               });
             }}
           >
@@ -97,20 +96,19 @@ const PropertyMatcher = ({
           variant={"light"}
           onPress={async () => {
             if (name == undefined || name.length == 0) {
-              createPortal(
-                Modal, {
-                  defaultVisible: true,
-                  title: t<string>("No proper property name provided"),
-                  children: (
-                    <div className={"flex flex-col gap-2"}>
-                      {t<string>("Please provide a property name")}
-                    </div>
-                  ),
-                  footer: {
-                    actions: ['cancel']
-                  }
-                }
-              )
+              createPortal(Modal, {
+                defaultVisible: true,
+                title: t<string>("No proper property name provided"),
+                children: (
+                  <div className={"flex flex-col gap-2"}>
+                    {t<string>("Please provide a property name")}
+                  </div>
+                ),
+                footer: {
+                  actions: ["cancel"],
+                },
+              });
+
               return;
             }
             setIsFindingBestMatch(true);
@@ -164,7 +162,6 @@ const PropertyMatcher = ({
                               onSubmit: async (selection) => {
                                 onValueChange(selection[0]!);
                               },
-                              v2: true,
                             });
                           }}
                         >

@@ -293,9 +293,6 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
 
     return (
       <Popover
-        style={{
-          zIndex: 20,
-        }}
         trigger={
           <Button
             isIconOnly

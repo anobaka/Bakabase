@@ -23,6 +23,8 @@ import MediaPlayerTest from "./cases/MediaPlayer";
 import WindowedMediaPlayerTest from "./cases/WindowedMediaPlayer";
 import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsModalTest";
 import PathMarksInvalidPathsTest from "./cases/PathMarksInvalidPathsTest";
+import BulkModificationProcessEditorsTest from "./cases/BulkModificationProcessEditors";
+import ComparisonRuleTest from "./cases/ComparisonRuleTest";
 
 import ErrorBoundaryTestPage from "@/pages/test/cases/ErrorBoundaryTest";
 import { Listbox } from "@/components/bakaui";
@@ -40,6 +42,8 @@ import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 
 const components = {
+  ComparisonRule: <ComparisonRuleTest />,
+  BulkModificationProcessEditors: <BulkModificationProcessEditorsTest />,
   PathMarksInvalidPaths: <PathMarksInvalidPathsTest />,
   AfterFirstPlayOperationsModalTest: <AfterFirstPlayOperationsModalTest />,
   FolderSelectorTest: <FolderSelectorTest />,

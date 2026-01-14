@@ -11,7 +11,7 @@ import { useUpdateEffect } from "react-use";
 
 import { Button, Card, CardBody, Input, Modal, Select } from "@/components/bakaui";
 import PropertySelector from "@/components/PropertySelector";
-import { PropertyPool, propertyValueScopes } from "@/sdk/constants";
+import { PropertyPool, PropertyValueScope, propertyValueScopes } from "@/sdk/constants";
 import ProcessStep from "@/pages/bulk-modification/components/BulkModification/ProcessStep";
 import ProcessStepModal from "@/pages/bulk-modification/components/BulkModification/ProcessStepModal";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -24,8 +24,16 @@ type Props = {
   onChange?: (variable: BulkModificationVariable) => any;
 } & DestroyableProps;
 
-const validate = (v?: Partial<BulkModificationVariable>) =>
-  !(!v || !v.name || !v.propertyId || !v.propertyPool || v.scope == undefined);
+const validate = (v?: Partial<BulkModificationVariable>) => {
+  if (!v || !v.name || !v.propertyId || !v.propertyPool) {
+    return false;
+  }
+  // Internal properties don't need scope
+  if (v.propertyPool === PropertyPool.Internal) {
+    return true;
+  }
+  return v.scope !== undefined;
+};
 
 const log = buildLogger("VariableModal");
 const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props) => {
@@ -52,13 +60,22 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
         },
       }}
       size={"xl"}
-      title={t<string>("bulkModification.label.settingVariable")}
+      title={variable?.property
+        ? t<string>("bulkModification.title.preprocessForProperty", { property: variable.property.name })
+        : t<string>("bulkModification.label.settingVariable")}
       onDestroyed={onDestroyed}
       onOk={() => {
         if (!validate(variable)) {
           throw new Error("Invalid variable");
         }
-        onChange?.(variable as BulkModificationVariable);
+        // Ensure scope is set for Internal properties
+        const finalVariable = {
+          ...variable,
+          scope: variable.propertyPool === PropertyPool.Internal
+            ? PropertyValueScope.Manual
+            : variable.scope,
+        };
+        onChange?.(finalVariable as BulkModificationVariable);
       }}
     >
       <Card>
@@ -93,6 +110,8 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
                         propertyPool: p.pool,
                         propertyId: p.id,
                         property: p,
+                        // Auto-set scope to Default for Internal properties
+                        scope: p.pool === PropertyPool.Internal ? PropertyValueScope.Manual : variable?.scope,
                       });
                     },
                   });
@@ -105,30 +124,33 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
                 )}
               </Button>
             </div>
-            <Select
-              disallowEmptySelection
-              dataSource={propertyValueScopes.map((s) => ({
-                label: t<string>(`PropertyValueScope.${s.label}`),
-                value: s.value,
-              }))}
-              description={t<string>("bulkModification.label.scopeDescription")}
-              label={t<string>("bulkModification.label.scope")}
-              // labelPlacement="outside"
-              placeholder={t<string>("bulkModification.select.scope")}
-              selectedKeys={
-                variable?.scope == undefined ? undefined : [variable.scope.toString()]
-              }
-              selectionMode={"single"}
-              size="sm"
-              onSelectionChange={(v) => {
-                const scope = Array.from(v ?? [])[0] as number;
+            {/* Hide scope selector for Internal properties */}
+            {variable?.propertyPool !== PropertyPool.Internal && (
+              <Select
+                disallowEmptySelection
+                dataSource={propertyValueScopes.map((s) => ({
+                  label: t<string>(`PropertyValueScope.${s.label}`),
+                  value: s.value,
+                }))}
+                description={t<string>("bulkModification.label.scopeDescription")}
+                label={t<string>("bulkModification.label.scope")}
+                // labelPlacement="outside"
+                placeholder={t<string>("bulkModification.select.scope")}
+                selectedKeys={
+                  variable?.scope == undefined ? undefined : [variable.scope.toString()]
+                }
+                selectionMode={"single"}
+                size="sm"
+                onSelectionChange={(v) => {
+                  const scope = Array.from(v ?? [])[0] as number;
 
-                setVariable({
-                  ...variable,
-                  scope,
-                });
-              }}
-            />
+                  setVariable({
+                    ...variable,
+                    scope,
+                  });
+                }}
+              />
+            )}
             <Input
               isClearable
               isRequired
@@ -191,6 +213,7 @@ const VariableModal = ({ variable: propsVariable, onDestroyed, onChange }: Props
                 if (variable?.property) {
                   createPortal(ProcessStepModal, {
                     property: variable.property,
+                    isPreprocess: true,
                     onSubmit: (operation: number, options: any) => {
                       if (!variable.preprocesses) {
                         variable.preprocesses = [];

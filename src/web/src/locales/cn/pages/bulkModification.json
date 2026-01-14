@@ -1,6 +1,7 @@
 {
   "bulkModification.action.add": "添加批量修改",
   "bulkModification.action.addPreprocess": "添加预处理",
+  "bulkModification.action.addStep": "添加处理步骤",
   "bulkModification.action.apply": "应用批量修改",
   "bulkModification.action.applyChanges": "应用更改",
   "bulkModification.action.calculate": "计算更改",
@@ -46,6 +47,8 @@
   "bulkModification.label.preprocessing": "预处理",
   "bulkModification.label.settingProcess": "设置处理",
   "bulkModification.label.settingVariable": "设置变量",
+  "bulkModification.title.processForProperty": "{{property}} 属性的处理流程",
+  "bulkModification.title.preprocessForProperty": "{{property}} 属性的预处理流程",
   "bulkModification.label.typeTransformation": "类型转换",
   "bulkModification.label.startsFromZero": "从 0 开始",
 
@@ -75,7 +78,9 @@
 
   "bulkModification.input.setVariableName": "为此变量设置名称",
   "bulkModification.info.addPreprocessSteps": "您可以添加多个预处理步骤。",
+  "bulkModification.info.addProcessSteps": "您可以添加多个处理步骤。",
   "bulkModification.info.checkTypeRules": "您可以在此查看类型转换规则",
+  "bulkModification.info.typeConversion": "我们将自动把值从 {{fromType}} 转换为 {{toType}}。",
   "bulkModification.info.underDevelopment": "开发中，目前支持的数据类型",
   "bulkModification.info.ensureCalculation": "请确保已执行计算操作。",
   "bulkModification.info.noResourcesToChange": "如果已执行计算操作，可能没有需要更改的资源。",
@@ -235,12 +240,24 @@
   "bulkModification.valueType.manuallyInput": "手动输入",
   "bulkModification.valueType.variable": "变量",
 
+  "bulkModification.valueSource.label": "值来源",
+  "bulkModification.valueType.label": "值类型",
+  "bulkModification.dataSource.label": "数据来源",
+  "bulkModification.dataSource.clickToSelect": "点击选择属性",
+
   "bulkModification.validation.valueRequired": "值是必填的",
   "bulkModification.validation.valueAndIndexRequired": "值和索引是必填的",
   "bulkModification.validation.countRequired": "数量是必填的",
   "bulkModification.validation.countAndIndexRequired": "数量和索引是必填的",
   "bulkModification.validation.findAndReplaceRequired": "查找和替换内容是必填的",
   "bulkModification.validation.optionsRequired": "请提供有效的选项",
+  "bulkModification.validation.modifyOptionsRequired": "修改选项是必填的",
+  "bulkModification.validation.filterValueRequired": "筛选值是必填的",
+  "bulkModification.validation.operationRequired": "操作是必填的",
+  "bulkModification.validation.invalidValue": "请提供有效的值",
+  "bulkModification.validation.invalidValueType": "请提供有效的值类型",
+  "bulkModification.validation.invalidPropertyType": "请提供有效的属性类型",
+  "bulkModification.validation.invalidVariable": "请提供有效的变量",
 
   "bulkModification.label.scope": "作用域",
   "bulkModification.label.scopeDescription": "一个属性可能有多个维度的值，您可以选择其中一个维度作为基础数据。",
@@ -253,5 +270,14 @@
   "bulkModification.label.followPropertyChangesDescription2": "例如，如果您使用多选数据中的\"演员\"作为变更结果，那么将来如果您将\"演员\"修改为\"演员1\"，当前数据在下次处理后也会变为\"演员1\"。但是，如果未启用此选项，当前数据在下次处理后将变为\"演员\"。",
   "bulkModification.label.followPropertyChangesDescription3": "对于没有引用值的属性（如文本、数字、日期等），此选项的状态没有区别。",
   "bulkModification.label.clickToSet": "点击设置",
-  "bulkModification.label.notSet": "未设置"
+  "bulkModification.label.notSet": "未设置",
+  "bulkModification.label.amount": "数量",
+  "bulkModification.label.decimalPlaces": "小数位数",
+  "bulkModification.label.text": "文本",
+  "bulkModification.label.url": "链接",
+  "bulkModification.label.stringOperation": "文本操作",
+  "bulkModification.label.setValue": "设置值",
+
+  "bulkModification.placeholder.inputKeyword": "请输入关键词",
+  "bulkModification.placeholder.inputRegex": "请输入正则表达式"
 }

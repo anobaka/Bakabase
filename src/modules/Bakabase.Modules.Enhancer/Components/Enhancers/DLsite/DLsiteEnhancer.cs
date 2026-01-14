@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 
-public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsiteEnhancerContext, object?>
+public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsiteEnhancerContext, IKeywordEnhancerOptions>
 {
     private readonly DLsiteClient _client;
     private readonly IStandardValueService _standardValueService;
@@ -31,7 +31,7 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
         _standardValueService = standardValueService;
     }
 
-    protected override async Task<DLsiteEnhancerContext?> BuildContextInternal(string keyword, Resource resource, EnhancerFullOptions options,
+    protected override async Task<DLsiteEnhancerContext?> BuildContextInternal(string keyword, Resource resource, IKeywordEnhancerOptions options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var match = IdRegex.Match(keyword);

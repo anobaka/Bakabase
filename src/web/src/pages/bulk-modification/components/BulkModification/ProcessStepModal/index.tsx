@@ -30,6 +30,7 @@ type Props = {
   onSubmit?: (operation: number, options: any) => any;
   variables?: BulkModificationVariable[];
   availableValueTypes?: BulkModificationProcessorValueType[];
+  isPreprocess?: boolean;
 } & DestroyableProps;
 
 const log = buildLogger("ProcessStepModal");
@@ -41,6 +42,7 @@ const ProcessStepModal = ({
   onSubmit,
   variables,
   availableValueTypes = [BulkModificationProcessorValueType.ManuallyInput],
+  isPreprocess = false,
 }: Props) => {
   const { t } = useTranslation();
 
@@ -209,6 +211,9 @@ const ProcessStepModal = ({
         },
       }}
       size={"xl"}
+      title={isPreprocess
+        ? t<string>("bulkModification.title.preprocessForProperty", { property: property.name })
+        : t<string>("bulkModification.title.processForProperty", { property: property.name })}
       onDestroyed={onDestroyed}
       onOk={() => {
         if (operation != undefined) {
@@ -220,7 +225,7 @@ const ProcessStepModal = ({
       {renderOptions()}
       {error && (
         <div className={"whitespace-break-spaces text-danger"}>
-          {t<string>("bulkModification.error.title")}: {error}
+          {t<string>("bulkModification.error.title")}: {t<string>(error)}
         </div>
       )}
     </Modal>

@@ -47,7 +47,7 @@ const mockMultilineTextProperty = {
   order: 1,
 };
 
-// 3. SingleChoice
+// 3. SingleChoice (with 35+ choices for testing large option lists)
 const mockSingleChoiceProperty = {
   id: 3,
   pool: PropertyPool.Custom,
@@ -63,6 +63,38 @@ const mockSingleChoiceProperty = {
       { value: "draft", label: "Draft", color: "#888888" },
       { value: "published", label: "Published", color: "#22c55e" },
       { value: "archived", label: "Archived", color: "#f59e0b" },
+      { value: "pending", label: "Pending Review", color: "#3b82f6" },
+      { value: "rejected", label: "Rejected", color: "#ef4444" },
+      { value: "scheduled", label: "Scheduled", color: "#8b5cf6" },
+      { value: "expired", label: "Expired", color: "#6b7280" },
+      { value: "deleted", label: "Deleted", color: "#dc2626" },
+      { value: "hidden", label: "Hidden", color: "#4b5563" },
+      { value: "featured", label: "Featured", color: "#eab308" },
+      { value: "pinned", label: "Pinned", color: "#14b8a6" },
+      { value: "locked", label: "Locked", color: "#78716c" },
+      { value: "unlisted", label: "Unlisted", color: "#a3a3a3" },
+      { value: "processing", label: "Processing", color: "#06b6d4" },
+      { value: "failed", label: "Failed", color: "#be123c" },
+      { value: "queued", label: "Queued", color: "#7c3aed" },
+      { value: "active", label: "Active", color: "#16a34a" },
+      { value: "inactive", label: "Inactive", color: "#9ca3af" },
+      { value: "suspended", label: "Suspended", color: "#ea580c" },
+      { value: "banned", label: "Banned", color: "#991b1b" },
+      { value: "verified", label: "Verified", color: "#059669" },
+      { value: "unverified", label: "Unverified", color: "#d97706" },
+      { value: "premium", label: "Premium", color: "#c026d3" },
+      { value: "free", label: "Free", color: "#65a30d" },
+      { value: "trial", label: "Trial", color: "#0891b2" },
+      { value: "beta", label: "Beta", color: "#4f46e5" },
+      { value: "alpha", label: "Alpha", color: "#7c2d12" },
+      { value: "stable", label: "Stable", color: "#15803d" },
+      { value: "deprecated", label: "Deprecated", color: "#71717a" },
+      { value: "legacy", label: "Legacy", color: "#57534e" },
+      { value: "experimental", label: "Experimental", color: "#db2777" },
+      { value: "maintenance", label: "Maintenance", color: "#ca8a04" },
+      { value: "readonly", label: "Read Only", color: "#0284c7" },
+      { value: "restricted", label: "Restricted", color: "#b91c1c" },
+      { value: "public", label: "Public", color: "#22c55e" },
     ],
   },
 };
@@ -80,7 +112,7 @@ const mockSingleChoiceNoOptionsProperty = {
   order: 2,
 };
 
-// 4. MultipleChoice
+// 4. MultipleChoice (with 40+ choices for testing large option lists)
 const mockMultipleChoiceProperty = {
   id: 4,
   pool: PropertyPool.Custom,
@@ -97,6 +129,42 @@ const mockMultipleChoiceProperty = {
       { value: "comedy", label: "Comedy", color: "#f59e0b" },
       { value: "drama", label: "Drama", color: "#3b82f6" },
       { value: "sci-fi", label: "Sci-Fi", color: "#8b5cf6" },
+      { value: "horror", label: "Horror", color: "#1f2937" },
+      { value: "romance", label: "Romance", color: "#ec4899" },
+      { value: "thriller", label: "Thriller", color: "#dc2626" },
+      { value: "mystery", label: "Mystery", color: "#4b5563" },
+      { value: "fantasy", label: "Fantasy", color: "#7c3aed" },
+      { value: "adventure", label: "Adventure", color: "#059669" },
+      { value: "animation", label: "Animation", color: "#06b6d4" },
+      { value: "documentary", label: "Documentary", color: "#78716c" },
+      { value: "family", label: "Family", color: "#22c55e" },
+      { value: "musical", label: "Musical", color: "#c026d3" },
+      { value: "war", label: "War", color: "#991b1b" },
+      { value: "western", label: "Western", color: "#b45309" },
+      { value: "crime", label: "Crime", color: "#374151" },
+      { value: "biography", label: "Biography", color: "#0891b2" },
+      { value: "history", label: "History", color: "#92400e" },
+      { value: "sport", label: "Sport", color: "#16a34a" },
+      { value: "music", label: "Music", color: "#db2777" },
+      { value: "news", label: "News", color: "#0284c7" },
+      { value: "reality", label: "Reality TV", color: "#ca8a04" },
+      { value: "talk-show", label: "Talk Show", color: "#7c2d12" },
+      { value: "game-show", label: "Game Show", color: "#4f46e5" },
+      { value: "soap", label: "Soap Opera", color: "#be185d" },
+      { value: "short", label: "Short Film", color: "#6366f1" },
+      { value: "adult", label: "Adult", color: "#be123c" },
+      { value: "noir", label: "Film Noir", color: "#27272a" },
+      { value: "superhero", label: "Superhero", color: "#2563eb" },
+      { value: "martial-arts", label: "Martial Arts", color: "#ea580c" },
+      { value: "disaster", label: "Disaster", color: "#b91c1c" },
+      { value: "psychological", label: "Psychological", color: "#6b21a8" },
+      { value: "supernatural", label: "Supernatural", color: "#5b21b6" },
+      { value: "slice-of-life", label: "Slice of Life", color: "#65a30d" },
+      { value: "isekai", label: "Isekai", color: "#0d9488" },
+      { value: "mecha", label: "Mecha", color: "#475569" },
+      { value: "harem", label: "Harem", color: "#f472b6" },
+      { value: "ecchi", label: "Ecchi", color: "#fb7185" },
+      { value: "shounen", label: "Shounen", color: "#f97316" },
     ],
   },
 };
@@ -218,7 +286,7 @@ const mockTimeProperty = {
   order: 10,
 };
 
-// 12. Tags
+// 12. Tags (with 40+ tags across multiple groups for testing large option lists)
 const mockTagsProperty = {
   id: 12,
   pool: PropertyPool.Custom,
@@ -231,10 +299,54 @@ const mockTagsProperty = {
   order: 11,
   options: {
     tags: [
+      // Priority group (6 tags)
       { value: "tag1", name: "Important", group: "Priority", color: "#ef4444" },
       { value: "tag2", name: "Urgent", group: "Priority", color: "#f59e0b" },
-      { value: "tag3", name: "Work", group: "Category", color: "#3b82f6" },
-      { value: "tag4", name: "Personal", group: "Category", color: "#22c55e" },
+      { value: "tag3", name: "Critical", group: "Priority", color: "#dc2626" },
+      { value: "tag4", name: "Low", group: "Priority", color: "#22c55e" },
+      { value: "tag5", name: "Medium", group: "Priority", color: "#3b82f6" },
+      { value: "tag6", name: "High", group: "Priority", color: "#ea580c" },
+      // Category group (8 tags)
+      { value: "tag7", name: "Work", group: "Category", color: "#0891b2" },
+      { value: "tag8", name: "Personal", group: "Category", color: "#8b5cf6" },
+      { value: "tag9", name: "Study", group: "Category", color: "#6366f1" },
+      { value: "tag10", name: "Entertainment", group: "Category", color: "#ec4899" },
+      { value: "tag11", name: "Health", group: "Category", color: "#10b981" },
+      { value: "tag12", name: "Finance", group: "Category", color: "#84cc16" },
+      { value: "tag13", name: "Travel", group: "Category", color: "#06b6d4" },
+      { value: "tag14", name: "Shopping", group: "Category", color: "#f472b6" },
+      // Status group (8 tags)
+      { value: "tag15", name: "Todo", group: "Status", color: "#6b7280" },
+      { value: "tag16", name: "In Progress", group: "Status", color: "#3b82f6" },
+      { value: "tag17", name: "Done", group: "Status", color: "#22c55e" },
+      { value: "tag18", name: "Blocked", group: "Status", color: "#ef4444" },
+      { value: "tag19", name: "Review", group: "Status", color: "#f59e0b" },
+      { value: "tag20", name: "Testing", group: "Status", color: "#8b5cf6" },
+      { value: "tag21", name: "Deployed", group: "Status", color: "#059669" },
+      { value: "tag22", name: "Cancelled", group: "Status", color: "#78716c" },
+      // Type group (8 tags)
+      { value: "tag23", name: "Bug", group: "Type", color: "#dc2626" },
+      { value: "tag24", name: "Feature", group: "Type", color: "#2563eb" },
+      { value: "tag25", name: "Enhancement", group: "Type", color: "#7c3aed" },
+      { value: "tag26", name: "Documentation", group: "Type", color: "#0d9488" },
+      { value: "tag27", name: "Refactor", group: "Type", color: "#ca8a04" },
+      { value: "tag28", name: "Performance", group: "Type", color: "#16a34a" },
+      { value: "tag29", name: "Security", group: "Type", color: "#be123c" },
+      { value: "tag30", name: "UI/UX", group: "Type", color: "#c026d3" },
+      // Platform group (6 tags)
+      { value: "tag31", name: "Web", group: "Platform", color: "#3b82f6" },
+      { value: "tag32", name: "Mobile", group: "Platform", color: "#22c55e" },
+      { value: "tag33", name: "Desktop", group: "Platform", color: "#6366f1" },
+      { value: "tag34", name: "iOS", group: "Platform", color: "#1f2937" },
+      { value: "tag35", name: "Android", group: "Platform", color: "#84cc16" },
+      { value: "tag36", name: "API", group: "Platform", color: "#0891b2" },
+      // Misc group (6 tags)
+      { value: "tag37", name: "Favorite", group: "Misc", color: "#f59e0b" },
+      { value: "tag38", name: "Bookmark", group: "Misc", color: "#8b5cf6" },
+      { value: "tag39", name: "Archive", group: "Misc", color: "#78716c" },
+      { value: "tag40", name: "Pinned", group: "Misc", color: "#ef4444" },
+      { value: "tag41", name: "Starred", group: "Misc", color: "#eab308" },
+      { value: "tag42", name: "Flagged", group: "Misc", color: "#dc2626" },
     ],
   },
 };
@@ -252,7 +364,7 @@ const mockTagsNoOptionsProperty = {
   order: 11,
 };
 
-// 13. Multilevel
+// 13. Multilevel (with 40+ nodes for testing large option lists)
 const mockMultilevelProperty = {
   id: 13,
   pool: PropertyPool.Custom,
@@ -269,15 +381,138 @@ const mockMultilevelProperty = {
         value: "asia",
         label: "Asia",
         children: [
-          { value: "china", label: "China", children: [{ value: "beijing", label: "Beijing" }, { value: "shanghai", label: "Shanghai" }] },
-          { value: "japan", label: "Japan", children: [{ value: "tokyo", label: "Tokyo" }] },
+          {
+            value: "china",
+            label: "China",
+            children: [
+              { value: "beijing", label: "Beijing" },
+              { value: "shanghai", label: "Shanghai" },
+              { value: "guangzhou", label: "Guangzhou" },
+              { value: "shenzhen", label: "Shenzhen" },
+              { value: "hangzhou", label: "Hangzhou" },
+              { value: "chengdu", label: "Chengdu" },
+              { value: "wuhan", label: "Wuhan" },
+              { value: "xian", label: "Xi'an" },
+            ],
+          },
+          {
+            value: "japan",
+            label: "Japan",
+            children: [
+              { value: "tokyo", label: "Tokyo" },
+              { value: "osaka", label: "Osaka" },
+              { value: "kyoto", label: "Kyoto" },
+              { value: "yokohama", label: "Yokohama" },
+              { value: "nagoya", label: "Nagoya" },
+              { value: "sapporo", label: "Sapporo" },
+            ],
+          },
+          {
+            value: "korea",
+            label: "South Korea",
+            children: [
+              { value: "seoul", label: "Seoul" },
+              { value: "busan", label: "Busan" },
+              { value: "incheon", label: "Incheon" },
+            ],
+          },
+          {
+            value: "india",
+            label: "India",
+            children: [
+              { value: "mumbai", label: "Mumbai" },
+              { value: "delhi", label: "Delhi" },
+              { value: "bangalore", label: "Bangalore" },
+              { value: "chennai", label: "Chennai" },
+            ],
+          },
         ],
       },
       {
         value: "europe",
         label: "Europe",
         children: [
-          { value: "uk", label: "UK", children: [{ value: "london", label: "London" }] },
+          {
+            value: "uk",
+            label: "United Kingdom",
+            children: [
+              { value: "london", label: "London" },
+              { value: "manchester", label: "Manchester" },
+              { value: "birmingham", label: "Birmingham" },
+              { value: "edinburgh", label: "Edinburgh" },
+            ],
+          },
+          {
+            value: "germany",
+            label: "Germany",
+            children: [
+              { value: "berlin", label: "Berlin" },
+              { value: "munich", label: "Munich" },
+              { value: "frankfurt", label: "Frankfurt" },
+              { value: "hamburg", label: "Hamburg" },
+            ],
+          },
+          {
+            value: "france",
+            label: "France",
+            children: [
+              { value: "paris", label: "Paris" },
+              { value: "lyon", label: "Lyon" },
+              { value: "marseille", label: "Marseille" },
+            ],
+          },
+          {
+            value: "italy",
+            label: "Italy",
+            children: [
+              { value: "rome", label: "Rome" },
+              { value: "milan", label: "Milan" },
+              { value: "venice", label: "Venice" },
+            ],
+          },
+        ],
+      },
+      {
+        value: "north-america",
+        label: "North America",
+        children: [
+          {
+            value: "usa",
+            label: "United States",
+            children: [
+              { value: "new-york", label: "New York" },
+              { value: "los-angeles", label: "Los Angeles" },
+              { value: "chicago", label: "Chicago" },
+              { value: "houston", label: "Houston" },
+              { value: "phoenix", label: "Phoenix" },
+              { value: "seattle", label: "Seattle" },
+              { value: "san-francisco", label: "San Francisco" },
+            ],
+          },
+          {
+            value: "canada",
+            label: "Canada",
+            children: [
+              { value: "toronto", label: "Toronto" },
+              { value: "vancouver", label: "Vancouver" },
+              { value: "montreal", label: "Montreal" },
+            ],
+          },
+        ],
+      },
+      {
+        value: "oceania",
+        label: "Oceania",
+        children: [
+          {
+            value: "australia",
+            label: "Australia",
+            children: [
+              { value: "sydney", label: "Sydney" },
+              { value: "melbourne", label: "Melbourne" },
+              { value: "brisbane", label: "Brisbane" },
+            ],
+          },
         ],
       },
     ],

@@ -24,9 +24,9 @@ public class RegexEnhancer(
     IFileManager fileManager,
     IBOptions<EnhancerOptions> enhancerOptions,
     IServiceProvider serviceProvider)
-    : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, object?>(loggerFactory, fileManager, serviceProvider)
+    : AbstractEnhancer<RegexEnhancerTarget, RegexEnhancerContext, IRegexEnhancerOptions>(loggerFactory, fileManager, serviceProvider)
 {
-    protected override async Task<RegexEnhancerContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
+    protected override async Task<RegexEnhancerContext?> BuildContextInternal(Resource resource, IRegexEnhancerOptions options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
         var expressions = options.Expressions ?? enhancerOptions.Value.RegexEnhancer?.Expressions ?? [];

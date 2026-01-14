@@ -11,7 +11,7 @@ export const validate = (
   }
 
   if (!options) {
-    return "Please provide valid options";
+    return "bulkModification.validation.optionsRequired";
   }
 
   const {
@@ -28,23 +28,23 @@ export const validate = (
     case BulkModificationStringProcessOperation.AddToStart:
     case BulkModificationStringProcessOperation.AddToEnd:
       if (!value) {
-        return "Value is required";
+        return "bulkModification.validation.valueRequired";
       }
       break;
     case BulkModificationStringProcessOperation.AddToAnyPosition:
       if (index == undefined || index < 0 || !value) {
-        return "Value and index are required";
+        return "bulkModification.validation.valueAndIndexRequired";
       }
       break;
     case BulkModificationStringProcessOperation.RemoveFromStart:
     case BulkModificationStringProcessOperation.RemoveFromEnd:
       if (count == undefined || count < 0) {
-        return "Count is required";
+        return "bulkModification.validation.countRequired";
       }
       break;
     case BulkModificationStringProcessOperation.RemoveFromAnyPosition:
       if (count == undefined || count < 0 || index == undefined || index < 0) {
-        return "Count and index are required";
+        return "bulkModification.validation.countAndIndexRequired";
       }
       break;
     case BulkModificationStringProcessOperation.ReplaceFromStart:
@@ -52,7 +52,7 @@ export const validate = (
     case BulkModificationStringProcessOperation.ReplaceFromAnyPosition:
     case BulkModificationStringProcessOperation.ReplaceWithRegex:
       if (!(find != undefined && find.length > 0) || !value) {
-        return "Find and replace are required";
+        return "bulkModification.validation.findAndReplaceRequired";
       }
       break;
   }

@@ -8,6 +8,8 @@ using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
+using Bakabase.Modules.Comparison.Components;
+using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -22,7 +24,7 @@ using Tag = Bakabase.InsideWorld.Models.Models.Entities.Tag;
 
 namespace Bakabase.InsideWorld.Business
 {
-    public class BakabaseDbContext : DbContext, IBulkModificationDbContext
+    public class BakabaseDbContext : DbContext, IBulkModificationDbContext, IComparisonDbContext
     {
         [Obsolete] public DbSet<LegacyAlias> Aliases { get; set; }
         [Obsolete] public DbSet<AliasGroup> AliasGroups { get; set; }
@@ -89,6 +91,13 @@ namespace Bakabase.InsideWorld.Business
         // PathMark effect tracking tables
         public DbSet<ResourceMarkEffectDbModel> ResourceMarkEffects { get; set; }
         public DbSet<PropertyMarkEffectDbModel> PropertyMarkEffects { get; set; }
+
+        // Comparison module tables
+        public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
+        public DbSet<ComparisonRuleDbModel> ComparisonRules { get; set; }
+        public DbSet<ComparisonResultGroupDbModel> ComparisonResultGroups { get; set; }
+        public DbSet<ComparisonResultGroupMemberDbModel> ComparisonResultGroupMembers { get; set; }
+        public DbSet<ComparisonResultPairDbModel> ComparisonResultPairs { get; set; }
 
         public BakabaseDbContext()
         {
@@ -279,6 +288,40 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.MarkId);
                 t.HasIndex(x => new { x.PropertyPool, x.PropertyId, x.ResourceId });
                 t.HasIndex(x => new { x.MarkId, x.PropertyPool, x.PropertyId, x.ResourceId }).IsUnique();
+            });
+
+            // Comparison module tables
+            modelBuilder.Entity<ComparisonPlanDbModel>(t =>
+            {
+                t.HasIndex(x => x.Name);
+                t.HasIndex(x => x.CreatedAt);
+            });
+
+            modelBuilder.Entity<ComparisonRuleDbModel>(t =>
+            {
+                t.HasIndex(x => x.PlanId);
+                t.HasIndex(x => new { x.PlanId, x.Order });
+            });
+
+            modelBuilder.Entity<ComparisonResultGroupDbModel>(t =>
+            {
+                t.HasIndex(x => x.PlanId);
+                t.HasIndex(x => x.MemberCount);
+                t.HasIndex(x => new { x.PlanId, x.MemberCount });
+            });
+
+            modelBuilder.Entity<ComparisonResultGroupMemberDbModel>(t =>
+            {
+                t.HasIndex(x => x.GroupId);
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.GroupId, x.ResourceId }).IsUnique();
+            });
+
+            modelBuilder.Entity<ComparisonResultPairDbModel>(t =>
+            {
+                t.HasIndex(x => x.GroupId);
+                t.HasIndex(x => new { x.Resource1Id, x.Resource2Id });
+                t.HasIndex(x => new { x.GroupId, x.Resource1Id, x.Resource2Id }).IsUnique();
             });
         }
     }

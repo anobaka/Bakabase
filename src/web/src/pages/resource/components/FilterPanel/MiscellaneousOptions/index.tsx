@@ -25,14 +25,16 @@ import { BiCarousel } from "react-icons/bi";
 import _ from "lodash";
 import { ImEmbed } from "react-icons/im";
 
-import { Button, Checkbox, Chip, Divider, Modal, ButtonGroup } from "@/components/bakaui";
+import { Button, Checkbox, Chip, Divider, Modal, ButtonGroup, Input } from "@/components/bakaui";
 import { CoverFit, PropertyPool } from "@/sdk/constants";
+import { useFilterOptionsThreshold, DEFAULT_FILTER_OPTIONS_THRESHOLD } from "@/hooks/useFilterOptionsThreshold";
 import BApi from "@/sdk/BApi";
 import { useUiOptionsStore } from "@/stores/options";
 import { buildLogger } from "@/components/utils";
 import PropertySelector from "@/components/PropertySelector";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { PropertyLabel } from "@/components/Property";
+import BriefProperty from "@/components/Chips/Property/BriefProperty";
 
 type Props = {
   rearrangeResources?: () => any;
@@ -51,6 +53,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
   const resourceUiOptions = uiOptionsStore.data?.resource;
   const currentColCount = resourceUiOptions?.colCount ?? DefaultResourceColCount;
   const [propertyMap, setPropertyMap] = useState<PropertyMap>({});
+  const [filterOptionsThreshold, setFilterOptionsThreshold] = useFilterOptionsThreshold();
 
   const navigate = useNavigate();
 
@@ -233,6 +236,33 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   {t<string>("resource.display.showResourceId")}
                 </div>
               </Checkbox>
+            </div>
+
+            <div className={"flex items-center gap-2"}>
+              <div className={"text-sm"}>{t("resource.display.filterOptionsCollapseThreshold")}</div>
+              <Input
+                type="number"
+                size="sm"
+                min={1}
+                className="w-20"
+                value={filterOptionsThreshold.toString()}
+                onValueChange={(value) => {
+                  const num = parseInt(value, 10);
+                  if (!isNaN(num) && num > 0) {
+                    setFilterOptionsThreshold(num);
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setFilterOptionsThreshold(DEFAULT_FILTER_OPTIONS_THRESHOLD)}
+              >
+                {t("resource.display.reset")}
+              </Button>
+              <span className="text-xs text-default-400">
+                {t("resource.display.filterOptionsCollapseThresholdDesc")}
+              </span>
             </div>
 
             <Divider />
@@ -428,7 +458,7 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
                   return (
                     <div key={`${p.pool}-${p.id}`} className={"flex items-center gap-1"}>
                       {property ? (
-                        <PropertyLabel property={property} showPool={true} />
+                        <BriefProperty property={property} fields={["pool", "name"]} showPoolChip={false} />
                       ) : (
                         <Chip>{t("common.label.unknownProperty")}</Chip>
                       )}

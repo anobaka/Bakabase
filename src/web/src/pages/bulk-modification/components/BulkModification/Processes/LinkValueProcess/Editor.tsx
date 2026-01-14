@@ -66,21 +66,18 @@ const Editor = ({
         return null;
       case BulkModificationLinkProcessOperation.SetWithFixedValue:
         return (
-          <>
-            <div>{t("bulkModification.label.value")}</div>
-            <ProcessValueEditor
-              availableValueTypes={availableValueTypes}
-              baseValueType={propertyType}
-              value={options.value}
-              variables={variables}
-              onChange={(value) => changeOptions({ value })}
-            />
-          </>
+          <ProcessValueEditor
+            availableValueTypes={availableValueTypes}
+            baseValueType={propertyType}
+            value={options.value}
+            variables={variables}
+            onChange={(value) => changeOptions({ value })}
+          />
         );
       case BulkModificationLinkProcessOperation.SetText:
         return (
-          <>
-            <div>{t("bulkModification.label.text")}</div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-default-500">{t("bulkModification.label.text")}</span>
             <ProcessValueEditor
               availableValueTypes={availableValueTypes}
               baseValueType={PropertyType.SingleLineText}
@@ -88,12 +85,12 @@ const Editor = ({
               variables={variables}
               onChange={(text) => changeOptions({ text })}
             />
-          </>
+          </div>
         );
       case BulkModificationLinkProcessOperation.SetUrl:
         return (
-          <>
-            <div>{t("bulkModification.label.url")}</div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-default-500">{t("bulkModification.label.url")}</span>
             <ProcessValueEditor
               availableValueTypes={availableValueTypes}
               baseValueType={PropertyType.SingleLineText}
@@ -101,13 +98,13 @@ const Editor = ({
               variables={variables}
               onChange={(url) => changeOptions({ url })}
             />
-          </>
+          </div>
         );
       case BulkModificationLinkProcessOperation.ModifyText:
       case BulkModificationLinkProcessOperation.ModifyUrl:
         return (
-          <>
-            <div>{t("bulkModification.label.stringOperation")}</div>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-default-500">{t("bulkModification.label.stringOperation")}</span>
             <StringValueProcessEditor
               availableValueTypes={availableValueTypes}
               operation={options.stringOperation}
@@ -118,7 +115,7 @@ const Editor = ({
                 changeOptions({ stringOperation, stringOptions });
               }}
             />
-          </>
+          </div>
         );
       default:
         return null;
@@ -126,12 +123,9 @@ const Editor = ({
   };
 
   return (
-    <div
-      className="grid items-center gap-2"
-      style={{ gridTemplateColumns: "auto minmax(0, 1fr)" }}
-    >
-      <div>{t("bulkModification.label.operation")}</div>
+    <div className="flex flex-col gap-3">
       <Select
+        label={t("bulkModification.label.operation")}
         dataSource={bulkModificationLinkProcessOperations.map((op) => ({
           label: t(getEnumKey('BulkModificationLinkProcessOperation', op.label)),
           value: op.value,

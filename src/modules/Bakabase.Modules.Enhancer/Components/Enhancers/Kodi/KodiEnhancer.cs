@@ -14,7 +14,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi;
 public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager, IServiceProvider serviceProvider)
     : AbstractEnhancer<KodiEnhancerTarget, KodiEnhancerContext, object?>(loggerFactory, fileManager, serviceProvider)
 {
-    protected override async Task<KodiEnhancerContext?> BuildContextInternal(Resource resource, EnhancerFullOptions options,
+    protected override async Task<KodiEnhancerContext?> BuildContextInternal(Resource resource, object? options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
         try
