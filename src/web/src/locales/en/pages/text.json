@@ -9,5 +9,38 @@
   "text.input.enterText": "Enter text",
   "text.action.runPretreatment": "Run pretreatment",
   "text.label.noChanges": "No changes",
-  "text.confirm.deleteTitle": "Sure to delete?"
+  "text.confirm.deleteTitle": "Sure to delete?",
+
+  "SpecialTextType.Useless": "Useless",
+  "SpecialTextType.Language": "Language",
+  "SpecialTextType.Wrapper": "Wrapper",
+  "SpecialTextType.Standardization": "Standardization",
+  "SpecialTextType.Volume": "Volume",
+  "SpecialTextType.Trim": "Trim",
+  "SpecialTextType.DateTime": "DateTime",
+
+  "text.typeDescription.useless": "Ignore the part inside the wrapper that is successfully matched by the regular expression",
+  "text.typeDescription.language": "Text will be parsed as [specific language] if it surrounded by [wrappers]",
+  "text.typeDescription.wrapper": "Text wrapper, used to match and extract the text within the wrapper",
+  "text.typeDescription.standardization": "Treat [text1] as [text2] during analyzation",
+  "text.typeDescription.volume": "Extract volume information from this text group",
+  "text.typeDescription.trim": "TBD, do not set it for now",
+  "text.typeDescription.dateTime": "Date and time parsing template, used to extract dates and times from text",
+
+  "text.usedIn.textPretreatment": "Text pretreatment",
+  "text.usedIn.bakabaseEnhancerAnalysis": "Bakabase enhancer analysis",
+  "text.usedIn.resourceDisplayNameTemplate": "Resource display name template",
+  "text.usedIn.exhentaiEnhancerAnalysis": "Exhentai enhancer analysis",
+  "text.usedIn.parsingOrConvertingPropertyValue": "Parsing or converting property value",
+
+  "text.label.text": "Text",
+  "text.placeholder.text": "Enter text",
+  "text.label.sourceText": "Source text",
+  "text.placeholder.sourceText": "Enter source text",
+  "text.label.convertTo": "Convert to",
+  "text.placeholder.convertTo": "Enter target text",
+  "text.label.leftWrapper": "Left wrapper",
+  "text.placeholder.leftWrapper": "Enter left wrapper",
+  "text.label.rightWrapper": "Right wrapper",
+  "text.placeholder.rightWrapper": "Enter right wrapper"
 }

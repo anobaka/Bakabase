@@ -41,11 +41,11 @@ const OrderSelector = ({ value: propsValue, onChange, ...otherProps }: IProps) =
         label: (
           <div className="flex items-center gap-2">
             {sortPropertyIcons[x.value]}
-            <span>{t<string>(x.label)}</span>
+            <span>{t<string>(`ResourceSearchSortableProperty.${x.label}`)}</span>
           </div>
         ),
         value: x.value.toString(),
-        textValue: t<string>(x.label),
+        textValue: t<string>(`ResourceSearchSortableProperty.${x.label}`),
       })),
     [t],
   );

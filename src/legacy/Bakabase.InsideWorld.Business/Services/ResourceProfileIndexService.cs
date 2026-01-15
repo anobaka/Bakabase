@@ -206,7 +206,7 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             Level = BTaskLevel.Default,
             IsPersistent = false,
             StartNow = true,
-            DuplicateIdHandling = BTaskDuplicateIdHandling.Ignore
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace
         };
 
         _ = _taskManager.Enqueue(builder);
@@ -404,7 +404,8 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             // If profile still exists, rebuild its index
             if (profileMap.TryGetValue(profileId, out var profile))
             {
-                var matchingResourceIds = await resourceProfileService.GetMatchingResourceIds(profileId);
+                // Use profile.Search directly to bypass index cache and avoid circular dependency
+                var matchingResourceIds = await resourceProfileService.GetMatchingResourceIds(profile.Search);
                 _profileToResources[profileId] = matchingResourceIds;
 
                 foreach (var resourceId in matchingResourceIds)
@@ -448,8 +449,8 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
             {
                 if (_profileToResources.TryGetValue(profile.Id, out var profileResourceIds))
                 {
-                    // Check if we need to re-evaluate
-                    var newMatchingIds = await resourceProfileService.GetMatchingResourceIds(profile.Id);
+                    // Check if we need to re-evaluate - use profile.Search to bypass index cache
+                    var newMatchingIds = await resourceProfileService.GetMatchingResourceIds(profile.Search);
                     if (newMatchingIds.Contains(resourceId))
                     {
                         matchingProfileIds.Add(profile.Id);
@@ -458,8 +459,8 @@ public class ResourceProfileIndexService : IResourceProfileIndexService
                 }
                 else
                 {
-                    // Profile has no cached resources, evaluate
-                    var matchingIds = await resourceProfileService.GetMatchingResourceIds(profile.Id);
+                    // Profile has no cached resources, evaluate - use profile.Search to bypass index cache
+                    var matchingIds = await resourceProfileService.GetMatchingResourceIds(profile.Search);
                     _profileToResources[profile.Id] = matchingIds;
                     if (matchingIds.Contains(resourceId))
                     {

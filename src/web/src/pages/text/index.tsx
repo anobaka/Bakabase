@@ -56,34 +56,29 @@ const typeTagRendersMapping: Partial<Record<SpecialTextType, (t: SpecialText) =>
 };
 
 const typeDescriptions = {
-  [SpecialTextType.Useless]:
-    "Ignore the part inside the wrapper that is successfully matched by the regular expression",
-  [SpecialTextType.Language]:
-    "Text will be parsed as [specific language] if it surrounded by [wrappers]",
-  [SpecialTextType.Wrapper]:
-    "Text wrapper, used to match and extract the text within the wrapper",
-  [SpecialTextType.Standardization]:
-    "Treat [text1] as [text2] during analyzation",
-  [SpecialTextType.Volume]: "Extract volume information from this text group",
-  [SpecialTextType.Trim]: "TBD, do not set it for now",
-  [SpecialTextType.DateTime]:
-    "Date and time parsing template, used to extract dates and times from text",
+  [SpecialTextType.Useless]: "text.typeDescription.useless",
+  [SpecialTextType.Language]: "text.typeDescription.language",
+  [SpecialTextType.Wrapper]: "text.typeDescription.wrapper",
+  [SpecialTextType.Standardization]: "text.typeDescription.standardization",
+  [SpecialTextType.Volume]: "text.typeDescription.volume",
+  [SpecialTextType.Trim]: "text.typeDescription.trim",
+  [SpecialTextType.DateTime]: "text.typeDescription.dateTime",
 };
 
 const usedInMapping: Record<SpecialTextType, string[]> = {
-  [SpecialTextType.Useless]: ["Text pretreatment"],
-  [SpecialTextType.Language]: ["Bakabase enhancer analysis"],
+  [SpecialTextType.Useless]: ["text.usedIn.textPretreatment"],
+  [SpecialTextType.Language]: ["text.usedIn.bakabaseEnhancerAnalysis"],
   [SpecialTextType.Wrapper]: [
-    "Text pretreatment",
-    "Resource display name template",
-    "Exhentai enhancer analysis",
+    "text.usedIn.textPretreatment",
+    "text.usedIn.resourceDisplayNameTemplate",
+    "text.usedIn.exhentaiEnhancerAnalysis",
   ],
-  [SpecialTextType.Standardization]: ["Text pretreatment"],
-  [SpecialTextType.Volume]: ["Bakabase enhancer analysis"],
-  [SpecialTextType.Trim]: ["Text pretreatment"],
+  [SpecialTextType.Standardization]: ["text.usedIn.textPretreatment"],
+  [SpecialTextType.Volume]: ["text.usedIn.bakabaseEnhancerAnalysis"],
+  [SpecialTextType.Trim]: ["text.usedIn.textPretreatment"],
   [SpecialTextType.DateTime]: [
-    "Bakabase enhancer analysis",
-    "Parsing or converting property value",
+    "text.usedIn.bakabaseEnhancerAnalysis",
+    "text.usedIn.parsingOrConvertingPropertyValue",
   ],
 };
 const TextPage = () => {
@@ -202,7 +197,7 @@ const TextPage = () => {
               <TableRow>
                 <TableCell>
                   <div className={"flex items-center gap-1"}>
-                    {t<string>(SpecialTextType[type])}
+                    {t<string>(`SpecialTextType.${SpecialTextType[type]}`)}
                     <Tooltip content={t<string>(typeDescriptions[type])}>
                       <QuestionCircleOutlined className={"text-base"} />
                     </Tooltip>

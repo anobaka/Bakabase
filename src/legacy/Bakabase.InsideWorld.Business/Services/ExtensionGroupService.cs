@@ -26,7 +26,8 @@ public class ExtensionGroupService(FullMemoryCacheResourceService<BakabaseDbCont
         {
             Id = 0,
             Name = g.Name,
-            Extensions = g.Extensions
+            // Normalize extensions to ensure they all start with a single dot
+            Extensions = g.Extensions.NormalizeExtensions()
         }).ToArray();
         var dbModels = domainModels.Select(d => d.ToDbModel()).ToList();
         var data = (await orm.AddRange(dbModels)).Data!;
@@ -44,7 +45,8 @@ public class ExtensionGroupService(FullMemoryCacheResourceService<BakabaseDbCont
         data = data with
         {
             Name = group.Name,
-            Extensions = group.Extensions
+            // Normalize extensions to ensure they all start with a single dot
+            Extensions = group.Extensions.NormalizeExtensions()
         };
         await orm.Update(data.ToDbModel());
     }

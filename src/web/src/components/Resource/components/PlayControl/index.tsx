@@ -19,7 +19,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import NoPlayableFilesModal from "./NoPlayableFilesModal";
 
 // Play control status for UI rendering
-export type PlayControlStatus = "hidden" | "loading" | "ready" | "not-found";
+export type PlayControlStatus = "loading" | "ready" | "not-found";
 
 export type PlayControlPortalProps = {
   status: PlayControlStatus;
@@ -131,14 +131,10 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       return "not-found";
     }
 
-    if (discoveryState.status === "ready") {
-      if (portalCtx?.files && portalCtx.files.length > 0) {
-        return "ready";
-      }
-      return "not-found";
+    if (portalCtx?.files && portalCtx.files.length > 0) {
+      return "ready";
     }
-
-    return "hidden";
+    return "not-found";
   };
 
   // Compute tooltip content based on status and source

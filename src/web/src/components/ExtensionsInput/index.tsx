@@ -61,10 +61,10 @@ const ExtensionsInput: React.FC<ExtensionsInputProps> = ({
         fullWidth
         isClearable
         isMultiline
-        label={label ?? t<string>("Extensions")}
+        label={label ?? t<string>("common.label.extensions")}
         minRows={minRows}
         size={size}
-        placeholder={placeholder ?? t<string>("Separate by space or newline")}
+        placeholder={placeholder ?? t<string>("common.placeholder.separateBySpaceOrNewline")}
         value={text}
         onValueChange={(v) => {
           setText(v);

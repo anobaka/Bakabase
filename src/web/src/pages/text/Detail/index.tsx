@@ -38,7 +38,8 @@ const DetailPage = ({ value: propsValue, onChange }: Props) => {
           key="0"
           required
           className={"w-full"}
-          placeholder={t<string>("Text")}
+          label={t<string>("text.label.text")}
+          placeholder={t<string>("text.placeholder.text")}
           value={value.value1}
           onValueChange={(value1) => {
             change({ value1 });
@@ -52,7 +53,8 @@ const DetailPage = ({ value: propsValue, onChange }: Props) => {
           <Input
             key="0"
             required
-            placeholder={t<string>("Source text")}
+            label={t<string>("text.label.sourceText")}
+            placeholder={t<string>("text.placeholder.sourceText")}
             value={value.value1}
             onValueChange={(value1) => {
               change({ value1 });
@@ -61,7 +63,8 @@ const DetailPage = ({ value: propsValue, onChange }: Props) => {
           <Input
             key="1"
             required
-            placeholder={t<string>("Convert to")}
+            label={t<string>("text.label.convertTo")}
+            placeholder={t<string>("text.placeholder.convertTo")}
             value={value.value2}
             onValueChange={(value2) => {
               change({ value2 });
@@ -75,7 +78,8 @@ const DetailPage = ({ value: propsValue, onChange }: Props) => {
           <Input
             key="0"
             required
-            placeholder={t<string>("Left wrapper")}
+            label={t<string>("text.label.leftWrapper")}
+            placeholder={t<string>("text.placeholder.leftWrapper")}
             value={value.value1}
             onValueChange={(value1) => {
               change({ value1 });
@@ -84,7 +88,8 @@ const DetailPage = ({ value: propsValue, onChange }: Props) => {
           <Input
             key="1"
             required
-            placeholder={t<string>("Right wrapper")}
+            label={t<string>("text.label.rightWrapper")}
+            placeholder={t<string>("text.placeholder.rightWrapper")}
             value={value.value2}
             onValueChange={(value2) => {
               change({ value2 });

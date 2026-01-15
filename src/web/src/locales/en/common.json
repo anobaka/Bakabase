@@ -77,6 +77,7 @@
   "common.label.type": "Type",
   "common.label.pattern": "Pattern",
   "common.label.extensions": "Extensions",
+  "common.placeholder.separateBySpaceOrNewline": "Separate by space or newline",
   "common.label.total": "Total",
   "common.label.count": "Count",
   "common.label.progress": "Progress",
@@ -113,6 +114,7 @@
   "common.label.dynamic": "Dynamic",
   "common.label.fixed": "Fixed",
   "common.label.notSet": "Not set",
+  "common.label.clickToSet": "Click to set",
   "common.action.more": "More",
 
   "resourcesModal.title": "{{count}} Resources",

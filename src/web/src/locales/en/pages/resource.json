@@ -27,6 +27,12 @@
   "resource.order.asc": "Asc",
   "resource.order.desc": "Desc",
 
+  "ResourceSearchSortableProperty.FileCreateDt": "File Create Date",
+  "ResourceSearchSortableProperty.FileModifyDt": "File Modify Date",
+  "ResourceSearchSortableProperty.Filename": "Filename",
+  "ResourceSearchSortableProperty.AddDt": "Add Date",
+  "ResourceSearchSortableProperty.PlayedAt": "Last Played At",
+
   "resource.display.title": "Display options",
   "resource.display.columnCount": "Column count",
   "resource.display.fillCover": "Fill cover",

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
@@ -59,6 +60,9 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
             ? JsonConvert.SerializeObject(model.Search.ToDbModel())
             : null;
 
+        // Normalize extensions to ensure they all start with a single dot
+        model.PlayableFileOptions.NormalizeExtensions();
+
         var result = await service.Add(
             model.Name,
             searchJson,
@@ -79,6 +83,9 @@ public class ResourceProfileController(IResourceProfileService service, IPropert
         var searchJson = model.Search != null
             ? JsonConvert.SerializeObject(model.Search.ToDbModel())
             : null;
+
+        // Normalize extensions to ensure they all start with a single dot
+        model.PlayableFileOptions.NormalizeExtensions();
 
         await service.Update(
             id,

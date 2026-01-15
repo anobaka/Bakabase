@@ -9,5 +9,38 @@
   "text.input.enterText": "输入文本",
   "text.action.runPretreatment": "运行预处理",
   "text.label.noChanges": "无变化",
-  "text.confirm.deleteTitle": "确定要删除吗？"
+  "text.confirm.deleteTitle": "确定要删除吗？",
+
+  "SpecialTextType.Useless": "无用文本",
+  "SpecialTextType.Language": "语言",
+  "SpecialTextType.Wrapper": "包装器",
+  "SpecialTextType.Standardization": "标准化",
+  "SpecialTextType.Volume": "卷",
+  "SpecialTextType.Trim": "修剪",
+  "SpecialTextType.DateTime": "日期时间",
+
+  "text.typeDescription.useless": "忽略被正则表达式成功匹配的包装器内的部分",
+  "text.typeDescription.language": "如果文本被[包装器]包围，将被解析为[特定语言]",
+  "text.typeDescription.wrapper": "文本包装器，用于匹配和提取包装器内的文本",
+  "text.typeDescription.standardization": "分析时将[文本1]视为[文本2]",
+  "text.typeDescription.volume": "从此文本组中提取卷信息",
+  "text.typeDescription.trim": "待定，目前不要设置",
+  "text.typeDescription.dateTime": "日期时间解析模板，用于从文本中提取日期和时间",
+
+  "text.usedIn.textPretreatment": "文本预处理",
+  "text.usedIn.bakabaseEnhancerAnalysis": "Bakabase 增强器分析",
+  "text.usedIn.resourceDisplayNameTemplate": "资源显示名称模板",
+  "text.usedIn.exhentaiEnhancerAnalysis": "Exhentai 增强器分析",
+  "text.usedIn.parsingOrConvertingPropertyValue": "解析或转换属性值",
+
+  "text.label.text": "文本",
+  "text.placeholder.text": "输入文本",
+  "text.label.sourceText": "源文本",
+  "text.placeholder.sourceText": "输入源文本",
+  "text.label.convertTo": "转换为",
+  "text.placeholder.convertTo": "输入目标文本",
+  "text.label.leftWrapper": "左包装器",
+  "text.placeholder.leftWrapper": "输入左包装器",
+  "text.label.rightWrapper": "右包装器",
+  "text.placeholder.rightWrapper": "输入右包装器"
 }
