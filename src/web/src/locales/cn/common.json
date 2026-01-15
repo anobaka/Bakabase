@@ -77,6 +77,7 @@
   "common.label.type": "类型",
   "common.label.pattern": "模式",
   "common.label.extensions": "扩展名",
+  "common.placeholder.separateBySpaceOrNewline": "用空格或换行分隔",
   "common.label.total": "总计",
   "common.label.count": "数量",
   "common.label.progress": "进度",
@@ -113,6 +114,7 @@
   "common.label.dynamic": "动态",
   "common.label.fixed": "固定",
   "common.label.notSet": "未设置",
+  "common.label.clickToSet": "点击设置",
   "common.action.more": "更多",
 
   "resourcesModal.title": "{{count}} 个资源",

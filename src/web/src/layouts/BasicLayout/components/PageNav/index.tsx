@@ -8,7 +8,6 @@ import {
   MenuUnfoldOutlined,
   MoonOutlined,
   SunOutlined,
-  TranslationOutlined,
 } from "@ant-design/icons";
 
 import AntdMenu from "./components/AntdMenu";
@@ -107,7 +106,7 @@ const Navigation = () => {
               });
           }}
         >
-          <TranslationOutlined style={OptIconStyle} />
+          <span className="text-lg font-medium">{isEnglish ? "EN" : "中"}</span>
         </Button>
         <Button
           isIconOnly

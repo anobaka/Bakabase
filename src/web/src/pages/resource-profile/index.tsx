@@ -8,7 +8,6 @@ import { BsController } from "react-icons/bs";
 import BApi from "@/sdk/BApi";
 import type {
   BakabaseServiceModelsViewResourceProfileViewModel,
-  BakabaseServiceModelsViewResourceSearchFilterGroupViewModel,
   BakabaseAbstractionsModelsDomainEnhancerFullOptions,
   BakabaseAbstractionsModelsDomainResourceProfilePlayableFileOptions,
   BakabaseAbstractionsModelsDomainMediaLibraryPlayer,
@@ -26,7 +25,7 @@ import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
 import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
 import PropertySelector from "@/components/PropertySelector";
-import { FilterGroupWithContext, toSearchInputModel, toFilterGroupInputModel } from "@/components/ResourceFilter";
+import { ResourceFilterController, toSearchInputModel } from "@/components/ResourceFilter";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import { getEnumKey } from "@/i18n";
 import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
@@ -99,6 +98,8 @@ const ResourceProfilePage = () => {
   const [properties, setProperties] = useState<IProperty[]>([]);
   const [enhancerDescriptors, setEnhancerDescriptors] = useState<EnhancerDescriptor[]>([]);
   const [editingProfileIds, setEditingProfileIds] = useState<Set<number>>(new Set());
+  // Store pending filter group changes while editing (profileId -> pending group)
+  const [pendingFilterGroups, setPendingFilterGroups] = useState<Map<number, SearchFilterGroup>>(new Map());
 
   // Use ref to always access the latest profiles in callbacks (avoids stale closure issues)
   const profilesRef = useRef<ResourceProfile[]>(profiles);
@@ -537,44 +538,70 @@ const ResourceProfilePage = () => {
       label: t("resourceProfile.label.searchCriteria"),
       description: t("resourceProfile.tip.searchCriteria"),
       render: (profile: ResourceProfile) => {
-        const group = profile.search?.group ?? { combinator: 1, disabled: false };
+        const savedGroup = profile.search?.group ?? { combinator: 1, disabled: false };
         const isEditing = editingProfileIds.has(profile.id!);
+        // Use pending group if editing, otherwise use saved group
+        const group = isEditing && pendingFilterGroups.has(profile.id!)
+          ? pendingFilterGroups.get(profile.id!)!
+          : savedGroup;
 
         return (
           <div className="flex flex-col gap-1">
             <div className="flex items-start gap-2">
               <div className="flex-1">
-                <FilterGroupWithContext
+                <ResourceFilterController
                   group={group as SearchFilterGroup}
-                  onChange={(newGroup) => {
-                    updateProfile(profile, {
-                      search: {
-                        ...profile.search,
-                        group: newGroup as BakabaseServiceModelsViewResourceSearchFilterGroupViewModel,
-                      },
+                  onGroupChange={(newGroup) => {
+                    // Store changes locally while editing
+                    setPendingFilterGroups((prev) => {
+                      const next = new Map(prev);
+                      next.set(profile.id!, newGroup);
+                      return next;
                     });
                   }}
                   filterDisplayMode={1}
                   filterLayout="vertical"
                   isReadonly={!isEditing}
+                  autoCreateMediaLibraryFilter
                 />
               </div>
-              <Tooltip content={isEditing ? "Save" : "Edit"}>
+              <Tooltip content={isEditing ? t("common.action.save") : t("common.action.edit")}>
                 <Button
                   isIconOnly
                   size="sm"
                   variant="light"
                   color={isEditing ? "success" : "default"}
                   onPress={() => {
-                    setEditingProfileIds((prev) => {
-                      const next = new Set(prev);
-                      if (isEditing) {
-                        next.delete(profile.id!);
-                      } else {
-                        next.add(profile.id!);
+                    if (isEditing) {
+                      // Save pending changes when exiting edit mode
+                      const pendingGroup = pendingFilterGroups.get(profile.id!);
+                      if (pendingGroup) {
+                        updateProfile(profile, {
+                          search: {
+                            ...profile.search,
+                            group: pendingGroup,
+                          } as typeof profile.search,
+                        });
+                        // Clear pending changes
+                        setPendingFilterGroups((prev) => {
+                          const next = new Map(prev);
+                          next.delete(profile.id!);
+                          return next;
+                        });
                       }
-                      return next;
-                    });
+                      setEditingProfileIds((prev) => {
+                        const next = new Set(prev);
+                        next.delete(profile.id!);
+                        return next;
+                      });
+                    } else {
+                      // Enter edit mode
+                      setEditingProfileIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(profile.id!);
+                        return next;
+                      });
+                    }
                   }}
                 >
                   {isEditing ? <CheckOutlined /> : <EditOutlined />}

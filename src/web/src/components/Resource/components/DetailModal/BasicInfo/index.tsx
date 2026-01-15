@@ -13,19 +13,19 @@ type Props = {
 const dateTimes = [
   {
     key: "fileCreateDt",
-    label: "File Add Date",
+    label: "resource.label.fileAddDate",
   },
   {
     key: "fileModifyDt",
-    label: "File Modify Date",
+    label: "resource.label.fileModifyDate",
   },
   {
     key: "createDt",
-    label: "Resource Create Date",
+    label: "resource.label.resourceCreateDate",
   },
   {
     key: "updateDt",
-    label: "Resource Update Date",
+    label: "resource.label.resourceUpdateDate",
   },
 ];
 const BasicInfo = ({ resource }: Props) => {

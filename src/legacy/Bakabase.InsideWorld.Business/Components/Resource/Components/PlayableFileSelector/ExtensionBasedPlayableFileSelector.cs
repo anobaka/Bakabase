@@ -36,10 +36,13 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.PlayableF
                     ? Directory.GetFiles(fileOrDirectory, "*.*", SearchOption.AllDirectories)
                     : new[] {fileOrDirectory};
 
-                var extensions = Options.Extensions;
+                // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
+                var extensions = Options.Extensions
+                    .Select(e => e.StartsWith('.') ? e : $".{e}")
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var standardRoot = new DirectoryInfo(fileOrDirectory).FullName;
                 var targetFilesMap = files
-                    .Where(a => extensions.Contains(Path.GetExtension(a), StringComparer.OrdinalIgnoreCase))
+                    .Where(a => extensions.Contains(Path.GetExtension(a)))
                     .ToDictionary(a => a.Replace(standardRoot, null).TrimStart(Path.DirectorySeparatorChar), t => t);
                 var startFiles = targetFilesMap.OrderBy(a => a.Key).Take(Options.MaxFileCount).Select(a => a.Value)
                     .ToArray();

@@ -15,11 +15,11 @@ const NotSet = (props: Props) => {
   if (onClick) {
     return (
       <Button radius={"sm"} size={size} variant={"light"} onClick={onClick}>
-        <span className={"opacity-40"}>{t<string>("Click to set")}</span>
+        <span className={"opacity-40"}>{t<string>("common.label.clickToSet")}</span>
       </Button>
     );
   } else {
-    return <span className={"opacity-40"}>{t<string>("Not set")}</span>;
+    return <span className={"opacity-40"}>{t<string>("common.label.notSet")}</span>;
   }
 };
 

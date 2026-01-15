@@ -462,22 +462,38 @@ public class ResourceProfileService<TDbContext>(
         {
             var resourceIds = new HashSet<int>();
 
-            // Get old matching resources (if search changed or playable options changed)
-            if (oldSearchJson != null)
-            {
-                var oldMatchingIds = await GetMatchingResourceIdsBySearchJson(oldSearchJson);
-                resourceIds.UnionWith(oldMatchingIds);
-            }
-
-            // Get new matching resources
+            // Get matching resources based on what changed
+            var oldMatchingIds = oldSearchJson != null
+                ? await GetMatchingResourceIdsBySearchJson(oldSearchJson)
+                : new HashSet<int>();
             var newMatchingIds = await GetMatchingResourceIdsBySearchJson(searchJson);
-            resourceIds.UnionWith(newMatchingIds);
+
+            if (searchChanged && playableOptionsChanged)
+            {
+                // Both changed - invalidate union of old and new matches
+                resourceIds.UnionWith(oldMatchingIds);
+                resourceIds.UnionWith(newMatchingIds);
+            }
+            else if (searchChanged)
+            {
+                // Only search changed - use symmetric difference
+                // Resources that stayed matched don't need invalidation (same playable options)
+                // Only resources that lost match or gained match need cache reset
+                resourceIds.UnionWith(oldMatchingIds);
+                resourceIds.SymmetricExceptWith(newMatchingIds);
+            }
+            else
+            {
+                // Only playable options changed - invalidate current matches
+                // (old matches == new matches since search didn't change)
+                resourceIds.UnionWith(newMatchingIds);
+            }
 
             if (resourceIds.Count > 0)
             {
                 await ResourceService.DeleteResourceCacheByResourceIdsAndCacheType(
                     resourceIds,
-                    Abstractions.Models.Domain.Constants.ResourceCacheType.PlayableFiles);
+                    ResourceCacheType.PlayableFiles);
             }
         }
     }
@@ -528,7 +544,7 @@ public class ResourceProfileService<TDbContext>(
         }
     }
 
-    private async Task<HashSet<int>> GetMatchingResourceIds(ResourceSearch? search)
+    public async Task<HashSet<int>> GetMatchingResourceIds(ResourceSearch? search)
     {
         if (search == null)
         {

@@ -27,6 +27,12 @@
   "resource.order.asc": "升序",
   "resource.order.desc": "降序",
 
+  "ResourceSearchSortableProperty.FileCreateDt": "文件创建时间",
+  "ResourceSearchSortableProperty.FileModifyDt": "文件修改时间",
+  "ResourceSearchSortableProperty.Filename": "文件名",
+  "ResourceSearchSortableProperty.AddDt": "添加时间",
+  "ResourceSearchSortableProperty.PlayedAt": "上次播放时间",
+
   "resource.display.title": "显示选项",
   "resource.display.columnCount": "列数",
   "resource.display.fillCover": "填充封面",

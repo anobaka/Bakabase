@@ -50,9 +50,6 @@ import { autoBackgroundColor } from "@/components/utils"; // adjust the path as 
 
 // PlayButton component defined outside Resource to maintain stable reference
 const PlayButton: React.FC<PlayControlPortalProps> = ({ status, onClick, tooltipContent, cacheEnabled }) => {
-  // Hidden status - don't render anything
-  if (status === "hidden") return null;
-
   // Only show tooltip when preparing cache (loading + cacheEnabled)
   const showTooltip = status === "loading" && cacheEnabled;
 

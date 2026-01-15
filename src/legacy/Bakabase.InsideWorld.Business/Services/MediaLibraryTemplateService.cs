@@ -265,8 +265,11 @@ public class MediaLibraryTemplateService<TDbContext>(
         var pathExtMap = subPaths.ToDictionary(d => d, Path.GetExtension);
         if (template.PlayableFileLocator != null)
         {
+            // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
             var extensions = (template.PlayableFileLocator.ExtensionGroups?.SelectMany(x => x.Extensions) ?? [])
-                .Concat(template.PlayableFileLocator.Extensions ?? []).ToHashSet();
+                .Concat(template.PlayableFileLocator.Extensions ?? [])
+                .Select(e => e.StartsWith('.') ? e : $".{e}")
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var rpi in resourcePathInfoMap.Values)
             {
                 var playableFilePaths = rpi.InnerPaths.Where(ip => extensions.Contains(pathExtMap[ip]!)).ToList();
@@ -645,10 +648,12 @@ public class MediaLibraryTemplateService<TDbContext>(
             (localizer.Keyword(), model.ResourceKeyword ?? localizer.NotSet()),
             ..resources.Select(r => (localizer.Resource(), r.Path))
         ]);
+        // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
         var playableFilesExtensions =
             (template.PlayableFileLocator?.ExtensionGroups?.SelectMany(x => x.Extensions ?? []) ?? [])
             .Concat(template.PlayableFileLocator?.Extensions ?? [])
-            .ToHashSet();
+            .Select(e => e.StartsWith('.') ? e : $".{e}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var resource in resources)
         {
             tracingContext.AddTrace(LogLevel.Information,

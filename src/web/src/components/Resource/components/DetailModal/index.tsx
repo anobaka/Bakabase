@@ -146,7 +146,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
             >
               <div className="flex flex-col gap-2 p-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-default-500">{t("Columns")}</span>
+                  <span className="text-sm text-default-500">{t("resource.label.columns")}</span>
                   <ButtonGroup size="sm">
                     {([
                       { col: 1 as const, icon: <TbColumns1 /> },

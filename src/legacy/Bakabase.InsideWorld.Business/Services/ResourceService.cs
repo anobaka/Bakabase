@@ -1003,7 +1003,10 @@ namespace Bakabase.InsideWorld.Business.Services
             var playableFileOptions = await ResourceProfileService.GetEffectivePlayableFileOptions(r);
             if (playableFileOptions?.Extensions != null && playableFileOptions.Extensions.Count > 0)
             {
-                var extensions = playableFileOptions.Extensions.ToHashSet(StringComparer.OrdinalIgnoreCase);
+                // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
+                var extensions = playableFileOptions.Extensions
+                    .Select(e => e.StartsWith('.') ? e : $".{e}")
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var files = r.IsFile ? new List<string> { r.Path } : Directory.EnumerateFiles(r.Path, "*", SearchOption.AllDirectories);
 
                 var result = files.Where(f => extensions.Contains(Path.GetExtension(f))).ToList();
@@ -1181,9 +1184,10 @@ namespace Bakabase.InsideWorld.Business.Services
                                             await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
                                         if (playableFileOptions?.Extensions is { Count: > 0 })
                                         {
-                                            var extensions =
-                                                playableFileOptions.Extensions.ToHashSet(StringComparer
-                                                    .OrdinalIgnoreCase);
+                                            // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
+                                            var extensions = playableFileOptions.Extensions
+                                                .Select(e => e.StartsWith('.') ? e : $".{e}")
+                                                .ToHashSet(StringComparer.OrdinalIgnoreCase);
                                             var files = resource.IsFile
                                                 ? File.Exists(resource.Path) ? new List<string> { resource.Path } : []
                                                 : Directory.Exists(resource.Path)
@@ -1228,6 +1232,11 @@ namespace Bakabase.InsideWorld.Business.Services
                                                         .ListString);
                                             cache.HasMorePlayableFiles =
                                                 trimmedPlayableFiles.Count < playableFiles.Length;
+                                        }
+                                        else
+                                        {
+                                            cache.PlayableFilePaths = null;
+                                            cache.HasMorePlayableFiles = false;
                                         }
 
                                         cache.CachedTypes |= ResourceCacheType.PlayableFiles;
@@ -1549,7 +1558,25 @@ namespace Bakabase.InsideWorld.Business.Services
             if (ids.Count == 0) return;
 
             await _resourceCacheOrm.UpdateAll(c => ids.Contains(c.ResourceId),
-                x => { x.CachedTypes &= ~type; });
+                x =>
+                {
+                    x.CachedTypes &= ~type;
+                    switch (type)
+                    {
+                        case ResourceCacheType.Covers:
+                            x.CoverPaths = null;
+                            break;
+                        case ResourceCacheType.PlayableFiles:
+                            x.HasMorePlayableFiles = false;
+                            x.PlayableFilePaths = null;
+                            break;
+                        case ResourceCacheType.ResourceMarkers:
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(type), type, null);
+                    }
+                    
+                });
             _prepareCacheTrigger.RequestTrigger();
         }
 
