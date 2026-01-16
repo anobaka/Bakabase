@@ -6,7 +6,7 @@ import type { ValueRendererProps } from "../models";
 import { useEffect, useState } from "react";
 
 import { DateInput } from "@/components/bakaui";
-import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import { buildLogger } from "@/components/utils";
 
 type DateTimeValueRendererProps = ValueRendererProps<Dayjs> & {
@@ -23,14 +23,15 @@ const DateTimeValueRenderer = (props: DateTimeValueRendererProps) => {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(propsValue);
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
 
   useEffect(() => {
     setValue(propsValue);
   }, [propsValue]);
 
-  const startEditing = !isReadonly && editor
+  // Don't allow starting edit mode if isEditing is explicitly set to false
+  const startEditing = !isReadonly && editor && isEditing !== false
     ? () => {
         setEditing(true);
       }

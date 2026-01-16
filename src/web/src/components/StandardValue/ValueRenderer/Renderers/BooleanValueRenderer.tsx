@@ -2,9 +2,12 @@
 
 import type { ValueRendererProps } from "../models";
 
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { Checkbox, Switch, Chip } from "@/components/bakaui";
+import { Checkbox, Switch } from "@/components/bakaui";
+import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
+import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
 
 type BooleanValueRendererProps = Omit<
   ValueRendererProps<boolean>,
@@ -13,78 +16,100 @@ type BooleanValueRendererProps = Omit<
   variant: ValueRendererProps<boolean>["variant"] | "switch";
   size?: "sm" | "md" | "lg";
 };
+
 const BooleanValueRenderer = ({
   value,
   variant,
   editor,
   size,
   isReadonly: propsIsReadonly,
-  ...props
+  isEditing,
+  defaultEditing = false,
 }: BooleanValueRendererProps) => {
   const { t } = useTranslation();
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
 
-  // When not readonly, show Yes/No chips with a visual NotSet indicator at the beginning
-  if (!isReadonly && editor) {
-    const isNotSet = value === undefined;
+  const v = variant ?? "default";
+  const canEdit = !isReadonly && editor;
+
+  // Track internal editing state for light and default variants
+  const [internalEditing, setInternalEditing] = useState(
+    defaultEditing && !isReadonly && !!editor && (v === "light" || v === "default"),
+  );
+
+  const startEditing = canEdit && isEditing !== false ? () => setInternalEditing(true) : undefined;
+
+  // Shared chip click handler for editing mode
+  const handleChipClick = (clickedValue: boolean) => {
+    // Toggle: if already selected, clear to undefined; otherwise set the value
+    const newValue = value === clickedValue ? undefined : clickedValue;
+    editor?.onValueChange?.(newValue, newValue);
+    if (!isEditing) {
+      setInternalEditing(false);
+    }
+  };
+
+  // Editing mode for light and default variants
+  if ((isEditing || internalEditing) && canEdit && v !== "switch") {
     return (
-      <div className="inline-flex gap-1 flex-wrap min-w-[138px]">
-        {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
-        <Chip
+      <div className="inline-flex gap-1 flex-wrap">
+        <SelectableChip
+          itemKey="__yes__"
+          label={t("common.label.yes")}
+          isSelected={value === true}
           size={size}
-          color={isNotSet ? "primary" : "default"}
-          variant={isNotSet ? "solid" : "bordered"}
-          className="flex-shrink-0"
-        >
-          {t("common.label.notSet")}
-        </Chip>
-        <Chip
+          onClick={() => handleChipClick(true)}
+        />
+        <SelectableChip
+          itemKey="__no__"
+          label={t("common.label.no")}
+          isSelected={value === false}
           size={size}
-          color={value === true ? "success" : "default"}
-          variant={value === true ? "solid" : "bordered"}
-          className="cursor-pointer flex-shrink-0"
-          onClick={() => editor?.onValueChange?.(value === true ? undefined : true, value === true ? undefined : true)}
-        >
-          {t("common.label.yes")}
-        </Chip>
-        <Chip
-          size={size}
-          color={value === false ? "danger" : "default"}
-          variant={value === false ? "solid" : "bordered"}
-          className="cursor-pointer flex-shrink-0"
-          onClick={() => editor?.onValueChange?.(value === false ? undefined : false, value === false ? undefined : false)}
-        >
-          {t("common.label.no")}
-        </Chip>
+          onClick={() => handleChipClick(false)}
+        />
       </div>
     );
   }
 
-  const v = variant ?? "default";
-
-  switch (v) {
-    case "default":
-    case "light":
+  // Light variant display mode
+  if (v === "light") {
+    if (value === true) {
       return (
-        <Checkbox
-          disableAnimation={!editor}
-          isSelected={value}
-          size={size}
-          onValueChange={(v) => editor?.onValueChange?.(v, v)}
-        />
+        <LightText size={size} onClick={startEditing}>
+          {t("common.label.yes")}
+        </LightText>
       );
-    case "switch":
+    } else if (value === false) {
       return (
-        <Switch
-          disableAnimation={!editor}
-          isSelected={value}
-          size={size}
-          onValueChange={(v) => editor?.onValueChange?.(v, v)}
-        />
+        <LightText size={size} onClick={startEditing}>
+          {t("common.label.no")}
+        </LightText>
       );
+    } else {
+      return <NotSet size={size} onClick={startEditing} />;
+    }
   }
+
+  // Switch variant: always directly interactive
+  if (v === "switch") {
+    return (
+      <Switch
+        isSelected={value}
+        size={size}
+        isDisabled={!canEdit}
+        onValueChange={canEdit ? (v) => editor?.onValueChange?.(v, v) : undefined}
+      />
+    );
+  }
+
+  // Default variant display mode: show Checkbox (clickable to enter editing)
+  return (
+    <div onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>
+      <Checkbox isSelected={value} size={size} isReadOnly className="pointer-events-none" />
+    </div>
+  );
 };
 
 BooleanValueRenderer.displayName = "BooleanValueRenderer";

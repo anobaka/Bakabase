@@ -236,17 +236,30 @@ const Properties = (props: Props) => {
 
   // log(renderContext);
 
-  const gridStyle = { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` };
+  // Masonry layout using CSS columns
+  const masonryStyle = {
+    columnCount: columns,
+    columnGap: "1rem",
+  };
+
+  const masonryItemStyle = {
+    breakInside: "avoid" as const,
+    marginBottom: "0.5rem",
+  };
 
   return (
     <div>
       {propertyInnerDirection == "hoz" ? (
         <>
           <div
-            className={`grid gap-x-4 gap-y-2 ${className} items-start overflow-visible`}
-            style={gridStyle}
+            className={`${className} overflow-visible`}
+            style={masonryStyle}
           >
-            {visibleProperties.map((pCtx) => renderProperty(pCtx))}
+            {visibleProperties.map((pCtx) => (
+              <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} style={masonryItemStyle}>
+                {renderProperty(pCtx)}
+              </div>
+            ))}
           </div>
           {invisibleProperties.length > 0 && (
             <>
@@ -258,10 +271,14 @@ const Properties = (props: Props) => {
                 <Divider className="flex-1" />
               </div>
               <div
-                className={`grid gap-x-4 gap-y-2 ${className} items-start overflow-visible`}
-                style={gridStyle}
+                className={`${className} overflow-visible`}
+                style={masonryStyle}
               >
-                {invisibleProperties.map((pCtx) => renderProperty(pCtx))}
+                {invisibleProperties.map((pCtx) => (
+                  <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} style={masonryItemStyle}>
+                    {renderProperty(pCtx)}
+                  </div>
+                ))}
               </div>
             </>
           )}
@@ -269,7 +286,7 @@ const Properties = (props: Props) => {
       ) : (
         <div className={"flex flex-col gap-4"}>
           {visibleProperties.map((pCtx) => (
-            <div className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
+            <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
           ))}
           {invisibleProperties.length > 0 && (
             <>
@@ -281,7 +298,7 @@ const Properties = (props: Props) => {
                 <Divider className="flex-1" />
               </div>
               {invisibleProperties.map((pCtx) => (
-                <div className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
+                <div key={`${pCtx.propertyPool}-${pCtx.property.id}`} className={"flex flex-col gap-2"}>{renderProperty(pCtx)}</div>
               ))}
             </>
           )}

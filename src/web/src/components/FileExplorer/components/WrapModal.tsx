@@ -28,13 +28,13 @@ const WrapModal = ({ entries = [], onDestroyed }: Props) => {
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>("Wrap")}(Enter)`,
+          children: `${t<string>("fileExplorer.wrapModal.okButton")}(Enter)`,
           autoFocus: true,
           disabled: _.values(newParentNames).some((x) => !x || x.length == 0),
         },
       }}
       size={"xl"}
-      title={t<string>("Wrapping {{count}} file entries", {
+      title={t<string>("fileExplorer.wrapModal.title", {
         count: entries.length,
       })}
       onDestroyed={onDestroyed}

@@ -70,7 +70,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
       const entry = selectedEntries[0];
       items.push({
         icon: <FolderOpenOutlined className={"text-base"} />,
-        label: t<string>("Open in system file manager"),
+        label: t<string>("fileExplorer.contextMenu.openInFileManager"),
         onClick: () => {
           BApi.tool.openFileOrDirectory({
             path: entry.path,
@@ -84,7 +84,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (selectedEntries.length === 1 && selectedEntries[0].isDirectoryOrDrive && onChangeWorkingDirectory) {
       items.push({
         icon: <LoginOutlined className={"text-base"} />,
-        label: t<string>("Enter directory"),
+        label: t<string>("fileExplorer.contextMenu.enterDirectory"),
         onClick: () => {
           onChangeWorkingDirectory(selectedEntries[0].path);
         },
@@ -95,7 +95,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("create-directory") && selectedEntries.length === 1 && selectedEntries[0].isDirectoryOrDrive) {
       items.push({
         icon: <FolderAddOutlined className={"text-base"} />,
-        label: t<string>("Create new folder"),
+        label: t<string>("fileExplorer.contextMenu.createNewFolder"),
         onClick: () => {
           createPortal(CreateDirectoryModal, {
             parentPath: selectedEntries[0].path,
@@ -107,7 +107,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (expandableEntries.length > 0) {
       items.push({
         icon: <DownOutlined className={"text-base"} />,
-        label: t<string>(selectedEntries.length == 1 ? "Expand" : "Expand selected"),
+        label: t<string>(selectedEntries.length == 1 ? "fileExplorer.contextMenu.expand" : "fileExplorer.contextMenu.expandSelected"),
         onClick: () => {
           for (const entry of expandableEntries) {
             entry.expand(false);
@@ -119,7 +119,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (collapsableEntries.length > 0) {
       items.push({
         icon: <UpOutlined className={"text-base"} />,
-        label: t<string>(selectedEntries.length == 1 ? "Collapse" : "Collapse selected"),
+        label: t<string>(selectedEntries.length == 1 ? "fileExplorer.contextMenu.collapse" : "fileExplorer.contextMenu.collapseSelected"),
         onClick: () => {
           for (const entry of collapsableEntries) {
             entry.collapse();
@@ -131,11 +131,11 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("decompress") && decompressableEntries.length > 0) {
       items.push({
         icon: <CopyOutlined className={"text-base"} />,
-        label: t<string>("Decompress {{count}} files", {
+        label: t<string>("fileExplorer.contextMenu.decompressFiles", {
           count: decompressableEntries.length,
         }),
         onClick: () => {
-          toast.default(t<string>("Start decompressing"));
+          toast.default(t<string>("fileExplorer.contextMenu.startDecompressing"));
           BApi.file.decompressFiles({
             paths: decompressableEntries.map((e) => e.path),
           });
@@ -146,7 +146,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("extract") && directoryEntries.length > 0) {
       items.push({
         icon: <UploadOutlined className={"text-base"} />,
-        label: t<string>("Extract {{count}} directories", {
+        label: t<string>("fileExplorer.contextMenu.extractDirectories", {
           count: directoryEntries.length,
         }),
         onClick: () => {
@@ -158,7 +158,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("wrap")) {
       items.push({
         icon: <MergeOutlined className={"text-base"} />,
-        label: t<string>("Wrap {{count}} items using directory", {
+        label: t<string>("fileExplorer.contextMenu.wrapItems", {
           count: selectedEntries.length,
         }),
         onClick: () => {
@@ -170,7 +170,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("delete")) {
       items.push({
         icon: <DeleteOutlined className={"text-base"} />,
-        label: t<string>("Delete {{count}} items", {
+        label: t<string>("fileExplorer.contextMenu.deleteItems", {
           count: selectedEntries.length,
         }),
         onClick: () => {
@@ -185,7 +185,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("delete-all-same-name")) {
       items.push({
         icon: <DeleteColumnOutlined className={"text-base"} />,
-        label: t<string>("Delete items with the same names"),
+        label: t<string>("fileExplorer.contextMenu.deleteItemsWithSameNames"),
         onClick: () => {
           createPortal(DeleteItemsWithSameNamesModal, {
             entries: selectedEntries,
@@ -198,7 +198,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     if (capabilities?.includes("move")) {
       items.push({
         icon: <SendOutlined className={"text-base"} />,
-        label: t<string>("Move {{count}} items", {
+        label: t<string>("fileExplorer.contextMenu.moveItems", {
           count: selectedEntries.length,
         }),
         onClick: () => {
@@ -221,7 +221,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
       if (fileEntries.length > 1) {
         items.push({
           icon: <GroupOutlined className={"text-base"} />,
-          label: t<string>("Auto group {{count}} selected files", {
+          label: t<string>("fileExplorer.contextMenu.autoGroupSelectedFiles", {
             count: fileEntries.length,
           }),
           onClick: () => {
@@ -238,7 +238,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
       if (directoryEntries.length > 0) {
         items.push({
           icon: <GroupOutlined className={"text-base"} />,
-          label: t<string>("Auto group internal items in {{count}} selected directories", {
+          label: t<string>("fileExplorer.contextMenu.autoGroupInternalItems", {
             count: directoryEntries.length,
           }),
           onClick: () => {
@@ -255,7 +255,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
       // Detect compressed files
       items.push({
         icon: <AiOutlineFileZip className={"text-base"} />,
-        label: t<string>("Use bulk decompression tool"),
+        label: t<string>("fileExplorer.contextMenu.useBulkDecompressionTool"),
         onClick: () => {
           createPortal(BulkDecompressionToolModal, { paths: selectedEntries.map((e) => e.path) });
         },
@@ -264,34 +264,34 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
 
     items.push({
       icon: <CopyOutlined className={"text-base"} />,
-      label: t<string>("Copy {{count}} names", {
+      label: t<string>("fileExplorer.contextMenu.copyNames", {
         count: selectedEntries.length,
       }),
       onClick: () => {
         navigator.clipboard
           .writeText(selectedEntries.map((e) => e.name).join("\n"))
           .then(() => {
-            toast.success(t<string>("Copied"));
+            toast.success(t<string>("fileExplorer.contextMenu.copied"));
           })
           .catch((e) => {
-            toast.danger(`${t<string>("Failed to copy")}. ${e}`);
+            toast.danger(`${t<string>("fileExplorer.contextMenu.failedToCopy")}. ${e}`);
           });
       },
     });
 
     items.push({
       icon: <CopyOutlined className={"text-base"} />,
-      label: t<string>("Copy {{count}} paths", {
+      label: t<string>("fileExplorer.contextMenu.copyPaths", {
         count: selectedEntries.length,
       }),
       onClick: () => {
         navigator.clipboard
           .writeText(selectedEntries.map((e) => e.path).join("\n"))
           .then(() => {
-            toast.success(t<string>("Copied"));
+            toast.success(t<string>("fileExplorer.contextMenu.copied"));
           })
           .catch((e) => {
-            toast.danger(`${t<string>("Failed to copy")}. ${e}`);
+            toast.danger(`${t<string>("fileExplorer.contextMenu.failedToCopy")}. ${e}`);
           });
       },
     });
@@ -299,7 +299,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
     // 批量修改名称操作
     items.push({
       icon: <MdDriveFileRenameOutline className={"text-base"} />, // 可换为更合适的icon
-      label: t<string>("Batch rename {{count}} items", {
+      label: t<string>("fileExplorer.contextMenu.batchRename", {
         count: selectedEntries.length,
       }),
       onClick: () => {
@@ -315,7 +315,7 @@ const ContextMenu = ({ selectedEntries, capabilities, root, renderExtraContextMe
   if (selectedEntries.length === 0 && capabilities?.includes("create-directory") && root?.path) {
     items.push({
       icon: <FolderAddOutlined className={"text-base"} />,
-      label: t<string>("Create new folder"),
+      label: t<string>("fileExplorer.contextMenu.createNewFolder"),
       onClick: () => {
         createPortal(CreateDirectoryModal, {
           parentPath: root.path,

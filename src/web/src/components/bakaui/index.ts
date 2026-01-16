@@ -8,6 +8,7 @@ import type { TextareaProps } from "./components/Textarea";
 import type { TableRowProps } from "./components/Table";
 import type { NumberInputProps } from "./components/NumberInput";
 import type { CircularProgressProps } from "./components/CircularProgress";
+import type { RatingProps } from "./components/Rating";
 
 import { Button, ButtonGroup } from "./components/Button";
 import Select from "./components/Select";
@@ -128,6 +129,7 @@ export {
   RadioGroup,
   Radio,
   Rating,
+  type RatingProps,
   Image,
   type TableRowProps,
   Kbd,

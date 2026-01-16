@@ -79,6 +79,7 @@ public class ReservedPropertyValueService(
             .ToDictionary(d => d.Key, d => d.GroupBy(c => c.Scope).ToDictionary(e => e.Key, e => e.First()));
 
         var changed = new Dictionary<int, Dictionary<int, ReservedPropertyValue>>();
+        var coverChangedResourceIds = new HashSet<int>();
 
         foreach (var r in resources)
         {
@@ -147,6 +148,7 @@ public class ReservedPropertyValueService(
                             {
                                 data.CoverPaths = newCoverPaths;
                                 dataIsChanged = true;
+                                coverChangedResourceIds.Add(r.Id);
                             }
 
                             break;
@@ -173,6 +175,11 @@ public class ReservedPropertyValueService(
         if (changed.Count > 0)
         {
             eventPublisher.PublishResourcesChanged(changed.Keys);
+        }
+
+        if (coverChangedResourceIds.Count > 0)
+        {
+            eventPublisher.PublishResourceCoverChanged(coverChangedResourceIds);
         }
 
         return BaseResponseBuilder.Ok;

@@ -1116,6 +1116,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
             // All caches where CachedTypes != fullCacheType need processing
             var tbdCaches = await _resourceCacheOrm.GetAll(x => x.CachedTypes != fullCacheType);
+
+            // Batch preload existing cover data from ReservedPropertyValue
+            // This avoids discovering covers for resources that already have user-configured or enhancer-created covers
+            var tbdResourceIds = tbdCaches.Select(c => c.ResourceId).ToList();
+            var existingCoverMap = (await _reservedPropertyValueService.GetAll(
+                    x => tbdResourceIds.Contains(x.ResourceId) && x.CoverPaths != null && x.CoverPaths.Any()))
+                .GroupBy(x => x.ResourceId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderBy(x => x.Scope).First().CoverPaths); // Priority by Scope: Manual=0 > Enhancer=1000+
+
             var estimateCount = tbdCaches.Count;
             var itemPercentage = estimateCount == 0 ? 0 : 100m / estimateCount;
             var doneCount = 0;
@@ -1158,12 +1169,24 @@ namespace Bakabase.InsideWorld.Business.Services
                                         // Skip if already cached
                                         if (!cache.CachedTypes.HasFlag(ResourceCacheType.Covers))
                                         {
-                                            var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
-                                            cache.CoverPaths = coverPath.IsNotEmpty()
-                                                ? new ListStringValueBuilder([coverPath]).Value
-                                                    ?.SerializeAsStandardValue(
-                                                        StandardValueType.ListString)
-                                                : null;
+                                            // Check if resource already has covers from ReservedPropertyValue (user-configured or enhancer-created)
+                                            var existingCoverPaths = existingCoverMap.GetValueOrDefault(resource.Id);
+
+                                            if (existingCoverPaths?.Any() == true)
+                                            {
+                                                // Use existing covers, skip discovery
+                                                cache.CoverPaths = new ListStringValueBuilder(existingCoverPaths).Value
+                                                    ?.SerializeAsStandardValue(StandardValueType.ListString);
+                                            }
+                                            else
+                                            {
+                                                // No existing covers, run discovery
+                                                var coverPath = await DiscoverAndCacheCover(resource.Id, ct);
+                                                cache.CoverPaths = coverPath.IsNotEmpty()
+                                                    ? new ListStringValueBuilder([coverPath]).Value
+                                                        ?.SerializeAsStandardValue(StandardValueType.ListString)
+                                                    : null;
+                                            }
                                         }
 
                                         cache.CachedTypes |= ResourceCacheType.Covers;
@@ -1457,6 +1480,9 @@ namespace Bakabase.InsideWorld.Business.Services
                 rpv.CoverPaths = currentCovers;
                 await _reservedPropertyValueService.Update(rpv);
             }
+
+            // Publish cover changed event to invalidate cache
+            ResourceDataChangeEventPublisher.PublishResourceCoverChanged([id]);
         }
 
         public async Task<CacheOverviewViewModel> GetCacheOverview()
@@ -1742,9 +1768,17 @@ namespace Bakabase.InsideWorld.Business.Services
                                 throw new ArgumentOutOfRangeException();
                         }
 
-                        return noValue
+                        var result = noValue
                             ? await _reservedPropertyValueService.Add(scopeValue)
                             : await _reservedPropertyValueService.Update(scopeValue);
+
+                        if (property == ResourceProperty.Cover)
+                        {
+                            // Publish cover changed event to invalidate cache
+                            ResourceDataChangeEventPublisher.PublishResourceCoverChanged([resourceId]);
+                        }
+
+                        return result;
                     }
                     // case ResourceProperty.CustomProperty:
                     //     break;
@@ -1922,6 +1956,16 @@ namespace Bakabase.InsideWorld.Business.Services
                             if (updateResult.Code != 0)
                             {
                                 return updateResult;
+                            }
+                        }
+
+                        if (property == ResourceProperty.Cover)
+                        {
+                            // Publish cover changed event to invalidate cache (only for actually changed resources)
+                            var changedResourceIds = toAdd.Concat(toUpdate).Select(v => v.ResourceId).ToArray();
+                            if (changedResourceIds.Length > 0)
+                            {
+                                ResourceDataChangeEventPublisher.PublishResourceCoverChanged(changedResourceIds);
                             }
                         }
 

@@ -11,19 +11,21 @@ import BApi from "@/sdk/BApi";
 type Props = {
   href: string;
 } & ButtonProps;
-const ExternalLink = ({ href, children, ...otherProps }: Props) => {
+const ExternalLink = ({ href, children, size, ...otherProps }: Props) => {
+
   return (
     <Button
       color={"primary"}
       href={href}
       variant={"light"}
+      size={size}
       {...otherProps}
       onPress={(e) => {
         BApi.gui.openUrlInDefaultBrowser({ url: href });
       }}
     >
       {children}
-      <TbExternalLink className={"text-base"} />
+      <TbExternalLink className={"text-lg"} />
     </Button>
   );
 };

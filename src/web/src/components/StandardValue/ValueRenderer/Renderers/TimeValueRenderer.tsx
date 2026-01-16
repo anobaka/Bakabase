@@ -6,7 +6,7 @@ import type { ValueRendererProps } from "../models";
 import { useRef, useState } from "react";
 
 import { TimeInput } from "@/components/bakaui";
-import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 type TimeValueRendererProps = ValueRendererProps<Duration, Duration> & {
   format?: string;
   size?: "sm" | "md" | "lg";
@@ -24,12 +24,13 @@ const TimeValueRenderer = ({
   const [editing, setEditing] = useState(false);
   const editingValueRef = useRef<Duration>();
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
 
   const f = format == undefined ? "HH:mm:ss" : format;
 
-  const startEditing = !isReadonly && editor
+  // Don't allow starting edit mode if isEditing is explicitly set to false
+  const startEditing = !isReadonly && editor && isEditing !== false
     ? () => {
         editingValueRef.current = value;
         setEditing(true);

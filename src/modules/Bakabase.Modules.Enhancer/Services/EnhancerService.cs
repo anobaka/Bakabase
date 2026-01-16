@@ -319,6 +319,20 @@ namespace Bakabase.Modules.Enhancer.Services
 
                 await _reservedPropertyValueService.UpdateRange(reservedPropertyValuesToBeUpdated);
                 await _reservedPropertyValueService.AddRange(reservedPropertyValuesToBeAdded);
+
+                // Invalidate cover cache for resources that have cover updates from enhancers
+                var affectedResourceIds = reservedPropertyValuesToBeUpdated
+                    .Concat(reservedPropertyValuesToBeAdded)
+                    .Where(rpv => rpv.CoverPaths?.Any() == true)
+                    .Select(rpv => rpv.ResourceId)
+                    .Distinct()
+                    .ToList();
+
+                if (affectedResourceIds.Any())
+                {
+                    await _resourceService.DeleteResourceCacheByResourceIdsAndCacheType(
+                        affectedResourceIds, ResourceCacheType.Covers);
+                }
             }
 
             var valueIdsToDelete = new List<int>();

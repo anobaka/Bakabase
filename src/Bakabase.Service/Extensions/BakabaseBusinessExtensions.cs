@@ -187,6 +187,9 @@ namespace Bakabase.Service.Extensions
             // TODO: Remove when no longer needed
             services.AddHostedService<ResourceIndexNotificationService>();
 
+            // Resource cover cache invalidation service (invalidates cover cache when covers change)
+            services.AddHostedService<ResourceCoverCacheInvalidationService>();
+
             #endregion
 
             services.AddScoped<MigrationHelper>();

@@ -1,22 +1,21 @@
 "use client";
 
-import type { CSSProperties } from "react";
 import type { ValueRendererProps } from "../models";
-import type { MultilevelData, TagValue } from "../../models";
+import type { TagValue } from "../../models";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
-import MultilevelValueEditor from "../../ValueEditor/Editors/MultilevelValueEditor";
+import TagsValueEditor from "../../ValueEditor/Editors/TagsValueEditor";
 
-import NotSet from "./components/NotSet";
+import NotSet, { LightText } from "./components/LightText";
 import NoChoicesAvailable from "./components/NoChoicesAvailable";
 
-import SelectableChip from "@/components/Chips/SelectableChip";
+import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Chip, Button } from "@/components/bakaui";
-import { autoBackgroundColor, buildLogger, uuidv4 } from "@/components/utils";
+import { Button } from "@/components/bakaui";
+import { buildLogger } from "@/components/utils";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
@@ -33,24 +32,51 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
   const { createPortal } = useBakabaseContext();
   const { t } = useTranslation();
 
-  const { value, editor, variant, getDataSource, valueAttributes, size, isReadonly: propsIsReadonly } = props;
+  const { value, editor, variant, getDataSource, valueAttributes, size, isReadonly: propsIsReadonly, isEditing: controlledIsEditing, defaultEditing = false } = props;
   const [dataSource, setDataSource] = useState<TagData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [optionsThreshold] = useFilterOptionsThreshold();
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Internal editing state for uncontrolled mode
+  const [internalIsEditing, setInternalIsEditing] = useState(defaultEditing);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load data source on mount if not readonly
+  // Use controlled value if provided, otherwise use internal state
+  const isEditing = controlledIsEditing ?? internalIsEditing;
+
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
+
+  // Click outside to close editing mode (only for uncontrolled mode)
   useEffect(() => {
-    if (!isReadonly && getDataSource) {
+    if (controlledIsEditing !== undefined || !isEditing) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setInternalIsEditing(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [controlledIsEditing, isEditing]);
+
+  // Load data source when entering editing mode
+  useEffect(() => {
+    if (isEditing && getDataSource && dataSource.length === 0) {
       setIsLoading(true);
       getDataSource().then((data) => {
         setDataSource(data);
         setIsLoading(false);
       });
     }
-  }, [isReadonly, getDataSource]);
+  }, [isEditing, getDataSource]);
+
+  const handleClick = () => {
+    if (controlledIsEditing === undefined && !isEditing && !isReadonly && editor) {
+      setInternalIsEditing(true);
+    }
+  };
 
   const getTagLabel = (tag: TagValue) => {
     if (tag.group != undefined && tag.group.length > 0) {
@@ -63,58 +89,13 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
 
   const openFullEditor = editor
     ? () => {
-        createPortal(MultilevelValueEditor<string>, {
+        createPortal(TagsValueEditor, {
           value: editor?.value,
-          multiple: true,
           getDataSource: async () => {
-            const ds = (await getDataSource?.()) || [];
-            const data: MultilevelData<string>[] = [];
-
-            for (const d of ds) {
-              if (d.group == undefined || d.group.length == 0) {
-                data.push({
-                  value: d.value,
-                  label: d.name,
-                });
-              } else {
-                let group = data.find((x) => x.label == d.group);
-
-                if (!group) {
-                  group = {
-                    value: uuidv4(),
-                    label: d.group,
-                    children: [],
-                  };
-                  data.push(group);
-                }
-                group.children!.push({
-                  value: d.value,
-                  label: d.name,
-                });
-              }
-            }
-
-            return data;
+            return (await getDataSource?.()) || [];
           },
           onValueChange: (dbValue, bizValue) => {
-            if (dbValue) {
-              const bv: TagValue[] = [];
-
-              for (const b of bizValue!) {
-                if (b.length == 1) {
-                  bv.push({
-                    name: b[0]!,
-                  });
-                } else {
-                  bv.push({
-                    name: b[1]!,
-                    group: b[0],
-                  });
-                }
-              }
-
-              editor?.onValueChange?.(dbValue, bv);
-            }
+            editor?.onValueChange?.(dbValue, bizValue);
           },
         });
       }
@@ -150,11 +131,11 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
   const hasMore = hasMoreOptions(dataSource.length, optionsThreshold);
   const remainingCount = getRemainingCount(dataSource.length, visibleOptions.length);
 
-  // Editable mode: show inline options with toggle
-  if (!isReadonly && dataSource.length > 0) {
+  // Editing mode: show inline options with toggle (only when isEditing is explicitly true)
+  if (isEditing === true && dataSource.length > 0) {
     const isNotSet = selectedValues.length === 0;
     return (
-      <div className="flex flex-wrap gap-1 items-center">
+      <div ref={containerRef} className="flex flex-wrap gap-1 items-center">
         {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
         <SelectableChip
           itemKey="__not_set__"
@@ -187,58 +168,52 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
     );
   }
 
-  // Loading state for editable mode
-  if (!isReadonly && isLoading) {
+  // Loading state for editing mode
+  if (isEditing === true && isLoading) {
     return <span className="text-default-400">{t("common.state.loading")}</span>;
   }
 
-  // No choices available in editable mode
-  if (!isReadonly && dataSource.length === 0) {
+  // No choices available in editing mode
+  if (isEditing === true && dataSource.length === 0) {
     return <NoChoicesAvailable />;
   }
 
+  // Determine if editing is allowed (for NotSet to show "click to set" vs "not set")
+  const canEdit = !isReadonly && !!editor;
+
   // Readonly mode
   if (!value || value.length == 0) {
-    return <NotSet onClick={openFullEditor} size={size} />;
+    return (
+      <div ref={containerRef} onClick={handleClick} className={canEdit ? "cursor-pointer" : undefined}>
+        <NotSet size={size} onClick={canEdit ? handleClick : undefined} />
+      </div>
+    );
   }
 
   if (variant == "light") {
     return (
-      <span onClick={openFullEditor} className={openFullEditor ? "cursor-pointer" : undefined}>
-        {simpleLabels?.map((l, i) => {
-          const styles: CSSProperties = {};
-
-          styles.color = valueAttributes?.[i]?.color;
-          if (styles.color) {
-            styles.backgroundColor = autoBackgroundColor(styles.color);
-          }
-
-          return (
-            <span key={i}>
-              {i != 0 && ","}
-              <span style={styles}>{l}</span>
-            </span>
-          );
-        })}
-      </span>
+      <LightText onClick={handleClick} size={size}>
+        {simpleLabels?.map((l, i) => (
+          <span key={i}>
+            {i != 0 && ", "}
+            <LightText color={valueAttributes?.[i]?.color} size={size}>{l}</LightText>
+          </span>
+        ))}
+      </LightText>
     );
   } else {
     return (
-      <div className={`flex flex-wrap gap-1 ${openFullEditor ? "cursor-pointer" : ""}`} onClick={openFullEditor}>
-        {simpleLabels?.map((l, i) => {
-          const styles: CSSProperties = {};
-
-          styles.color = valueAttributes?.[i]?.color;
-          if (styles.color) {
-            styles.backgroundColor = autoBackgroundColor(styles.color);
-          }
-
-          return (
-            <Chip key={i} radius={"sm"} size={size} style={styles}>
-              {l}
-            </Chip>
-          );
-        })}
+      <div ref={containerRef} onClick={handleClick} className="flex flex-wrap gap-1 cursor-pointer">
+        {simpleLabels?.map((l, i) => (
+          <SelectableChip
+            key={i}
+            itemKey={`display-${i}`}
+            label={l}
+            isSelected
+            color={valueAttributes?.[i]?.color}
+            size={size}
+          />
+        ))}
       </div>
     );
   }

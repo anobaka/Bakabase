@@ -20,15 +20,15 @@ const FileSystemSelectorModal = (props: IProps) => {
     setVisible(false);
   };
 
-  let title = "Select file system entries";
+  let titleKey = "fileSystemSelector.title.selectEntries";
 
   if (props.targetType != undefined) {
     switch (props.targetType) {
       case "file":
-        title = "Select file";
+        titleKey = "fileSystemSelector.title.selectFile";
         break;
       case "folder":
-        title = "Select folder";
+        titleKey = "fileSystemSelector.title.selectFolder";
         break;
     }
   }
@@ -38,7 +38,7 @@ const FileSystemSelectorModal = (props: IProps) => {
       className={"h-full"}
       footer={false}
       size={"xl"}
-      title={t<string>(title)}
+      title={t(titleKey)}
       visible={visible}
       onClose={close}
       onDestroyed={props.onDestroyed}

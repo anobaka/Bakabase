@@ -116,11 +116,12 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     const serverAddress =
       resourceServerAddresses[Math.floor(Math.random() * resourceServerAddresses.length)];
 
-    // Use discovered cover paths, or fallback to resource path
-    const coverPaths = stableDiscoveryCoverPaths?.length
-      ? stableDiscoveryCoverPaths
-      : stableResourceCoverPaths?.length
-        ? stableResourceCoverPaths
+    // Priority: resource.coverPaths (from ReservedPropertyValue) > discovered covers (from cache) > resource.path
+    // This ensures user-configured or enhancer-created covers take precedence over auto-discovered cache
+    const coverPaths = stableResourceCoverPaths?.length
+      ? stableResourceCoverPaths
+      : stableDiscoveryCoverPaths?.length
+        ? stableDiscoveryCoverPaths
         : [resource.path];
 
     return coverPaths.map(

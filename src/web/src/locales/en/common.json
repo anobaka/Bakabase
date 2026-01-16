@@ -78,6 +78,8 @@
   "common.label.pattern": "Pattern",
   "common.label.extensions": "Extensions",
   "common.placeholder.separateBySpaceOrNewline": "Separate by space or newline",
+  "common.placeholder.typeHere": "Type here",
+  "common.placeholder.readonly": "Readonly",
   "common.label.total": "Total",
   "common.label.count": "Count",
   "common.label.progress": "Progress",
@@ -230,5 +232,21 @@
   "resourceFilter.filter": "Filter",
   "resourceFilter.filterGroup": "Filter group",
   "resourceFilter.specialFilters": "Special filters",
-  "resourceFilter.recentFilters": "Recent filters"
+  "resourceFilter.recentFilters": "Recent filters",
+
+  "Set rating": "Set rating",
+
+  "Recycle bin": "Recycle bin",
+  "New Folder": "New Folder",
+  "OK": "OK",
+  "Cancel": "Cancel",
+  "Selected": "Selected",
+  "Filter": "Filter",
+  "You can type a path here": "You can type a path here",
+  "Copied {{count}} items": "Copied {{count}} items",
+  "Cut {{count}} items": "Cut {{count}} items",
+  "Moved {{count}} items": "Moved {{count}} items",
+  "Delete": "Delete",
+  "No data": "No data",
+  "Select data": "Select data"
 }

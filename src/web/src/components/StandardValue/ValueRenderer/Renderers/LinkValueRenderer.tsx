@@ -9,6 +9,7 @@ import { useState } from "react";
 
 import ExternalLink from "@/components/ExternalLink";
 import { Button, Input, Popover } from "@/components/bakaui";
+import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 
 type LinkValueRendererProps = ValueRendererProps<LinkValue> & {
   size?: "sm" | "md" | "lg";
@@ -18,15 +19,23 @@ const LinkValueRenderer = ({
   editor,
   variant,
   size,
+  isReadonly: propsIsReadonly,
+  isEditing,
   ...props
 }: LinkValueRendererProps) => {
   const { t } = useTranslation();
   const [editingValue, setEditingValue] = useState<LinkValue>();
 
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
+
+  // Don't show editor if isEditing is explicitly set to false or if readonly
+  const canEdit = !isReadonly && editor && isEditing !== false;
+
   const renderInner = () => {
     if (value?.url) {
       return (
-        <ExternalLink href={value.url}>{value.text ?? value.url}</ExternalLink>
+        <ExternalLink className="px-3" size={size} href={value.url}>{value.text ?? value.url}</ExternalLink>
       );
     } else {
       if (value?.text != undefined && value.text.length > 0) {
@@ -39,7 +48,12 @@ const LinkValueRenderer = ({
 
   const inner = renderInner();
 
-  if (editor) {
+  // Show NotSet when no value and not in editable mode
+  if (!inner && !canEdit) {
+    return <NotSet size={size} />;
+  }
+
+  if (canEdit) {
     return (
       <span className={"flex items-center gap-2"}>
         {inner}

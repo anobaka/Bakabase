@@ -49,19 +49,19 @@ const DeleteItemsWithSameNamesModal = ({
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>("Delete")}(Enter)`,
+          children: `${t<string>("fileExplorer.deleteSameNamesModal.okButton")}(Enter)`,
           color: "danger",
           autoFocus: true,
           disabled: !deletingAllPaths || deletingAllPaths.length == 0,
         },
       }}
       size={"xl"}
-      title={t<string>("Delete items with the same names")}
+      title={t<string>("fileExplorer.deleteSameNamesModal.title")}
       onDestroyed={onDestroyed}
       onOk={async () => {
         // console.log(deletingAllPaths);
         if (!deletingAllPaths || deletingAllPaths.length == 0) {
-          toast.danger("Nothing to delete");
+          toast.danger(t<string>("fileExplorer.deleteSameNamesModal.nothingToDelete"));
 
           return false;
         } else {
@@ -75,13 +75,10 @@ const DeleteItemsWithSameNamesModal = ({
       }}
     >
       <div className={"mb-2"}>
-        {t<string>(
-          "Removing all filesystem entries in {{workingDirectory}} that have the same names as the {{count}} selected filesystem entries",
-          {
-            count: entries.length,
-            workingDirectory,
-          },
-        )}
+        {t<string>("fileExplorer.deleteSameNamesModal.description", {
+          count: entries.length,
+          workingDirectory,
+        })}
       </div>
       {deletingAllPaths ? (
         <>
@@ -106,7 +103,7 @@ const DeleteItemsWithSameNamesModal = ({
       ) : (
         <div className={"flex items-center gap-2"}>
           <Spinner />
-          {t<string>("Discovering files with same name")}
+          {t<string>("fileExplorer.deleteSameNamesModal.discovering")}
         </div>
       )}
     </Modal>

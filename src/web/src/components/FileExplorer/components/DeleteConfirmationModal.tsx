@@ -129,13 +129,13 @@ const DeleteConfirmationModal = ({
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>("Delete")}(Enter)`,
+          children: `${t<string>("fileExplorer.deleteModal.okButton")}(Enter)`,
           color: "danger",
           autoFocus: true,
         },
       }}
       size={"xl"}
-      title={t<string>("Sure to delete?")}
+      title={t<string>("fileExplorer.deleteModal.title")}
       onDestroyed={onDestroyed}
       onOk={async () =>
         await BApi.file.removeFiles({ paths: entries.map((p) => p.path) })

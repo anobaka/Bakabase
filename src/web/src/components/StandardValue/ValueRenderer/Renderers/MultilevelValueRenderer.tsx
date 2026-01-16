@@ -1,22 +1,21 @@
 "use client";
 
 "use strict";
-import type { CSSProperties } from "react";
 import type { ValueRendererProps } from "../models";
 import type { MultilevelData } from "../../models";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import MultilevelValueEditor from "../../ValueEditor/Editors/MultilevelValueEditor";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Chip, Button } from "@/components/bakaui";
-import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import { Button } from "@/components/bakaui";
+import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import NoChoicesAvailable from "@/components/StandardValue/ValueRenderer/Renderers/components/NoChoicesAvailable";
 
-import SelectableChip from "@/components/Chips/SelectableChip";
-import { autoBackgroundColor, buildLogger } from "@/components/utils";
+import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
+import { buildLogger } from "@/components/utils";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
@@ -41,11 +40,11 @@ const MultilevelValueRenderer = ({
   variant,
   getDataSource,
   multiple,
-  defaultEditing,
+  defaultEditing = false,
   valueAttributes,
   size,
   isReadonly: propsIsReadonly,
-  ...props
+  isEditing: controlledIsEditing,
 }: MultilevelValueRendererProps) => {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -53,22 +52,46 @@ const MultilevelValueRenderer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [optionsThreshold] = useFilterOptionsThreshold();
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Internal editing state for uncontrolled mode
+  const [internalIsEditing, setInternalIsEditing] = useState(defaultEditing);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load data source on mount if not readonly
+  // Use controlled value if provided, otherwise use internal state
+  const isEditing = controlledIsEditing ?? internalIsEditing;
+
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
+
+  // Click outside to close editing mode (only for uncontrolled mode)
   useEffect(() => {
-    if (!isReadonly && getDataSource) {
+    if (controlledIsEditing !== undefined || !isEditing) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setInternalIsEditing(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [controlledIsEditing, isEditing]);
+
+  // Load data source when entering editing mode
+  useEffect(() => {
+    if (isEditing && getDataSource && dataSource.length === 0) {
       setIsLoading(true);
       getDataSource().then((data) => {
         setDataSource(data);
         setIsLoading(false);
       });
     }
-  }, [isReadonly, getDataSource]);
+  }, [isEditing, getDataSource]);
 
-  // Note: defaultEditing is no longer used for MultilevelValueRenderer
-  // because inline editing (showing first 30 options) is always enabled when !isReadonly
+  const handleClick = () => {
+    if (controlledIsEditing === undefined && !isEditing && !isReadonly && editor) {
+      setInternalIsEditing(true);
+    }
+  };
 
   const openFullEditor = editor
     ? () => {
@@ -159,17 +182,18 @@ const MultilevelValueRenderer = ({
   const hasMore = hasMoreOptions(flattenedOptions.length, optionsThreshold);
   const remainingCount = getRemainingCount(flattenedOptions.length, visibleOptions.length);
 
-  // Editable mode: show inline options with toggle
-  if (!isReadonly && dataSource.length > 0) {
+  // Editing mode: show inline options with toggle (only when isEditing is explicitly true)
+  if (isEditing === true && dataSource.length > 0) {
     const isNotSet = selectedValues.length === 0;
     return (
-      <div className="flex flex-wrap gap-1 items-center">
+      <div ref={containerRef} className="flex flex-wrap gap-1 items-center">
         {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
         <SelectableChip
           itemKey="__not_set__"
           label={t("common.label.notSet")}
           isSelected={isNotSet}
           size={size}
+          onClick={() => {}}
         />
         {visibleOptions.map((opt) => (
           <SelectableChip
@@ -196,80 +220,63 @@ const MultilevelValueRenderer = ({
     );
   }
 
-  // Loading state for editable mode
-  if (!isReadonly && isLoading) {
+  // Loading state for editing mode
+  if (isEditing === true && isLoading) {
     return <span className="text-default-400">{t("common.state.loading")}</span>;
   }
 
-  // No choices available in editable mode
-  if (!isReadonly && dataSource.length === 0) {
+  // No choices available in editing mode
+  if (isEditing === true && dataSource.length === 0) {
     return <NoChoicesAvailable />;
   }
 
+  // Determine if editing is allowed (for NotSet to show "click to set" vs "not set")
+  const canEdit = !isReadonly && !!editor;
+
   // Readonly mode
   if (value == undefined || value.length == 0) {
-    return <NotSet onClick={openFullEditor} size={size} />;
+    return (
+      <div ref={containerRef} onClick={handleClick} className={canEdit ? "cursor-pointer" : undefined}>
+        <NotSet size={size} onClick={canEdit ? handleClick : undefined} />
+      </div>
+    );
   }
 
-  if (variant == "light") {
-    const label: any[] = [];
-
-    if (value) {
-      for (let i = 0; i < value.length; i++) {
-        const arr = value[i];
-
-        if (arr) {
-          if (i != 0) {
-            label.push(";");
-          }
-          for (let j = 0; j < arr.length; j++) {
-            if (j != 0) {
-              label.push("/");
-            }
-            const style: CSSProperties = {};
-            const color = valueAttributes?.[i]?.[j]?.color;
-
-            if (color) {
-              style.color = color;
-              style.backgroundColor = autoBackgroundColor(color);
-            }
-            label.push(<span key={`${i}-${j}`} style={style}>{arr[j]}</span>);
-          }
-        }
+  // Helper to get first available color from value attributes
+  const getFirstColor = (index: number) => {
+    const attrs = valueAttributes?.[index];
+    if (attrs) {
+      for (const attr of attrs) {
+        if (attr?.color) return attr.color;
       }
     }
+    return undefined;
+  };
 
+  if (variant == "light") {
     return (
-      <span onClick={openFullEditor} className={openFullEditor ? "cursor-pointer" : undefined}>
-        {label}
-      </span>
+      <LightText onClick={handleClick} size={size}>
+        {value?.map((v, i) => (
+          <span key={i}>
+            {i != 0 && ", "}
+            <LightText color={getFirstColor(i)} size={size}>{v.join("/")}</LightText>
+          </span>
+        ))}
+      </LightText>
     );
   } else {
     return (
-      <div className={`flex flex-wrap gap-1 ${openFullEditor ? "cursor-pointer" : ""}`} onClick={openFullEditor}>
-        {value?.map((v, i) => {
-          const label: any[] = [];
-
-          for (let j = 0; j < v.length; j++) {
-            if (j != 0) {
-              label.push("/");
-            }
-            const style: CSSProperties = {};
-            const color = valueAttributes?.[i]?.[j]?.color;
-
-            if (color) {
-              style.color = color;
-              style.backgroundColor = autoBackgroundColor(color);
-            }
-            label.push(<span key={`${i}-${j}`} style={style}>{v[j]}</span>);
-          }
-
-          return (
-            <Chip key={i} radius={"sm"} size={size} variant={"flat"}>
-              {label}
-            </Chip>
-          );
-        })}
+      <div ref={containerRef} onClick={handleClick} className="flex flex-wrap gap-1 cursor-pointer">
+        {value?.map((v, i) => (
+          <SelectableChip
+            key={i}
+            itemKey={`display-${i}`}
+            label={v.join("/")}
+            isSelected
+            color={getFirstColor(i)}
+            size={size}
+          />
+        ))}
       </div>
     );
   }

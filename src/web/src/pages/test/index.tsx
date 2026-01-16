@@ -3,8 +3,9 @@
 import React, { useEffect } from "react";
 import "./index.scss";
 import { useTranslation } from "react-i18next";
-import { ListboxItem } from "@heroui/react";
-import { useCookie } from "react-use";
+import { ListboxItem, Button } from "@heroui/react";
+import { useCookie, useLocalStorage } from "react-use";
+import { ChevronLeftIcon, ChevronRightIcon } from "@heroui/shared-icons";
 
 import PscPage from "./cases/Psc";
 import TourPage from "./cases/Tour";
@@ -25,6 +26,7 @@ import AfterFirstPlayOperationsModalTest from "./cases/AfterFirstPlayOperationsM
 import PathMarksInvalidPathsTest from "./cases/PathMarksInvalidPathsTest";
 import BulkModificationProcessEditorsTest from "./cases/BulkModificationProcessEditors";
 import ComparisonRuleTest from "./cases/ComparisonRuleTest";
+import PropertyValueRendererTestPage from "./cases/PropertyValueRenderer";
 
 import ErrorBoundaryTestPage from "@/pages/test/cases/ErrorBoundaryTest";
 import { Listbox } from "@/components/bakaui";
@@ -42,6 +44,7 @@ import DeprecatedChip from "@/components/Chips/DeprecatedChip";
 import { FileSystemSelectorButton } from "@/components/FileSystemSelector";
 
 const components = {
+  PropertyValueRenderer: <PropertyValueRendererTestPage />,
   ComparisonRule: <ComparisonRuleTest />,
   BulkModificationProcessEditors: <BulkModificationProcessEditorsTest />,
   PathMarksInvalidPaths: <PathMarksInvalidPathsTest />,
@@ -125,11 +128,14 @@ const components = {
   MediaPreviewer: <MediaPreviewerTest />,
   MediaPlayer: <MediaPlayerTest />,
 };
+const SIDEBAR_COLLAPSED_KEY = "test-page-sidebar-collapsed";
+
 const TestPage = () => {
   const { t } = useTranslation();
 
   const { createPortal } = useBakabaseContext();
   const [testingKey, setTestingKey] = useCookie("test-component-key");
+  const [isCollapsed, setIsCollapsed] = useLocalStorage(SIDEBAR_COLLAPSED_KEY, false);
 
   useEffect(() => {
     if (testingKey == null) {
@@ -137,38 +143,44 @@ const TestPage = () => {
     }
   }, []);
 
+  const toggleCollapsed = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
   return (
     <div>
       <div className={"flex items-start gap-2 max-h-full h-full"}>
         <div
           className={
-            "border-small px-1 py-2 rounded-small border-default-200 dark:border-default-100"
+            "border-small rounded-small border-default-200 dark:border-default-100 flex flex-col transition-all duration-200"
           }
+          style={{ minWidth: isCollapsed ? "auto" : "200px" }}
         >
-          <Listbox
-            selectedKeys={testingKey ? [testingKey] : undefined}
-            onAction={(k) => {
-              // const tk: keyof typeof components = k as any;
-              // document.getElementById(tk)?.scrollIntoView();
-              setTestingKey(k as string);
-            }}
+          <Button
+            isIconOnly
+            className="self-end m-1"
+            size="sm"
+            variant="light"
+            onPress={toggleCollapsed}
           >
-            {Object.keys(components).sort().map((c) => {
-              return <ListboxItem key={c}>{c}</ListboxItem>;
-            })}
-          </Listbox>
+            {isCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+          </Button>
+          {!isCollapsed && (
+            <div className="px-1 pb-2">
+              <Listbox
+                selectedKeys={testingKey ? [testingKey] : undefined}
+                onAction={(k) => {
+                  setTestingKey(k as string);
+                }}
+              >
+                {Object.keys(components).sort().map((c) => {
+                  return <ListboxItem key={c}>{c}</ListboxItem>;
+                })}
+              </Listbox>
+            </div>
+          )}
         </div>
         <div className={"flex flex-col gap-2 grow max-h-full h-full overflow-auto"}>
-          {/* {Object.keys(components).map(c => { */}
-          {/*   return ( */}
-          {/*     <> */}
-          {/*       <div id={c} className={''}> */}
-          {/*         {components[c]} */}
-          {/*       </div> */}
-          {/*       <Divider /> */}
-          {/*     </> */}
-          {/*   ); */}
-          {/* })} */}
           <div className={""} id={testingKey}>
             {components[testingKey]}
           </div>

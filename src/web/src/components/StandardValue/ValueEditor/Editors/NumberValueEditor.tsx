@@ -28,8 +28,9 @@ const NumberValueEditor = ({
       hideStepper
       labelPlacement="outside"
       classNames={{
-        input: "text-center",
+        input: "text-left",
       }}
+      className="w-[120px]"
       defaultValue={valueRef.current}
       label={label}
       placeholder={placeholder}

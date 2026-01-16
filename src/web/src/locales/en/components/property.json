@@ -12,5 +12,8 @@
   "property.modal.confirmPropertyChange": "Confirm property change",
   "property.success.propertyUpdatedSuccessfully": "Property updated successfully",
   "property.error.failedToUpdateProperty": "Failed to update property",
-  "property.warning.willOverrideValues": "This will override different values on {{count}} resources"
+  "property.warning.willOverrideValues": "This will override different values on {{count}} resources",
+  "property.attachment.selectFromFileSystem": "Select from file system",
+  "property.attachment.uploadFromLocal": "Upload from local",
+  "property.attachment.uploadHint": "Uploaded files will be saved in the data/attachments folder under the app data path"
 }

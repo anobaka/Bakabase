@@ -7,6 +7,7 @@ public class ResourceDataChangeEventHub : IResourceDataChangeEvent, IResourceDat
 {
     public event Action<ResourceDataChangedEventArgs>? OnResourceDataChanged;
     public event Action<ResourceRemovedEventArgs>? OnResourceRemoved;
+    public event Action<ResourceCoverChangedEventArgs>? OnResourceCoverChanged;
 
     public void PublishResourceChanged(int resourceId)
     {
@@ -42,6 +43,18 @@ public class ResourceDataChangeEventHub : IResourceDataChangeEvent, IResourceDat
         if (ids.Count > 0)
         {
             OnResourceRemoved?.Invoke(new ResourceRemovedEventArgs
+            {
+                ResourceIds = ids
+            });
+        }
+    }
+
+    public void PublishResourceCoverChanged(IEnumerable<int> resourceIds)
+    {
+        var ids = resourceIds as IReadOnlyCollection<int> ?? resourceIds.ToList();
+        if (ids.Count > 0)
+        {
+            OnResourceCoverChanged?.Invoke(new ResourceCoverChangedEventArgs
             {
                 ResourceIds = ids
             });

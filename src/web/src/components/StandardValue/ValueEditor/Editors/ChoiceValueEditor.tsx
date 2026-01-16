@@ -64,6 +64,7 @@ const ChoiceValueEditor = (props: ChoiceValueEditorProps) => {
       <div>
         <Input
           size={"sm"}
+          placeholder={t<string>("common.placeholder.search")}
           startContent={<SearchOutlined className={"text-small"} />}
           value={keyword}
           onValueChange={(v) => {

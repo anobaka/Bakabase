@@ -78,6 +78,8 @@
   "common.label.pattern": "模式",
   "common.label.extensions": "扩展名",
   "common.placeholder.separateBySpaceOrNewline": "用空格或换行分隔",
+  "common.placeholder.typeHere": "在这里输入",
+  "common.placeholder.readonly": "只读",
   "common.label.total": "总计",
   "common.label.count": "数量",
   "common.label.progress": "进度",
@@ -230,5 +232,21 @@
   "resourceFilter.filter": "筛选器",
   "resourceFilter.filterGroup": "筛选器组",
   "resourceFilter.specialFilters": "特殊筛选",
-  "resourceFilter.recentFilters": "最近筛选"
+  "resourceFilter.recentFilters": "最近筛选",
+
+  "Set rating": "设置评分",
+
+  "Recycle bin": "回收站",
+  "New Folder": "新建文件夹",
+  "OK": "确定",
+  "Cancel": "取消",
+  "Selected": "已选择",
+  "Filter": "筛选",
+  "You can type a path here": "可以在此输入路径",
+  "Copied {{count}} items": "已复制 {{count}} 个项目",
+  "Cut {{count}} items": "已剪切 {{count}} 个项目",
+  "Moved {{count}} items": "已移动 {{count}} 个项目",
+  "Delete": "删除",
+  "No data": "无数据",
+  "Select data": "选择数据"
 }

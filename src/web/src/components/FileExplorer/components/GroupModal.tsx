@@ -58,13 +58,13 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>("Group")}(Enter)`,
+          children: `${t<string>("fileExplorer.groupModal.okButton")}(Enter)`,
           autoFocus: true,
           disabled: !preview || preview.length == 0,
         },
       }}
       size={"xl"}
-      title={t<string>(groupInternal ? "Group internal items" : "Group {{count}} items", {
+      title={t<string>(groupInternal ? "fileExplorer.groupModal.titleInternal" : "fileExplorer.groupModal.title", {
         count: entries.length,
       })}
       onDestroyed={onDestroyed}
@@ -94,14 +94,14 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
           renderValue={v => {
             const p = Math.round(similarityThresholdRef.current * 100);
             if (p == 0) {
-              return `${t<string>("All items will be stored in one folder")}`;
+              return `${t<string>("fileExplorer.groupModal.allItemsOneFolder")}`;
             }
             if (p == 100) {
-              return `${t<string>("Items with exactly the same name (excluding file extensions) will be stored in the same folder")}`;
+              return `${t<string>("fileExplorer.groupModal.exactSameNameFolder")}`;
             }
             return `${p}%`;
           }}
-          label={t<string>("Similarity threshold")}
+          label={t<string>("fileExplorer.groupModal.similarityThreshold")}
         />
         {preview ? (
           preview.map((p) => {
@@ -134,9 +134,7 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
                 ) : (
                   <FileSystemEntryChangeExampleItem
                     layer={1}
-                    text={t<string>(
-                      "Nothing to group. Please check if the folder contains any files; subfolders cannot be grouped",
-                    )}
+                    text={t<string>("fileExplorer.groupModal.nothingToGroup")}
                     type={"error"}
                   />
                 )}
@@ -147,7 +145,7 @@ const GroupModal = ({ entries = [], groupInternal, onDestroyed }: Props) => {
         ) : (
           <div className={"flex items-center gap-2"}>
             <Spinner />
-            {t<string>("Calculating changes...")}
+            {t<string>("fileExplorer.groupModal.calculating")}
           </div>
         )}
       </div>

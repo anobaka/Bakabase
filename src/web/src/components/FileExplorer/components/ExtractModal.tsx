@@ -54,12 +54,12 @@ const ExtractModal = ({ entries = [], onDestroyed }: Props) => {
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>("Extract")}(Enter)`,
+          children: `${t<string>("fileExplorer.extractModal.okButton")}(Enter)`,
           autoFocus: true,
         },
       }}
       size={"xl"}
-      title={t<string>("Extract {{count}} directories", {
+      title={t<string>("fileExplorer.extractModal.title", {
         count: entries.length,
       })}
       onDestroyed={onDestroyed}
@@ -94,13 +94,13 @@ const ExtractModal = ({ entries = [], onDestroyed }: Props) => {
                       <FileSystemEntryChangeExampleItem
                         isDirectory={false}
                         layer={2}
-                        text={`${t<string>("Other files")}...`}
+                        text={`${t<string>("fileExplorer.extractModal.otherFiles")}...`}
                         type={"deleted"}
                       />
                       <FileSystemEntryChangeExampleItem
                         isDirectory={false}
                         layer={1}
-                        text={`${t<string>("Other files in {{parent}}", { parent: e.name })}...`}
+                        text={`${t<string>("fileExplorer.extractModal.otherFilesIn", { parent: e.name })}...`}
                         type={"added"}
                       />
                     </React.Fragment>

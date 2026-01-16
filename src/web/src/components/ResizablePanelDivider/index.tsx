@@ -70,12 +70,17 @@ const ResizablePanelDivider: React.FC<Props> = ({
   const startX = useRef(0);
   const startWidth = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const currentDragWidth = useRef(panelWidth);
+  const isAnimating = useRef(false);
+  const visualCollapsed = useRef(collapsed);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     isDragging.current = true;
     startX.current = e.clientX;
     startWidth.current = panelWidth;
+    currentDragWidth.current = panelWidth;
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   }, [panelWidth]);
@@ -89,7 +94,11 @@ const ResizablePanelDivider: React.FC<Props> = ({
     // Clamp to min/max
     newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
 
-    setPanelWidth(newWidth);
+    // Update DOM directly without triggering React re-render
+    currentDragWidth.current = newWidth;
+    if (leftPanelRef.current) {
+      leftPanelRef.current.style.width = `${newWidth}px`;
+    }
   }, [minWidth, maxWidth]);
 
   const handleMouseUp = useCallback(() => {
@@ -99,25 +108,65 @@ const ResizablePanelDivider: React.FC<Props> = ({
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
 
+    const finalWidth = currentDragWidth.current;
+
+    // Update React state only on drag end (triggers re-render once)
+    setPanelWidth(finalWidth);
+
     // Save to localStorage if storageKey is provided
     if (storageKey) {
-      localStorage.setItem(storageKey, panelWidth.toString());
+      localStorage.setItem(storageKey, finalWidth.toString());
     }
 
-    onWidthChange?.(panelWidth);
-  }, [panelWidth, onWidthChange, storageKey]);
+    onWidthChange?.(finalWidth);
+  }, [onWidthChange, storageKey]);
 
   const toggleCollapse = useCallback(() => {
-    const newCollapsed = !collapsed;
-    setCollapsed(newCollapsed);
+    if (isAnimating.current) return;
+
+    const newCollapsed = !visualCollapsed.current;
+    visualCollapsed.current = newCollapsed;
+    isAnimating.current = true;
 
     // Save to localStorage if collapsedStorageKey is provided
     if (collapsedStorageKey) {
       localStorage.setItem(collapsedStorageKey, newCollapsed.toString());
     }
 
+    if (newCollapsed) {
+      // Collapsing: animate first, update state after animation ends
+      if (leftPanelRef.current) {
+        leftPanelRef.current.style.width = "0px";
+      }
+    } else {
+      // Expanding: update state first to render content, then animate
+      setCollapsed(false);
+      // Use requestAnimationFrame to ensure content is rendered before animation starts
+      requestAnimationFrame(() => {
+        if (leftPanelRef.current) {
+          // Force a reflow to ensure the width:0 is applied before transition
+          leftPanelRef.current.offsetHeight;
+          leftPanelRef.current.style.width = `${panelWidth}px`;
+        }
+      });
+    }
+  }, [panelWidth, collapsedStorageKey]);
+
+  const handleTransitionEnd = useCallback((e: React.TransitionEvent) => {
+    // Only handle width transitions on the left panel
+    if (e.propertyName !== "width" || !isAnimating.current) return;
+
+    isAnimating.current = false;
+    const newCollapsed = visualCollapsed.current;
+
+    if (newCollapsed) {
+      // Collapsing: update state after animation completes
+      setCollapsed(true);
+    }
+    // For expanding, state was already updated before animation started
+
     onCollapsedChange?.(newCollapsed);
-  }, [collapsed, collapsedStorageKey, onCollapsedChange]);
+  }, [onCollapsedChange]);
 
   useEffect(() => {
     document.addEventListener("mousemove", handleMouseMove);
@@ -133,8 +182,10 @@ const ResizablePanelDivider: React.FC<Props> = ({
     <div ref={containerRef} className={`flex flex-row h-full ${className}`}>
       {/* Left Panel */}
       <div
-        className={`flex-shrink-0 h-full overflow-hidden transition-all duration-300 ${collapsed ? "w-0" : ""}`}
+        ref={leftPanelRef}
+        className="flex-shrink-0 h-full overflow-hidden transition-all duration-300"
         style={{ width: collapsed ? 0 : panelWidth }}
+        onTransitionEnd={handleTransitionEnd}
       >
         {!collapsed && leftPanel}
       </div>

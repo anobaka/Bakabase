@@ -23,7 +23,8 @@ import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { useResourceSearch } from "@/hooks/useResourceSearch";
 
-const PageSize = 50;
+const BasePageSize = 50;
+const getPageSize = (cols: number) => cols > 0 ? Math.ceil(BasePageSize / cols) * cols : BasePageSize;
 
 interface IPageable {
   page: number;
@@ -242,15 +243,33 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
   // Update pageable when search response changes
   useEffect(() => {
     if (searchResponse) {
-      setPageable({
-        page: searchResponse.pageIndex,
+      setPageable((prev) => ({
+        // Only update page on initial load (when prev is undefined) or when it's a replace search
+        page: prev?.page ?? searchResponse.pageIndex,
         pageSize: searchResponse.pageSize,
         totalCount: searchResponse.totalCount,
-      });
-      // Also update searchForm with the actual page index
-      setSearchForm((prev) => prev ? { ...prev, page: searchResponse.pageIndex } : prev);
+      }));
     }
   }, [searchResponse]);
+
+  // Auto-load more when content doesn't fill the viewport
+  useEffect(() => {
+    const pageSize = pageable?.pageSize;
+    if (pageable && pageSize && props.activated && !searching && resources.length > 0) {
+      const timer = setTimeout(() => {
+        const gridElement = pageContainerRef.current?.querySelector('.ReactVirtualized__Grid');
+        if (gridElement && gridElement.scrollHeight <= gridElement.clientHeight) {
+          const totalPage = Math.ceil(pageable.totalCount / pageSize);
+          // Calculate loaded pages from resources.length
+          const loadedPages = Math.ceil(resources.length / pageSize);
+          if (loadedPages < totalPage) {
+            search({ page: loadedPages + 1 }, 'append', false, false);
+          }
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [pageable, props.activated, searching, resources.length]);
 
   // Sync ref during render phase to ensure renderCell gets the latest value
   if (selectedIdsRef.current !== selectedIds) {
@@ -282,7 +301,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       const newForm = {
         ...baseForm,
         ...partialForm,
-        pageSize: PageSize,
+        pageSize: getPageSize(columnCount),
       } as SearchForm;
 
       setSearchForm(newForm);
@@ -294,6 +313,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
 
       if (renderMode == "replace") {
         lastSelectedIndexRef.current = null;
+        // Reset pageable so page will be set from searchResponse on next load
+        setPageable(undefined);
       }
 
       // Use the progressive search hook for two-phase loading
@@ -430,18 +451,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     <div className="flex flex-col h-full overflow-hidden">
         {columnCount > 0 && resources.length > 0 && (
           <>
-            {pageable && (
+            {pageable && pageable.pageSize != undefined && Math.ceil(pageable.totalCount / pageable.pageSize) > 1 && (
               <div className={"flex items-center justify-end py-2"}>
                 <Pagination
                   showControls
                   boundaries={3}
                   page={pageable.page}
                   size={"sm"}
-                  total={
-                    pageable.pageSize == undefined
-                      ? 0
-                      : Math.ceil(pageable.totalCount / pageable.pageSize)
-                  }
+                  total={Math.ceil(pageable.totalCount / pageable.pageSize)}
                   onChange={(p) => {
                     search(
                       {
@@ -465,7 +482,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 return;
               }
               if (e.scrollHeight < e.scrollTop + e.clientHeight + 200 && !searchingRef.current) {
-                const totalPage = Math.ceil((pageable?.totalCount ?? 0) / PageSize);
+                const totalPage = Math.ceil((pageable?.totalCount ?? 0) / (pageable?.pageSize ?? BasePageSize));
 
                 if (
                   searchFormRef.current?.page != undefined &&
@@ -505,7 +522,7 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
                 }
                 const centerResourceId = parseInt(closest.getAttribute("data-id"), 10);
                 const pageOffset = Math.floor(
-                  resources.findIndex((r) => r.id == centerResourceId) / PageSize,
+                  resources.findIndex((r) => r.id == centerResourceId) / (searchFormRef.current?.pageSize ?? BasePageSize),
                 );
                 const currentPage = pageOffset + initStartPageRef.current;
 

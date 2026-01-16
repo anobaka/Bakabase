@@ -9,8 +9,9 @@ import { useUpdateEffect } from "react-use";
 import NumberValueEditor from "../../ValueEditor/Editors/NumberValueEditor";
 
 import { Rating } from "@/components/bakaui";
-import NotSet from "@/components/StandardValue/ValueRenderer/Renderers/components/NotSet";
+import NotSet, { LightText } from "@/components/StandardValue/ValueRenderer/Renderers/components/LightText";
 import { buildLogger } from "@/components/utils";
+
 type RatingValueRendererProps = ValueRendererProps<number, number> & {
   allowHalf?: boolean;
   size?: "sm" | "md" | "lg";
@@ -18,92 +19,88 @@ type RatingValueRendererProps = ValueRendererProps<number, number> & {
 
 const log = buildLogger("RatingValueRenderer");
 const RatingValueRenderer = (props: RatingValueRendererProps) => {
-  const { value: propsValue, editor, variant, allowHalf = true, size, isEditing, isReadonly: propsIsReadonly } = props;
+  const { value: propsValue, editor, variant, allowHalf = true, size, isEditing, isReadonly: propsIsReadonly, defaultEditing } = props;
   const [value, setValue] = useState(propsValue);
   const { t } = useTranslation();
-  const [editing, setEditing] = useState(false);
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
 
-  // log(props);
+  // For light variant, track editing state for NumberValueEditor
+  const [lightEditing, setLightEditing] = useState(defaultEditing && !isReadonly && !!editor && variant === "light");
 
   useUpdateEffect(() => {
     setValue(propsValue);
   }, [propsValue]);
 
-  const startEditing = !isReadonly && editor ? () => setEditing(true) : undefined;
-  const changeValue = (v: number | undefined) => {
+  // Handle value change for Rating component
+  const handleRatingChange = (r: number | undefined) => {
+    if (isReadonly || !editor) return;
+    setValue(r);
+    editor.onValueChange?.(r, r);
+  };
+
+  // For light variant only: editing mode controls
+  const startLightEditing = !isReadonly && editor && isEditing !== false && variant === "light" ? () => setLightEditing(true) : undefined;
+  const completeLightEditing = (v: number | undefined) => {
     setValue(v);
-    setEditing(false);
-    // console.log('changeValue', v);
+    setLightEditing(false);
     editor?.onValueChange?.(v, v);
   };
 
-  // Direct editing mode: depends on variant
-  if (isEditing && !isReadonly && editor) {
-    if (variant === "light") {
-      // Light variant: show number input
+  // Light variant handling
+  if (variant === "light") {
+    // Direct editing mode (controlled by isEditing prop)
+    if (isEditing && !isReadonly && editor) {
       return (
         <NumberValueEditor
           placeholder={t<string>("Set rating")}
           value={value}
           size={size}
-          onValueChange={(dv, bv) => {
+          onValueChange={(dv) => {
             setValue(dv);
             editor.onValueChange?.(dv, dv);
           }}
         />
       );
-    } else {
-      // Default variant: show editable stars
+    }
+
+    // Internal editing mode
+    if (lightEditing) {
       return (
-        <Rating
-          allowHalf={allowHalf}
+        <NumberValueEditor
+          placeholder={t<string>("Set rating")}
           value={value}
-          onChange={(r) => {
-            setValue(r);
-            editor.onValueChange?.(r, r);
-          }}
+          size={size}
+          onValueChange={(dv) => completeLightEditing(dv)}
         />
       );
     }
-  }
 
-  if (editing) {
-    return (
-      <NumberValueEditor
-        placeholder={t<string>("Set rating")}
-        value={value}
-        size={size}
-        onValueChange={(dv, bv) => changeValue(dv)}
-      />
-    );
-  } else {
-    if (variant == "light") {
-      if (value != undefined && value > 0) {
-        return <span onClick={startEditing} className={startEditing ? "cursor-pointer" : undefined}>{value}</span>;
-      } else {
-        return <NotSet onClick={startEditing} />;
-      }
-    } else {
+    // Display mode
+    if (value != undefined && value > 0) {
       return (
-        <div className={"flex gap-1"}>
-          <Rating
-            allowHalf={allowHalf}
-            value={value}
-            onChange={(r) => {
-              if (value == undefined) {
-                setValue(r);
-              }
-              setEditing(true);
-            }}
-          />
+        <LightText size={size} onClick={startLightEditing}>
           {value}
-        </div>
+        </LightText>
       );
+    } else {
+      return <NotSet size={size} onClick={startLightEditing} />;
     }
   }
+
+  // Non-light variants: Rating component is always interactive (if not readonly)
+  const canEdit = !isReadonly && editor;
+
+  return (
+    <Rating
+      allowHalf={allowHalf}
+      value={value}
+      size={size}
+      disabled={!canEdit}
+      onChange={canEdit ? handleRatingChange : undefined}
+    />
+  );
 };
 
 RatingValueRenderer.displayName = "RatingValueRenderer";

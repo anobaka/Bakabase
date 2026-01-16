@@ -6,7 +6,6 @@ import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
 import type { IProperty, ChoiceOption, TagOption } from "@/components/Property/models";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
-import type { StandardValueOf } from "@/components/Property/PropertySystem";
 
 import { useTranslation } from "react-i18next";
 import React from "react";
@@ -75,8 +74,8 @@ const PropertyValueRenderer = (props: Props) => {
   } = props;
   const { t } = useTranslation();
 
-  // If isReadonly is not provided, default to !onValueChange for backward compatibility
-  const isReadonly = isReadonlyProp ?? !onValueChange;
+  // Default isReadonly to false
+  const isReadonly = isReadonlyProp ?? false;
 
   // Use PropertySystem for type-safe value type access
   const dbValueType = getDbValueType(property.type);
@@ -88,19 +87,18 @@ const PropertyValueRenderer = (props: Props) => {
   log(props, bv, dv);
 
   // Use isReadonly to determine if editing is allowed
-  const simpleOnValueChange:
-    | ((dbValue?: any, bizValue?: any) => any)
-    | undefined = !isReadonly && onValueChange
-    ? (dv, bv) => {
-        const sdv = serializeStandardValue(dv ?? null, dbValueType);
-        const sbv = serializeStandardValue(bv ?? null, bizValueType);
+  const simpleOnValueChange: ((dbValue?: any, bizValue?: any) => any) | undefined =
+    !isReadonly && onValueChange
+      ? (dv, bv) => {
+          const sdv = serializeStandardValue(dv ?? null, dbValueType);
+          const sbv = serializeStandardValue(bv ?? null, bizValueType);
 
-        log("OnValueChange:Serialization:dv", dv, sdv);
-        log("OnValueChange:Serialization:bv", bv, sbv);
+          log("OnValueChange:Serialization:dv", dv, sdv);
+          log("OnValueChange:Serialization:bv", bv, sbv);
 
-        return onValueChange(sdv, sbv);
-      }
-    : undefined;
+          return onValueChange(sdv, sbv);
+        }
+      : undefined;
 
   const simpleEditor = simpleOnValueChange
     ? {
@@ -113,14 +111,14 @@ const PropertyValueRenderer = (props: Props) => {
   if (property.pool === PropertyPool.Internal && property.id === InternalProperty.ParentResource) {
     return (
       <ParentResourceValueRenderer
-        property={property}
         bizValue={bizValue}
         dbValue={dbValue}
         defaultEditing={defaultEditing}
+        isReadonly={isReadonly}
+        property={property}
         size={size}
         variant={variant}
         onValueChange={onValueChange}
-        isReadonly={isReadonly}
       />
     );
   }
@@ -134,11 +132,11 @@ const PropertyValueRenderer = (props: Props) => {
         <StringValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -153,11 +151,11 @@ const PropertyValueRenderer = (props: Props) => {
           multiline
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -173,10 +171,7 @@ const PropertyValueRenderer = (props: Props) => {
                   ? serializeStandardValue(dbValue[0], StandardValueType.String)
                   : undefined,
                 bizValue && bizValue.length > 0
-                  ? serializeStandardValue(
-                      bizValue[0],
-                      StandardValueType.String,
-                    )
+                  ? serializeStandardValue(bizValue[0], StandardValueType.String)
                   : undefined,
               );
             };
@@ -192,8 +187,7 @@ const PropertyValueRenderer = (props: Props) => {
 
       const typedBv =
         (bv as string) ??
-        (property.options?.choices ?? []).find((x: ChoiceOption) => x.value == typedDv)
-          ?.label;
+        (property.options?.choices ?? []).find((x: ChoiceOption) => x.value == typedDv)?.label;
       const vas: ChoiceOption[] = _.sortBy(
         property.options?.choices?.filter((o: ChoiceOption) => dv?.includes(o.value)) ?? [],
         (x: ChoiceOption) => x.value == typedDv,
@@ -206,11 +200,12 @@ const PropertyValueRenderer = (props: Props) => {
           getDataSource={async () => {
             return property.options?.choices ?? [];
           }}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv == undefined ? undefined : [typedBv]}
           valueAttributes={vas}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
@@ -234,11 +229,12 @@ const PropertyValueRenderer = (props: Props) => {
           getDataSource={async () => {
             return property.options?.choices ?? [];
           }}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           valueAttributes={vas}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
@@ -251,11 +247,11 @@ const PropertyValueRenderer = (props: Props) => {
           as={"number"}
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -268,12 +264,12 @@ const PropertyValueRenderer = (props: Props) => {
           as={"progress"}
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           suffix={"%"}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -285,11 +281,11 @@ const PropertyValueRenderer = (props: Props) => {
         <RatingValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -301,10 +297,11 @@ const PropertyValueRenderer = (props: Props) => {
         <BooleanValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
@@ -316,10 +313,11 @@ const PropertyValueRenderer = (props: Props) => {
         <LinkValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
@@ -331,10 +329,11 @@ const PropertyValueRenderer = (props: Props) => {
         <AttachmentValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
@@ -348,11 +347,11 @@ const PropertyValueRenderer = (props: Props) => {
           as={property.type == PropertyType.DateTime ? "datetime" : "date"}
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -364,11 +363,11 @@ const PropertyValueRenderer = (props: Props) => {
         <TimeValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
-          isEditing={isEditing}
         />
       );
     }
@@ -380,22 +379,20 @@ const PropertyValueRenderer = (props: Props) => {
         <FormulaValueRenderer
           defaultEditing={defaultEditing}
           editor={simpleEditor}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
     case PropertyType.Multilevel: {
       const typedDv = dv as string[];
       const tbv = typedDv
-        ?.map((v) =>
-          findNodeChainInMultilevelData(property?.options?.data || [], v),
-        )
+        ?.map((v) => findNodeChainInMultilevelData(property?.options?.data || [], v))
         .filter((x) => x != undefined);
-      const typedBv =
-        (bv as string[][]) ?? tbv?.map((x) => x!.map((y) => y.label));
+      const typedBv = (bv as string[][]) ?? tbv?.map((x) => x!.map((y) => y.label));
       const vas = tbv?.map((v) => v!.map((x) => ({ color: x.color })));
 
       // log(tbv, bv, vas);
@@ -407,12 +404,13 @@ const PropertyValueRenderer = (props: Props) => {
           getDataSource={async () => {
             return property?.options?.data || [];
           }}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
           multiple={property?.options?.valueIsSingleton ?? true}
+          size={size}
           value={typedBv}
           valueAttributes={vas}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }
@@ -440,11 +438,12 @@ const PropertyValueRenderer = (props: Props) => {
           getDataSource={async () => {
             return property?.options?.tags || [];
           }}
+          isEditing={isEditing}
+          isReadonly={isReadonly}
+          size={size}
           value={typedBv}
           valueAttributes={vas}
           variant={variant}
-          size={size}
-          isReadonly={isReadonly}
         />
       );
     }

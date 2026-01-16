@@ -21,19 +21,19 @@ const CreateDirectoryModal = ({ parentPath, onDestroyed }: Props) => {
       footer={{
         actions: ["ok", "cancel"],
         okProps: {
-          children: `${t<string>("Create")}(Enter)`,
+          children: `${t<string>("fileExplorer.createDirectoryModal.okButton")}(Enter)`,
           autoFocus: true,
         },
       }}
       size={"sm"}
-      title={t<string>("Create new folder")}
+      title={t<string>("fileExplorer.createDirectoryModal.title")}
       onDestroyed={onDestroyed}
       onOk={async () => {
         await BApi.file.createDirectory({ parent: parentPath });
       }}
     >
       <div className="text-sm">
-        {t<string>("Create a new folder in")}: <span className="font-medium">{parentPath}</span>
+        {t<string>("fileExplorer.createDirectoryModal.description")}: <span className="font-medium">{parentPath}</span>
       </div>
     </Modal>
   );

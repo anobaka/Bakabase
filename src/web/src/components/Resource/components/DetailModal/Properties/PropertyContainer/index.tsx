@@ -106,9 +106,9 @@ const PropertyContainer = (props: PropertyContainerProps) => {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-0.5">
       {!hidePropertyName && (
-        <div className={`flex ${classNames?.name}`}>
+        <div className={classNames?.name}>
           <BriefProperty fields={["pool", "name"]} property={property} showPoolChip={false} />
         </div>
       )}
@@ -121,7 +121,7 @@ const PropertyContainer = (props: PropertyContainerProps) => {
           onValueChange={onValueChange}
         />
       </div>
-    </>
+    </div>
   );
 };
 

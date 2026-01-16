@@ -9,7 +9,7 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
 import { Button, Chip, Modal } from "@/components/bakaui";
-import { buildLogger, splitPathIntoSegments, standardizePath } from "@/components/utils";
+import { splitPathIntoSegments, standardizePath } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
 import { useUiOptionsStore } from "@/stores/options";
@@ -100,7 +100,6 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 ) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
-  const log = buildLogger(`PlayControl:${resource.id}|${resource.path}`);
   const uiOptionsStore = useUiOptionsStore();
   const resourceUiOptions = uiOptionsStore.data?.resource;
 
@@ -206,12 +205,15 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       ) {
         play(portalCtx.files[0]!);
       } else {
-        if (dirs) {
-          setModalVisible(true);
+        // Compute dirs synchronously to avoid race condition with useEffect
+        if (!resource.isFile && portalCtx.files.length > 0) {
+          const computedDirs = splitIntoDirs(portalCtx.files, resource.path);
+          setDirs(computedDirs);
         }
+        setModalVisible(true);
       }
     }
-  }, [status, portalCtx, dirs, resourceUiOptions?.autoSelectFirstPlayableFile]);
+  }, [status, portalCtx, resource.isFile, resource.path, resourceUiOptions?.autoSelectFirstPlayableFile]);
 
   return (
     <>
@@ -225,7 +227,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       <Modal
         footer={false}
         size={"lg"}
-        title={t<string>("Please select a file to play")}
+        title={t<string>("resource.playControl.modal.selectFileTitle")}
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
@@ -284,7 +286,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                               setDirs([...dirs]);
                             }}
                           >
-                            {t<string>("Show all {{count}} files", {
+                            {t<string>("resource.playControl.modal.showAllFiles", {
                               count: g.files.length,
                             })}
                           </Button>
@@ -312,13 +314,11 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
                 });
                 setModalVisible(false);
                 toast.success(
-                  t<string>(
-                    "Auto-select first playable file has been enabled. You can change this in the resource page settings.",
-                  ),
+                  t<string>("resource.playControl.toast.autoSelectEnabled"),
                 );
               }}
             >
-              {t<string>("Auto-select first file if multiple playable files exist")}
+              {t<string>("resource.playControl.modal.autoSelectFirstFile")}
             </Button>
           </div>
         )}

@@ -3,19 +3,19 @@
 "use strict";
 import type { ValueRendererProps } from "../models";
 
-import { type CSSProperties, useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import ChoiceValueEditor from "../../ValueEditor/Editors/ChoiceValueEditor";
 
-import NotSet from "./components/NotSet";
+import NotSet, { LightText } from "./components/LightText";
 import NoChoicesAvailable from "./components/NoChoicesAvailable";
 
-import SelectableChip from "@/components/Chips/SelectableChip";
+import SelectableChip from "@/components/StandardValue/ValueRenderer/Renderers/components/SelectableChip";
 
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Chip, Button } from "@/components/bakaui";
-import { autoBackgroundColor, buildLogger } from "@/components/utils";
+import { Button } from "@/components/bakaui";
+import { buildLogger } from "@/components/utils";
 import { buildVisibleOptions, hasMoreOptions, getRemainingCount } from "../utils";
 import { useFilterOptionsThreshold } from "@/hooks/useFilterOptionsThreshold";
 
@@ -30,7 +30,7 @@ type ChoiceValueRendererProps = ValueRendererProps<string[]> & {
 
 const log = buildLogger("ChoiceValueRenderer");
 const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
-  const { value, editor, variant, getDataSource, multiple, valueAttributes, size, isReadonly: propsIsReadonly } =
+  const { value, editor, variant, getDataSource, multiple, valueAttributes, size, isReadonly: propsIsReadonly, isEditing: controlledIsEditing, defaultEditing = false } =
     props;
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
@@ -38,21 +38,48 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [optionsThreshold] = useFilterOptionsThreshold();
 
-  // Default isReadonly to true if no editor is provided
-  const isReadonly = propsIsReadonly ?? !editor;
+  // Internal editing state for uncontrolled mode
+  const [internalIsEditing, setInternalIsEditing] = useState(defaultEditing);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Use controlled value if provided, otherwise use internal state
+  const isEditing = controlledIsEditing ?? internalIsEditing;
+
+  // Default isReadonly to false
+  const isReadonly = propsIsReadonly ?? false;
 
   log(props);
 
-  // Load data source on mount if not readonly
+  // Click outside to close editing mode (only for uncontrolled mode)
   useEffect(() => {
-    if (!isReadonly && getDataSource) {
+    if (controlledIsEditing !== undefined || !isEditing) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setInternalIsEditing(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [controlledIsEditing, isEditing]);
+
+  // Load data source when entering editing mode
+  useEffect(() => {
+    if (isEditing && getDataSource && dataSource.length === 0) {
       setIsLoading(true);
       getDataSource().then((data) => {
         setDataSource(data);
         setIsLoading(false);
       });
     }
-  }, [isReadonly, getDataSource]);
+  }, [isEditing, getDataSource]);
+
+  const handleClick = () => {
+    if (controlledIsEditing === undefined && !isEditing && !isReadonly && editor) {
+      setInternalIsEditing(true);
+    }
+  };
 
   const openFullEditor = editor
     ? () => {
@@ -103,11 +130,11 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
   const hasMore = hasMoreOptions(dataSource.length, optionsThreshold);
   const remainingCount = getRemainingCount(dataSource.length, visibleOptions.length);
 
-  // Editable mode: show inline options with toggle
-  if (!isReadonly && dataSource.length > 0) {
+  // Editing mode: show inline options with toggle (only when isEditing is explicitly true)
+  if (isEditing === true && dataSource.length > 0) {
     const isNotSet = selectedValues.length === 0;
     return (
-      <div className="flex flex-wrap gap-1 items-center">
+      <div ref={containerRef} className="flex flex-wrap gap-1 items-center">
         {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
         <SelectableChip
           itemKey="__not_set__"
@@ -140,66 +167,54 @@ const ChoiceValueRenderer = (props: ChoiceValueRendererProps) => {
     );
   }
 
-  // Loading state for editable mode
-  if (!isReadonly && isLoading) {
+  // Loading state for editing mode
+  if (isEditing === true && isLoading) {
     return <span className="text-default-400">{t("common.state.loading")}</span>;
   }
 
-  // No choices available in editable mode
-  if (!isReadonly && dataSource.length === 0) {
+  // No choices available in editing mode
+  if (isEditing === true && dataSource.length === 0) {
     return <NoChoicesAvailable />;
   }
 
   // Readonly mode: display current values
   const validValues = value?.filter((v) => v != undefined) || [];
 
+  // Determine if editing is allowed (for NotSet to show "click to set" vs "not set")
+  const canEdit = !isReadonly && !!editor;
+
   if (validValues.length == 0) {
-    return <NotSet onClick={openFullEditor} />;
+    return (
+      <div ref={containerRef} onClick={handleClick} className={canEdit ? "cursor-pointer" : undefined}>
+        <NotSet size={size} onClick={canEdit ? handleClick : undefined} />
+      </div>
+    );
   }
 
   if (variant == "light") {
     return (
-      <span onClick={openFullEditor} className={openFullEditor ? "cursor-pointer" : undefined}>
-        {value?.map((v, i) => {
-          const styles: CSSProperties = {};
-
-          styles.color = valueAttributes?.[i]?.color;
-          if (styles.color) {
-            styles.backgroundColor = autoBackgroundColor(styles.color);
-          }
-
-          return (
-            <span key={i}>
-              {i != 0 && ","}
-              <span style={styles}>{v}</span>
-            </span>
-          );
-        })}
-      </span>
+      <LightText onClick={handleClick} size={size}>
+        {value?.map((v, i) => (
+          <span key={i}>
+            {i != 0 && ", "}
+            <LightText color={valueAttributes?.[i]?.color} size={size}>{v}</LightText>
+          </span>
+        ))}
+      </LightText>
     );
   } else {
     return (
-      <div className={`flex flex-wrap gap-1 ${openFullEditor ? "cursor-pointer" : ""}`} onClick={openFullEditor}>
-        {value?.map((v, i) => {
-          const styles: CSSProperties = {};
-
-          styles.color = valueAttributes?.[i]?.color;
-          if (styles.color) {
-            styles.backgroundColor = autoBackgroundColor(styles.color);
-          }
-
-          return (
-            <Chip
-              key={i}
-              className={"h-auto whitespace-break-spaces py-1"}
-              radius={"sm"}
-              size={size}
-              style={styles}
-            >
-              {v}
-            </Chip>
-          );
-        })}
+      <div ref={containerRef} onClick={handleClick} className="flex flex-wrap gap-1 cursor-pointer">
+        {value?.map((v, i) => (
+          <SelectableChip
+            key={i}
+            itemKey={`display-${i}`}
+            label={v}
+            isSelected
+            color={valueAttributes?.[i]?.color}
+            size={size}
+          />
+        ))}
       </div>
     );
   }

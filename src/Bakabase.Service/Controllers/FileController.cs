@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Tasks;
+using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Services;
 using Bakabase.Infrastructures.Components.App;
@@ -68,13 +69,15 @@ namespace Bakabase.Service.Controllers
         private readonly HardwareAccelerationService _hardwareAccelerationService;
 
         private readonly ISystemPlayer _systemPlayer;
+        private readonly IFileManager _fileManager;
+        private readonly AppService _appService;
 
         public FileController(ISpecialTextService specialTextService, IWebHostEnvironment env,
             CompressedFileService compressedFileService, IBOptionsManager<FileSystemOptions> fsOptionsManager,
             IwFsWatcher fileProcessorWatcher, PasswordService passwordService, ILogger<FileController> logger,
             BakabaseLocalizer localizer, BTaskManager taskManager, IGuiAdapter guiAdapter,
             FfMpegService ffMpegService, HardwareAccelerationService hardwareAccelerationService,
-            ISystemPlayer systemPlayer)
+            ISystemPlayer systemPlayer, IFileManager fileManager, AppService appService)
         {
             _specialTextService = specialTextService;
             _env = env;
@@ -89,6 +92,8 @@ namespace Bakabase.Service.Controllers
             _ffMpegService = ffMpegService;
             _hardwareAccelerationService = hardwareAccelerationService;
             _systemPlayer = systemPlayer;
+            _fileManager = fileManager;
+            _appService = appService;
         }
 
         [HttpPost("decompression/detect")]
@@ -1743,6 +1748,29 @@ namespace Bakabase.Service.Controllers
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
             var fileGroup = files.GroupBy(Path.GetExtension).OrderByDescending(x => x.Count()).Select(a => a.First());
             return new ListResponse<string>(fileGroup);
+        }
+
+        [HttpPost("upload")]
+        [SwaggerOperation(OperationId = "UploadFile")]
+        [Consumes("multipart/form-data")]
+        public async Task<SingletonResponse<string>> UploadFile([FromForm] IFormFile file)
+        {
+            if (file.Length == 0)
+            {
+                return SingletonResponseBuilder<string>.BuildBadRequest("File is empty");
+            }
+
+            var originalFilename = Path.GetFileName(file.FileName);
+            var safeFilename = $"{Guid.NewGuid():N}_{originalFilename}";
+            var rootPath = _appService.RequestAppDataDirectory("data", "attachments");
+            var relativePath = Path.Combine(rootPath, safeFilename);
+
+            await using var stream = file.OpenReadStream();
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms, HttpContext.RequestAborted);
+
+            var savedPath = await _fileManager.Save(relativePath, ms.ToArray(), HttpContext.RequestAborted);
+            return new SingletonResponse<string>(savedPath);
         }
     }
 }

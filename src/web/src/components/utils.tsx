@@ -938,7 +938,7 @@ function adjustHSLAWithAlpha(hsla: string, alphaAdjustment: number): string {
 }
 
 export function autoBackgroundColor(color: string): string {
-  return adjustAlpha(color, 0.1);
+  return adjustAlpha(color, 0.2);
 }
 
 export function generateNextWithPrefix(

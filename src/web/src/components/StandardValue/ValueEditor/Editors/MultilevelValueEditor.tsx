@@ -6,8 +6,8 @@ import type { MultilevelData } from "@/components/StandardValue/models";
 import type { DestroyableProps } from "@/components/bakaui/types";
 
 import { useTranslation } from "react-i18next";
-import React, { useCallback, useEffect, useState } from "react";
-import { DoubleRightOutlined, SearchOutlined } from "@ant-design/icons";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { RightOutlined, SearchOutlined } from "@ant-design/icons";
 import { useUpdateEffect } from "react-use";
 
 import { Button, Input, Modal } from "@/components/bakaui";
@@ -56,6 +56,8 @@ const MultilevelValueEditor = <V = string,>(
   const [dataSource, setDataSource] = useState<MultilevelData<V>[]>([]);
   const [keyword, setKeyword] = useState("");
   const [value, setValue] = useState<V[]>(propsValue ?? []);
+  // Track expanded path: array of values representing expanded items at each level
+  const [expandedPath, setExpandedPath] = useState<V[]>([]);
 
   useEffect(() => {
     loadData();
@@ -77,84 +79,95 @@ const MultilevelValueEditor = <V = string,>(
     }
   };
 
-  const renderTreeNodes = useCallback(
-    (data: MultilevelData<V>[]) => {
-      const leaves = data.filter((d) => !d.children || d.children.length == 0);
-      const branches = data.filter((d) => d.children && d.children.length > 0);
+  // Get children at each level based on expanded path
+  const getColumnsData = useCallback(() => {
+    const columns: { items: MultilevelData<V>[]; depth: number }[] = [];
+    let currentItems = filterMultilevelData(dataSource, keyword);
+    columns.push({ items: currentItems, depth: 0 });
 
-      return (
-        <div
-          className={"flex flex-col gap-1 rounded p-2 grow"}
-          style={{ background: "var(--bakaui-overlap-background)" }}
-        >
-          {leaves.length > 0 && (
-            <div className={"flex flex-wrap gap-1"}>
-              {leaves.map(({ value: nodeValue, color, label }, idx) => {
-                const isSelected = value.includes(nodeValue);
-                const style: CSSProperties = {};
+    for (let i = 0; i < expandedPath.length; i++) {
+      const expandedValue = expandedPath[i];
+      const expandedItem = currentItems.find((item) => item.value === expandedValue);
+      if (expandedItem?.children && expandedItem.children.length > 0) {
+        currentItems = filterMultilevelData(expandedItem.children, keyword);
+        columns.push({ items: currentItems, depth: i + 1 });
+      } else {
+        break;
+      }
+    }
 
-                if (color) {
-                  style.color = color;
-                  if (!isSelected) {
-                    style.backgroundColor = autoBackgroundColor(color);
-                  }
-                }
+    return columns;
+  }, [dataSource, expandedPath, keyword]);
 
-                return (
-                  <Button
-                    key={idx}
-                    color={isSelected ? "primary" : "default"}
-                    size={"sm"}
-                    style={style}
-                    onPress={() => {
-                      if (multiple) {
-                        if (isSelected) {
-                          setValue(value.filter((v) => v !== nodeValue));
-                        } else {
-                          setValue([...value, nodeValue]);
-                        }
-                      } else {
-                        setValue([nodeValue]);
-                      }
-                    }}
-                  >
-                    {label}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-          {branches.length > 0 && (
-            <div
-              className={"grid items-center gap-1 grow"}
-              style={{ gridTemplateColumns: "auto auto minmax(0, 1fr)" }}
+  const columns = getColumnsData();
+
+  const handleItemClick = (item: MultilevelData<V>, depth: number) => {
+    const hasChildren = item.children && item.children.length > 0;
+
+    if (hasChildren) {
+      // Expand this item - truncate expanded path to this level and add this item
+      setExpandedPath([...expandedPath.slice(0, depth), item.value]);
+    } else {
+      // Leaf node - toggle selection
+      if (multiple) {
+        if (value.includes(item.value)) {
+          setValue(value.filter((v) => v !== item.value));
+        } else {
+          setValue([...value, item.value]);
+        }
+      } else {
+        setValue([item.value]);
+      }
+    }
+  };
+
+  const renderColumn = (items: MultilevelData<V>[], depth: number) => {
+    return (
+      <div
+        className="flex flex-col gap-1 min-w-[150px] max-w-[200px] p-2 rounded overflow-y-auto"
+        style={{ background: "var(--bakaui-overlap-background)" }}
+      >
+        {items.map((item, idx) => {
+          const hasChildren = item.children && item.children.length > 0;
+          const isSelected = value.includes(item.value);
+          const isExpanded = expandedPath[depth] === item.value;
+          const style: CSSProperties = {};
+
+          if (item.color) {
+            style.color = item.color;
+            if (!isSelected && !isExpanded) {
+              style.backgroundColor = autoBackgroundColor(item.color);
+            }
+          }
+
+          return (
+            <Button
+              key={idx}
+              color={isSelected ? "primary" : isExpanded ? "secondary" : "default"}
+              size="sm"
+              variant={isExpanded && !isSelected ? "flat" : "solid"}
+              style={style}
+              className="justify-between"
+              onPress={() => handleItemClick(item, depth)}
             >
-              {branches.map(({ value, label, color, children }, idx) => {
-                const style: CSSProperties = {};
+              <span className="truncate">{item.label}</span>
+              {hasChildren && <RightOutlined className="text-xs flex-shrink-0" />}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  };
 
-                if (color) {
-                  style.color = color;
-                }
-
-                return (
-                  <React.Fragment key={idx}>
-                    <div className={"flex justify-end"} style={style}>
-                      {label}
-                    </div>
-                    <DoubleRightOutlined className={"text-small"} />
-                    {renderTreeNodes(children!)}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-    },
-    [value],
-  );
-
-  const filteredData = filterMultilevelData(dataSource, keyword);
+  // Get selected items display
+  const selectedLabels = useMemo(() => {
+    return value
+      .map((v) => {
+        const chain = findNodeChainInMultilevelData(dataSource, v);
+        return chain?.map((x) => x.label).join(" / ");
+      })
+      .filter((x) => x);
+  }, [value, dataSource]);
 
   return (
     <Modal
@@ -172,22 +185,39 @@ const MultilevelValueEditor = <V = string,>(
         onValueChange?.(value, bv);
       }}
     >
-      <div className={"flex flex-col gap-1 max-h-full min-h-0"}>
+      <div className="flex flex-col gap-3 max-h-full min-h-0">
         <div>
           <Input
-            size={"sm"}
-            startContent={<SearchOutlined className={"text-small"} />}
+            size="sm"
+            placeholder={t<string>("common.placeholder.search")}
+            startContent={<SearchOutlined className="text-small" />}
             value={keyword}
-            onValueChange={(v) => {
-              setKeyword(v);
-            }}
+            onValueChange={(v) => setKeyword(v)}
           />
         </div>
-        <div className={"flex flex-wrap gap-1 w-full min-h-0 overflow-y-auto"}>
-          {filteredData.length > 0 ? (
-            renderTreeNodes(filteredData)
+
+        {/* Selected items display */}
+        {selectedLabels.length > 0 && (
+          <div className="flex flex-wrap gap-1 p-2 rounded bg-default-100">
+            <span className="text-sm text-default-500 mr-1">{t<string>("Selected")}:</span>
+            {selectedLabels.map((label, i) => (
+              <span key={i} className="text-sm bg-primary-100 text-primary-700 px-2 py-0.5 rounded">
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Cascader columns */}
+        <div className="flex gap-2 min-h-0 overflow-x-auto overflow-y-hidden">
+          {columns.length > 0 && columns[0].items.length > 0 ? (
+            columns.map((column, i) => (
+              <React.Fragment key={i}>
+                {renderColumn(column.items, column.depth)}
+              </React.Fragment>
+            ))
           ) : (
-            <div className={"m-2 flex items-center justify-center"}>
+            <div className="m-2 flex items-center justify-center text-default-400">
               {t<string>("No data")}
             </div>
           )}

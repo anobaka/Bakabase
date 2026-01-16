@@ -12,5 +12,8 @@
   "property.modal.confirmPropertyChange": "确认属性更改",
   "property.success.propertyUpdatedSuccessfully": "属性更新成功",
   "property.error.failedToUpdateProperty": "更新属性失败",
-  "property.warning.willOverrideValues": "这将覆盖 {{count}} 个资源上的不同值"
+  "property.warning.willOverrideValues": "这将覆盖 {{count}} 个资源上的不同值",
+  "property.attachment.selectFromFileSystem": "从文件系统选择",
+  "property.attachment.uploadFromLocal": "从本地上传",
+  "property.attachment.uploadHint": "上传的文件将保存在应用数据路径下的 data/attachments 文件夹中"
 }
