@@ -26,10 +26,20 @@ const BooleanValueRenderer = ({
   // Default isReadonly to true if no editor is provided
   const isReadonly = propsIsReadonly ?? !editor;
 
-  // When not readonly, show Yes/No/NotSet chips for easy selection
+  // When not readonly, show Yes/No chips with a visual NotSet indicator at the beginning
   if (!isReadonly && editor) {
+    const isNotSet = value === undefined;
     return (
       <div className="inline-flex gap-1 flex-wrap min-w-[138px]">
+        {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
+        <Chip
+          size={size}
+          color={isNotSet ? "primary" : "default"}
+          variant={isNotSet ? "solid" : "bordered"}
+          className="flex-shrink-0"
+        >
+          {t("common.label.notSet")}
+        </Chip>
         <Chip
           size={size}
           color={value === true ? "success" : "default"}
@@ -47,15 +57,6 @@ const BooleanValueRenderer = ({
           onClick={() => editor?.onValueChange?.(value === false ? undefined : false, value === false ? undefined : false)}
         >
           {t("common.label.no")}
-        </Chip>
-        <Chip
-          size={size}
-          color={value === undefined ? "primary" : "default"}
-          variant={value === undefined ? "solid" : "bordered"}
-          className="cursor-pointer flex-shrink-0"
-          onClick={() => editor?.onValueChange?.(undefined, undefined)}
-        >
-          {t("common.label.notSet")}
         </Chip>
       </div>
     );

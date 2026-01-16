@@ -75,31 +75,10 @@ public class ResourceDiscoveryService : BackgroundService
             return;
         }
 
-        // First, check if cache already exists
-        using var scope = _scopeFactory.CreateScope();
-        var resourceService = scope.ServiceProvider.GetRequiredService<IResourceService>();
-        var cache = await resourceService.GetResourceCache(resourceId);
-
-        if (cache != null && cache.CachedTypes.Contains(types))
-        {
-            // Cache exists, broadcast immediately
-            _logger.LogDebug("Cache exists for resource {ResourceId}, broadcasting immediately", resourceId);
-
-            var result = new DiscoveryResult
-            {
-                ResourceId = resourceId,
-                Success = true,
-                CoverPaths = cache.CoverPaths?.ToArray(),
-                PlayableFilePaths = cache.PlayableFilePaths?.ToArray(),
-                HasMorePlayableFiles = cache.HasMorePlayableFiles
-            };
-
-            await BroadcastResult(result);
-            _pendingRequests.TryRemove(requestKey, out _);
-            return;
-        }
-
-        // Enqueue for processing
+        // Always enqueue for real-time discovery.
+        // Frontend already checks cache before calling subscribe, so if we receive a request,
+        // it means either cache is disabled or cache doesn't have the required data.
+        // The discovery process will write results to cache after completion.
         await _requestChannel.Writer.WriteAsync(new DiscoveryRequest(resourceId, types));
         _logger.LogDebug("Request enqueued: {RequestKey}", requestKey);
     }
@@ -188,7 +167,7 @@ public class ResourceDiscoveryService : BackgroundService
         if (request.Types.HasFlag(ResourceCacheType.PlayableFiles))
         {
             _logger.LogDebug("Discovering playable files for resource {ResourceId}", request.ResourceId);
-            playableFilePaths = await resourceService.GetPlayableFiles(request.ResourceId, ct);
+            playableFilePaths = await resourceService.DiscoverAndCachePlayableFiles(request.ResourceId, ct);
 
             // Check cache for hasMorePlayableFiles flag
             var cache = await resourceService.GetResourceCache(request.ResourceId);

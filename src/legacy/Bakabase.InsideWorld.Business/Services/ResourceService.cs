@@ -989,7 +989,7 @@ namespace Bakabase.InsideWorld.Business.Services
             }
         }
 
-        public async Task<string[]> GetPlayableFiles(int id, CancellationToken ct)
+        public async Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct)
         {
             var r = await Get(id, ResourceAdditionalItem.None);
             if (r == null)

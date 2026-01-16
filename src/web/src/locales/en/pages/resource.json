@@ -47,7 +47,7 @@
   "resource.display.coverCarousel": "Cover carousel",
   "resource.display.showResourceId": "Display resource ID",
   "resource.display.filterOptionsCollapseThreshold": "Filter options collapse threshold",
-  "resource.display.filterOptionsCollapseThresholdDesc": "Options exceeding this count will be collapsed",
+  "resource.display.filterOptionsCollapseThresholdDesc": "Selected options are always shown. At most this many options will be displayed.",
   "resource.display.reset": "Reset",
   "resource.display.operations": "Display operations",
   "resource.display.aggregateButton": "Aggregate button",

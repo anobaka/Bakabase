@@ -55,7 +55,7 @@ public interface IResourceService
     Task<List<DataChangeViewModel>> AddOrPutRange(List<Abstractions.Models.Domain.Resource> resources);
 
     Task RefreshParentTag();
-    Task<string[]> GetPlayableFiles(int id, CancellationToken ct);
+    Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct);
 
     Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null);
 

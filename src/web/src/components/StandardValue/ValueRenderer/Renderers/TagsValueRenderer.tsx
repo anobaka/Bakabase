@@ -152,8 +152,16 @@ const TagsValueRenderer = (props: TagsValueRendererProps) => {
 
   // Editable mode: show inline options with toggle
   if (!isReadonly && dataSource.length > 0) {
+    const isNotSet = selectedValues.length === 0;
     return (
       <div className="flex flex-wrap gap-1 items-center">
+        {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
+        <SelectableChip
+          itemKey="__not_set__"
+          label={t("common.label.notSet")}
+          isSelected={isNotSet}
+          size={size}
+        />
         {visibleOptions.map((item) => (
           <SelectableChip
             key={item.value}

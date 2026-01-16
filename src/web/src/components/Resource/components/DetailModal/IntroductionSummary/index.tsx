@@ -14,7 +14,7 @@ import type { Resource } from "@/core/models/Resource";
 import { PropertyPool, ReservedProperty, PropertyValueScope } from "@/sdk/constants";
 import { Button, Card, CardBody, Textarea } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { serializeStandardValue } from "@/components/StandardValue/helpers";
+import { serializeStandardValue, StringValueRenderer } from "@/components/StandardValue";
 import { StandardValueType } from "@/sdk/constants";
 
 interface Props {
@@ -152,12 +152,13 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
               </div>
             ) : (
               <div className="flex flex-col h-full">
-                <div className="flex-1 whitespace-pre-wrap text-default-700">
-                  {introduction || (
-                    <span className="text-default-400 italic">
-                      {t("resource.state.noIntroductionYet")}
-                    </span>
-                  )}
+                <div className="flex-1 text-default-700">
+                  <StringValueRenderer
+                    multiline
+                    value={introduction ?? undefined}
+                    variant="default"
+                    isReadonly
+                  />
                 </div>
                 <div className="flex justify-end pt-4">
                   <Button

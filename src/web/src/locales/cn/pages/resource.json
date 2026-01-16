@@ -47,7 +47,7 @@
   "resource.display.coverCarousel": "封面轮播",
   "resource.display.showResourceId": "显示资源 ID",
   "resource.display.filterOptionsCollapseThreshold": "筛选选项折叠阈值",
-  "resource.display.filterOptionsCollapseThresholdDesc": "超过此数量的选项将被折叠",
+  "resource.display.filterOptionsCollapseThresholdDesc": "已选的选项一定会全部显示，最多显示此数量的选项",
   "resource.display.reset": "重置",
   "resource.display.operations": "显示操作按钮",
   "resource.display.aggregateButton": "聚合按钮",

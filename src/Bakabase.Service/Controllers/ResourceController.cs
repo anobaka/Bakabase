@@ -336,7 +336,7 @@ namespace Bakabase.Service.Controllers
         [ResponseCache(Duration = 20 * 60)]
         public async Task<ListResponse<string>> GetPlayableFiles(int id)
         {
-            return new ListResponse<string>(await service.GetPlayableFiles(id, HttpContext.RequestAborted) ??
+            return new ListResponse<string>(await service.DiscoverAndCachePlayableFiles(id, HttpContext.RequestAborted) ??
                                             new string[] { });
         }
 
@@ -481,7 +481,7 @@ namespace Bakabase.Service.Controllers
         {
             if (file.IsNullOrEmpty())
             {
-                var pfs = await service.GetPlayableFiles(resourceId, HttpContext.RequestAborted);
+                var pfs = await service.DiscoverAndCachePlayableFiles(resourceId, HttpContext.RequestAborted);
                 file = pfs.FirstOrDefault();
             }
 
