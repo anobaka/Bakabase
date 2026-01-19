@@ -326,7 +326,9 @@ public class V220Migrator : AbstractMigrator
             var enhancerOptions = template != null ? ExtractEnhancerOptions(template) : null;
             var nameTemplate = template?.DisplayNameTemplate;
             var playableFileOptions = template != null ? ExtractPlayableFileOptions(template) : null;
-            var playerOptions = library?.Players;
+            var playerOptions = library?.Players != null && library.Players.Any()
+                ? new ResourceProfilePlayerOptions { Players = library.Players }
+                : null;
             var propertyOptions = template != null ? ExtractPropertyOptions(template) : null;
 
             // Skip if no settings to migrate
