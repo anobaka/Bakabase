@@ -195,7 +195,7 @@ const Filter = ({
         variant: "light",
         isReadonly,
         operation: filter.operation,
-        isEditing: isSimpleMode,
+        isEditing: isSimpleMode && !isReadonly,
       }
     );
 

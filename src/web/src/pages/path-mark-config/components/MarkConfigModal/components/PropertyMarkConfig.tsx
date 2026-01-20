@@ -77,6 +77,11 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         {t("pathMark.property.explanation")}
       </div>
 
+      {/* Important note */}
+      <div className="bg-warning-50 text-warning-700 rounded p-2 text-xs">
+        {t("pathMark.property.importantNote")}
+      </div>
+
       <MatchModeSelector
         config={config}
         updateConfig={updateConfig}

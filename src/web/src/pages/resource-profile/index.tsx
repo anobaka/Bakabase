@@ -29,7 +29,7 @@ import { ResourceFilterController, toSearchInputModel } from "@/components/Resou
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
 import { getEnumKey } from "@/i18n";
 import type { ResourceSearchInputModel } from "@/components/ResourceFilter/utils/toInputModel";
-import { PropertyPool, resourceTags, builtinPropertyForDisplayNames } from "@/sdk/constants";
+import { PropertyPool, resourceTags, builtinPropertyForDisplayNames, FilterDisplayMode } from "@/sdk/constants";
 import { splitPathIntoSegments } from "@/components/utils";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import { EnhancerDescription } from "@/components/Chips/Terms";
@@ -559,8 +559,8 @@ const ResourceProfilePage = () => {
                       return next;
                     });
                   }}
-                  filterDisplayMode={1}
-                  filterLayout="vertical"
+                  filterDisplayMode={FilterDisplayMode.Simple}
+                  filterLayout="horizontal"
                   isReadonly={!isEditing}
                   autoCreateMediaLibraryFilter
                 />

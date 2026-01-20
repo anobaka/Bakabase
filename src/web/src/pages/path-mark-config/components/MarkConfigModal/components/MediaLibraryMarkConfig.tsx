@@ -80,6 +80,11 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
         {t("pathMark.mediaLibrary.explanation")}
       </div>
 
+      {/* Important note */}
+      <div className="bg-warning-50 text-warning-700 rounded p-2 text-xs">
+        {t("pathMark.mediaLibrary.importantNote")}
+      </div>
+
       <MatchModeSelector
         config={config}
         updateConfig={updateConfig}
