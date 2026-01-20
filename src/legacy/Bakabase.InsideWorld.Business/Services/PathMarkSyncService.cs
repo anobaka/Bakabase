@@ -1738,7 +1738,18 @@ public class PathMarkSyncService : ScopedService
             }
             else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
             {
-                var regex = ctx.GetOrCreateRegex(config.Regex);
+                // For MatchedOnly: modify regex to not match sub-paths
+                // by ensuring no path separator follows the match
+                var regexPattern = config.Regex;
+                if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
+                {
+                    // If pattern ends with $, replace it; otherwise append
+                    regexPattern = regexPattern.EndsWith("$")
+                        ? regexPattern.Substring(0, regexPattern.Length - 1) + @"[^/\\]*$"
+                        : regexPattern + @"[^/\\]*$";
+                }
+
+                var regex = ctx.GetOrCreateRegex(regexPattern);
                 var entries = GetAllEntries(normalizedRoot, config.FsTypeFilter, config.Extensions, ctx);
                 initialMatches = new List<string>();
 

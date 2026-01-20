@@ -162,7 +162,7 @@ const TagsValueEditor = (props: TagsValueEditorProps) => {
               {/* No results after filtering */}
               {groupedTags.ungrouped.length === 0 && groupNames.length === 0 && keyword.length > 0 && (
                 <div className={"text-default-400 text-center py-4"}>
-                  {t<string>("No data")}
+                  {t<string>("common.state.noData")}
                 </div>
               )}
             </>

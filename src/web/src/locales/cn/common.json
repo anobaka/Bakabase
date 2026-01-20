@@ -247,6 +247,8 @@
   "Cut {{count}} items": "已剪切 {{count}} 个项目",
   "Moved {{count}} items": "已移动 {{count}} 个项目",
   "Delete": "删除",
-  "No data": "无数据",
-  "Select data": "选择数据"
+  "Select data": "选择数据",
+
+  "extensionGroupSelect.label": "限制扩展名分组",
+  "extensionGroupSelect.placeholder": "从扩展名分组中选择"
 }

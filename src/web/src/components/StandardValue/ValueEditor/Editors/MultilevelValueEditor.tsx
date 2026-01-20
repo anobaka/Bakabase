@@ -218,7 +218,7 @@ const MultilevelValueEditor = <V = string,>(
             ))
           ) : (
             <div className="m-2 flex items-center justify-center text-default-400">
-              {t<string>("No data")}
+              {t<string>("common.state.noData")}
             </div>
           )}
         </div>

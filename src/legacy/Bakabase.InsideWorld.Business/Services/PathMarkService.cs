@@ -500,6 +500,7 @@ public class PathMarkService<TDbContext>(
         PathMatchMode matchMode;
         int? layer = null;
         string? regex = null;
+        PathMarkApplyScope? applyScope = null;
 
         // Step 2: Parse type-specific filter/value config
         PathFilterFsType? fsTypeFilter = null;
@@ -520,6 +521,7 @@ public class PathMarkService<TDbContext>(
                 matchMode = config.MatchMode;
                 layer = config.Layer;
                 regex = config.Regex;
+                applyScope = config.ApplyScope;
                 fsTypeFilter = config.FsTypeFilter;
                 extensions = config.Extensions;
                 // Note: ExtensionGroupIds would need to be resolved to actual extensions here if needed
@@ -533,6 +535,7 @@ public class PathMarkService<TDbContext>(
                 matchMode = config.MatchMode;
                 layer = config.Layer;
                 regex = config.Regex;
+                applyScope = config.ApplyScope;
                 valueType = config.ValueType;
                 fixedValue = config.FixedValue;
                 valueLayer = config.ValueLayer;
@@ -547,6 +550,7 @@ public class PathMarkService<TDbContext>(
                 matchMode = config.MatchMode;
                 layer = config.Layer;
                 regex = config.Regex;
+                applyScope = config.ApplyScope;
                 valueType = config.ValueType;
                 fixedValue = config.MediaLibraryId; // For Fixed, the value is MediaLibraryId
                 valueLayer = config.LayerToMediaLibrary;
@@ -558,7 +562,7 @@ public class PathMarkService<TDbContext>(
         }
 
         // Step 3: Get matched paths using common logic
-        var matchedPaths = GetMatchingPaths(rootPath, matchMode, layer, regex, fsTypeFilter, extensions);
+        var matchedPaths = GetMatchingPaths(rootPath, matchMode, layer, regex, applyScope, fsTypeFilter, extensions);
 
         var rootSegments = rootPath.Split(new[] { Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar },
             StringSplitOptions.RemoveEmptyEntries);
@@ -595,7 +599,7 @@ public class PathMarkService<TDbContext>(
     /// Common path matching logic for all mark types
     /// </summary>
     private List<string> GetMatchingPaths(string rootPath, PathMatchMode matchMode, int? layer, string? regex,
-        PathFilterFsType? fsTypeFilter = null, List<string>? extensions = null)
+        PathMarkApplyScope? applyScope = null, PathFilterFsType? fsTypeFilter = null, List<string>? extensions = null)
     {
         var matchedPaths = new List<string>();
 
@@ -618,7 +622,18 @@ public class PathMarkService<TDbContext>(
             }
             else if (matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(regex))
             {
-                var regexObj = new Regex(regex, RegexOptions.IgnoreCase);
+                // For MatchedOnly: modify regex to not match sub-paths
+                // by ensuring no path separator follows the match
+                var regexPattern = regex;
+                if (applyScope == PathMarkApplyScope.MatchedOnly)
+                {
+                    // If pattern ends with $, replace it; otherwise append
+                    regexPattern = regexPattern.EndsWith("$")
+                        ? regexPattern.Substring(0, regexPattern.Length - 1) + @"[^/\\]*$"
+                        : regexPattern + @"[^/\\]*$";
+                }
+
+                var regexObj = new Regex(regexPattern, RegexOptions.IgnoreCase);
                 var entries = GetAllEntries(rootPath, fsTypeFilter, extensions);
 
                 foreach (var entry in entries)

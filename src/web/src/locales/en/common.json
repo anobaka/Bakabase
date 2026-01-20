@@ -247,6 +247,8 @@
   "Cut {{count}} items": "Cut {{count}} items",
   "Moved {{count}} items": "Moved {{count}} items",
   "Delete": "Delete",
-  "No data": "No data",
-  "Select data": "Select data"
+  "Select data": "Select data",
+
+  "extensionGroupSelect.label": "Limit file extension groups",
+  "extensionGroupSelect.placeholder": "Select from extension groups"
 }

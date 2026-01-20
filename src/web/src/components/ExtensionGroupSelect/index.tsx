@@ -35,8 +35,8 @@ const ExtensionGroupSelect = ({ value = [], onSelectionChange, size, className }
         label: l.name,
         value: l.id.toString(),
       }))}
-      label={t<string>("Limit file extension groups")}
-      placeholder={t<string>("Select from extension groups")}
+      label={t<string>("extensionGroupSelect.label")}
+      placeholder={t<string>("extensionGroupSelect.placeholder")}
       selectedKeys={(value ?? []).map((x) => x.toString())}
       selectionMode={"multiple"}
       size={size}
