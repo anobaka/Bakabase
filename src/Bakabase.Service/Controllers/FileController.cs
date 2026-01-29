@@ -26,6 +26,7 @@ using Bakabase.InsideWorld.Business.Components.FileExplorer.Information;
 using Bakabase.InsideWorld.Business.Extensions;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
+using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.RequestModels;
 using Bakabase.Service.Extensions;
 using Bakabase.Service.Models.Input;
@@ -1119,6 +1120,222 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpGet("playability")]
+        [SwaggerOperation(OperationId = "CheckFilePlayability")]
+        public async Task<SingletonResponse<FilePlayabilityViewModel>> CheckPlayability(string fullname)
+        {
+            var result = new FilePlayabilityViewModel();
+            var ext = Path.GetExtension(fullname);
+
+            // Determine media type by extension
+            if (InternalOptions.ImageExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Image;
+                result.Playable = true;
+
+                // For images, we can try to validate by checking if the file exists
+                // and optionally use ffprobe to get dimensions
+                if (!fullname.Contains(InternalOptions.CompressedFileRootSeparator))
+                {
+                    if (!System.IO.File.Exists(fullname))
+                    {
+                        result.Playable = false;
+                        result.Error = "File not found";
+                        return new SingletonResponse<FilePlayabilityViewModel>(result);
+                    }
+
+                    try
+                    {
+                        var ffprobePath = _ffMpegService.FfProbeExecutable;
+                        var probeResult = await Cli.Wrap(ffprobePath)
+                            .WithArguments(args =>
+                            {
+                                args
+                                    .Add("-v").Add("error")
+                                    .Add("-select_streams").Add("v:0")
+                                    .Add("-show_entries").Add("stream=width,height")
+                                    .Add("-of").Add("json")
+                                    .Add(fullname);
+                            })
+                            .WithValidation(CommandResultValidation.None)
+                            .ExecuteBufferedAsync(HttpContext.RequestAborted);
+
+                        if (probeResult.ExitCode == 0 && !string.IsNullOrWhiteSpace(probeResult.StandardOutput))
+                        {
+                            var json = JsonDocument.Parse(probeResult.StandardOutput);
+                            if (json.RootElement.TryGetProperty("streams", out var streams) &&
+                                streams.GetArrayLength() > 0)
+                            {
+                                var stream = streams[0];
+                                if (stream.TryGetProperty("width", out var width))
+                                    result.Width = width.GetInt32();
+                                if (stream.TryGetProperty("height", out var height))
+                                    result.Height = height.GetInt32();
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // Image validation via ffprobe is optional, still mark as playable
+                    }
+                }
+
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            if (InternalOptions.VideoExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Video;
+                return await ProbeMediaFile(fullname, result, true);
+            }
+
+            if (InternalOptions.AudioExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Audio;
+                return await ProbeMediaFile(fullname, result, false);
+            }
+
+            if (InternalOptions.TextExtensions.Contains(ext))
+            {
+                result.MediaType = MediaType.Text;
+                result.Playable = true;
+
+                if (!fullname.Contains(InternalOptions.CompressedFileRootSeparator) &&
+                    !System.IO.File.Exists(fullname))
+                {
+                    result.Playable = false;
+                    result.Error = "File not found";
+                }
+
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            // Unknown/unsupported extension
+            result.MediaType = MediaType.Unknown;
+            result.Playable = false;
+            result.Error = $"Unsupported file extension: {ext}";
+            return new SingletonResponse<FilePlayabilityViewModel>(result);
+        }
+
+        private async Task<SingletonResponse<FilePlayabilityViewModel>> ProbeMediaFile(
+            string fullname, FilePlayabilityViewModel result, bool isVideo)
+        {
+            // For files inside compressed archives, we can't easily probe them
+            // Mark as potentially playable and let the player handle errors
+            if (fullname.Contains(InternalOptions.CompressedFileRootSeparator))
+            {
+                result.Playable = true;
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            if (!System.IO.File.Exists(fullname))
+            {
+                result.Playable = false;
+                result.Error = "File not found";
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+
+            try
+            {
+                var ffprobePath = _ffMpegService.FfProbeExecutable;
+                var streamSelector = isVideo ? "v:0" : "a:0";
+                var showEntries = isVideo
+                    ? "stream=codec_name,width,height,duration:format=duration"
+                    : "stream=codec_name,duration:format=duration";
+
+                var probeResult = await Cli.Wrap(ffprobePath)
+                    .WithArguments(args =>
+                    {
+                        args
+                            .Add("-v").Add("error")
+                            .Add("-select_streams").Add(streamSelector)
+                            .Add("-show_entries").Add(showEntries)
+                            .Add("-of").Add("json")
+                            .Add(fullname);
+                    })
+                    .WithValidation(CommandResultValidation.None)
+                    .ExecuteBufferedAsync(HttpContext.RequestAborted);
+
+                if (probeResult.ExitCode != 0)
+                {
+                    result.Playable = false;
+                    result.Error = string.IsNullOrWhiteSpace(probeResult.StandardError)
+                        ? "Failed to probe file"
+                        : probeResult.StandardError.Trim();
+                    return new SingletonResponse<FilePlayabilityViewModel>(result);
+                }
+
+                if (string.IsNullOrWhiteSpace(probeResult.StandardOutput))
+                {
+                    result.Playable = false;
+                    result.Error = "No media streams found";
+                    return new SingletonResponse<FilePlayabilityViewModel>(result);
+                }
+
+                var json = JsonDocument.Parse(probeResult.StandardOutput);
+
+                // Check for streams
+                if (!json.RootElement.TryGetProperty("streams", out var streams) ||
+                    streams.GetArrayLength() == 0)
+                {
+                    result.Playable = false;
+                    result.Error = isVideo ? "No video stream found" : "No audio stream found";
+                    return new SingletonResponse<FilePlayabilityViewModel>(result);
+                }
+
+                var stream = streams[0];
+
+                // Get codec
+                if (stream.TryGetProperty("codec_name", out var codec))
+                {
+                    result.Codec = codec.GetString();
+                }
+
+                // Check browser codec compatibility
+                if (!string.IsNullOrEmpty(result.Codec))
+                {
+                    var supportedCodecs = isVideo ? BrowserSupportedVideoCodecs : BrowserSupportedAudioCodecs;
+                    if (!supportedCodecs.Contains(result.Codec))
+                    {
+                        result.Playable = false;
+                        result.Error = _localizer.CodecNotSupportedByBrowsers(result.Codec);
+                        return new SingletonResponse<FilePlayabilityViewModel>(result);
+                    }
+                }
+
+                // Get dimensions for video
+                if (isVideo)
+                {
+                    if (stream.TryGetProperty("width", out var width))
+                        result.Width = width.GetInt32();
+                    if (stream.TryGetProperty("height", out var height))
+                        result.Height = height.GetInt32();
+                }
+
+                // Get duration - try stream first, then format
+                if (stream.TryGetProperty("duration", out var streamDuration) &&
+                    double.TryParse(streamDuration.GetString(), out var durationValue))
+                {
+                    result.Duration = durationValue;
+                }
+                else if (json.RootElement.TryGetProperty("format", out var format) &&
+                         format.TryGetProperty("duration", out var formatDuration) &&
+                         double.TryParse(formatDuration.GetString(), out var formatDurationValue))
+                {
+                    result.Duration = formatDurationValue;
+                }
+
+                result.Playable = true;
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+            catch (Exception ex)
+            {
+                result.Playable = false;
+                result.Error = ex.Message;
+                return new SingletonResponse<FilePlayabilityViewModel>(result);
+            }
+        }
+
         [HttpGet("play")]
         [SwaggerOperation(OperationId = "PlayFile")]
         public async Task<IActionResult> Play(string fullname)
@@ -1494,6 +1711,34 @@ namespace Bakabase.Service.Controllers
 
         private static readonly string PngContentType = MimeTypes.GetMimeType(".png");
 
+        // Browser-supported video codecs
+        // H.264/AVC: Widely supported across all browsers
+        // H.265/HEVC: Safari, partial Chrome/Edge
+        // VP8/VP9: Chrome, Firefox, Edge
+        // AV1: Modern browsers
+        // Theora: Firefox, Chrome (legacy)
+        private static readonly HashSet<string> BrowserSupportedVideoCodecs = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "h264", "avc1", "avc",           // H.264/AVC
+            "hevc", "h265", "hvc1",          // H.265/HEVC
+            "vp8", "vp9",                    // VP8/VP9
+            "av1", "av01",                   // AV1
+            "theora"                         // Theora (legacy)
+        };
+
+        // Browser-supported audio codecs
+        private static readonly HashSet<string> BrowserSupportedAudioCodecs = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "aac", "mp4a",                   // AAC
+            "mp3", "mp3float",               // MP3
+            "opus",                          // Opus
+            "vorbis",                        // Vorbis
+            "flac",                          // FLAC
+            "pcm_s16le", "pcm_s24le", "pcm_s32le", "pcm_f32le", "pcm_f64le", // PCM variants (WAV)
+            "pcm_u8", "pcm_s16be", "pcm_s24be", "pcm_s32be",
+            "alac"                           // Apple Lossless
+        };
+
         [HttpGet("icon")]
         [SwaggerOperation(OperationId = "GetIconData")]
         public Task<SingletonResponse<string>> GetIcon(IconType type, string? path)
@@ -1523,7 +1768,8 @@ namespace Bakabase.Service.Controllers
             }
 
             return new ListResponse<string>(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                .Select(a => a.StandardizePath()!));
+                .Select(a => a.StandardizePath()!)
+                .OrderByNatural());
         }
 
         [HttpGet("compressed-file/entries")]
@@ -1753,7 +1999,7 @@ namespace Bakabase.Service.Controllers
         [HttpPost("upload")]
         [SwaggerOperation(OperationId = "UploadFile")]
         [Consumes("multipart/form-data")]
-        public async Task<SingletonResponse<string>> UploadFile([FromForm] IFormFile file)
+        public async Task<SingletonResponse<string>> UploadFile(IFormFile file)
         {
             if (file.Length == 0)
             {

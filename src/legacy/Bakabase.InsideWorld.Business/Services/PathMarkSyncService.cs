@@ -293,6 +293,22 @@ public class PathMarkSyncService : ScopedService
             result.MediaLibraryMappingsCreated = mappingResult.Created;
             result.MediaLibraryMappingsDeleted = mappingResult.Deleted;
 
+            // Refresh resource count for affected media libraries
+            if (mappingResult.Created > 0 || mappingResult.Deleted > 0)
+            {
+                var affectedMediaLibraryIds = ctx.FinalMappingsToEnsure
+                    .Select(m => m.MediaLibraryId)
+                    .Concat(ctx.MediaLibraryMappingsToDelete.Select(m => m.MediaLibraryId))
+                    .Distinct()
+                    .ToList();
+
+                foreach (var mlId in affectedMediaLibraryIds)
+                {
+                    await _mediaLibraryV2Service.RefreshResourceCount(mlId);
+                }
+                _logger.LogInformation("[Sync] Refreshed resource count for {Count} media libraries", affectedMediaLibraryIds.Count);
+            }
+
             // ===== Phase 4: Persist Effects (80-90%) =====
             await ReportProgress(onProgressChange, onProcessChange, 80, "Persisting effects...");
             await ComputeEffectDiff(ctx);

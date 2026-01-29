@@ -52,6 +52,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -1202,42 +1203,51 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                         string[]? playableFiles = null;
 
-                                        // Use ResourceProfile to get effective playable file options
-                                        var playableFileOptions =
-                                            await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
-                                        if (playableFileOptions?.Extensions is { Count: > 0 })
+                                        // For file resources, directly use the file itself as playable
+                                        if (resource.IsFile)
                                         {
-                                            // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
-                                            var extensions = playableFileOptions.Extensions
-                                                .Select(e => e.StartsWith('.') ? e : $".{e}")
-                                                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                                            var files = resource.IsFile
-                                                ? File.Exists(resource.Path) ? new List<string> { resource.Path } : []
-                                                : Directory.Exists(resource.Path)
+                                            if (File.Exists(resource.Path))
+                                            {
+                                                playableFiles = [resource.Path.StandardizePath()!];
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Use ResourceProfile to get effective playable file options for folder resources
+                                            var playableFileOptions =
+                                                await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
+                                            if (playableFileOptions?.Extensions is { Count: > 0 })
+                                            {
+                                                // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
+                                                var extensions = playableFileOptions.Extensions
+                                                    .Select(e => e.StartsWith('.') ? e : $".{e}")
+                                                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                                                var files = Directory.Exists(resource.Path)
                                                     ? Directory.EnumerateFiles(resource.Path, "*",
                                                         SearchOption.AllDirectories)
                                                     : [];
 
-                                            var result = files.Where(f =>
-                                                extensions.Contains(Path.GetExtension(f))).ToArray();
+                                                var result = files.Where(f =>
+                                                    extensions.Contains(Path.GetExtension(f))).ToArray();
 
-                                            // Apply file name pattern filter if configured
-                                            if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
-                                            {
-                                                try
+                                                // Apply file name pattern filter if configured
+                                                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
                                                 {
-                                                    var regex = new System.Text.RegularExpressions.Regex(
-                                                        playableFileOptions.FileNamePattern,
-                                                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                                    result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToArray();
+                                                    try
+                                                    {
+                                                        var regex = new System.Text.RegularExpressions.Regex(
+                                                            playableFileOptions.FileNamePattern,
+                                                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToArray();
+                                                    }
+                                                    catch
+                                                    {
+                                                        // Invalid regex, ignore the filter
+                                                    }
                                                 }
-                                                catch
-                                                {
-                                                    // Invalid regex, ignore the filter
-                                                }
+
+                                                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
                                             }
-
-                                            playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
                                         }
 
                                         if (playableFiles?.Any() == true)
@@ -2114,9 +2124,26 @@ namespace Bakabase.InsideWorld.Business.Services
                 if (player != null)
                 {
                     var cmd = player.Command;
-                    var args = cmd.Replace("{0}", file);
                     _ = Task.Run(async () =>
-                        await Cli.Wrap(player.ExecutablePath).WithArguments(args).ExecuteAsync());
+                    {
+                        // Replace placeholders with proper escaping
+                        // If placeholder is already quoted (e.g., "{0}" or '{0}'), only escape inner quotes
+                        // Otherwise, add quotes around the value
+                        var template = string.IsNullOrEmpty(cmd) ? "{0}" : cmd;
+                        var escapedFile = file.Replace("\"", "\\\"");
+                        var args = Regex.Replace(template, @"([""']?)\{(\d+)\}([""']?)", match =>
+                        {
+                            var prefix = match.Groups[1].Value;
+                            var suffix = match.Groups[3].Value;
+                            var alreadyQuoted = (prefix == "\"" && suffix == "\"") || (prefix == "'" && suffix == "'");
+                            return alreadyQuoted
+                                ? $"{prefix}{escapedFile}{suffix}"
+                                : $"\"{escapedFile}\"";
+                        });
+                        await Cli.Wrap(player.ExecutablePath)
+                            .WithArguments(args)
+                            .ExecuteAsync();
+                    });
                     playedByCustomPlayer = true;
                 }
             }

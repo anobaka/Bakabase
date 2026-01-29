@@ -639,4 +639,7 @@
   <data name="Dependency_Component_7z_Description" xml:space="preserve">
     <value>该组件用于压缩包的压缩和解压。它是 ffmpeg、lux 等组件安装过程中所必需的依赖。</value>
   </data>
+  <data name="CodecNotSupportedByBrowsers" xml:space="preserve">
+    <value>编码格式 '{0}' 不被浏览器支持</value>
+  </data>
 </root>

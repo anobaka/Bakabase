@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Bakabase.InsideWorld.Business.Components.Resource.Components.Player.Infrastructures;
 using Bakabase.InsideWorld.Models.Configs.CustomOptions;
@@ -55,7 +56,19 @@ namespace Bakabase.InsideWorld.Business.Components.Resource.Components.Player
             else
             {
                 var cmd = cmdTemplate.IsNullOrEmpty() ? DefaultCommandTemplate : cmdTemplate;
-                var args = cmd.Replace("{0}", file);
+                // Replace placeholders with proper escaping
+                // If placeholder is already quoted (e.g., "{0}" or '{0}'), only escape inner quotes
+                // Otherwise, add quotes around the value
+                var escapedFile = file.Replace("\"", "\\\"");
+                var args = Regex.Replace(cmd, @"([""']?)\{(\d+)\}([""']?)", match =>
+                {
+                    var prefix = match.Groups[1].Value;
+                    var suffix = match.Groups[3].Value;
+                    var alreadyQuoted = (prefix == "\"" && suffix == "\"") || (prefix == "'" && suffix == "'");
+                    return alreadyQuoted
+                        ? $"{prefix}{escapedFile}{suffix}"
+                        : $"\"{escapedFile}\"";
+                });
                 Cli.Wrap(executable).WithArguments(args).ExecuteAsync();
             }
         }

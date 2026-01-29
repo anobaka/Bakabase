@@ -25,6 +25,13 @@ export function createDefaultFilterConfig(
         return response.data || [];
       },
 
+      getAvailableOperationsByPropertyType: async (propertyType) => {
+        const response = await BApi.resource.getSearchOperationsByPropertyType({
+          propertyType,
+        });
+        return response.data || [];
+      },
+
       getValueProperty: async (filter) => {
         if (!filter.propertyPool || !filter.propertyId || !filter.operation) {
           return undefined;

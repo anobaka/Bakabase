@@ -31,6 +31,8 @@ namespace Bakabase.Service.Components
 {
     public class BakabaseHost(IGuiAdapter guiAdapter, ISystemService systemService) : AppHost(guiAdapter, systemService)
     {
+        protected override string? SingleInstanceId => "Bakabase";
+
         protected override int DefaultAutoListeningPortCount => 3;
 
         protected override Assembly[] AssembliesForGlobalConfigurationRegistrationsScanning =>

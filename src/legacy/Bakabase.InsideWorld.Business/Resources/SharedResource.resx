@@ -639,4 +639,7 @@ The version of lux is not limited.</value>
   <data name="Dependency_Component_7z_Description" xml:space="preserve">
     <value>This component is used for archive compression and extraction. It is required by other components such as ffmpeg and lux for their installation.</value>
   </data>
+  <data name="CodecNotSupportedByBrowsers" xml:space="preserve">
+    <value>Codec '{0}' is not supported by browsers</value>
+  </data>
 </root>

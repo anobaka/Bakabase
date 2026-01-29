@@ -89,6 +89,19 @@ const Filter = ({
         });
       }
     }
+
+    // Auto-fetch availableOperations if property type is known but availableOperations is missing
+    // This is needed for filters created with mock data or restored from storage
+    if (filter.property?.type && !filter.availableOperations?.length) {
+      config.api.getAvailableOperationsByPropertyType(filter.property.type).then((ops) => {
+        if (ops?.length) {
+          setFilter((prev) => ({
+            ...prev,
+            availableOperations: ops,
+          }));
+        }
+      });
+    }
   }, []);
 
   useUpdateEffect(() => {
@@ -195,7 +208,9 @@ const Filter = ({
         variant: "light",
         isReadonly,
         operation: filter.operation,
-        isEditing: isSimpleMode && !isReadonly,
+        // In Simple mode, always show editing UI (isEditing: true)
+        // In Advanced mode, don't pass isEditing (keep undefined) to allow click-to-edit
+        isEditing: (isSimpleMode && !isReadonly) ? true : undefined,
       }
     );
 

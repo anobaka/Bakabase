@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { IProperty } from "@/components/Property/models";
-import type { PropertyPool, SearchOperation } from "@/sdk/constants";
+import type { PropertyPool, PropertyType, SearchOperation } from "@/sdk/constants";
 
 export enum GroupCombinator {
   And = 1,
@@ -44,6 +44,13 @@ export interface FilterApiAdapter {
   getAvailableOperations: (
     propertyPool: PropertyPool,
     propertyId: number
+  ) => Promise<SearchOperation[]>;
+
+  /**
+   * 通过属性类型获取可用的操作列表
+   */
+  getAvailableOperationsByPropertyType: (
+    propertyType: PropertyType
   ) => Promise<SearchOperation[]>;
 
   /**

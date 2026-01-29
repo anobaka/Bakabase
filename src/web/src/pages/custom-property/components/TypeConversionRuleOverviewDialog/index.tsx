@@ -133,7 +133,7 @@ const TypeConversionRuleOverviewDialog = () => {
       }
     >
       <div>
-        <Tabs isVertical disabledKeys={["title"]}>
+        <Tabs isVertical disableAnimation disabledKeys={["title"]}>
           <Tab key={"title"} title={t<string>("typeConversion.sourceType")} />
           {propertyTypes.map((cpt) => {
             return (

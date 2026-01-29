@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useUpdateEffect } from "react-use";
-import { EyeInvisibleOutlined, LoadingOutlined } from "@ant-design/icons";
+import { EyeInvisibleOutlined, LoadingOutlined, WarningOutlined } from "@ant-design/icons";
 import ReactPlayer from "react-player";
 import { MdAccessTime } from "react-icons/md";
 
@@ -11,6 +11,7 @@ import "./index.scss";
 import BApi from "@/sdk/BApi";
 import { MediaType } from "@/sdk/constants";
 import envConfig from "@/config/env";
+import type { BakabaseServiceModelsViewFilePlayabilityViewModel } from "@/sdk/Api";
 
 enum PreviewerStatus {
   Initializing = 0,
@@ -18,6 +19,7 @@ enum PreviewerStatus {
   Playing = 2,
   Paused = 3,
   NothingToPreview = 4,
+  NotPlayable = 5,
 }
 
 interface IItem {
@@ -54,6 +56,11 @@ const MediaPreviewer = (props: IProps) => {
   const mediaRef = useRef<HTMLDivElement>(null);
   const reactPlayerRef = useRef<HTMLVideoElement | null>(null);
   const videoInitializedRef = useRef(false);
+
+  // Playability state
+  const [playabilityError, setPlayabilityError] = useState<string | null>(null);
+  const [isCheckingPlayability, setIsCheckingPlayability] = useState(false);
+  const playabilityCheckedPathsRef = useRef<Map<string, BakabaseServiceModelsViewFilePlayabilityViewModel>>(new Map());
 
   const isControlled = useCallback(
     () => mouseOffsetXRef.current != undefined,
@@ -171,6 +178,52 @@ const MediaPreviewer = (props: IProps) => {
     // console.log('currentItem', currentItem);
     videoInitializedRef.current = false;
     currentItemRef.current = currentItem;
+  }, [currentItem]);
+
+  // Check playability when currentItem changes to a video
+  useEffect(() => {
+    if (!currentItem || currentItem.type !== MediaType.Video) {
+      setPlayabilityError(null);
+      return;
+    }
+
+    const filePath = currentItem.filePath;
+
+    // Check if already cached
+    const cached = playabilityCheckedPathsRef.current.get(filePath);
+    if (cached) {
+      if (!cached.playable) {
+        setPlayabilityError(cached.error || t("Cannot play this file"));
+        setStatus(PreviewerStatus.NotPlayable);
+      } else {
+        setPlayabilityError(null);
+      }
+      return;
+    }
+
+    // Check playability
+    const checkPlayability = async () => {
+      setIsCheckingPlayability(true);
+      try {
+        const response = await BApi.file.checkFilePlayability({ fullname: filePath });
+        if (response.data) {
+          playabilityCheckedPathsRef.current.set(filePath, response.data);
+          if (!response.data.playable) {
+            setPlayabilityError(response.data.error || t("Cannot play this file"));
+            setStatus(PreviewerStatus.NotPlayable);
+          } else {
+            setPlayabilityError(null);
+          }
+        }
+      } catch (err) {
+        // On error, assume playable and let the player handle it
+        setPlayabilityError(null);
+      } finally {
+        setIsCheckingPlayability(false);
+      }
+    };
+
+    checkPlayability();
   }, [currentItem]);
 
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -315,6 +368,18 @@ const MediaPreviewer = (props: IProps) => {
               <LoadingOutlined className={"text-2xl"} />
               {/* <Icon type={'loading'} size={'xl'} /> */}
               {/* {t<string>(PreviewerStatus[status])} */}
+            </div>
+          </div>
+        );
+      case PreviewerStatus.NotPlayable:
+        return (
+          <div className={"not-playable"}>
+            <div className="mask" />
+            <div className="label flex flex-col items-center">
+              <WarningOutlined className={"text-2xl text-yellow-500"} />
+              <div className="text-xs mt-1 text-center max-w-full px-2 truncate">
+                {playabilityError || t("Cannot play")}
+              </div>
             </div>
           </div>
         );

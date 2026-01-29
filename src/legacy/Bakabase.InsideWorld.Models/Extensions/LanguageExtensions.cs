@@ -10,9 +10,32 @@ namespace Bakabase.InsideWorld.Models.Extensions
             switch ((language ?? string.Empty).ToUpper())
             {
                 case "CN":
+                case "ZH-CN":
+                case "ZH-HANS":
+                case "ZH-HANS-CN":
                     return ResourceLanguage.Chinese;
                 case "EN":
+                case "EN-US":
                     return ResourceLanguage.English;
+                case "JP":
+                case "JA":
+                case "JA-JP":
+                    return ResourceLanguage.Japanese;
+                case "KO":
+                case "KO-KR":
+                    return ResourceLanguage.Korean;
+                case "FR":
+                case "FR-FR":
+                    return ResourceLanguage.French;
+                case "DE":
+                case "DE-DE":
+                    return ResourceLanguage.German;
+                case "ES":
+                case "ES-ES":
+                    return ResourceLanguage.Spanish;
+                case "RU":
+                case "RU-RU":
+                    return ResourceLanguage.Russian;
                 default:
                     return ResourceLanguage.NotSet;
             }

@@ -6,9 +6,8 @@ import type SimpleSearchEngine from "@/core/models/SimpleSearchEngine";
 import type { Property, Resource as ResourceModel } from "@/core/models/Resource";
 import type { TagValue } from "@/components/StandardValue/models";
 
-import React, { useCallback, useImperativeHandle, useRef, useState } from "react";
+import React, { useCallback, useImperativeHandle, useReducer, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useUpdate } from "react-use";
 import {
   ApartmentOutlined,
   CheckCircleFilled,
@@ -152,7 +151,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const uiOptions = useUiOptionsStore((state) => state.data);
 
-  const forceUpdate = useUpdate();
+  // Use useReducer for stable forceUpdate reference
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
 
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const [contextMenuAnchorPoint, setContextMenuAnchorPoint] = useState({
@@ -174,9 +174,16 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   // Discovery happens automatically via SSE now
 
+  const coverRef = useRef<IResourceCoverRef>();
+
+  // Keep a ref to the latest resource to avoid stale closure in reload
+  const resourceRef = useRef(resource);
+  resourceRef.current = resource;
+
   const reload = useCallback(async (ct?: AbortSignal) => {
+    const currentResource = resourceRef.current;
     const newResourceRsp = await BApi.resource.getResourcesByKeys({
-      ids: [resource.id],
+      ids: [currentResource.id],
       additionalItems: ResourceAdditionalItem.All,
     });
 
@@ -185,7 +192,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
       if (nr) {
         Object.keys(nr).forEach((k) => {
-          resource[k] = nr[k];
+          currentResource[k] = nr[k];
         });
         coverRef.current?.reload();
         forceUpdate();
@@ -193,9 +200,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
     } else {
       throw new Error(newResourceRsp.message!);
     }
-  }, []);
-
-  const coverRef = useRef<IResourceCoverRef>();
+  }, [forceUpdate]);
 
   const onCoverClick = useCallback(() => {
     if (disableCoverClick) return;

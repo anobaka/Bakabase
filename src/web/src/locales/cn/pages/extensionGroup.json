@@ -3,5 +3,7 @@
   "extensionGroup.action.addGroup": "添加组",
   "extensionGroup.label.extensions": "扩展名",
   "extensionGroup.input.separatePlaceholder": "用空格或换行分隔",
-  "extensionGroup.confirm.deleteTitle": "确定要删除吗？"
+  "extensionGroup.confirm.deleteTitle": "确定要删除吗？",
+  "extensionGroup.select.label": "限制文件扩展组",
+  "extensionGroup.select.placeholder": "从扩展组选择"
 }

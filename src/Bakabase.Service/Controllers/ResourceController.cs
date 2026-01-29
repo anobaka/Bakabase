@@ -91,8 +91,14 @@ namespace Bakabase.Service.Controllers
                 return ListResponseBuilder<SearchOperation>.NotFound;
             }
 
-            var psh = PropertySystem.Property.TryGetSearchHandler(pt.Value);
+            return GetSearchOperationsByPropertyType(pt.Value);
+        }
 
+        [HttpGet("search-operation/by-type")]
+        [SwaggerOperation(OperationId = "GetSearchOperationsByPropertyType")]
+        public ListResponse<SearchOperation> GetSearchOperationsByPropertyType(PropertyType propertyType)
+        {
+            var psh = PropertySystem.Property.TryGetSearchHandler(propertyType);
             return new ListResponse<SearchOperation>(psh?.SearchOperations.Keys);
         }
 

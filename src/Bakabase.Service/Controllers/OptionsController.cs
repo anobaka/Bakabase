@@ -87,9 +87,10 @@ namespace Bakabase.Service.Controllers
             {
                 if (model.Language.IsNotEmpty())
                 {
-                    if (options.Language != model.Language)
+                    var normalizedLanguage = AppService.NormalizeLanguageCode(model.Language);
+                    if (options.Language != normalizedLanguage)
                     {
-                        options.Language = model.Language;
+                        options.Language = normalizedLanguage;
                         AppService.SetCulture(options.Language);
                     }
                 }

@@ -3330,6 +3330,30 @@ export interface BakabaseServiceModelsViewFileRenameResult {
   error?: string;
 }
 
+export interface BakabaseServiceModelsViewFilePlayabilityViewModel {
+  /** Whether the file is playable */
+  playable: boolean;
+  /** Detected media type */
+  mediaType: BakabaseInsideWorldModelsConstantsMediaType;
+  /** Video/Audio codec name (e.g., h264, hevc, aac) */
+  codec?: string;
+  /** Duration in seconds */
+  duration?: number;
+  /** Video width in pixels */
+  width?: number;
+  /** Video height in pixels */
+  height?: number;
+  /** Error message if not playable */
+  error?: string;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
+}
+
 export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
   rootPath: string;
   groups: BakabaseServiceModelsViewFileSystemEntryGroupResultViewModelGroupViewModel[];
@@ -8342,6 +8366,55 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Resource
+     * @name GetSearchOperationsByPropertyType
+     * @request GET:/resource/search-operation/by-type
+     */
+    getSearchOperationsByPropertyType: (
+      query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainConstantsSearchOperation,
+        any
+      >({
+        path: `/resource/search-operation/by-type`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSearchOperationsByPropertyType
+     * @name getSearchOperationsByPropertyTypeUrl
+     */
+    getSearchOperationsByPropertyTypeUrl: (query?: {
+        /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+        propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/search-operation/by-type`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Resource
      * @name GetFilterValueProperty
      * @request GET:/resource/filter-value-property
      */
@@ -10885,6 +10958,50 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     },
 
     /**
+     * Check if a file is playable
+     *
+     * @tags File
+     * @name CheckFilePlayability
+     * @request GET:/file/playability
+     */
+    checkFilePlayability: (
+      query?: {
+        fullname?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel, any>({
+        path: `/file/playability`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for checkFilePlayability
+     * @name checkFilePlayabilityUrl
+     */
+    checkFilePlayabilityUrl: (query?: {
+        fullname?: string;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/playability`;
+
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+
+      return baseUrl + path;
+    },
+
+    /**
      * No description
      *
      * @tags File
@@ -11446,6 +11563,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags File
+     * @name UploadFile
+     * @request POST:/file/upload
+     */
+    uploadFile: (
+      data: {
+        /** @format binary */
+        file?: File;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/file/upload`,
+        method: "POST",
+        body: data,
+        type: ContentType.FormData,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for uploadFile
+     * @name uploadFileUrl
+     */
+    uploadFileUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/file/upload`;
       
       return baseUrl + path;
     },

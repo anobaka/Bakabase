@@ -6,7 +6,7 @@
     width: 100%;
     height: 100%;
 
-    &.loading, &.nothing-to-preview {
+    &.loading, &.nothing-to-preview, &.not-playable {
       position: relative;
       &>* {
         width: 100%;

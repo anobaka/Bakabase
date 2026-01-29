@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useImperativeHandle, forwardRef } from "react";
+import React, { useRef, useImperativeHandle, forwardRef, useState, useEffect } from "react";
 import ReactPlayer from "react-player";
 
 import { MediaType } from "@/sdk/constants";
@@ -9,8 +9,10 @@ import { Spinner } from "@/components/bakaui";
 import TextReader from "@/components/TextReader";
 import envConfig from "@/config/env";
 import { useTranslation } from "react-i18next";
+import BApi from "@/sdk/BApi";
 
 import type { MediaPlayerEntry } from "../types";
+import type { BakabaseServiceModelsViewFilePlayabilityViewModel } from "@/sdk/Api";
 
 export interface MediaRendererRef {
   getImageRef: () => HTMLImageElement | null;
@@ -35,6 +37,7 @@ interface MediaRendererProps {
     loaded: number;
     loadedSeconds: number;
   }) => void;
+  onPlayabilityError?: (error: string) => void;
 }
 
 const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, ref) => {
@@ -51,6 +54,7 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
     onVideoSeek,
     onVideoStart,
     onVideoProgress,
+    onPlayabilityError,
   } = props;
 
   const { t } = useTranslation();
@@ -60,6 +64,11 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   const videoSizeRef = useRef<{ width: number; height: number }>();
   const mediaContainerRef = useRef<HTMLDivElement | null>(null);
 
+  // Playability check state
+  const [playabilityInfo, setPlayabilityInfo] = useState<BakabaseServiceModelsViewFilePlayabilityViewModel | null>(null);
+  const [isCheckingPlayability, setIsCheckingPlayability] = useState(false);
+  const [playabilityChecked, setPlayabilityChecked] = useState(false);
+
   useImperativeHandle(ref, () => ({
     getImageRef: () => imageRef.current,
     getPlayerRef: () => playerRef.current,
@@ -68,7 +77,63 @@ const MediaRenderer = forwardRef<MediaRendererRef, MediaRendererProps>((props, r
   // Use playPath for compressed file entries, otherwise use path
   const playPath = entry.playPath || entry.path;
 
+  // Check playability when entry changes (only for video/audio)
+  useEffect(() => {
+    const checkPlayability = async () => {
+      // Only check for video and audio files
+      if (mediaType !== MediaType.Video && mediaType !== MediaType.Audio) {
+        setPlayabilityChecked(true);
+        setPlayabilityInfo({ playable: true, mediaType });
+        return;
+      }
+
+      setIsCheckingPlayability(true);
+      setPlayabilityChecked(false);
+      setPlayabilityInfo(null);
+
+      try {
+        const response = await BApi.file.checkFilePlayability({ fullname: playPath });
+        if (response.data) {
+          setPlayabilityInfo(response.data);
+          if (!response.data.playable && response.data.error) {
+            log("File not playable:", response.data.error);
+            onPlayabilityError?.(response.data.error);
+          }
+        }
+      } catch (err) {
+        log("Playability check failed:", err);
+        // On error, assume playable and let the player handle it
+        setPlayabilityInfo({ playable: true, mediaType });
+      } finally {
+        setIsCheckingPlayability(false);
+        setPlayabilityChecked(true);
+      }
+    };
+
+    checkPlayability();
+  }, [playPath, mediaType]);
+
   const renderMediaContent = () => {
+    // Show checking state for video/audio
+    if ((mediaType === MediaType.Video || mediaType === MediaType.Audio) && isCheckingPlayability) {
+      return (
+        <div className="flex flex-col items-center justify-center text-white/70">
+          <Spinner size="lg" />
+          <div className="mt-2">{t("Checking playability...")}</div>
+        </div>
+      );
+    }
+
+    // Show error if not playable
+    if (playabilityChecked && playabilityInfo && !playabilityInfo.playable) {
+      return (
+        <div className="flex flex-col items-center justify-center text-white/70 text-center p-4">
+          <div className="text-red-400 text-xl mb-2">⚠️ {t("Cannot play this file")}</div>
+          <div className="text-sm opacity-80">{playabilityInfo.error || t("Unknown error")}</div>
+        </div>
+      );
+    }
+
     switch (mediaType) {
       case MediaType.Audio:
       case MediaType.Video:

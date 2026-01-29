@@ -140,7 +140,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.308'
+          dotnet-version: '9.0.310'
           dotnet-quality: ''
       - name: Check dotnet info
         run: dotnet --info

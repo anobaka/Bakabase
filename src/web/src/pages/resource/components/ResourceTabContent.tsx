@@ -159,6 +159,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
     }
   }, [selectionKey]);
 
+  // Reset multi-selection mode when window loses focus (e.g., user switches apps while holding key)
+  const onWindowBlur = useCallback(() => {
+    if (multiSelectionRef.current) {
+      multiSelectionRef.current = false;
+      containerRef.current?.removeAttribute("data-selection-mode");
+    }
+  }, []);
+
   const onClick = useCallback((e: globalThis.MouseEvent) => {
     if (!multiSelectionRef.current && !e.shiftKey) {
       // Don't clear selection if clicking on menu items, modals, or other overlay elements
@@ -179,6 +187,8 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("click", onClick, true);
+      window.removeEventListener("blur", onWindowBlur);
+      document.removeEventListener("visibilitychange", onWindowBlur);
     };
   }, []);
 
@@ -197,10 +207,14 @@ const ResourceTabContent = React.forwardRef<ResourceTabContentRef, Props>((props
       window.addEventListener("keydown", onKeyDown);
       window.addEventListener("keyup", onKeyUp);
       window.addEventListener("click", onClick, true);
+      window.addEventListener("blur", onWindowBlur);
+      document.addEventListener("visibilitychange", onWindowBlur);
     } else {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("click", onClick, true);
+      window.removeEventListener("blur", onWindowBlur);
+      document.removeEventListener("visibilitychange", onWindowBlur);
     }
   }, [props.activated]);
 

@@ -1,9 +1,86 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Text.RegularExpressions;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.InsideWorld.Models.Constants;
 using Bootstrap.Extensions;
 
 namespace Bakabase.Abstractions.Extensions;
+
+public static partial class NaturalSort
+{
+    [GeneratedRegex(@"(\d+)")]
+    private static partial Regex NumberRegex();
+
+    private static int CompareParts(object[] xParts, object[] yParts)
+    {
+        var minLength = Math.Min(xParts.Length, yParts.Length);
+        for (var i = 0; i < minLength; i++)
+        {
+            int result;
+            var xIsNum = xParts[i] is long;
+            var yIsNum = yParts[i] is long;
+
+            if (xIsNum && yIsNum)
+            {
+                result = ((long)xParts[i]).CompareTo((long)yParts[i]);
+            }
+            else if (xIsNum)
+            {
+                result = -1; // numbers before strings
+            }
+            else if (yIsNum)
+            {
+                result = 1;
+            }
+            else
+            {
+                result = string.Compare((string)xParts[i], (string)yParts[i], StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (result != 0) return result;
+        }
+
+        return xParts.Length.CompareTo(yParts.Length);
+    }
+
+    private static object[] ParseParts(string s)
+    {
+        var parts = NumberRegex().Split(s);
+        var result = new object[parts.Length];
+        for (var i = 0; i < parts.Length; i++)
+        {
+            result[i] = long.TryParse(parts[i], out var num) ? num : parts[i];
+        }
+        return result;
+    }
+
+    public static IOrderedEnumerable<T> OrderByNatural<T>(this IEnumerable<T> source, Func<T, string?> keySelector)
+    {
+        return source.OrderBy(x =>
+        {
+            var key = keySelector(x);
+            return key == null ? null : ParseParts(key);
+        }, PartsComparer.Default);
+    }
+
+    public static IOrderedEnumerable<string> OrderByNatural(this IEnumerable<string> source)
+    {
+        return source.OrderByNatural(x => x);
+    }
+
+    private class PartsComparer : IComparer<object[]?>
+    {
+        public static readonly PartsComparer Default = new();
+
+        public int Compare(object[]? x, object[]? y)
+        {
+            if (x == null && y == null) return 0;
+            if (x == null) return -1;
+            if (y == null) return 1;
+            return CompareParts(x, y);
+        }
+    }
+}
 
 public static class StringExtensions
 {
