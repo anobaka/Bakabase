@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using Bakabase.Components;
 using Bakabase.Infrastructures.Components.App;
 using Bakabase.Infrastructures.Components.Configurations.App;
@@ -30,6 +30,7 @@ namespace Bakabase
         private void App_OnExit(object sender, ExitEventArgs e)
         {
             _guiAdapter.HideTray();
+            Host?.Dispose();
         }
 
         private async void App_OnStartup(object sender, StartupEventArgs e)

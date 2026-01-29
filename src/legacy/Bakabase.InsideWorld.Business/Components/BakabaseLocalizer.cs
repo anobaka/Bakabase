@@ -432,5 +432,8 @@ namespace Bakabase.InsideWorld.Business.Components
 
         public string Dependency_Required_Message(string dependencyDisplayName, string requiredByDisplayName) =>
             this[nameof(Dependency_Required_Message), dependencyDisplayName, requiredByDisplayName];
+
+        public string CodecNotSupportedByBrowsers(string codec) =>
+            this[nameof(CodecNotSupportedByBrowsers), codec];
     }
 }

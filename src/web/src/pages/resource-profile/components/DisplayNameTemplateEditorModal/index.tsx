@@ -10,7 +10,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 
 import { Chip, Modal, Textarea, Divider } from "@/components/bakaui";
 import BApi from "@/sdk/BApi.tsx";
-import { builtinPropertyForDisplayNames, PropertyType, SpecialTextType } from "@/sdk/constants.ts";
+import { builtinPropertyForDisplayNames, PropertyPool, PropertyType, SpecialTextType } from "@/sdk/constants.ts";
 import { getEnumKey } from "@/i18n";
 
 type Props = DestroyableProps & {
@@ -132,7 +132,7 @@ const DisplayNameTemplateEditorModal = ({ template, properties, onSubmit, ...pro
     });
 
     // Add custom properties with their type
-    properties?.forEach((cp) => {
+    properties?.filter(p => p.pool != PropertyPool.Internal).forEach((cp) => {
       if (cp.name) {
         items.push({
           name: cp.name,
