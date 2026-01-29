@@ -1523,7 +1523,8 @@ namespace Bakabase.Service.Controllers
             }
 
             return new ListResponse<string>(Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                .Select(a => a.StandardizePath()!));
+                .Select(a => a.StandardizePath()!)
+                .OrderByNatural());
         }
 
         [HttpGet("compressed-file/entries")]
@@ -1753,7 +1754,7 @@ namespace Bakabase.Service.Controllers
         [HttpPost("upload")]
         [SwaggerOperation(OperationId = "UploadFile")]
         [Consumes("multipart/form-data")]
-        public async Task<SingletonResponse<string>> UploadFile([FromForm] IFormFile file)
+        public async Task<SingletonResponse<string>> UploadFile(IFormFile file)
         {
             if (file.Length == 0)
             {

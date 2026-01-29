@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -182,13 +183,28 @@ namespace Bakabase.Components
         [GuiContextInterceptor]
         public override void Show()
         {
-            _mainWindow?.Show();
             if (_mainWindow != null)
             {
-                _mainWindow.Topmost = true;
-                _mainWindow.Topmost = false;
+                // Restore window if minimized
+                if (_mainWindow.WindowState == WindowState.Minimized)
+                {
+                    _mainWindow.WindowState = WindowState.Normal;
+                }
+
+                _mainWindow.Show();
+
+                // Use Win32 API to properly bring window to foreground
+                var hwnd = new WindowInteropHelper(_mainWindow).Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    SetForegroundWindow(hwnd);
+                }
             }
         }
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         private async void _onExitConfirmationDialogClosing(CloseBehavior behavior,
             Func<CloseBehavior, bool, Task> onClosed)

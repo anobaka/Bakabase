@@ -201,11 +201,14 @@ const cnResources = {
 if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources: {
+      "zh-CN": { translation: cnResources },
+      "en-US": { translation: enResources },
+      // Legacy aliases for backward compatibility
       cn: { translation: cnResources },
       en: { translation: enResources },
     },
-    lng: "en", // 默认语言
-    fallbackLng: "en",
+    lng: "en-US", // 默认语言
+    fallbackLng: "en-US",
     returnNull: false,
     interpolation: { escapeValue: false },
     parseMissingKeyHandler: (key: string) => key,
@@ -222,6 +225,7 @@ if (import.meta.hot) {
   Object.keys(enModules).forEach((modulePath) => {
     import.meta.hot?.accept(modulePath, (newModule) => {
       if (newModule) {
+        i18n.addResourceBundle("en-US", "translation", newModule.default, true, true);
         i18n.addResourceBundle("en", "translation", newModule.default, true, true);
         console.log(`i18n hot updated: ${modulePath}`);
       }
@@ -233,6 +237,7 @@ if (import.meta.hot) {
   Object.keys(cnModules).forEach((modulePath) => {
     import.meta.hot?.accept(modulePath, (newModule) => {
       if (newModule) {
+        i18n.addResourceBundle("zh-CN", "translation", newModule.default, true, true);
         i18n.addResourceBundle("cn", "translation", newModule.default, true, true);
         console.log(`i18n hot updated: ${modulePath}`);
       }
