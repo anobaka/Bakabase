@@ -1759,6 +1759,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/file/playability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["CheckFilePlayability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/file/play": {
         parameters: {
             query?: never;
@@ -5420,6 +5436,7 @@ export interface components {
             logPath?: string;
             backupPath: string;
             tempFilesPath: string;
+            dataPath: string;
             notAcceptTerms: boolean;
             needRestart: boolean;
         };
@@ -7219,6 +7236,18 @@ export interface components {
             reservedPropertyValue?: components["schemas"]["Bakabase.Abstractions.Models.Domain.ReservedPropertyValue"];
             property?: components["schemas"]["Bakabase.Modules.Property.Models.View.PropertyViewModel"];
         };
+        "Bakabase.Service.Models.View.FilePlayabilityViewModel": {
+            playable: boolean;
+            mediaType: components["schemas"]["Bakabase.InsideWorld.Models.Constants.MediaType"];
+            codec?: string;
+            /** Format: double */
+            duration?: number;
+            /** Format: int32 */
+            width?: number;
+            /** Format: int32 */
+            height?: number;
+            error?: string;
+        };
         "Bakabase.Service.Models.View.FileRenameResult": {
             oldPath: string;
             newPath: string;
@@ -8035,6 +8064,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Service.Models.View.CustomPropertyViewModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Service.Models.View.FilePlayabilityViewModel"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.ResourceHierarchyContextViewModel]": {
             /** Format: int32 */
@@ -12258,6 +12293,30 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    CheckFilePlayability: {
+        parameters: {
+            query?: {
+                fullname?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Service.Models.View.FilePlayabilityViewModel]"];
                 };
             };
         };

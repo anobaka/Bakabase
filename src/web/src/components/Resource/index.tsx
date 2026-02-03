@@ -172,6 +172,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
   const displayPropertyKeys = uiOptions.resource?.displayProperties ?? [];
 
+  log(`render #${renderedTimes.current}`, 'displayPropertyKeys:', displayPropertyKeys.length, 'hasProperties:', !!resource.properties, 'propertyPools:', resource.properties ? Object.keys(resource.properties) : '(none)', 'mediaLibraries:', resource.mediaLibraries, 'category:', resource.category?.name);
+
   // Discovery happens automatically via SSE now
 
   const coverRef = useRef<IResourceCoverRef>();
@@ -381,6 +383,8 @@ const Resource = React.forwardRef((props: Props, ref) => {
               } catch (error) {
                 log("error occurred while rendering display property", error);
               }
+
+              log(`displayProperty pool:${dpk.pool} id:${dpk.id} => bizValue:`, bizValue, 'bizValueType:', bizValueType);
 
               if (bizValue == undefined || bizValueType == undefined) {
                 return [];

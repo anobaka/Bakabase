@@ -7,7 +7,9 @@ using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
 using Microsoft.Extensions.Logging;
+using System.Xml.Linq;
 using System.Xml.Serialization;
+using Bakabase.Modules.Enhancer.Components.Enhancers.Kodi.Models;
 
 namespace Bakabase.Modules.Enhancer.Components.Enhancers.Kodi;
 
@@ -19,26 +21,40 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
     {
         try
         {
-            // Look for .nfo files in the same directory as the resource
-            var directory = Path.GetDirectoryName(resource.Path);
-            if (string.IsNullOrEmpty(directory))
+            string searchDirectory;
+            string resourceName;
+
+            if (resource.IsFile)
             {
-                Logger.LogWarning($"Cannot determine directory for resource: {resource.Path}");
+                // For file resources, look for nfo in the same directory with the same name
+                searchDirectory = Path.GetDirectoryName(resource.Path)!;
+                resourceName = Path.GetFileNameWithoutExtension(resource.FileName);
+            }
+            else
+            {
+                // For folder resources, look for nfo inside the folder
+                searchDirectory = resource.Path;
+                resourceName = Path.GetFileName(resource.Path);
+            }
+
+            if (string.IsNullOrEmpty(searchDirectory) || !Directory.Exists(searchDirectory))
+            {
+                Logger.LogWarning($"Cannot determine or access directory for resource: {resource.Path}");
                 logCollector.LogWarning(EnhancementLogEvent.Error,
-                    $"Cannot determine directory for resource: {resource.Path}");
+                    $"Cannot determine or access directory for resource: {resource.Path}");
                 return null;
             }
 
             logCollector.LogInfo(EnhancementLogEvent.DataFetching,
-                $"Searching for NFO files in: {directory}",
-                new { Directory = directory });
+                $"Searching for NFO files in: {searchDirectory} (Resource is {(resource.IsFile ? "file" : "folder")})",
+                new { Directory = searchDirectory, IsFile = resource.IsFile });
 
-            var nfoFiles = Directory.GetFiles(directory, "*.nfo", SearchOption.TopDirectoryOnly);
+            var nfoFiles = Directory.GetFiles(searchDirectory, "*.nfo", SearchOption.TopDirectoryOnly);
             if (!nfoFiles.Any())
             {
-                Logger.LogInformation($"No .nfo files found in directory: {directory}");
+                Logger.LogInformation($"No .nfo files found in directory: {searchDirectory}");
                 logCollector.LogWarning(EnhancementLogEvent.DataFetched,
-                    $"No .nfo files found in directory: {directory}");
+                    $"No .nfo files found in directory: {searchDirectory}");
                 return null;
             }
 
@@ -47,7 +63,6 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
                 new { Files = nfoFiles.Select(Path.GetFileName).ToList() });
 
             // Try to find the most relevant .nfo file (same name as resource or generic)
-            var resourceName = Path.GetFileNameWithoutExtension(resource.FileName);
             var targetNfoFile = nfoFiles.FirstOrDefault(f =>
                 Path.GetFileNameWithoutExtension(f).Equals(resourceName, StringComparison.OrdinalIgnoreCase))
                 ?? nfoFiles.First();
@@ -66,10 +81,8 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
                 return null;
             }
 
-            // Deserialize the XML content
-            var serializer = new XmlSerializer(typeof(KodiEnhancerContext));
-            using var reader = new StringReader(xmlContent);
-            var context = serializer.Deserialize(reader) as KodiEnhancerContext;
+            // Detect root element and deserialize accordingly
+            var context = DeserializeNfoContent(xmlContent, logCollector);
 
             if (context == null)
             {
@@ -108,6 +121,69 @@ public class KodiEnhancer(ILoggerFactory loggerFactory, IFileManager fileManager
             logCollector.LogError(EnhancementLogEvent.Error,
                 $"Error parsing NFO file: {ex.Message}",
                 new { ExceptionType = ex.GetType().Name, ex.Message });
+            return null;
+        }
+    }
+
+    private KodiEnhancerContext? DeserializeNfoContent(string xmlContent, EnhancementLogCollector logCollector)
+    {
+        try
+        {
+            var doc = XDocument.Parse(xmlContent);
+            var rootName = doc.Root?.Name.LocalName;
+
+            if (string.IsNullOrEmpty(rootName))
+            {
+                logCollector.LogWarning(EnhancementLogEvent.Error, "NFO file has no root element");
+                return null;
+            }
+
+            logCollector.LogInfo(EnhancementLogEvent.DataFetching, $"Detected NFO type: {rootName}");
+
+            var context = new KodiEnhancerContext();
+            using var reader = new StringReader(xmlContent);
+
+            switch (rootName.ToLowerInvariant())
+            {
+                case "movie":
+                    var movieSerializer = new XmlSerializer(typeof(Movie));
+                    context.Movie = movieSerializer.Deserialize(reader) as Movie;
+                    break;
+                case "tvshow":
+                    var tvShowSerializer = new XmlSerializer(typeof(TvShow));
+                    context.TvShow = tvShowSerializer.Deserialize(reader) as TvShow;
+                    break;
+                case "episodedetails":
+                    var episodeSerializer = new XmlSerializer(typeof(EpisodeDetails));
+                    var episode = episodeSerializer.Deserialize(reader) as EpisodeDetails;
+                    if (episode != null)
+                    {
+                        context.Episodes = [episode];
+                    }
+                    break;
+                case "musicvideo":
+                    var musicVideoSerializer = new XmlSerializer(typeof(MusicVideo));
+                    context.MusicVideo = musicVideoSerializer.Deserialize(reader) as MusicVideo;
+                    break;
+                case "album":
+                    var albumSerializer = new XmlSerializer(typeof(Album));
+                    context.Album = albumSerializer.Deserialize(reader) as Album;
+                    break;
+                case "artist":
+                    var artistSerializer = new XmlSerializer(typeof(Artist));
+                    context.Artist = artistSerializer.Deserialize(reader) as Artist;
+                    break;
+                default:
+                    logCollector.LogWarning(EnhancementLogEvent.Error, $"Unknown NFO root element: {rootName}");
+                    return null;
+            }
+
+            return context;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deserializing NFO content");
+            logCollector.LogError(EnhancementLogEvent.Error, $"Error deserializing NFO: {ex.Message}");
             return null;
         }
     }

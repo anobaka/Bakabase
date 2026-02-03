@@ -1,5 +1,8 @@
 {
   "cache.label.resourceCount": "资源数量",
   "cache.label.cached": "已缓存",
-  "cache.label.unassociatedResources": "未关联的资源"
+  "cache.label.unassociatedResources": "未关联的资源",
+  "cache.resourceCacheType.covers": "封面",
+  "cache.resourceCacheType.playablefiles": "可播放文件",
+  "cache.resourceCacheType.resourcemarkers": "资源标记"
 }

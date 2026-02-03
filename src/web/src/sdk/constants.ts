@@ -1465,8 +1465,8 @@ export enum StartupPage {
 }
 
 export const startupPages = [
-  { label: 'Default', value: StartupPage.Default },
-  { label: 'Resource', value: StartupPage.Resource }
+  { label: 'configuration.functional.startupPage.default', value: StartupPage.Default },
+  { label: 'configuration.functional.startupPage.resource', value: StartupPage.Resource }
 ] as const;
 
 export const StartupPageLabel: Record<StartupPage, string> = {

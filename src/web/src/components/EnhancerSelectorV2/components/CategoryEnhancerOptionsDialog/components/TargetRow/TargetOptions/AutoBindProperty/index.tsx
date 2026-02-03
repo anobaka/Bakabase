@@ -18,17 +18,17 @@ const AutoBindProperty = ({ autoBindProperty, onChange }: IProps) => {
           <div>
             <div>
               {t<string>(
-                "If this option is checked, a property with the same name and type of the target will be bound automatically.",
+                "enhancer.targetOptions.autoBind.description",
               )}
             </div>
             <div>
               {t<string>(
-                "If there isn't such a property, a new property will be created and bound to this target.",
+                "enhancer.targetOptions.autoBind.createTip",
               )}
             </div>
             <div>
               {t<string>(
-                "If this option is checked in default options of a dynamic target, all unlisted dynamic targets will be bound to properties of the same type with the same name.",
+                "enhancer.targetOptions.autoBind.dynamicTip",
               )}
             </div>
           </div>
@@ -40,7 +40,7 @@ const AutoBindProperty = ({ autoBindProperty, onChange }: IProps) => {
           size={"sm"}
           onValueChange={onChange}
         >
-          {t<string>("Auto bind property")}
+          {t<string>("enhancer.targetOptions.autoBind.label")}
         </Checkbox>
       </Tooltip>
     </>

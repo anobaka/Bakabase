@@ -52,14 +52,7 @@ namespace Bakabase.Service.Controllers
 
             // Use ResourceProfileService to get enhancer options for this resource
             var enhancerOptions = await resourceProfileService.GetEffectiveEnhancerOptions(resource);
-            var enhancerOptionsSet = new HashSet<int>();
-            if (enhancerOptions?.Enhancers != null)
-            {
-                foreach (var enhancer in enhancerOptions.Enhancers)
-                {
-                    enhancerOptionsSet.Add(enhancer.EnhancerId);
-                }
-            }
+            var enhancerOptionsSet = enhancerOptions.Select(e => e.EnhancerId).ToHashSet();
 
             // Build response for enhancers from resource profile
             var res = enhancerOptionsSet.Select(enhancerId =>

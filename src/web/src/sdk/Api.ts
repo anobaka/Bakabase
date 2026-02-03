@@ -1080,6 +1080,7 @@ export interface BakabaseInfrastructuresComponentsAppModelsResponseModelsAppInfo
   logPath?: string;
   backupPath: string;
   tempFilesPath: string;
+  dataPath: string;
   notAcceptTerms: boolean;
   needRestart: boolean;
 }
@@ -3323,35 +3324,25 @@ export interface BakabaseServiceModelsViewEnhancementViewModel {
   property?: BakabaseModulesPropertyModelsViewPropertyViewModel;
 }
 
+export interface BakabaseServiceModelsViewFilePlayabilityViewModel {
+  playable: boolean;
+  /** [1: Image, 2: Audio, 3: Video, 4: Text, 5: Application, 1000: Unknown] */
+  mediaType: BakabaseInsideWorldModelsConstantsMediaType;
+  codec?: string;
+  /** @format double */
+  duration?: number;
+  /** @format int32 */
+  width?: number;
+  /** @format int32 */
+  height?: number;
+  error?: string;
+}
+
 export interface BakabaseServiceModelsViewFileRenameResult {
   oldPath: string;
   newPath: string;
   success: boolean;
   error?: string;
-}
-
-export interface BakabaseServiceModelsViewFilePlayabilityViewModel {
-  /** Whether the file is playable */
-  playable: boolean;
-  /** Detected media type */
-  mediaType: BakabaseInsideWorldModelsConstantsMediaType;
-  /** Video/Audio codec name (e.g., h264, hevc, aac) */
-  codec?: string;
-  /** Duration in seconds */
-  duration?: number;
-  /** Video width in pixels */
-  width?: number;
-  /** Video height in pixels */
-  height?: number;
-  /** Error message if not playable */
-  error?: string;
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
 }
 
 export interface BakabaseServiceModelsViewFileSystemEntryGroupResultViewModel {
@@ -4297,6 +4288,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceM
   code: number;
   message?: string;
   data?: BakabaseServiceModelsViewCustomPropertyViewModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseServiceModelsViewFilePlayabilityViewModel;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewResourceHierarchyContextViewModel {
@@ -10958,7 +10956,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     },
 
     /**
-     * Check if a file is playable
+     * No description
      *
      * @tags File
      * @name CheckFilePlayability
@@ -10970,7 +10968,10 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       },
       params: RequestParams = {},
     ) =>
-      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel, any>({
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseServiceModelsViewFilePlayabilityViewModel,
+        any
+      >({
         path: `/file/playability`,
         method: "GET",
         query: query,
@@ -10987,17 +10988,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/file/playability`;
-
+      
       // Build query string
       if (query) {
         const queryString = Object.keys(query)
           .filter(key => query[key] !== undefined && query[key] !== null)
           .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
           .join("&");
-
+        
         return baseUrl + path + (queryString ? `?${queryString}` : "");
       }
-
+      
       return baseUrl + path;
     },
 

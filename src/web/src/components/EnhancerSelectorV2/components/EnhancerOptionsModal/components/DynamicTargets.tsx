@@ -105,20 +105,20 @@ const DynamicTargets = (props: Props) => {
             <Table removeWrapper aria-label={"Dynamic target"}>
               <TableHeader>
                 <TableColumn align={"center"} width={80}>
-                  {t<string>("Configured")}
+                  {t<string>("enhancer.target.configured.label")}
                 </TableColumn>
                 <TableColumn width={"33.3333%"}>
                   {descriptor.name}
                   &nbsp;
                   <Popover trigger={<ApartmentOutlined className={"text-base"} />}>
                     {t<string>(
-                      "This is not a fixed enhancement target, which will be replaced with other content when data is collected",
+                      "enhancer.target.dynamicLabel.tip",
                     )}
                   </Popover>
                 </TableColumn>
                 <TableColumn width={"25%"}>
                   <div className={"flex items-center gap-1"}>
-                    {t<string>("Bind property")}
+                    {t<string>("enhancer.target.bindProperty.label")}
                     {notEmptyTargets.length > 0 && (
                       <PropertiesMatcher
                         properties={notEmptyTargets.map((td) => ({
@@ -154,11 +154,11 @@ const DynamicTargets = (props: Props) => {
                 </TableColumn>
                 <TableColumn width={"25%"}>
                   <div className={"flex items-center gap-1"}>
-                    {t<string>("Other options")}
+                    {t<string>("enhancer.target.otherOptions.label")}
                     <OtherOptionsTip />
                   </div>
                 </TableColumn>
-                <TableColumn>{t<string>("Operations")}</TableColumn>
+                <TableColumn>{t<string>("common.label.operations")}</TableColumn>
               </TableHeader>
               {/* @ts-ignore */}
               <TableBody />
@@ -197,7 +197,7 @@ const DynamicTargets = (props: Props) => {
                 const currentTargets = subOptions
                   .filter((x) => x.dynamicTarget != undefined)
                   .map((x) => x.dynamicTarget!);
-                const nextTarget = generateNextWithPrefix(t<string>("Target"), currentTargets);
+                const nextTarget = generateNextWithPrefix(t<string>("enhancer.target.label"), currentTargets);
                 const newOptions = createEnhancerTargetOptions(descriptor);
 
                 newOptions.dynamicTarget = nextTarget;
@@ -206,7 +206,7 @@ const DynamicTargets = (props: Props) => {
               }}
             >
               <PlusCircleOutlined className={"text-sm"} />
-              {t<string>("Specify dynamic target")}
+              {t<string>("enhancer.target.specifyDynamic.action")}
             </Button>
           </div>
         );

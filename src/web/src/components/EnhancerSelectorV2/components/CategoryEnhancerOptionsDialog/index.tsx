@@ -126,7 +126,7 @@ const CategoryEnhancerOptionsDialog = ({
       }}
       size={"full"}
       title={t<string>(
-        "Configure enhancer:{{enhancerName}} for category:{{categoryName}}",
+        "enhancer.categoryOptions.title",
         {
           enhancerName: enhancer.name,
           categoryName: category.name,

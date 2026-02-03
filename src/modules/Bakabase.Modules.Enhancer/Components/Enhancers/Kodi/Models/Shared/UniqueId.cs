@@ -8,7 +8,7 @@ public record UniqueId
     public string? Type { get; set; }
 
     [XmlAttribute("default")]
-    public bool? Default { get; set; }
+    public string? Default { get; set; }
 
     [XmlText]
     public string? Value { get; set; }

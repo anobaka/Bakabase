@@ -88,7 +88,7 @@ const TargetNotSetupTip = ({ options, enhancer }: IProps) => {
       return (
         <Tooltip
           content={t<string>(
-            "Some of targets are not mapped to a property, corresponding data will not be enhanced.",
+            "enhancer.tip.partialSetup.warning",
           )}
         >
           <ExclamationCircleOutlined
@@ -101,7 +101,7 @@ const TargetNotSetupTip = ({ options, enhancer }: IProps) => {
       return (
         <Tooltip
           content={t<string>(
-            "None of targets is mapped to a property, so no data will be enhanced.",
+            "enhancer.tip.noSetup.warning",
           )}
         >
           <ExclamationCircleOutlined

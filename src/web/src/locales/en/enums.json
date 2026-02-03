@@ -216,6 +216,9 @@
   "BangumiSubjectType.Game": "Game",
   "BangumiSubjectType.Real": "Real",
 
+  "CoverSelectOrder.FilenameAscending": "Filename ascending",
+  "CoverSelectOrder.FileModifyDtDescending": "File modify time descending",
+
   "enhancer.bangumi.prioritySubjectType.label": "Priority subject type",
   "enhancer.bangumi.prioritySubjectType.description": "If set, Bangumi will first search with this type. If no results found, it will fall back to searching all types.",
   "enhancer.bangumi.prioritySubjectType.hint": "Leave empty to search all types by default."

@@ -108,7 +108,7 @@ const ConfigureEnhancerButton = ({
       const profilesWithEnhancer = await getProfiles(enhancer);
 
       if (profilesWithEnhancer.length === 0) {
-        toast.default(t<string>("No resource profiles found with this enhancer configured"));
+        toast.default(t<string>("enhancer.records.noProfilesFound.warning"));
         return;
       }
 
@@ -140,12 +140,12 @@ const ConfigureEnhancerButton = ({
             isLoading={loading}
             onClick={handleClick}
           >
-            {t<string>("Configure enhancer")}
+            {t<string>("enhancer.records.configure.action")}
           </Button>
         }
       >
         <Listbox
-          aria-label={t<string>("Select resource profile")}
+          aria-label={t<string>("enhancer.records.selectProfile.label")}
           onAction={(key) => {
             const profile = profiles.find((p) => p.id === Number(key));
             if (profile) {
@@ -172,7 +172,7 @@ const ConfigureEnhancerButton = ({
       isLoading={loading}
       onClick={handleClick}
     >
-      {t<string>("Configure enhancer")}
+      {t<string>("enhancer.records.configure.action")}
     </Button>
   );
 };
@@ -192,11 +192,11 @@ const EmptyState = ({ type, enhancerName, onConfigureClick, onNavigateToProfiles
       <div className={"flex flex-col items-center justify-center py-12 gap-4"}>
         <div className={"text-center text-default-500"}>
           <div className={"text-lg font-semibold mb-2"}>
-            {t<string>("No resource profiles configured for this enhancer")}
+            {t<string>("enhancer.records.noProfiles.title")}
           </div>
           <div className={"text-sm"}>
             {t<string>(
-              "Please configure a resource profile with {{enhancerName}} enhancer to enable data retrieval",
+              "enhancer.records.noProfiles.description",
               { enhancerName }
             )}
           </div>
@@ -206,7 +206,7 @@ const EmptyState = ({ type, enhancerName, onConfigureClick, onNavigateToProfiles
           variant={"flat"}
           onClick={onNavigateToProfiles}
         >
-          {t<string>("Go to Resource Profiles")}
+          {t<string>("enhancer.records.goToProfiles.action")}
         </Button>
       </div>
     );
@@ -217,11 +217,11 @@ const EmptyState = ({ type, enhancerName, onConfigureClick, onNavigateToProfiles
       <div className={"flex flex-col items-center justify-center py-12 gap-4"}>
         <div className={"text-center text-default-500"}>
           <div className={"text-lg font-semibold mb-2"}>
-            {t<string>("No enhancement data available yet")}
+            {t<string>("enhancer.records.noData.title")}
           </div>
           <div className={"text-sm"}>
             {t<string>(
-              "Enhancement data will be generated automatically in the background, or you can click the button above to trigger it manually"
+              "enhancer.records.noData.description"
             )}
           </div>
         </div>
@@ -231,7 +231,7 @@ const EmptyState = ({ type, enhancerName, onConfigureClick, onNavigateToProfiles
             variant={"flat"}
             onClick={onConfigureClick}
           >
-            {t<string>("Enhance now")}
+            {t<string>("enhancer.records.enhanceNow.action")}
           </Button>
         )}
       </div>
@@ -393,7 +393,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
 
         await BApi.resourceProfile.updateResourceProfile(profile.id!, inputModel as any);
 
-        toast.success(t<string>("Enhancer configuration updated"));
+        toast.success(t<string>("enhancer.records.configUpdated.label"));
 
         // 重新加载 enhancements 以显示更新后的配置
         loadEnhancements();
@@ -453,7 +453,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
             dbRv = new Dayjs(rv.playedAt);
             break;
           default:
-            return t<string>("Unsupported reserved property type: {{type}}", {
+            return t<string>("enhancer.records.unsupportedReservedType.error", {
               type: e.propertyId,
             });
         }
@@ -485,7 +485,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
       }
       case PropertyPool.Internal:
       case PropertyPool.All:
-        return t<string>("Unsupported property type: {{type}}", {
+        return t<string>("enhancer.records.unsupportedPropertyType.error", {
           type: e.propertyPool,
         });
     }
@@ -497,15 +497,15 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
       footer={{
         actions: ["cancel"],
         cancelProps: {
-          children: t<string>("Close"),
+          children: t<string>("common.action.close"),
         }
       }}
       size={"7xl"}
-      title={t<string>("Enhancement records")}
+      title={t<string>("enhancer.records.title")}
       onDestroyed={props.onDestroyed}
     >
       <div className={"flex items-center gap-2"}>
-        <div>{t<string>("Path of resource")}</div>
+        <div>{t<string>("enhancer.records.resourcePath.label")}</div>
         <Snippet size={"sm"} symbol={""}>
           {resource.path}
         </Snippet>
@@ -517,11 +517,11 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
           </div>
           <div className={"text-center text-default-500"}>
             <div className={"text-lg font-semibold mb-2"}>
-              {t<string>("No enhancers configured")}
+              {t<string>("enhancer.records.noEnhancers.title")}
             </div>
             <div className={"text-sm"}>
               {t<string>(
-                "This resource has no enhancement records yet. Please configure enhancers in resource profiles to enable automatic data enhancement."
+                "enhancer.records.noEnhancers.description"
               )}
             </div>
           </div>
@@ -530,7 +530,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
             variant={"flat"}
             onClick={() => navigate("/resource-profile")}
           >
-            {t<string>("Go to Resource Profiles")}
+            {t<string>("enhancer.records.goToProfiles.action")}
           </Button>
         </div>
       ) : (
@@ -576,11 +576,11 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                     <ExclamationCircleOutlined className={"text-warning-600 dark:text-warning-400 text-lg mt-0.5"} />
                     <div className={"flex-1"}>
                       <div className={"text-warning-800 dark:text-warning-300 font-semibold mb-1"}>
-                        {t<string>("Enhancer not configured in resource profiles")}
+                        {t<string>("enhancer.records.notConfigured.title")}
                       </div>
                       <div className={"text-warning-700 dark:text-warning-400 text-sm"}>
                         {t<string>(
-                          "This enhancer is not currently configured in any resource profile. The data shown below is from previous enhancements. To enable automatic updates, please configure this enhancer in the resource profile settings."
+                          "enhancer.records.notConfigured.description"
                         )}
                       </div>
                       <Button
@@ -590,7 +590,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                         variant={"flat"}
                         onClick={() => navigate("/resource-profiles")}
                       >
-                        {t<string>("Go to Resource Profiles")}
+                        {t<string>("enhancer.records.goToProfiles.action")}
                       </Button>
                     </div>
                   </div>
@@ -606,12 +606,12 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                       variant={"light"}
                     >
                       <div className={"flex items-center gap-1"}>
-                        {t<string>("Data created at")}
+                        {t<string>("enhancer.records.dataCreatedAt.label")}
                         <Tooltip
                           className={"max-w-[500px]"}
                           color={"secondary"}
                           content={t<string>(
-                            "The data has been created, indicating that the enhancer has completed the data retrieval process, which is typically done by accessing third-party sites or executing specific internal logic. You can check the status of the data retrieval in the table below. Frequent repeated data retrieval attempts may result in access denial from third-party services.",
+                            "enhancer.records.dataCreatedAt.tip",
                           )}
                           placement={"top"}
                         >
@@ -619,7 +619,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                         </Tooltip>
                       </div>
                     </Chip>
-                    {enhancement?.contextCreatedAt ?? t<string>("None")}
+                    {enhancement?.contextCreatedAt ?? t<string>("common.label.none")}
                   </div>
                   <div className={"flex items-center gap-2"}>
                     <Chip
@@ -629,12 +629,12 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                       variant={"light"}
                     >
                       <div className={"flex items-center gap-1"}>
-                        {t<string>("Data applied at")}
+                        {t<string>("enhancer.records.dataAppliedAt.label")}
                         <Tooltip
                           className={"max-w-[500px]"}
                           color={"secondary"}
                           content={t<string>(
-                            "The application of data indicates that the retrieved data has been successfully converted into attribute values. This step is conducted entirely within the program, without involving any third-party data exchange.",
+                            "enhancer.records.dataAppliedAt.tip",
                           )}
                           placement={"top"}
                         >
@@ -642,13 +642,13 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                         </Tooltip>
                       </div>
                     </Chip>
-                    {enhancement?.contextAppliedAt ?? t<string>("None")}
+                    {enhancement?.contextAppliedAt ?? t<string>("common.label.none")}
                   </div>
                   <Tooltip
                     className={"max-w-[500px]"}
                     color={"secondary"}
                     content={t<string>(
-                      "Retrieve data then apply data. To reduce the possibility of access denial from third-party services, it is recommended to apply data only after all data has been retrieved. Configuring enhancer options in category won't affect the data retrieval process, it only affects the data applying process.",
+                      "enhancer.records.enhanceProcess.tip",
                     )}
                   >
                     <Button
@@ -674,8 +674,8 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                       <SyncOutlined className={"text-base"} />
                       {t<string>(
                         enhancement?.status == EnhancementRecordStatus.ContextApplied
-                          ? "Re-enhance now"
-                          : "Enhance now",
+                          ? "enhancer.records.reEnhance.action"
+                          : "enhancer.records.enhanceNow.action",
                       )}
                     </Button>
                   </Tooltip>
@@ -683,7 +683,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                     enhancement?.status == EnhancementRecordStatus.ContextCreated) && (
                     <Tooltip
                       color={"secondary"}
-                      content={t<string>("Apply the data to property values of the resource.")}
+                      content={t<string>("enhancer.records.applyData.tip")}
                     >
                       <Button
                         color={"primary"}
@@ -704,7 +704,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                         }}
                       >
                         <ApiOutlined className={"text-base"} />
-                        {t<string>("Apply data")}
+                        {t<string>("enhancer.records.applyData.action")}
                       </Button>
                     </Tooltip>
                   )}
@@ -726,7 +726,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                     <ExclamationCircleOutlined className={"text-danger-600 dark:text-danger-400 text-lg mt-0.5"} />
                     <div className={"flex-1"}>
                       <div className={"text-danger-800 dark:text-danger-300 font-semibold mb-1"}>
-                        {t<string>("Enhancement Error")}
+                        {t<string>("enhancer.records.error.title")}
                       </div>
                       <div className={"text-danger-700 dark:text-danger-400 text-sm whitespace-pre-wrap"}>
                         {enhancement.errorMessage}
@@ -741,22 +741,22 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                 <Accordion className={"mb-4"} variant={"bordered"}>
                   <AccordionItem
                     key="logs"
-                    aria-label={t<string>("Enhancement Logs")}
+                    aria-label={t<string>("enhancer.logs.title")}
                     title={
                       <div className={"flex items-center gap-2"}>
-                        <span>{t<string>("Enhancement Logs")}</span>
+                        <span>{t<string>("enhancer.logs.title")}</span>
                         <Chip size={"sm"} variant={"flat"}>{enhancement.logs.length}</Chip>
                       </div>
                     }
                   >
                     <div className={"max-h-[400px] overflow-y-auto"}>
-                      <Table isStriped aria-label={t<string>("Enhancement Logs")}>
+                      <Table isStriped aria-label={t<string>("enhancer.logs.title")}>
                         <TableHeader>
-                          <TableColumn width={160}>{t<string>("Timestamp")}</TableColumn>
-                          <TableColumn width={80}>{t<string>("Level")}</TableColumn>
-                          <TableColumn width={120}>{t<string>("Event")}</TableColumn>
-                          <TableColumn>{t<string>("Message")}</TableColumn>
-                          <TableColumn width={200}>{t<string>("Data")}</TableColumn>
+                          <TableColumn width={160}>{t<string>("enhancer.logs.timestamp.label")}</TableColumn>
+                          <TableColumn width={80}>{t<string>("enhancer.logs.level.label")}</TableColumn>
+                          <TableColumn width={120}>{t<string>("enhancer.logs.event.label")}</TableColumn>
+                          <TableColumn>{t<string>("common.label.message")}</TableColumn>
+                          <TableColumn width={200}>{t<string>("enhancer.logs.data.label")}</TableColumn>
                         </TableHeader>
                         <TableBody>
                           {enhancement.logs.map((log, index) => (
@@ -792,7 +792,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                                     placement={"left"}
                                     trigger={
                                       <span className={"text-xs text-primary cursor-pointer underline"}>
-                                        {t<string>("View Data")}
+                                        {t<string>("enhancer.logs.viewData.action")}
                                       </span>
                                     }
                                   >
@@ -803,10 +803,10 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                                           variant={"light"}
                                           onClick={() => {
                                             navigator.clipboard.writeText(JSON.stringify(log.data, null, 2));
-                                            toast.success(t<string>("Copied to clipboard"));
+                                            toast.success(t<string>("enhancer.logs.copiedToClipboard.label"));
                                           }}
                                         >
-                                          {t<string>("Copy")}
+                                          {t<string>("common.action.copy")}
                                         </Button>
                                       </div>
                                       <pre className={"text-xs max-w-[400px] max-h-[300px] overflow-auto whitespace-pre-wrap bg-default-100 p-2 rounded"}>
@@ -831,15 +831,15 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                     <Chip className={"opacity-60"} radius={"sm"} size={"sm"} variant={"light"}>
                       <ExclamationCircleOutlined className={"text-sm mr-1"} />
                       {t<string>(
-                        "No data retrieved for fixed targets, please check configuration if necessary",
+                        "enhancer.records.noFixedData.warning",
                       )}
                     </Chip>
                   )}
                   <Table isStriped className={"break-all"}>
                     <TableHeader>
-                      <TableColumn>{t<string>("Target")}</TableColumn>
-                      <TableColumn>{t<string>("Raw data")}</TableColumn>
-                      <TableColumn>{t<string>("Generated custom property value")}</TableColumn>
+                      <TableColumn>{t<string>("enhancer.target.label")}</TableColumn>
+                      <TableColumn>{t<string>("enhancer.records.rawData.label")}</TableColumn>
+                      <TableColumn>{t<string>("enhancer.records.generatedValue.label")}</TableColumn>
                     </TableHeader>
                     <TableBody>
                       {targets.map((e) => {
@@ -861,7 +861,7 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                         <Chip className={"opacity-60"} radius={"sm"} size={"sm"} variant={"light"}>
                           <ExclamationCircleOutlined className={"text-sm mr-1"} />
                           {t<string>(
-                            "No data retrieved for dynamic targets, please check configuration if necessary",
+                            "enhancer.records.noDynamicData.warning",
                           )}
                         </Chip>
                       )}
@@ -870,8 +870,8 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                           <TableColumn>
                             {dt.targetName}({dt.enhancements?.length ?? 0})
                           </TableColumn>
-                          <TableColumn>{t<string>("Raw data")}</TableColumn>
-                          <TableColumn>{t<string>("Generated custom property value")}</TableColumn>
+                          <TableColumn>{t<string>("enhancer.records.rawData.label")}</TableColumn>
+                          <TableColumn>{t<string>("enhancer.records.generatedValue.label")}</TableColumn>
                         </TableHeader>
                         <TableBody>
                           {dt.enhancements?.map((e) => {

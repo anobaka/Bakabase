@@ -85,9 +85,7 @@ namespace Bakabase.Modules.Enhancer.Services
             // Build a map from resource ID to enhancer options map
             var resourceIdEnhancerOptionsMap = resourceEnhancerOptionsMap.ToDictionary(
                 kvp => kvp.Key,
-                kvp => kvp.Value.Enhancers?.ToDictionary(
-                    x => x.EnhancerId,
-                    x => x) ?? new Dictionary<int, EnhancerFullOptions>());
+                kvp => kvp.Value.ToDictionary(x => x.EnhancerId, x => x));
 
             var enhancementTargetOptionsMap = new Dictionary<Enhancement, EnhancerTargetFullOptions>();
             foreach (var enhancement in enhancements)
@@ -396,7 +394,7 @@ namespace Bakabase.Modules.Enhancer.Services
             // Build resource ID to enhancer options map
             var resourceIdEnhancerOptionsMap = resourceEnhancerOptionsMap.ToDictionary(
                 kvp => kvp.Key,
-                kvp => kvp.Value.Enhancers?.ToDictionary(
+                kvp => kvp.Value.ToDictionary(
                     x => x.EnhancerId,
                     x => new EnhancerFullOptions
                     {
@@ -413,7 +411,7 @@ namespace Bakabase.Modules.Enhancer.Services
                         Requirements = x.Requirements?.Select(r => r).ToList(),
                         KeywordProperty = x.KeywordProperty,
                         PretreatKeyword = x.PretreatKeyword
-                    }) ?? new Dictionary<int, EnhancerFullOptions>());
+                    }));
 
             var prevTasks =
                 new Dictionary<IEnhancer,

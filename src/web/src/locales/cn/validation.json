@@ -8,5 +8,6 @@
   "validation.file.notFolder": "请选择文件，而非文件夹",
   "validation.path.notExist": "{{count}} 个路径在文件系统中不存在",
   "validation.ports.tooMany": "端口数量过多，最多支持 {{max}} 个端口。",
-  "validation.data.invalid": "无效数据"
+  "validation.data.invalid": "无效数据",
+  "validation.field.required": "此字段为必填项"
 }

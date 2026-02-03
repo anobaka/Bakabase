@@ -46,13 +46,13 @@ const FixedTargets = (props: Props) => {
       <Table removeWrapper aria-label={"Fixed targets"}>
         <TableHeader>
           <TableColumn width={"41.666667%"}>
-            {t<string>("Enhancement target")}
+            {t<string>("enhancer.target.fixed.label")}
           </TableColumn>
           <TableColumn width={"25%"}>
-            {t<string>("Save as property")}
+            {t<string>("enhancer.target.saveAsProperty.label")}
           </TableColumn>
-          <TableColumn width={"25%"}>{t<string>("Other options")}</TableColumn>
-          <TableColumn>{t<string>("Operations")}</TableColumn>
+          <TableColumn width={"25%"}>{t<string>("enhancer.target.otherOptions.label")}</TableColumn>
+          <TableColumn>{t<string>("common.label.operations")}</TableColumn>
         </TableHeader>
         {/* @ts-ignore */}
         <TableBody />

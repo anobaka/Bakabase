@@ -28,7 +28,7 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
 
   const functionSettings = [
     {
-      label: "Startup page",
+      label: "configuration.functional.startupPage",
       renderCell: () => {
         return (
           <RadioGroup
@@ -53,7 +53,7 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
       },
     },
     {
-      label: "Exit behavior",
+      label: "configuration.functional.exitBehavior",
       renderCell: () => {
         return (
           <RadioGroup
@@ -72,7 +72,7 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
               CloseBehavior.Prompt,
             ].map((c) => (
               <Radio key={c} value={String(c)}>
-                {t<string>(CloseBehavior[c])}
+                {t<string>(`configuration.functional.exitBehavior.${CloseBehavior[c].toLowerCase()}`)}
               </Radio>
             ))}
           </RadioGroup>

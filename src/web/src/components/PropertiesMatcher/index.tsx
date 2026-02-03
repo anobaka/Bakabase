@@ -41,7 +41,7 @@ const PropertiesMatcher = ({
   );
 
   return (
-    <Tooltip content={t<string>("Automatically match property")}>
+    <Tooltip content={t<string>("propertyMatcher.autoMatch.tooltip")}>
       <Button
         isIconOnly
         color={"primary"}
@@ -75,25 +75,25 @@ const PropertiesMatcher = ({
 
             const modal = createPortal(Modal, {
               defaultVisible: true,
-              title: t<string>("Some properties cannot be matched"),
+              title: t<string>("propertyMatcher.partialMatch.title"),
               size: "lg",
               children: (
                 <div className={"flex flex-col gap-3"}>
                   <div className={"flex flex-col gap-1"}>
-                    <div className={"font-semibold"}>{t<string>("Auto matched")}</div>
+                    <div className={"font-semibold"}>{t<string>("propertyMatcher.autoMatched.label")}</div>
                     <div className={"flex flex-wrap items-center gap-1 text-sm"}>
                       {ret.map((p, idx) => (p ? <BriefProperty key={`matched-${idx}`} property={p} /> : null))}
                     </div>
                   </div>
                   <div className={"flex flex-col gap-1"}>
-                    <div className={"font-semibold"}>{t<string>("Missing")}</div>
+                    <div className={"font-semibold"}>{t<string>("propertyMatcher.missing.label")}</div>
                     <div className={"flex flex-wrap items-center gap-1 text-sm text-warning-500"}>
                       {missingIndexes.map((idx) => (
                         <BriefProperty key={`missing-${idx}`} property={properties[idx]!} />
                       ))}
                     </div>
                   </div>
-                  {t<string>("You can")}:
+                  {t<string>("propertyMatcher.noMatch.youCan")}:
                   <div className={"grid grid-cols-2 gap-2"}>
                     <Card
                       isPressable
@@ -126,11 +126,11 @@ const PropertiesMatcher = ({
                       }}
                     >
                       <span className={"absolute top-1 right-1 rounded-full bg-primary-500 text-white text-[10px] px-2 py-0.5"}>
-                        {t<string>("Recommended")}
+                        {t<string>("propertyMatcher.recommended.label")}
                       </span>
                       <MdAutoFixHigh className={"text-2xl text-primary-600"} />
                       <div className={"text-sm font-medium text-primary-700 text-center px-2"}>
-                        {t<string>("Automatically create missing properties")}
+                        {t<string>("propertyMatcher.autoCreateMissing.label")}
                       </div>
                     </Card>
                     <Card
@@ -148,7 +148,7 @@ const PropertiesMatcher = ({
                     >
                       <AiOutlineSearch className={"text-2xl text-default-500"} />
                       <div className={"text-sm text-default-700 text-center px-2"}>
-                        {t<string>("Keep matched properties, handle missing ones manually")}
+                        {t<string>("propertyMatcher.keepMatched.label")}
                       </div>
                     </Card>
                   </div>

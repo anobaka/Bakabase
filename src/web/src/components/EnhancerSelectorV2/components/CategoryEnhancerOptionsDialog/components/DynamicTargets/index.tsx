@@ -125,7 +125,7 @@ const DynamicTargets = (props: Props) => {
 
     if (otherOptions != undefined) {
       const regex = new RegExp(
-        String.raw`^${t<string>("Target")}(?<no>\d+)$`,
+        String.raw`^${t<string>("enhancer.target.label")}(?<no>\d+)$`,
         "g",
       );
 
@@ -146,7 +146,7 @@ const DynamicTargets = (props: Props) => {
       }
     }
     // console.log('current max no', maxNo, otherOptions);
-    options.dynamicTarget = `${t<string>("Target")}${maxNo + 1}`;
+    options.dynamicTarget = `${t<string>("enhancer.target.label")}${maxNo + 1}`;
 
     return options;
   };
@@ -170,12 +170,12 @@ const DynamicTargets = (props: Props) => {
                   <DynamicTargetLabel />
                 </TableColumn>
                 <TableColumn width={"25%"}>
-                  {t<string>("Save as property")}
+                  {t<string>("enhancer.target.saveAsProperty.label")}
                 </TableColumn>
                 <TableColumn width={"25%"}>
-                  {t<string>("Other options")}
+                  {t<string>("enhancer.target.otherOptions.label")}
                 </TableColumn>
-                <TableColumn>{t<string>("Operations")}</TableColumn>
+                <TableColumn>{t<string>("common.label.operations")}</TableColumn>
               </TableHeader>
               {/* @ts-ignore */}
               <TableBody />
@@ -241,7 +241,7 @@ const DynamicTargets = (props: Props) => {
               }}
             >
               <PlusCircleOutlined className={"text-sm"} />
-              {t<string>("Specify dynamic target")}
+              {t<string>("enhancer.target.specifyDynamic.action")}
             </Button>
           </div>
         );

@@ -87,7 +87,7 @@ const PropertyMatcher = ({
           )}
         </>
       )}
-      <Tooltip content={t<string>("Automatically match property")}>
+      <Tooltip content={t<string>("propertyMatcher.autoMatch.tooltip")}>
         <Button
           isIconOnly
           color={"primary"}
@@ -98,10 +98,10 @@ const PropertyMatcher = ({
             if (name == undefined || name.length == 0) {
               createPortal(Modal, {
                 defaultVisible: true,
-                title: t<string>("No proper property name provided"),
+                title: t<string>("propertyMatcher.noName.title"),
                 children: (
                   <div className={"flex flex-col gap-2"}>
-                    {t<string>("Please provide a property name")}
+                    {t<string>("propertyMatcher.noName.description")}
                   </div>
                 ),
                 footer: {
@@ -123,10 +123,10 @@ const PropertyMatcher = ({
               } else {
                 const modal = createPortal(Modal, {
                   defaultVisible: true,
-                  title: t<string>("No proper property found"),
+                  title: t<string>("propertyMatcher.noMatch.title"),
                   children: (
                     <div className={"flex flex-col gap-2"}>
-                      {t<string>("You can")}:
+                      {t<string>("propertyMatcher.noMatch.youCan")}:
                       <div className={"grid grid-cols-2 gap-2"}>
                         <Card
                           isPressable
@@ -148,7 +148,7 @@ const PropertyMatcher = ({
                           }}
                         >
                           <MdAutoFixHigh className={"text-2xl"} />
-                          {t<string>("Automatically create a new property")}
+                          {t<string>("propertyMatcher.autoCreate.label")}
                         </Card>
                         <Card
                           isPressable
@@ -166,7 +166,7 @@ const PropertyMatcher = ({
                           }}
                         >
                           <AiOutlineSearch className={"text-2xl"} />
-                          {t<string>("Select manually")}
+                          {t<string>("propertyMatcher.selectManually.label")}
                         </Card>
                       </div>
                     </div>

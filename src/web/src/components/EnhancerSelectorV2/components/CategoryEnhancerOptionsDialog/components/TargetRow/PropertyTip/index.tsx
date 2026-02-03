@@ -72,7 +72,7 @@ const PropertyTip = ({
       tips.push(
         <div key={2} className={"flex items-center gap-1"}>
           {t<string>(
-            "This property is not bound to the category, its data will not be displayed.",
+            "enhancer.targetOptions.propertyNotBound.warning",
           )}
           <Button
             color={"primary"}
@@ -81,7 +81,7 @@ const PropertyTip = ({
             onClick={() => {
               createPortal(Modal, {
                 title: t<string>(
-                  "Bind property {{propertyName}} to category {{categoryName}}",
+                  "enhancer.targetOptions.bindToCategory.title",
                   {
                     propertyName: property.name,
                     categoryName: category.name,
@@ -98,7 +98,7 @@ const PropertyTip = ({
               });
             }}
           >
-            {t<string>("Bind now")}
+            {t<string>("enhancer.targetOptions.bindToCategory.action")}
           </Button>
         </div>,
       );

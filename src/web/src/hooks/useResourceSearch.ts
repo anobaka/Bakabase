@@ -105,6 +105,8 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
         let basicResources = (rsp.data || []) as Resource[];
 
+        console.log('[useResourceSearch] Phase 1 (Cache) loaded', basicResources.length, 'resources. Sample properties:', basicResources.slice(0, 3).map(r => ({ id: r.id, hasProperties: !!r.properties, propertyKeys: r.properties ? Object.keys(r.properties) : [], mediaLibraries: r.mediaLibraries, category: r.category?.name })));
+
         // Apply filter if provided
         if (filter) {
           basicResources = filter(basicResources);
@@ -141,11 +143,14 @@ export const useResourceSearch = (): UseResourceSearchResult => {
 
           // Check again if this search is still the latest one
           if (currentSearchId !== searchIdRef.current) {
+            console.log('[useResourceSearch] Phase 2 aborted: searchId mismatch', currentSearchId, '!==', searchIdRef.current);
             return [];
           }
 
           if (!fullRsp.code) {
             let fullResources = (fullRsp.data || []) as Resource[];
+
+            console.log('[useResourceSearch] Phase 2 (All) loaded', fullResources.length, 'resources. Sample properties:', fullResources.slice(0, 3).map(r => ({ id: r.id, hasProperties: !!r.properties, propertyPools: r.properties ? Object.keys(r.properties).map(pool => ({ pool, propIds: Object.keys(r.properties![pool as any] || {}) })) : [], mediaLibraries: r.mediaLibraries, category: r.category?.name })));
 
             // Apply filter to full resources as well
             if (filter) {
@@ -155,11 +160,16 @@ export const useResourceSearch = (): UseResourceSearchResult => {
             // For append/prepend mode, we need to replace only the newly added resources
             const fullResourcesMap = new Map(fullResources.map((r) => [r.id, r]));
 
-            setResources((prev) => prev.map((r) => fullResourcesMap.get(r.id) ?? r));
+            setResources((prev) => {
+              const next = prev.map((r) => fullResourcesMap.get(r.id) ?? r);
+              console.log('[useResourceSearch] Phase 2 setResources: prev refs === next refs?', prev.map((r, i) => r === next[i]));
+              return next;
+            });
             setLoadingDetails(false);
             return fullResources;
           }
 
+          console.log('[useResourceSearch] Phase 2 API error, code:', fullRsp.code, 'message:', fullRsp.message);
           setLoadingDetails(false);
         }
 

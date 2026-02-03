@@ -16,11 +16,19 @@
   "configuration.thirdParty.invalidCookie": "无效的 Cookie",
 
   "configuration.functional.title": "功能配置",
+  "configuration.functional.startupPage": "启动页面",
+  "configuration.functional.startupPage.default": "默认",
+  "configuration.functional.startupPage.resource": "资源",
+  "configuration.functional.exitBehavior": "退出行为",
+  "configuration.functional.exitBehavior.minimize": "最小化",
+  "configuration.functional.exitBehavior.exit": "退出",
+  "configuration.functional.exitBehavior.prompt": "询问",
 
   "configuration.contact.title": "联系我们",
 
   "configuration.appInfo.title": "系统信息",
   "configuration.appInfo.appDataPath": "应用数据路径",
+  "configuration.appInfo.dataPath": "数据路径",
   "configuration.appInfo.tempFilesPath": "临时文件路径",
   "configuration.appInfo.logPath": "日志路径",
   "configuration.appInfo.backupPath": "备份路径",
@@ -37,7 +45,8 @@
   "configuration.appInfo.downloading": "下载中",
 
   "configuration.appInfo.tip.appDataPath": "这是存储核心数据文件的位置，如非必要请勿更改。[系统] - [日志] 中的日志保存在 bootstrap_log.* 文件中，可以安全删除。",
-  "configuration.appInfo.tip.tempFilesPath": "这是存储临时文件的目录，如封面文件等。",
+  "configuration.appInfo.tip.dataPath": "这是存储用户文件、封面等数据的目录。",
+  "configuration.appInfo.tip.tempFilesPath": "这是存储临时文件的目录。",
   "configuration.appInfo.tip.logPath": "描述应用运行状态的详细信息。如果应用运行异常，您可以将日志文件发送给开发者；如果一切正常，也可以删除它们。",
   "configuration.appInfo.tip.backupPath": "首次使用新版本应用时会创建数据备份，如果一切正常可以删除它们。您可以下载相应版本的应用，使用备份文件覆盖应用数据路径来恢复数据。",
 

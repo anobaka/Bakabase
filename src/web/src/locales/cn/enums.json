@@ -216,6 +216,9 @@
   "BangumiSubjectType.Game": "游戏",
   "BangumiSubjectType.Real": "三次元",
 
+  "CoverSelectOrder.FilenameAscending": "文件名升序",
+  "CoverSelectOrder.FileModifyDtDescending": "文件修改时间降序",
+
   "enhancer.bangumi.prioritySubjectType.label": "优先类别",
   "enhancer.bangumi.prioritySubjectType.description": "如果设置了此选项，Bangumi 将首先使用该类别进行搜索。如果没有找到结果，则会回退到搜索全部类别。",
   "enhancer.bangumi.prioritySubjectType.hint": "留空则默认搜索全部类别。"

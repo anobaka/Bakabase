@@ -10,7 +10,7 @@ const DynamicTargetLabel = () => {
   return (
     <Tooltip
       content={t<string>(
-        "This is not a fixed enhancement target, which will be replaced with other content when data is collected",
+        "enhancer.target.dynamicLabel.tip",
       )}
     >
       <ApartmentOutlined className={"text-sm"} />

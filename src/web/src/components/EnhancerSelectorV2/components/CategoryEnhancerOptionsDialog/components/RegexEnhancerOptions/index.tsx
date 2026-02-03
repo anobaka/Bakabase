@@ -116,7 +116,7 @@ const RegexEnhancerOptions = ({
             <div>
               {captureGroups.length > 0 ? (
                 <div>
-                  {t<string>("Available capture groups:")}
+                  {t<string>("enhancer.regex.captureGroups.label")}
                   {captureGroups.map((g) => {
                     return (
                       <Chip size={"sm"} variant={"light"}>
@@ -128,40 +128,40 @@ const RegexEnhancerOptions = ({
               ) : (
                 <div>
                   {t<string>(
-                    "No named capture groups were found, so the enhancement will not take effect.",
+                    "enhancer.regex.captureGroups.warning",
                   )}
                 </div>
               )}
               <div>
                 {t<string>(
-                  "You can set multiple regex expressions(separated by new line) to match the file or folder name of each resource.",
+                  "enhancer.regex.expressions.description",
                 )}
               </div>
               <div>
                 {t<string>(
-                  "Text matched by multiple capture groups with the same name will be merged into a list and deduplicated.",
+                  "enhancer.regex.captureGroups.mergeDescription",
                 )}
               </div>
               <div>
                 {t<string>(
-                  "After setting regex expressions, you must go to category page to configure regex enhancer for each category.",
+                  "enhancer.regex.expressions.categoryTip",
                 )}
               </div>
               <div>
                 {t<string>(
-                  "You need to use the same name(index-based group name will be ignored) as the capture group for the dynamic enhancement target, otherwise the resource may not be enhanced.",
+                  "enhancer.regex.expressions.namingTip",
                 )}
               </div>
             </div>
           }
-          label={t<string>("Regex expressions")}
+          label={t<string>("enhancer.regex.expressions.label")}
           maxRows={10}
           minRows={3}
           value={tmpEnhancerOptions?.regexEnhancer?.expressions?.join("\n")}
           onBlur={() => {
             BApi.options.patchEnhancerOptions(tmpEnhancerOptions).then((r) => {
               if (!r.code) {
-                toast.success(t<string>("Successfully saved"));
+                toast.success(t<string>("common.success.saved"));
               }
             });
           }}

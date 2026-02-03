@@ -42,15 +42,16 @@ public interface IResourceProfileService
     Task<Dictionary<int, string?>> GetEffectiveNameTemplatesForResources(int[] resourceIds);
 
     /// <summary>
-    /// Get effective enhancer options for a resource
+    /// Get effective enhancer options for a resource.
+    /// Aggregates enhancer options from all matching profiles, taking the highest priority configuration for each enhancer id.
     /// </summary>
-    Task<ResourceProfileEnhancerOptions?> GetEffectiveEnhancerOptions(Resource resource);
+    Task<List<EnhancerFullOptions>> GetEffectiveEnhancerOptions(Resource resource);
 
     /// <summary>
-    /// Get effective enhancer options for multiple resources (batch operation for performance)
-    /// Returns a dictionary mapping resource ID to its enhancer options
+    /// Get effective enhancer options for multiple resources (batch operation for performance).
+    /// Returns a dictionary mapping resource ID to its aggregated enhancer options.
     /// </summary>
-    Task<Dictionary<int, ResourceProfileEnhancerOptions>> GetEffectiveEnhancerOptionsForResources(IEnumerable<Resource> resources);
+    Task<Dictionary<int, List<EnhancerFullOptions>>> GetEffectiveEnhancerOptionsForResources(IEnumerable<Resource> resources);
 
     /// <summary>
     /// Get effective playable file options for a resource

@@ -79,7 +79,7 @@ const CachePage = () => {
                             >
                               <Chip radius={"sm"} size={"sm"}>
                                 {t<string>("cache.label.cached")}{" "}
-                                {t<string>(ResourceCacheType[type])}
+                                {t<string>(`cache.resourceCacheType.${ResourceCacheType[type].toLowerCase()}`)}
                               </Chip>
                               {item.resourceCacheCountMap[type]}
                               <Button
@@ -144,7 +144,7 @@ const CachePage = () => {
                       <div key={idx} className={"flex items-center gap-2"}>
                         <Chip radius={"sm"} size={"sm"}>
                           {t<string>("cache.label.cached")}{" "}
-                          {t<string>(ResourceCacheType[type])}
+                          {t<string>(`cache.resourceCacheType.${ResourceCacheType[type].toLowerCase()}`)}
                         </Chip>
                         {cacheOverview.unassociatedCaches!.resourceCacheCountMap[type]}
                         <Button

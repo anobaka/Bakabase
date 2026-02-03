@@ -12,54 +12,54 @@ const OtherOptionsTip = () => {
       <div className={"flex flex-col gap-1"}>
         <div>
           <div className={"font-bold text-base"}>
-            {t<string>("Auto bind property")}
+            {t<string>("enhancer.targetOptions.autoBind.label")}
           </div>
           <div>
             <div>
               {t<string>(
-                "If this option is checked, a property with the same name and type of the target will be bound automatically.",
+                "enhancer.targetOptions.autoBind.description",
               )}
             </div>
             <div>
               {t<string>(
-                "If there isn't such a property, a new property will be created and bound to this target.",
+                "enhancer.targetOptions.autoBind.createTip",
               )}
             </div>
             <div>
               {t<string>(
-                "If this option is checked in default options of a dynamic target, all unlisted dynamic targets will be bound to properties of the same type with the same name.",
+                "enhancer.targetOptions.autoBind.dynamicTip",
               )}
             </div>
           </div>
         </div>
         <div>
           <div className={"font-bold text-base"}>
-            {t<string>("Auto match on empty values")}
+            {t<string>("enhancer.targetOptions.autoMatch.label")}
           </div>
           <div>
             <div>
               {t<string>(
-                "By default, an empty layer will be created if we meet an empty value in multilevel data.",
+                "enhancer.targetOptions.autoMatch.description",
               )}
             </div>
             <div>
               {t<string>(
-                "If checked, this kind of data will be matched with the most similar multilevel value in the database.",
+                "enhancer.targetOptions.autoMatch.checkedBehavior",
               )}
             </div>
             <div>
               {t<string>(
-                "For example, assume we already have a multilevel data: a->b->c, then for the incoming data: ->->c, the values of 1st and 2nd layers of which are empty.",
+                "enhancer.targetOptions.autoMatch.example",
               )}
             </div>
             <div>
               {t<string>(
-                "If this option is checked, we'll save ->->c as a->b->c, otherwise the incoming value ->->c will be saved.",
+                "enhancer.targetOptions.autoMatch.exampleResult",
               )}
             </div>
             <div>
               {t<string>(
-                "This option may cause unexpected behaviors, make sure you have enough confidence to merge the produced data into data in db before check it.",
+                "enhancer.targetOptions.autoMatch.warning",
               )}
             </div>
           </div>

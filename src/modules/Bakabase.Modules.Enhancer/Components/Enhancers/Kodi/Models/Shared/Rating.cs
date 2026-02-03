@@ -7,10 +7,11 @@ public record Rating
     [XmlAttribute("name")]
     public string? Name { get; set; }
 
-    [XmlAttribute("max")] public int? Max { get; set; }
+    [XmlAttribute("max")]
+    public string? Max { get; set; }
 
     [XmlAttribute("default")]
-    public bool? Default { get; set; }
+    public string? Default { get; set; }
 
     [XmlElement("value", IsNullable = true)]
     public double? Value { get; set; }

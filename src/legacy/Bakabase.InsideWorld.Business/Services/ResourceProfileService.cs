@@ -170,16 +170,42 @@ public class ResourceProfileService<TDbContext>(
         }
     }
 
-    public async Task<ResourceProfileEnhancerOptions?> GetEffectiveEnhancerOptions(Resource resource)
+    public async Task<List<EnhancerFullOptions>> GetEffectiveEnhancerOptions(Resource resource)
     {
         var profiles = await GetMatchingProfiles(resource);
-        return profiles.FirstOrDefault(p => p.EnhancerOptions != null)?.EnhancerOptions;
+        return AggregateEnhancerOptions(profiles);
     }
 
-    public async Task<Dictionary<int, ResourceProfileEnhancerOptions>> GetEffectiveEnhancerOptionsForResources(
+    /// <summary>
+    /// Aggregates enhancer options from multiple profiles.
+    /// For each enhancer id, takes the configuration from the highest priority profile.
+    /// Profiles should already be sorted by priority (highest first).
+    /// </summary>
+    private static List<EnhancerFullOptions> AggregateEnhancerOptions(List<ResourceProfile> profiles)
+    {
+        var aggregatedEnhancers = new Dictionary<int, EnhancerFullOptions>();
+
+        foreach (var profile in profiles)
+        {
+            if (profile.EnhancerOptions?.Enhancers == null)
+            {
+                continue;
+            }
+
+            foreach (var enhancer in profile.EnhancerOptions.Enhancers)
+            {
+                // Only add if we haven't seen this enhancer id yet (first one wins = highest priority)
+                aggregatedEnhancers.TryAdd(enhancer.EnhancerId, enhancer);
+            }
+        }
+
+        return aggregatedEnhancers.Values.ToList();
+    }
+
+    public async Task<Dictionary<int, List<EnhancerFullOptions>>> GetEffectiveEnhancerOptionsForResources(
         IEnumerable<Resource> resources)
     {
-        var result = new Dictionary<int, ResourceProfileEnhancerOptions>();
+        var result = new Dictionary<int, List<EnhancerFullOptions>>();
         var allProfiles = await GetAll();
         var resourcesList = resources.ToList();
         var profilesWithEnhancerOptions = allProfiles.Where(p => p.EnhancerOptions != null).ToList();
@@ -189,19 +215,24 @@ public class ResourceProfileService<TDbContext>(
             return result;
         }
 
+        var profileMap = allProfiles.ToDictionary(p => p.Id);
+
         // Wait for index service - much faster than fallback N+1 queries
         var resourceIds = resourcesList.Select(r => r.Id);
         var allProfileIds = await IndexService.GetMatchingProfileIdsForResources(resourceIds);
         foreach (var (resourceId, profileIds) in allProfileIds)
         {
             // profileIds are sorted by priority (highest first)
-            var matchingProfile = profileIds
-                .Select(pid => profilesWithEnhancerOptions.FirstOrDefault(p => p.Id == pid))
-                .FirstOrDefault(p => p != null);
+            // Get all matching profiles in priority order
+            var matchingProfiles = profileIds
+                .Select(pid => profileMap.GetValueOrDefault(pid))
+                .Where(p => p != null)
+                .ToList()!;
 
-            if (matchingProfile != null)
+            var aggregated = AggregateEnhancerOptions(matchingProfiles!);
+            if (aggregated.Count > 0)
             {
-                result[resourceId] = matchingProfile.EnhancerOptions!;
+                result[resourceId] = aggregated;
             }
         }
 

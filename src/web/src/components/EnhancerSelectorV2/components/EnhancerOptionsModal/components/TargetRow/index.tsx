@@ -68,10 +68,10 @@ const TargetRow = (props: Props) => {
     let error;
 
     if (otherDynamicTargetsInGroup?.includes(newTarget)) {
-      error = t<string>("Duplicate dynamic target is found");
+      error = t<string>("enhancer.target.duplicateDynamic.error");
     }
     if (newTarget.length == 0) {
-      error = t<string>("This field is required");
+      error = t<string>("validation.field.required");
     }
     if (dynamicTargetError != error) {
       setDynamicTargetError(error);
@@ -105,7 +105,7 @@ const TargetRow = (props: Props) => {
 
   const dt = options.dynamicTarget ?? dynamicTarget;
 
-  const targetLabel = descriptor.isDynamic ? (dt ?? t<string>("Default")) : descriptor.name;
+  const targetLabel = descriptor.isDynamic ? (dt ?? t<string>("enhancer.target.default.label")) : descriptor.name;
   const isDefaultTargetOfDynamic = descriptor.isDynamic && dt == undefined;
   const integratedSpecialTextType = StdValueSpecialTextIntegrationMap[descriptor.valueType];
 
@@ -178,7 +178,7 @@ const TargetRow = (props: Props) => {
                     setEditingDynamicTarget(true);
                   }}
                 >
-                  {targetLabel ?? t<string>("Click to specify target")}
+                  {targetLabel ?? t<string>("enhancer.target.clickToSpecify.action")}
                   <EditOutlined className={"text-base"} />
                 </Button>
               )

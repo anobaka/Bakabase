@@ -18,27 +18,27 @@ const AutoMatchMultilevelString = ({ autoMatch, onChange }: IProps) => {
           <div>
             <div>
               {t<string>(
-                "By default, an empty layer will be created if we meet an empty value in multilevel data.",
+                "enhancer.targetOptions.autoMatch.description",
               )}
             </div>
             <div>
               {t<string>(
-                "If checked, this kind of data will be matched with the most similar multilevel value in the database.",
+                "enhancer.targetOptions.autoMatch.checkedBehavior",
               )}
             </div>
             <div>
               {t<string>(
-                "For example, assume we already have a multilevel data: a->b->c, then for the incoming data: ->->c, the values of 1st and 2nd layers of which are empty.",
+                "enhancer.targetOptions.autoMatch.example",
               )}
             </div>
             <div>
               {t<string>(
-                "If this option is checked, we'll save ->->c as a->b->c, otherwise the incoming value ->->c will be saved.",
+                "enhancer.targetOptions.autoMatch.exampleResult",
               )}
             </div>
             <div>
               {t<string>(
-                "This option may cause unexpected behaviors, make sure you have enough confidence to merge the produced data into data in db before check it.",
+                "enhancer.targetOptions.autoMatch.warning",
               )}
             </div>
           </div>
@@ -52,7 +52,7 @@ const AutoMatchMultilevelString = ({ autoMatch, onChange }: IProps) => {
             onChange?.(c);
           }}
         >
-          {t<string>("Auto match on empty values")}
+          {t<string>("enhancer.targetOptions.autoMatch.label")}
         </Checkbox>
       </Tooltip>
     </>

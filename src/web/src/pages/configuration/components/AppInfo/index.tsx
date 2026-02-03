@@ -213,6 +213,13 @@ const AppInfo: React.FC<AppInfoProps> = ({ appInfo }) => {
         ),
       },
       {
+        label: "configuration.appInfo.dataPath",
+        value: renderPathValue(
+          appInfo.dataPath,
+          t("configuration.appInfo.tip.dataPath"),
+        ),
+      },
+      {
         label: "configuration.appInfo.tempFilesPath",
         value: renderPathValue(
           appInfo.tempFilesPath,

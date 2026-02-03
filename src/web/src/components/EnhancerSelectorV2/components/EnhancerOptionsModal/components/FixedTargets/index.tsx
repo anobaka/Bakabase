@@ -51,14 +51,14 @@ const FixedTargets = (props: Props) => {
       <Table removeWrapper aria-label={"Fixed targets"}>
         <TableHeader>
           <TableColumn align={"center"} width={80}>
-            {t<string>("Configured")}
+            {t<string>("enhancer.target.configured.label")}
           </TableColumn>
           <TableColumn width={"33.3333%"}>
-            {t<string>("Enhancement target")}
+            {t<string>("enhancer.target.fixed.label")}
           </TableColumn>
           <TableColumn width={"25%"}>
             <div className={"flex items-center gap-1"}>
-              {t<string>("Bind property")}
+              {t<string>("enhancer.target.bindProperty.label")}
               {enhancer.targets && enhancer.targets.length > 0 && (
                 <PropertiesMatcher
                   properties={enhancer.targets.map((td) => ({
@@ -98,11 +98,11 @@ const FixedTargets = (props: Props) => {
           </TableColumn>
           <TableColumn width={"25%"}>
             <div className={"flex items-center gap-1"}>
-              {t<string>("Other options")}
+              {t<string>("enhancer.target.otherOptions.label")}
               <OtherOptionsTip />
             </div>
           </TableColumn>
-          <TableColumn>{t<string>("Operations")}</TableColumn>
+          <TableColumn>{t<string>("common.label.operations")}</TableColumn>
         </TableHeader>
         {/* @ts-ignore */}
         <TableBody />

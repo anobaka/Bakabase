@@ -120,7 +120,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
         actions: ["cancel"],
       }}
       size={"xl"}
-      title={t<string>("Enhancers")}
+      title={t<string>("enhancer.selector.title")}
       onClose={onClose}
       onDestroyed={onDestroyed}
     >
@@ -159,7 +159,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
               <div className={"mt-2 mb-2 grow"}>
                 <div className={" italic"}>
                   {t<string>(
-                    "This enhancer can produce the following property values",
+                    "enhancer.selector.producesValues.label",
                   )}
                 </div>
                 <div className={"flex flex-wrap gap-x-3 gap-y-1 mt-1"}>
@@ -171,7 +171,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                           <div>
                             <div>{target.description}</div>
                             <div>
-                              {t<string>("The value type of this target is")}
+                              {t<string>("enhancer.selector.targetValueType.label")}
                               &nbsp;
                               <span className={"font-bold"}>
                                 <StandardValueIcon
@@ -227,7 +227,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                           case "Category":
                             createPortal(DeleteEnhancementsModal, {
                               title: t<string>(
-                                "Delete all enhancement records of this enhancer for category {{categoryName}}",
+                                "enhancer.selector.deleteRecordsForCategory.confirm",
                                 { categoryName: category!.name },
                               ),
                               onOk: async (deleteEmptyOnly) =>
@@ -241,7 +241,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                           case "All":
                             createPortal(DeleteEnhancementsModal, {
                               title: t<string>(
-                                "Delete all enhancement records of this enhancer",
+                                "enhancer.selector.deleteAllRecords.confirm",
                               ),
                               onOk: async (deleteEmptyOnly) =>
                                 await BApi.enhancer.deleteEnhancementsByEnhancer(
@@ -254,7 +254,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                             createPortal(Modal, {
                               defaultVisible: true,
                               title: t<string>(
-                                "Re-apply all enhancement data of this enhancer for category {{categoryName}}",
+                                "enhancer.selector.reapplyForCategory.confirm",
                                 { categoryName: category?.name },
                               ),
                               onOk: async () =>
@@ -278,7 +278,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                         }
                       >
                         {t<string>(
-                          "Delete all enhancement records of this enhancer for category {{categoryName}}",
+                          "enhancer.selector.deleteRecordsForCategory.confirm",
                           { categoryName: category?.name },
                         )}
                       </ListboxItem>
@@ -291,7 +291,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                         }
                       >
                         {t<string>(
-                          "Delete all enhancement records of this enhancer",
+                          "enhancer.selector.deleteAllRecords.confirm",
                         )}
                       </ListboxItem>
                       <ListboxItem
@@ -301,7 +301,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                         startContent={<FireOutlined className={"text-base"} />}
                       >
                         {t<string>(
-                          "Re-apply all enhancement data of this enhancer for category {{categoryName}}",
+                          "enhancer.selector.reapplyForCategory.confirm",
                           { categoryName: category?.name },
                         )}
                       </ListboxItem>
@@ -322,7 +322,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                       });
                     }}
                   >
-                    {t<string>("Setup")}
+                    {t<string>("enhancer.selector.setup.action")}
                   </Button>
                   <Checkbox
                     isSelected={ceo?.active}
@@ -337,7 +337,7 @@ const EnhancerSelector = ({ categoryId, onDestroyed, onClose }: IProps) => {
                         });
                     }}
                   >
-                    {t<string>("Enable")}
+                    {t<string>("common.action.enable")}
                   </Checkbox>
                 </div>
               </div>

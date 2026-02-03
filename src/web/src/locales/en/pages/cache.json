@@ -1,5 +1,8 @@
 {
   "cache.label.resourceCount": "Resource count",
   "cache.label.cached": "Cached",
-  "cache.label.unassociatedResources": "Unassociated Resources"
+  "cache.label.unassociatedResources": "Unassociated Resources",
+  "cache.resourceCacheType.covers": "Covers",
+  "cache.resourceCacheType.playablefiles": "Playable Files",
+  "cache.resourceCacheType.resourcemarkers": "Resource Markers"
 }
