@@ -14,7 +14,7 @@ import type { Resource } from "@/core/models/Resource";
 import { PropertyPool, ReservedProperty, PropertyValueScope } from "@/sdk/constants";
 import { Button, Card, CardBody, Textarea } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { serializeStandardValue, StringValueRenderer } from "@/components/StandardValue";
+import { serializeStandardValue } from "@/components/StandardValue";
 import { StandardValueType } from "@/sdk/constants";
 
 interface Props {
@@ -68,10 +68,9 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
   };
 
   const hasIntroduction = !!introduction;
-  const isTruncated = hasIntroduction && introduction.length > MAX_SUMMARY_LENGTH;
-  const summary = hasIntroduction
-    ? (isTruncated ? `${introduction.slice(0, MAX_SUMMARY_LENGTH)}...` : introduction)
-    : null;
+  // Strip HTML tags to get plain text length for truncation check
+  const plainTextIntroduction = introduction?.replace(/<[^>]*>/g, "") ?? null;
+  const isTruncated = !!plainTextIntroduction && plainTextIntroduction.length > MAX_SUMMARY_LENGTH;
 
   return (
     <>
@@ -86,9 +85,10 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
             <div className="flex-1 min-w-0">
               {hasIntroduction ? (
                 <>
-                  <p className="text-sm text-default-600 line-clamp-2">
-                    {summary}
-                  </p>
+                  <div
+                    className="text-sm text-default-600 line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: introduction }}
+                  />
                   {isTruncated && (
                     <p className="text-xs text-primary mt-1">
                       {t("resource.tip.clickToViewFullIntroduction")}
@@ -152,14 +152,10 @@ const IntroductionSummary = ({ resource, onReload }: Props) => {
               </div>
             ) : (
               <div className="flex flex-col h-full">
-                <div className="flex-1 text-default-700">
-                  <StringValueRenderer
-                    multiline
-                    value={introduction ?? undefined}
-                    variant="default"
-                    isReadonly
-                  />
-                </div>
+                <div
+                  className="flex-1 text-default-700"
+                  dangerouslySetInnerHTML={{ __html: introduction ?? "" }}
+                />
                 <div className="flex justify-end pt-4">
                   <Button
                     color="primary"
