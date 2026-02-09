@@ -75,5 +75,16 @@
   "ResourceCover.CoverTips.S2.Todo.DisableCache": "禁用封面缓存，使用原始文件作为封面",
   "Cover cache": "封面缓存",
   "Cover cache has been reset": "封面缓存已重置",
-  "Reset cover cache of current resource": "重置当前资源的封面缓存"
+  "Reset cover cache of current resource": "重置当前资源的封面缓存",
+
+  "resource.contextMenu.setMediaLibraries": "设置媒体库",
+  "resource.contextMenu.setMediaLibrariesForCount": "为 {{count}} 个资源设置媒体库",
+  "resource.contextMenu.transferResourceData": "转移资源数据",
+  "resource.contextMenu.transferDataOfCount": "转移 {{count}} 个资源的数据",
+  "resource.contextMenu.editProperties": "编辑属性",
+  "resource.contextMenu.bulkEditProperties": "批量编辑属性",
+  "resource.contextMenu.deleteResource": "删除资源",
+  "resource.contextMenu.deleteCountResources": "删除 {{count}} 个资源",
+  "resource.contextMenu.confirmDeleteCount": "确定要删除 {{count}} 个资源吗？",
+  "resource.contextMenu.filesWillNotBeDeleted": "文件不会被删除。"
 }

@@ -21,7 +21,6 @@ import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
 import Window from "@/components/Window";
 import { ErrorBoundary } from "@/components/Error";
-import { CoverLoadQueueProvider } from "@/components/ContextProvider/CoverLoadQueueContext";
 
 dayjs.extend(duration);
 
@@ -248,34 +247,32 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
           }}
         >
           <ToastProvider placement={"top-center"} />
-          <CoverLoadQueueProvider concurrency={6}>
-            <BakabaseContext.Provider
-              value={{
-                isDarkMode,
-                createPortal: mount,
-                createWindow: mountWindow,
-                closeAllModals,
-                isDebugging,
-              }}
+          <BakabaseContext.Provider
+            value={{
+              isDarkMode,
+              createPortal: mount,
+              createWindow: mountWindow,
+              closeAllModals,
+              isDebugging,
+            }}
+          >
+            {portals.map(({ key, component }) => (
+              <ErrorBoundary key={key}>
+                <Fragment>{component}</Fragment>
+              </ErrorBoundary>
+            ))}
+            <div
+              className={`${isDarkMode ? "dark" : "light"} h-[100vh] w-[100vw] text-foreground bg-background`}
             >
-              {portals.map(({ key, component }) => (
-                <ErrorBoundary key={key}>
-                  <Fragment>{component}</Fragment>
-                </ErrorBoundary>
-              ))}
-              <div
-                className={`${isDarkMode ? "dark" : "light"} h-[100vh] w-[100vw] text-foreground bg-background`}
-              >
-                {appOptions ? (
-                  children
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Spinner />
-                  </div>
-                )}
-              </div>
-            </BakabaseContext.Provider>
-          </CoverLoadQueueProvider>
+              {appOptions ? (
+                children
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Spinner />
+                </div>
+              )}
+            </div>
+          </BakabaseContext.Provider>
         </ConfigProvider>
       </HeroUIProvider>
     </>

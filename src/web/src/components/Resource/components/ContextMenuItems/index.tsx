@@ -52,10 +52,10 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2"}>
           <ApiOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("Set media libraries for {{count}} resources", {
+            ? t<string>("resource.contextMenu.setMediaLibrariesForCount", {
                 count: selectedResourceIds.length,
               })
-            : t<string>("Set media libraries")}
+            : t<string>("resource.contextMenu.setMediaLibraries")}
         </div>
       </MenuItem>
       <MenuItem
@@ -88,10 +88,10 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2"}>
           <SendOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("Transfer data of {{count}} resources", {
+            ? t<string>("resource.contextMenu.transferDataOfCount", {
                 count: selectedResourceIds.length,
               })
-            : t<string>("Transfer resource data")}
+            : t<string>("resource.contextMenu.transferResourceData")}
         </div>
       </MenuItem>
       <MenuItem
@@ -112,8 +112,8 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2 text-secondary"}>
           <EditOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("Bulk edit properties")
-            : t<string>("Edit properties")}
+            ? t<string>("resource.contextMenu.bulkEditProperties")
+            : t<string>("resource.contextMenu.editProperties")}
         </div>
       </MenuItem>
       <MenuItem
@@ -121,19 +121,19 @@ const ContextMenuItems = ({
           log("inner", "click");
           createPortal(Modal, {
             defaultVisible: true,
-            title: t<string>("Delete {{count}} resources", {
+            title: t<string>("resource.contextMenu.deleteCountResources", {
               count: selectedResourceIds.length,
             }),
             children: (
               <div>
                 <div className={"font-bold"}>
                   {t<string>(
-                    "Are you sure you want to delete {{count}} resources?",
+                    "resource.contextMenu.confirmDeleteCount",
                     { count: selectedResourceIds.length },
                   )}
                 </div>
                 <div className={"opacity-60 mt-2"}>
-                  {t<string>("Files will not be deleted.")}
+                  {t<string>("resource.contextMenu.filesWillNotBeDeleted")}
                 </div>
               </div>
             ),
@@ -151,10 +151,10 @@ const ContextMenuItems = ({
         <div className={"flex items-center gap-2 text-danger"}>
           <DeleteOutlined className={"text-base"} />
           {selectedResourceIds.length > 1
-            ? t<string>("Delete {{count}} resources", {
+            ? t<string>("resource.contextMenu.deleteCountResources", {
                 count: selectedResourceIds.length,
               })
-            : t<string>("Delete resource")}
+            : t<string>("resource.contextMenu.deleteResource")}
         </div>
       </MenuItem>
     </>

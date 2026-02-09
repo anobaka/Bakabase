@@ -267,7 +267,7 @@ const FilterPanel = (props: IProps) => {
                         }}
                       >
                         {t<string>(
-                          "Select all {{count}} filtered resources (including those not currently loaded).",
+                          "resource.search.selectAllFiltered",
                           { count: totalFilteredResourceCount },
                         )}
                       </Button>

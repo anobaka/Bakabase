@@ -321,7 +321,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                   <IntroductionSummary resource={resource} onReload={loadResource} />
                   <div className={"flex flex-col gap-1"}>
                     <Properties
-                      columns={columns}
+                      columns={1}
                       reload={loadResource}
                       resource={resource}
                       restrictedPropertyIds={[ReservedProperty.Cover]}

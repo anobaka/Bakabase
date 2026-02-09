@@ -5,7 +5,7 @@ import { useUpdate, useUpdateEffect } from "react-use";
 import { useTranslation } from "react-i18next";
 
 import envConfig from "@/config/env";
-import { buildLogger, uuidv4 } from "@/components/utils";
+import { buildLogger } from "@/components/utils";
 import MediaPreviewerPage from "@/components/MediaPreviewer";
 import "./index.scss";
 import { useAppContextStore } from "@/stores/appContext";
@@ -17,7 +17,6 @@ import type { Resource as ResourceModel } from "@/core/models/Resource";
 
 import FallbackCover from "@/components/Resource/components/ResourceCover/components/FallbackCover.tsx";
 import { useCoverDiscovery } from "@/hooks/useResourceDiscovery";
-import { useCoverLoadQueue } from "@/components/ContextProvider/CoverLoadQueueContext";
 
 type TooltipPlacement =
   | "top"
@@ -60,9 +59,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const { t } = useTranslation();
 
-  // Use global cover load queue for controlled concurrent loading
-  const coverLoadQueue = useCoverLoadQueue();
-
   const log = buildLogger(`ResourceCover:${resource.id}|${resource.path}`);
 
   const forceUpdate = useUpdate();
@@ -86,9 +82,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   });
 
   const [failureUrls, setFailureUrls] = useState<Set<string>>(new Set());
-  const [blobUrls, setBlobUrls] = useState<Map<string, string>>(new Map());
   const [reloadKey, setReloadKey] = useState(0);
-  const mountedRef = useRef(true);
 
   // Stabilize array references using useMemo to prevent unnecessary re-renders
   const stableDiscoveryCoverPaths = useMemo(
@@ -105,6 +99,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
   );
 
   // Build URLs from discovery result
+  // Uses only 2nd-nth endpoints for resource loading (1st is for API calls)
   const urls = useMemo(() => {
     if (discoveryState.status !== "ready") {
       return null;
@@ -133,64 +128,13 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     forceUpdate();
   }, [coverFit]);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-      // Clean up blob URLs on unmount
-      blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-    };
-  }, []);
-
-  // Load images when URLs change
-  useEffect(() => {
-    if (!urls) return;
-
-    // Clean up old blob URLs
-    blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-    setBlobUrls(new Map());
+  // Reset failure state when URLs change
+  useUpdateEffect(() => {
     setFailureUrls(new Set());
-
-    // Create abort controllers for all fetch requests
-    const abortControllers = new Map<string, AbortController>();
-
-    // Load each image
-    urls.forEach((url) => {
-      const controller = new AbortController();
-      abortControllers.set(url, controller);
-
-      const loadImage = async () => {
-        if (!mountedRef.current) return;
-        try {
-          // Use global queue for controlled concurrent loading
-          const blobUrl = await coverLoadQueue.loadCover(url, controller.signal);
-
-          if (!mountedRef.current) return;
-          setBlobUrls((prev) => new Map(prev).set(url, blobUrl));
-        } catch (e: any) {
-          if (!mountedRef.current) return;
-          // Don't treat aborted requests as failures
-          if (e.name === "AbortError") {
-            log("fetch aborted for url", url);
-            return;
-          }
-          setFailureUrls((prev) => new Set(prev).add(url));
-          log("failed to load url", url);
-        }
-      };
-      loadImage();
-    });
-
-    // Cleanup function to abort all pending requests
-    return () => {
-      abortControllers.forEach((controller) => controller.abort());
-    };
   }, [urls]);
 
   // Reset state when resource changes
   useUpdateEffect(() => {
-    blobUrls.forEach((blobUrl) => URL.revokeObjectURL(blobUrl));
-    setBlobUrls(new Map());
     setFailureUrls(new Set());
     maxCoverRawSizeRef.current = { w: 0, h: 0 };
   }, [resource.id]);
@@ -231,6 +175,43 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
     }
     return undefined;
   }, [discoveryState.status, discoveryState.cacheEnabled, t]);
+
+  const handleImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+
+    if (img) {
+      const prevW = maxCoverRawSizeRef.current?.w ?? 0;
+      const prevH = maxCoverRawSizeRef.current?.h ?? 0;
+
+      if (!maxCoverRawSizeRef.current) {
+        maxCoverRawSizeRef.current = {
+          w: img.naturalWidth,
+          h: img.naturalHeight,
+        };
+      } else {
+        maxCoverRawSizeRef.current.w = Math.max(
+          maxCoverRawSizeRef.current.w,
+          img.naturalWidth,
+        );
+        maxCoverRawSizeRef.current.h = Math.max(
+          maxCoverRawSizeRef.current.h,
+          img.naturalHeight,
+        );
+      }
+
+      if (
+        maxCoverRawSizeRef.current.w !== prevW ||
+        maxCoverRawSizeRef.current.h !== prevH
+      ) {
+        forceUpdate();
+      }
+    }
+  }, [forceUpdate]);
+
+  const handleImageError = useCallback((url: string) => {
+    setFailureUrls((prev) => new Set(prev).add(url));
+    log("failed to load url", url);
+  }, []);
 
   const renderCover = useCallback(() => {
     // Show loading state with tooltip
@@ -274,9 +255,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         dots={urls && urls.length > 1}
       >
         {renderingUrls?.map((url) => {
-          const blobUrl = blobUrls.get(url);
-          const isLoading = !blobUrl && !failureUrls.has(url);
-
           return (
             <div key={url}>
               <div
@@ -288,46 +266,17 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
               >
                 {failureUrls.has(url) ? (
                   <FallbackCover afterClearingCache={reload} id={resource.id} />
-                ) : isLoading ? (
-                  <div className="w-full h-full bg-default-100 animate-pulse" />
                 ) : (
                   <Image
-                    key={blobUrl}
+                    key={url}
                     removeWrapper
                     className={`${dynamicClassName} max-w-full max-h-full`}
                     loading={"eager"}
-                    src={blobUrl}
-                    onLoad={(e) => {
-                      const img = e.target as HTMLImageElement;
-
-                      if (img) {
-                        const prevW = maxCoverRawSizeRef.current?.w ?? 0;
-                        const prevH = maxCoverRawSizeRef.current?.h ?? 0;
-
-                        if (!maxCoverRawSizeRef.current) {
-                          maxCoverRawSizeRef.current = {
-                            w: img.naturalWidth,
-                            h: img.naturalHeight,
-                          };
-                        } else {
-                          maxCoverRawSizeRef.current.w = Math.max(
-                            maxCoverRawSizeRef.current.w,
-                            img.naturalWidth,
-                          );
-                          maxCoverRawSizeRef.current.h = Math.max(
-                            maxCoverRawSizeRef.current.h,
-                            img.naturalHeight,
-                          );
-                        }
-
-                        if (
-                          maxCoverRawSizeRef.current.w !== prevW ||
-                          maxCoverRawSizeRef.current.h !== prevH
-                        ) {
-                          forceUpdate();
-                        }
-                      }
-                    }}
+                    // @ts-ignore - fetchPriority is supported but not in all type defs
+                    fetchPriority={"low"}
+                    src={url}
+                    onLoad={handleImageLoad}
+                    onError={() => handleImageError(url)}
                   />
                 )}
               </div>
@@ -336,7 +285,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
         })}
       </Carousel>
     );
-  }, [urls, coverFit, disableCarousel, blobUrls, failureUrls, discoveryState.status, loadingTooltipContent]);
+  }, [urls, coverFit, disableCarousel, failureUrls, discoveryState.status, loadingTooltipContent, handleImageLoad, handleImageError]);
 
   const renderContainer = () => {
     return (
@@ -353,7 +302,7 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
             }
           }
         }}
-        onMouseOver={(e) => {
+        onMouseOver={() => {
           if (!disableMediaPreviewer) {
             if (!previewerHoverTimerRef.current) {
               previewerHoverTimerRef.current = setTimeout(() => {
@@ -405,8 +354,6 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
             dots={!!(urls && urls.length > 1)}
           >
             {urls?.map((url) => {
-              const blobUrl = blobUrls.get(url);
-
               return (
                 <div key={url}>
                   <div
@@ -418,24 +365,16 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
                   >
                     {failureUrls.has(url) ? (
                       <FallbackCover afterClearingCache={reload} id={resource.id} />
-                    ) : blobUrl ? (
+                    ) : (
                       <Image
-                        key={blobUrl}
+                        key={url}
                         removeWrapper
                         alt={""}
                         loading={"eager"}
-                        src={blobUrl}
+                        src={url}
                         style={{
                           maxWidth: tooltipWidth,
                           maxHeight: tooltipHeight,
-                        }}
-                      />
-                    ) : (
-                      <div
-                        className="bg-default-100 animate-pulse"
-                        style={{
-                          width: tooltipWidth,
-                          height: tooltipHeight,
                         }}
                       />
                     )}

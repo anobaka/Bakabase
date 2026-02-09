@@ -8,6 +8,7 @@
   "resource.search.selectedCount": "已选 {{count}} 项",
   "resource.search.loadedResources": "已加载资源",
   "resource.search.allFiltered": "所有筛选结果",
+  "resource.search.selectAllFiltered": "选择全部 {{count}} 个筛选结果（包括尚未加载的）。",
   "resource.search.playlist": "播放列表",
   "resource.search.recentlyPlayed": "最近播放",
 

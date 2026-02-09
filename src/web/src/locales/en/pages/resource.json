@@ -8,6 +8,7 @@
   "resource.search.selectedCount": "{{count}} items selected",
   "resource.search.loadedResources": "Loaded resources",
   "resource.search.allFiltered": "All filtered resources",
+  "resource.search.selectAllFiltered": "Select all {{count}} filtered resources (including those not currently loaded).",
   "resource.search.playlist": "Playlist",
   "resource.search.recentlyPlayed": "Recently played",
 

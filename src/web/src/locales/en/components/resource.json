@@ -75,5 +75,16 @@
   "ResourceCover.CoverTips.S2.Todo.DisableCache": "Disable cover cache and use original files as covers",
   "Cover cache": "Cover cache",
   "Cover cache has been reset": "Cover cache has been reset",
-  "Reset cover cache of current resource": "Reset cover cache of current resource"
+  "Reset cover cache of current resource": "Reset cover cache of current resource",
+
+  "resource.contextMenu.setMediaLibraries": "Set media libraries",
+  "resource.contextMenu.setMediaLibrariesForCount": "Set media libraries for {{count}} resources",
+  "resource.contextMenu.transferResourceData": "Transfer resource data",
+  "resource.contextMenu.transferDataOfCount": "Transfer data of {{count}} resources",
+  "resource.contextMenu.editProperties": "Edit properties",
+  "resource.contextMenu.bulkEditProperties": "Bulk edit properties",
+  "resource.contextMenu.deleteResource": "Delete resource",
+  "resource.contextMenu.deleteCountResources": "Delete {{count}} resources",
+  "resource.contextMenu.confirmDeleteCount": "Are you sure you want to delete {{count}} resources?",
+  "resource.contextMenu.filesWillNotBeDeleted": "Files will not be deleted."
 }

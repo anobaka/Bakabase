@@ -13,6 +13,7 @@ using Bakabase.InsideWorld.Models.Models.Aos;
 using Bakabase.Windows;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
 using Application = System.Windows.Application;
 using Brushes = System.Windows.Media.Brushes;
@@ -139,7 +140,24 @@ namespace Bakabase.Components
 
                 _mainWindow.Title = title;
                 await _mainWindow.WebView2.EnsureCoreWebView2Async();
-                await _mainWindow.WebView2.CoreWebView2.Profile.ClearBrowsingDataAsync();
+
+                // Keep localstorage
+                var kindsToClear =
+                    CoreWebView2BrowsingDataKinds.FileSystems |
+                    CoreWebView2BrowsingDataKinds.IndexedDb |
+                    CoreWebView2BrowsingDataKinds.WebSql |
+                    CoreWebView2BrowsingDataKinds.CacheStorage |
+                    CoreWebView2BrowsingDataKinds.Cookies |
+                    CoreWebView2BrowsingDataKinds.DiskCache |
+                    CoreWebView2BrowsingDataKinds.DownloadHistory |
+                    CoreWebView2BrowsingDataKinds.GeneralAutofill |
+                    CoreWebView2BrowsingDataKinds.PasswordAutosave |
+                    CoreWebView2BrowsingDataKinds.BrowsingHistory |
+                    CoreWebView2BrowsingDataKinds.Settings |
+                    CoreWebView2BrowsingDataKinds.ServiceWorkers;
+
+                await _mainWindow.WebView2.CoreWebView2.Profile.ClearBrowsingDataAsync(kindsToClear);
+
                 _mainWindow.WebView2.CoreWebView2.Navigate(url);
                 _mainWindow.Closing += async (sender, args) =>
                 {
