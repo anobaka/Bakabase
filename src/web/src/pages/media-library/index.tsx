@@ -5,7 +5,7 @@ import type { InputProps } from "@heroui/react";
 import type { ButtonProps } from "@/components/bakaui";
 
 import { useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUpdate } from "react-use";
 import { AiOutlinePlusCircle, AiOutlineProduct, AiOutlineSearch } from "react-icons/ai";
 import { MdOutlineDelete } from "react-icons/md";
@@ -44,6 +44,8 @@ const MediaLibraryPage = () => {
 
   const [mediaLibraries, setMediaLibraries] = useState<MediaLibrary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [highlightedId, setHighlightedId] = useState<number | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const forceUpdate = useUpdate();
 
   const loadMediaLibraries = async (): Promise<MediaLibrary[]> => {
@@ -75,11 +77,31 @@ const MediaLibraryPage = () => {
     const no = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
     const name = `${t("mediaLibrary.title")} ${no}`;
 
+    const oldIds = new Set(mediaLibraries.map((ml) => ml.id));
+
     await BApi.mediaLibraryV2.addMediaLibraryV2({
       name,
       paths: [],
     });
-    await loadMediaLibraries();
+    const newList = await loadMediaLibraries();
+    const newMl = newList.find((ml) => !oldIds.has(ml.id));
+
+    if (newMl) {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+      setHighlightedId(newMl.id);
+      highlightTimerRef.current = setTimeout(() => {
+        setHighlightedId(null);
+      }, 3000);
+
+      requestAnimationFrame(() => {
+        document.getElementById(`media-library-card-${newMl.id}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      });
+    }
   };
 
   const deleteMediaLibrary = (ml: MediaLibrary) => {
@@ -238,10 +260,13 @@ const MediaLibraryPage = () => {
     const textColor = getCssVariable("--theme-text") || "#222";
     const libraryColor = ml.color ?? textColor;
 
+    const isHighlighted = highlightedId === ml.id;
+
     return (
       <Card
         key={ml.id}
-        className="group hover:shadow-md hover:scale-[1.02] transition-all duration-300"
+        id={`media-library-card-${ml.id}`}
+        className={`group hover:shadow-md hover:scale-[1.02] transition-all duration-300 ${isHighlighted ? "ring-2 ring-primary shadow-md" : ""}`}
         shadow="sm"
       >
         <CardBody className="p-4 flex flex-col gap-3">

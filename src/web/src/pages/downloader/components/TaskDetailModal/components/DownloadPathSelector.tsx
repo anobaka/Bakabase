@@ -19,7 +19,7 @@ const DownloadPathSelector: FC<Props> = ({ downloadPath, onChange }: Props) => {
 
   return (
     <div className="flex items-center gap-2">
-      <Chip radius="sm">{t<string>("Download path")}</Chip>
+      <Chip radius="sm" variant="flat">{t<string>("Download path")}</Chip>
       <div>
         <Button
           color={"primary"}

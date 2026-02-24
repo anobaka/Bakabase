@@ -1465,8 +1465,8 @@ export enum StartupPage {
 }
 
 export const startupPages = [
-  { label: 'configuration.functional.startupPage.default', value: StartupPage.Default },
-  { label: 'configuration.functional.startupPage.resource', value: StartupPage.Resource }
+  { label: 'Default', value: StartupPage.Default },
+  { label: 'Resource', value: StartupPage.Resource }
 ] as const;
 
 export const StartupPageLabel: Record<StartupPage, string> = {
@@ -3082,22 +3082,19 @@ export const FanboxNamingFieldsLabel: Record<FanboxNamingFields, string> = {
 export enum ExHentaiDownloadTaskType {
   SingleWork = 1,
   Watched = 2,
-  List = 3,
-  Torrent = 4
+  List = 3
 }
 
 export const exHentaiDownloadTaskTypes = [
   { label: 'SingleWork', value: ExHentaiDownloadTaskType.SingleWork },
   { label: 'Watched', value: ExHentaiDownloadTaskType.Watched },
-  { label: 'List', value: ExHentaiDownloadTaskType.List },
-  { label: 'Torrent', value: ExHentaiDownloadTaskType.Torrent }
+  { label: 'List', value: ExHentaiDownloadTaskType.List }
 ] as const;
 
 export const ExHentaiDownloadTaskTypeLabel: Record<ExHentaiDownloadTaskType, string> = {
   [ExHentaiDownloadTaskType.SingleWork]: 'SingleWork',
   [ExHentaiDownloadTaskType.Watched]: 'Watched',
-  [ExHentaiDownloadTaskType.List]: 'List',
-  [ExHentaiDownloadTaskType.Torrent]: 'Torrent'
+  [ExHentaiDownloadTaskType.List]: 'List'
 };
 
 export enum ExHentaiNamingFields {

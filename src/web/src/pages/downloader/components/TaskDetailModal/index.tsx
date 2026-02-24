@@ -12,7 +12,8 @@ import { useTranslation } from "react-i18next";
 import { ButtonGroup, Input, Textarea } from "@heroui/react";
 
 import { ThirdPartyId } from "@/sdk/constants";
-import { Button, Modal } from "@/components/bakaui";
+import { Alert, Button, Modal } from "@/components/bakaui";
+import NavigateButton from "@/components/NavigateButton";
 import { isThirdPartyDeveloping } from "@/pages/downloader/models";
 import DevelopingChip from "@/components/Chips/DevelopingChip";
 import ThirdPartyIcon from "@/components/ThirdPartyIcon";
@@ -32,6 +33,7 @@ import IntervalField from "@/pages/downloader/components/TaskDetailModal/compone
 import CheckpointField from "@/pages/downloader/components/TaskDetailModal/components/CheckpointField.tsx";
 import AutoRetryField from "@/pages/downloader/components/TaskDetailModal/components/AutoRetryField.tsx";
 import AllowDuplicateField from "@/pages/downloader/components/TaskDetailModal/components/AllowDuplicateField.tsx";
+import PreferTorrentField from "@/pages/downloader/components/TaskDetailModal/components/PreferTorrentField.tsx";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -297,6 +299,27 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                 }}
               />
             ) : null;
+          case DownloadTaskFieldType.PreferTorrent: {
+            const parsedOptions = form.options ? JSON.parse(form.options) : {};
+            if (parsedOptions.preferTorrent === undefined) {
+              parsedOptions.preferTorrent = true;
+              form.options = JSON.stringify(parsedOptions);
+            }
+            const preferTorrent = parsedOptions.preferTorrent;
+
+            return (
+              <PreferTorrentField
+                preferTorrent={preferTorrent}
+                onChange={(value) => {
+                  const newOptions = { ...parsedOptions, preferTorrent: value };
+                  setForm({
+                    ...form,
+                    options: JSON.stringify(newOptions),
+                  });
+                }}
+              />
+            );
+          }
         }
       });
     }
@@ -392,6 +415,7 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
                               setForm({
                                 ...form,
                                 type: taskType.value,
+                                keys: undefined,
                               });
                             }
                           }}
@@ -408,6 +432,20 @@ const DownloadTaskDetailModal = ({ onDestroyed, id }: Props) => {
               t<string>("downloader.status.notAvailable")
             ))}
         </div>
+        {form.thirdPartyId === ThirdPartyId.ExHentai && (
+          <Alert
+            color="primary"
+            variant="flat"
+            description={
+              <div className="flex items-center gap-1 flex-wrap">
+                <span>{t<string>("downloader.tip.exHentaiUserscript")}</span>
+                <NavigateButton to="/third-party-integration">
+                  {t<string>("downloader.tip.goToThirdPartyIntegration")}
+                </NavigateButton>
+              </div>
+            }
+          />
+        )}
         {form.thirdPartyId && form.type && (
           <div className={"flex flex-col gap-2"}>{renderFields()}</div>
         )}

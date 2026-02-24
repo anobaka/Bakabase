@@ -210,7 +210,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   patchProperty({
                     options: {
                       ...options,
-                      precision: (c as Set<Key>).values().next().value,
+                      precision: Number((c as Set<Key>).values().next().value),
                     },
                   });
                 }}
@@ -240,7 +240,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   patchProperty({
                     options: {
                       ...options,
-                      precision: (c as Set<Key>).values().next().value,
+                      precision: Number((c as Set<Key>).values().next().value),
                     },
                   });
                 }}
@@ -297,7 +297,7 @@ const ModalContent = ({ validValueTypes, value, onChange }: Props) => {
                   patchProperty({
                     options: {
                       ...options,
-                      maxValue: (c as Set<Key>).values().next().value,
+                      maxValue: Number((c as Set<Key>).values().next().value),
                     },
                   });
                 }}

@@ -28,5 +28,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Models.Db
         [Required]
         public string DownloadPath { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public string? Options { get; set; }
     }
 }

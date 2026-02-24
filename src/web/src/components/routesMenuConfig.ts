@@ -158,14 +158,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.alias",
-        path: "/alias",
-        component: AliasPage,
-        icon: AiOutlineBranches,
-        layout: "basic",
-        menu: true,
-      },
-      {
         name: "menu.specialText",
         path: "/text",
         component: TextPage,
@@ -198,6 +190,14 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
         isBeta: true,
+      },
+      {
+        name: "menu.alias",
+        path: "/alias",
+        component: AliasPage,
+        icon: AiOutlineBranches,
+        layout: "basic",
+        menu: true,
       },
       {
         name: "menu.mediaLibrary",

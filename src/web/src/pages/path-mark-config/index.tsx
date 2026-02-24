@@ -12,7 +12,8 @@ import type { PendingSyncButtonRef } from "./components/PendingSyncButton";
 import usePathMarks from "./hooks/usePathMarks";
 import { PathMarkGuideModal, usePathMarkGuide } from "./components/PathMarkGuide";
 
-import { Button, Chip } from "@/components/bakaui";
+import { Button } from "@/components/bakaui";
+import BetaChip from "@/components/Chips/BetaChip";
 
 const PATH_MARK_ROOT_PATH_KEY = "pathMarkConfig.rootPath";
 
@@ -65,9 +66,7 @@ const PathRuleConfigPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">{t("pathMarkConfig.title")}</h2>
-            <Chip color="primary" size="sm" variant="flat">
-              {t("pathMarkConfig.label.beta")}
-            </Chip>
+            <BetaChip />
           </div>
 
           {/* Actions */}

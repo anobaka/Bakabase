@@ -106,7 +106,8 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components
                 AutoRetry = model.AutoRetry,
                 Status = DownloadTaskStatus.Idle,
                 DownloadPath = model.DownloadPath,
-                CreatedAt = DateTime.Now
+                CreatedAt = DateTime.Now,
+                Options = model.Options
             }).ToArray() ?? [];
 
             return tasks;

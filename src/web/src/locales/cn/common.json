@@ -226,6 +226,13 @@
   "BetaFeature.UnstableWarning": "此功能处于测试阶段，可能不稳定。如遇到问题请反馈。",
   "BetaFeature.BackupWarning": "强烈建议在使用前备份数据。",
 
+  "Developing": "开发中",
+  "This feature is currently in development and may not be fully functional.": "此功能正在开发中，可能尚未完全可用。",
+  "DevelopingFeature.ExpectChanges": "功能可能会有较大变动，请留意后续更新。",
+
+  "Deprecated": "已弃用",
+  "This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.": "此功能已弃用，可能会在未来版本中移除。请考虑使用推荐的替代方案。",
+
   "resourceFilter.switchToAdvancedMode": "切换到高级模式",
   "resourceFilter.switchToSimpleMode": "切换到简单模式",
   "resourceFilter.advanceFilter": "高级筛选",
@@ -250,5 +257,14 @@
   "Select data": "选择数据",
 
   "extensionGroupSelect.label": "限制扩展名分组",
-  "extensionGroupSelect.placeholder": "从扩展名分组中选择"
+  "extensionGroupSelect.placeholder": "从扩展名分组中选择",
+
+  "common.confirm.navigateAway": "离开当前页面",
+  "common.confirm.navigateAwayMessage": "即将离开当前页面，确定要继续吗？",
+
+  "FeatureRequestTip.Developing": "<1>{{name}}</1> 功能正在开发中。你可以在 <3>Github</3> 或 <5>QQ群</5> 上催促作者或提出建议。",
+  "FeatureRequestTip.Deprecated": "<1>{{name}}</1> 功能已弃用。你可以在 <3>Github</3> 或 <5>QQ群</5> 上了解详情或提出建议。",
+  "FeatureRequestTip.Deprecating": "<1>{{name}}</1> 功能即将弃用。你可以在 <3>Github</3> 或 <5>QQ群</5> 上了解详情或提出建议。",
+  "Join QQ group": "加入QQ群",
+  "For more information, you can visit:": "如需了解更多信息，请访问："
 }

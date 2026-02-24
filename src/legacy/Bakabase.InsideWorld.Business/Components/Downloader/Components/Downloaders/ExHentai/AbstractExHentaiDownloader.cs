@@ -17,7 +17,7 @@ using SixLabors.ImageSharp.Formats.Png;
 
 namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai
 {
-    public abstract class AbstractExHentaiDownloader : AbstractDownloader<ExHentaiDownloadTaskType>
+    public abstract class AbstractExHentaiDownloader : AbstractDownloader<ExHentaiDownloadTaskType, ExHentaiTaskOptions>
     {
         protected readonly IStringLocalizer<SharedResource> Localizer;
         protected readonly ExHentaiClient Client;
@@ -43,10 +43,11 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             Func<string, Task> onCurrentChanged,
             Func<decimal, Task> onProgress,
             Func<string, Task> onCheckpointChanged,
-            CancellationToken ct)
+            CancellationToken ct,
+            bool preferTorrent = true)
         {
-            // Parse detail with torrent info to check if torrents are available
-            var detail = await Client.ParseDetail(url, true);
+            // Only fetch torrent info when preferTorrent is true
+            var detail = await Client.ParseDetail(url, preferTorrent);
             if (detail == null)
             {
                 throw new Exception($"Got empty response from: {url}");

@@ -47,6 +47,8 @@ public class PathMarkSyncService : ScopedService
     private readonly IBakabaseLocalizer _localizer;
     private readonly ILogger<PathMarkSyncService> _logger;
 
+    private readonly IExtensionGroupService _extensionGroupService;
+
     public PathMarkSyncService(
         IServiceProvider serviceProvider,
         IPathMarkService pathMarkService,
@@ -58,7 +60,8 @@ public class PathMarkSyncService : ScopedService
         IPathMarkEffectService effectService,
         IBOptions<ResourceOptions> resourceOptions,
         IBakabaseLocalizer localizer,
-        ILogger<PathMarkSyncService> logger) : base(serviceProvider)
+        ILogger<PathMarkSyncService> logger,
+        IExtensionGroupService extensionGroupService) : base(serviceProvider)
     {
         _pathMarkService = pathMarkService;
         _resourceService = resourceService;
@@ -70,6 +73,7 @@ public class PathMarkSyncService : ScopedService
         _resourceOptions = resourceOptions;
         _localizer = localizer;
         _logger = logger;
+        _extensionGroupService = extensionGroupService;
     }
 
     /// <summary>
@@ -376,6 +380,21 @@ public class PathMarkSyncService : ScopedService
     {
         var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
         if (config == null) return new List<string>();
+
+        // Resolve extension group IDs to actual extensions and merge with config.Extensions
+        if (config.ExtensionGroupIds is { Count: > 0 })
+        {
+            var allGroups = await _extensionGroupService.GetAll();
+            var groupMap = allGroups.ToDictionary(g => g.Id, g => g);
+            var groupExtensions = config.ExtensionGroupIds
+                .Select(id => groupMap.GetValueOrDefault(id))
+                .Where(g => g?.Extensions != null)
+                .SelectMany(g => g!.Extensions!);
+
+            var merged = new List<string>(config.Extensions ?? []);
+            merged.AddRange(groupExtensions);
+            config.Extensions = merged.Distinct().ToList();
+        }
 
         var matchedPaths = GetMatchingPathsForResourceMark(mark.Path, config, ctx);
         var collectedPaths = new List<string>();

@@ -14,6 +14,7 @@
   "resource.playControl.noPlayableFiles.noMatchingProfiles": "未找到匹配的资源扩展",
   "resource.playControl.modal.selectFileTitle": "请选择要播放的文件",
   "resource.playControl.modal.showAllFiles": "显示全部 {{count}} 个文件",
+  "resource.playControl.modal.loadAllFiles": "加载全部文件",
   "resource.playControl.modal.autoSelectFirstFile": "当存在多个可播放文件时自动选择第一个",
   "resource.playControl.toast.autoSelectEnabled": "已启用自动选择第一个可播放文件。您可以在资源页面设置中更改此选项。",
   "resource.cover.tooltip.cachePreparing": "封面缓存准备中...",
@@ -86,5 +87,15 @@
   "resource.contextMenu.deleteResource": "删除资源",
   "resource.contextMenu.deleteCountResources": "删除 {{count}} 个资源",
   "resource.contextMenu.confirmDeleteCount": "确定要删除 {{count}} 个资源吗？",
-  "resource.contextMenu.filesWillNotBeDeleted": "文件不会被删除。"
+  "resource.contextMenu.filesWillNotBeDeleted": "文件不会被删除。",
+  "The following properties are not bound to resource profiles": "以下属性未绑定到资源扩展",
+  "There is no property bound yet, you can bind properties in resource profile.": "尚未绑定任何属性，您可以在资源扩展中绑定属性。",
+  "Property": "属性",
+  "Display value": "显示值",
+  "The numbers represent the priority of property dimensions, and the property values will be displayed according to the priority of the dimensions.": "数字代表属性维度的优先级，属性值将按照维度的优先级顺序显示。",
+  "indicates this scope is not enabled": "表示该作用域未启用",
+  "Setup priority of property value scopes": "设置属性值作用域的优先级",
+  "Visible scopes": "可见作用域",
+  "This filter is used for quick check and does not change the priority of property value scopes.": "此筛选器仅用于快速查看，不会改变属性值作用域的优先级。",
+  "You can click on the scope button to change the priority of the property value scopes.": "您可以点击作用域按钮来改变属性值作用域的优先级。"
 }

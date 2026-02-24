@@ -30,7 +30,8 @@ public class PathMarkService<TDbContext>(
     FullMemoryCacheResourceService<TDbContext, PathMarkDbModel, int> orm,
     IServiceProvider serviceProvider,
     IBOptions<ResourceOptions> resourceOptions,
-    IHubContext<WebGuiHub, IWebGuiClient> uiHub
+    IHubContext<WebGuiHub, IWebGuiClient> uiHub,
+    IExtensionGroupService extensionGroupService
 ) : ScopedService(serviceProvider), IPathMarkService where TDbContext : DbContext
 {
     private async Task NotifyPathMarkStatusChange(PathMarkDbModel dbModel)
@@ -486,14 +487,14 @@ public class PathMarkService<TDbContext>(
         return allMarks.Count;
     }
 
-    public Task<List<PathMarkPreviewResult>> PreviewMatchedPaths(PathMarkPreviewRequest request)
+    public async Task<List<PathMarkPreviewResult>> PreviewMatchedPaths(PathMarkPreviewRequest request)
     {
         var rootPath = request.Path.StandardizePath()!;
         var results = new List<PathMarkPreviewResult>();
 
         if (!Directory.Exists(rootPath))
         {
-            return Task.FromResult(results);
+            return results;
         }
 
         // Step 1: Parse base match config (common to all mark types)
@@ -516,21 +517,20 @@ public class PathMarkService<TDbContext>(
             case PathMarkType.Resource:
             {
                 var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(request.ConfigJson);
-                if (config == null) return Task.FromResult(results);
+                if (config == null) return results;
 
                 matchMode = config.MatchMode;
                 layer = config.Layer;
                 regex = config.Regex;
                 applyScope = config.ApplyScope;
                 fsTypeFilter = config.FsTypeFilter;
-                extensions = config.Extensions;
-                // Note: ExtensionGroupIds would need to be resolved to actual extensions here if needed
+                extensions = await ResolveExtensions(config.Extensions, config.ExtensionGroupIds);
                 break;
             }
             case PathMarkType.Property:
             {
                 var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(request.ConfigJson);
-                if (config == null) return Task.FromResult(results);
+                if (config == null) return results;
 
                 matchMode = config.MatchMode;
                 layer = config.Layer;
@@ -545,7 +545,7 @@ public class PathMarkService<TDbContext>(
             case PathMarkType.MediaLibrary:
             {
                 var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(request.ConfigJson);
-                if (config == null) return Task.FromResult(results);
+                if (config == null) return results;
 
                 matchMode = config.MatchMode;
                 layer = config.Layer;
@@ -558,7 +558,7 @@ public class PathMarkService<TDbContext>(
                 break;
             }
             default:
-                return Task.FromResult(results);
+                return results;
         }
 
         // Step 3: Get matched paths using common logic
@@ -592,7 +592,24 @@ public class PathMarkService<TDbContext>(
             results.Add(result);
         }
 
-        return Task.FromResult(results);
+        return results;
+    }
+
+    private async Task<List<string>?> ResolveExtensions(List<string>? extensions, List<int>? extensionGroupIds)
+    {
+        if (extensionGroupIds == null || extensionGroupIds.Count == 0)
+            return extensions;
+
+        var allGroups = await extensionGroupService.GetAll();
+        var groupMap = allGroups.ToDictionary(g => g.Id, g => g);
+        var groupExtensions = extensionGroupIds
+            .Select(id => groupMap.GetValueOrDefault(id))
+            .Where(g => g?.Extensions != null)
+            .SelectMany(g => g!.Extensions!);
+
+        var merged = new List<string>(extensions ?? []);
+        merged.AddRange(groupExtensions);
+        return merged.Count > 0 ? merged.Distinct().ToList() : null;
     }
 
     /// <summary>

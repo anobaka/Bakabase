@@ -128,6 +128,7 @@ public class DownloadTaskController : Controller
             t.StartPage = task.StartPage;
             t.EndPage = task.EndPage;
             t.AutoRetry = task.AutoRetry;
+            t.Options = task.Options;
         });
     }
 

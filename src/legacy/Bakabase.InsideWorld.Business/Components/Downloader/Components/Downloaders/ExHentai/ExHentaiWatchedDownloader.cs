@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
-using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -22,13 +21,13 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override ExHentaiDownloadTaskType EnumTaskType => ExHentaiDownloadTaskType.Watched;
 
-        protected override Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override Task StartCore(DownloadTask task, ExHentaiTaskOptions options, CancellationToken ct)
         {
             if (task.Key.IsNullOrEmpty())
             {
                 task.Key = "https://exhentai.org/watched";
             }
-            return base.StartCore(task, ct);
+            return base.StartCore(task, options, ct);
         }
     }
 }

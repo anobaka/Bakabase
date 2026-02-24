@@ -111,6 +111,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
 
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
+  const [loadingAllFiles, setLoadingAllFiles] = useState(false);
+  const [allFilesLoaded, setAllFilesLoaded] = useState(false);
 
   // Compute playable files context from discovery state
   const portalCtx = discoveryState.status === "ready"
@@ -165,6 +167,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   // Reset dirs when resource changes
   useEffect(() => {
     setDirs(undefined);
+    setAllFilesLoaded(false);
   }, [resource.id]);
 
   useImperativeHandle(ref, () => ({}), []);
@@ -299,6 +302,31 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
             );
           })}
         </div>
+        {portalCtx?.hasMore && !allFilesLoaded && (
+          <div className={"pt-2"}>
+            <Button
+              color={"primary"}
+              size={"sm"}
+              variant={"light"}
+              isLoading={loadingAllFiles}
+              onPress={async () => {
+                setLoadingAllFiles(true);
+                try {
+                  const rsp = await BApi.resource.getResourcePlayableFiles(resource.id);
+                  const allFiles = rsp.data ?? [];
+                  if (allFiles.length > 0 && !resource.isFile) {
+                    setDirs(splitIntoDirs(allFiles, resource.path));
+                  }
+                  setAllFilesLoaded(true);
+                } finally {
+                  setLoadingAllFiles(false);
+                }
+              }}
+            >
+              {t<string>("resource.playControl.modal.loadAllFiles")}
+            </Button>
+          </div>
+        )}
         {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx && portalCtx.files.length > 1 && (
           <div className={"pt-3 border-t mt-3"}>
             <Button

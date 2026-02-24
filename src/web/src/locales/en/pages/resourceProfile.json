@@ -10,7 +10,7 @@
   "resourceProfile.label.properties": "Properties",
   "resourceProfile.label.actions": "Actions",
   "resourceProfile.label.total": "Total",
-  "resourceProfile.tip.priority": "Higher priority profiles are matched first. When multiple profiles match a resource, the one with highest priority takes effect.",
+  "resourceProfile.tip.priority": "Lower numbers indicate higher priority. Higher priority profiles are matched first. When multiple profiles match a resource, the one with highest priority takes effect.",
   "resourceProfile.tip.name": "A unique name to identify this profile.",
   "resourceProfile.tip.searchCriteria": "Define which resources this profile applies to. Resources matching these criteria will use this profile's settings.",
   "resourceProfile.tip.nameTemplate": "Customize how resource names are displayed using property placeholders like {Name}. Leave empty to use the original filename.",

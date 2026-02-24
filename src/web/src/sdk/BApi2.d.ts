@@ -5986,6 +5986,7 @@ export interface components {
             availableActions: components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants.DownloadTaskAction"][];
             /** Format: date-time */
             createdAt: string;
+            options?: string;
             readonly displayName: string;
             readonly canStart: boolean;
         };
@@ -6038,6 +6039,7 @@ export interface components {
             autoRetry: boolean;
             downloadPath: string;
             isDuplicateAllowed: boolean;
+            options?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskDeleteInputModel": {
             ids?: number[];
@@ -6052,6 +6054,7 @@ export interface components {
             endPage?: number;
             checkpoint?: string;
             autoRetry: boolean;
+            options?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskStartRequestModel": {
             ids: number[];

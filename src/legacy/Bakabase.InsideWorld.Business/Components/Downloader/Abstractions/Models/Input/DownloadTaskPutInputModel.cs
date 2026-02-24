@@ -7,4 +7,5 @@ public record DownloadTaskPutInputModel
     public int? EndPage { get; set; }
     public string? Checkpoint { get; set; }
     public bool AutoRetry { get; set; }
+    public string? Options { get; set; }
 }

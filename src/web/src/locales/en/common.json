@@ -226,6 +226,13 @@
   "BetaFeature.UnstableWarning": "This feature is in beta and may be unstable. Please report any issues you encounter.",
   "BetaFeature.BackupWarning": "It is strongly recommended to backup your data before use.",
 
+  "Developing": "Developing",
+  "This feature is currently in development and may not be fully functional.": "This feature is currently in development and may not be fully functional.",
+  "DevelopingFeature.ExpectChanges": "Expect significant changes in future updates.",
+
+  "Deprecated": "Deprecated",
+  "This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.": "This feature is deprecated and may be removed in future versions. Please consider using the recommended alternative.",
+
   "resourceFilter.switchToAdvancedMode": "Switch to Advanced mode",
   "resourceFilter.switchToSimpleMode": "Switch to Simple mode",
   "resourceFilter.advanceFilter": "Advanced filter",
@@ -250,5 +257,14 @@
   "Select data": "Select data",
 
   "extensionGroupSelect.label": "Limit file extension groups",
-  "extensionGroupSelect.placeholder": "Select from extension groups"
+  "extensionGroupSelect.placeholder": "Select from extension groups",
+
+  "common.confirm.navigateAway": "Leave current page",
+  "common.confirm.navigateAwayMessage": "You are about to leave the current page. Continue?",
+
+  "FeatureRequestTip.Developing": "The <1>{{name}}</1> feature is under development. You can urge the author or make suggestions on <3>Github</3> or <5>QQ group</5>.",
+  "FeatureRequestTip.Deprecated": "The <1>{{name}}</1> feature is deprecated. You can learn more or make suggestions on <3>Github</3> or <5>QQ group</5>.",
+  "FeatureRequestTip.Deprecating": "The <1>{{name}}</1> feature is being deprecated. You can learn more or make suggestions on <3>Github</3> or <5>QQ group</5>.",
+  "Join QQ group": "Join QQ group",
+  "For more information, you can visit:": "For more information, you can visit:"
 }

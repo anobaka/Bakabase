@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models;
-using Bakabase.InsideWorld.Business.Components.Downloader.Models.Db;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -23,7 +22,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
     {
         public override ExHentaiDownloadTaskType EnumTaskType => ExHentaiDownloadTaskType.List;
 
-        protected override async Task StartCore(DownloadTask task, CancellationToken ct)
+        protected override async Task StartCore(DownloadTask task, ExHentaiTaskOptions options, CancellationToken ct)
         {
             var checkpointContext = new RangeCheckpointContext(task.Checkpoint);
 
@@ -82,7 +81,7 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
                                 {
                                     var newProgress = unitWorkProgress * (doneCount + p / 100m);
                                     await OnProgressInternal(newProgress);
-                                }, null, ct);
+                                }, null, ct, options.PreferTorrent);
                                 break;
                             default:
                                 throw new ArgumentOutOfRangeException();

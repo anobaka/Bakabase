@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 
@@ -33,6 +34,24 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public DateTime? NextStartDt { get; set; }
         public HashSet<DownloadTaskAction> AvailableActions { get; set; } = new();
         public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public string? Options { get; set; }
+
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+        };
+
+        public T GetTypedOptions<T>() where T : class, new()
+        {
+            return string.IsNullOrEmpty(Options)
+                ? new T()
+                : JsonSerializer.Deserialize<T>(Options, JsonOptions) ?? new T();
+        }
+
+        public void SetTypedOptions<T>(T options) where T : class
+        {
+            Options = JsonSerializer.Serialize(options, JsonOptions);
+        }
 
         [NotMapped] public string DisplayName => Name ?? Key;
 

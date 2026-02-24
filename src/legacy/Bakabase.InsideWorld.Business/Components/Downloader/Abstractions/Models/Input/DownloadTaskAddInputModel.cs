@@ -18,5 +18,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Model
         public bool AutoRetry { get; set; } = true;
         [Required] public string DownloadPath { get; set; } = string.Empty;
         public bool IsDuplicateAllowed { get; set; }
+        public string? Options { get; set; }
     }
 }

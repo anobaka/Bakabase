@@ -92,7 +92,7 @@ https://xxxxxxx
             color={'primary'}
           >
             <AiOutlinePlusCircle className={"text-base"} />
-            {t<string>("Add tasks")}
+            {t<string>("postParser.action.addTasks")}
           </Button>
           <Button
             size={"sm"}

@@ -41,5 +41,39 @@
   "downloader.label.success": "成功",
   "downloader.label.failure": "失败",
   "downloader.label.checkInterval": "检查间隔（秒）",
-  "downloader.tip.checkIntervalDesc": "下载完成或失败后重新启动任务的间隔（以秒为单位）。通常用于下载定期更新的内容。"
+  "downloader.tip.checkIntervalDesc": "下载完成或失败后重新启动任务的间隔（以秒为单位）。通常用于下载定期更新的内容。",
+
+  "Idle": "空闲",
+  "InQueue": "排队中",
+  "Starting": "启动中",
+  "Downloading": "下载中",
+  "Stopping": "停止中",
+  "Complete": "已完成",
+  "Failed": "失败",
+  "Disabled": "已禁用",
+
+  "Cookie required for authentication": "用于身份验证的 Cookie",
+  "Default download path": "默认下载路径",
+  "Default path where downloads will be saved": "下载文件的默认保存路径",
+  "Maximum concurrent download threads": "最大并发下载线程数",
+  "Max concurrency": "最大并发数",
+  "Request interval help": "每次请求之间的等待时间，用于避免请求过于频繁",
+  "Request interval (s)": "请求间隔（秒）",
+  "Define how downloaded files should be named": "定义下载文件的命名方式",
+  "Available fields": "可用字段",
+  "Naming convention": "命名规则",
+
+  "Download path": "下载路径",
+  "Select download path": "选择下载路径",
+
+  "Set a page range if you don't want to download them all.": "如果不想全部下载，可以设置页码范围。",
+  "The minimal page number is 1.": "最小页码为 1。",
+  "Start page": "起始页",
+  "End page": "结束页",
+
+  "downloader.label.preferTorrent": "优先下载种子",
+  "downloader.tip.preferTorrentDesc": "如果可用，优先下载种子文件而非直接下载图片。",
+
+  "downloader.tip.exHentaiUserscript": "您可以使用我们提供的油猴脚本在 ExHentai 网站上一键下载。",
+  "downloader.tip.goToThirdPartyIntegration": "前往第三方集成页面"
 }

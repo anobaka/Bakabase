@@ -19,7 +19,8 @@ import type { PendingSyncButtonRef } from "@/pages/path-mark-config/components/P
 import CopyMarksSidebar from "@/pages/path-mark-config/components/CopyMarksSidebar";
 import { PathMarkGuideModal, usePathMarkGuide } from "@/pages/path-mark-config/components/PathMarkGuide";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
-import { Button, Chip, toast, Modal, Spinner, Switch } from "@/components/bakaui";
+import { Button, toast, Modal, Spinner, Switch } from "@/components/bakaui";
+import BetaChip from "@/components/Chips/BetaChip";
 import BApi from "@/sdk/BApi";
 
 const PathMarksPage = () => {
@@ -241,9 +242,7 @@ const PathMarksPage = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-semibold">{t("pathMarks.title")}</h2>
-            <Chip color="primary" size="sm" variant="flat">
-              {t("pathMarks.label.beta")}
-            </Chip>
+            <BetaChip />
           </div>
 
           {/* Actions */}

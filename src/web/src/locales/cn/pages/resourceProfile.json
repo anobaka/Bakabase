@@ -10,7 +10,7 @@
   "resourceProfile.label.properties": "属性",
   "resourceProfile.label.actions": "操作",
   "resourceProfile.label.total": "总计",
-  "resourceProfile.tip.priority": "优先级越高的配置会先匹配。当多个配置匹配同一资源时，优先级最高的生效。",
+  "resourceProfile.tip.priority": "数字越小优先级越高。优先级越高的配置会先匹配。当多个配置匹配同一资源时，优先级最高的生效。",
   "resourceProfile.tip.name": "用于标识此配置的唯一名称。",
   "resourceProfile.tip.searchCriteria": "定义此配置适用于哪些资源。匹配这些条件的资源将使用此配置的设置。",
   "resourceProfile.tip.nameTemplate": "使用属性占位符（如 {Name}）自定义资源名称的显示方式。留空则使用原始文件名。",

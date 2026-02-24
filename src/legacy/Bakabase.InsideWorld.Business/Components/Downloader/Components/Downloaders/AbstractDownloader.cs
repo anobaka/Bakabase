@@ -260,4 +260,18 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
 
         }
     }
+
+    public abstract class AbstractDownloader<TEnumTaskType, TOptions>(IServiceProvider serviceProvider)
+        : AbstractDownloader<TEnumTaskType>(serviceProvider)
+        where TEnumTaskType : struct
+        where TOptions : class, new()
+    {
+        protected sealed override Task StartCore(DownloadTask task, CancellationToken ct)
+        {
+            var options = task.GetTypedOptions<TOptions>();
+            return StartCore(task, options, ct);
+        }
+
+        protected abstract Task StartCore(DownloadTask task, TOptions options, CancellationToken ct);
+    }
 }

@@ -23,13 +23,6 @@ namespace Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloa
             $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}}/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
             typeof(ExHentaiNamingFields),
             typeof(ExHentaiDownloaderHelper))]
-        List = 3,
-        
-        [Downloader(ThirdPartyId.ExHentai,
-            typeof(ExHentaiTorrentDownloader),
-            $"[{{{nameof(ExHentaiNamingFields.Category)}}}] {{{nameof(ExHentaiNamingFields.RawName)}}}/{{{nameof(ExHentaiNamingFields.PageTitle)}}}{{{nameof(ExHentaiNamingFields.Extension)}}}",
-            typeof(ExHentaiNamingFields),
-            typeof(ExHentaiDownloaderHelper))]
-        Torrent = 4
+        List = 3
     }
 }

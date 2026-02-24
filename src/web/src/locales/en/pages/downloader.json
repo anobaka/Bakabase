@@ -41,5 +41,39 @@
   "downloader.label.success": "Success",
   "downloader.label.failure": "Failure",
   "downloader.label.checkInterval": "Check interval(s)",
-  "downloader.tip.checkIntervalDesc": "The interval (in seconds) after download completion or failure before restarting the task. Generally used for downloading content that updates periodically."
+  "downloader.tip.checkIntervalDesc": "The interval (in seconds) after download completion or failure before restarting the task. Generally used for downloading content that updates periodically.",
+
+  "Idle": "Idle",
+  "InQueue": "In Queue",
+  "Starting": "Starting",
+  "Downloading": "Downloading",
+  "Stopping": "Stopping",
+  "Complete": "Complete",
+  "Failed": "Failed",
+  "Disabled": "Disabled",
+
+  "Cookie required for authentication": "Cookie required for authentication",
+  "Default download path": "Default download path",
+  "Default path where downloads will be saved": "Default path where downloads will be saved",
+  "Maximum concurrent download threads": "Maximum concurrent download threads",
+  "Max concurrency": "Max concurrency",
+  "Request interval help": "Wait time between each request to avoid too frequent requests",
+  "Request interval (s)": "Request interval (s)",
+  "Define how downloaded files should be named": "Define how downloaded files should be named",
+  "Available fields": "Available fields",
+  "Naming convention": "Naming convention",
+
+  "Download path": "Download path",
+  "Select download path": "Select download path",
+
+  "Set a page range if you don't want to download them all.": "Set a page range if you don't want to download them all.",
+  "The minimal page number is 1.": "The minimal page number is 1.",
+  "Start page": "Start page",
+  "End page": "End page",
+
+  "downloader.label.preferTorrent": "Prefer torrent download",
+  "downloader.tip.preferTorrentDesc": "If available, download torrent files instead of downloading images directly.",
+
+  "downloader.tip.exHentaiUserscript": "You can use our Tampermonkey userscript to download from ExHentai with one click.",
+  "downloader.tip.goToThirdPartyIntegration": "Go to Third-Party Integration"
 }

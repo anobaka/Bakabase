@@ -17,7 +17,8 @@ public static class PropertyExtensions
 {
     private static readonly JsonSerializerOptions CamelCaseJsonOptions = new()
     {
-        PropertyNameCaseInsensitive = true
+        PropertyNameCaseInsensitive = true,
+        NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowReadingFromString
     };
 
     private static readonly ConcurrentDictionary<StandardValueType, PropertyType[]>

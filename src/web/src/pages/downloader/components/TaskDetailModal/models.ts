@@ -8,7 +8,7 @@ import {
 } from "@/sdk/constants";
 import { IconType } from "react-icons";
 import { AiOutlineSearch, AiOutlineStar, AiOutlineUnorderedList } from "react-icons/ai";
-import { FaImages, FaMagnet, FaRankingStar } from "react-icons/fa6";
+import { FaImages, FaRankingStar } from "react-icons/fa6";
 
 type Form =
   components["schemas"]["Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Models.Input.DownloadTaskAddInputModel"];
@@ -26,7 +26,6 @@ export const DownloadTaskTypeIconMap: Record<number, Record<number, IconType>> =
   },
   [ThirdPartyId.ExHentai]: {
     [ExHentaiDownloadTaskType.List]: AiOutlineUnorderedList,
-    [ExHentaiDownloadTaskType.Torrent]: FaMagnet,
     [ExHentaiDownloadTaskType.Watched]: AiOutlineStar,
     [ExHentaiDownloadTaskType.SingleWork]: FaImages,
   },
@@ -35,7 +34,7 @@ export const DownloadTaskTypeIconMap: Record<number, Record<number, IconType>> =
     [PixivDownloadTaskType.Ranking]: FaRankingStar,
     [PixivDownloadTaskType.Search]: AiOutlineSearch,
   }
-} 
+}
 
 export enum DownloadTaskFieldType {
   BilibiliFavorites = 1,
@@ -49,6 +48,7 @@ export enum DownloadTaskFieldType {
   Checkpoint = 9,
   AutoRetry = 10,
   AllowDuplicate = 11,
+  PreferTorrent = 12,
 }
 
 export type DownloadTaskField = {
@@ -111,25 +111,7 @@ https://exhentai.org/g/xxxxx/xxxxx/
         type: DownloadTaskFieldType.PageRange,
       },
       {
-        type: DownloadTaskFieldType.Checkpoint,
-      },
-      {
-        type: DownloadTaskFieldType.AutoRetry,
-      },
-      {
-        type: DownloadTaskFieldType.AllowDuplicate,
-      },
-    ],
-    [ExHentaiDownloadTaskType.Torrent]: [
-      {
-        type: DownloadTaskFieldType.Keys,
-        placeholder: `https://exhentai.org/g/xxxxx/xxxxx/
-https://exhentai.org/g/xxxxx/xxxxx/
-...`,
-        label: "Urls",
-      },
-      {
-        type: DownloadTaskFieldType.DownloadPath,
+        type: DownloadTaskFieldType.PreferTorrent,
       },
       {
         type: DownloadTaskFieldType.Checkpoint,
@@ -157,6 +139,9 @@ https://exhentai.org/g/xxxxx/xxxxx/
         type: DownloadTaskFieldType.PageRange,
       },
       {
+        type: DownloadTaskFieldType.PreferTorrent,
+      },
+      {
         type: DownloadTaskFieldType.Checkpoint,
       },
       {
@@ -180,6 +165,9 @@ https://exhentai.org/g/xxxxx/xxxxx/
       },
       {
         type: DownloadTaskFieldType.PageRange,
+      },
+      {
+        type: DownloadTaskFieldType.PreferTorrent,
       },
       {
         type: DownloadTaskFieldType.Checkpoint,
