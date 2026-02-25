@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.Property.Components;
@@ -79,9 +80,15 @@ public static class ResourceSearchExtensions
 
     public static ResourceSearchFilterDbModel ToDbModel(this ResourceSearchFilter model)
     {
+        // Use the operation-aware property type for serialization.
+        // e.g., SingleChoice with In operation needs MultipleChoice value type (List<string>),
+        // not SingleChoice value type (string).
+        var psh = PropertySystem.Property.TryGetSearchHandler(model.Property.Type);
+        var asType = psh?.SearchOperations.GetValueOrDefault(model.Operation)?.AsType ?? model.Property.Type;
+
         return new ResourceSearchFilterDbModel
         {
-            Value = model.DbValue?.SerializeAsStandardValue(model.Property.Type.GetDbValueType()),
+            Value = model.DbValue?.SerializeAsStandardValue(asType.GetDbValueType()),
             Operation = model.Operation,
             PropertyId = model.PropertyId,
             PropertyPool = model.PropertyPool,
@@ -122,9 +129,14 @@ public static class ResourceSearchExtensions
                 return null;
             }
 
+            // Use the operation-aware property type for deserialization.
+            // e.g., SingleChoice with In operation stores MultipleChoice value type (List<string>).
+            var psh = PropertySystem.Property.TryGetSearchHandler(property.Type);
+            var asType = psh?.SearchOperations.GetValueOrDefault(f.Operation!.Value)?.AsType ?? property.Type;
+
             return new ResourceSearchFilter
             {
-                DbValue = f.Value?.DeserializeAsStandardValue(property.Type.GetDbValueType()),
+                DbValue = f.Value?.DeserializeAsStandardValue(asType.GetDbValueType()),
                 Operation = f.Operation!.Value,
                 Property = property,
                 PropertyId = f.PropertyId!.Value,

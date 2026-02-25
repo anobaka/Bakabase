@@ -98,6 +98,10 @@ namespace Bakabase.Service.Components
         {
             using var scope = serviceProvider.CreateScope();
 
+            // Clean up logs older than 30 days
+            var logService = serviceProvider.GetRequiredService<Bootstrap.Components.Logging.LogService.Services.LogService>();
+            await logService.DeleteBefore(DateTime.Now.AddDays(-7));
+
             var dependencies = serviceProvider.GetRequiredService<IEnumerable<IDependentComponentService>>().ToList();
             foreach (var d in dependencies)
             {
