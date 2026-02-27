@@ -33,6 +33,7 @@ using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Migrations.V190;
+using Bakabase.Modules.AI.Extensions;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
@@ -115,6 +116,7 @@ namespace Bakabase.Service.Extensions
 
             services.AddLegacies();
 
+            services.AddAI<BakabaseDbContext>();
             services.AddAlias<BakabaseDbContext>();
             services.AddProperty<BakabaseDbContext>();
             services.AddEnhancers<BakabaseDbContext>();

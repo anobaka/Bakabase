@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Models.Models.Entities;
 using Bakabase.Modules.BulkModification.Components;
 using Bakabase.Modules.BulkModification.Models.Db;
 using Bakabase.Modules.Comparison.Components;
+using Bakabase.Modules.AI.Models.Db;
 using Bakabase.Modules.Comparison.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bootstrap.Components.Logging.LogService.Models.Entities;
@@ -91,6 +92,9 @@ namespace Bakabase.InsideWorld.Business
         // PathMark effect tracking tables
         public DbSet<ResourceMarkEffectDbModel> ResourceMarkEffects { get; set; }
         public DbSet<PropertyMarkEffectDbModel> PropertyMarkEffects { get; set; }
+
+        // AI module tables
+        public DbSet<LlmProviderConfigDbModel> LlmProviderConfigs { get; set; }
 
         // Comparison module tables
         public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
@@ -288,6 +292,13 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.MarkId);
                 t.HasIndex(x => new { x.PropertyPool, x.PropertyId, x.ResourceId });
                 t.HasIndex(x => new { x.MarkId, x.PropertyPool, x.PropertyId, x.ResourceId }).IsUnique();
+            });
+
+            // AI module tables
+            modelBuilder.Entity<LlmProviderConfigDbModel>(t =>
+            {
+                t.HasIndex(x => x.ProviderType);
+                t.HasIndex(x => x.IsEnabled);
             });
 
             // Comparison module tables

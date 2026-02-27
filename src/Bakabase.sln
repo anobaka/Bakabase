@@ -74,6 +74,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.BulkModifi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bakabase.Modules.Comparison", "modules\Bakabase.Modules.Comparison\Bakabase.Modules.Comparison.csproj", "{374077BC-8044-4206-87CB-8D4FAA5C56A2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bakabase.Modules.AI", "modules\Bakabase.Modules.AI\Bakabase.Modules.AI.csproj", "{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Company|Any CPU = Company|Any CPU
@@ -237,6 +239,12 @@ Global
 		{374077BC-8044-4206-87CB-8D4FAA5C56A2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{374077BC-8044-4206-87CB-8D4FAA5C56A2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{374077BC-8044-4206-87CB-8D4FAA5C56A2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}.Company|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}.Company|Any CPU.Build.0 = Debug|Any CPU
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -272,6 +280,7 @@ Global
 		{31B23806-C781-46C1-BF91-33E266CD331A} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
 		{4D3CC5C2-B686-46CC-A32E-DE095D4CDEB0} = {8B728E85-2F02-43E7-A3D1-32CDB437DFEC}
 		{374077BC-8044-4206-87CB-8D4FAA5C56A2} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
+		{B2A1F7E3-4C8D-4A6B-9E2F-1D3C5A7B8E9F} = {3808ECDD-78CB-44E1-BBBD-3D7D0A5B51F2}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0EDB2DE5-2794-4737-A47F-105A2CCFFD16}
