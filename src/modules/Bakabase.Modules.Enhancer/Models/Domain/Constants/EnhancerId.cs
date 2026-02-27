@@ -14,28 +14,28 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
 {
     public enum EnhancerId
     {
-        [Enhancer(typeof(BakabaseEnhancer), PropertyValueScope.BakabaseEnhancer, typeof(BakabaseEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(BakabaseEnhancer), PropertyValueScope.Bakabase, typeof(BakabaseEnhancerTarget), [EnhancerTag.UseKeyword])]
         Bakabase = 1,
 
-        [Enhancer(typeof(ExHentaiEnhancer), PropertyValueScope.ExHentaiEnhancer, typeof(ExHentaiEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(ExHentaiEnhancer), PropertyValueScope.ExHentai, typeof(ExHentaiEnhancerTarget), [EnhancerTag.UseKeyword])]
         ExHentai = 2,
 
-        [Enhancer(typeof(BangumiEnhancer), PropertyValueScope.BangumiEnhancer, typeof(BangumiEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(BangumiEnhancer), PropertyValueScope.Bangumi, typeof(BangumiEnhancerTarget), [EnhancerTag.UseKeyword])]
         Bangumi = 3,
 
-        [Enhancer(typeof(DLsiteEnhancer), PropertyValueScope.DLsiteEnhancer, typeof(DLsiteEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(DLsiteEnhancer), PropertyValueScope.DLsite, typeof(DLsiteEnhancerTarget), [EnhancerTag.UseKeyword])]
         DLsite = 4,
 
-        [Enhancer(typeof(RegexEnhancer), PropertyValueScope.RegexEnhancer, typeof(RegexEnhancerTarget), [EnhancerTag.UseRegex])]
+        [Enhancer(typeof(RegexEnhancer), PropertyValueScope.Regex, typeof(RegexEnhancerTarget), [EnhancerTag.UseRegex])]
         Regex = 5,
 
-        [Enhancer(typeof(KodiEnhancer), PropertyValueScope.KodiEnhancer, typeof(KodiEnhancerTarget), [])]
+        [Enhancer(typeof(KodiEnhancer), PropertyValueScope.Kodi, typeof(KodiEnhancerTarget), [])]
         Kodi = 6,
 
-        [Enhancer(typeof(TmdbEnhancer), PropertyValueScope.TmdbEnhancer, typeof(TmdbEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(TmdbEnhancer), PropertyValueScope.Tmdb, typeof(TmdbEnhancerTarget), [EnhancerTag.UseKeyword])]
         Tmdb = 7,
 
-        [Enhancer(typeof(AvEnhancer), PropertyValueScope.AvEnhancer, typeof(AvEnhancerTarget), [EnhancerTag.UseKeyword])]
+        [Enhancer(typeof(AvEnhancer), PropertyValueScope.Av, typeof(AvEnhancerTarget), [EnhancerTag.UseKeyword])]
         Av = 8
     }
 }

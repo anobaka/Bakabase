@@ -5,13 +5,14 @@
         Manual = 0,
         Synchronization = 1,
 
-        BakabaseEnhancer = 1000,
-        ExHentaiEnhancer = 1001,
-        BangumiEnhancer = 1002,
-        DLsiteEnhancer = 1003,
-        RegexEnhancer = 1004,
-        KodiEnhancer = 1005,
-        TmdbEnhancer = 1006,
-        AvEnhancer = 1007,
+        Bakabase = 1000,
+        ExHentai = 1001,
+        Bangumi = 1002,
+        DLsite = 1003,
+        Regex = 1004,
+        Kodi = 1005,
+        Tmdb = 1006,
+        Av = 1007,
+        Steam = 1008,
     }
 }

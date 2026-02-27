@@ -484,40 +484,43 @@ export const PropertyTypeLabel: Record<PropertyType, string> = {
 export enum PropertyValueScope {
   Manual = 0,
   Synchronization = 1,
-  BakabaseEnhancer = 1000,
-  ExHentaiEnhancer = 1001,
-  BangumiEnhancer = 1002,
-  DLsiteEnhancer = 1003,
-  RegexEnhancer = 1004,
-  KodiEnhancer = 1005,
-  TmdbEnhancer = 1006,
-  AvEnhancer = 1007
+  Bakabase = 1000,
+  ExHentai = 1001,
+  Bangumi = 1002,
+  DLsite = 1003,
+  Regex = 1004,
+  Kodi = 1005,
+  Tmdb = 1006,
+  Av = 1007,
+  Steam = 1008
 }
 
 export const propertyValueScopes = [
   { label: 'Manual', value: PropertyValueScope.Manual },
   { label: 'Synchronization', value: PropertyValueScope.Synchronization },
-  { label: 'BakabaseEnhancer', value: PropertyValueScope.BakabaseEnhancer },
-  { label: 'ExHentaiEnhancer', value: PropertyValueScope.ExHentaiEnhancer },
-  { label: 'BangumiEnhancer', value: PropertyValueScope.BangumiEnhancer },
-  { label: 'DLsiteEnhancer', value: PropertyValueScope.DLsiteEnhancer },
-  { label: 'RegexEnhancer', value: PropertyValueScope.RegexEnhancer },
-  { label: 'KodiEnhancer', value: PropertyValueScope.KodiEnhancer },
-  { label: 'TmdbEnhancer', value: PropertyValueScope.TmdbEnhancer },
-  { label: 'AvEnhancer', value: PropertyValueScope.AvEnhancer }
+  { label: 'Bakabase', value: PropertyValueScope.Bakabase },
+  { label: 'ExHentai', value: PropertyValueScope.ExHentai },
+  { label: 'Bangumi', value: PropertyValueScope.Bangumi },
+  { label: 'DLsite', value: PropertyValueScope.DLsite },
+  { label: 'Regex', value: PropertyValueScope.Regex },
+  { label: 'Kodi', value: PropertyValueScope.Kodi },
+  { label: 'Tmdb', value: PropertyValueScope.Tmdb },
+  { label: 'Av', value: PropertyValueScope.Av },
+  { label: 'Steam', value: PropertyValueScope.Steam }
 ] as const;
 
 export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.Manual]: 'Manual',
   [PropertyValueScope.Synchronization]: 'Synchronization',
-  [PropertyValueScope.BakabaseEnhancer]: 'BakabaseEnhancer',
-  [PropertyValueScope.ExHentaiEnhancer]: 'ExHentaiEnhancer',
-  [PropertyValueScope.BangumiEnhancer]: 'BangumiEnhancer',
-  [PropertyValueScope.DLsiteEnhancer]: 'DLsiteEnhancer',
-  [PropertyValueScope.RegexEnhancer]: 'RegexEnhancer',
-  [PropertyValueScope.KodiEnhancer]: 'KodiEnhancer',
-  [PropertyValueScope.TmdbEnhancer]: 'TmdbEnhancer',
-  [PropertyValueScope.AvEnhancer]: 'AvEnhancer'
+  [PropertyValueScope.Bakabase]: 'Bakabase',
+  [PropertyValueScope.ExHentai]: 'ExHentai',
+  [PropertyValueScope.Bangumi]: 'Bangumi',
+  [PropertyValueScope.DLsite]: 'DLsite',
+  [PropertyValueScope.Regex]: 'Regex',
+  [PropertyValueScope.Kodi]: 'Kodi',
+  [PropertyValueScope.Tmdb]: 'Tmdb',
+  [PropertyValueScope.Av]: 'Av',
+  [PropertyValueScope.Steam]: 'Steam'
 };
 
 export enum PropertyValueType {
@@ -590,6 +593,45 @@ export const ResourceTagLabel: Record<ResourceTag, string> = {
   [ResourceTag.Pinned]: 'Pinned',
   [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
   [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
+};
+
+export enum ResourceSource {
+  FileSystem = 1,
+  Steam = 2,
+  DLsite = 3,
+  ExHentai = 4
+}
+
+export const resourceSources = [
+  { label: 'FileSystem', value: ResourceSource.FileSystem },
+  { label: 'Steam', value: ResourceSource.Steam },
+  { label: 'DLsite', value: ResourceSource.DLsite },
+  { label: 'ExHentai', value: ResourceSource.ExHentai }
+] as const;
+
+export const ResourceSourceLabel: Record<ResourceSource, string> = {
+  [ResourceSource.FileSystem]: 'FileSystem',
+  [ResourceSource.Steam]: 'Steam',
+  [ResourceSource.DLsite]: 'DLsite',
+  [ResourceSource.ExHentai]: 'ExHentai'
+};
+
+export enum ResourceStatus {
+  Active = 1,
+  Absent = 2,
+  Unavailable = 3
+}
+
+export const resourceStatuses = [
+  { label: 'Active', value: ResourceStatus.Active },
+  { label: 'Absent', value: ResourceStatus.Absent },
+  { label: 'Unavailable', value: ResourceStatus.Unavailable }
+] as const;
+
+export const ResourceStatusLabel: Record<ResourceStatus, string> = {
+  [ResourceStatus.Active]: 'Active',
+  [ResourceStatus.Absent]: 'Absent',
+  [ResourceStatus.Unavailable]: 'Unavailable'
 };
 
 export enum RuleQueueAction {

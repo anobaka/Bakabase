@@ -92,6 +92,11 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<ResourceMarkEffectDbModel> ResourceMarkEffects { get; set; }
         public DbSet<PropertyMarkEffectDbModel> PropertyMarkEffects { get; set; }
 
+        // Resource source tables
+        public DbSet<SteamAppDbModel> SteamApps { get; set; }
+        public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
+        public DbSet<ExHentaiGalleryDbModel> ExHentaiGalleries { get; set; }
+
         // Comparison module tables
         public DbSet<ComparisonPlanDbModel> ComparisonPlans { get; set; }
         public DbSet<ComparisonRuleDbModel> ComparisonRules { get; set; }
@@ -220,6 +225,9 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<ResourceDbModel>(r =>
             {
                 r.HasIndex(x => x.Path);
+                r.HasIndex(x => x.Source);
+                r.HasIndex(x => x.Status);
+                r.HasIndex(x => new { x.Source, x.SourceKey });
             });
 
             modelBuilder.Entity<EnhancementRecord>(er =>
@@ -288,6 +296,25 @@ namespace Bakabase.InsideWorld.Business
                 t.HasIndex(x => x.MarkId);
                 t.HasIndex(x => new { x.PropertyPool, x.PropertyId, x.ResourceId });
                 t.HasIndex(x => new { x.MarkId, x.PropertyPool, x.PropertyId, x.ResourceId }).IsUnique();
+            });
+
+            // Resource source tables
+            modelBuilder.Entity<SteamAppDbModel>(t =>
+            {
+                t.HasIndex(x => x.AppId).IsUnique();
+                t.HasIndex(x => x.ResourceId);
+            });
+
+            modelBuilder.Entity<DLsiteWorkDbModel>(t =>
+            {
+                t.HasIndex(x => x.WorkId).IsUnique();
+                t.HasIndex(x => x.ResourceId);
+            });
+
+            modelBuilder.Entity<ExHentaiGalleryDbModel>(t =>
+            {
+                t.HasIndex(x => new { x.GalleryId, x.GalleryToken }).IsUnique();
+                t.HasIndex(x => x.ResourceId);
             });
 
             // Comparison module tables

@@ -21,6 +21,7 @@
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.Search\Bakabase.Modules.Search.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.StandardValue\Bakabase.Modules.StandardValue.csproj" />
 		<ProjectReference Include="..\..\modules\Bakabase.Modules.ThirdParty\Bakabase.Modules.ThirdParty.csproj" />
+		<ProjectReference Include="..\..\modules\Bakabase.Modules.ResourceResolver\Bakabase.Modules.ResourceResolver.csproj" />
 		<ProjectReference Include="..\Bakabase.InsideWorld.Models\Bakabase.InsideWorld.Models.csproj" />
 	</ItemGroup>
 
