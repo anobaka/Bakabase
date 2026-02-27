@@ -279,7 +279,7 @@ const PathMarkTreeView = ({
             }}
           >
             <div className="flex items-center gap-2">
-              <AiOutlineAim className="text-base text-warning" />
+              <AiOutlineAim className="text-base text-secondary" />
               {t("pathMarkConfig.action.addMediaLibraryMark", { count: entries.length })}
             </div>
           </MenuItem>

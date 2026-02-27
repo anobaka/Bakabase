@@ -111,7 +111,7 @@ public class FalenoClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 return text;
             }
 
-            string title = doc.Select("h1").Text().Trim();
+            string title = doc.Select("h1").First().Text().Trim();
             if (string.IsNullOrWhiteSpace(title))
             {
                 return null;

@@ -93,4 +93,20 @@ pre {
   pointer-events: none !important;
 }
 
+/* ===== HeroUI Toast bug workaround =====
+ * Toast container remains in DOM after dismiss with pointer-events: all,
+ * blocking clicks on elements beneath it.
+ * See: https://github.com/heroui-inc/heroui/issues/5340
+ *      https://github.com/heroui-inc/heroui/issues/5549
+ */
+div[data-react-aria-top-layer][role="region"],
+div[data-react-aria-top-layer][role="region"] > div[data-placement] {
+  pointer-events: none !important;
+}
+
+div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toast-exiting="true"]),
+div[data-react-aria-top-layer][role="region"] [data-toast="true"]:not([data-toast-exiting="true"]) * {
+  pointer-events: auto !important;
+}
+
 /* ===== END icejs 样式迁移 ===== */

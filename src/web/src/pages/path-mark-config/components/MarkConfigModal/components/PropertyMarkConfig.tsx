@@ -86,6 +86,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         config={config}
         updateConfig={updateConfig}
         t={t}
+        markType={PathMarkType.Property}
       />
 
       {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
@@ -102,7 +103,7 @@ const PropertyMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
 
       <div className="border-t border-default-200 pt-2">
         <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.propertySettings")}</span>
-        <div className="text-xs text-default-400 mt-1">{t("pathMark.property.settingsDescription")}</div>
+        <div className="text-xs text-default-400 mt-1">{t("pathMark.property.configDescription")}</div>
       </div>
 
       {/* Property Selector */}

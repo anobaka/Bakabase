@@ -545,7 +545,7 @@ const ComparisonPage = () => {
                       </CardHeader>
                       <CardBody className="pt-0">
                         <ResourceFilterController
-                          filterDisplayMode={FilterDisplayMode.Simple}
+                          defaultFilterDisplayMode={FilterDisplayMode.Simple}
                           autoCreateMediaLibraryFilter={true}
                           group={plan.search?.group}
                           onGroupChange={(group) => {

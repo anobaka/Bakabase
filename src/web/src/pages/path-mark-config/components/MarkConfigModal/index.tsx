@@ -6,7 +6,7 @@ import type { MarkConfigModalProps } from "./types";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Modal, Switch, DurationInput, Button, toast } from "@/components/bakaui";
-import { PathMarkType } from "@/sdk/constants";
+import { PathMarkType, PathMarkApplyScope } from "@/sdk/constants";
 import { SaveOutlined, SyncOutlined, DownOutlined } from "@ant-design/icons";
 
 import { parseMarkConfig, buildConfigJson } from "./utils";
@@ -23,6 +23,10 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
   const { t } = useTranslation();
 
   const initialConfig = parseMarkConfig(mark?.configJson);
+  // For new MediaLibrary marks, default applyScope to MatchedAndSubdirectories
+  if (!mark && markType === PathMarkType.MediaLibrary) {
+    initialConfig.applyScope = PathMarkApplyScope.MatchedAndSubdirectories;
+  }
   const [priority, setPriority] = useState(mark?.priority ?? 10);
   const [config, setConfig] = useState(initialConfig);
   const [enableExpiration, setEnableExpiration] = useState(mark?.expiresInSeconds != null && mark.expiresInSeconds > 0);
@@ -200,7 +204,7 @@ const MarkConfigModal = ({ mark, markType, rootPath, rootPaths, onSave, onDestro
                   }
                 }}
               />
-              <span className="text-sm font-medium">{t("pathMarkConfig.label.enableExpiration")}</span>
+              <span className="text-sm font-medium">{t("pathMarkConfig.label.scheduledSync")}</span>
             </div>
             <div className="text-xs text-default-400 ml-10 mb-2">
               {t("pathMarkConfig.tip.expirationDescription")}

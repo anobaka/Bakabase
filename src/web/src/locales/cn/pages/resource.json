@@ -47,6 +47,7 @@
   "resource.display.manageCache": "管理缓存",
   "resource.display.coverCarousel": "封面轮播",
   "resource.display.showResourceId": "显示资源 ID",
+  "resource.display.hideResourceBorder": "隐藏资源边框",
   "resource.display.filterOptionsCollapseThreshold": "筛选选项折叠阈值",
   "resource.display.filterOptionsCollapseThresholdDesc": "已选的选项一定会全部显示，最多显示此数量的选项",
   "resource.display.reset": "重置",

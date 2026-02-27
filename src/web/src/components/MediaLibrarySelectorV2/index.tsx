@@ -46,7 +46,7 @@ const MediaLibrarySelectorV2 = (props: Props) => {
     if (mlv2s.length > 0) {
       data.push({
         id: 0,
-        name: t<string>("Media Libraries"),
+        name: t<string>("common.label.mediaLibraries"),
         libraries: mlv2s.map((ml) => ({
           id: ml.id,
           name: ml.name,

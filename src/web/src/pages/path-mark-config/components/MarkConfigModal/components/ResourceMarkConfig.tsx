@@ -37,6 +37,7 @@ const ResourceMarkConfig = ({ config, updateConfig, t, priority, onPriorityChang
         config={config}
         updateConfig={updateConfig}
         t={t}
+        markType={PathMarkType.Resource}
       />
 
       <div className="border-t border-default-200 pt-2">

@@ -44,7 +44,7 @@ public class IqqtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             var html = await HttpClient.GetStringAsync(realUrl);
             var cq = new CQ(html);
 
-            var title = cq["#videoInfo h1.h4.b"].Text().Trim();
+            var title = cq["#videoInfo h1.h4.b"].First().Text().Trim();
             if (string.IsNullOrEmpty(title)) return null;
             var webNumber = GetWebNumberFromTitle(title, number ?? string.Empty);
             title = title.Replace($" {webNumber}", "").Trim();

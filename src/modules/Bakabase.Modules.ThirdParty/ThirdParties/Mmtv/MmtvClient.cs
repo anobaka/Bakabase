@@ -71,7 +71,7 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 }
             }
 
-            var title = doc.Select("h1.fullvideo-title").Text().Trim();
+            var title = doc.Select("h1.fullvideo-title").First().Text().Trim();
             var webNumForTitle = webNumber;
             title = title.Replace(webNumForTitle, "").Trim();
             if (string.IsNullOrWhiteSpace(title)) return null;

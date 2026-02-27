@@ -120,7 +120,7 @@ public class MgstageClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
     private static string GetTitle(CQ html)
     {
-        return html["#center_column h1"].Text().Replace("/", ",").Trim();
+        return html["#center_column h1"].First().Text().Replace("/", ",").Trim();
     }
 
     private static string GetActor(CQ html)

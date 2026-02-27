@@ -2074,6 +2074,7 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   inlineDisplayName: boolean;
   autoSelectFirstPlayableFile: boolean;
   displayOperations: string[];
+  hideResourceBorder: boolean;
 }
 
 /**

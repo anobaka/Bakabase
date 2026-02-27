@@ -44,7 +44,7 @@ const RightOperations = ({ entry, capabilities }: Props) => {
           trigger={
             <Button size={"sm"} variant={"ghost"}>
               <FileZipOutlined className={"text-sm"} />
-              {t<string>("Decompress")}
+              {t<string>("fileExplorer.action.decompress")}
             </Button>
           }
         />
@@ -61,7 +61,7 @@ const RightOperations = ({ entry, capabilities }: Props) => {
           }}
         >
           <ApartmentOutlined className={"text-sm"} />
-          {t<string>("Wrap")}
+          {t<string>("fileExplorer.action.wrap")}
         </Button>
       )}
       {isMovable && (
@@ -82,7 +82,7 @@ const RightOperations = ({ entry, capabilities }: Props) => {
           }}
         >
           <SendOutlined className={"text-sm"} />
-          {t<string>("Move")}
+          {t<string>("fileExplorer.action.move")}
         </Button>
       )}
     </>

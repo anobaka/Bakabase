@@ -238,6 +238,18 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
               </Checkbox>
             </div>
 
+            <div>
+              <Checkbox
+                size="sm"
+                isSelected={!!resourceUiOptions?.hideResourceBorder}
+                onValueChange={(checked) => patchOptions({ hideResourceBorder: checked })}
+              >
+                <div className={"flex items-center gap-1"}>
+                  {t<string>("resource.display.hideResourceBorder")}
+                </div>
+              </Checkbox>
+            </div>
+
             <div className={"flex items-center gap-2"}>
               <div className={"text-sm"}>{t("resource.display.filterOptionsCollapseThreshold")}</div>
               <Input

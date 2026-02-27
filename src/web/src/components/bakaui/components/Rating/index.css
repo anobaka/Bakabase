@@ -1,0 +1,9 @@
+/* Dark mode: empty stars are too bright (#e8e8e8), looks like 5-star rating */
+.iw-theme-dark .rc-rate-star-zero .rc-rate-star-first,
+.iw-theme-dark .rc-rate-star-zero .rc-rate-star-second {
+  color: #3a3a3a;
+}
+
+.iw-theme-dark .rc-rate-star-half .rc-rate-star-second {
+  color: #3a3a3a;
+}

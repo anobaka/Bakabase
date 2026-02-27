@@ -116,8 +116,14 @@ public class AiravClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetTitle(CQ html)
     {
-        var result = html["h5.d-none.d-md-block"].Text().Trim();
-        return result;
+        // Use :not() to exclude the number element which also matches h5.d-none.d-md-block
+        var result = html["h5.d-none.d-md-block:not(.text-primary)"].First().Text().Trim();
+        if (!string.IsNullOrEmpty(result))
+        {
+            return result;
+        }
+        // Fallback: use first h5 matching the broad selector
+        return html["h5.d-none.d-md-block"].First().Text().Trim();
     }
 
     private static string GetActor(CQ html)

@@ -296,7 +296,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
         {(displayPropertyKeys.length > 0 || uiOptions.resource?.inlineDisplayName) && (
           <div
             className={
-              "inline-flex flex-col gap-1 absolute bottom-0 right-0 items-end max-w-full max-h-full w-fit"
+              "inline-flex flex-col gap-1 absolute bottom-0 right-0 items-end max-w-full max-h-full w-fit overflow-hidden"
             }
           >
             {displayPropertyKeys.flatMap((dpk) => {
@@ -509,8 +509,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
   return (
     <div
       key={resource.id}
-      className={`flex flex-col p-1 rounded relative border-2 group/resource resource ${props.className} ${
-        selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : "border-default-200"
+      className={`flex flex-col p-1 rounded relative group/resource resource ${props.className} ${
+        uiOptions.resource?.hideResourceBorder ? "" : "border-2"
+      } ${
+        selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : uiOptions.resource?.hideResourceBorder ? "" : "border-default-200"
       }`}
       data-id={resource.id}
       role={"resource"}

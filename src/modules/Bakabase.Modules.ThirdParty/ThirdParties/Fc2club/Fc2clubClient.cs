@@ -39,7 +39,7 @@ public class Fc2clubClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
             var doc = new CQ(html);
 
-            string title = doc.Select("h3").Text().Trim();
+            string title = doc.Select("h3").First().Text().Trim();
             if (!string.IsNullOrEmpty(title))
             {
                 title = title.Replace($"FC2-{normalized} ", "").Trim();

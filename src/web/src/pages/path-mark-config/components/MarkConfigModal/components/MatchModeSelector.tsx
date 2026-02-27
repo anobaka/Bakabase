@@ -2,17 +2,28 @@
 
 import type { MarkConfig } from "../types";
 import { Input, NumberInput, RadioGroup, Radio } from "@/components/bakaui";
-import { PathMatchMode, PathMarkApplyScope } from "@/sdk/constants";
+import { PathMatchMode, PathMarkApplyScope, PathMarkType } from "@/sdk/constants";
 
 type Props = {
   config: MarkConfig;
   updateConfig: (updates: Partial<MarkConfig>) => void;
   t: (key: string) => string;
+  markType: PathMarkType;
 };
 
-const MatchModeSelector = ({ config, updateConfig, t }: Props) => {
+const markTypeKey = (markType: PathMarkType) => {
+  switch (markType) {
+    case PathMarkType.Resource: return "resource";
+    case PathMarkType.Property: return "property";
+    case PathMarkType.MediaLibrary: return "mediaLibrary";
+    default: return "resource";
+  }
+};
+
+const MatchModeSelector = ({ config, updateConfig, t, markType }: Props) => {
   const isLayerMode = config.matchMode === PathMatchMode.Layer;
   const currentApplyScope = config.applyScope ?? PathMarkApplyScope.MatchedOnly;
+  const typeKey = markTypeKey(markType);
 
   return (
     <>
@@ -31,6 +42,9 @@ const MatchModeSelector = ({ config, updateConfig, t }: Props) => {
             {t("pathMarkConfig.label.regex")}
           </Radio>
         </RadioGroup>
+        <div className="text-xs text-default-400">
+          {t(`pathMark.${typeKey}.matchMode.description`)}
+        </div>
       </div>
 
       {isLayerMode ? (
@@ -61,13 +75,13 @@ const MatchModeSelector = ({ config, updateConfig, t }: Props) => {
         >
           <Radio
             value={String(PathMarkApplyScope.MatchedOnly)}
-            description={t("pathMark.applyScope.matchedOnly.description")}
+            description={t(`pathMark.${typeKey}.applyScope.matchedOnly.description`)}
           >
             {t("pathMarkConfig.label.matchedOnly")}
           </Radio>
           <Radio
             value={String(PathMarkApplyScope.MatchedAndSubdirectories)}
-            description={t("pathMark.applyScope.matchedAndSubdirectories.description")}
+            description={t(`pathMark.${typeKey}.applyScope.matchedAndSubdirectories.description`)}
           >
             {t("pathMarkConfig.label.matchedAndSubdirectories")}
           </Radio>

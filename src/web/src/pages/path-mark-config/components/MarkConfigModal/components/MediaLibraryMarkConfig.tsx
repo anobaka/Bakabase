@@ -89,6 +89,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
         config={config}
         updateConfig={updateConfig}
         t={t}
+        markType={PathMarkType.MediaLibrary}
       />
 
       {/* Preview Results - placed after apply scope (part of MatchModeSelector) */}
@@ -105,7 +106,7 @@ const MediaLibraryMarkConfig = ({ config, updateConfig, t, priority, onPriorityC
 
       <div className="border-t border-default-200 pt-2">
         <span className="text-sm font-medium text-default-600">{t("pathMarkConfig.label.mediaLibrarySettings")}</span>
-        <div className="text-xs text-default-400 mt-1">{t("pathMark.mediaLibrary.settingsDescription")}</div>
+        <div className="text-xs text-default-400 mt-1">{t("pathMark.mediaLibrary.configDescription")}</div>
       </div>
 
       {/* Value Type - Radio Group */}

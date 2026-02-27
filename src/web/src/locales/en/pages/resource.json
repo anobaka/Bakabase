@@ -47,6 +47,7 @@
   "resource.display.manageCache": "Manage cache",
   "resource.display.coverCarousel": "Cover carousel",
   "resource.display.showResourceId": "Display resource ID",
+  "resource.display.hideResourceBorder": "Hide resource border",
   "resource.display.filterOptionsCollapseThreshold": "Filter options collapse threshold",
   "resource.display.filterOptionsCollapseThresholdDesc": "Selected options are always shown. At most this many options will be displayed.",
   "resource.display.reset": "Reset",

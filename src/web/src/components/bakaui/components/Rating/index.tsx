@@ -4,6 +4,7 @@ import Rate from "rc-rate/lib/Rate";
 import React, { forwardRef } from "react";
 
 import "rc-rate/assets/index.css";
+import "./index.css";
 
 export interface RatingProps extends Omit<RcRateProps, "style"> {
   size?: "sm" | "md" | "lg";

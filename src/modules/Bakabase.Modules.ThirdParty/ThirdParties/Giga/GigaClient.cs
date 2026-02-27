@@ -47,7 +47,7 @@ public class GigaClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
             var html = await HttpClient.GetStringAsync(realUrl);
             var doc = new CQ(html);
 
-            var title = doc.Select("h5").Text().Trim();
+            var title = doc.Select("h5").First().Text().Trim();
             if (string.IsNullOrWhiteSpace(title)) return null;
 
             var webNumber = doc.Select("span:contains('作品番号')").Parent().Find("dd").Text().Trim();

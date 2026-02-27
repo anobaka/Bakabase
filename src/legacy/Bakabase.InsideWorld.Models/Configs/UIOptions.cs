@@ -56,6 +56,7 @@ namespace Bakabase.InsideWorld.Models.Configs
             public bool InlineDisplayName { get; set; }
             public bool AutoSelectFirstPlayableFile { get; set; }
             public List<string> DisplayOperations { get; set; } = [];
+            public bool HideResourceBorder { get; set; }
         }
     }
 }

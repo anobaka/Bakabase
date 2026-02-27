@@ -116,8 +116,8 @@ public class JavdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static (string title, string originalTitle) GetTitle(CQ html, string orgLanguage)
     {
-        var title = html["h2.title.is-4 strong.current-title"].Text();
-        var original = html["h2.title.is-4 span.origin-title"].Text();
+        var title = html["h2.title.is-4 strong.current-title"].First().Text();
+        var original = html["h2.title.is-4 span.origin-title"].First().Text();
         if (!string.IsNullOrEmpty(original) && orgLanguage == "jp")
         {
             title = original;

@@ -41,13 +41,13 @@ const Shortcuts = ({ capabilities, className }: Props) => {
 
     // Add navigation shortcuts (always available)
     result.push(
-      { label: t<string>("Select previous"), shortcut: "↑" },
-      { label: t<string>("Select next"), shortcut: "↓" },
-      { label: t<string>("Enter directory"), shortcut: "Enter" },
-      { label: t<string>("Select all"), shortcut: "Ctrl+A" },
-      { label: t<string>("Copy"), shortcut: "Ctrl+C" },
-      { label: t<string>("Cut"), shortcut: "Ctrl+X" },
-      { label: t<string>("Paste (move files)"), shortcut: "Ctrl+V" },
+      { label: t<string>("fileExplorer.shortcut.selectPrevious"), shortcut: "↑" },
+      { label: t<string>("fileExplorer.shortcut.selectNext"), shortcut: "↓" },
+      { label: t<string>("fileExplorer.shortcut.enterDirectory"), shortcut: "Enter" },
+      { label: t<string>("fileExplorer.shortcut.selectAll"), shortcut: "Ctrl+A" },
+      { label: t<string>("fileExplorer.shortcut.copy"), shortcut: "Ctrl+C" },
+      { label: t<string>("fileExplorer.shortcut.cut"), shortcut: "Ctrl+X" },
+      { label: t<string>("fileExplorer.shortcut.pasteMove"), shortcut: "Ctrl+V" },
     );
 
     return result;
@@ -57,7 +57,7 @@ const Shortcuts = ({ capabilities, className }: Props) => {
     createPortal(Modal, {
       defaultVisible: true,
       size: "lg",
-      title: t<string>("Shortcuts"),
+      title: t<string>("fileExplorer.label.shortcuts"),
       footer: { actions: ["cancel"] },
       children: (
         <div className="grid grid-cols-2 gap-x-8 gap-y-2">
@@ -73,7 +73,7 @@ const Shortcuts = ({ capabilities, className }: Props) => {
   };
 
   return (
-    <Tooltip content={t<string>("Shortcuts")}>
+    <Tooltip content={t<string>("fileExplorer.label.shortcuts")}>
       <Button isIconOnly className={className} variant={"light"} onPress={openModal}>
         <RiKeyboardLine className={"text-lg"} />
       </Button>

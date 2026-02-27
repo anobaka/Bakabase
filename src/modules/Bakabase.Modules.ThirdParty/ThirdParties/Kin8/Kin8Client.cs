@@ -46,7 +46,7 @@ public class Kin8Client(IHttpClientFactory httpClientFactory, ILoggerFactory log
             }
 
             var cq = new CQ(html);
-            var title = cq["p.sub_title"].Text();
+            var title = cq["p.sub_title"].First().Text();
             if (string.IsNullOrWhiteSpace(title))
             {
                 return null;

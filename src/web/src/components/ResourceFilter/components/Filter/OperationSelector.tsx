@@ -69,7 +69,7 @@ const OperationSelector = ({
   }
 
   // No available operations: disabled text with tooltip
-  if (availableOperations.length === 0) {
+  if (!availableOperations || availableOperations.length === 0) {
     return (
       <Tooltip content={t<string>("Can not operate on this property")}>
         <span className="text-sm text-default-400 cursor-not-allowed">

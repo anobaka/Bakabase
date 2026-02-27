@@ -124,7 +124,7 @@ public class FC2Client(IHttpClientFactory httpClientFactory, ILoggerFactory logg
     private static string GetTitle(CQ html)
     {
         // XPath: //div[@data-section="userInfo"]//h3/span/../text()
-        var titleElements = html["div[data-section='userInfo'] h3 span"].Parent();
+        var titleElements = html["div[data-section='userInfo'] h3 span"].First().Parent();
         var title = titleElements.Text().Trim();
         
         // Remove the span content to get just the text nodes

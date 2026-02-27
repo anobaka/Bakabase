@@ -266,5 +266,11 @@
   "FeatureRequestTip.Deprecated": "The <1>{{name}}</1> feature is deprecated. You can learn more or make suggestions on <3>Github</3> or <5>QQ group</5>.",
   "FeatureRequestTip.Deprecating": "The <1>{{name}}</1> feature is being deprecated. You can learn more or make suggestions on <3>Github</3> or <5>QQ group</5>.",
   "Join QQ group": "Join QQ group",
-  "For more information, you can visit:": "For more information, you can visit:"
+  "For more information, you can visit:": "For more information, you can visit:",
+
+  "Select a media library": "Select a media library",
+  "Quick filter": "Quick filter",
+  "Are you sure to select this media library?": "Are you sure to select this media library?",
+  "Are you sure to select this path?": "Are you sure to select this path?",
+  "Select a path": "Select a path"
 }

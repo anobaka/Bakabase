@@ -298,7 +298,7 @@ public class AvEnhancer(
                     AddStringEnhancement(context.Details, d => d.OriginalTitle, target, enhancements);
                     break;
                 case AvEnhancerTarget.Actor:
-                    AddStringEnhancement(context.Details, d => d.Actor, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Actor?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Tags:
                     AddListStringEnhancement(context.Details, d => d.Tag?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
@@ -313,16 +313,16 @@ public class AvEnhancer(
                     AddStringEnhancement(context.Details, d => d.Studio, target, enhancements);
                     break;
                 case AvEnhancerTarget.Publisher:
-                    AddStringEnhancement(context.Details, d => d.Publisher, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Publisher?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Series:
-                    AddStringEnhancement(context.Details, d => d.Series, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Series?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Runtime:
                     AddStringEnhancement(context.Details, d => d.Runtime, target, enhancements);
                     break;
                 case AvEnhancerTarget.Director:
-                    AddStringEnhancement(context.Details, d => d.Director, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Director?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Source:
                     AddStringEnhancement(context.Details, d => d.Source, target, enhancements);
@@ -355,21 +355,63 @@ public class AvEnhancer(
         return enhancements;
     }
 
-    private static void AddStringEnhancement(List<IAvDetail> details, Func<IAvDetail, string?> selector, 
+    private static void AddStringEnhancement(List<IAvDetail> details, Func<IAvDetail, string?> selector,
         AvEnhancerTarget target, List<EnhancementTargetValue<AvEnhancerTarget>> enhancements)
     {
         var value = details.Select(selector).FirstOrDefault(v => !string.IsNullOrEmpty(v));
         if (!string.IsNullOrEmpty(value))
         {
-            enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null, 
+            value = DeduplicateString(value);
+            enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
                 new StringValueBuilder(value)));
         }
+    }
+
+    /// <summary>
+    /// Detects and removes duplicated text caused by CsQuery .Text() concatenating
+    /// text from multiple matching elements (e.g., mobile and desktop versions).
+    /// For example, "TitleTitle" or "Title Title" becomes "Title".
+    /// </summary>
+    private static string DeduplicateString(string value)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length < 2)
+        {
+            return value;
+        }
+
+        var trimmed = value.Trim();
+        var len = trimmed.Length;
+
+        // Check for exact duplication: "TitleTitle"
+        if (len % 2 == 0)
+        {
+            var half = trimmed.Substring(0, len / 2);
+            if (trimmed.Substring(len / 2) == half)
+            {
+                return half;
+            }
+        }
+
+        // Check for duplication with single space: "Title Title"
+        var spaceIdx = trimmed.IndexOf(' ', trimmed.Length / 3);
+        while (spaceIdx > 0 && spaceIdx < trimmed.Length - 1)
+        {
+            var left = trimmed.Substring(0, spaceIdx);
+            var right = trimmed.Substring(spaceIdx + 1);
+            if (left == right)
+            {
+                return left;
+            }
+            spaceIdx = trimmed.IndexOf(' ', spaceIdx + 1);
+        }
+
+        return value;
     }
 
     private static void AddListStringEnhancement(List<IAvDetail> details, Func<IAvDetail, string[]?> selector,
         AvEnhancerTarget target, List<EnhancementTargetValue<AvEnhancerTarget>> enhancements)
     {
-        var values = details.SelectMany(d => selector(d) ?? []).Distinct().Where(v => !string.IsNullOrEmpty(v)).ToList();
+        var values = details.SelectMany(d => selector(d) ?? []).Select(v => v.Trim()).Where(v => !string.IsNullOrEmpty(v)).Distinct().ToList();
         if (values.Any())
         {
             enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
