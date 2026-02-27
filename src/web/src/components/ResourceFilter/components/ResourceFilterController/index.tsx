@@ -36,8 +36,10 @@ export interface ResourceFilterControllerProps {
   /** Called when tags change */
   onTagsChange?: (tags: ResourceTag[]) => void;
 
-  /** Current filter display mode */
+  /** Current filter display mode (controlled). If provided, component is controlled. */
   filterDisplayMode?: FilterDisplayMode;
+  /** Default filter display mode (uncontrolled). Used as initial value when filterDisplayMode is not provided. */
+  defaultFilterDisplayMode?: FilterDisplayMode;
   /** Called when filter display mode changes */
   onFilterDisplayModeChange?: (mode: FilterDisplayMode) => void;
 
@@ -113,7 +115,8 @@ const ResourceFilterControllerInner = ({
   onGroupChange,
   tags,
   onTagsChange,
-  filterDisplayMode = FilterDisplayMode.Simple,
+  filterDisplayMode: externalFilterDisplayMode,
+  defaultFilterDisplayMode = FilterDisplayMode.Simple,
   onFilterDisplayModeChange,
   filterLayout = "vertical",
   externalNewFilterIndex,
@@ -137,6 +140,12 @@ const ResourceFilterControllerInner = ({
   // Use external keyword if provided, otherwise use internal state
   const keyword = externalKeyword !== undefined ? externalKeyword : internalKeyword;
   const onKeywordChange = externalOnKeywordChange ?? setInternalKeyword;
+
+  // Internal filterDisplayMode state for uncontrolled mode
+  const [internalFilterDisplayMode, setInternalFilterDisplayMode] = useState<FilterDisplayMode>(defaultFilterDisplayMode);
+
+  // Use external filterDisplayMode if provided, otherwise use internal state
+  const filterDisplayMode = externalFilterDisplayMode ?? internalFilterDisplayMode;
 
   // Combine internal and external new filter index
   const newFilterIndex = internalNewFilterIndex ?? externalNewFilterIndex ?? null;
@@ -202,26 +211,28 @@ const ResourceFilterControllerInner = ({
   }, [group, onGroupChange]);
 
   const handleModeChange = useCallback((mode: FilterDisplayMode) => {
-    if (onFilterDisplayModeChange) {
-      // When switching from Advanced to Simple, clean up
-      if (mode === FilterDisplayMode.Simple && filterDisplayMode === FilterDisplayMode.Advanced) {
-        const currentGroup = group;
-        if (currentGroup) {
-          const cleanedFilters = (currentGroup.filters || [])
-            .filter(f => !f.disabled)
-            .map(f => ({ ...f, disabled: false }));
+    // When switching from Advanced to Simple, clean up
+    if (mode === FilterDisplayMode.Simple && filterDisplayMode === FilterDisplayMode.Advanced) {
+      const currentGroup = group;
+      if (currentGroup) {
+        const cleanedFilters = (currentGroup.filters || [])
+          .filter(f => !f.disabled)
+          .map(f => ({ ...f, disabled: false }));
 
-          onGroupChange({
-            ...currentGroup,
-            filters: cleanedFilters,
-            groups: [], // Remove all sub-groups in Simple mode
-            combinator: GroupCombinator.And,
-            disabled: false,
-          });
-        }
+        onGroupChange({
+          ...currentGroup,
+          filters: cleanedFilters,
+          groups: [], // Remove all sub-groups in Simple mode
+          combinator: GroupCombinator.And,
+          disabled: false,
+        });
       }
-      onFilterDisplayModeChange(mode);
     }
+
+    // Update internal state (for uncontrolled mode)
+    setInternalFilterDisplayMode(mode);
+    // Notify external callback
+    onFilterDisplayModeChange?.(mode);
   }, [onFilterDisplayModeChange, filterDisplayMode, group, onGroupChange]);
 
   // Render keyword search with autocomplete

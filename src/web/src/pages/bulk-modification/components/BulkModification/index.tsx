@@ -75,7 +75,7 @@ const BulkModification = ({ bm, onChange }: Props) => {
         return (
           <div className="flex flex-col gap-3">
             <ResourceFilterController
-              filterDisplayMode={FilterDisplayMode.Simple}
+              defaultFilterDisplayMode={FilterDisplayMode.Simple}
               autoCreateMediaLibraryFilter={true}
               group={bm.search?.group}
               onGroupChange={(group) => {

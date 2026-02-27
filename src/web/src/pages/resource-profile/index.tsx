@@ -559,7 +559,7 @@ const ResourceProfilePage = () => {
                       return next;
                     });
                   }}
-                  filterDisplayMode={FilterDisplayMode.Simple}
+                  defaultFilterDisplayMode={FilterDisplayMode.Simple}
                   filterLayout="horizontal"
                   isReadonly={!isEditing}
                   autoCreateMediaLibraryFilter

@@ -184,17 +184,8 @@ const MultilevelValueRenderer = ({
 
   // Editing mode: show inline options with toggle (only when isEditing is explicitly true)
   if (isEditing === true && dataSource.length > 0) {
-    const isNotSet = selectedValues.length === 0;
     return (
       <div ref={containerRef} className="flex flex-wrap gap-1 items-center">
-        {/* Fake NotSet indicator - visual only, helps user understand nothing is selected */}
-        <SelectableChip
-          itemKey="__not_set__"
-          label={t("common.label.notSet")}
-          isSelected={isNotSet}
-          size={size}
-          onClick={() => {}}
-        />
         {visibleOptions.map((opt) => (
           <SelectableChip
             key={opt.path.join("/")}

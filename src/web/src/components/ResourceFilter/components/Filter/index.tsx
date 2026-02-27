@@ -280,26 +280,14 @@ const Filter = ({
         />
 
         {/* Operation selector */}
-        {isSimpleMode ? (
-          // Simple mode: readonly operation display
-          filter.operation !== undefined && (
-            <OperationSelector
-              operation={filter.operation}
-              propertyType={filter.property?.type}
-              isReadonly
-            />
-          )
-        ) : (
-          // Advanced mode: operation dropdown
-          <OperationSelector
-            operation={filter.operation}
-            propertyType={filter.property?.type}
-            availableOperations={filter.availableOperations}
-            hasProperty={filter.propertyId !== undefined}
-            isReadonly={isReadonly}
-            onSelect={(op) => refreshValue({ ...filter, operation: op })}
-          />
-        )}
+        <OperationSelector
+          operation={filter.operation}
+          propertyType={filter.property?.type}
+          availableOperations={filter.availableOperations}
+          hasProperty={filter.propertyId !== undefined}
+          isReadonly={isReadonly}
+          onSelect={(op) => refreshValue({ ...filter, operation: op })}
+        />
 
         {/* Value in same row for horizontal layout or compact types */}
         {!useVerticalLayout && <div className="pr-2">{renderValue()}</div>}
