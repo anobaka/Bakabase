@@ -492,7 +492,8 @@ export enum PropertyValueScope {
   KodiEnhancer = 1005,
   TmdbEnhancer = 1006,
   AvEnhancer = 1007,
-  AiEnhancer = 1008
+  AiEnhancer = 1008,
+  SteamEnhancer = 1009
 }
 
 export const propertyValueScopes = [
@@ -506,7 +507,8 @@ export const propertyValueScopes = [
   { label: 'KodiEnhancer', value: PropertyValueScope.KodiEnhancer },
   { label: 'TmdbEnhancer', value: PropertyValueScope.TmdbEnhancer },
   { label: 'AvEnhancer', value: PropertyValueScope.AvEnhancer },
-  { label: 'AiEnhancer', value: PropertyValueScope.AiEnhancer }
+  { label: 'AiEnhancer', value: PropertyValueScope.AiEnhancer },
+  { label: 'SteamEnhancer', value: PropertyValueScope.SteamEnhancer }
 ] as const;
 
 export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
@@ -520,7 +522,8 @@ export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.KodiEnhancer]: 'KodiEnhancer',
   [PropertyValueScope.TmdbEnhancer]: 'TmdbEnhancer',
   [PropertyValueScope.AvEnhancer]: 'AvEnhancer',
-  [PropertyValueScope.AiEnhancer]: 'AiEnhancer'
+  [PropertyValueScope.AiEnhancer]: 'AiEnhancer',
+  [PropertyValueScope.SteamEnhancer]: 'SteamEnhancer'
 };
 
 export enum PropertyValueType {
@@ -593,6 +596,45 @@ export const ResourceTagLabel: Record<ResourceTag, string> = {
   [ResourceTag.Pinned]: 'Pinned',
   [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
   [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
+};
+
+export enum ResourceSource {
+  FileSystem = 1,
+  Steam = 2,
+  DLsite = 3,
+  ExHentai = 4
+}
+
+export const resourceSources = [
+  { label: 'FileSystem', value: ResourceSource.FileSystem },
+  { label: 'Steam', value: ResourceSource.Steam },
+  { label: 'DLsite', value: ResourceSource.DLsite },
+  { label: 'ExHentai', value: ResourceSource.ExHentai }
+] as const;
+
+export const ResourceSourceLabel: Record<ResourceSource, string> = {
+  [ResourceSource.FileSystem]: 'FileSystem',
+  [ResourceSource.Steam]: 'Steam',
+  [ResourceSource.DLsite]: 'DLsite',
+  [ResourceSource.ExHentai]: 'ExHentai'
+};
+
+export enum ResourceStatus {
+  Active = 1,
+  Absent = 2,
+  Unavailable = 3
+}
+
+export const resourceStatuses = [
+  { label: 'Active', value: ResourceStatus.Active },
+  { label: 'Absent', value: ResourceStatus.Absent },
+  { label: 'Unavailable', value: ResourceStatus.Unavailable }
+] as const;
+
+export const ResourceStatusLabel: Record<ResourceStatus, string> = {
+  [ResourceStatus.Active]: 'Active',
+  [ResourceStatus.Absent]: 'Absent',
+  [ResourceStatus.Unavailable]: 'Unavailable'
 };
 
 export enum RuleQueueAction {

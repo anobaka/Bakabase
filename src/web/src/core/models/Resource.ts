@@ -1,6 +1,8 @@
 import type {
   PropertyValueScope,
   ResourceCacheType,
+  ResourceSource,
+  ResourceStatus,
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
@@ -26,10 +28,13 @@ export type Resource = {
   id: number;
   mediaLibraryId: number;
   categoryId: number;
-  fileName: string;
-  directory: string;
-  displayName: string;
-  path: string;
+  source: ResourceSource;
+  status: ResourceStatus;
+  sourceKey: string;
+  fileName?: string;
+  directory?: string;
+  displayName?: string;
+  path?: string;
   parentId?: number;
   hasChildren: boolean;
   isFile: boolean;

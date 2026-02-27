@@ -14,5 +14,6 @@
         TmdbEnhancer = 1006,
         AvEnhancer = 1007,
         AiEnhancer = 1008,
+        SteamEnhancer = 1009,
     }
 }

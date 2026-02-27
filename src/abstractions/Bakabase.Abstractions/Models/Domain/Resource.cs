@@ -17,9 +17,13 @@ public record Resource
     [Obsolete]
     public int CategoryId { get; set; }
 
-    private string _fileName = null!;
+    public ResourceSource Source { get; set; } = ResourceSource.FileSystem;
+    public ResourceStatus Status { get; set; } = ResourceStatus.Active;
+    public string SourceKey { get; set; } = null!;
 
-    public string FileName
+    private string? _fileName;
+
+    public string? FileName
     {
         get
         {
@@ -40,9 +44,9 @@ public record Resource
         }
     }
 
-    private string _directory = null!;
+    private string? _directory;
 
-    public string Directory
+    public string? Directory
     {
         get
         {
@@ -63,9 +67,9 @@ public record Resource
         }
     }
 
-    private string _path = null!;
+    private string? _path;
 
-    public string Path
+    public string? Path
     {
         get
         {
@@ -89,7 +93,7 @@ public record Resource
 
     private string? _displayName;
 
-    public string DisplayName
+    public string? DisplayName
     {
         get => _displayName ?? FileName;
         set => _displayName = value;

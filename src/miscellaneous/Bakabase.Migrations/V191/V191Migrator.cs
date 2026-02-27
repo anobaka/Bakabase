@@ -19,9 +19,9 @@ public class V191Migrator : AbstractMigrator
 
     private static readonly HashSet<PropertyValueScope> BadIntroductionValueScopes =
     [
-        PropertyValueScope.DLsiteEnhancer,
-        PropertyValueScope.BangumiEnhancer,
-        PropertyValueScope.ExHentaiEnhancer
+        PropertyValueScope.DLsite,
+        PropertyValueScope.Bangumi,
+        PropertyValueScope.ExHentai
     ];
 
     protected override async Task MigrateAfterDbMigrationInternal(object context)
