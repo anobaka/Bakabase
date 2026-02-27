@@ -553,8 +553,9 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     }
                                                 }
 
-                                                // Sort property values by scope for this resource
-                                                SortPropertyValuesByScope(r, scopePriorityMap);
+                                                // Sort property values by scope for this resource (with per-property overrides)
+                                                resourceProfilePropertyOptions.TryGetValue(r.Id, out var profilePropOptions);
+                                                SortPropertyValuesByScope(r, scopePriorityMap, profilePropOptions);
 
                                                 return ValueTask.CompletedTask;
                                             });
@@ -730,6 +731,9 @@ namespace Bakabase.InsideWorld.Business.Services
             _optionsManager.Value.PropertyValueScopePriority.Cast<int>()
                 .Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
 
+        private static Dictionary<int, int> BuildScopePriorityMap(PropertyValueScope[] scopes) =>
+            scopes.Cast<int>().Select((x, i) => (Scope: x, Index: i)).ToDictionary(d => d.Scope, d => d.Index);
+
         private void SortPropertyValuesByScope(List<Resource> resources)
         {
             var scopePriorityMap = GetScopePriorityMap();
@@ -742,18 +746,35 @@ namespace Bakabase.InsideWorld.Business.Services
         private void SortPropertyValuesByScope(Resource resource) =>
             SortPropertyValuesByScope(resource, GetScopePriorityMap());
 
-        private static void SortPropertyValuesByScope(Resource resource, Dictionary<int, int> scopePriorityMap)
+        private static void SortPropertyValuesByScope(Resource resource, Dictionary<int, int> globalScopePriorityMap,
+            ResourceProfilePropertyOptions? propertyOptions = null)
         {
-            if (resource.Properties != null)
+            if (resource.Properties == null) return;
+
+            // Build per-property scope priority map lookup if available
+            Dictionary<(int Pool, int Id), Dictionary<int, int>>? perPropertyMaps = null;
+            if (propertyOptions?.Properties != null)
             {
-                foreach (var (_, ps) in resource.Properties)
+                foreach (var prop in propertyOptions.Properties)
                 {
-                    foreach (var p in ps.Values)
+                    if (prop.ScopePriority is { Length: > 0 })
                     {
-                        p.Values?.Sort((a, b) =>
-                            scopePriorityMap.GetValueOrDefault(a.Scope, int.MaxValue) -
-                            scopePriorityMap.GetValueOrDefault(b.Scope, int.MaxValue));
+                        perPropertyMaps ??= new Dictionary<(int Pool, int Id), Dictionary<int, int>>();
+                        perPropertyMaps[((int)prop.Pool, prop.Id)] = BuildScopePriorityMap(prop.ScopePriority);
                     }
+                }
+            }
+
+            foreach (var (pool, ps) in resource.Properties)
+            {
+                foreach (var (propertyId, p) in ps)
+                {
+                    var effectiveMap = perPropertyMaps?.GetValueOrDefault((pool, propertyId))
+                                      ?? globalScopePriorityMap;
+
+                    p.Values?.Sort((a, b) =>
+                        effectiveMap.GetValueOrDefault(a.Scope, int.MaxValue) -
+                        effectiveMap.GetValueOrDefault(b.Scope, int.MaxValue));
                 }
             }
         }

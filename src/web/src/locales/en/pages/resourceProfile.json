@@ -143,5 +143,28 @@
   "resourceProfile.label.preview": "Preview",
   "resourceProfile.tip.wrappersRemovedAutomatically": "Wrappers around empty property values will be removed automatically.",
   "resourceProfile.input.templatePlaceholder": "Enter template or click properties above to insert...",
-  "resourceProfile.tip.leaveEmptyForFilename": "Leave empty to use filename as display name."
+  "resourceProfile.tip.leaveEmptyForFilename": "Leave empty to use filename as display name.",
+
+  "resourceProfile.enhancementConfig.title": "Enhancement Property Configuration",
+  "resourceProfile.enhancementConfig.targetSelection": "Select Enhancement Targets",
+  "resourceProfile.enhancementConfig.enhancerConfig": "Enhancer Configuration",
+  "resourceProfile.enhancementConfig.dynamic": "Dynamic",
+  "resourceProfile.enhancementConfig.needsConfig": "Needs config",
+  "resourceProfile.enhancementConfig.configured": "Configured",
+  "resourceProfile.enhancementConfig.targetsUsing": "{{count}} target(s) in use",
+
+  "resourceProfile.propertyPool.title": "Property Pool Configuration",
+  "resourceProfile.propertyPool.description": "Configure which properties should be displayed for resources matching this profile, and the value display priority for each property.",
+  "resourceProfile.propertyPool.addProperty": "Add Property",
+  "resourceProfile.propertyPool.empty": "No properties added. Click 'Add Property' to get started.",
+  "resourceProfile.propertyPool.columnProperty": "Property",
+  "resourceProfile.propertyPool.columnType": "Type",
+  "resourceProfile.propertyPool.columnScopePriority": "Value Display Priority",
+  "resourceProfile.propertyPool.unknownProperty": "Unknown property",
+
+  "resourceProfile.scopePriority.useGlobal": "Use global setting",
+  "resourceProfile.scopePriority.customize": "Customize",
+  "resourceProfile.scopePriority.customizeTooltip": "Customize value display priority for this property, overriding the global setting",
+  "resourceProfile.scopePriority.customLabel": "Custom priority",
+  "resourceProfile.scopePriority.resetTooltip": "Reset to use global setting"
 }

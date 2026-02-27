@@ -143,5 +143,28 @@
   "resourceProfile.label.preview": "预览",
   "resourceProfile.tip.wrappersRemovedAutomatically": "空属性值周围的包装器将被自动移除。",
   "resourceProfile.input.templatePlaceholder": "输入模板或点击上方属性插入...",
-  "resourceProfile.tip.leaveEmptyForFilename": "留空则使用文件名作为显示名称。"
+  "resourceProfile.tip.leaveEmptyForFilename": "留空则使用文件名作为显示名称。",
+
+  "resourceProfile.enhancementConfig.title": "增强属性配置",
+  "resourceProfile.enhancementConfig.targetSelection": "选择增强属性",
+  "resourceProfile.enhancementConfig.enhancerConfig": "增强器配置",
+  "resourceProfile.enhancementConfig.dynamic": "动态",
+  "resourceProfile.enhancementConfig.needsConfig": "需要配置",
+  "resourceProfile.enhancementConfig.configured": "已配置",
+  "resourceProfile.enhancementConfig.targetsUsing": "{{count}} 个属性使用中",
+
+  "resourceProfile.propertyPool.title": "属性池配置",
+  "resourceProfile.propertyPool.description": "配置匹配此方案的资源应显示哪些属性，以及每个属性的值展示优先级。",
+  "resourceProfile.propertyPool.addProperty": "添加属性",
+  "resourceProfile.propertyPool.empty": "未添加任何属性。点击「添加属性」开始。",
+  "resourceProfile.propertyPool.columnProperty": "属性",
+  "resourceProfile.propertyPool.columnType": "类型",
+  "resourceProfile.propertyPool.columnScopePriority": "属性值展示优先级",
+  "resourceProfile.propertyPool.unknownProperty": "未知属性",
+
+  "resourceProfile.scopePriority.useGlobal": "使用全局设置",
+  "resourceProfile.scopePriority.customize": "自定义",
+  "resourceProfile.scopePriority.customizeTooltip": "为此属性自定义值展示优先级，覆盖全局设置",
+  "resourceProfile.scopePriority.customLabel": "自定义优先级",
+  "resourceProfile.scopePriority.resetTooltip": "恢复为使用全局设置"
 }

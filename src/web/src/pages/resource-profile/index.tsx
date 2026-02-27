@@ -20,10 +20,11 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import ResourceProfileModal from "./components/ResourceProfileModal";
 import ResourceProfileTestModal from "./components/ResourceProfileTestModal";
 import DisplayNameTemplateEditorModal from "./components/DisplayNameTemplateEditorModal";
-import EnhancerSelectorModal from "./components/EnhancerSelectorModal";
+import EnhancementConfigPanel from "./components/EnhancementConfigPanel";
 import PlayableFileSelectorModal from "./components/PlayableFileSelectorModal";
 import PlayerSelectorModal from "./components/PlayerSelectorModal";
 import DeleteEnhancementsModal from "./components/DeleteEnhancementsModal";
+import PropertyPoolModal from "./components/PropertyPoolModal";
 import PropertySelector from "@/components/PropertySelector";
 import { ResourceFilterController, toSearchInputModel } from "@/components/ResourceFilter";
 import type { SearchFilterGroup } from "@/components/ResourceFilter/models";
@@ -256,7 +257,7 @@ const ResourceProfilePage = () => {
     const hasEnhancers = enhancerOptions.length > 0;
 
     const openEnhancerModal = () => {
-      createPortal(EnhancerSelectorModal, {
+      createPortal(EnhancementConfigPanel, {
         enhancerOptions: enhancerOptions,
         onSubmit: (options: BakabaseAbstractionsModelsDomainEnhancerFullOptions[]) => {
           updateProfile(profile, {
@@ -460,15 +461,14 @@ const ResourceProfilePage = () => {
     const hasProperties = propertyRefs.length > 0;
 
     const openModal = () => {
-      createPortal(PropertySelector, {
-        v2: true,
-        pool: PropertyPool.Reserved | PropertyPool.Custom,
-        multiple: true,
-        selection: propertyRefs.map((ref) => ({ pool: ref.pool!, id: ref.id! })),
-        onSubmit: async (selectedProperties: IProperty[]) => {
-          const newRefs = selectedProperties.map((p) => ({ pool: p.pool, id: p.id }));
+      createPortal(PropertyPoolModal, {
+        propertyOptions: profile.propertyOptions,
+        allProperties: properties,
+        enhancerOptions: profile.enhancerOptions?.enhancers ?? [],
+        enhancerDescriptors,
+        onSubmit: (newPropertyOptions: BakabaseAbstractionsModelsDomainResourceProfilePropertyOptions | undefined) => {
           updateProfile(profile, {
-            propertyOptions: newRefs.length > 0 ? { properties: newRefs } : undefined,
+            propertyOptions: newPropertyOptions,
           });
         },
       });

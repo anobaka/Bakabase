@@ -464,7 +464,11 @@ public class V220Migrator : AbstractMigrator
 
         return new ResourceProfilePropertyOptions
         {
-            Properties = template.Properties.Select(p => new PropertyKey(p.Pool, p.Id)).ToList()
+            Properties = template.Properties.Select(p => new PropertyKeyWithScopePriority
+            {
+                Pool = p.Pool,
+                Id = p.Id
+            }).ToList()
         };
     }
 

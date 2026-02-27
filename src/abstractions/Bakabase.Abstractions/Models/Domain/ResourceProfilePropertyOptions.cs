@@ -1,14 +1,13 @@
-using Bakabase.Abstractions.Models.Domain.Constants;
-
 namespace Bakabase.Abstractions.Models.Domain;
 
 /// <summary>
-/// Resource Profile property configuration - simple property reference list without ValueLocators
+/// Resource Profile property configuration - property references with optional per-property scope priority.
+/// JSON backward compatible: old data without ScopePriority will deserialize with ScopePriority = null.
 /// </summary>
 public class ResourceProfilePropertyOptions
 {
     /// <summary>
-    /// List of property references (Pool + Id only, no ValueLocators)
+    /// List of property references with optional per-property scope priority override.
     /// </summary>
-    public List<PropertyKey>? Properties { get; set; }
+    public List<PropertyKeyWithScopePriority>? Properties { get; set; }
 }
