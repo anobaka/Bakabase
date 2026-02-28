@@ -152,6 +152,9 @@
   "enhancementConfig.selectAll": "全选",
   "enhancementConfig.selectResourceType": "选择您的资源类型",
   "enhancementConfig.selectGroupFirst": "请先选择至少一个资源类型",
+  "enhancementConfig.columnProperty": "属性",
+  "enhancementConfig.columnSources": "数据来源",
+  "enhancementConfig.columnBindProperty": "绑定属性",
 
   "enhancementConfig.scenario.general": "通用",
   "enhancementConfig.scenario.doujinshi": "同人志",

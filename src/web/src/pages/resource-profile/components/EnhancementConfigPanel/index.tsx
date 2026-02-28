@@ -351,14 +351,10 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         key={`${prop.propertyName}::${prop.propertyType}`}
         className={`flex items-center gap-3 py-1.5 px-2 rounded ${unbound ? "bg-warning-50" : hasEnabled ? "bg-success-50" : ""}`}
       >
-        {/* Property name */}
-        <div className="min-w-[120px] text-sm font-medium truncate">
+        {/* Property name + type */}
+        <div className="min-w-[140px] flex items-center gap-1 text-sm font-medium truncate">
+          <PropertyTypeIcon type={prop.propertyType} textVariant="tooltip" />
           {prop.propertyName}
-        </div>
-
-        {/* Property type */}
-        <div className="min-w-[100px] flex-shrink-0">
-          <PropertyTypeIcon type={prop.propertyType} textVariant="default" />
         </div>
 
         {/* Enhancer checkboxes */}
@@ -446,23 +442,35 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         {/* ─── Scrollable middle: Property list ─── */}
         <div className="flex-1 overflow-y-auto py-2 min-h-0">
           {selectedGroups.size > 0 && currentProperties.length > 0 && (
-            <div className="flex items-center gap-2 mb-2 px-2">
-              <Checkbox
-                isIndeterminate={someSelected && !allSelected}
-                isSelected={allSelected}
-                size="sm"
-                onValueChange={(checked) => toggleAllInSelectedGroups(checked)}
-              >
-                <span className="text-xs text-default-500">
-                  {t("enhancementConfig.selectAll")}
-                </span>
-              </Checkbox>
-              {someSelected && (
-                <Chip size="sm" variant="flat" color="success">
-                  {groupStats.enabled}/{groupStats.total}
-                </Chip>
-              )}
-            </div>
+            <>
+              {/* Table header */}
+              <div className="flex items-center gap-3 py-1.5 px-2 border-b border-default-200 mb-1 sticky top-0 bg-background z-10">
+                <div className="min-w-[140px] text-xs text-default-500 font-medium">
+                  {t("enhancementConfig.columnProperty")}
+                </div>
+                <div className="flex-1 text-xs text-default-500 font-medium flex items-center gap-2">
+                  {t("enhancementConfig.columnSources")}
+                  <Checkbox
+                    isIndeterminate={someSelected && !allSelected}
+                    isSelected={allSelected}
+                    size="sm"
+                    onValueChange={(checked) => toggleAllInSelectedGroups(checked)}
+                  >
+                    <span className="text-xs text-default-400">
+                      {t("enhancementConfig.selectAll")}
+                    </span>
+                  </Checkbox>
+                  {someSelected && (
+                    <Chip size="sm" variant="flat" color="success">
+                      {groupStats.enabled}/{groupStats.total}
+                    </Chip>
+                  )}
+                </div>
+                <div className="flex-shrink-0 text-xs text-default-500 font-medium">
+                  {t("enhancementConfig.columnBindProperty")}
+                </div>
+              </div>
+            </>
           )}
 
           <div className="flex flex-col gap-0.5">

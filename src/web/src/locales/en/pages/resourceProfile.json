@@ -152,6 +152,9 @@
   "enhancementConfig.selectAll": "Select all",
   "enhancementConfig.selectResourceType": "Select your resource type",
   "enhancementConfig.selectGroupFirst": "Please select at least one resource type first",
+  "enhancementConfig.columnProperty": "Property",
+  "enhancementConfig.columnSources": "Sources",
+  "enhancementConfig.columnBindProperty": "Bind Property",
 
   "enhancementConfig.scenario.general": "General",
   "enhancementConfig.scenario.doujinshi": "Doujinshi",
