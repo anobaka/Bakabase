@@ -3,6 +3,8 @@ import type {
   BakabaseInfrastructuresComponentsAppModelsRequestModelsAppOptionsPatchRequestModel,
   BakabaseInsideWorldModelsConfigsUIOptions,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIOptionsPatchRequestModel,
+  BakabaseInsideWorldModelsConfigsUIStyleOptions,
+  BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIStyleOptionsPatchRequestModel,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions,
   BakabaseInsideWorldModelsConfigsFileSystemOptions,
@@ -80,6 +82,11 @@ export const useUiOptionsStore = createOptionStore<
   BakabaseInsideWorldModelsConfigsUIOptions,
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIOptionsPatchRequestModel
 >(BApi.options.patchUiOptions);
+
+export const useUiStyleOptionsStore = createOptionStore<
+  BakabaseInsideWorldModelsConfigsUIStyleOptions,
+  BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIStyleOptionsPatchRequestModel
+>(BApi.options.patchUiStyleOptions);
 
 export const useBilibiliOptionsStore = createOptionStore<
   BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBilibiliOptions,
@@ -179,6 +186,7 @@ export const useTmdbOptionsStore = createOptionStore<
 export const optionsStores = {
   appOptions: useAppOptionsStore,
   uiOptions: useUiOptionsStore,
+  uiStyleOptions: useUiStyleOptionsStore,
   bilibiliOptions: useBilibiliOptionsStore,
   exHentaiOptions: useExHentaiOptionsStore,
   fileSystemOptions: useFileSystemOptionsStore,

@@ -195,6 +195,32 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpGet("ui-style")]
+        [SwaggerOperation(OperationId = "GetUIStyleOptions")]
+        public async Task<SingletonResponse<UIStyleOptions>> GetUIStyleOptions()
+        {
+            return new SingletonResponse<UIStyleOptions>(
+                _bakabaseOptionsManager.Get<UIStyleOptions>().Value);
+        }
+
+        [HttpPatch("ui-style")]
+        [SwaggerOperation(OperationId = "PatchUIStyleOptions")]
+        public async Task<BaseResponse> PatchUIStyleOptions(
+            [FromBody] UIStyleOptionsPatchRequestModel model)
+        {
+            await _bakabaseOptionsManager.Get<UIStyleOptions>().SaveAsync(options =>
+            {
+                if (model.CssVariableOverwrites != null)
+                {
+                    foreach (var (key, value) in model.CssVariableOverwrites)
+                    {
+                        options.CssVariableOverwrites[key] = value;
+                    }
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
         [HttpGet("bilibili")]
         [SwaggerOperation(OperationId = "GetBilibiliOptions")]
         public async Task<SingletonResponse<BilibiliOptions>> GetBilibiliOptions()
