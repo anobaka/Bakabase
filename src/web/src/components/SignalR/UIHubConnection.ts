@@ -127,6 +127,7 @@ export const UIHubConnection = () => {
 
     conn.on("OptionsChanged", (name, options) => {
       if (name.toLowerCase() === "uioptions") name = "uiOptions";
+      if (name.toLowerCase() === "uistyleoptions") name = "uiStyleOptions";
       log("options changed", name, options);
       const store = optionsStores[name as keyof typeof optionsStores];
 

@@ -1,5 +1,12 @@
 /* Resource component styles - migrated from SCSS to plain CSS + Tailwind */
 
+/* Display property chips on resource cover - font size controlled by CSS variable.
+   Use wildcard to override inner elements like StandardValueRenderer's text-medium class. */
+.resource-display-property-chip,
+.resource-display-property-chip * {
+  font-size: var(--resource-cover-property-font-size, 12px) !important;
+}
+
 /* Limited content with line clamp and hover expand */
 .resource-limited-content {
   overflow: hidden;
