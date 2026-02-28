@@ -5,21 +5,21 @@ import type { EnhancerFullOptions } from "@/components/EnhancerSelectorV2/compon
 import type { DestroyableProps } from "@/components/bakaui/types";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineCheckCircle, AiOutlineSetting, AiOutlineWarning, AiOutlineInfoCircle } from "react-icons/ai";
+import { AiOutlineSetting, AiOutlineWarning, AiOutlineInfoCircle } from "react-icons/ai";
 
 import {
   buildSourceStates,
   convertStatesToEnhancerOptions,
   extractEnhancerLevelConfigs,
-  getGroupPropertyRows,
   getGroupEnabledCount,
-  getGroupDynamicEnhancers,
+  getPropertyRowsForGroups,
+  getDynamicEnhancersForGroups,
+  getEnhancerIdsForGroups,
   enhancerNeedsConfig,
   sourceKey,
   groupOrder,
-  groupEnhancerMap,
   PropertyGroup,
 } from "./utils";
 import type { PropertyRow, SourceState } from "./utils";
@@ -31,8 +31,6 @@ import {
   Checkbox,
   Chip,
   Modal,
-  Tab,
-  Tabs,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { EnhancerId } from "@/sdk/constants";
@@ -54,7 +52,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const [descriptors, setDescriptors] = useState<EnhancerDescriptor[]>([]);
   const [sourceStates, setSourceStates] = useState<Map<string, SourceState>>(new Map());
   const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<Map<EnhancerId, Partial<ApiEnhancerOptions>>>(new Map());
-  const [activeGroup, setActiveGroup] = useState<PropertyGroup>(PropertyGroup.General);
+  const [selectedGroups, setSelectedGroups] = useState<Set<PropertyGroup>>(new Set([PropertyGroup.General]));
 
   useEffect(() => {
     BApi.enhancer.getAllEnhancerDescriptors().then((r) => {
@@ -66,19 +64,39 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     });
   }, []);
 
-  // Derived data for current group
+  const selectedGroupsArray = useMemo(() => [...selectedGroups], [selectedGroups]);
+
+  // Derived data for selected groups
   const currentProperties = useMemo(
-    () => getGroupPropertyRows(activeGroup, sourceStates),
-    [activeGroup, sourceStates]
+    () => getPropertyRowsForGroups(selectedGroupsArray, sourceStates),
+    [selectedGroupsArray, sourceStates]
   );
 
   const dynamicEnhancers = useMemo(
-    () => getGroupDynamicEnhancers(activeGroup, descriptors),
-    [activeGroup, descriptors]
+    () => getDynamicEnhancersForGroups(selectedGroupsArray, descriptors),
+    [selectedGroupsArray, descriptors]
   );
 
+  const selectedEnhancerIds = useMemo(
+    () => getEnhancerIdsForGroups(selectedGroupsArray),
+    [selectedGroupsArray]
+  );
+
+  // Toggle group selection
+  const toggleGroup = useCallback((group: PropertyGroup) => {
+    setSelectedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) {
+        next.delete(group);
+      } else {
+        next.add(group);
+      }
+      return next;
+    });
+  }, []);
+
   // Toggle a single source
-  const toggleSource = (stateKey: string) => {
+  const toggleSource = useCallback((stateKey: string) => {
     setSourceStates((prev) => {
       const next = new Map(prev);
       const state = next.get(stateKey);
@@ -87,27 +105,25 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       }
       return next;
     });
-  };
+  }, []);
 
-  // Toggle all sources in the current group
-  const toggleAllInGroup = (enabled: boolean) => {
-    const enhancerIds = groupEnhancerMap[activeGroup];
+  // Toggle all sources in the selected groups
+  const toggleAllInSelectedGroups = useCallback((enabled: boolean) => {
     setSourceStates((prev) => {
       const next = new Map(prev);
       for (const [key, state] of next) {
-        if (enhancerIds.includes(state.enhancerId)) {
+        if (selectedEnhancerIds.has(state.enhancerId)) {
           next.set(key, { ...state, enabled });
         }
       }
       return next;
     });
-  };
+  }, [selectedEnhancerIds]);
 
   // Open enhancer config modal
   const openEnhancerConfig = (enhancer: EnhancerDescriptor) => {
     const currentLevelConfig = enhancerLevelConfigs.get(enhancer.id) ?? {};
 
-    // Collect enabled targets for this enhancer from source states
     const enabledTargets: { target: number; dynamicTarget?: string; pool?: number; propertyId?: number; autoBindProperty?: boolean; autoMatchMultilevelString?: boolean }[] = [];
     for (const [, state] of sourceStates) {
       if (state.enhancerId === enhancer.id && state.enabled) {
@@ -142,7 +158,6 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       enhancer,
       options: optionsForModal,
       onSubmit: async (newOptions: EnhancerFullOptions) => {
-        // Update enhancer-level config
         setEnhancerLevelConfigs((prev) => {
           const next = new Map(prev);
           next.set(enhancer.id, {
@@ -156,12 +171,10 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           return next;
         });
 
-        // Reconcile source states with modal results
         if (newOptions.targetOptions) {
           setSourceStates((prev) => {
             const next = new Map(prev);
 
-            // Find existing keys for this enhancer
             const existingDynamicKeys = new Set<string>();
             for (const [key, state] of next) {
               if (state.enhancerId === enhancer.id && state.isDynamic) {
@@ -169,10 +182,9 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
               }
             }
 
-            // Process returned target options
             const processedKeys = new Set<string>();
             for (const to of newOptions.targetOptions!) {
-              const target = enhancer.targets.find((t) => t.id === to.target);
+              const target = enhancer.targets.find((tgt) => tgt.id === to.target);
               if (!target) continue;
 
               const key = target.isDynamic
@@ -183,7 +195,6 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
               const existing = next.get(key);
               if (existing) {
-                // Update existing source
                 next.set(key, {
                   ...existing,
                   targetMapping:
@@ -196,7 +207,6 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                   },
                 });
               } else if (target.isDynamic && to.dynamicTarget) {
-                // New dynamic target
                 next.set(key, {
                   enhancerId: enhancer.id,
                   enhancerName: enhancer.name,
@@ -217,7 +227,6 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
               }
             }
 
-            // Remove dynamic targets that were removed in the modal
             for (const key of existingDynamicKeys) {
               if (!processedKeys.has(key)) {
                 next.delete(key);
@@ -236,19 +245,18 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     onSubmit?.(result);
   };
 
-  // Stats for select-all checkbox
+  // Stats for select-all checkbox across all selected groups
   const groupStats = useMemo(() => {
-    const enhancerIds = groupEnhancerMap[activeGroup];
     let total = 0;
     let enabled = 0;
     for (const [, state] of sourceStates) {
-      if (enhancerIds.includes(state.enhancerId)) {
+      if (selectedEnhancerIds.has(state.enhancerId)) {
         total++;
         if (state.enabled) enabled++;
       }
     }
     return { total, enabled };
-  }, [activeGroup, sourceStates]);
+  }, [selectedEnhancerIds, sourceStates]);
 
   const allSelected = groupStats.enabled === groupStats.total && groupStats.total > 0;
   const someSelected = groupStats.enabled > 0;
@@ -298,50 +306,39 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       onOk={handleSubmit}
     >
       <div className="flex flex-col" style={{ height: "70vh" }}>
-        {/* ─── Fixed top: Group tabs ─── */}
-        <Tabs
-          selectedKey={activeGroup}
-          onSelectionChange={(key) => setActiveGroup(key as PropertyGroup)}
-          classNames={{
-            base: "flex-shrink-0",
-            tabList: "flex-wrap",
-            panel: "hidden",
-          }}
-          size="sm"
-          aria-label="Property groups"
-        >
+        {/* ─── Fixed top: Group tags (multi-select) ─── */}
+        <div className="flex-shrink-0 flex items-center gap-2 pb-2 flex-wrap">
+          <span className="text-xs text-default-400 whitespace-nowrap">
+            {t("enhancementConfig.selectResourceType")}
+          </span>
           {groupOrder.map((group) => {
+            const isSelected = selectedGroups.has(group);
             const count = getGroupEnabledCount(group, sourceStates);
             return (
-              <Tab
+              <Chip
                 key={group}
-                title={
-                  <div className="flex items-center gap-1.5">
-                    <span>{t(`enhancementConfig.scenario.${group}`)}</span>
-                    {count > 0 && (
-                      <Chip size="sm" variant="flat" color="primary" className="h-5 min-w-5">
-                        {count}
-                      </Chip>
-                    )}
-                  </div>
-                }
+                className="cursor-pointer select-none"
+                color={isSelected ? "primary" : "default"}
+                variant={isSelected ? "solid" : "bordered"}
+                size="sm"
+                onClick={() => toggleGroup(group)}
               >
-                {null}
-              </Tab>
+                {t(`enhancementConfig.scenario.${group}`)}
+                {count > 0 && ` (${count})`}
+              </Chip>
             );
           })}
-        </Tabs>
+        </div>
 
         {/* ─── Scrollable middle: Property list ─── */}
         <div className="flex-1 overflow-y-auto py-2 min-h-0">
-          {/* Select all */}
-          {currentProperties.length > 0 && (
+          {selectedGroups.size > 0 && currentProperties.length > 0 && (
             <div className="flex items-center gap-2 mb-2 px-2">
               <Checkbox
                 isIndeterminate={someSelected && !allSelected}
                 isSelected={allSelected}
                 size="sm"
-                onValueChange={(checked) => toggleAllInGroup(checked)}
+                onValueChange={(checked) => toggleAllInSelectedGroups(checked)}
               >
                 <span className="text-xs text-default-500">
                   {t("enhancementConfig.selectAll")}
@@ -355,12 +352,17 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             </div>
           )}
 
-          {/* Property rows */}
           <div className="flex flex-col gap-0.5">
             {currentProperties.map((prop) => renderPropertyRow(prop))}
           </div>
 
-          {currentProperties.length === 0 && (
+          {selectedGroups.size === 0 && (
+            <div className="py-8 text-center text-sm text-default-400">
+              {t("enhancementConfig.selectGroupFirst")}
+            </div>
+          )}
+
+          {selectedGroups.size > 0 && currentProperties.length === 0 && (
             <div className="py-8 text-center text-sm text-default-400">
               {t("enhancementConfig.noStaticProperties")}
             </div>
@@ -369,7 +371,6 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
         {/* ─── Fixed bottom: Enhancer configuration ─── */}
         <div className="flex-shrink-0 border-t border-default-200 pt-3">
-          {/* Dynamic property hint */}
           {dynamicEnhancers.length > 0 && (
             <div className="flex items-start gap-2 p-2.5 mb-2 bg-warning-50 rounded-lg text-sm">
               <AiOutlineInfoCircle className="text-warning mt-0.5 flex-shrink-0" />
@@ -387,7 +388,6 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           <div className="flex flex-wrap gap-2">
             {descriptors.map((enhancer) => {
               const needsCfg = enhancerNeedsConfig(enhancer, enhancerLevelConfigs.get(enhancer.id));
-              // Check if this enhancer has any enabled target
               let hasEnabled = false;
               for (const [, state] of sourceStates) {
                 if (state.enhancerId === enhancer.id && state.enabled) {
@@ -415,7 +415,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                       isIconOnly
                       onPress={() => openEnhancerConfig(enhancer)}
                     >
-                      <AiOutlineSetting />
+                      <AiOutlineSetting className="text-lg" />
                     </Button>
                   </CardBody>
                 </Card>

@@ -150,9 +150,8 @@
   "enhancementConfig.needsConfig": "需要配置",
   "enhancementConfig.configured": "已配置",
   "enhancementConfig.selectAll": "全选",
-
-  "enhancementConfig.tab.staticProperties": "固定属性",
-  "enhancementConfig.tab.dynamicProperties": "动态属性",
+  "enhancementConfig.selectResourceType": "选择您的资源类型",
+  "enhancementConfig.selectGroupFirst": "请先选择至少一个资源类型",
 
   "enhancementConfig.scenario.general": "通用",
   "enhancementConfig.scenario.anime": "动画",

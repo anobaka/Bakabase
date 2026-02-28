@@ -150,9 +150,8 @@
   "enhancementConfig.needsConfig": "Needs config",
   "enhancementConfig.configured": "Configured",
   "enhancementConfig.selectAll": "Select all",
-
-  "enhancementConfig.tab.staticProperties": "Static Properties",
-  "enhancementConfig.tab.dynamicProperties": "Dynamic Properties",
+  "enhancementConfig.selectResourceType": "Select your resource type",
+  "enhancementConfig.selectGroupFirst": "Please select at least one resource type first",
 
   "enhancementConfig.scenario.general": "General",
   "enhancementConfig.scenario.anime": "Anime",

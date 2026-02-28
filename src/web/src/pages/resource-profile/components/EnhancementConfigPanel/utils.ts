@@ -223,6 +223,68 @@ export function getGroupEnabledCount(
   return enabledNames.size;
 }
 
+/** Collect unique enhancer IDs from multiple groups */
+export function getEnhancerIdsForGroups(groups: PropertyGroup[]): Set<EnhancerId> {
+  const ids = new Set<EnhancerId>();
+  for (const group of groups) {
+    for (const id of groupEnhancerMap[group]) {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
+/** Derive property rows for multiple selected groups (union of enhancers, deduped) */
+export function getPropertyRowsForGroups(
+  groups: PropertyGroup[],
+  sourceStates: Map<string, SourceState>
+): PropertyRow[] {
+  const enhancerIds = getEnhancerIdsForGroups(groups);
+  const nameMap = new Map<string, PropertyRow>();
+
+  for (const [key, state] of sourceStates) {
+    if (!enhancerIds.has(state.enhancerId)) continue;
+
+    const name = state.isDynamic ? (state.dynamicTarget ?? "") : state.targetDescriptor.name;
+    if (!name) continue;
+
+    const source: EnhancerSource = {
+      stateKey: key,
+      enhancerId: state.enhancerId,
+      enhancerName: state.enhancerName,
+      targetId: state.targetId,
+      targetDescriptor: state.targetDescriptor,
+      enabled: state.enabled,
+      isDynamic: state.isDynamic,
+      dynamicTarget: state.dynamicTarget,
+    };
+
+    const existing = nameMap.get(name);
+    if (existing) {
+      existing.sources.push(source);
+    } else {
+      nameMap.set(name, {
+        propertyName: name,
+        propertyType: state.targetDescriptor.propertyType,
+        sources: [source],
+      });
+    }
+  }
+
+  return [...nameMap.values()].sort((a, b) => a.propertyName.localeCompare(b.propertyName));
+}
+
+/** Get dynamic enhancers from multiple selected groups */
+export function getDynamicEnhancersForGroups(
+  groups: PropertyGroup[],
+  descriptors: EnhancerDescriptor[]
+): EnhancerDescriptor[] {
+  const enhancerIds = getEnhancerIdsForGroups(groups);
+  return descriptors.filter(
+    (d) => enhancerIds.has(d.id) && d.targets.some((t) => t.isDynamic)
+  );
+}
+
 /** Get enhancers in a group that have dynamic targets */
 export function getGroupDynamicEnhancers(
   group: PropertyGroup,
