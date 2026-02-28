@@ -179,7 +179,7 @@
   "enhancementConfig.unboundWarning": "This property is checked but not bound to any system property. Enhanced data will not be visible. Click the button to bind or create a property.",
   "enhancementConfig.intro": "Enhancers automatically fetch and populate resource properties from external data sources (e.g. Bangumi, DLsite). Select a resource type, check the properties and sources you need, then bind them to system properties.",
   "enhancementConfig.introStep1": "Select a resource type to see available properties",
-  "enhancementConfig.introStep2": "Check the data sources (enhancers) for each property",
+  "enhancementConfig.introStep2": "Check the data sources (enhancers) for each property — select multiple for fallback",
   "enhancementConfig.introStep3": "Bind properties to make enhanced data visible on resources",
 
   "resourceProfile.propertyPool.title": "Property Pool Configuration",
