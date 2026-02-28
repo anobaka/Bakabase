@@ -157,15 +157,17 @@
   "enhancementConfig.scenario.general": "通用",
   "enhancementConfig.scenario.anime": "动画",
   "enhancementConfig.scenario.movie": "电影",
+  "enhancementConfig.scenario.tv": "电视剧",
   "enhancementConfig.scenario.doujinshi": "同人",
   "enhancementConfig.scenario.game": "游戏",
   "enhancementConfig.scenario.av": "AV",
 
+  "enhancementConfig.dynamicHint": "当前分组中的 {{enhancers}} 支持动态属性。点击下方配置按钮添加更多属性。",
   "enhancementConfig.dynamicExplanation": "动态属性由增强器在运行时从数据源中提取，例如 Bangumi 页面左栏中的属性、DLsite 封面右侧的属性、以及正则表达式的捕获组。您需要先配置对应的增强器，配置完成后动态属性将出现在下方列表中。",
   "enhancementConfig.configureDynamicEnhancers": "配置支持动态属性的增强器",
   "enhancementConfig.configuredDynamicProperties": "已配置的动态属性",
   "enhancementConfig.noDynamicPropertiesYet": "尚未配置任何动态属性。请先配置上方的增强器。",
-  "enhancementConfig.noStaticProperties": "此场景无固定属性",
+  "enhancementConfig.noStaticProperties": "当前分组无属性",
 
   "resourceProfile.propertyPool.title": "属性池配置",
   "resourceProfile.propertyPool.description": "配置匹配此方案的资源应显示哪些属性，以及每个属性的值展示优先级。",
