@@ -2091,6 +2091,10 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey {
   id: number;
 }
 
+export interface BakabaseInsideWorldModelsConfigsUIStyleOptions {
+  cssVariableOverwrites: Record<string, string>;
+}
+
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** @format int32 */
   colCount: number;
@@ -14399,7 +14403,67 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
-      
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetUiStyleOptions
+     * @request GET:/options/ui-style
+     */
+    getUiStyleOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldModelsConfigsUIStyleOptions,
+        any
+      >({
+        path: `/options/ui-style`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getUiStyleOptions
+     * @name getUiStyleOptionsUrl
+     */
+    getUiStyleOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui-style`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchUiStyleOptions
+     * @request PATCH:/options/ui-style
+     */
+    patchUiStyleOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputUIStyleOptionsPatchRequestModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/ui-style`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchUiStyleOptions
+     * @name patchUiStyleOptionsUrl
+     */
+    patchUiStyleOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/ui-style`;
+
       return baseUrl + path;
     },
 
