@@ -154,11 +154,17 @@
   "enhancementConfig.selectGroupFirst": "Please select at least one resource type first",
 
   "enhancementConfig.scenario.general": "General",
+  "enhancementConfig.scenario.doujinshi": "Doujinshi",
+  "enhancementConfig.scenario.manga": "Manga",
+  "enhancementConfig.scenario.gallery": "Gallery",
+  "enhancementConfig.scenario.gameCG": "Game CG",
   "enhancementConfig.scenario.anime": "Anime",
   "enhancementConfig.scenario.movie": "Movie",
   "enhancementConfig.scenario.tv": "TV",
-  "enhancementConfig.scenario.doujinshi": "Doujinshi",
   "enhancementConfig.scenario.game": "Game",
+  "enhancementConfig.scenario.music": "Music",
+  "enhancementConfig.scenario.voiceWork": "Voice Work",
+  "enhancementConfig.scenario.book": "Book",
   "enhancementConfig.scenario.av": "AV",
 
   "enhancementConfig.dynamicHint": "{{enhancers}} in this group support dynamic properties. Click the configure button below to add more properties.",

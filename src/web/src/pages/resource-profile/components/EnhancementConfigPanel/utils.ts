@@ -24,23 +24,35 @@ export const enhancerIdToScope = (id: EnhancerId): PropertyValueScope => {
 
 export enum PropertyGroup {
   General = "general",
+  Doujinshi = "doujinshi",
+  Manga = "manga",
+  Gallery = "gallery",
+  GameCG = "gameCG",
   Anime = "anime",
   Movie = "movie",
   TV = "tv",
-  Doujinshi = "doujinshi",
   Game = "game",
+  Music = "music",
+  VoiceWork = "voiceWork",
+  Book = "book",
   AV = "av",
 }
 
 /** Many-to-many: each group maps to enhancers, an enhancer can appear in multiple groups */
 export const groupEnhancerMap: Record<PropertyGroup, EnhancerId[]> = {
-  [PropertyGroup.General]: [EnhancerId.Bakabase, EnhancerId.Regex],
-  [PropertyGroup.Anime]: [EnhancerId.Bangumi],
-  [PropertyGroup.Movie]: [EnhancerId.Tmdb, EnhancerId.Kodi],
-  [PropertyGroup.TV]: [EnhancerId.Tmdb, EnhancerId.Kodi],
-  [PropertyGroup.Doujinshi]: [EnhancerId.ExHentai],
-  [PropertyGroup.Game]: [EnhancerId.DLsite],
-  [PropertyGroup.AV]: [EnhancerId.Av],
+  [PropertyGroup.General]: [EnhancerId.Regex],
+  [PropertyGroup.Doujinshi]: [EnhancerId.ExHentai, EnhancerId.DLsite, EnhancerId.Bakabase],
+  [PropertyGroup.Manga]: [EnhancerId.ExHentai, EnhancerId.DLsite, EnhancerId.Bakabase],
+  [PropertyGroup.Gallery]: [EnhancerId.ExHentai, EnhancerId.DLsite],
+  [PropertyGroup.GameCG]: [EnhancerId.ExHentai, EnhancerId.Bakabase],
+  [PropertyGroup.Anime]: [EnhancerId.Bangumi, EnhancerId.Kodi, EnhancerId.Tmdb],
+  [PropertyGroup.Movie]: [EnhancerId.Tmdb, EnhancerId.Kodi, EnhancerId.Bangumi, EnhancerId.Av],
+  [PropertyGroup.TV]: [EnhancerId.Tmdb, EnhancerId.Kodi, EnhancerId.Bangumi, EnhancerId.Av],
+  [PropertyGroup.Game]: [EnhancerId.Bangumi, EnhancerId.DLsite, EnhancerId.ExHentai],
+  [PropertyGroup.Music]: [EnhancerId.Bangumi, EnhancerId.Kodi],
+  [PropertyGroup.VoiceWork]: [EnhancerId.DLsite],
+  [PropertyGroup.Book]: [EnhancerId.Bangumi, EnhancerId.DLsite],
+  [PropertyGroup.AV]: [EnhancerId.Av, EnhancerId.Tmdb, EnhancerId.Kodi],
 };
 
 export const groupOrder: PropertyGroup[] = [
@@ -49,7 +61,13 @@ export const groupOrder: PropertyGroup[] = [
   PropertyGroup.Movie,
   PropertyGroup.TV,
   PropertyGroup.Doujinshi,
+  PropertyGroup.Manga,
+  PropertyGroup.Gallery,
+  PropertyGroup.GameCG,
   PropertyGroup.Game,
+  PropertyGroup.VoiceWork,
+  PropertyGroup.Music,
+  PropertyGroup.Book,
   PropertyGroup.AV,
 ];
 

@@ -120,16 +120,17 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     });
   }, [selectedEnhancerIds]);
 
-  // Open enhancer config modal
+  // Open enhancer config modal (only dynamic targets - static are configured outside)
   const openEnhancerConfig = (enhancer: EnhancerDescriptor) => {
     const currentLevelConfig = enhancerLevelConfigs.get(enhancer.id) ?? {};
 
-    const enabledTargets: { target: number; dynamicTarget?: string; pool?: number; propertyId?: number; autoBindProperty?: boolean; autoMatchMultilevelString?: boolean }[] = [];
+    // Only collect dynamic enabled targets for the modal
+    const dynamicTargets: { target: number; dynamicTarget?: string; pool?: number; propertyId?: number; autoBindProperty?: boolean; autoMatchMultilevelString?: boolean }[] = [];
     for (const [, state] of sourceStates) {
-      if (state.enhancerId === enhancer.id && state.enabled) {
-        enabledTargets.push({
+      if (state.enhancerId === enhancer.id && state.enabled && state.isDynamic) {
+        dynamicTargets.push({
           target: state.targetId,
-          dynamicTarget: state.isDynamic ? state.dynamicTarget : undefined,
+          dynamicTarget: state.dynamicTarget,
           pool: state.targetMapping?.pool,
           propertyId: state.targetMapping?.id,
           autoBindProperty: state.config?.autoBindProperty,
@@ -138,14 +139,20 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       }
     }
 
+    // Pass a descriptor with only dynamic targets so the modal won't render FixedTargets
+    const dynamicOnlyEnhancer: EnhancerDescriptor = {
+      ...enhancer,
+      targets: enhancer.targets.filter((t) => t.isDynamic),
+    };
+
     const optionsForModal: EnhancerFullOptions = {
-      targetOptions: enabledTargets.map((et) => ({
-        target: et.target,
-        dynamicTarget: et.dynamicTarget,
-        propertyPool: et.pool,
-        propertyId: et.propertyId,
-        autoBindProperty: et.autoBindProperty,
-        autoMatchMultilevelString: et.autoMatchMultilevelString,
+      targetOptions: dynamicTargets.map((dt) => ({
+        target: dt.target,
+        dynamicTarget: dt.dynamicTarget,
+        propertyPool: dt.pool,
+        propertyId: dt.propertyId,
+        autoBindProperty: dt.autoBindProperty,
+        autoMatchMultilevelString: dt.autoMatchMultilevelString,
       })),
       expressions: currentLevelConfig.expressions ?? undefined,
       requirements: currentLevelConfig.requirements as EnhancerId[] ?? undefined,
@@ -155,7 +162,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     };
 
     createPortal(EnhancerOptionsModal, {
-      enhancer,
+      enhancer: dynamicOnlyEnhancer,
       options: optionsForModal,
       onSubmit: async (newOptions: EnhancerFullOptions) => {
         setEnhancerLevelConfigs((prev) => {
