@@ -7,19 +7,30 @@ import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AiOutlineCheckCircle, AiOutlineSetting, AiOutlineWarning } from "react-icons/ai";
+import { AiOutlineCheckCircle, AiOutlineSetting, AiOutlineWarning, AiOutlineInfoCircle } from "react-icons/ai";
 
 import {
-  buildTargetItems,
-  mergeWithExistingConfig,
-  convertToEnhancerOptions,
+  buildScenarioGroups,
+  convertGroupsToEnhancerOptions,
   extractEnhancerLevelConfigs,
+  getUsedEnhancerIds,
+  enhancerNeedsConfig,
 } from "./utils";
-import type { EnhancementTargetItem } from "./utils";
+import type { ScenarioGroup, PropertyRow } from "./utils";
 
-import { Button, Card, CardBody, Checkbox, Chip, Divider, Modal, Tooltip } from "@/components/bakaui";
+import {
+  Button,
+  Card,
+  CardBody,
+  Checkbox,
+  Chip,
+  Divider,
+  Modal,
+  Tab,
+  Tabs,
+} from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { EnhancerId, EnhancerTag, PropertyPool } from "@/sdk/constants";
+import { EnhancerId } from "@/sdk/constants";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
@@ -36,7 +47,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const { createPortal } = useBakabaseContext();
 
   const [descriptors, setDescriptors] = useState<EnhancerDescriptor[]>([]);
-  const [targetItems, setTargetItems] = useState<Map<EnhancerId, EnhancementTargetItem[]>>(new Map());
+  const [groups, setGroups] = useState<ScenarioGroup[]>([]);
   const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<Map<EnhancerId, Partial<ApiEnhancerOptions>>>(new Map());
 
   useEffect(() => {
@@ -44,68 +55,90 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       const descs = (r.data || []) as EnhancerDescriptor[];
       setDescriptors(descs);
 
-      const items = buildTargetItems(descs);
       const existingConfig = propEnhancerOptions ?? [];
-      const merged = mergeWithExistingConfig(items, existingConfig);
-      setTargetItems(merged);
+      const scenarioGroups = buildScenarioGroups(descs, existingConfig);
+      setGroups(scenarioGroups);
       setEnhancerLevelConfigs(extractEnhancerLevelConfigs(existingConfig));
     });
   }, []);
 
-  const toggleTarget = (enhancerId: EnhancerId, targetId: number, dynamicTarget?: string) => {
-    setTargetItems((prev) => {
-      const next = new Map(prev);
-      const targets = [...(next.get(enhancerId) ?? [])];
-      const idx = targets.findIndex((t) =>
-        t.targetId === targetId && t.dynamicTarget === dynamicTarget
-      );
-      if (idx !== -1) {
-        targets[idx] = { ...targets[idx], enabled: !targets[idx].enabled };
-        next.set(enhancerId, targets);
+  const toggleSource = (
+    scenarioIdx: number,
+    isDynamic: boolean,
+    propIdx: number,
+    sourceIdx: number
+  ) => {
+    setGroups((prev) => {
+      const next = [...prev];
+      const group = { ...next[scenarioIdx] };
+      const propList = isDynamic
+        ? [...group.dynamicProperties]
+        : [...group.staticProperties];
+      const prop = { ...propList[propIdx] };
+      const sources = [...prop.sources];
+      sources[sourceIdx] = { ...sources[sourceIdx], enabled: !sources[sourceIdx].enabled };
+      prop.sources = sources;
+      propList[propIdx] = prop;
+      if (isDynamic) {
+        group.dynamicProperties = propList;
+      } else {
+        group.staticProperties = propList;
       }
+      next[scenarioIdx] = group;
       return next;
     });
   };
 
-  const toggleAllForEnhancer = (enhancerId: EnhancerId, enabled: boolean) => {
-    setTargetItems((prev) => {
-      const next = new Map(prev);
-      const targets = (next.get(enhancerId) ?? []).map((t) => ({ ...t, enabled }));
-      next.set(enhancerId, targets);
+  const toggleAllInScenario = (scenarioIdx: number, isDynamic: boolean, enabled: boolean) => {
+    setGroups((prev) => {
+      const next = [...prev];
+      const group = { ...next[scenarioIdx] };
+      const propList = (isDynamic ? group.dynamicProperties : group.staticProperties).map((prop) => ({
+        ...prop,
+        sources: prop.sources.map((s) => ({ ...s, enabled })),
+      }));
+      if (isDynamic) {
+        group.dynamicProperties = propList;
+      } else {
+        group.staticProperties = propList;
+      }
+      next[scenarioIdx] = group;
       return next;
     });
   };
 
-  const getEnhancerStats = (enhancerId: EnhancerId) => {
-    const targets = targetItems.get(enhancerId) ?? [];
-    const enabledCount = targets.filter((t) => t.enabled).length;
-    return { total: targets.length, enabled: enabledCount };
-  };
-
-  const usedEnhancerIds = useMemo(() => {
-    const ids: EnhancerId[] = [];
-    for (const [enhancerId, targets] of targetItems) {
-      if (targets.some((t) => t.enabled)) {
-        ids.push(enhancerId);
-      }
-    }
-    return ids;
-  }, [targetItems]);
+  const usedEnhancerIds = useMemo(() => getUsedEnhancerIds(groups), [groups]);
 
   const openEnhancerConfig = (enhancer: EnhancerDescriptor) => {
     const currentLevelConfig = enhancerLevelConfigs.get(enhancer.id) ?? {};
-    const currentTargets = targetItems.get(enhancer.id) ?? [];
-    const enabledTargets = currentTargets.filter((t) => t.enabled);
 
-    // Build the options object that EnhancerOptionsModal expects
+    // Collect enabled targets for this enhancer across all groups
+    const enabledTargets: { target: number; dynamicTarget?: string; pool?: number; propertyId?: number; autoBindProperty?: boolean; autoMatchMultilevelString?: boolean }[] = [];
+    for (const group of groups) {
+      for (const prop of [...group.staticProperties, ...group.dynamicProperties]) {
+        for (const source of prop.sources) {
+          if (source.enhancerId === enhancer.id && source.enabled) {
+            enabledTargets.push({
+              target: source.targetId,
+              dynamicTarget: source.targetDescriptor.isDynamic ? prop.propertyName : undefined,
+              pool: source.targetMapping?.pool,
+              propertyId: source.targetMapping?.id,
+              autoBindProperty: source.config?.autoBindProperty,
+              autoMatchMultilevelString: source.config?.autoMatchMultilevelString,
+            });
+          }
+        }
+      }
+    }
+
     const optionsForModal: EnhancerFullOptions = {
       targetOptions: enabledTargets.map((t) => ({
-        target: t.targetId,
+        target: t.target,
         dynamicTarget: t.dynamicTarget,
-        propertyPool: t.targetMapping?.pool,
-        propertyId: t.targetMapping?.id,
-        autoBindProperty: t.config?.autoBindProperty,
-        autoMatchMultilevelString: t.config?.autoMatchMultilevelString,
+        propertyPool: t.pool,
+        propertyId: t.propertyId,
+        autoBindProperty: t.autoBindProperty,
+        autoMatchMultilevelString: t.autoMatchMultilevelString,
       })),
       expressions: currentLevelConfig.expressions ?? undefined,
       requirements: currentLevelConfig.requirements as EnhancerId[] ?? undefined,
@@ -134,28 +167,40 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
         // Update target-level config from modal results
         if (newOptions.targetOptions) {
-          setTargetItems((prev) => {
-            const next = new Map(prev);
-            const targets = [...(next.get(enhancer.id) ?? [])];
-            for (const to of newOptions.targetOptions!) {
-              const idx = targets.findIndex((t) =>
-                t.targetId === to.target && t.dynamicTarget === to.dynamicTarget
-              );
-              if (idx !== -1) {
-                targets[idx] = {
-                  ...targets[idx],
-                  targetMapping:
-                    to.propertyPool != null && to.propertyId != null
-                      ? { pool: to.propertyPool, id: to.propertyId }
-                      : undefined,
-                  config: {
-                    autoBindProperty: to.autoBindProperty,
-                    autoMatchMultilevelString: to.autoMatchMultilevelString,
-                  },
-                };
-              }
-            }
-            next.set(enhancer.id, targets);
+          setGroups((prev) => {
+            const next = prev.map((group) => {
+              const updatePropList = (propList: PropertyRow[]): PropertyRow[] =>
+                propList.map((prop) => ({
+                  ...prop,
+                  sources: prop.sources.map((source) => {
+                    if (source.enhancerId !== enhancer.id) return source;
+                    const to = newOptions.targetOptions?.find((t) =>
+                      t.target === source.targetId &&
+                      (source.targetDescriptor.isDynamic
+                        ? t.dynamicTarget === prop.propertyName
+                        : true)
+                    );
+                    if (!to) return source;
+                    return {
+                      ...source,
+                      targetMapping:
+                        to.propertyPool != null && to.propertyId != null
+                          ? { pool: to.propertyPool, id: to.propertyId }
+                          : undefined,
+                      config: {
+                        autoBindProperty: to.autoBindProperty,
+                        autoMatchMultilevelString: to.autoMatchMultilevelString,
+                      },
+                    };
+                  }),
+                }));
+
+              return {
+                ...group,
+                staticProperties: updatePropList(group.staticProperties),
+                dynamicProperties: updatePropList(group.dynamicProperties),
+              };
+            });
             return next;
           });
         }
@@ -163,23 +208,206 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     });
   };
 
-  const needsConfig = (enhancerId: EnhancerId): boolean => {
-    const desc = descriptors.find((d) => d.id === enhancerId);
-    if (!desc) return false;
-    const levelConfig = enhancerLevelConfigs.get(enhancerId);
-
-    // Regex needs expressions
-    if (desc.tags.includes(EnhancerTag.UseRegex)) {
-      if (!levelConfig?.expressions || levelConfig.expressions.filter((e) => e.trim()).length === 0) {
-        return true;
-      }
-    }
-    return false;
+  const handleSubmit = () => {
+    const result = convertGroupsToEnhancerOptions(groups, enhancerLevelConfigs);
+    onSubmit?.(result);
   };
 
-  const handleSubmit = () => {
-    const result = convertToEnhancerOptions(targetItems, enhancerLevelConfigs);
-    onSubmit?.(result);
+  const getScenarioStats = (group: ScenarioGroup, isDynamic: boolean) => {
+    const props = isDynamic ? group.dynamicProperties : group.staticProperties;
+    let total = 0;
+    let enabled = 0;
+    for (const prop of props) {
+      for (const source of prop.sources) {
+        total++;
+        if (source.enabled) enabled++;
+      }
+    }
+    return { total, enabled };
+  };
+
+  const renderPropertyRow = (
+    prop: PropertyRow,
+    scenarioIdx: number,
+    propIdx: number,
+    isDynamic: boolean
+  ) => {
+    const hasEnabled = prop.sources.some((s) => s.enabled);
+    return (
+      <div
+        key={`${prop.propertyName}-${propIdx}`}
+        className={`flex items-center gap-3 py-1.5 px-2 rounded ${hasEnabled ? "bg-success-50" : ""}`}
+      >
+        <div className="min-w-[140px] text-sm font-medium truncate">
+          {prop.propertyName}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {prop.sources.map((source, sourceIdx) => {
+            const desc = descriptors.find((d) => d.id === source.enhancerId);
+            return (
+              <Checkbox
+                key={`${source.enhancerId}-${source.targetId}`}
+                isSelected={source.enabled}
+                size="sm"
+                onValueChange={() => toggleSource(scenarioIdx, isDynamic, propIdx, sourceIdx)}
+              >
+                <span className="text-xs">
+                  {desc ? (
+                    <span className="flex items-center gap-1">
+                      <BriefEnhancer enhancer={desc} />
+                    </span>
+                  ) : source.enhancerName}
+                </span>
+              </Checkbox>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderScenarioGroup = (group: ScenarioGroup, scenarioIdx: number) => {
+    const hasDynamicEnhancers = group.dynamicEnhancers.length > 0;
+
+    return (
+      <div key={group.scenario} className="border border-default-200 rounded-lg">
+        {/* Scenario header */}
+        <div className="flex items-center gap-2 px-3 py-2 bg-default-50 rounded-t-lg border-b border-default-200">
+          <span className="text-sm font-semibold">
+            {t(`enhancementConfig.scenario.${group.scenario}`)}
+          </span>
+          <span className="text-xs text-default-400">
+            {group.enhancers.map((e) => e.name).join(", ")}
+          </span>
+        </div>
+
+        <div className="p-2">
+          {hasDynamicEnhancers ? (
+            <Tabs
+              size="sm"
+              aria-label={`${group.scenario} tabs`}
+              classNames={{ panel: "py-2" }}
+            >
+              <Tab key="static" title={t<string>("enhancementConfig.tab.staticProperties")}>
+                {renderStaticTab(group, scenarioIdx)}
+              </Tab>
+              <Tab key="dynamic" title={t<string>("enhancementConfig.tab.dynamicProperties")}>
+                {renderDynamicTab(group, scenarioIdx)}
+              </Tab>
+            </Tabs>
+          ) : (
+            renderStaticTab(group, scenarioIdx)
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderStaticTab = (group: ScenarioGroup, scenarioIdx: number) => {
+    const stats = getScenarioStats(group, false);
+    const allSelected = stats.enabled === stats.total && stats.total > 0;
+    const someSelected = stats.enabled > 0;
+
+    return (
+      <div className="flex flex-col gap-1">
+        {group.staticProperties.length > 0 && (
+          <div className="flex items-center gap-2 mb-1">
+            <Checkbox
+              isIndeterminate={someSelected && !allSelected}
+              isSelected={allSelected}
+              size="sm"
+              onValueChange={(checked) => toggleAllInScenario(scenarioIdx, false, checked)}
+            >
+              <span className="text-xs text-default-500">
+                {t("enhancementConfig.selectAll")}
+              </span>
+            </Checkbox>
+            {someSelected && (
+              <Chip size="sm" variant="flat" color="success">
+                {stats.enabled}/{stats.total}
+              </Chip>
+            )}
+          </div>
+        )}
+        {group.staticProperties.map((prop, propIdx) =>
+          renderPropertyRow(prop, scenarioIdx, propIdx, false)
+        )}
+        {group.staticProperties.length === 0 && (
+          <div className="py-4 text-center text-sm text-default-400">
+            {t("enhancementConfig.noStaticProperties")}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderDynamicTab = (group: ScenarioGroup, scenarioIdx: number) => {
+    return (
+      <div className="flex flex-col gap-3">
+        {/* Explanation */}
+        <div className="flex items-start gap-2 p-3 bg-warning-50 rounded-lg text-sm">
+          <AiOutlineInfoCircle className="text-warning mt-0.5 flex-shrink-0" />
+          <div className="text-default-600">
+            {t("enhancementConfig.dynamicExplanation")}
+          </div>
+        </div>
+
+        {/* Enhancer config entry points */}
+        <div className="flex flex-col gap-2">
+          <div className="text-xs font-medium text-default-500">
+            {t("enhancementConfig.configureDynamicEnhancers")}
+          </div>
+          {group.dynamicEnhancers.map((enhancer) => {
+            const needsCfg = enhancerNeedsConfig(enhancer, enhancerLevelConfigs.get(enhancer.id));
+            return (
+              <Card key={enhancer.id} className="shadow-none border border-default-200">
+                <CardBody className="flex-row items-center justify-between py-2 px-3">
+                  <div className="flex items-center gap-2">
+                    <BriefEnhancer enhancer={enhancer} />
+                    {needsCfg ? (
+                      <Chip size="sm" variant="flat" color="warning" startContent={<AiOutlineWarning />}>
+                        {t<string>("enhancementConfig.needsConfig")}
+                      </Chip>
+                    ) : (
+                      <Chip size="sm" variant="flat" color="success" startContent={<AiOutlineCheckCircle />}>
+                        {t<string>("enhancementConfig.configured")}
+                      </Chip>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    color="primary"
+                    startContent={<AiOutlineSetting />}
+                    onPress={() => openEnhancerConfig(enhancer)}
+                  >
+                    {t<string>("resourceProfile.action.configure")}
+                  </Button>
+                </CardBody>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Configured dynamic properties */}
+        {group.dynamicProperties.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <div className="text-xs font-medium text-default-500">
+              {t("enhancementConfig.configuredDynamicProperties")}
+            </div>
+            {group.dynamicProperties.map((prop, propIdx) =>
+              renderPropertyRow(prop, scenarioIdx, propIdx, true)
+            )}
+          </div>
+        )}
+
+        {group.dynamicProperties.length === 0 && (
+          <div className="py-3 text-center text-sm text-default-400">
+            {t("enhancementConfig.noDynamicPropertiesYet")}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -187,71 +415,13 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       defaultVisible
       classNames={{ base: "max-w-[90vw] max-h-[90vh]" }}
       size="5xl"
-      title={t<string>("resourceProfile.enhancementConfig.title")}
+      title={t<string>("enhancementConfig.title")}
       onDestroyed={onDestroyed}
       onOk={handleSubmit}
     >
       <div className="flex flex-col gap-4 overflow-auto max-h-[70vh]">
-        {/* Target Selection Section */}
-        <div>
-          <div className="text-base font-medium mb-2">
-            {t<string>("resourceProfile.enhancementConfig.targetSelection")}
-          </div>
-          <div className="flex flex-col gap-3">
-            {[...targetItems.entries()].map(([enhancerId, targets]) => {
-              const desc = descriptors.find((d) => d.id === enhancerId);
-              if (!desc) return null;
-              const stats = getEnhancerStats(enhancerId);
-              const allSelected = stats.enabled === stats.total && stats.total > 0;
-              const someSelected = stats.enabled > 0;
-
-              return (
-                <div key={enhancerId} className="border border-default-200 rounded-lg p-3">
-                  {/* Enhancer header */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <Checkbox
-                      isIndeterminate={someSelected && !allSelected}
-                      isSelected={allSelected}
-                      size="sm"
-                      onValueChange={(checked) => toggleAllForEnhancer(enhancerId, checked)}
-                    />
-                    <BriefEnhancer enhancer={desc} />
-                    {someSelected && (
-                      <Chip size="sm" variant="flat" color="success">
-                        {stats.enabled}/{stats.total}
-                      </Chip>
-                    )}
-                  </div>
-
-                  {/* Target grid */}
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-1 pl-7">
-                    {targets.map((target) => (
-                      <div
-                        key={`${target.targetId}-${target.dynamicTarget ?? ""}`}
-                        className="flex items-center gap-1"
-                      >
-                        <Checkbox
-                          isSelected={target.enabled}
-                          size="sm"
-                          onValueChange={() =>
-                            toggleTarget(enhancerId, target.targetId, target.dynamicTarget)
-                          }
-                        >
-                          <span className="text-sm">{target.targetName}</span>
-                        </Checkbox>
-                        {target.isDynamic && (
-                          <Chip size="sm" variant="flat" color="warning" className="h-4 text-[10px]">
-                            {t<string>("resourceProfile.enhancementConfig.dynamic")}
-                          </Chip>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        {/* Scenario groups */}
+        {groups.map((group, idx) => renderScenarioGroup(group, idx))}
 
         {/* Enhancer Configuration Section */}
         {usedEnhancerIds.length > 0 && (
@@ -259,14 +429,13 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             <Divider />
             <div>
               <div className="text-base font-medium mb-2">
-                {t<string>("resourceProfile.enhancementConfig.enhancerConfig")}
+                {t<string>("enhancementConfig.enhancerConfig")}
               </div>
               <div className="flex flex-col gap-2">
                 {usedEnhancerIds.map((enhancerId) => {
                   const desc = descriptors.find((d) => d.id === enhancerId);
                   if (!desc) return null;
-                  const stats = getEnhancerStats(enhancerId);
-                  const needsCfg = needsConfig(enhancerId);
+                  const needsCfg = enhancerNeedsConfig(desc, enhancerLevelConfigs.get(enhancerId));
 
                   return (
                     <Card key={enhancerId} className="shadow-none border border-default-200">
@@ -275,16 +444,13 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                           <BriefEnhancer enhancer={desc} />
                           {needsCfg ? (
                             <Chip size="sm" variant="flat" color="warning" startContent={<AiOutlineWarning />}>
-                              {t<string>("resourceProfile.enhancementConfig.needsConfig")}
+                              {t<string>("enhancementConfig.needsConfig")}
                             </Chip>
                           ) : (
                             <Chip size="sm" variant="flat" color="success" startContent={<AiOutlineCheckCircle />}>
-                              {t<string>("resourceProfile.enhancementConfig.configured")}
+                              {t<string>("enhancementConfig.configured")}
                             </Chip>
                           )}
-                          <span className="text-xs text-default-400">
-                            {t("resourceProfile.enhancementConfig.targetsUsing", { count: stats.enabled })}
-                          </span>
                         </div>
                         <Button
                           size="sm"

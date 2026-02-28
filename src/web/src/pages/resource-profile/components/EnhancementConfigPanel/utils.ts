@@ -1,7 +1,7 @@
 import type { EnhancerDescriptor, EnhancerTargetDescriptor } from "@/components/EnhancerSelectorV2/models";
 import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/Api";
 import type { PropertyPool, PropertyType } from "@/sdk/constants";
-import { EnhancerId, PropertyValueScope } from "@/sdk/constants";
+import { EnhancerId, EnhancerTag, PropertyValueScope } from "@/sdk/constants";
 
 type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
@@ -20,15 +20,53 @@ export const enhancerIdToScope = (id: EnhancerId): PropertyValueScope => {
   return map[id];
 };
 
-/** Single enhancer target view model */
-export interface EnhancementTargetItem {
+// ─── Scenario definitions ────────────────────────────────────────────
+
+export enum EnhancementScenario {
+  Anime = "anime",
+  Movie = "movie",
+  Doujinshi = "doujinshi",
+  Game = "game",
+  AV = "av",
+  General = "general",
+}
+
+/** Which enhancers belong to which scenario */
+export const scenarioEnhancerMap: Record<EnhancementScenario, EnhancerId[]> = {
+  [EnhancementScenario.Anime]: [EnhancerId.Bangumi],
+  [EnhancementScenario.Movie]: [EnhancerId.Tmdb, EnhancerId.Kodi],
+  [EnhancementScenario.Doujinshi]: [EnhancerId.ExHentai],
+  [EnhancementScenario.Game]: [EnhancerId.DLsite],
+  [EnhancementScenario.AV]: [EnhancerId.Av],
+  [EnhancementScenario.General]: [EnhancerId.Bakabase, EnhancerId.Regex],
+};
+
+/** All scenarios in display order */
+export const scenarioOrder: EnhancementScenario[] = [
+  EnhancementScenario.General,
+  EnhancementScenario.Anime,
+  EnhancementScenario.Movie,
+  EnhancementScenario.Doujinshi,
+  EnhancementScenario.Game,
+  EnhancementScenario.AV,
+];
+
+/** Reverse lookup: enhancerId → scenario */
+export function getEnhancerScenario(enhancerId: EnhancerId): EnhancementScenario {
+  for (const [scenario, ids] of Object.entries(scenarioEnhancerMap)) {
+    if (ids.includes(enhancerId)) return scenario as EnhancementScenario;
+  }
+  return EnhancementScenario.General;
+}
+
+// ─── Property-centric data model ─────────────────────────────────────
+
+/** One enhancer source for a property row */
+export interface EnhancerSource {
   enhancerId: EnhancerId;
   enhancerName: string;
   targetId: number;
-  targetName: string;
-  propertyType: PropertyType;
-  isDynamic: boolean;
-  dynamicTarget?: string;
+  targetDescriptor: EnhancerTargetDescriptor;
   enabled: boolean;
   targetMapping?: {
     pool: PropertyPool;
@@ -41,163 +79,262 @@ export interface EnhancementTargetItem {
   };
 }
 
-/**
- * Build target items from enhancer descriptors, grouped by enhancer.
- * Each group is sorted by target name alphabetically.
- */
-export function buildTargetItems(
-  descriptors: EnhancerDescriptor[]
-): Map<EnhancerId, EnhancementTargetItem[]> {
-  const result = new Map<EnhancerId, EnhancementTargetItem[]>();
-
-  for (const desc of descriptors) {
-    const items: EnhancementTargetItem[] = desc.targets.map((target: EnhancerTargetDescriptor) => ({
-      enhancerId: desc.id,
-      enhancerName: desc.name,
-      targetId: target.id,
-      targetName: target.name,
-      propertyType: target.propertyType,
-      isDynamic: target.isDynamic,
-      enabled: false,
-      config: {},
-    }));
-
-    // Sort by target name alphabetically
-    items.sort((a, b) => a.targetName.localeCompare(b.targetName));
-    result.set(desc.id, items);
-  }
-
-  // Sort the map by enhancer name
-  const sorted = new Map(
-    [...result.entries()].sort(([, a], [, b]) => {
-      const nameA = a[0]?.enhancerName ?? "";
-      const nameB = b[0]?.enhancerName ?? "";
-      return nameA.localeCompare(nameB);
-    })
-  );
-
-  return sorted;
+/** A single property row - may have multiple enhancer sources */
+export interface PropertyRow {
+  /** Canonical property name (target name) */
+  propertyName: string;
+  propertyType: PropertyType;
+  /** All enhancers that can provide this property */
+  sources: EnhancerSource[];
 }
 
+/** A scenario group containing property rows */
+export interface ScenarioGroup {
+  scenario: EnhancementScenario;
+  /** Enhancer descriptors in this scenario */
+  enhancers: EnhancerDescriptor[];
+  /** Static property rows (non-dynamic targets) */
+  staticProperties: PropertyRow[];
+  /** Enhancers that support dynamic targets */
+  dynamicEnhancers: EnhancerDescriptor[];
+  /** Dynamic property rows (from configured dynamic targets) */
+  dynamicProperties: PropertyRow[];
+}
+
+// ─── Build functions ─────────────────────────────────────────────────
+
 /**
- * Merge existing enhancer config into target items.
+ * Build scenario groups from enhancer descriptors.
+ * Static targets with the same name within a scenario are merged into one row.
  */
-export function mergeWithExistingConfig(
-  items: Map<EnhancerId, EnhancementTargetItem[]>,
-  config: ApiEnhancerOptions[]
-): Map<EnhancerId, EnhancementTargetItem[]> {
-  const result = new Map<EnhancerId, EnhancementTargetItem[]>();
+export function buildScenarioGroups(
+  descriptors: EnhancerDescriptor[],
+  existingConfig: ApiEnhancerOptions[]
+): ScenarioGroup[] {
+  const groups: ScenarioGroup[] = [];
 
-  for (const [enhancerId, targets] of items) {
-    const enhancerConfig = config.find((c) => c.enhancerId === enhancerId);
-    const newTargets = targets.map((target) => {
-      if (!enhancerConfig?.targetOptions) return { ...target };
+  for (const scenario of scenarioOrder) {
+    const enhancerIds = scenarioEnhancerMap[scenario];
+    const enhancers = descriptors.filter((d) => enhancerIds.includes(d.id));
+    if (enhancers.length === 0) continue;
 
-      const targetOption = enhancerConfig.targetOptions.find((to) => {
+    // Collect static properties, merging same-name targets
+    const staticMap = new Map<string, PropertyRow>();
+    // Collect dynamic enhancers and dynamic properties
+    const dynamicEnhancers: EnhancerDescriptor[] = [];
+    const dynamicMap = new Map<string, PropertyRow>();
+
+    for (const desc of enhancers) {
+      let hasDynamic = false;
+
+      for (const target of desc.targets) {
         if (target.isDynamic) {
-          return to.target === target.targetId && to.dynamicTarget === target.dynamicTarget;
+          hasDynamic = true;
+          // Dynamic targets: build from existing config (already configured dynamic targets)
+          const enhancerConfig = existingConfig.find((c) => c.enhancerId === desc.id);
+          if (enhancerConfig?.targetOptions) {
+            for (const to of enhancerConfig.targetOptions) {
+              if (to.target === target.id && to.dynamicTarget) {
+                const key = `${desc.id}:${target.id}:${to.dynamicTarget}`;
+                const toAny = to as any;
+                if (!dynamicMap.has(key)) {
+                  dynamicMap.set(key, {
+                    propertyName: to.dynamicTarget,
+                    propertyType: target.propertyType,
+                    sources: [{
+                      enhancerId: desc.id,
+                      enhancerName: desc.name,
+                      targetId: target.id,
+                      targetDescriptor: target,
+                      enabled: true,
+                      targetMapping:
+                        to.propertyPool != null && to.propertyId != null
+                          ? { pool: to.propertyPool, id: to.propertyId }
+                          : undefined,
+                      config: {
+                        autoBindProperty: toAny.autoBindProperty,
+                        autoMatchMultilevelString: toAny.autoMatchMultilevelString,
+                        coverSelectOrder: toAny.coverSelectOrder,
+                      },
+                    }],
+                  });
+                }
+              }
+            }
+          }
+          continue;
         }
-        return to.target === target.targetId;
-      });
 
-      if (!targetOption) return { ...target };
+        // Static target: merge by target name
+        const source = buildSource(desc, target, existingConfig);
+        const existing = staticMap.get(target.name);
+        if (existing) {
+          existing.sources.push(source);
+        } else {
+          staticMap.set(target.name, {
+            propertyName: target.name,
+            propertyType: target.propertyType,
+            sources: [source],
+          });
+        }
+      }
 
-      // Use type assertion since SDK types may not include all fields sent via API
-      const to = targetOption as any;
-      return {
-        ...target,
-        enabled: true,
-        targetMapping:
-          targetOption.propertyPool != null && targetOption.propertyId != null
-            ? { pool: targetOption.propertyPool, id: targetOption.propertyId }
-            : undefined,
-        config: {
-          autoBindProperty: to.autoBindProperty,
-          autoMatchMultilevelString: to.autoMatchMultilevelString,
-          coverSelectOrder: to.coverSelectOrder,
-        },
-      };
+      if (hasDynamic) {
+        dynamicEnhancers.push(desc);
+      }
+    }
+
+    // Sort properties alphabetically
+    const staticProperties = [...staticMap.values()].sort((a, b) =>
+      a.propertyName.localeCompare(b.propertyName)
+    );
+    const dynamicProperties = [...dynamicMap.values()].sort((a, b) =>
+      a.propertyName.localeCompare(b.propertyName)
+    );
+
+    groups.push({
+      scenario,
+      enhancers,
+      staticProperties,
+      dynamicEnhancers,
+      dynamicProperties,
     });
-    result.set(enhancerId, newTargets);
   }
 
-  return result;
+  return groups;
 }
 
+function buildSource(
+  desc: EnhancerDescriptor,
+  target: EnhancerTargetDescriptor,
+  existingConfig: ApiEnhancerOptions[]
+): EnhancerSource {
+  const enhancerConfig = existingConfig.find((c) => c.enhancerId === desc.id);
+  const targetOption = enhancerConfig?.targetOptions?.find((to) => to.target === target.id);
+
+  const source: EnhancerSource = {
+    enhancerId: desc.id,
+    enhancerName: desc.name,
+    targetId: target.id,
+    targetDescriptor: target,
+    enabled: false,
+    config: {},
+  };
+
+  if (targetOption) {
+    const toAny = targetOption as any;
+    source.enabled = true;
+    source.targetMapping =
+      targetOption.propertyPool != null && targetOption.propertyId != null
+        ? { pool: targetOption.propertyPool, id: targetOption.propertyId }
+        : undefined;
+    source.config = {
+      autoBindProperty: toAny.autoBindProperty,
+      autoMatchMultilevelString: toAny.autoMatchMultilevelString,
+      coverSelectOrder: toAny.coverSelectOrder,
+    };
+  }
+
+  return source;
+}
+
+// ─── Convert back to API format ──────────────────────────────────────
+
 /**
- * Convert target items back to EnhancerFullOptions[] for storage.
- * Only includes enhancers that have at least one enabled target.
+ * Convert scenario groups back to EnhancerFullOptions[] for storage.
+ * Only includes enhancers with at least one enabled source.
  */
-export function convertToEnhancerOptions(
-  items: Map<EnhancerId, EnhancementTargetItem[]>,
+export function convertGroupsToEnhancerOptions(
+  groups: ScenarioGroup[],
   enhancerLevelConfigs: Map<EnhancerId, Partial<ApiEnhancerOptions>>
 ): ApiEnhancerOptions[] {
+  // Collect all enabled sources by enhancer
+  const enhancerTargets = new Map<EnhancerId, {
+    target: number;
+    dynamicTarget?: string;
+    pool?: PropertyPool;
+    propertyId?: number;
+    coverSelectOrder?: number;
+  }[]>();
+
+  for (const group of groups) {
+    const allProperties = [...group.staticProperties, ...group.dynamicProperties];
+    for (const prop of allProperties) {
+      for (const source of prop.sources) {
+        if (!source.enabled) continue;
+        const targets = enhancerTargets.get(source.enhancerId) ?? [];
+        targets.push({
+          target: source.targetId,
+          dynamicTarget: source.targetDescriptor.isDynamic ? prop.propertyName : undefined,
+          pool: source.targetMapping?.pool,
+          propertyId: source.targetMapping?.id,
+          coverSelectOrder: source.config?.coverSelectOrder,
+        });
+        enhancerTargets.set(source.enhancerId, targets);
+      }
+    }
+  }
+
   const result: ApiEnhancerOptions[] = [];
-
-  for (const [enhancerId, targets] of items) {
-    const enabledTargets = targets.filter((t) => t.enabled);
-    if (enabledTargets.length === 0) continue;
-
+  for (const [enhancerId, targets] of enhancerTargets) {
     const levelConfig = enhancerLevelConfigs.get(enhancerId) ?? {};
-
-    const enhancerOptions: ApiEnhancerOptions = {
+    result.push({
       enhancerId,
       ...levelConfig,
-      targetOptions: enabledTargets.map((t) => ({
-        target: t.targetId,
+      targetOptions: targets.map((t) => ({
+        target: t.target,
         dynamicTarget: t.dynamicTarget,
-        propertyPool: t.targetMapping?.pool ?? 0 as any,
-        propertyId: t.targetMapping?.id ?? 0,
-        coverSelectOrder: t.config?.coverSelectOrder,
+        propertyPool: t.pool ?? 0 as any,
+        propertyId: t.propertyId ?? 0,
+        coverSelectOrder: t.coverSelectOrder,
       })),
-    };
-
-    result.push(enhancerOptions);
+    });
   }
 
   return result;
 }
 
 /**
- * Extract enhancer-level config from existing options (everything except targetOptions).
+ * Extract enhancer-level config from existing options.
  */
 export function extractEnhancerLevelConfigs(
   config: ApiEnhancerOptions[]
 ): Map<EnhancerId, Partial<ApiEnhancerOptions>> {
   const result = new Map<EnhancerId, Partial<ApiEnhancerOptions>>();
-
   for (const c of config) {
     const { targetOptions, ...rest } = c;
     result.set(c.enhancerId as EnhancerId, rest);
   }
-
   return result;
 }
 
 /**
- * Get the relevant PropertyValueScopes for a property based on which enhancers target it.
+ * Get enhancer IDs that have at least one enabled source across all groups.
  */
-export function getRelevantScopes(
-  items: Map<EnhancerId, EnhancementTargetItem[]>,
-  propertyPool: PropertyPool,
-  propertyId: number
-): PropertyValueScope[] {
-  const scopes: PropertyValueScope[] = [
-    PropertyValueScope.Manual,
-    PropertyValueScope.Synchronization,
-  ];
-
-  for (const [enhancerId, targets] of items) {
-    const hasTarget = targets.some(
-      (t) =>
-        t.enabled &&
-        t.targetMapping?.pool === propertyPool &&
-        t.targetMapping?.id === propertyId
-    );
-    if (hasTarget) {
-      scopes.push(enhancerIdToScope(enhancerId));
+export function getUsedEnhancerIds(groups: ScenarioGroup[]): EnhancerId[] {
+  const ids = new Set<EnhancerId>();
+  for (const group of groups) {
+    for (const prop of [...group.staticProperties, ...group.dynamicProperties]) {
+      for (const source of prop.sources) {
+        if (source.enabled) ids.add(source.enhancerId);
+      }
     }
   }
+  return [...ids];
+}
 
-  return scopes;
+/**
+ * Check if an enhancer needs additional configuration (e.g. Regex needs expressions).
+ */
+export function enhancerNeedsConfig(
+  descriptor: EnhancerDescriptor,
+  levelConfig: Partial<ApiEnhancerOptions> | undefined
+): boolean {
+  if (descriptor.tags.includes(EnhancerTag.UseRegex)) {
+    const expressions = levelConfig?.expressions;
+    if (!expressions || expressions.filter((e: string) => e.trim()).length === 0) {
+      return true;
+    }
+  }
+  return false;
 }
