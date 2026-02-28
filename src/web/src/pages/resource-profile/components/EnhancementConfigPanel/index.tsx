@@ -429,6 +429,16 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       onOk={handleSubmit}
     >
       <div className="flex flex-col" style={{ height: "70vh" }}>
+        {/* ─── Intro tip ─── */}
+        <div className="flex-shrink-0 text-sm text-default-500 pb-2">
+          <p>{t("enhancementConfig.intro")}</p>
+          <ol className="list-decimal list-inside mt-1 text-xs text-default-400 flex gap-4">
+            <li>{t("enhancementConfig.introStep1")}</li>
+            <li>{t("enhancementConfig.introStep2")}</li>
+            <li>{t("enhancementConfig.introStep3")}</li>
+          </ol>
+        </div>
+
         {/* ─── Fixed top: Group tags (multi-select) ─── */}
         <div className="flex-shrink-0 flex items-center gap-2 pb-2 flex-wrap">
           <span className="text-xs text-default-400 whitespace-nowrap">

@@ -177,6 +177,10 @@
   "enhancementConfig.noDynamicPropertiesYet": "尚未配置任何动态属性。请先配置上方的增强器。",
   "enhancementConfig.noStaticProperties": "当前分组无属性",
   "enhancementConfig.unboundWarning": "此属性已被勾选但未绑定到任何系统属性，增强后的数据将不可见。请点击左侧按钮绑定或创建属性。",
+  "enhancementConfig.intro": "增强器可以从外部数据源（如 Bangumi、DLsite 等）自动获取并填充资源的属性值。选择资源类型后，勾选需要的属性及其数据来源，然后绑定到系统属性即可。",
+  "enhancementConfig.introStep1": "选择资源类型，查看可用属性",
+  "enhancementConfig.introStep2": "勾选属性的数据来源（增强器）",
+  "enhancementConfig.introStep3": "将属性绑定到系统属性，使增强后的数据可见",
 
   "resourceProfile.propertyPool.title": "属性池配置",
   "resourceProfile.propertyPool.description": "配置匹配此方案的资源应显示哪些属性，以及每个属性的值展示优先级。",
