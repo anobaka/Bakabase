@@ -173,6 +173,7 @@
   "enhancementConfig.configuredDynamicProperties": "Configured dynamic properties",
   "enhancementConfig.noDynamicPropertiesYet": "No dynamic properties configured yet. Please configure the enhancers above first.",
   "enhancementConfig.noStaticProperties": "No properties in this group",
+  "enhancementConfig.unboundWarning": "This property is checked but not bound to any system property. Enhanced data will not be visible. Click the button to bind or create a property.",
 
   "resourceProfile.propertyPool.title": "Property Pool Configuration",
   "resourceProfile.propertyPool.description": "Configure which properties should be displayed for resources matching this profile, and the value display priority for each property.",

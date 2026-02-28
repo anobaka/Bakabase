@@ -18,6 +18,8 @@ import {
   getDynamicEnhancersForGroups,
   getEnhancerIdsForGroups,
   enhancerNeedsConfig,
+  getRowBinding,
+  isRowEnabledButUnbound,
   sourceKey,
   groupOrder,
   PropertyGroup,
@@ -31,10 +33,14 @@ import {
   Checkbox,
   Chip,
   Modal,
+  Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
-import { EnhancerId } from "@/sdk/constants";
+import { EnhancerId, PropertyPool } from "@/sdk/constants";
+import type { IProperty } from "@/components/Property/models";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
+import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
+import PropertyMatcher from "@/components/PropertyMatcher";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
 
@@ -53,14 +59,41 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const [sourceStates, setSourceStates] = useState<Map<string, SourceState>>(new Map());
   const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<Map<EnhancerId, Partial<ApiEnhancerOptions>>>(new Map());
   const [selectedGroups, setSelectedGroups] = useState<Set<PropertyGroup>>(new Set([PropertyGroup.General]));
+  // Cache of loaded properties for display in PropertyMatcher
+  const [propertyCache, setPropertyCache] = useState<Map<string, IProperty>>(new Map());
 
   useEffect(() => {
     BApi.enhancer.getAllEnhancerDescriptors().then((r) => {
       const descs = (r.data || []) as EnhancerDescriptor[];
       setDescriptors(descs);
       const existingConfig = propEnhancerOptions ?? [];
-      setSourceStates(buildSourceStates(descs, existingConfig));
+      const states = buildSourceStates(descs, existingConfig);
+      setSourceStates(states);
       setEnhancerLevelConfigs(extractEnhancerLevelConfigs(existingConfig));
+
+      // Load bound properties into cache
+      const propertyIds = new Map<PropertyPool, Set<number>>();
+      for (const [, state] of states) {
+        if (state.targetMapping) {
+          const ids = propertyIds.get(state.targetMapping.pool) ?? new Set();
+          ids.add(state.targetMapping.id);
+          propertyIds.set(state.targetMapping.pool, ids);
+        }
+      }
+      const pools = [...propertyIds.keys()];
+      if (pools.length > 0) {
+        Promise.all(
+          pools.map((pool) => BApi.property.getPropertiesByPool(pool))
+        ).then((results) => {
+          const cache = new Map<string, IProperty>();
+          for (const res of results) {
+            for (const p of (res.data ?? []) as IProperty[]) {
+              cache.set(`${p.pool}:${p.id}`, p);
+            }
+          }
+          setPropertyCache(cache);
+        });
+      }
     });
   }, []);
 
@@ -119,6 +152,45 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       return next;
     });
   }, [selectedEnhancerIds]);
+
+  // Bind a property to all sources in a row
+  const bindPropertyToRow = useCallback((row: PropertyRow, property: IProperty) => {
+    setSourceStates((prev) => {
+      const next = new Map(prev);
+      for (const source of row.sources) {
+        const state = next.get(source.stateKey);
+        if (state) {
+          next.set(source.stateKey, {
+            ...state,
+            targetMapping: { pool: property.pool, id: property.id },
+          });
+        }
+      }
+      return next;
+    });
+    setPropertyCache((prev) => {
+      const next = new Map(prev);
+      next.set(`${property.pool}:${property.id}`, property);
+      return next;
+    });
+  }, []);
+
+  // Unbind property from all sources in a row
+  const unbindPropertyFromRow = useCallback((row: PropertyRow) => {
+    setSourceStates((prev) => {
+      const next = new Map(prev);
+      for (const source of row.sources) {
+        const state = next.get(source.stateKey);
+        if (state) {
+          next.set(source.stateKey, {
+            ...state,
+            targetMapping: undefined,
+          });
+        }
+      }
+      return next;
+    });
+  }, []);
 
   // Open enhancer config modal (only dynamic targets - static are configured outside)
   const openEnhancerConfig = (enhancer: EnhancerDescriptor) => {
@@ -270,15 +342,27 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
   const renderPropertyRow = (prop: PropertyRow) => {
     const hasEnabled = prop.sources.some((s) => s.enabled);
+    const binding = getRowBinding(prop, sourceStates);
+    const unbound = isRowEnabledButUnbound(prop, sourceStates);
+    const boundProperty = binding ? propertyCache.get(`${binding.pool}:${binding.id}`) : undefined;
+
     return (
       <div
-        key={prop.propertyName}
-        className={`flex items-center gap-3 py-1.5 px-2 rounded ${hasEnabled ? "bg-success-50" : ""}`}
+        key={`${prop.propertyName}::${prop.propertyType}`}
+        className={`flex items-center gap-3 py-1.5 px-2 rounded ${unbound ? "bg-warning-50" : hasEnabled ? "bg-success-50" : ""}`}
       >
-        <div className="min-w-[140px] text-sm font-medium truncate">
+        {/* Property name */}
+        <div className="min-w-[120px] text-sm font-medium truncate">
           {prop.propertyName}
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+
+        {/* Property type */}
+        <div className="min-w-[100px] flex-shrink-0">
+          <PropertyTypeIcon type={prop.propertyType} textVariant="default" />
+        </div>
+
+        {/* Enhancer checkboxes */}
+        <div className="flex items-center gap-2 flex-wrap flex-1">
           {prop.sources.map((source) => {
             const desc = descriptors.find((d) => d.id === source.enhancerId);
             return (
@@ -298,6 +382,28 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
               </Checkbox>
             );
           })}
+        </div>
+
+        {/* Bound property */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <PropertyMatcher
+            matchedProperty={boundProperty}
+            name={prop.propertyName}
+            type={prop.propertyType}
+            isClearable
+            onValueChanged={(p) => {
+              if (p) {
+                bindPropertyToRow(prop, p);
+              } else {
+                unbindPropertyFromRow(prop);
+              }
+            }}
+          />
+          {unbound && (
+            <Tooltip content={t<string>("enhancementConfig.unboundWarning")}>
+              <AiOutlineWarning className="text-warning text-base flex-shrink-0" />
+            </Tooltip>
+          )}
         </div>
       </div>
     );
