@@ -60,6 +60,11 @@
   "resource.display.properties": "Display properties",
   "resource.display.selectedProperties": "Selected",
   "resource.display.selectProperties": "Select properties",
+  "resource.display.coverPropertyFontSize": "Cover property font size",
+  "resource.display.styleSettings": "Style settings",
+  "resource.display.styleGroup.resourceList": "Resource list",
+  "resource.display.tab.general": "General",
+  "resource.display.tab.style": "Style",
 
   "resource.shortcut.title": "Shortcuts",
 

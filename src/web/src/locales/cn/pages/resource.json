@@ -60,6 +60,11 @@
   "resource.display.properties": "显示属性",
   "resource.display.selectedProperties": "已选择",
   "resource.display.selectProperties": "选择属性",
+  "resource.display.coverPropertyFontSize": "封面属性文字大小",
+  "resource.display.styleSettings": "样式设置",
+  "resource.display.styleGroup.resourceList": "资源列表",
+  "resource.display.tab.general": "通用",
+  "resource.display.tab.style": "样式",
 
   "resource.shortcut.title": "快捷键",
 
