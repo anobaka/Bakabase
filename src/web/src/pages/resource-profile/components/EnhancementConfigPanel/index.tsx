@@ -408,7 +408,9 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
             />
             {unbound && (
               <Tooltip content={t<string>("enhancementConfig.unboundWarning")}>
-                <AiOutlineWarning className="text-warning text-base flex-shrink-0" />
+                <span className="flex items-center">
+                  <AiOutlineWarning className="text-warning text-base flex-shrink-0" />
+                </span>
               </Tooltip>
             )}
           </div>
