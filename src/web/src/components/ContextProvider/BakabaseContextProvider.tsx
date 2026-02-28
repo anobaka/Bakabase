@@ -15,8 +15,9 @@ import duration from "dayjs/plugin/duration";
 
 import { UIHubConnection } from "@/components/SignalR/UIHubConnection";
 import { getUiTheme, uuidv4 } from "@/components/utils";
-import { useAppOptionsStore } from "@/stores/options";
+import { useAppOptionsStore, useUiStyleOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
+import { allCssVariableDefinitions } from "@/cons/uiStyleVariables";
 import i18n from "@/i18n";
 import BApi from "@/sdk/BApi";
 import Window from "@/components/Window";
@@ -177,6 +178,7 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const appOptionsStore = useAppOptionsStore();
+  const cssVariableOverwrites = useUiStyleOptionsStore((s) => s.data?.cssVariableOverwrites);
   const isDebugging = false;
   const firstTimeGotAppOptionsRef = useRef(false);
 
@@ -228,6 +230,15 @@ const BakabaseContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       }
     }
   }, [appOptions]);
+
+  // Inject CSS variable overwrites to :root
+  useEffect(() => {
+    const root = document.documentElement;
+    for (const def of allCssVariableDefinitions) {
+      const value = cssVariableOverwrites?.[def.name] ?? def.defaultValue;
+      root.style.setProperty(def.name, value);
+    }
+  }, [cssVariableOverwrites]);
 
   // Clear non-persistent portals on route change
   // Persistent windows (created with createWindow) will remain
