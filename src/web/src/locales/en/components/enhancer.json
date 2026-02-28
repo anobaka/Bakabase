@@ -25,8 +25,8 @@
   "enhancer.options.runAfter.label": "Run after enhancers",
   "enhancer.options.runAfter.description": "You can perform chained enhancement by customizing the execution order of the enhancers.",
   "enhancer.options.runAfter.tip": "Generally, you can just leave it as empty.",
-  "enhancer.options.enhanceProperties.label": "Enhance properties",
-  "enhancer.options.enhanceProperties.tip": "Please select at least one property to enhance.",
+  "enhancer.options.enhanceProperties.label": "Dynamic Property Configuration",
+  "enhancer.options.enhanceProperties.tip": "Configure dynamic properties for this enhancer. Static properties are managed in the external property list.",
 
   "enhancer.categoryOptions.title": "Configure enhancer:{{enhancerName}} for category:{{categoryName}}",
 
