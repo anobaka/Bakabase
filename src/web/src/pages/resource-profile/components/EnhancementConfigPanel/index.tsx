@@ -33,6 +33,12 @@ import {
   Checkbox,
   Chip,
   Modal,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
   Tooltip,
 } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
@@ -347,61 +353,67 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     const boundProperty = binding ? propertyCache.get(`${binding.pool}:${binding.id}`) : undefined;
 
     return (
-      <div
+      <TableRow
         key={`${prop.propertyName}::${prop.propertyType}`}
-        className={`flex items-center gap-3 py-1.5 px-2 rounded ${unbound ? "bg-warning-50" : hasEnabled ? "bg-success-50" : ""}`}
+        className={unbound ? "bg-warning-50" : hasEnabled ? "bg-success-50" : ""}
       >
         {/* Property name + type */}
-        <div className="min-w-[140px] flex items-center gap-1 text-sm font-medium truncate">
-          <PropertyTypeIcon type={prop.propertyType} textVariant="tooltip" />
-          {prop.propertyName}
-        </div>
+        <TableCell>
+          <div className="flex items-center gap-1 text-sm font-medium">
+            <PropertyTypeIcon type={prop.propertyType} textVariant="tooltip" />
+            <span className="truncate">{prop.propertyName}</span>
+          </div>
+        </TableCell>
 
         {/* Enhancer checkboxes */}
-        <div className="flex items-center gap-2 flex-wrap flex-1">
-          {prop.sources.map((source) => {
-            const desc = descriptors.find((d) => d.id === source.enhancerId);
-            return (
-              <Checkbox
-                key={source.stateKey}
-                isSelected={source.enabled}
-                size="sm"
-                onValueChange={() => toggleSource(source.stateKey)}
-              >
-                <span className="text-xs">
-                  {desc ? (
-                    <span className="flex items-center gap-1">
-                      <BriefEnhancer enhancer={desc} />
-                    </span>
-                  ) : source.enhancerName}
-                </span>
-              </Checkbox>
-            );
-          })}
-        </div>
+        <TableCell>
+          <div className="flex items-center gap-2 flex-wrap">
+            {prop.sources.map((source) => {
+              const desc = descriptors.find((d) => d.id === source.enhancerId);
+              return (
+                <Checkbox
+                  key={source.stateKey}
+                  isSelected={source.enabled}
+                  size="sm"
+                  onValueChange={() => toggleSource(source.stateKey)}
+                >
+                  <span className="text-xs">
+                    {desc ? (
+                      <span className="flex items-center gap-1">
+                        <BriefEnhancer enhancer={desc} />
+                      </span>
+                    ) : source.enhancerName}
+                  </span>
+                </Checkbox>
+              );
+            })}
+          </div>
+        </TableCell>
 
         {/* Bound property */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <PropertyMatcher
-            matchedProperty={boundProperty}
-            name={prop.propertyName}
-            type={prop.propertyType}
-            isClearable
-            onValueChanged={(p) => {
-              if (p) {
-                bindPropertyToRow(prop, p);
-              } else {
-                unbindPropertyFromRow(prop);
-              }
-            }}
-          />
-          {unbound && (
-            <Tooltip content={t<string>("enhancementConfig.unboundWarning")}>
-              <AiOutlineWarning className="text-warning text-base flex-shrink-0" />
-            </Tooltip>
-          )}
-        </div>
-      </div>
+        <TableCell>
+          <div className="flex items-center gap-1">
+            <PropertyMatcher
+              matchedProperty={boundProperty}
+              name={prop.propertyName}
+              type={prop.propertyType}
+              isClearable
+              onValueChanged={(p) => {
+                if (p) {
+                  bindPropertyToRow(prop, p);
+                } else {
+                  unbindPropertyFromRow(prop);
+                }
+              }}
+            />
+            {unbound && (
+              <Tooltip content={t<string>("enhancementConfig.unboundWarning")}>
+                <AiOutlineWarning className="text-warning text-base flex-shrink-0" />
+              </Tooltip>
+            )}
+          </div>
+        </TableCell>
+      </TableRow>
     );
   };
 
@@ -441,49 +453,50 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
         {/* ─── Scrollable middle: Property list ─── */}
         <div className="flex-1 overflow-y-auto py-2 min-h-0">
-          {selectedGroups.size > 0 && currentProperties.length > 0 && (
-            <>
-              {/* Table header */}
-              <div className="flex items-center gap-3 py-1.5 px-2 border-b border-default-200 mb-1 sticky top-0 bg-background z-10">
-                <div className="min-w-[140px] text-xs text-default-500 font-medium">
+          {selectedGroups.size > 0 && currentProperties.length > 0 ? (
+            <Table
+              isCompact
+              isHeaderSticky
+              removeWrapper
+              aria-label="Enhancement properties"
+            >
+              <TableHeader>
+                <TableColumn width="20%">
                   {t("enhancementConfig.columnProperty")}
-                </div>
-                <div className="flex-1 text-xs text-default-500 font-medium flex items-center gap-2">
-                  {t("enhancementConfig.columnSources")}
-                  <Checkbox
-                    isIndeterminate={someSelected && !allSelected}
-                    isSelected={allSelected}
-                    size="sm"
-                    onValueChange={(checked) => toggleAllInSelectedGroups(checked)}
-                  >
-                    <span className="text-xs text-default-400">
-                      {t("enhancementConfig.selectAll")}
-                    </span>
-                  </Checkbox>
-                  {someSelected && (
-                    <Chip size="sm" variant="flat" color="success">
-                      {groupStats.enabled}/{groupStats.total}
-                    </Chip>
-                  )}
-                </div>
-                <div className="flex-shrink-0 text-xs text-default-500 font-medium">
+                </TableColumn>
+                <TableColumn>
+                  <div className="flex items-center gap-2">
+                    {t("enhancementConfig.columnSources")}
+                    <Checkbox
+                      isIndeterminate={someSelected && !allSelected}
+                      isSelected={allSelected}
+                      size="sm"
+                      onValueChange={(checked) => toggleAllInSelectedGroups(checked)}
+                    >
+                      <span className="text-xs text-default-400">
+                        {t("enhancementConfig.selectAll")}
+                      </span>
+                    </Checkbox>
+                    {someSelected && (
+                      <Chip size="sm" variant="flat" color="success">
+                        {groupStats.enabled}/{groupStats.total}
+                      </Chip>
+                    )}
+                  </div>
+                </TableColumn>
+                <TableColumn width="15%">
                   {t("enhancementConfig.columnBindProperty")}
-                </div>
-              </div>
-            </>
-          )}
-
-          <div className="flex flex-col gap-0.5">
-            {currentProperties.map((prop) => renderPropertyRow(prop))}
-          </div>
-
-          {selectedGroups.size === 0 && (
+                </TableColumn>
+              </TableHeader>
+              <TableBody>
+                {currentProperties.map((prop) => renderPropertyRow(prop))}
+              </TableBody>
+            </Table>
+          ) : selectedGroups.size === 0 ? (
             <div className="py-8 text-center text-sm text-default-400">
               {t("enhancementConfig.selectGroupFirst")}
             </div>
-          )}
-
-          {selectedGroups.size > 0 && currentProperties.length === 0 && (
+          ) : (
             <div className="py-8 text-center text-sm text-default-400">
               {t("enhancementConfig.noStaticProperties")}
             </div>
