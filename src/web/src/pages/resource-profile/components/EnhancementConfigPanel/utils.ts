@@ -280,12 +280,11 @@ export function getEnhancerIdsForGroups(groups: PropertyGroup[]): Set<EnhancerId
   return ids;
 }
 
-/** Derive property rows for multiple selected groups (union of enhancers, deduped by name+type) */
-export function getPropertyRowsForGroups(
-  groups: PropertyGroup[],
+/** Derive property rows for a set of enhancer IDs (deduped by name+type) */
+export function getPropertyRowsForEnhancerIds(
+  enhancerIds: Set<EnhancerId>,
   sourceStates: Map<string, SourceState>
 ): PropertyRow[] {
-  const enhancerIds = getEnhancerIdsForGroups(groups);
   const rowMap = new Map<string, PropertyRow>();
 
   for (const [key, state] of sourceStates) {
@@ -321,15 +320,46 @@ export function getPropertyRowsForGroups(
   return [...rowMap.values()].sort((a, b) => a.propertyName.localeCompare(b.propertyName));
 }
 
+/** Derive property rows for multiple selected groups (union of enhancers, deduped by name+type) */
+export function getPropertyRowsForGroups(
+  groups: PropertyGroup[],
+  sourceStates: Map<string, SourceState>
+): PropertyRow[] {
+  const enhancerIds = getEnhancerIdsForGroups(groups);
+  return getPropertyRowsForEnhancerIds(enhancerIds, sourceStates);
+}
+
+/** Get dynamic enhancers from a set of enhancer IDs */
+export function getDynamicEnhancersForEnhancerIds(
+  enhancerIds: Set<EnhancerId>,
+  descriptors: EnhancerDescriptor[]
+): EnhancerDescriptor[] {
+  return descriptors.filter(
+    (d) => enhancerIds.has(d.id) && d.targets.some((t) => t.isDynamic)
+  );
+}
+
 /** Get dynamic enhancers from multiple selected groups */
 export function getDynamicEnhancersForGroups(
   groups: PropertyGroup[],
   descriptors: EnhancerDescriptor[]
 ): EnhancerDescriptor[] {
   const enhancerIds = getEnhancerIdsForGroups(groups);
-  return descriptors.filter(
-    (d) => enhancerIds.has(d.id) && d.targets.some((t) => t.isDynamic)
-  );
+  return getDynamicEnhancersForEnhancerIds(enhancerIds, descriptors);
+}
+
+/** Count properties with at least one enabled source for a specific enhancer */
+export function getEnhancerEnabledCount(
+  enhancerId: EnhancerId,
+  sourceStates: Map<string, SourceState>
+): number {
+  const enabledKeys = new Set<string>();
+  for (const [, state] of sourceStates) {
+    if (state.enhancerId !== enhancerId || !state.enabled) continue;
+    const name = state.isDynamic ? (state.dynamicTarget ?? "") : state.targetDescriptor.name;
+    if (name) enabledKeys.add(`${name}::${state.targetDescriptor.propertyType}`);
+  }
+  return enabledKeys.size;
 }
 
 /** Get enhancers in a group that have dynamic targets */

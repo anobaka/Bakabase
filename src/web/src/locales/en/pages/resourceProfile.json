@@ -175,6 +175,7 @@
   "enhancementConfig.configureDynamicEnhancers": "Configure enhancers that support dynamic properties",
   "enhancementConfig.configuredDynamicProperties": "Configured dynamic properties",
   "enhancementConfig.noDynamicPropertiesYet": "No dynamic properties configured yet. Please configure the enhancers above first.",
+  "enhancementConfig.selectByEnhancer": "Select by enhancer",
   "enhancementConfig.noStaticProperties": "No properties in this group",
   "enhancementConfig.unboundWarning": "This property is checked but not bound to any system property. Enhanced data will not be visible. Click the button to bind or create a property.",
   "enhancementConfig.intro": "Enhancers automatically fetch and populate resource properties from external data sources (e.g. Bangumi, DLsite). Select a resource type, check the properties and sources you need, then bind them to system properties.",

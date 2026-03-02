@@ -14,8 +14,9 @@ import {
   convertStatesToEnhancerOptions,
   extractEnhancerLevelConfigs,
   getGroupEnabledCount,
-  getPropertyRowsForGroups,
-  getDynamicEnhancersForGroups,
+  getEnhancerEnabledCount,
+  getPropertyRowsForEnhancerIds,
+  getDynamicEnhancersForEnhancerIds,
   getEnhancerIdsForGroups,
   enhancerNeedsConfig,
   getRowBinding,
@@ -45,6 +46,7 @@ import BApi from "@/sdk/BApi";
 import { EnhancerId, PropertyPool } from "@/sdk/constants";
 import type { IProperty } from "@/components/Property/models";
 import BriefEnhancer from "@/components/Chips/Enhancer/BriefEnhancer";
+import { EnhancerIcon } from "@/components/Enhancer";
 import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon";
 import PropertyMatcher from "@/components/PropertyMatcher";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
@@ -65,6 +67,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
   const [sourceStates, setSourceStates] = useState<Map<string, SourceState>>(new Map());
   const [enhancerLevelConfigs, setEnhancerLevelConfigs] = useState<Map<EnhancerId, Partial<ApiEnhancerOptions>>>(new Map());
   const [selectedGroups, setSelectedGroups] = useState<Set<PropertyGroup>>(new Set([PropertyGroup.General]));
+  const [selectedEnhancers, setSelectedEnhancers] = useState<Set<EnhancerId>>(new Set());
   // Cache of loaded properties for display in PropertyMatcher
   const [propertyCache, setPropertyCache] = useState<Map<string, IProperty>>(new Map());
 
@@ -105,20 +108,26 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
 
   const selectedGroupsArray = useMemo(() => [...selectedGroups], [selectedGroups]);
 
-  // Derived data for selected groups
+  // Combined enhancer IDs from both group selection and direct enhancer selection
+  const selectedEnhancerIds = useMemo(() => {
+    const ids = getEnhancerIdsForGroups(selectedGroupsArray);
+    for (const id of selectedEnhancers) {
+      ids.add(id);
+    }
+    return ids;
+  }, [selectedGroupsArray, selectedEnhancers]);
+
+  const hasSelection = selectedGroups.size > 0 || selectedEnhancers.size > 0;
+
+  // Derived data for combined selection
   const currentProperties = useMemo(
-    () => getPropertyRowsForGroups(selectedGroupsArray, sourceStates),
-    [selectedGroupsArray, sourceStates]
+    () => getPropertyRowsForEnhancerIds(selectedEnhancerIds, sourceStates),
+    [selectedEnhancerIds, sourceStates]
   );
 
   const dynamicEnhancers = useMemo(
-    () => getDynamicEnhancersForGroups(selectedGroupsArray, descriptors),
-    [selectedGroupsArray, descriptors]
-  );
-
-  const selectedEnhancerIds = useMemo(
-    () => getEnhancerIdsForGroups(selectedGroupsArray),
-    [selectedGroupsArray]
+    () => getDynamicEnhancersForEnhancerIds(selectedEnhancerIds, descriptors),
+    [selectedEnhancerIds, descriptors]
   );
 
   // Toggle group selection
@@ -129,6 +138,19 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
         next.delete(group);
       } else {
         next.add(group);
+      }
+      return next;
+    });
+  }, []);
+
+  // Toggle direct enhancer selection
+  const toggleEnhancer = useCallback((enhancerId: EnhancerId) => {
+    setSelectedEnhancers((prev) => {
+      const next = new Set(prev);
+      if (next.has(enhancerId)) {
+        next.delete(enhancerId);
+      } else {
+        next.add(enhancerId);
       }
       return next;
     });
@@ -463,9 +485,34 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
           })}
         </div>
 
+        {/* ─── Select by enhancer ─── */}
+        <div className="flex-shrink-0 flex items-center gap-2 pb-2 flex-wrap">
+          <span className="text-xs text-default-400 whitespace-nowrap">
+            {t("enhancementConfig.selectByEnhancer")}
+          </span>
+          {descriptors.map((enhancer) => {
+            const isSelected = selectedEnhancers.has(enhancer.id);
+            const count = getEnhancerEnabledCount(enhancer.id, sourceStates);
+            return (
+              <Chip
+                key={enhancer.id}
+                className="cursor-pointer select-none"
+                color={isSelected ? "secondary" : "default"}
+                variant={isSelected ? "solid" : "bordered"}
+                size="sm"
+                onClick={() => toggleEnhancer(enhancer.id)}
+                startContent={<EnhancerIcon id={enhancer.id} />}
+              >
+                {enhancer.name}
+                {count > 0 && ` (${count})`}
+              </Chip>
+            );
+          })}
+        </div>
+
         {/* ─── Scrollable middle: Property list ─── */}
         <div className="flex-1 overflow-y-auto py-2 min-h-0">
-          {selectedGroups.size > 0 && currentProperties.length > 0 ? (
+          {hasSelection && currentProperties.length > 0 ? (
             <Table
               isCompact
               isHeaderSticky
@@ -504,7 +551,7 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
                 {currentProperties.map((prop) => renderPropertyRow(prop))}
               </TableBody>
             </Table>
-          ) : selectedGroups.size === 0 ? (
+          ) : !hasSelection ? (
             <div className="py-8 text-center text-sm text-default-400">
               {t("enhancementConfig.selectGroupFirst")}
             </div>
