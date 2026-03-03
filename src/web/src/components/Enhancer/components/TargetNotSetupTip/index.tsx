@@ -33,7 +33,8 @@ const isSet = (
 ): boolean => {
   return (
     (options != undefined &&
-      ((options.propertyId != undefined && options.propertyId > 0) ||
+      ((options.propertyId != undefined && options.propertyId > 0 &&
+        options.propertyPool != undefined && (options.propertyPool as number) > 0) ||
         options.autoBindProperty ||
         isDefaultOfDynamic)) ??
     false
