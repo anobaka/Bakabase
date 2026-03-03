@@ -40,10 +40,26 @@ const extractCaptureGroups = (expressions: string[]) =>
     return s;
   }, []);
 
+/** Sanitize targetOptions on load: treat pool=0/id=0 (C# default for unbound) as undefined */
+const sanitizeOptions = (opts?: EnhancerFullOptions): EnhancerFullOptions => {
+  if (!opts) return {};
+  return {
+    ...opts,
+    targetOptions: opts.targetOptions?.map((to) => {
+      if ((to.propertyPool != null && to.propertyPool <= 0) || (to.propertyId != null && to.propertyId <= 0)) {
+        return { ...to, propertyPool: undefined, propertyId: undefined };
+      }
+      return to;
+    }),
+  };
+};
+
 type Props = {
   enhancer: EnhancerDescriptor;
   options?: EnhancerFullOptions;
   onSubmit?: (options: EnhancerFullOptions) => Promise<any>;
+  /** When true, hide property binding and target config columns (managed by outer panel) */
+  hideBindingAndConfig?: boolean;
 } & DestroyableProps;
 
 export default function EnhancerOptionsModal({
@@ -51,13 +67,14 @@ export default function EnhancerOptionsModal({
   options: propsOptions,
   onSubmit,
   onDestroyed,
+  hideBindingAndConfig,
 }: Props) {
   const { t } = useTranslation();
   const { createPortal } = useBakabaseContext();
   const forceUpdate = useUpdate();
   const navigate = useNavigate();
 
-  const [options, setOptions] = useState<EnhancerFullOptions>(propsOptions ?? {});
+  const [options, setOptions] = useState<EnhancerFullOptions>(sanitizeOptions(propsOptions));
   const [propertyMap, setPropertyMap] = useState<{
     [key in PropertyPool]?: Record<number, IProperty>;
   }>({});
@@ -306,7 +323,51 @@ export default function EnhancerOptionsModal({
 
   const hasDynamicTargets = enhancer.targets?.some((t) => t.isDynamic);
   const hasFixedTargets = enhancer.targets?.some((t) => !t.isDynamic);
-  // console.log('prerequisite enhancers', options.requirements, options.requirements?.map((r) => r.toString()));
+  // When candidateTargetsMap is populated (e.g. Regex), dynamic targets are fully driven by candidates
+  const hasCandidateTargets = Object.keys(candidateTargetsMap).length > 0;
+
+  // Auto-sync candidate targets (e.g. regex capture groups) into targetOptions
+  // so that DynamicTargets UI is not needed for candidate-driven enhancers
+  const captureGroupsKey = captureGroups.join("\0");
+  useEffect(() => {
+    if (!hasCandidateTargets) return;
+
+    const dynamicDescriptor = enhancer.targets.find((t) => t.isDynamic);
+    if (!dynamicDescriptor) return;
+
+    setOptions((prev) => {
+      const current = prev.targetOptions ?? [];
+
+      // Separate non-candidate targets from candidate-driven ones
+      const kept = current.filter(
+        (to) => to.target !== dynamicDescriptor.id || to.dynamicTarget == undefined,
+      );
+
+      // Build synced list from candidates, preserving existing config (property binding etc.)
+      const existingByName = new Map(
+        current
+          .filter((to) => to.target === dynamicDescriptor.id && to.dynamicTarget != undefined)
+          .map((to) => [to.dynamicTarget!, to]),
+      );
+
+      const synced = captureGroups.map(
+        (group) => existingByName.get(group) ?? { target: dynamicDescriptor.id, dynamicTarget: group },
+      );
+
+      // Check if anything actually changed
+      const oldDynamic = current.filter(
+        (to) => to.target === dynamicDescriptor.id && to.dynamicTarget != undefined,
+      );
+      if (
+        synced.length === oldDynamic.length &&
+        synced.every((s, i) => s.dynamicTarget === oldDynamic[i]?.dynamicTarget)
+      ) {
+        return prev;
+      }
+
+      return { ...prev, targetOptions: [...kept, ...synced] };
+    });
+  }, [captureGroupsKey]);
 
   return (
     <Modal
@@ -323,7 +384,14 @@ export default function EnhancerOptionsModal({
       }
       onDestroyed={onDestroyed}
       onOk={async () => {
-        await onSubmit?.(options);
+        // Filter out target entries without valid property binding to prevent saving invalid data
+        const sanitized = {
+          ...options,
+          targetOptions: options.targetOptions?.filter(
+            (to) => to.autoBindProperty || (to.propertyPool && to.propertyPool > 0 && to.propertyId && to.propertyId > 0),
+          ),
+        };
+        await onSubmit?.(sanitized);
       }}
     >
       <div className={"flex flex-col gap-y-2"}>
@@ -417,47 +485,51 @@ export default function EnhancerOptionsModal({
         )}
       </div>
 
-      <div>
-        <div className="text-base">
-          {t<string>("enhancer.options.enhanceProperties.label")}
-          <div className="text-xs text-default-400">
-            <div>{t<string>("enhancer.options.enhanceProperties.tip")}</div>
+      {(hasFixedTargets || (hasDynamicTargets && !hasCandidateTargets)) && (
+        <div>
+          <div className="text-base">
+            {t<string>("enhancer.options.enhanceProperties.label")}
+            <div className="text-xs text-default-400">
+              <div>{t<string>("enhancer.options.enhanceProperties.tip")}</div>
+            </div>
           </div>
+          {options && (
+            <div className={"flex flex-col gap-y-4"}>
+              {hasFixedTargets && (
+                <FixedTargets
+                  enhancer={enhancer}
+                  hideBindingAndConfig={hideBindingAndConfig}
+                  optionsList={options.targetOptions}
+                  propertyMap={propertyMap}
+                  onChange={(list) => {
+                    setOptions({
+                      ...options,
+                      targetOptions: list,
+                    });
+                  }}
+                  onPropertyChanged={loadAllProperties}
+                />
+              )}
+              {hasDynamicTargets && !hasCandidateTargets && (
+                <DynamicTargets
+                  candidateTargetsMap={candidateTargetsMap}
+                  enhancer={enhancer}
+                  hideBindingAndConfig={hideBindingAndConfig}
+                  optionsList={options.targetOptions}
+                  propertyMap={propertyMap}
+                  onChange={(list) => {
+                    setOptions({
+                      ...options,
+                      targetOptions: list,
+                    });
+                  }}
+                  onPropertyChanged={loadAllProperties}
+                />
+              )}
+            </div>
+          )}
         </div>
-        {options && (
-          <div className={"flex flex-col gap-y-4"}>
-            {hasFixedTargets && (
-              <FixedTargets
-                enhancer={enhancer}
-                optionsList={options.targetOptions}
-                propertyMap={propertyMap}
-                onChange={(list) => {
-                  setOptions({
-                    ...options,
-                    targetOptions: list,
-                  });
-                }}
-                onPropertyChanged={loadAllProperties}
-              />
-            )}
-            {hasDynamicTargets && (
-              <DynamicTargets
-                candidateTargetsMap={candidateTargetsMap}
-                enhancer={enhancer}
-                optionsList={options.targetOptions}
-                propertyMap={propertyMap}
-                onChange={(list) => {
-                  setOptions({
-                    ...options,
-                    targetOptions: list,
-                  });
-                }}
-                onPropertyChanged={loadAllProperties}
-              />
-            )}
-          </div>
-        )}
-      </div>
+      )}
     </Modal>
   );
 }

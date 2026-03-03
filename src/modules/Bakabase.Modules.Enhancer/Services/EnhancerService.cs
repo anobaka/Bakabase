@@ -399,7 +399,9 @@ namespace Bakabase.Modules.Enhancer.Services
                     x => new EnhancerFullOptions
                     {
                         EnhancerId = x.EnhancerId,
-                        TargetOptions = x.TargetOptions?.Select(t => new EnhancerTargetFullOptions
+                        TargetOptions = x.TargetOptions
+                            ?.Where(t => (int)t.PropertyPool > 0 && t.PropertyId > 0)
+                            .Select(t => new EnhancerTargetFullOptions
                         {
                             CoverSelectOrder = t.CoverSelectOrder,
                             PropertyId = t.PropertyId,
@@ -787,7 +789,7 @@ namespace Bakabase.Modules.Enhancer.Services
                             if (targetOptions != null)
                             {
                                 var property = propertyMap.GetValueOrDefault(targetOptions.PropertyPool)
-                                    ?.GetValueOrDefault(targetOptions.PropertyId);;
+                                    ?.GetValueOrDefault(targetOptions.PropertyId);
 
                                 if (property != null)
                                 {

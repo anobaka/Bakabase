@@ -244,7 +244,8 @@ public static class MediaLibraryTemplateExtensions
             {
                 EnhancerId = eo.EnhancerId,
                 TargetOptions = ceo?.Options?.TargetOptions
-                    ?.Select(to =>
+                    ?.Where(to => (int)to.PropertyPool > 0 && to.PropertyId > 0)
+                    .Select(to =>
                         new EnhancerTargetFullOptions()
                         {
                             CoverSelectOrder = to.CoverSelectOrder,
