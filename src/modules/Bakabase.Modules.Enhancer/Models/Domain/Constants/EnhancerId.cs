@@ -9,6 +9,7 @@ using Bakabase.Modules.Enhancer.Components.Enhancers.DLsite;
 using Bakabase.Modules.Enhancer.Components.Enhancers.ExHentai;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Kodi;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Regex;
+using Bakabase.Modules.Enhancer.Components.Enhancers.Steam;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Tmdb;
 
 namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
@@ -40,6 +41,9 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         Av = 8,
 
         [Enhancer(typeof(AiEnhancer), PropertyValueScope.AiEnhancer, typeof(AiEnhancerTarget), [])]
-        AI = 9
+        AI = 9,
+
+        [Enhancer(typeof(SteamEnhancer), PropertyValueScope.SteamEnhancer, typeof(SteamEnhancerTarget), [])]
+        Steam = 10
     }
 }

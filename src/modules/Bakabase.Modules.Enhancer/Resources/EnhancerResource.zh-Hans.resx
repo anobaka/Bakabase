@@ -675,4 +675,37 @@
   <data name="Enhancer_KeywordAfterPretreatment" xml:space="preserve">
     <value>预处理后的关键字: {0}</value>
   </data>
+  <data name="Enhancer_Steam_Name" xml:space="preserve">
+    <value>Steam</value>
+  </data>
+  <data name="Enhancer_Steam_Description" xml:space="preserve">
+    <value>从 Steam 商店获取游戏元数据。</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Name_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Description_Name" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Developer_Name" xml:space="preserve">
+    <value>开发商</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Publisher_Name" xml:space="preserve">
+    <value>发行商</value>
+  </data>
+  <data name="Enhancer_Steam_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>发售日期</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Genre_Name" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Category_Name" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="Enhancer_Steam_Target_MetacriticScore_Name" xml:space="preserve">
+    <value>Metacritic 评分</value>
+  </data>
+  <data name="Enhancer_Steam_Target_Cover_Name" xml:space="preserve">
+    <value>封面</value>
+  </data>
 </root>

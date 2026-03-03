@@ -8,6 +8,7 @@ using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
@@ -20,6 +21,9 @@ internal class SyncContext
     public Dictionary<string, Resource> PathToResource { get; } = new(StringComparer.OrdinalIgnoreCase);
     public HashSet<string> ExistingPathSet { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<int, Resource> IdToResource { get; } = new();
+
+    // SourceKey -> Resource for non-FileSystem resources
+    public Dictionary<string, Resource> SourceKeyToResource { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     // Caches for standardized paths
     public Dictionary<string, string> StandardizedPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -99,6 +103,14 @@ internal class SyncContext
     // Paths affected by resource effect changes
     public HashSet<string> AffectedResourcePaths { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // ===== Resolver Integration =====
+    // Resources discovered by resolvers (path/virtualPath -> ResolvedResource)
+    public Dictionary<string, ResolvedResource> ResolverDiscoveredResources { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    // Resolver sync results: Source -> success/failure (for Absent resource detection)
+    // true = resolver completed successfully, false = resolver failed (network/auth issue)
+    public Dictionary<ResourceSource, bool> ResolverSyncResults { get; } = new();
+
     // Effect keys for current sync (used for diff detection)
     public HashSet<(int MarkId, PropertyPool Pool, int PropertyId, int ResourceId)> CurrentPropertyEffectKeys { get; } = new();
     public HashSet<(int MarkId, string Path)> CurrentResourceEffectKeys { get; } = new(new ResourceEffectKeyComparer());
@@ -119,6 +131,7 @@ internal class SyncContext
         PathToResource.Clear();
         ExistingPathSet.Clear();
         IdToResource.Clear();
+        SourceKeyToResource.Clear();
 
         foreach (var resource in AllResources)
         {
@@ -129,6 +142,12 @@ internal class SyncContext
                 ExistingPathSet.Add(standardizedPath);
             }
             IdToResource[resource.Id] = resource;
+
+            // Index non-FileSystem resources by SourceKey
+            if (resource.Source != ResourceSource.FileSystem && !string.IsNullOrEmpty(resource.SourceKey))
+            {
+                SourceKeyToResource[resource.SourceKey] = resource;
+            }
         }
     }
 

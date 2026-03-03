@@ -15,6 +15,7 @@ using Bakabase.InsideWorld.Business.Components.Dependency.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.BakabaseUpdater;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.FfMpeg;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lux;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.InsideWorld.Business.Components.FileMover;
 using Bakabase.InsideWorld.Business.Components.Gui;
@@ -85,6 +86,7 @@ namespace Bakabase.Service.Components
             services.TryAddSingleton<LuxService>();
             services.TryAddSingleton<BakabaseUpdaterService>();
             services.TryAddSingleton<SevenZipService>();
+            services.TryAddSingleton<LocaleEmulatorService>();
             services.RegisterAllRegisteredTypeAs<IDependentComponentService>();
 
             services.TryAddSingleton<IBakabaseUpdater>(sp => sp.GetRequiredService<BakabaseUpdaterService>());

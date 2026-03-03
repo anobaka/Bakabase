@@ -19,6 +19,7 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bootstrap.Components.Configuration.Abstractions;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using Bootstrap.Components.DependencyInjection;
@@ -48,6 +49,7 @@ public class PathMarkSyncService : ScopedService
     private readonly ILogger<PathMarkSyncService> _logger;
 
     private readonly IExtensionGroupService _extensionGroupService;
+    private readonly IEnumerable<IResourceResolver> _resourceResolvers;
 
     public PathMarkSyncService(
         IServiceProvider serviceProvider,
@@ -61,7 +63,8 @@ public class PathMarkSyncService : ScopedService
         IBOptions<ResourceOptions> resourceOptions,
         IBakabaseLocalizer localizer,
         ILogger<PathMarkSyncService> logger,
-        IExtensionGroupService extensionGroupService) : base(serviceProvider)
+        IExtensionGroupService extensionGroupService,
+        IEnumerable<IResourceResolver> resourceResolvers) : base(serviceProvider)
     {
         _pathMarkService = pathMarkService;
         _resourceService = resourceService;
@@ -74,6 +77,7 @@ public class PathMarkSyncService : ScopedService
         _localizer = localizer;
         _logger = logger;
         _extensionGroupService = extensionGroupService;
+        _resourceResolvers = resourceResolvers;
     }
 
     /// <summary>
@@ -183,6 +187,9 @@ public class PathMarkSyncService : ScopedService
                     result.Errors.Add(new PathMarkSyncError { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
                 }
             }
+
+            // 1a-ext. Collect resources from external resolvers (non-FileSystem)
+            await CollectResolverResourceEffects(ctx, onProgressChange, onProcessChange, ct);
 
             // Find related Property/MediaLibrary marks
             var additionalPropertyMarks = await FindRelatedMarksAsync(collectedResourcePaths, PathMarkType.Property, propertyMarks, ctx);
@@ -318,8 +325,12 @@ public class PathMarkSyncService : ScopedService
             await ComputeEffectDiff(ctx);
             await PersistEffects(ctx);
 
-            // ===== Cleanup (90-100%) =====
-            await ReportProgress(onProgressChange, onProcessChange, 90, _localizer.SyncPathMark_EstablishingRelationships());
+            // ===== Update Resource Statuses (90-92%) =====
+            await ReportProgress(onProgressChange, onProcessChange, 90, "Updating resource statuses...");
+            await UpdateResolverResourceStatuses(ctx, ct);
+
+            // ===== Cleanup (92-100%) =====
+            await ReportProgress(onProgressChange, onProcessChange, 92, _localizer.SyncPathMark_EstablishingRelationships());
 
             // Establish parent-child relationships
             var createdPaths = ctx.ResourcesToCreate.Keys.ToList();
@@ -436,6 +447,105 @@ public class PathMarkSyncService : ScopedService
         }
 
         return collectedPaths;
+    }
+
+    /// <summary>
+    /// Virtual mark ID offset for resolver-generated effects.
+    /// Each resolver gets a unique virtual mark ID to track its effects.
+    /// </summary>
+    private const int ResolverVirtualMarkIdBase = -1000;
+
+    /// <summary>
+    /// Builds a virtual path for a non-FileSystem resource that has no local path.
+    /// Format: source://{SourceKey}
+    /// </summary>
+    internal static string BuildVirtualPath(ResourceSource source, string sourceKey)
+    {
+        return $"{source.ToString().ToLowerInvariant()}://{sourceKey}";
+    }
+
+    /// <summary>
+    /// Checks if a path is a virtual path (non-filesystem resource).
+    /// </summary>
+    internal static bool IsVirtualPath(string path)
+    {
+        return path.Contains("://");
+    }
+
+    /// <summary>
+    /// Collects resource effects from all registered non-FileSystem resolvers.
+    /// Each resolver's discovered resources are converted to ResourceMarkEffects.
+    /// </summary>
+    private async Task CollectResolverResourceEffects(
+        SyncContext ctx,
+        Func<int, Task>? onProgressChange,
+        Func<string?, Task>? onProcessChange,
+        CancellationToken ct)
+    {
+        var nonFsResolvers = _resourceResolvers
+            .Where(r => r.Source != ResourceSource.FileSystem)
+            .ToList();
+
+        if (nonFsResolvers.Count == 0) return;
+
+        var resolverIndex = 0;
+        foreach (var resolver in nonFsResolvers)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var virtualMarkId = ResolverVirtualMarkIdBase - (int)resolver.Source;
+            var sourceName = resolver.Source.ToString();
+
+            try
+            {
+                _logger.LogInformation("[Sync] Discovering resources from {Source}...", sourceName);
+                await ReportProgress(onProgressChange, onProcessChange, 14,
+                    $"Discovering {sourceName} resources...");
+
+                var resolvedResources = await resolver.DiscoverResources(ct);
+                _logger.LogInformation("[Sync] {Source} discovered {Count} resources", sourceName, resolvedResources.Count);
+
+                foreach (var resolved in resolvedResources)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    // Use the real local path if available, otherwise build a virtual path
+                    var effectPath = !string.IsNullOrEmpty(resolved.Path)
+                        ? ctx.GetStandardizedPath(resolved.Path)
+                        : BuildVirtualPath(resolved.Source, resolved.SourceKey);
+
+                    // Record the effect
+                    ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
+                    {
+                        MarkId = virtualMarkId,
+                        Path = effectPath
+                    });
+                    ctx.CurrentResourceEffectKeys.Add((virtualMarkId, effectPath));
+
+                    // Build FinalResourcePaths
+                    if (!ctx.FinalResourcePaths.TryGetValue(effectPath, out var markList))
+                    {
+                        markList = new List<int>();
+                        ctx.FinalResourcePaths[effectPath] = markList;
+                    }
+                    markList.Add(virtualMarkId);
+
+                    // Track resolver metadata for resource creation
+                    ctx.ResolverDiscoveredResources[effectPath] = resolved;
+                }
+
+                // Track resolver status for Absent resource detection
+                ctx.ResolverSyncResults[resolver.Source] = true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Sync] Failed to discover resources from {Source}: {Message}", sourceName, ex.Message);
+                // Mark as unavailable - don't mark resources as Absent when resolver fails
+                ctx.ResolverSyncResults[resolver.Source] = false;
+            }
+
+            resolverIndex++;
+        }
     }
 
     /// <summary>
@@ -823,72 +933,130 @@ public class PathMarkSyncService : ScopedService
     /// <summary>
     /// Computes which resources should exist based on collected effects.
     /// Prepares ResourcesToCreate for resources that don't exist yet.
+    /// Handles both filesystem paths and virtual paths (source://sourceKey).
     /// </summary>
     private async Task ComputeFinalResourceState(SyncContext ctx)
     {
         foreach (var (path, markIds) in ctx.FinalResourcePaths)
         {
+            // Check if this is a resolver-discovered resource with a virtual path
+            var isVirtual = IsVirtualPath(path);
+
             // If resource already exists, no need to create
             if (ctx.ExistingPathSet.Contains(path))
             {
-                // But check for bakabase.json marker for path recovery
-                var existingResourceId = await CheckBakabaseJsonMarker(path);
-                if (existingResourceId.HasValue && ctx.IdToResource.TryGetValue(existingResourceId.Value, out var existingResource))
+                if (!isVirtual)
                 {
-                    if (!existingResource.Path.Equals(path, StringComparison.OrdinalIgnoreCase))
+                    // But check for bakabase.json marker for path recovery
+                    var existingResourceId = await CheckBakabaseJsonMarker(path);
+                    if (existingResourceId.HasValue && ctx.IdToResource.TryGetValue(existingResourceId.Value, out var existingResource))
                     {
-                        // Resource exists but path changed - update it
-                        existingResource.Path = path;
-                        existingResource.UpdatedAt = DateTime.Now;
-                        ctx.ResourcesToCreate[path] = existingResource;
+                        if (!existingResource.Path!.Equals(path, StringComparison.OrdinalIgnoreCase))
+                        {
+                            // Resource exists but path changed - update it
+                            existingResource.Path = path;
+                            existingResource.UpdatedAt = DateTime.Now;
+                            ctx.ResourcesToCreate[path] = existingResource;
+                        }
                     }
                 }
                 continue;
             }
 
-            // Check for bakabase.json recovery
-            var markerResourceId = await CheckBakabaseJsonMarker(path);
-            if (markerResourceId.HasValue && ctx.IdToResource.TryGetValue(markerResourceId.Value, out var markerResource))
+            // For resolver-discovered resources, check if already exists by SourceKey
+            if (isVirtual && ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolvedResource))
             {
-                markerResource.Path = path;
-                markerResource.UpdatedAt = DateTime.Now;
-                ctx.ResourcesToCreate[path] = markerResource;
-                continue;
+                if (ctx.SourceKeyToResource.ContainsKey(resolvedResource.SourceKey))
+                {
+                    // Resource already exists by SourceKey - update path if changed
+                    var existing = ctx.SourceKeyToResource[resolvedResource.SourceKey];
+                    var newPath = resolvedResource.Path;
+                    if (newPath != existing.Path)
+                    {
+                        existing.Path = newPath;
+                        existing.UpdatedAt = DateTime.Now;
+                        ctx.ResourcesToCreate[path] = existing;
+                    }
+                    continue;
+                }
+            }
+
+            if (!isVirtual)
+            {
+                // Check for bakabase.json recovery
+                var markerResourceId = await CheckBakabaseJsonMarker(path);
+                if (markerResourceId.HasValue && ctx.IdToResource.TryGetValue(markerResourceId.Value, out var markerResource))
+                {
+                    markerResource.Path = path;
+                    markerResource.UpdatedAt = DateTime.Now;
+                    ctx.ResourcesToCreate[path] = markerResource;
+                    continue;
+                }
             }
 
             // Need to create new resource
-            var isFile = File.Exists(path);
-            var isDirectory = Directory.Exists(path);
-
-            if (!isFile && !isDirectory) continue;
-
-            DateTime fileCreatedAt, fileModifiedAt;
-            if (isFile)
+            if (isVirtual)
             {
-                var fileInfo = new FileInfo(path);
-                fileCreatedAt = fileInfo.CreationTime;
-                fileModifiedAt = fileInfo.LastWriteTime;
+                // Virtual path - create resource from resolver data
+                if (!ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolved)) continue;
+
+                var resource = new Resource
+                {
+                    Path = resolved.Path, // May be null for uninstalled games, etc.
+                    IsFile = false,
+                    Source = resolved.Source,
+                    Status = ResourceStatus.Active,
+                    SourceKey = resolved.SourceKey,
+                    DisplayName = resolved.DisplayName,
+                    CategoryId = 0,
+                    MediaLibraryId = 0,
+                    FileCreatedAt = DateTime.Now,
+                    FileModifiedAt = DateTime.Now,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+
+                ctx.ResourcesToCreate[path] = resource;
             }
             else
             {
-                var dirInfo = new DirectoryInfo(path);
-                fileCreatedAt = dirInfo.CreationTime;
-                fileModifiedAt = dirInfo.LastWriteTime;
+                // Filesystem path - existing logic
+                var isFile = File.Exists(path);
+                var isDirectory = Directory.Exists(path);
+
+                if (!isFile && !isDirectory) continue;
+
+                DateTime fileCreatedAt, fileModifiedAt;
+                if (isFile)
+                {
+                    var fileInfo = new FileInfo(path);
+                    fileCreatedAt = fileInfo.CreationTime;
+                    fileModifiedAt = fileInfo.LastWriteTime;
+                }
+                else
+                {
+                    var dirInfo = new DirectoryInfo(path);
+                    fileCreatedAt = dirInfo.CreationTime;
+                    fileModifiedAt = dirInfo.LastWriteTime;
+                }
+
+                var resource = new Resource
+                {
+                    Path = path,
+                    IsFile = isFile,
+                    Source = ResourceSource.FileSystem,
+                    Status = ResourceStatus.Active,
+                    SourceKey = path,
+                    CategoryId = 0,
+                    MediaLibraryId = 0,
+                    FileCreatedAt = fileCreatedAt,
+                    FileModifiedAt = fileModifiedAt,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now
+                };
+
+                ctx.ResourcesToCreate[path] = resource;
             }
-
-            var resource = new Resource
-            {
-                Path = path,
-                IsFile = isFile,
-                CategoryId = 0,
-                MediaLibraryId = 0,
-                FileCreatedAt = fileCreatedAt,
-                FileModifiedAt = fileModifiedAt,
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
-            };
-
-            ctx.ResourcesToCreate[path] = resource;
         }
 
         // Determine resources to delete: paths that had effects before but don't anymore
@@ -1670,6 +1838,82 @@ public class PathMarkSyncService : ScopedService
         }
 
         return relatedMarks;
+    }
+
+    /// <summary>
+    /// Updates resource statuses based on resolver sync results.
+    /// - Resources whose resolver succeeded but weren't discovered → Absent
+    /// - Resources whose resolver failed → Unavailable
+    /// - Resources that were Absent but are now discovered → Active (recovery)
+    /// </summary>
+    private async Task UpdateResolverResourceStatuses(SyncContext ctx, CancellationToken ct)
+    {
+        var resourcesToUpdate = new List<Resource>();
+
+        foreach (var (source, success) in ctx.ResolverSyncResults)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            // Get all existing resources from this source
+            var sourceResources = ctx.AllResources
+                .Where(r => r.Source == source)
+                .ToList();
+
+            if (sourceResources.Count == 0) continue;
+
+            // Get all SourceKeys discovered by this resolver
+            var discoveredSourceKeys = ctx.ResolverDiscoveredResources.Values
+                .Where(r => r.Source == source)
+                .Select(r => r.SourceKey)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (success)
+            {
+                // Resolver succeeded - we can determine Absent vs Active
+                foreach (var resource in sourceResources)
+                {
+                    if (discoveredSourceKeys.Contains(resource.SourceKey))
+                    {
+                        // Resource found - ensure it's Active
+                        if (resource.Status != ResourceStatus.Active)
+                        {
+                            resource.Status = ResourceStatus.Active;
+                            resource.UpdatedAt = DateTime.Now;
+                            resourcesToUpdate.Add(resource);
+                        }
+                    }
+                    else
+                    {
+                        // Resource not found by resolver - mark as Absent
+                        if (resource.Status != ResourceStatus.Absent)
+                        {
+                            resource.Status = ResourceStatus.Absent;
+                            resource.UpdatedAt = DateTime.Now;
+                            resourcesToUpdate.Add(resource);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Resolver failed - mark all as Unavailable (don't delete anything)
+                foreach (var resource in sourceResources)
+                {
+                    if (resource.Status != ResourceStatus.Unavailable)
+                    {
+                        resource.Status = ResourceStatus.Unavailable;
+                        resource.UpdatedAt = DateTime.Now;
+                        resourcesToUpdate.Add(resource);
+                    }
+                }
+            }
+        }
+
+        if (resourcesToUpdate.Count > 0)
+        {
+            await _resourceService.AddOrPutRange(resourcesToUpdate);
+            _logger.LogInformation("[Sync] Updated status for {Count} resources from external resolvers", resourcesToUpdate.Count);
+        }
     }
 
     private async Task EstablishParentChildRelationships(List<string> resourcePaths, SyncContext ctx,

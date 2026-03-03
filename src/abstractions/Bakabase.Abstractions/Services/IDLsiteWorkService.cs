@@ -1,0 +1,13 @@
+using Bakabase.Abstractions.Models.Db;
+
+namespace Bakabase.Abstractions.Services;
+
+public interface IDLsiteWorkService
+{
+    Task<List<DLsiteWorkDbModel>> GetAll();
+    Task<DLsiteWorkDbModel?> GetByWorkId(string workId);
+    Task<List<DLsiteWorkDbModel>> GetByWorkIds(IEnumerable<string> workIds);
+    Task AddOrUpdate(DLsiteWorkDbModel work);
+    Task AddOrUpdateRange(IEnumerable<DLsiteWorkDbModel> works);
+    Task DeleteByWorkId(string workId);
+}
