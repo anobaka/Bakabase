@@ -139,7 +139,9 @@ public static class MediaLibraryTemplateExtensions
         return new EnhancerFullOptions
         {
             EnhancerId = dbModel.EnhancerId,
-            TargetOptions = dbModel.TargetOptions?.Select(t => t.ToDomainModel()).ToList(),
+            TargetOptions = dbModel.TargetOptions
+                ?.Where(t => t.PropertyPool > 0 && t.PropertyId > 0)
+                .Select(t => t.ToDomainModel()).ToList(),
             Expressions = dbModel.Expressions.IsNullOrEmpty()
                 ? null
                 : JsonConvert.DeserializeObject<List<string>>(dbModel.Expressions),
