@@ -5362,6 +5362,13 @@ export interface components {
             id: number;
             scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
+        "Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
+            /** Optional per-property scope priority override. Null means use global setting. */
+            scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][] | null;
+        };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
             /** Format: int32 */

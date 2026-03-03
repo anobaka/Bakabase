@@ -580,6 +580,15 @@ export interface BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority {
   scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
+export interface BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority {
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  /** @format int32 */
+  id: number;
+  /** Optional per-property scope priority override. Null means use global setting. */
+  scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
+}
+
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
   fixedText?: string;
   /** @format int32 */
