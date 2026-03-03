@@ -23,6 +23,20 @@ import {
 import BApi from "@/sdk/BApi";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 
+/** Sanitize targetOptions on load: treat pool=0/id=0 (C# default for unbound) as undefined */
+const sanitizeOptions = (opts?: EnhancerFullOptions): EnhancerFullOptions => {
+  if (!opts) return {};
+  return {
+    ...opts,
+    targetOptions: opts.targetOptions?.map((to) => {
+      if ((to.propertyPool != null && to.propertyPool <= 0) || (to.propertyId != null && to.propertyId <= 0)) {
+        return { ...to, propertyPool: undefined, propertyId: undefined };
+      }
+      return to;
+    }),
+  };
+};
+
 type IProps = {
   enhancer: EnhancerDescriptor;
   categoryId: number;
@@ -68,7 +82,7 @@ const CategoryEnhancerOptionsDialog = ({
       enhancer.id,
     );
 
-    setOptions(data?.options || {});
+    setOptions(sanitizeOptions(data?.options));
   };
 
   const loadCategory = async () => {
@@ -92,7 +106,7 @@ const CategoryEnhancerOptionsDialog = ({
       (x) => x.enhancerId == enhancer.id,
     )?.options ?? {}) as EnhancerFullOptions;
 
-    setOptions(ceo);
+    setOptions(sanitizeOptions(ceo));
   };
 
   const loadAllProperties = async () => {

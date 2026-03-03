@@ -33,6 +33,9 @@ interface Props {
   onPropertyChanged?: () => any;
   onChange?: (options: EnhancerTargetFullOptions) => any;
   dynamicTargetCandidates?: string[];
+  hideBindingAndConfig?: boolean;
+  /** When true, dynamic target name is not editable (driven by candidates like regex capture groups) */
+  readOnly?: boolean;
 }
 
 const StdValueSpecialTextIntegrationMap: {
@@ -55,6 +58,8 @@ const TargetRow = (props: Props) => {
     onPropertyChanged,
     onChange,
     dynamicTargetCandidates,
+    hideBindingAndConfig,
+    readOnly,
   } = props;
 
   const [options, setOptions] = useState<EnhancerTargetFullOptions>(
@@ -122,24 +127,26 @@ const TargetRow = (props: Props) => {
 
   return (
     <div className={"flex items-center gap-1"}>
-      <div className={"w-[80px] flex justify-center"}>
-        {isDefaultTargetOfDynamic ? (
-          "-"
-        ) : noPropertyBound ? (
-          <Chip color={"warning"} size={"sm"} variant={"light"}>
-            <AiOutlineClose className={"text-lg text-warning"} />
-          </Chip>
-        ) : (
-          <Chip color={"success"} size={"sm"} variant={"light"}>
-            <AiOutlineCheckCircle className={"text-lg"} />
-          </Chip>
-        )}
-      </div>
-      <div className={"w-4/12"}>
+      {!hideBindingAndConfig && (
+        <div className={"w-[80px] flex justify-center"}>
+          {noPropertyBound ? (
+            <Chip color={"warning"} size={"sm"} variant={"light"}>
+              <AiOutlineClose className={"text-lg text-warning"} />
+            </Chip>
+          ) : (
+            <Chip color={"success"} size={"sm"} variant={"light"}>
+              <AiOutlineCheckCircle className={"text-lg"} />
+            </Chip>
+          )}
+        </div>
+      )}
+      <div className={hideBindingAndConfig ? "flex-1" : "w-4/12"}>
         <div className={"flex flex-col gap-2"}>
           <div className={"flex items-center gap-1"}>
-            {descriptor.isDynamic && !isDefaultTargetOfDynamic ? (
-              editingDynamicTarget ? (
+            {descriptor.isDynamic ? (
+              readOnly ? (
+                <span className="text-sm px-3 py-1.5">{targetLabel}</span>
+              ) : editingDynamicTarget ? (
                 <Autocomplete
                   allowsCustomValue
                   isRequired
@@ -170,9 +177,7 @@ const TargetRow = (props: Props) => {
                 </Autocomplete>
               ) : (
                 <Button
-                  // size={'sm'}
                   variant={"light"}
-                  // color={'success'}
                   onClick={() => {
                     dynamicTargetInputValueRef.current = dt;
                     setEditingDynamicTarget(true);
@@ -191,7 +196,6 @@ const TargetRow = (props: Props) => {
                     name: descriptor.name,
                   }}
                 />
-                {/* {targetLabel} */}
                 {integratedSpecialTextType && (
                   <IntegrateWithSpecialTextLabel type={integratedSpecialTextType} />
                 )}
@@ -208,16 +212,10 @@ const TargetRow = (props: Props) => {
               </>
             )}
           </div>
-          {/* <div className={'flex items-center gap-1 opacity-60'}> */}
-          {/*   <StandardValueIcon valueType={target.valueType} className={'text-small'} /> */}
-          {/*   {t<string>(`StandardValueType.${StandardValueType[target.valueType]}`)} */}
-          {/* </div> */}
         </div>
       </div>
-      <div className={"w-1/4"}>
-        {isDefaultTargetOfDynamic ? (
-          <Chip variant={"light"}>/</Chip>
-        ) : (
+      {!hideBindingAndConfig && (
+        <div className={"w-1/4"}>
           <div className={"flex items-center gap-1"}>
             <PropertyMatcher
               isClearable
@@ -238,35 +236,37 @@ const TargetRow = (props: Props) => {
               }}
             />
           </div>
-        )}
-      </div>
-      <div className={"w-1/4"}>
-        <div className={"flex flex-col gap-2"}>
-          <TargetOptions
-            isDisabled={!options.autoBindProperty && (!options.propertyId || !options.propertyPool)}
-            options={options}
-            optionsItems={descriptor.optionsItems}
-            onChange={patchTargetOptions}
-          />
         </div>
-      </div>
-      <div className={"w-1/12"}>
-        <div className={"flex flex-col gap-1"}>
-          {descriptor.isDynamic && !isDefaultTargetOfDynamic && (
+      )}
+      {!hideBindingAndConfig && (
+        <div className={"w-1/4"}>
+          <div className={"flex flex-col gap-2"}>
+            <TargetOptions
+              isDisabled={!options.autoBindProperty && (!options.propertyId || !options.propertyPool)}
+              options={options}
+              optionsItems={descriptor.optionsItems}
+              onChange={patchTargetOptions}
+            />
+          </div>
+        </div>
+      )}
+      {descriptor.isDynamic && onDeleted && (
+        <div className={"w-1/12"}>
+          <div className={"flex flex-col gap-1"}>
             <Button
               isIconOnly
               color={"danger"}
               size={"sm"}
               variant={"light"}
               onPress={() => {
-                onDeleted?.();
+                onDeleted();
               }}
             >
               <DeleteOutlined className={"text-base"} />
             </Button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
