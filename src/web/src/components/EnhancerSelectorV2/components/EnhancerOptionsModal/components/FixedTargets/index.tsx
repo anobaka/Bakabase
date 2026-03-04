@@ -26,6 +26,7 @@ interface Props {
   onPropertyChanged?: () => any;
   optionsList?: EnhancerTargetFullOptions[];
   onChange?: (options: EnhancerTargetFullOptions[]) => any;
+  hideBindingAndConfig?: boolean;
 }
 const FixedTargets = (props: Props) => {
   const { t } = useTranslation();
@@ -36,6 +37,7 @@ const FixedTargets = (props: Props) => {
     enhancer,
     onPropertyChanged,
     onChange,
+    hideBindingAndConfig,
   } = props;
 
   const [optionsList, setOptionsList] = useState<EnhancerTargetFullOptions[]>(
@@ -44,69 +46,87 @@ const FixedTargets = (props: Props) => {
 
   const fixedTargets = enhancer.targets.filter((t) => !t.isDynamic);
 
+  const hasUnbound = fixedTargets.some((target) => {
+    const to = optionsList.find((x) => x.target === target.id);
+    return !to?.propertyId || !to?.propertyPool;
+  });
+
   return (
     <>
       {/* NextUI doesn't support the wrap of TableRow, use div instead for now, waiting the updates of NextUI */}
       {/* see https://github.com/nextui-org/nextui/issues/729 */}
-      <Table removeWrapper aria-label={"Fixed targets"}>
-        <TableHeader>
-          <TableColumn align={"center"} width={80}>
-            {t<string>("enhancer.target.configured.label")}
-          </TableColumn>
-          <TableColumn width={"33.3333%"}>
-            {t<string>("enhancer.target.fixed.label")}
-          </TableColumn>
-          <TableColumn width={"25%"}>
-            <div className={"flex items-center gap-1"}>
-              {t<string>("enhancer.target.bindProperty.label")}
-              {enhancer.targets && enhancer.targets.length > 0 && (
-                <PropertiesMatcher
-                  properties={enhancer.targets.map((td) => ({
-                    type: td.propertyType,
-                    name: td.name,
-                  }))}
-                  onValueChanged={(ps) => {
-                    for (let i = 0; i < ps.length; i++) {
-                      const p = ps[i];
+      {hideBindingAndConfig ? (
+        <Table removeWrapper aria-label={"Fixed targets"}>
+          <TableHeader>
+            <TableColumn width="80%">
+              {t<string>("enhancer.target.fixed.label")}
+            </TableColumn>
+            <TableColumn>{t<string>("common.label.operations")}</TableColumn>
+          </TableHeader>
+          {/* @ts-ignore */}
+          <TableBody />
+        </Table>
+      ) : (
+        <Table removeWrapper aria-label={"Fixed targets"}>
+          <TableHeader>
+            <TableColumn align={"center"} width={80}>
+              {t<string>("enhancer.target.configured.label")}
+            </TableColumn>
+            <TableColumn width={"33.3333%"}>
+              {t<string>("enhancer.target.fixed.label")}
+            </TableColumn>
+            <TableColumn width={"25%"}>
+              <div className={"flex items-center gap-1"}>
+                {t<string>("enhancer.target.bindProperty.label")}
+                {hasUnbound && (
+                  <PropertiesMatcher
+                    properties={fixedTargets.map((td) => ({
+                      type: td.propertyType,
+                      name: td.name,
+                    }))}
+                    onValueChanged={(ps) => {
+                      for (let i = 0; i < ps.length; i++) {
+                        const p = ps[i];
 
-                      if (p) {
-                        const td = enhancer.targets[i]!;
-                        let to = optionsList.find((x) => x.target == td.id);
+                        if (p) {
+                          const td = fixedTargets[i]!;
+                          let to = optionsList.find((x) => x.target == td.id);
 
-                        if (!to) {
-                          to = { target: enhancer.targets[i]!.id };
-                          optionsList.push(to);
-                        }
-                        to.propertyId = p.id;
-                        to.propertyPool = p.pool;
+                          if (!to) {
+                            to = { target: td.id };
+                            optionsList.push(to);
+                          }
+                          to.propertyId = p.id;
+                          to.propertyPool = p.pool;
 
-                        if (propertyMap) {
-                          const pMap = (propertyMap[p.pool] ??= {});
-                          if (!(p.id in pMap)) {
-                            pMap[p.id] = p;
+                          if (propertyMap) {
+                            const pMap = (propertyMap[p.pool] ??= {});
+                            if (!(p.id in pMap)) {
+                              pMap[p.id] = p;
+                            }
                           }
                         }
                       }
-                    }
 
-                    setOptionsList(optionsList);
-                    onChange?.(optionsList);
-                  }}
-                />
-              )}
-            </div>
-          </TableColumn>
-          <TableColumn width={"25%"}>
-            <div className={"flex items-center gap-1"}>
-              {t<string>("enhancer.target.otherOptions.label")}
-              <OtherOptionsTip />
-            </div>
-          </TableColumn>
-          <TableColumn>{t<string>("common.label.operations")}</TableColumn>
-        </TableHeader>
-        {/* @ts-ignore */}
-        <TableBody />
-      </Table>
+                      setOptionsList(optionsList);
+                      onChange?.(optionsList);
+                    }}
+                  />
+                )}
+              </div>
+            </TableColumn>
+            <TableColumn width={"25%"}>
+              <div className={"flex items-center gap-1"}>
+                {t<string>("enhancer.target.otherOptions.label")}
+                <OtherOptionsTip />
+              </div>
+            </TableColumn>
+            <TableColumn>{t<string>("common.label.operations")}</TableColumn>
+          </TableHeader>
+          {/* @ts-ignore */}
+          <TableBody />
+        </Table>
+      )}
       <div className={"flex flex-col gap-y-2"}>
         {fixedTargets.map((target, i) => {
           const toIdx = optionsList.findIndex((x) => x.target == target.id);
@@ -121,6 +141,7 @@ const FixedTargets = (props: Props) => {
               <TargetRow
                 key={`${target.id}-${to?.dynamicTarget}`}
                 descriptor={targetDescriptor}
+                hideBindingAndConfig={hideBindingAndConfig}
                 options={to}
                 propertyMap={propertyMap}
                 onChange={(o) => {

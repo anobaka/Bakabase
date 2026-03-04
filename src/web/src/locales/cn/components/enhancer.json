@@ -25,8 +25,8 @@
   "enhancer.options.runAfter.label": "在以下增强器之后运行",
   "enhancer.options.runAfter.description": "你可以通过自定义增强器的执行顺序来进行链式增强。",
   "enhancer.options.runAfter.tip": "通常，留空即可。",
-  "enhancer.options.enhanceProperties.label": "增强属性",
-  "enhancer.options.enhanceProperties.tip": "请至少选择一个要增强的属性。",
+  "enhancer.options.enhanceProperties.label": "动态属性配置",
+  "enhancer.options.enhanceProperties.tip": "配置增强器的动态属性，静态属性请在外部属性列表中管理。",
 
   "enhancer.categoryOptions.title": "为分类 {{categoryName}} 配置增强器 {{enhancerName}}",
 

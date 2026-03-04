@@ -5024,6 +5024,13 @@ export interface components {
             /** Format: int32 */
             id: number;
         };
+        "Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority": {
+            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            /** Format: int32 */
+            id: number;
+            /** Optional per-property scope priority override. Null means use global setting. */
+            scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][] | null;
+        };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
             /** Format: int32 */
@@ -5141,7 +5148,7 @@ export interface components {
             players?: components["schemas"]["Bakabase.Abstractions.Models.Domain.MediaLibraryPlayer"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfilePropertyOptions": {
-            properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyKey"][];
+            properties?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceSearch": {
             /** Format: int32 */
