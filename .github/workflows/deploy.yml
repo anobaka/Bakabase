@@ -327,10 +327,14 @@ jobs:
             // Label display configuration (order matters for changelog output)
             const labelConfig = [
               { name: 'breaking-changes', emoji: '🚨', title: 'Breaking Changes' },
+              { name: 'security', emoji: '🔒', title: 'Security' },
               { name: 'feature', emoji: '🚀', title: 'Features' },
               { name: 'enhancement', emoji: '✨', title: 'Enhancements' },
+              { name: 'performance', emoji: '⚡', title: 'Performance' },
               { name: 'architecture optimization', emoji: '🏗️', title: 'Architecture' },
               { name: 'bug', emoji: '🐛', title: 'Bug Fixes' },
+              { name: 'deprecation', emoji: '⚠️', title: 'Deprecations' },
+              { name: 'documentation', emoji: '📚', title: 'Documentation' },
               { name: 'experiment', emoji: '🧪', title: 'Experiments' },
             ];
             const labelGroups = {};
@@ -347,6 +351,32 @@ jobs:
                 if (m) {
                   numberSet.add(m[1]);
                 }
+              }
+            }
+
+            // Also collect issue numbers from PR descriptions (fix/close/resolve keywords)
+            // commitPrIssues maps commit id -> set of issue numbers found via PR
+            const commitPrIssues = {};
+            const prChecked = new Set();
+            for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
+              if (!commit.id || prChecked.has(commit.id)) continue;
+              prChecked.add(commit.id);
+              try {
+                const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner, repo, commit_sha: commit.id
+                });
+                for (const pr of prs) {
+                  if (!pr.body) continue;
+                  const regex = /(?:fix(?:e[sd])?|close[sd]?|resolve[sd]?)\s+#(\d+)/gi;
+                  let match;
+                  while ((match = regex.exec(pr.body)) !== null) {
+                    numberSet.add(match[1]);
+                    commitPrIssues[commit.id] ??= new Set();
+                    commitPrIssues[commit.id].add(match[1]);
+                  }
+                }
+              } catch (e) {
+                core.warning(`Failed to fetch PRs for commit ${commit.id}: ${e.message}`);
               }
             }
 
@@ -379,17 +409,25 @@ jobs:
               }
             }
 
-            // Attach issues to commits (for backward compatibility)
+            // Attach issues to commits (from both commit links and PR descriptions)
             for (const commit of Array.isArray(initial.commits) ? initial.commits : []) {
-              const links = Array.isArray(commit.links) ? commit.links : [];
+              const linkedNums = new Set();
               const list = [];
+              // From commit message links
+              const links = Array.isArray(commit.links) ? commit.links : [];
               for (const link of links) {
                 const m = /#(\d+)/.exec(link.text || '');
-                if (m) {
-                  const n = m[1];
-                  const issue = issues[n] || issues['#' + n] || null;
-                  if (issue) list.push(issue);
+                if (m) linkedNums.add(m[1]);
+              }
+              // From PR descriptions
+              if (commit.id && commitPrIssues[commit.id]) {
+                for (const n of commitPrIssues[commit.id]) {
+                  linkedNums.add(n);
                 }
+              }
+              for (const n of linkedNums) {
+                const issue = issues[n] || issues['#' + n] || null;
+                if (issue) list.push(issue);
               }
               commit.extra ??= {};
               commit.extra["issues"] = list;
