@@ -50,12 +50,6 @@ public class DLsiteResolver : IResourceResolver
         return resources;
     }
 
-    public Task<ResolvedCover?> GetCover(Resource resource, CancellationToken ct)
-    {
-        // Cover is handled by DLsiteEnhancer
-        return Task.FromResult<ResolvedCover?>(null);
-    }
-
     public ResolverConfigurationSchema GetConfigurationSchema()
     {
         return new ResolverConfigurationSchema

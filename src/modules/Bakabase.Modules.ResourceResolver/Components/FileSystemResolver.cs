@@ -30,16 +30,6 @@ public class FileSystemResolver : IResourceResolver
         return Task.FromResult(new List<ResolvedResource>());
     }
 
-    /// <summary>
-    /// Cover discovery for filesystem resources is handled by the existing
-    /// ICoverDiscoverer service, which is called from ResourceService.
-    /// </summary>
-    public Task<ResolvedCover?> GetCover(Resource resource, CancellationToken ct)
-    {
-        // Filesystem covers are handled by ICoverDiscoverer
-        return Task.FromResult<ResolvedCover?>(null);
-    }
-
     public ResolverConfigurationSchema GetConfigurationSchema()
     {
         // No additional configuration needed - PathMarks handle filesystem configuration

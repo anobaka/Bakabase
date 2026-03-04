@@ -54,12 +54,6 @@ public class SteamResolver : IResourceResolver
         return resources;
     }
 
-    public Task<ResolvedCover?> GetCover(Resource resource, CancellationToken ct)
-    {
-        // Cover is handled by SteamEnhancer via Steam Store API
-        return Task.FromResult<ResolvedCover?>(null);
-    }
-
     public ResolverConfigurationSchema GetConfigurationSchema()
     {
         return new ResolverConfigurationSchema

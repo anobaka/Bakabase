@@ -31,22 +31,6 @@ public record ResolvedResource
 }
 
 /// <summary>
-/// Cover image data retrieved by a Resolver.
-/// </summary>
-public record ResolvedCover
-{
-    /// <summary>
-    /// Already-downloaded image bytes (preferred if available).
-    /// </summary>
-    public byte[]? ImageData { get; set; }
-
-    /// <summary>
-    /// URL to the cover image (used if ImageData is null).
-    /// </summary>
-    public string? ImageUrl { get; set; }
-}
-
-/// <summary>
 /// A FileSystem resource identified as a candidate for migration to another source.
 /// </summary>
 public record MigrationCandidate

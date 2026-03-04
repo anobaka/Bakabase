@@ -48,12 +48,6 @@ public class ExHentaiResolver : IResourceResolver
         return resources;
     }
 
-    public Task<ResolvedCover?> GetCover(Resource resource, CancellationToken ct)
-    {
-        // Cover is handled by ExHentaiEnhancer
-        return Task.FromResult<ResolvedCover?>(null);
-    }
-
     public ResolverConfigurationSchema GetConfigurationSchema()
     {
         return new ResolverConfigurationSchema

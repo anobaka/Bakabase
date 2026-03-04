@@ -21,11 +21,6 @@ public interface IResourceResolver
     Task<List<ResolvedResource>> DiscoverResources(CancellationToken ct);
 
     /// <summary>
-    /// Gets the cover image for a specific resource.
-    /// </summary>
-    Task<ResolvedCover?> GetCover(Resource resource, CancellationToken ct);
-
-    /// <summary>
     /// Gets the configuration schema for this resolver (used by frontend to render settings UI).
     /// </summary>
     ResolverConfigurationSchema GetConfigurationSchema();
