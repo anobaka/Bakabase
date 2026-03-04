@@ -325,7 +325,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                             return (
                               <Chip
                                 key={`${dpk.pool}-${dpk.id}-${ml.id}`}
-                                className={"h-auto w-fit"}
+                                className={"h-auto w-fit resource-display-property-chip"}
                                 radius={"sm"}
                                 size={"sm"}
                                 style={mlStyle}
@@ -393,7 +393,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
               return [
                 <Chip
                   key={`${dpk.pool}-${dpk.id}`}
-                  className={"h-auto w-fit"}
+                  className={"h-auto w-fit resource-display-property-chip"}
                   radius={"sm"}
                   size={"sm"}
                   style={style}
