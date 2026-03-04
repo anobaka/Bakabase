@@ -46,7 +46,7 @@ const TailingOperations = (props: Props) => {
       </OperationButton>
       {isExtractable && (
         <Tooltip
-          content={`(E)${t<string>("Extract children to parent and delete current directory")}`}
+          content={`(E)${t<string>("fileExplorer.tip.extractChildrenToParent")}`}
           placement={"top"}
         >
           <Button
@@ -65,7 +65,7 @@ const TailingOperations = (props: Props) => {
         </Tooltip>
       )}
       {entry.isDirectoryOrDrive && capabilities?.includes("create-directory") && (
-        <Tooltip content={`(N)${t<string>("Create new folder")}`} placement={"top"}>
+        <Tooltip content={`(N)${t<string>("fileExplorer.contextMenu.createNewFolder")}`} placement={"top"}>
           <Button
             isIconOnly
             className={"w-auto h-auto p-1 min-w-fit opacity-60 hover:opacity-100"}
