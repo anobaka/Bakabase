@@ -37,6 +37,7 @@ import enPostParser from "@/locales/en/pages/postParser.json";
 import enPathMarks from "@/locales/en/pages/pathMarks.json";
 import enPathMarkConfig from "@/locales/en/pages/pathMarkConfig.json";
 import enComparison from "@/locales/en/pages/comparison.json";
+import enResourceSource from "@/locales/en/pages/resourceSource.json";
 
 // English - Components
 import enFileExplorer from "@/locales/en/components/fileExplorer.json";
@@ -86,6 +87,7 @@ import cnPostParser from "@/locales/cn/pages/postParser.json";
 import cnPathMarks from "@/locales/cn/pages/pathMarks.json";
 import cnPathMarkConfig from "@/locales/cn/pages/pathMarkConfig.json";
 import cnComparison from "@/locales/cn/pages/comparison.json";
+import cnResourceSource from "@/locales/cn/pages/resourceSource.json";
 
 // Chinese - Components
 import cnFileExplorer from "@/locales/cn/components/fileExplorer.json";
@@ -135,6 +137,7 @@ const enResources = {
   ...enPathMarks,
   ...enPathMarkConfig,
   ...enComparison,
+  ...enResourceSource,
   // Components
   ...enFileExplorer,
   ...enResourceFilter,
@@ -184,6 +187,7 @@ const cnResources = {
   ...cnPathMarks,
   ...cnPathMarkConfig,
   ...cnComparison,
+  ...cnResourceSource,
   // Components
   ...cnFileExplorer,
   ...cnResourceFilter,

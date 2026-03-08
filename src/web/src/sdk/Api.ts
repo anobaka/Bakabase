@@ -17908,8 +17908,131 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     restartAndUpdateAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/restart`;
-      
+
       return baseUrl + path;
     },
+  };
+  steamApp = {
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name GetAllSteamApps
+     * @request GET:/steam-app
+     */
+    getAllSteamApps: (params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/steam-app`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name GetSteamAppByAppId
+     * @request GET:/steam-app/{appId}
+     */
+    getSteamAppByAppId: (appId: number, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/steam-app/${appId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name DeleteSteamApp
+     * @request DELETE:/steam-app/{appId}
+     */
+    deleteSteamApp: (appId: number, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/steam-app/${appId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
+  dlsiteWork = {
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name GetAllDLsiteWorks
+     * @request GET:/dlsite-work
+     */
+    getAllDLsiteWorks: (params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/dlsite-work`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name GetDLsiteWorkByWorkId
+     * @request GET:/dlsite-work/{workId}
+     */
+    getDLsiteWorkByWorkId: (workId: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/dlsite-work/${workId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name DeleteDLsiteWork
+     * @request DELETE:/dlsite-work/{workId}
+     */
+    deleteDLsiteWork: (workId: string, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/dlsite-work/${workId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
+  exhentaiGallery = {
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name GetAllExHentaiGalleries
+     * @request GET:/exhentai-gallery
+     */
+    getAllExHentaiGalleries: (params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/exhentai-gallery`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name DeleteExHentaiGallery
+     * @request DELETE:/exhentai-gallery/{id}
+     */
+    deleteExHentaiGallery: (id: number, params: RequestParams = {}) =>
+      this.request<any, any>({
+        path: `/exhentai-gallery/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
 }

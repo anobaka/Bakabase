@@ -38,6 +38,9 @@ import {
   PropertyPool,
   ResourceAdditionalItem,
   ResourceProperty,
+  ResourceSource,
+  ResourceSourceLabel,
+  ResourceStatus,
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
@@ -252,6 +255,30 @@ const Resource = React.forwardRef((props: Props, ref) => {
             <Tooltip content={t<string>("resource.tip.unknownMediaLibrary")}>
               <DisconnectOutlined className={"text-warning"} />
             </Tooltip>
+          )}
+          {resource.source != null && resource.source !== ResourceSource.FileSystem && (
+            <Chip
+              color={
+                resource.source === ResourceSource.Steam ? "primary" :
+                resource.source === ResourceSource.DLsite ? "secondary" :
+                resource.source === ResourceSource.ExHentai ? "warning" : "default"
+              }
+              radius={"sm"}
+              size={"sm"}
+              variant={"flat"}
+            >
+              {ResourceSourceLabel[resource.source] || "Unknown"}
+            </Chip>
+          )}
+          {resource.status === ResourceStatus.Absent && (
+            <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>
+              {t("enum.resourceStatus.absent")}
+            </Chip>
+          )}
+          {resource.status === ResourceStatus.Unavailable && (
+            <Chip color="warning" radius={"sm"} size={"sm"} variant={"flat"}>
+              {t("enum.resourceStatus.unavailable")}
+            </Chip>
           )}
           {resource.playedAt && (
             <Chip radius={"sm"} size={"sm"} variant={"flat"} className="whitespace-break-spaces h-auto">
@@ -513,6 +540,9 @@ const Resource = React.forwardRef((props: Props, ref) => {
         uiOptions.resource?.hideResourceBorder ? "" : "border-2"
       } ${
         selected ? "border-primary ring-2 ring-primary/30 bg-primary/5" : uiOptions.resource?.hideResourceBorder ? "" : "border-default-200"
+      } ${
+        resource.status === ResourceStatus.Absent ? "opacity-50 grayscale" :
+        resource.status === ResourceStatus.Unavailable ? "opacity-60" : ""
       }`}
       data-id={resource.id}
       role={"resource"}

@@ -30,6 +30,9 @@ import {
   AiOutlineRobot,
   AiOutlineBarChart,
   AiOutlineAudit,
+  AiOutlineCloud,
+  AiOutlineShop,
+  AiOutlineCloudServer,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -67,6 +70,10 @@ import AiConfigurationPage from "@/pages/ai-configuration";
 import AiUsagePage from "@/pages/ai-usage";
 import AiAuditLogPage from "@/pages/ai-audit-log";
 import AiCachePage from "@/pages/ai-cache";
+import ResourceSourcePage from "@/pages/resource-source";
+import SteamAppsPage from "@/pages/steam-apps";
+import DLsiteWorksPage from "@/pages/dlsite-works";
+import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -99,6 +106,46 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlinePicture,
     layout: "basic",
     menu: true,
+  },
+  {
+    name: "menu.resourceSources",
+    icon: AiOutlineCloudServer,
+    menu: true,
+    isBeta: true,
+    children: [
+      {
+        name: "menu.resourceSources",
+        path: "/resource-sources",
+        component: ResourceSourcePage,
+        icon: AiOutlineCloudServer,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.steamApps",
+        path: "/steam-apps",
+        component: SteamAppsPage,
+        icon: AiOutlineCloud,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.dlsiteWorks",
+        path: "/dlsite-works",
+        component: DLsiteWorksPage,
+        icon: AiOutlineShop,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.exhentaiGalleries",
+        path: "/exhentai-galleries",
+        component: ExHentaiGalleriesPage,
+        icon: AiOutlinePicture,
+        layout: "basic",
+        menu: true,
+      },
+    ],
   },
   {
     name: "menu.mediaLibrary",
