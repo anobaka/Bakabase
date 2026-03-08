@@ -19,6 +19,7 @@ import {
 import { MdCalendarMonth } from "react-icons/md";
 import { TiFlowChildren } from "react-icons/ti";
 import { TbColumns1, TbColumns2, TbColumns3 } from "react-icons/tb";
+import { MdTranslate } from "react-icons/md";
 
 import ChildrenModal from "../ChildrenModal";
 
@@ -56,6 +57,7 @@ import PropertyValueScopePicker from "@/components/Resource/components/DetailMod
 import PlayControl from "@/components/Resource/components/PlayControl";
 import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
 import CustomPropertySortModal from "@/components/CustomPropertySortModal";
+import AiTranslateModal from "@/components/Resource/components/DetailModal/AiTranslateModal";
 import { useUiOptionsStore } from "@/stores/options";
 
 type ColumnCount = 1 | 2 | 3;
@@ -130,6 +132,23 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                 />
                 <ResourceProfiles compact resourceId={resource.id} />
               </>
+            )}
+            {resource && (
+              <Tooltip content={t("resource.action.aiTranslate.tooltip")}>
+                <Button
+                  isIconOnly
+                  size={"sm"}
+                  variant={"light"}
+                  onPress={() => {
+                    createPortal(AiTranslateModal, {
+                      resourceId: resource.id,
+                      onTranslationApplied: loadResource,
+                    });
+                  }}
+                >
+                  <MdTranslate className={"text-base"} />
+                </Button>
+              </Tooltip>
             )}
             <Popover
               shouldCloseOnBlur

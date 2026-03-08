@@ -97,5 +97,22 @@
   "Setup priority of property value scopes": "设置属性值作用域的优先级",
   "Visible scopes": "可见作用域",
   "This filter is used for quick check and does not change the priority of property value scopes.": "此筛选器仅用于快速查看，不会改变属性值作用域的优先级。",
-  "You can click on the scope button to change the priority of the property value scopes.": "您可以点击作用域按钮来改变属性值作用域的优先级。"
+  "You can click on the scope button to change the priority of the property value scopes.": "您可以点击作用域按钮来改变属性值作用域的优先级。",
+
+  "resource.action.aiTranslate": "AI 翻译",
+  "resource.action.aiTranslate.tooltip": "使用 AI 将所有文本属性翻译为当前语言",
+  "resource.ai.translating": "翻译中...",
+  "resource.ai.translateSuccess": "翻译完成",
+  "resource.ai.translateFailed": "翻译失败",
+  "resource.ai.noTextProperties": "没有可翻译的文本属性",
+  "resource.ai.translationResults": "翻译结果",
+  "resource.ai.original": "原文",
+  "resource.ai.translated": "译文",
+  "resource.ai.property": "属性",
+  "resource.ai.applyTranslation": "应用",
+  "resource.ai.applyAll": "全部应用",
+  "resource.ai.applySelected": "应用所选",
+  "resource.ai.applied": "已应用",
+  "resource.ai.targetLanguage": "目标语言",
+  "resource.ai.modelConfig": "模型配置"
 }

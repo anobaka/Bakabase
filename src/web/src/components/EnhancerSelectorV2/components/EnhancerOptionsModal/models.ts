@@ -9,6 +9,11 @@ export interface CategoryEnhancerFullOptions {
   options?: EnhancerFullOptions;
 }
 
+export interface EnhancerTranslationOptions {
+  enabled?: boolean;
+  targetLanguage?: string;
+}
+
 export interface EnhancerFullOptions {
   targetOptions?: EnhancerTargetFullOptions[];
   requirements?: EnhancerId[];
@@ -18,6 +23,7 @@ export interface EnhancerFullOptions {
     id: number;
     scope: PropertyValueScope;
   };
+  translationOptions?: EnhancerTranslationOptions;
 }
 
 export interface EnhancerTargetFullOptions {
@@ -27,6 +33,7 @@ export interface EnhancerTargetFullOptions {
   target: number;
   dynamicTarget?: string;
   propertyPool?: PropertyPool;
+  customPrompt?: string;
 }
 
 export function createEnhancerTargetOptions(

@@ -13,5 +13,6 @@
         KodiEnhancer = 1005,
         TmdbEnhancer = 1006,
         AvEnhancer = 1007,
+        AiEnhancer = 1008,
     }
 }

@@ -4,7 +4,6 @@ import React, { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
-  GlobalOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
@@ -14,7 +13,8 @@ import {
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";
 
-import { Button, Divider, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
+import { Button, Divider } from "@/components/bakaui";
+import LanguageDropdown from "@/components/LanguageDropdown";
 import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
@@ -22,9 +22,9 @@ import { UiTheme } from "@/sdk/constants";
 const OptIconStyle = { fontSize: 20 };
 
 const SUPPORTED_LANGUAGES = [
-  { code: "zh-CN", label: "简体中文", shortLabel: "中" },
-  { code: "en-US", label: "English", shortLabel: "EN" },
-] as const;
+  { code: "zh-CN", label: "简体中文" },
+  { code: "en-US", label: "English" },
+];
 
 const Navigation = () => {
   const { t } = useTranslation();
@@ -33,9 +33,9 @@ const Navigation = () => {
   const appOptions = useAppOptionsStore((state) => state.data);
   const uiOptionsStore = useUiOptionsStore();
   const isDarkMode = appOptions.uiTheme == UiTheme.Dark;
-  const currentLanguage = SUPPORTED_LANGUAGES.find(
+  const currentLanguageCode = SUPPORTED_LANGUAGES.find(
     (lang) => lang.code === appOptions.language || lang.code.toLowerCase() === appOptions.language?.toLowerCase()
-  ) ?? SUPPORTED_LANGUAGES[1]; // Default to English
+  )?.code ?? SUPPORTED_LANGUAGES[1].code;
 
   const [loading, setLoading] = useState(false);
   const prevPathRef = useRef<string>(pathname);
@@ -99,35 +99,21 @@ const Navigation = () => {
             <MoonOutlined style={OptIconStyle} />
           )}
         </Button>
-        <Dropdown>
-          <DropdownTrigger>
-            <Button isIconOnly color={"default"} variant={"light"}>
-              <GlobalOutlined style={OptIconStyle} />
-            </Button>
-          </DropdownTrigger>
-          <DropdownMenu
-            aria-label="Language selection"
-            selectionMode="single"
-            selectedKeys={new Set([currentLanguage.code])}
-            onSelectionChange={(keys) => {
-              const selected = Array.from(keys)[0] as string;
-              if (selected && selected !== currentLanguage.code) {
-                setLoading(true);
-                BApi.options
-                  .patchAppOptions({ language: selected })
-                  .then(() => {
-                    location.reload();
-                  });
-              }
-            }}
-          >
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <DropdownItem key={lang.code}>
-                {lang.label}
-              </DropdownItem>
-            ))}
-          </DropdownMenu>
-        </Dropdown>
+        <LanguageDropdown
+          size="sm"
+          availableLocales={SUPPORTED_LANGUAGES}
+          value={currentLanguageCode}
+          onValueChange={(v) => {
+            if (v !== currentLanguageCode) {
+              setLoading(true);
+              BApi.options
+                .patchAppOptions({ language: v })
+                .then(() => {
+                  location.reload();
+                });
+            }
+          }}
+        />
         <Button
           isIconOnly
           color={"default"}

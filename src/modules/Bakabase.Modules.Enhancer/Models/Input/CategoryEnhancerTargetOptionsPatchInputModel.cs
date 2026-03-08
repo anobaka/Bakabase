@@ -10,4 +10,5 @@ public record CategoryEnhancerTargetOptionsPatchInputModel
     public int? PropertyId { get; set; }
     public PropertyPool? PropertyPool { get; set; }
     public string? DynamicTarget { get; set; }
+    public string? CustomPrompt { get; set; }
 }
