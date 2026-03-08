@@ -52,6 +52,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     WorkType = table.Column<string>(type: "TEXT", nullable: true),
                     MetadataJson = table.Column<string>(type: "TEXT", nullable: true),
                     MetadataFetchedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    CoverUrl = table.Column<string>(type: "TEXT", nullable: true),
                     DrmKey = table.Column<string>(type: "TEXT", nullable: true),
                     IsPurchased = table.Column<bool>(type: "INTEGER", nullable: false),
                     IsDownloaded = table.Column<bool>(type: "INTEGER", nullable: false),

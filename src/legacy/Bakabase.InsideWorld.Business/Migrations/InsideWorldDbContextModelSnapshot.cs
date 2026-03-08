@@ -112,6 +112,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("Circle")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("CoverUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 

@@ -48,6 +48,9 @@
   "resourceSource.dlsite.label.workType": "Work type",
   "resourceSource.dlsite.label.purchased": "Purchased",
   "resourceSource.dlsite.label.downloaded": "Downloaded",
+  "resourceSource.dlsite.action.openPage": "Open DLsite page",
+  "resourceSource.dlsite.action.openLocal": "Open local file",
+  "resourceSource.dlsite.noLocalPath": "No local path set",
 
   "resourceSource.exhentai.title": "ExHentai Galleries",
   "resourceSource.exhentai.description": "Galleries synced from your ExHentai favorites.",

@@ -48,6 +48,9 @@
   "resourceSource.dlsite.label.workType": "作品类型",
   "resourceSource.dlsite.label.purchased": "已购入",
   "resourceSource.dlsite.label.downloaded": "已下载",
+  "resourceSource.dlsite.action.openPage": "打开 DLsite 页面",
+  "resourceSource.dlsite.action.openLocal": "打开本地文件",
+  "resourceSource.dlsite.noLocalPath": "未设置本地路径",
 
   "resourceSource.exhentai.title": "ExHentai 画廊",
   "resourceSource.exhentai.description": "从 ExHentai 收藏夹同步的画廊。",

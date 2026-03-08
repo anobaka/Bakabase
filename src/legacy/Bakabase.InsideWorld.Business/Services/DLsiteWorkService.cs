@@ -142,6 +142,7 @@ public class DLsiteWorkService(
                         Title = work.Name?.GetBestName(),
                         Circle = work.Maker?.Name?.GetBestName(),
                         WorkType = work.WorkType,
+                        CoverUrl = work.WorkFiles?.Main,
                         IsPurchased = true,
                         MetadataJson = JsonConvert.SerializeObject(work),
                         MetadataFetchedAt = DateTime.Now,

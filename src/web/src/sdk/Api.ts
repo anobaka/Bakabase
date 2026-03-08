@@ -48,6 +48,7 @@ export interface BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
   metadataJson?: string;
   /** @format date-time */
   metadataFetchedAt?: string;
+  coverUrl?: string;
   drmKey?: string;
   isPurchased: boolean;
   isDownloaded: boolean;

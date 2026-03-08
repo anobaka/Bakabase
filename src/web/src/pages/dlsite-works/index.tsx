@@ -3,17 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Input,
   Chip,
   Button,
   Spinner,
   Progress,
+  Card,
+  CardBody,
+  Image,
+  Tooltip,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -22,6 +20,8 @@ import {
   AiOutlineSync,
   AiOutlineStop,
   AiOutlineReload,
+  AiOutlineLink,
+  AiOutlineFolderOpen,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
@@ -37,6 +37,7 @@ interface DLsiteWork {
   title?: string;
   circle?: string;
   workType?: string;
+  coverUrl?: string;
   metadataJson?: string;
   metadataFetchedAt?: string;
   drmKey?: string;
@@ -49,6 +50,8 @@ interface DLsiteWork {
 }
 
 const SYNC_TASK_ID = "SyncDLsite";
+
+const DLSITE_WORK_URL = "https://www.dlsite.com/maniax/work/=/product_id/";
 
 export default function DLsiteWorksPage() {
   const { t } = useTranslation();
@@ -111,6 +114,14 @@ export default function DLsiteWorksPage() {
       toast.success(t("common.state.saved"));
       setWorks((prev) => prev.filter((w) => w.workId !== workId));
     }
+  };
+
+  const handleOpenDLsitePage = (workId: string) => {
+    window.open(`${DLSITE_WORK_URL}${workId}.html`, "_blank");
+  };
+
+  const handleOpenLocal = async (localPath: string) => {
+    await BApi.tool.openFileOrDirectory({ path: localPath, openInDirectory: false });
   };
 
   return (
@@ -209,84 +220,117 @@ export default function DLsiteWorksPage() {
             <div className="flex justify-center py-12">
               <Spinner size="lg" />
             </div>
+          ) : filteredWorks.length === 0 ? (
+            <div className="flex justify-center py-12 text-default-400">
+              {t("resourceSource.empty")}
+            </div>
           ) : (
-            <Table removeWrapper aria-label="DLsite Works" isStriped>
-              <TableHeader>
-                <TableColumn>{t("resourceSource.dlsite.label.workId")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.title")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.workType")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.purchased")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.downloaded")}</TableColumn>
-                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-                <TableColumn width={80}>{""}</TableColumn>
-              </TableHeader>
-              <TableBody
-                emptyContent={t("resourceSource.empty")}
-                items={filteredWorks}
-              >
-                {(work) => (
-                  <TableRow key={work.workId}>
-                    <TableCell>
-                      <Chip size="sm" variant="flat">
-                        {work.workId}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">{work.title || "-"}</span>
-                    </TableCell>
-                    <TableCell>{work.circle || "-"}</TableCell>
-                    <TableCell>
-                      {work.workType ? (
-                        <Chip color="secondary" size="sm" variant="flat">
-                          {work.workType}
-                        </Chip>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              {filteredWorks.map((work) => (
+                <Card
+                  key={work.workId}
+                  className="group"
+                  isPressable
+                  onPress={() => handleOpenDLsitePage(work.workId)}
+                >
+                  <CardBody className="p-0 overflow-hidden">
+                    <div className="relative aspect-[2/3] bg-default-100">
+                      {work.coverUrl ? (
+                        <Image
+                          alt={work.title || work.workId}
+                          className="w-full h-full object-cover"
+                          classNames={{ wrapper: "w-full h-full !max-w-full" }}
+                          radius="none"
+                          src={work.coverUrl}
+                        />
                       ) : (
-                        "-"
+                        <div className="w-full h-full flex items-center justify-center text-default-300 text-4xl font-bold">
+                          {work.workId.slice(0, 2)}
+                        </div>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        color={work.isPurchased ? "success" : "default"}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {work.isPurchased ? "Yes" : "No"}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        color={work.isDownloaded ? "success" : "default"}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {work.isDownloaded ? "Yes" : "No"}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      {work.resourceId ? (
-                        <Chip color="primary" size="sm" variant="flat">
-                          #{work.resourceId}
-                        </Chip>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        color="danger"
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        onPress={() => handleDelete(work.workId)}
-                      >
-                        <AiOutlineDelete />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+
+                      {/* Overlay with actions - visible on hover */}
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 gap-1">
+                        <div className="flex gap-1">
+                          <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
+                            <Button
+                              className="flex-1"
+                              color="primary"
+                              size="sm"
+                              variant="flat"
+                              onPress={(e) => {
+                                e.stopPropagation?.();
+                                handleOpenDLsitePage(work.workId);
+                              }}
+                            >
+                              <AiOutlineLink />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip
+                            content={
+                              work.localPath
+                                ? t("resourceSource.dlsite.action.openLocal")
+                                : t("resourceSource.dlsite.noLocalPath")
+                            }
+                          >
+                            <Button
+                              className="flex-1"
+                              color="success"
+                              isDisabled={!work.localPath}
+                              size="sm"
+                              variant="flat"
+                              onPress={(e) => {
+                                e.stopPropagation?.();
+                                if (work.localPath) {
+                                  handleOpenLocal(work.localPath);
+                                }
+                              }}
+                            >
+                              <AiOutlineFolderOpen />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content={t("resourceSource.action.delete")}>
+                            <Button
+                              color="danger"
+                              isIconOnly
+                              size="sm"
+                              variant="flat"
+                              onPress={(e) => {
+                                e.stopPropagation?.();
+                                handleDelete(work.workId);
+                              }}
+                            >
+                              <AiOutlineDelete />
+                            </Button>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-2 space-y-1">
+                      <p className="text-sm font-medium line-clamp-2 leading-tight" title={work.title}>
+                        {work.title || work.workId}
+                      </p>
+                      <p className="text-xs text-default-400 truncate">
+                        {work.circle || work.workId}
+                      </p>
+                      <div className="flex gap-1 flex-wrap">
+                        {work.workType && (
+                          <Chip className="text-[10px]" color="secondary" size="sm" variant="flat">
+                            {work.workType}
+                          </Chip>
+                        )}
+                        {work.isPurchased && (
+                          <Chip className="text-[10px]" color="success" size="sm" variant="flat">
+                            {t("resourceSource.dlsite.label.purchased")}
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
           )}
         </>
       )}

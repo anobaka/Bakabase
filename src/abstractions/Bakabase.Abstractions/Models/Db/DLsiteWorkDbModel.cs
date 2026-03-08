@@ -11,6 +11,7 @@ public record DLsiteWorkDbModel
     public string? WorkType { get; set; }
     public string? MetadataJson { get; set; }
     public DateTime? MetadataFetchedAt { get; set; }
+    public string? CoverUrl { get; set; }
     public string? DrmKey { get; set; }
     public bool IsPurchased { get; set; }
     public bool IsDownloaded { get; set; }
