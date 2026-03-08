@@ -84,9 +84,9 @@ export default function DLsiteWorksPage() {
   const prevSyncStatusRef = useRef(syncTask?.status);
   const prevScanStatusRef = useRef(scanTask?.status);
 
-  const isConfigured = (dlsiteOptions?.accounts?.length ?? 0) > 0;
+  const isConfigured = !dlsiteOptionsInitialized || (dlsiteOptions?.accounts?.length ?? 0) > 0;
   const downloadDir = dlsiteOptions?.defaultPath;
-  const hasDownloadDir = !!downloadDir;
+  const hasDownloadDir = !dlsiteOptionsInitialized || !!downloadDir;
   const scanFolders = dlsiteOptions?.scanFolders || [];
   const hasScanFolders = scanFolders.length > 0;
 
@@ -108,13 +108,6 @@ export default function DLsiteWorksPage() {
 
   useEffect(() => {
     loadWorks();
-    if (!dlsiteOptionsInitialized) {
-      BApi.options.getDLsiteOptions().then((rsp) => {
-        if (!rsp.code && rsp.data) {
-          useDLsiteOptionsStore.getState().update(rsp.data);
-        }
-      });
-    }
   }, []);
 
   useEffect(() => {
