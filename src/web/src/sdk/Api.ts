@@ -9411,6 +9411,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name SyncDLsiteWorks
+     * @request POST:/dlsite-work/sync
+     */
+    syncDLsiteWorks: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/sync`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for syncDLsiteWorks
+     * @name syncDLsiteWorksUrl
+     */
+    syncDLsiteWorksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/dlsite-work/sync`;
+      
+      return baseUrl + path;
+    },
   };
   downloadTask = {
     /**
@@ -11805,6 +11831,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name SyncExHentaiGalleries
+     * @request POST:/exhentai-gallery/sync
+     */
+    syncExHentaiGalleries: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/exhentai-gallery/sync`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for syncExHentaiGalleries
+     * @name syncExHentaiGalleriesUrl
+     */
+    syncExHentaiGalleriesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/exhentai-gallery/sync`;
+      
+      return baseUrl + path;
+    },
   };
   extensionGroup = {
     /**
@@ -17706,6 +17758,32 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name SyncSteamApps
+     * @request POST:/steam-app/sync
+     */
+    syncSteamApps: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/steam-app/sync`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for syncSteamApps
+     * @name syncSteamAppsUrl
+     */
+    syncSteamAppsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/steam-app/sync`;
+      
+      return baseUrl + path;
+    },
   };
   tampermonkey = {
     /**
