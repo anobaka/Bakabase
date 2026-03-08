@@ -179,6 +179,15 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExtensionGroupDbModel, int>>();
             services.AddScoped<IExtensionGroupService, ExtensionGroupService>();
 
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, SteamAppDbModel, int>>();
+            services.AddScoped<ISteamAppService, SteamAppService>();
+
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int>>();
+            services.AddScoped<IDLsiteWorkService, DLsiteWorkService>();
+
+            services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int>>();
+            services.AddScoped<IExHentaiGalleryService, ExHentaiGalleryService>();
+
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
 
             services.AddPostParser<BakabaseDbContext>();
