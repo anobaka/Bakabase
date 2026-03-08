@@ -53,6 +53,7 @@
   "resourceSource.dlsite.action.download": "下载",
   "resourceSource.dlsite.action.launch": "启动",
   "resourceSource.dlsite.action.downloading": "下载中...",
+  "resourceSource.dlsite.action.stopDownload": "点击停止下载",
   "resourceSource.dlsite.action.selectFile": "选择文件",
   "resourceSource.dlsite.action.scanFolder": "扫描文件夹",
   "resourceSource.dlsite.action.scanning": "扫描中...",

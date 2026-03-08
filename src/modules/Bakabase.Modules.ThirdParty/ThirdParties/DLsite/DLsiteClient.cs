@@ -185,6 +185,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         request.Headers.Add("Cookie", cookie);
         request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
         request.Headers.Add("Referer", "https://play.dlsite.com/");
+        request.Headers.Add("Origin", "https://play.dlsite.com");
     }
 
     #endregion
@@ -289,6 +290,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Add("Cookie", cookie);
         request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+        request.Headers.Add("Referer", "https://play.dlsite.com/");
 
         if (existingLength > 0)
         {

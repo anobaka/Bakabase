@@ -53,6 +53,7 @@
   "resourceSource.dlsite.action.download": "Download",
   "resourceSource.dlsite.action.launch": "Launch",
   "resourceSource.dlsite.action.downloading": "Downloading...",
+  "resourceSource.dlsite.action.stopDownload": "Click to stop download",
   "resourceSource.dlsite.action.selectFile": "Select file",
   "resourceSource.dlsite.action.scanFolder": "Scan folder",
   "resourceSource.dlsite.action.scanning": "Scanning...",

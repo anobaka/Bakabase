@@ -14,7 +14,6 @@ import {
   Button,
   Spinner,
   CircularProgress,
-  Progress,
   Image,
   Tooltip,
   Switch,
@@ -194,6 +193,11 @@ export default function DLsiteWorksPage() {
     if (rsp.code) {
       toast.error(rsp.message);
     }
+  };
+
+  const handleStopDownload = async (workId: string) => {
+    const taskId = `${DOWNLOAD_TASK_ID_PREFIX}${workId}`;
+    await BApi.backgroundTask.stopBackgroundTask(taskId);
   };
 
   const handleToggleHidden = async (workId: string, isHidden: boolean) => {
@@ -420,84 +424,91 @@ export default function DLsiteWorksPage() {
                         ) : "-"}
                       </TableCell>
                       <TableCell>
-                        {isDownloading ? (
-                          <div className="flex flex-col gap-1">
-                            <Progress
-                              className="w-full"
-                              color="primary"
+                        <div className="flex gap-1">
+                          <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
+                            <Button
+                              isIconOnly
                               size="sm"
-                              value={downloadTask?.percentage ?? 0}
-                            />
-                            <span className="text-xs text-default-400 truncate">
-                              {downloadTask?.process || t("resourceSource.dlsite.action.downloading")}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1">
-                            <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
-                              <Button
-                                isIconOnly
-                                size="sm"
-                                variant="light"
-                                onPress={() => handleOpenDLsitePage(work.workId)}
-                              >
-                                <FiExternalLink className="text-lg" />
-                              </Button>
-                            </Tooltip>
-                            {work.isDownloaded && work.localPath ? (
-                              <>
-                                <Tooltip content={t("resourceSource.dlsite.action.launch")}>
-                                  <Button
-                                    color="success"
-                                    isIconOnly
-                                    size="sm"
-                                    variant="light"
-                                    onPress={() => handleLaunch(work.workId)}
-                                  >
-                                    <AiOutlinePlayCircle className="text-lg" />
-                                  </Button>
-                                </Tooltip>
-                                <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
-                                  <Button
-                                    isIconOnly
-                                    size="sm"
-                                    variant="light"
-                                    onPress={() => handleOpenLocal(work.localPath!)}
-                                  >
-                                    <AiOutlineFolderOpen className="text-lg" />
-                                  </Button>
-                                </Tooltip>
-                              </>
-                            ) : (
-                              <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
-                                <span>
-                                  <Button
-                                    color="warning"
-                                    isDisabled={!hasDownloadDir}
-                                    isIconOnly
-                                    size="sm"
-                                    variant="light"
-                                    onPress={() => handleDownload(work.workId)}
-                                  >
-                                    <AiOutlineDownload className="text-lg" />
-                                  </Button>
-                                </span>
+                              variant="light"
+                              onPress={() => handleOpenDLsitePage(work.workId)}
+                            >
+                              <FiExternalLink className="text-lg" />
+                            </Button>
+                          </Tooltip>
+                          {work.isDownloaded && work.localPath ? (
+                            <>
+                              <Tooltip content={t("resourceSource.dlsite.action.launch")}>
+                                <Button
+                                  color="success"
+                                  isIconOnly
+                                  size="sm"
+                                  variant="light"
+                                  onPress={() => handleLaunch(work.workId)}
+                                >
+                                  <AiOutlinePlayCircle className="text-lg" />
+                                </Button>
                               </Tooltip>
-                            )}
-                            <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
-                              <Button
-                                isIconOnly
-                                size="sm"
-                                variant="light"
-                                onPress={() => handleToggleHidden(work.workId, !work.isHidden)}
+                              <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
+                                <Button
+                                  isIconOnly
+                                  size="sm"
+                                  variant="light"
+                                  onPress={() => handleOpenLocal(work.localPath!)}
+                                >
+                                  <AiOutlineFolderOpen className="text-lg" />
+                                </Button>
+                              </Tooltip>
+                            </>
+                          ) : isDownloading ? (
+                            <Tooltip content={
+                              <div className="text-center">
+                                <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
+                                <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
+                              </div>
+                            }>
+                              <div
+                                className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
+                                onClick={() => handleStopDownload(work.workId)}
                               >
-                                {work.isHidden
-                                  ? <AiOutlineEye className="text-lg" />
-                                  : <AiOutlineEyeInvisible className="text-lg" />}
-                              </Button>
+                                <CircularProgress
+                                  className="group-hover:hidden"
+                                  color="primary"
+                                  showValueLabel
+                                  size="sm"
+                                  value={downloadTask?.percentage ?? 0}
+                                />
+                                <AiOutlineStop className="text-lg text-danger hidden group-hover:block" />
+                              </div>
                             </Tooltip>
-                          </div>
-                        )}
+                          ) : (
+                            <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
+                              <span>
+                                <Button
+                                  color="warning"
+                                  isDisabled={!hasDownloadDir}
+                                  isIconOnly
+                                  size="sm"
+                                  variant="light"
+                                  onPress={() => handleDownload(work.workId)}
+                                >
+                                  <AiOutlineDownload className="text-lg" />
+                                </Button>
+                              </span>
+                            </Tooltip>
+                          )}
+                          <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              onPress={() => handleToggleHidden(work.workId, !work.isHidden)}
+                            >
+                              {work.isHidden
+                                ? <AiOutlineEye className="text-lg" />
+                                : <AiOutlineEyeInvisible className="text-lg" />}
+                            </Button>
+                          </Tooltip>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
