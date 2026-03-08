@@ -141,7 +141,7 @@ export default function AccountsConfigModal({
                       variant="light"
                       onPress={() => removeAccount(index)}
                     >
-                      <AiOutlineDelete />
+                      <AiOutlineDelete className="text-lg" />
                     </Button>
                   </div>
 

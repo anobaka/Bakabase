@@ -403,11 +403,15 @@ public class DLsiteWorkService(
     {
         if (!Directory.Exists(folderPath))
         {
-            throw new Exception($"Folder does not exist: {folderPath}");
+            logger.LogWarning("Scan folder does not exist: {Path}", folderPath);
+            return 0;
         }
 
-        // Find subdirectories whose name matches a DLsite work ID pattern (e.g. RJ123456)
-        var dirs = Directory.GetDirectories(folderPath)
+        // Get all known work IDs (only match works the account owns)
+        var knownWorks = (await orm.GetAll()).ToDictionary(w => w.WorkId, StringComparer.OrdinalIgnoreCase);
+
+        // Find all subdirectories (including nested) whose name matches a DLsite work ID pattern
+        var dirs = Directory.EnumerateDirectories(folderPath, "*", SearchOption.AllDirectories)
             .Select(d => (Path: d, Name: Path.GetFileName(d)))
             .Where(d => WorkIdPattern.IsMatch(d.Name))
             .ToList();
@@ -421,8 +425,7 @@ public class DLsiteWorkService(
             var (dirPath, dirName) = dirs[i];
             var workId = dirName.ToUpperInvariant();
 
-            var existing = await GetByWorkId(workId);
-            if (existing != null)
+            if (knownWorks.TryGetValue(workId, out var existing))
             {
                 if (!existing.IsDownloaded || string.IsNullOrEmpty(existing.LocalPath))
                 {
@@ -433,20 +436,7 @@ public class DLsiteWorkService(
                     matched++;
                 }
             }
-            else
-            {
-                // Create a stub record for works found on disk but not in DB
-                var work = new DLsiteWorkDbModel
-                {
-                    WorkId = workId,
-                    IsDownloaded = true,
-                    LocalPath = dirPath,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now,
-                };
-                await orm.Add(work);
-                matched++;
-            }
+            // Only match works the account owns - skip unknown work IDs
 
             if (onProgress != null)
             {
@@ -456,6 +446,32 @@ public class DLsiteWorkService(
 
         logger.LogInformation("Scan complete: {Matched} works matched out of {Total} directories", matched, dirs.Count);
         return matched;
+    }
+
+    public async Task<int> ScanConfiguredFolders(Func<int, int, Task>? onProgress = null, CancellationToken ct = default)
+    {
+        var folders = dlsiteOptions.Value.ScanFolders;
+        if (folders == null || folders.Count == 0)
+        {
+            logger.LogWarning("No scan folders configured");
+            return 0;
+        }
+
+        var totalMatched = 0;
+        for (var i = 0; i < folders.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var folder = folders[i];
+            var folderMatched = await ScanFolder(folder, null, ct);
+            totalMatched += folderMatched;
+
+            if (onProgress != null)
+            {
+                await onProgress((i + 1) * 100 / folders.Count, totalMatched);
+            }
+        }
+
+        return totalMatched;
     }
 
     public async Task SetHidden(string workId, bool isHidden)

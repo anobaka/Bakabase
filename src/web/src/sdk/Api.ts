@@ -1329,6 +1329,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   /** @format int32 */
   requestInterval: number;
   defaultPath?: string;
+  scanFolders?: string[];
   namingConvention?: string;
   skipExisting: boolean;
   /** @format int32 */
@@ -1611,6 +1612,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
   /** @format int32 */
   requestInterval?: number;
   defaultPath?: string;
+  scanFolders?: string[];
   namingConvention?: string;
   skipExisting?: boolean;
   /** @format int32 */
@@ -9488,15 +9490,13 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DLsiteWork
-     * @name ScanDLsiteFolder
-     * @request POST:/dlsite-work/scan-folder
+     * @name ScanDLsiteFolders
+     * @request POST:/dlsite-work/scan-folders
      */
-    scanDLsiteFolder: (data: string, params: RequestParams = {}) =>
+    scanDLsiteFolders: (params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/dlsite-work/scan-folder`,
+        path: `/dlsite-work/scan-folders`,
         method: "POST",
-        body: data,
-        type: ContentType.Json,
         format: "json",
         ...params,
       }),

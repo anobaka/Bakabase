@@ -139,9 +139,9 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         return new ListResponse<string>(files);
     }
 
-    [HttpPost("scan-folder")]
-    [SwaggerOperation(OperationId = "ScanDLsiteFolder")]
-    public async Task<BaseResponse> ScanFolder([FromBody] string folderPath)
+    [HttpPost("scan-folders")]
+    [SwaggerOperation(OperationId = "ScanDLsiteFolders")]
+    public async Task<BaseResponse> ScanFolders()
     {
         var taskId = "ScanDLsiteFolder";
         await btm.Start(taskId, () => new BTaskHandlerBuilder
@@ -153,8 +153,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
                 var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
-                await svc.ScanFolder(
-                    folderPath,
+                await svc.ScanConfiguredFolders(
                     async (percentage, matched) =>
                     {
                         await args.UpdateTask(t =>

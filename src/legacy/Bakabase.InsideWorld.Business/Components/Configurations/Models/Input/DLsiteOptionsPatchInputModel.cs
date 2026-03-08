@@ -13,6 +13,7 @@ public class DLsiteOptionsPatchInputModel
     public int? MaxConcurrency { get; set; }
     public int? RequestInterval { get; set; }
     public string? DefaultPath { get; set; }
+    public List<string>? ScanFolders { get; set; }
     public string? NamingConvention { get; set; }
     public bool? SkipExisting { get; set; }
     public int? MaxRetries { get; set; }

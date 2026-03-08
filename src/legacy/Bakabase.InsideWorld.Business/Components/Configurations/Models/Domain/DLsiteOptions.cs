@@ -43,6 +43,7 @@ public record DLsiteOptions : ISimpleDownloaderOptionsHolder, IThirdPartyHttpCli
     public int MaxConcurrency { get; set; } = 1;
     public int RequestInterval { get; set; } = 1000;
     public string? DefaultPath { get; set; }
+    public List<string>? ScanFolders { get; set; }
     public string? NamingConvention { get; set; }
     public bool SkipExisting { get; set; }
     public int MaxRetries { get; set; }

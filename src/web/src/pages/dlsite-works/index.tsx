@@ -13,6 +13,7 @@ import {
   Chip,
   Button,
   Spinner,
+  CircularProgress,
   Progress,
   Image,
   Tooltip,
@@ -71,7 +72,7 @@ export default function DLsiteWorksPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
-  const [showHidden, setShowHidden] = useState(false);
+  const [showHidden, setShowHidden] = useState(true);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
   const scanTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SCAN_TASK_ID));
@@ -84,6 +85,8 @@ export default function DLsiteWorksPage() {
   const isConfigured = (dlsiteOptions?.accounts?.length ?? 0) > 0;
   const downloadDir = dlsiteOptions?.defaultPath;
   const hasDownloadDir = !!downloadDir;
+  const scanFolders = dlsiteOptions?.scanFolders || [];
+  const hasScanFolders = scanFolders.length > 0;
 
   const getDownloadTask = (workId: string) => {
     return allTasks.find((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`);
@@ -119,7 +122,6 @@ export default function DLsiteWorksPage() {
     prevScanStatusRef.current = scanTask?.status;
   }, [scanTask?.status]);
 
-  // Reload works when any download task completes
   useEffect(() => {
     const downloadTasks = allTasks.filter((t) => t.id?.startsWith(DOWNLOAD_TASK_ID_PREFIX));
     const justCompleted = downloadTasks.some((t) => t.status === BTaskStatus.Completed);
@@ -136,9 +138,12 @@ export default function DLsiteWorksPage() {
     await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
   };
 
-  const handleScanFolder = async () => {
-    if (!downloadDir) return;
-    const rsp = await BApi.dlsiteWork.scanDLsiteFolder(downloadDir);
+  const handleScanFolders = async () => {
+    if (!hasScanFolders) {
+      setConfigOpen(true);
+      return;
+    }
+    const rsp = await BApi.dlsiteWork.scanDLsiteFolders();
     if (!rsp.code) {
       toast.success(t("resourceSource.dlsite.action.scanning"));
     }
@@ -212,16 +217,16 @@ export default function DLsiteWorksPage() {
         <div className="flex gap-2 items-center">
           {isSyncing ? (
             <div className="flex items-center gap-2">
-              <Progress
-                className="w-32"
+              <CircularProgress
                 color="primary"
+                showValueLabel
                 size="sm"
                 value={syncTask?.percentage ?? 0}
               />
               <Button
                 color="danger"
                 size="sm"
-                startContent={<AiOutlineStop />}
+                startContent={<AiOutlineStop className="text-lg" />}
                 variant="flat"
                 onPress={handleStopSync}
               >
@@ -229,21 +234,25 @@ export default function DLsiteWorksPage() {
               </Button>
             </div>
           ) : (
-            <Button
-              isDisabled={!isConfigured}
-              size="sm"
-              startContent={<AiOutlineSync />}
-              variant="flat"
-              onPress={handleSync}
-            >
-              {t("resourceSource.action.sync")}
-            </Button>
+            <Tooltip content={!isConfigured ? t("resourceSource.notConfigured.title") : undefined}>
+              <span>
+                <Button
+                  isDisabled={!isConfigured}
+                  size="sm"
+                  startContent={<AiOutlineSync className="text-lg" />}
+                  variant="flat"
+                  onPress={handleSync}
+                >
+                  {t("resourceSource.action.sync")}
+                </Button>
+              </span>
+            </Tooltip>
           )}
           {isScanning ? (
             <div className="flex items-center gap-2">
-              <Progress
-                className="w-24"
+              <CircularProgress
                 color="secondary"
+                showValueLabel
                 size="sm"
                 value={scanTask?.percentage ?? 0}
               />
@@ -252,22 +261,19 @@ export default function DLsiteWorksPage() {
               </span>
             </div>
           ) : (
-            <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.scanFolder") : t("resourceSource.dlsite.action.setDownloadDir")}>
-              <Button
-                isDisabled={!hasDownloadDir}
-                size="sm"
-                startContent={<AiOutlineScan />}
-                variant="flat"
-                onPress={handleScanFolder}
-              >
-                {t("resourceSource.dlsite.action.scanFolder")}
-              </Button>
-            </Tooltip>
+            <Button
+              size="sm"
+              startContent={<AiOutlineScan className="text-lg" />}
+              variant="flat"
+              onPress={handleScanFolders}
+            >
+              {t("resourceSource.dlsite.action.scanFolder")}
+            </Button>
           )}
           {hasDownloadDir ? (
             <Button
               size="sm"
-              startContent={<AiOutlineFolderOpen />}
+              startContent={<AiOutlineFolderOpen className="text-lg" />}
               variant="flat"
               onPress={handleOpenDownloadDir}
             >
@@ -277,16 +283,25 @@ export default function DLsiteWorksPage() {
             <Button
               color="warning"
               size="sm"
-              startContent={<AiOutlineFolderOpen />}
+              startContent={<AiOutlineFolderOpen className="text-lg" />}
               variant="flat"
               onPress={() => setConfigOpen(true)}
             >
               {t("resourceSource.dlsite.action.setDownloadDir")}
             </Button>
           )}
+          <Switch
+            isSelected={showHidden}
+            size="sm"
+            onValueChange={setShowHidden}
+          >
+            <span className="text-sm text-default-500 whitespace-nowrap">
+              {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
+            </span>
+          </Switch>
           <Button
             size="sm"
-            startContent={<AiOutlineReload />}
+            startContent={<AiOutlineReload className="text-lg" />}
             variant="flat"
             onPress={loadWorks}
           >
@@ -294,7 +309,7 @@ export default function DLsiteWorksPage() {
           </Button>
           <Button
             size="sm"
-            startContent={<AiOutlineSetting />}
+            startContent={<AiOutlineSetting className="text-lg" />}
             variant="flat"
             onPress={() => setConfigOpen(true)}
           >
@@ -333,17 +348,6 @@ export default function DLsiteWorksPage() {
             <Chip size="sm" variant="flat">
               {filteredWorks.length} / {works.length}
             </Chip>
-            {hiddenCount > 0 && (
-              <Switch
-                isSelected={showHidden}
-                size="sm"
-                onValueChange={setShowHidden}
-              >
-                <span className="text-sm text-default-500">
-                  {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
-                </span>
-              </Switch>
-            )}
           </div>
 
           {loading ? (
@@ -464,16 +468,18 @@ export default function DLsiteWorksPage() {
                               </>
                             ) : (
                               <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
-                                <Button
-                                  color="warning"
-                                  isDisabled={!hasDownloadDir}
-                                  isIconOnly
-                                  size="sm"
-                                  variant="light"
-                                  onPress={() => handleDownload(work.workId)}
-                                >
-                                  <AiOutlineDownload className="text-lg" />
-                                </Button>
+                                <span>
+                                  <Button
+                                    color="warning"
+                                    isDisabled={!hasDownloadDir}
+                                    isIconOnly
+                                    size="sm"
+                                    variant="light"
+                                    onPress={() => handleDownload(work.workId)}
+                                  >
+                                    <AiOutlineDownload className="text-lg" />
+                                  </Button>
+                                </span>
                               </Tooltip>
                             )}
                             <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
