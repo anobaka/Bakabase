@@ -214,10 +214,22 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         Action<HttpRequestMessage>? configureRequest = null)
     {
         var currentUrl = url;
+        // Accumulate cookies from Set-Cookie headers during redirect chain
+        var cookieJar = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in cookie.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var eqIdx = part.IndexOf('=');
+            if (eqIdx > 0)
+            {
+                cookieJar[part[..eqIdx].Trim()] = part[(eqIdx + 1)..].Trim();
+            }
+        }
+
         for (var i = 0; i < MaxRedirects; i++)
         {
+            var cookieHeader = string.Join("; ", cookieJar.Select(kv => $"{kv.Key}={kv.Value}"));
             var request = new HttpRequestMessage(HttpMethod.Get, currentUrl);
-            request.Headers.Add("Cookie", cookie);
+            request.Headers.Add("Cookie", cookieHeader);
             request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
             request.Headers.Add("Referer", "https://play.dlsite.com/");
             configureRequest?.Invoke(request);
@@ -233,6 +245,21 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 if (location == null)
                 {
                     throw new Exception($"Redirect response from {currentUrl} has no Location header");
+                }
+
+                // Merge Set-Cookie headers into the cookie jar
+                if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
+                {
+                    foreach (var sc in setCookies)
+                    {
+                        // Set-Cookie value format: name=value; path=...; domain=...
+                        var cookiePart = sc.Split(';', 2)[0].Trim();
+                        var eqIdx = cookiePart.IndexOf('=');
+                        if (eqIdx > 0)
+                        {
+                            cookieJar[cookiePart[..eqIdx].Trim()] = cookiePart[(eqIdx + 1)..].Trim();
+                        }
+                    }
                 }
 
                 response.Dispose();
