@@ -47,10 +47,10 @@ export default function ExHentaiGalleriesPage() {
   const [galleries, setGalleries] = useState<ExHentaiGallery[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
-  const [showConfig, setShowConfig] = useState(false);
-  const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
+  const [configOpen, setConfigOpen] = useState(false);
+  const exhentaiOptions = useExHentaiOptionsStore((s) => s.data);
 
-  const isConfigured = !!(exhentaiOptions as any)?.cookie;
+  const isConfigured = (exhentaiOptions?.accounts?.length ?? 0) > 0;
 
   const loadGalleries = async () => {
     setLoading(true);
@@ -110,6 +110,7 @@ export default function ExHentaiGalleriesPage() {
         </div>
         <div className="flex gap-2">
           <Button
+            isDisabled={!isConfigured}
             size="sm"
             startContent={<AiOutlineSync />}
             variant="flat"
@@ -118,31 +119,26 @@ export default function ExHentaiGalleriesPage() {
             {t("resourceSource.action.sync")}
           </Button>
           <Button
-            color={showConfig ? "primary" : "default"}
             size="sm"
             startContent={<AiOutlineSetting />}
-            variant={showConfig ? "solid" : "flat"}
-            onPress={() => setShowConfig(!showConfig)}
+            variant="flat"
+            onPress={() => setConfigOpen(true)}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      {showConfig && (
-        <div className="border-small border-default-200 rounded-lg p-4">
-          <ExHentaiConfig />
-        </div>
-      )}
+      <ExHentaiConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
 
-      {!isConfigured && !showConfig && galleries.length === 0 && (
+      {!isConfigured && galleries.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "ExHentai" })}</p>
           <Button
             color="primary"
             size="sm"
-            onPress={() => setShowConfig(true)}
+            onPress={() => setConfigOpen(true)}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>

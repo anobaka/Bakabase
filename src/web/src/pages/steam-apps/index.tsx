@@ -23,7 +23,7 @@ import {
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
-import { useThirdPartyOptionsStore } from "@/stores/options";
+import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
 
 interface SteamApp {
@@ -48,10 +48,10 @@ export default function SteamAppsPage() {
   const [apps, setApps] = useState<SteamApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
-  const [showConfig, setShowConfig] = useState(false);
-  const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
+  const [configOpen, setConfigOpen] = useState(false);
+  const steamOptions = useSteamOptionsStore((s) => s.data);
 
-  const isConfigured = !!(thirdPartyOptions as any)?.steamApiKey;
+  const isConfigured = (steamOptions?.accounts?.length ?? 0) > 0;
 
   const loadApps = async () => {
     setLoading(true);
@@ -110,6 +110,7 @@ export default function SteamAppsPage() {
         </div>
         <div className="flex gap-2">
           <Button
+            isDisabled={!isConfigured}
             size="sm"
             startContent={<AiOutlineSync />}
             variant="flat"
@@ -118,31 +119,26 @@ export default function SteamAppsPage() {
             {t("resourceSource.action.sync")}
           </Button>
           <Button
-            color={showConfig ? "primary" : "default"}
             size="sm"
             startContent={<AiOutlineSetting />}
-            variant={showConfig ? "solid" : "flat"}
-            onPress={() => setShowConfig(!showConfig)}
+            variant="flat"
+            onPress={() => setConfigOpen(true)}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      {showConfig && (
-        <div className="border-small border-default-200 rounded-lg p-4">
-          <SteamConfig />
-        </div>
-      )}
+      <SteamConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
 
-      {!isConfigured && !showConfig && apps.length === 0 && (
+      {!isConfigured && apps.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "Steam" })}</p>
           <Button
             color="primary"
             size="sm"
-            onPress={() => setShowConfig(true)}
+            onPress={() => setConfigOpen(true)}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>

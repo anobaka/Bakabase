@@ -1222,7 +1222,13 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   requestTimeout: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteAccount {
+  name?: string;
+  cookie?: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteAccount[];
   cookie?: string;
   userAgent?: string;
   referer?: string;
@@ -1240,7 +1246,13 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   requestTimeout: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
+  name?: string;
+  cookie?: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount[];
   cookie?: string;
   userAgent?: string;
   referer?: string;
@@ -1256,6 +1268,18 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   maxRetries: number;
   /** @format int32 */
   requestTimeout: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount {
+  name?: string;
+  apiKey?: string;
+  steamId?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
+  apiKey?: string;
+  steamId?: string;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
@@ -1486,6 +1510,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputC
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputDLsiteOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteAccount[];
   cookie?: string;
   userAgent?: string;
   referer?: string;
@@ -1507,7 +1532,19 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   regexEnhancer?: BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputExHentaiOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount[];
   cookie?: string;
   /** @format int32 */
   maxConcurrency?: number;
@@ -15639,6 +15676,66 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       const baseUrl = this.baseUrl || "";
       let path = `/options/dlsite`;
       
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name GetSteamOptions
+     * @request GET:/options/steam
+     */
+    getSteamOptions: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions,
+        any
+      >({
+        path: `/options/steam`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getSteamOptions
+     * @name getSteamOptionsUrl
+     */
+    getSteamOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/steam`;
+
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags Options
+     * @name PatchSteamOptions
+     * @request PATCH:/options/steam
+     */
+    patchSteamOptions: (
+      data: BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/options/steam`,
+        method: "PATCH",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for patchSteamOptions
+     * @name patchSteamOptionsUrl
+     */
+    patchSteamOptionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/options/steam`;
+
       return baseUrl + path;
     },
 

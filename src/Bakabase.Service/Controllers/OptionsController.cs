@@ -290,7 +290,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<ExHentaiOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1104,7 +1108,11 @@ namespace Bakabase.Service.Controllers
         {
             await _bakabaseOptionsManager.Get<DLsiteOptions>().SaveAsync(options =>
             {
-                if (model.Cookie != null)
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
+                }
+                else if (model.Cookie != null)
                 {
                     options.Cookie = model.Cookie;
                 }
@@ -1157,6 +1165,27 @@ namespace Bakabase.Service.Controllers
                 if (model.RequestTimeout.HasValue)
                 {
                     options.RequestTimeout = model.RequestTimeout.Value;
+                }
+            });
+            return BaseResponseBuilder.Ok;
+        }
+
+        [HttpGet("steam")]
+        [SwaggerOperation(OperationId = "GetSteamOptions")]
+        public async Task<SingletonResponse<SteamOptions>> GetSteamOptions()
+        {
+            return new SingletonResponse<SteamOptions>(_bakabaseOptionsManager.Get<SteamOptions>().Value);
+        }
+
+        [HttpPatch("steam")]
+        [SwaggerOperation(OperationId = "PatchSteamOptions")]
+        public async Task<BaseResponse> PatchSteamOptions([FromBody] SteamOptionsPatchInputModel model)
+        {
+            await _bakabaseOptionsManager.Get<SteamOptions>().SaveAsync(options =>
+            {
+                if (model.Accounts != null)
+                {
+                    options.Accounts = model.Accounts;
                 }
             });
             return BaseResponseBuilder.Ok;

@@ -48,10 +48,10 @@ export default function DLsiteWorksPage() {
   const [works, setWorks] = useState<DLsiteWork[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
-  const [showConfig, setShowConfig] = useState(false);
-  const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
+  const [configOpen, setConfigOpen] = useState(false);
+  const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
 
-  const isConfigured = !!(dlsiteOptions as any)?.cookie;
+  const isConfigured = (dlsiteOptions?.accounts?.length ?? 0) > 0;
 
   const loadWorks = async () => {
     setLoading(true);
@@ -101,6 +101,7 @@ export default function DLsiteWorksPage() {
         </div>
         <div className="flex gap-2">
           <Button
+            isDisabled={!isConfigured}
             size="sm"
             startContent={<AiOutlineSync />}
             variant="flat"
@@ -109,31 +110,26 @@ export default function DLsiteWorksPage() {
             {t("resourceSource.action.sync")}
           </Button>
           <Button
-            color={showConfig ? "primary" : "default"}
             size="sm"
             startContent={<AiOutlineSetting />}
-            variant={showConfig ? "solid" : "flat"}
-            onPress={() => setShowConfig(!showConfig)}
+            variant="flat"
+            onPress={() => setConfigOpen(true)}
           >
             {t("resourceSource.action.configure")}
           </Button>
         </div>
       </div>
 
-      {showConfig && (
-        <div className="border-small border-default-200 rounded-lg p-4">
-          <DLsiteConfig />
-        </div>
-      )}
+      <DLsiteConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
 
-      {!isConfigured && !showConfig && works.length === 0 && (
+      {!isConfigured && works.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "DLsite" })}</p>
           <Button
             color="primary"
             size="sm"
-            onPress={() => setShowConfig(true)}
+            onPress={() => setConfigOpen(true)}
           >
             {t("resourceSource.notConfigured.goToConfigure")}
           </Button>
