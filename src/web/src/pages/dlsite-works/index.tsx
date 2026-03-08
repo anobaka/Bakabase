@@ -355,8 +355,8 @@ export default function DLsiteWorksPage() {
               removeWrapper
               aria-label="DLsite Works"
               classNames={{
-                tr: "h-[200px]",
-                td: "align-middle",
+                // tr: "h-[200px]",
+                // td: "align-middle",
               }}
               isStriped
             >
@@ -384,12 +384,12 @@ export default function DLsiteWorksPage() {
                           <Image
                             alt={work.title || work.workId}
                             className="object-contain"
-                            classNames={{ wrapper: "w-[140px] h-[180px] min-w-[140px]" }}
+                            classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
                             radius="sm"
                             src={work.coverUrl}
                           />
                         ) : (
-                          <div className="w-[140px] h-[180px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
+                          <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
                             {work.workId}
                           </div>
                         )}
