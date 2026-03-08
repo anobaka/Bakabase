@@ -193,7 +193,7 @@ export default function DLsiteWorksPage() {
   const handleLaunch = async (workId: string) => {
     const rsp = await BApi.dlsiteWork.launchDLsiteWork(workId);
     if (rsp.code) {
-      toast.error(rsp.message);
+      toast.danger(rsp.message!);
     }
   };
 
@@ -236,7 +236,7 @@ export default function DLsiteWorksPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">
