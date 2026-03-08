@@ -234,11 +234,11 @@ export default function DLsiteWorksPage() {
                   onPress={() => handleOpenDLsitePage(work.workId)}
                 >
                   <CardBody className="p-0 overflow-hidden">
-                    <div className="relative aspect-[2/3] bg-default-100">
+                    <div className="relative bg-default-100">
                       {work.coverUrl ? (
                         <Image
                           alt={work.title || work.workId}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-contain"
                           classNames={{ wrapper: "w-full h-full !max-w-full" }}
                           radius="none"
                           src={work.coverUrl}
