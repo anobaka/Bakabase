@@ -206,6 +206,11 @@
   "menu.experimental": "实验性",
   "menu.thirdPartyIntegration": "第三方集成",
   "menu.postParser": "帖子解析器",
+  "menu.ai": "AI",
+  "menu.ai.configuration": "AI 配置",
+  "menu.ai.usage": "用量统计",
+  "menu.ai.auditLog": "审计日志",
+  "menu.ai.cache": "缓存管理",
   "menu.system": "系统",
   "menu.configuration": "配置",
   "menu.thirdParty": "第三方",
@@ -266,5 +271,7 @@
   "FeatureRequestTip.Deprecated": "<1>{{name}}</1> 功能已弃用。你可以在 <3>Github</3> 或 <5>QQ群</5> 上了解详情或提出建议。",
   "FeatureRequestTip.Deprecating": "<1>{{name}}</1> 功能即将弃用。你可以在 <3>Github</3> 或 <5>QQ群</5> 上了解详情或提出建议。",
   "Join QQ group": "加入QQ群",
-  "For more information, you can visit:": "如需了解更多信息，请访问："
+  "For more information, you can visit:": "如需了解更多信息，请访问：",
+  "ai.button.configureFirst": "请先配置模型",
+  "ai.button.configureFirstTip": "此功能需要配置 AI 模型后才能使用，请先点击上方设置图标进行配置"
 }

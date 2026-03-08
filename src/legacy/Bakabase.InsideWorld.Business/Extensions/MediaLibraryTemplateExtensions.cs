@@ -88,6 +88,7 @@ public static class MediaLibraryTemplateExtensions
             Target = options.Target,
             DynamicTarget = options.DynamicTarget,
             CoverSelectOrder = options.CoverSelectOrder,
+            CustomPrompt = options.CustomPrompt,
         };
     }
 

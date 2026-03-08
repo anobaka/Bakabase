@@ -627,6 +627,33 @@
   <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
     <value>马赛克</value>
   </data>
+  <data name="Enhancer_AI_Name" xml:space="preserve">
+    <value>AI</value>
+  </data>
+  <data name="Enhancer_AI_Description" xml:space="preserve">
+    <value>使用AI/LLM分析文件名和路径，自动提取标题、标签、系列、发行日期等元数据。需要先配置LLM提供者。</value>
+  </data>
+  <data name="Enhancer_AI_Target_Name_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Enhancer_AI_Target_Tags_Name" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Enhancer_AI_Target_Introduction_Name" xml:space="preserve">
+    <value>简介</value>
+  </data>
+  <data name="Enhancer_AI_Target_Rating_Name" xml:space="preserve">
+    <value>评分</value>
+  </data>
+  <data name="Enhancer_AI_Target_Series_Name" xml:space="preserve">
+    <value>系列</value>
+  </data>
+  <data name="Enhancer_AI_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>发行日期</value>
+  </data>
+  <data name="Enhancer_AI_Target_Properties_Name" xml:space="preserve">
+    <value>自定义属性</value>
+  </data>
   <data name="Enhance" xml:space="preserve">
     <value>增强</value>
   </data>

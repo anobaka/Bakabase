@@ -28,6 +28,12 @@
   "enhancer.options.enhanceProperties.label": "Dynamic Property Configuration",
   "enhancer.options.enhanceProperties.tip": "Configure dynamic properties for this enhancer. Static properties are managed in the external property list.",
 
+  "enhancer.options.translation.label": "Post-enhancement Translation",
+  "enhancer.options.translation.description": "Translate enhancement results to the target language after enhancement",
+  "enhancer.options.translation.notConfigured": "Translation AI feature is not configured. Please configure it in AI settings first.",
+  "enhancer.options.translation.targetLanguage.label": "Target language",
+  "enhancer.options.translation.targetLanguage.placeholder": "e.g. en, zh, ja",
+
   "enhancer.categoryOptions.title": "Configure enhancer:{{enhancerName}} for category:{{categoryName}}",
 
   "enhancer.regex.captureGroups.label": "Available capture groups:",
@@ -52,6 +58,8 @@
   "enhancer.target.dynamicLabel.tip": "This is not a fixed enhancement target, which will be replaced with other content when data is collected",
   "enhancer.target.configured.label": "Configured",
   "enhancer.target.bindProperty.label": "Bind property",
+  "enhancer.target.customPrompt.label": "Extraction hint for AI",
+  "enhancer.target.customPrompt.placeholder": "Describe how AI should extract this target, e.g. \"Extract from [] brackets in filename\"",
 
   "enhancer.targetOptions.autoMatch.label": "Auto match on empty values",
   "enhancer.targetOptions.autoMatch.description": "By default, an empty layer will be created if we meet an empty value in multilevel data.",

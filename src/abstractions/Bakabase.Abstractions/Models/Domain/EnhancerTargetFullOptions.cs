@@ -14,4 +14,9 @@ public record EnhancerTargetFullOptions() : EnhancerTargetOptions
     public PropertyPool PropertyPool { get; set; }
     public int PropertyId { get; set; }
     public Property? Property { get; set; }
+
+    /// <summary>
+    /// User-provided prompt hint for AI enhancer, describing how to extract this target.
+    /// </summary>
+    public string? CustomPrompt { get; set; }
 }

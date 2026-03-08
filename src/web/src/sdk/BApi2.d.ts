@@ -4,6 +4,326 @@
  */
 
 export interface paths {
+    "/ai/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllLlmProviders"];
+        put?: never;
+        post: operations["AddLlmProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/providers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLlmProvider"];
+        put: operations["UpdateLlmProvider"];
+        post?: never;
+        delete: operations["DeleteLlmProvider"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/providers/{id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["TestLlmProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/providers/{id}/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLlmProviderModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLlmProviderTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["SearchLlmUsage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/usage/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetLlmUsageSummary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllLlmCacheEntries"];
+        put?: never;
+        post?: never;
+        delete: operations["ClearAllLlmCache"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/cache/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteLlmCacheEntry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAllAiFeatureConfigs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/features/{feature}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetAiFeatureConfig"];
+        put: operations["SaveAiFeatureConfig"];
+        post?: never;
+        delete: operations["DeleteAiFeatureConfig"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/translate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiTranslate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/translate/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiTranslateBatch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/resource/{resourceId}/translate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiTranslateResourceProperties"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/file-processor/analyze-structure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiAnalyzeFileStructure"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/file-processor/analyze-naming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiAnalyzeNamingConvention"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/file-processor/suggest-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiSuggestFileNameCorrections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/file-processor/group-by-similarity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiGroupByPathSimilarity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/file-processor/suggest-directory-corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiSuggestDirectoryCorrections"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/file-processor/apply-operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["AiApplyFileOperations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/alias": {
         parameters: {
             query?: never;
@@ -2793,6 +3113,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/options/ui-style": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetUIStyleOptions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["PatchUIStyleOptions"];
+        trace?: never;
+    };
     "/options/bilibili": {
         parameters: {
             query?: never;
@@ -4740,10 +5076,10 @@ export interface components {
         "Bakabase.Abstractions.Models.Domain.Constants.PropertyType": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16;
         /**
          * Format: int32
-         * @description [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer]
+         * @description [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer]
          * @enum {integer}
          */
-        "Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope": 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007;
+        "Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope": 0 | 1 | 1000 | 1001 | 1002 | 1003 | 1004 | 1005 | 1006 | 1007 | 1008;
         /**
          * Format: int32
          * @description [12: Introduction, 13: Rating, 22: Cover]
@@ -4834,6 +5170,7 @@ export interface components {
             /** Format: int32 */
             propertyId: number;
             property?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Property"];
+            customPrompt?: string;
         };
         "Bakabase.Abstractions.Models.Domain.ExtensionGroup": {
             /** Format: int32 */
@@ -5019,17 +5356,11 @@ export interface components {
             /** Format: int32 */
             order: number;
         };
-        "Bakabase.Abstractions.Models.Domain.PropertyKey": {
-            pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
-            /** Format: int32 */
-            id: number;
-        };
         "Bakabase.Abstractions.Models.Domain.PropertyKeyWithScopePriority": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
             id: number;
-            /** Optional per-property scope priority override. Null means use global setting. */
-            scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][] | null;
+            scopePriority?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyValueScope"][];
         };
         "Bakabase.Abstractions.Models.Domain.PropertyPathSegmentMatcherValue": {
             fixedText?: string;
@@ -5505,6 +5836,14 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.AiOptions": {
             ollamaEndpoint?: string;
+            /** Format: int32 */
+            defaultProviderConfigId?: number;
+            defaultModelId?: string;
+            quota?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmQuotaConfig"];
+            enableCache: boolean;
+            /** Format: int32 */
+            defaultCacheTtlDays: number;
+            auditLogRequestContent: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.BangumiOptions": {
             /** Format: int32 */
@@ -5747,6 +6086,14 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.AiOptionsPatchInputModel": {
             ollamaEndpoint?: string;
+            /** Format: int32 */
+            defaultProviderConfigId?: number;
+            defaultModelId?: string;
+            quota?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmQuotaConfig"];
+            enableCache?: boolean;
+            /** Format: int32 */
+            defaultCacheTtlDays?: number;
+            auditLogRequestContent?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.BangumiOptionsPatchInputModel": {
             /** Format: int32 */
@@ -5934,6 +6281,11 @@ export interface components {
             isMenuCollapsed?: boolean;
             latestUsedProperties?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
         };
+        "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIStyleOptionsPatchRequestModel": {
+            cssVariableOverwrites?: {
+                [key: string]: string;
+            };
+        };
         "Bakabase.InsideWorld.Business.Components.Dependency.Abstractions.DependentComponentVersion": {
             version: string;
             description?: string;
@@ -6069,10 +6421,10 @@ export interface components {
         };
         /**
          * Format: int32
-         * @description [1: SingleWork, 2: Watched, 3: List, 4: Torrent]
+         * @description [1: SingleWork, 2: Watched, 3: List]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3 | 4;
+        "Bakabase.InsideWorld.Business.Components.Downloader.Components.Downloaders.ExHentai.ExHentaiDownloadTaskType": 1 | 2 | 3;
         "Bakabase.InsideWorld.Business.Components.FileExplorer.Entries.IwFsCompressedFileGroup": {
             keyName: string;
             files: string[];
@@ -6312,6 +6664,11 @@ export interface components {
             inlineDisplayName: boolean;
             autoSelectFirstPlayableFile: boolean;
             displayOperations: string[];
+        };
+        "Bakabase.InsideWorld.Models.Configs.UIStyleOptions": {
+            cssVariableOverwrites: {
+                [key: string]: string;
+            };
         };
         /**
          * Format: int32
@@ -6573,6 +6930,321 @@ export interface components {
             ids: number[];
             mediaLibraryIds: number[];
         };
+        "Bakabase.Modules.AI.Components.Observation.LlmUsageByFeature": {
+            feature: string;
+            /** Format: int64 */
+            totalTokens: number;
+            /** Format: int32 */
+            callCount: number;
+        };
+        "Bakabase.Modules.AI.Components.Observation.LlmUsageByProvider": {
+            /** Format: int32 */
+            providerConfigId: number;
+            modelId: string;
+            /** Format: int64 */
+            totalTokens: number;
+            /** Format: int32 */
+            callCount: number;
+        };
+        "Bakabase.Modules.AI.Components.Observation.LlmUsageSummary": {
+            /** Format: int64 */
+            totalTokens: number;
+            /** Format: int64 */
+            todayTokens: number;
+            /** Format: int64 */
+            monthTokens: number;
+            /** Format: int32 */
+            totalCalls: number;
+            /** Format: int32 */
+            cacheHits: number;
+            /** Format: double */
+            cacheHitRate: number;
+            byProvider: components["schemas"]["Bakabase.Modules.AI.Components.Observation.LlmUsageByProvider"][];
+            byFeature: components["schemas"]["Bakabase.Modules.AI.Components.Observation.LlmUsageByFeature"][];
+        };
+        "Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel": {
+            /** Format: int32 */
+            id: number;
+            feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
+            useDefault: boolean;
+            /** Format: int32 */
+            providerConfigId?: number;
+            modelId?: string;
+            /** Format: float */
+            temperature?: number;
+            /** Format: int32 */
+            maxTokens?: number;
+            /** Format: float */
+            topP?: number;
+        };
+        "Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel": {
+            /** Format: int64 */
+            id: number;
+            cacheKey: string;
+            responseJson: string;
+            /** Format: int32 */
+            providerConfigId: number;
+            modelId: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt?: string;
+            /** Format: int32 */
+            hitCount: number;
+        };
+        "Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel": {
+            /** Format: int32 */
+            id: number;
+            providerType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
+            name: string;
+            endpoint?: string;
+            apiKey?: string;
+            isEnabled: boolean;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        "Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel": {
+            /** Format: int64 */
+            id: number;
+            /** Format: int32 */
+            providerConfigId: number;
+            modelId: string;
+            feature?: string;
+            /** Format: int32 */
+            inputTokens: number;
+            /** Format: int32 */
+            outputTokens: number;
+            /** Format: int32 */
+            totalTokens: number;
+            /** Format: int32 */
+            durationMs: number;
+            cacheHit: boolean;
+            status: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmCallStatus"];
+            errorMessage?: string;
+            /** Format: date-time */
+            createdAt: string;
+            requestSummary?: string;
+            responseSummary?: string;
+        };
+        /**
+         * Format: int32
+         * @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.AiFeature": 0 | 1 | 2 | 3;
+        /**
+         * Format: int32
+         * @description [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.LlmCallStatus": 1 | 2 | 3 | 4;
+        /**
+         * Format: int32
+         * @description [0: None, 1: Chat, 2: ToolCalling, 4: Vision, 8: Streaming, 16: Embedding, 32: JsonMode]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.LlmCapabilities": 0 | 1 | 2 | 4 | 8 | 16 | 32;
+        "Bakabase.Modules.AI.Models.Domain.LlmModelInfo": {
+            modelId: string;
+            displayName: string;
+            capabilities: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmCapabilities"];
+        };
+        /**
+         * Format: int32
+         * @description [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Models.Domain.LlmProviderType": 1 | 2 | 3 | 4 | 5;
+        "Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo": {
+            type: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
+            displayName: string;
+            defaultCapabilities: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmCapabilities"];
+            requiresApiKey: boolean;
+            requiresEndpoint: boolean;
+            defaultEndpoint?: string;
+        };
+        "Bakabase.Modules.AI.Models.Domain.LlmQuotaConfig": {
+            /** Format: int32 */
+            dailyTokenLimit?: number;
+            /** Format: int32 */
+            monthlyTokenLimit?: number;
+        };
+        "Bakabase.Modules.AI.Models.Domain.PropertyTranslation": {
+            propertyKey: string;
+            originalText: string;
+            translatedText: string;
+            /** Format: int32 */
+            propertyId: number;
+            propertyPool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
+            propertyName?: string;
+            propertyType?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyType"];
+            dbValueType?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
+            bizValueType?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.StandardValueType"];
+        };
+        "Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult": {
+            /** Format: int32 */
+            resourceId: number;
+            translations: components["schemas"]["Bakabase.Modules.AI.Models.Domain.PropertyTranslation"][];
+        };
+        "Bakabase.Modules.AI.Models.Input.AiFeatureConfigInputModel": {
+            useDefault: boolean;
+            /** Format: int32 */
+            providerConfigId?: number;
+            modelId?: string;
+            /** Format: float */
+            temperature?: number;
+            /** Format: int32 */
+            maxTokens?: number;
+            /** Format: float */
+            topP?: number;
+        };
+        "Bakabase.Modules.AI.Models.Input.ApplyFileOperationsInputModel": {
+            operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
+        };
+        "Bakabase.Modules.AI.Models.Input.FileNameCorrectionInputModel": {
+            filePaths: string[];
+            workingDirectory?: string;
+            targetConvention?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel": {
+            directoryPath: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.FileProcessorPathsInputModel": {
+            filePaths: string[];
+            workingDirectory?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel": {
+            providerType: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
+            name: string;
+            endpoint?: string;
+            apiKey?: string;
+            isEnabled: boolean;
+        };
+        "Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel": {
+            providerType?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderType"];
+            name?: string;
+            endpoint?: string;
+            apiKey?: string;
+            isEnabled?: boolean;
+        };
+        "Bakabase.Modules.AI.Models.Input.PathSimilarityGroupInputModel": {
+            filePaths: string[];
+            workingDirectory?: string;
+            customGroupingLogic?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.TranslateBatchInputModel": {
+            texts: string[];
+            targetLanguage: string;
+            sourceLanguage?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.TranslateInputModel": {
+            text: string;
+            targetLanguage: string;
+            sourceLanguage?: string;
+        };
+        "Bakabase.Modules.AI.Models.Input.TranslateResourcePropertiesInputModel": {
+            targetLanguage: string;
+            sourceLanguage?: string;
+        };
+        "Bakabase.Modules.AI.Services.ApplyOperationsResult": {
+            /** Format: int32 */
+            totalOperations: number;
+            /** Format: int32 */
+            successCount: number;
+            /** Format: int32 */
+            failureCount: number;
+            errors: components["schemas"]["Bakabase.Modules.AI.Services.OperationError"][];
+        };
+        "Bakabase.Modules.AI.Services.BatchTranslationResult": {
+            results: components["schemas"]["Bakabase.Modules.AI.Services.TranslationResult"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            successCount: number;
+        };
+        "Bakabase.Modules.AI.Services.DirectoryCorrection": {
+            originalPath: string;
+            suggestedPath: string;
+            reason: string;
+        };
+        "Bakabase.Modules.AI.Services.DirectoryStructureCorrectionResult": {
+            directoryPath: string;
+            corrections: components["schemas"]["Bakabase.Modules.AI.Services.DirectoryCorrection"][];
+            summary?: string;
+            operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
+            rawText?: string;
+        };
+        "Bakabase.Modules.AI.Services.FileNameCorrection": {
+            originalPath: string;
+            suggestedName: string;
+            reason: string;
+        };
+        "Bakabase.Modules.AI.Services.FileNameCorrectionResult": {
+            corrections: components["schemas"]["Bakabase.Modules.AI.Services.FileNameCorrection"][];
+            appliedConvention?: string;
+            operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
+            rawText?: string;
+        };
+        "Bakabase.Modules.AI.Services.FileOperation": {
+            type: components["schemas"]["Bakabase.Modules.AI.Services.FileOperationType"];
+            sourcePath: string;
+            destinationPath: string;
+            reason?: string;
+            /** Format: int32 */
+            order: number;
+            /** Format: int32 */
+            dependsOnOrder?: number;
+        };
+        /**
+         * Format: int32
+         * @description [1: Rename, 2: Move, 3: CreateDirectory]
+         * @enum {integer}
+         */
+        "Bakabase.Modules.AI.Services.FileOperationType": 1 | 2 | 3;
+        "Bakabase.Modules.AI.Services.FileStructureAnalysisResult": {
+            directoryPath: string;
+            /** Format: int32 */
+            totalFiles: number;
+            /** Format: int32 */
+            totalDirectories: number;
+            issues: string[];
+            suggestions: string[];
+            summary?: string;
+            operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
+            rawText?: string;
+        };
+        "Bakabase.Modules.AI.Services.NamingConventionAnalysisResult": {
+            detectedPattern?: string;
+            inconsistencies: string[];
+            suggestions: string[];
+            summary?: string;
+            operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
+            rawText?: string;
+        };
+        "Bakabase.Modules.AI.Services.OperationError": {
+            /** Format: int32 */
+            operationIndex: number;
+            operation: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"];
+            errorMessage: string;
+        };
+        "Bakabase.Modules.AI.Services.PathSimilarityGroup": {
+            groupName: string;
+            paths: string[];
+            reason?: string;
+        };
+        "Bakabase.Modules.AI.Services.PathSimilarityGroupResult": {
+            groups: components["schemas"]["Bakabase.Modules.AI.Services.PathSimilarityGroup"][];
+            operations: components["schemas"]["Bakabase.Modules.AI.Services.FileOperation"][];
+            rawText?: string;
+        };
+        "Bakabase.Modules.AI.Services.TranslationResult": {
+            originalText: string;
+            translatedText: string;
+            detectedSourceLanguage?: string;
+            targetLanguage: string;
+        };
         "Bakabase.Modules.Alias.Abstractions.Models.Domain.Alias": {
             text: string;
             preferred?: string;
@@ -6775,10 +7447,10 @@ export interface components {
         "Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants.EnhancementAdditionalItem": 0 | 1;
         /**
          * Format: int32
-         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av]
+         * @description [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI]
          * @enum {integer}
          */
-        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+        "Bakabase.Modules.Enhancer.Models.Domain.Constants.EnhancerId": 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
         /**
          * Format: int32
          * @description [1: UseRegex, 2: UseKeyword]
@@ -7523,6 +8195,42 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.Password"][];
         };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmModelInfo]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmModelInfo"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo"][];
+        };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancerDescriptor]": {
             /** Format: int32 */
             code: number;
@@ -7979,6 +8687,12 @@ export interface components {
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions"];
         };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIStyleOptions]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIStyleOptions"];
+        };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Models.Aos.ThirdPartyRequestStatistics[]]": {
             /** Format: int32 */
             code: number;
@@ -8002,6 +8716,78 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.InsideWorld.Models.Models.Entities.ComponentOptions"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Components.Observation.LlmUsageSummary]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Components.Observation.LlmUsageSummary"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.ApplyOperationsResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.BatchTranslationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.BatchTranslationResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.DirectoryStructureCorrectionResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.DirectoryStructureCorrectionResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileNameCorrectionResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.FileNameCorrectionResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileStructureAnalysisResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.FileStructureAnalysisResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.NamingConventionAnalysisResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.NamingConventionAnalysisResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.PathSimilarityGroupResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.PathSimilarityGroupResult"];
+        };
+        "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.TranslationResult]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Modules.AI.Services.TranslationResult"];
         };
         "Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.Comparison.Models.Domain.ComparisonPlan]": {
             /** Format: int32 */
@@ -8759,6 +9545,693 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    GetAllLlmProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                };
+            };
+        };
+    };
+    AddLlmProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigAddInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                };
+            };
+        };
+    };
+    GetLlmProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                };
+            };
+        };
+    };
+    UpdateLlmProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.LlmProviderConfigUpdateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteLlmProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    TestLlmProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.Boolean]"];
+                };
+            };
+        };
+    };
+    GetLlmProviderModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmModelInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmModelInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmModelInfo]"];
+                };
+            };
+        };
+    };
+    GetLlmProviderTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Domain.LlmProviderTypeInfo]"];
+                };
+            };
+        };
+    };
+    SearchLlmUsage: {
+        parameters: {
+            query?: {
+                providerConfigId?: number;
+                modelId?: string;
+                feature?: string;
+                startTime?: string;
+                endTime?: string;
+                pageIndex?: number;
+                pageSize?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel]"];
+                };
+            };
+        };
+    };
+    GetLlmUsageSummary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Components.Observation.LlmUsageSummary]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Components.Observation.LlmUsageSummary]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Components.Observation.LlmUsageSummary]"];
+                };
+            };
+        };
+    };
+    GetAllLlmCacheEntries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel]"];
+                };
+            };
+        };
+    };
+    ClearAllLlmCache: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteLlmCacheEntry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetAllAiFeatureConfigs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                };
+            };
+        };
+    };
+    GetAiFeatureConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+                feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                };
+            };
+        };
+    };
+    SaveAiFeatureConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+                feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiFeatureConfigInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiFeatureConfigInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiFeatureConfigInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.AiFeatureConfigInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel]"];
+                };
+            };
+        };
+    };
+    DeleteAiFeatureConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+                feature: components["schemas"]["Bakabase.Modules.AI.Models.Domain.AiFeature"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    AiTranslate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.TranslationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.TranslationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.TranslationResult]"];
+                };
+            };
+        };
+    };
+    AiTranslateBatch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateBatchInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateBatchInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateBatchInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateBatchInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.BatchTranslationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.BatchTranslationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.BatchTranslationResult]"];
+                };
+            };
+        };
+    };
+    AiTranslateResourceProperties: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateResourcePropertiesInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateResourcePropertiesInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateResourcePropertiesInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.TranslateResourcePropertiesInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Models.Domain.ResourceTranslationResult]"];
+                };
+            };
+        };
+    };
+    AiAnalyzeFileStructure: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileStructureAnalysisResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileStructureAnalysisResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileStructureAnalysisResult]"];
+                };
+            };
+        };
+    };
+    AiAnalyzeNamingConvention: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorPathsInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorPathsInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorPathsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorPathsInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.NamingConventionAnalysisResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.NamingConventionAnalysisResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.NamingConventionAnalysisResult]"];
+                };
+            };
+        };
+    };
+    AiSuggestFileNameCorrections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileNameCorrectionInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileNameCorrectionInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileNameCorrectionInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileNameCorrectionInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileNameCorrectionResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileNameCorrectionResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.FileNameCorrectionResult]"];
+                };
+            };
+        };
+    };
+    AiGroupByPathSimilarity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.PathSimilarityGroupInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.PathSimilarityGroupInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.PathSimilarityGroupInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.PathSimilarityGroupInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.PathSimilarityGroupResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.PathSimilarityGroupResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.PathSimilarityGroupResult]"];
+                };
+            };
+        };
+    };
+    AiSuggestDirectoryCorrections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.FileProcessorDirectoryInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.DirectoryStructureCorrectionResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.DirectoryStructureCorrectionResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.DirectoryStructureCorrectionResult]"];
+                };
+            };
+        };
+    };
+    AiApplyFileOperations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.ApplyFileOperationsInputModel"];
+                "application/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.ApplyFileOperationsInputModel"];
+                "text/json": components["schemas"]["Bakabase.Modules.AI.Models.Input.ApplyFileOperationsInputModel"];
+                "application/*+json": components["schemas"]["Bakabase.Modules.AI.Models.Input.ApplyFileOperationsInputModel"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.Modules.AI.Services.ApplyOperationsResult]"];
+                };
+            };
+        };
+    };
     SearchAliasGroups: {
         parameters: {
             query?: {
@@ -14452,6 +15925,57 @@ export interface operations {
                 "application/json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
                 "text/json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
                 "application/*+json": components["schemas"]["Bakabase.InsideWorld.Models.Configs.UIOptions+PropertyKey"][];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetUIStyleOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIStyleOptions]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIStyleOptions]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[Bakabase.InsideWorld.Models.Configs.UIStyleOptions]"];
+                };
+            };
+        };
+    };
+    PatchUIStyleOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIStyleOptionsPatchRequestModel"];
+                "application/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIStyleOptionsPatchRequestModel"];
+                "text/json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIStyleOptionsPatchRequestModel"];
+                "application/*+json": components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.UIStyleOptionsPatchRequestModel"];
             };
         };
         responses: {

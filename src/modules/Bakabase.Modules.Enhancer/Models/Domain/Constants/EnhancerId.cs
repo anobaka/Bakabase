@@ -1,6 +1,7 @@
 ﻿using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Attributes;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain.Constants;
+using Bakabase.Modules.Enhancer.Components.Enhancers.AI;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Av;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bakabase;
 using Bakabase.Modules.Enhancer.Components.Enhancers.Bangumi;
@@ -36,6 +37,9 @@ namespace Bakabase.Modules.Enhancer.Models.Domain.Constants
         Tmdb = 7,
 
         [Enhancer(typeof(AvEnhancer), PropertyValueScope.AvEnhancer, typeof(AvEnhancerTarget), [EnhancerTag.UseKeyword])]
-        Av = 8
+        Av = 8,
+
+        [Enhancer(typeof(AiEnhancer), PropertyValueScope.AiEnhancer, typeof(AiEnhancerTarget), [])]
+        AI = 9
     }
 }

@@ -14,6 +14,7 @@ import _ from "lodash";
 
 import DynamicTargets from "./components/DynamicTargets";
 import FixedTargets from "./components/FixedTargets";
+import TranslationOptionsSection from "../TranslationOptionsSection";
 
 import { Button, Chip, Modal, Select, Switch, Textarea } from "@/components/bakaui";
 import {
@@ -483,6 +484,13 @@ export default function EnhancerOptionsModal({
             />
           </div>
         )}
+
+        <TranslationOptionsSection
+          value={options.translationOptions}
+          onChange={(translationOptions) => {
+            setOptions({ ...options, translationOptions });
+          }}
+        />
       </div>
 
       {(hasFixedTargets || (hasDynamicTargets && !hasCandidateTargets)) && (

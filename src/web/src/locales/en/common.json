@@ -206,6 +206,11 @@
   "menu.experimental": "Experimental",
   "menu.thirdPartyIntegration": "Third party integration",
   "menu.postParser": "Post parser",
+  "menu.ai": "AI",
+  "menu.ai.configuration": "AI Configuration",
+  "menu.ai.usage": "Usage Stats",
+  "menu.ai.auditLog": "Audit Log",
+  "menu.ai.cache": "Cache",
   "menu.system": "System",
   "menu.configuration": "Configuration",
   "menu.thirdParty": "Third party",
@@ -266,5 +271,7 @@
   "FeatureRequestTip.Deprecated": "The <1>{{name}}</1> feature is deprecated. You can learn more or make suggestions on <3>Github</3> or <5>QQ group</5>.",
   "FeatureRequestTip.Deprecating": "The <1>{{name}}</1> feature is being deprecated. You can learn more or make suggestions on <3>Github</3> or <5>QQ group</5>.",
   "Join QQ group": "Join QQ group",
-  "For more information, you can visit:": "For more information, you can visit:"
+  "For more information, you can visit:": "For more information, you can visit:",
+  "ai.button.configureFirst": "Configure model first",
+  "ai.button.configureFirstTip": "This feature requires an AI model to be configured. Please click the settings icon above to set it up."
 }

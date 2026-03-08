@@ -1352,6 +1352,177 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.ToTable("Volumes");
                 });
 
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.AiFeatureConfigDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Feature")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MaxTokens")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ModelId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ProviderConfigId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<float?>("Temperature")
+                        .HasColumnType("REAL");
+
+                    b.Property<float?>("TopP")
+                        .HasColumnType("REAL");
+
+                    b.Property<bool>("UseDefault")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Feature")
+                        .IsUnique();
+
+                    b.ToTable("AiFeatureConfigs");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.LlmCallCacheEntryDbModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CacheKey")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("HitCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProviderConfigId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ResponseJson")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CacheKey")
+                        .IsUnique();
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("LlmCallCacheEntries");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.LlmProviderConfigDbModel", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ApiKey")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Endpoint")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ProviderType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsEnabled");
+
+                    b.HasIndex("ProviderType");
+
+                    b.ToTable("LlmProviderConfigs");
+                });
+
+            modelBuilder.Entity("Bakabase.Modules.AI.Models.Db.LlmUsageLogDbModel", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("CacheHit")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DurationMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Feature")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("InputTokens")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("OutputTokens")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProviderConfigId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("RequestSummary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ResponseSummary")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TotalTokens")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CacheHit");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Feature");
+
+                    b.HasIndex("ProviderConfigId");
+
+                    b.ToTable("LlmUsageLogs");
+                });
+
             modelBuilder.Entity("Bakabase.Modules.Alias.Abstractions.Models.Db.Alias", b =>
                 {
                     b.Property<int>("Id")
