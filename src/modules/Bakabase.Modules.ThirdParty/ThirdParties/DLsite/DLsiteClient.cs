@@ -1,14 +1,18 @@
-﻿using System.Net;
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Components.Network;
 using Bakabase.Abstractions.Helpers;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Models.Dtos;
+using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
 using Bootstrap.Extensions;
 using CsQuery;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 
@@ -24,8 +28,18 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
     private const string InfoJsonUrlTemplate = "https://www.dlsite.com/books/product/info/ajax?product_id={0}&cdn_cache_min=1";
 
+    // Play API endpoints
+    private const string PlayApiContentCount = "https://play.dlsite.com/api/v3/content/count";
+    private const string PlayApiContentSales = "https://play.dlsite.com/api/v3/content/sales";
+    private const string PlayApiContentWorks = "https://play.dlsite.com/api/v3/content/works";
+    private const int PlayApiBatchSize = 100;
+
+    // Separate HttpClient for Play API (no auto cookie injection from handler)
+    private HttpClient? _playHttpClient;
+    private HttpClient PlayHttpClient => _playHttpClient ??= httpClientFactory.CreateClient(InternalOptions.HttpClientNames.Default);
+
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="id">Something like RJxxxxxxx</param>
     /// <returns></returns>
@@ -104,4 +118,74 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
         return detail;
     }
+
+    #region Play API
+
+    /// <summary>
+    /// Get the total count of purchased works from DLsite Play.
+    /// </summary>
+    public async Task<int> GetPurchaseCountAsync(string cookie, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{PlayApiContentCount}?last=0");
+        SetPlayApiHeaders(request, cookie);
+
+        var response = await PlayHttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var data = await response.Content.ReadFromJsonAsync<DLsitePlayContentCount>(cancellationToken: ct);
+        return data?.User ?? 0;
+    }
+
+    /// <summary>
+    /// Get all purchased work IDs and their sales dates.
+    /// </summary>
+    public async Task<List<DLsitePlaySaleItem>> GetPurchaseSalesAsync(string cookie, CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"{PlayApiContentSales}?last=0");
+        SetPlayApiHeaders(request, cookie);
+
+        var response = await PlayHttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var items = await response.Content.ReadFromJsonAsync<List<DLsitePlaySaleItem>>(cancellationToken: ct);
+        return items ?? [];
+    }
+
+    /// <summary>
+    /// Get work details for a batch of work IDs (max 100 per request).
+    /// </summary>
+    public async Task<List<DLsitePlayWorkDetail>> GetPurchaseWorksAsync(string cookie, List<string> workIds, CancellationToken ct = default)
+    {
+        var allWorks = new List<DLsitePlayWorkDetail>();
+
+        for (var i = 0; i < workIds.Count; i += PlayApiBatchSize)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var batch = workIds.Skip(i).Take(PlayApiBatchSize).ToList();
+            using var request = new HttpRequestMessage(HttpMethod.Post, PlayApiContentWorks);
+            SetPlayApiHeaders(request, cookie);
+            request.Content = JsonContent.Create(batch);
+
+            var response = await PlayHttpClient.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+
+            var works = await response.Content.ReadFromJsonAsync<List<DLsitePlayWorkDetail>>(cancellationToken: ct);
+            if (works != null)
+            {
+                allWorks.AddRange(works);
+            }
+        }
+
+        return allWorks;
+    }
+
+    private static void SetPlayApiHeaders(HttpRequestMessage request, string cookie)
+    {
+        request.Headers.Add("Cookie", cookie);
+        request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+        request.Headers.Add("Referer", "https://play.dlsite.com/");
+    }
+
+    #endregion
 }

@@ -6,14 +6,17 @@ using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
 public class DLsiteWorkService(
     FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm,
+    DLsiteClient dlsiteClient,
     IBOptions<DLsiteOptions> dlsiteOptions,
     ILogger<DLsiteWorkService> logger)
     : IDLsiteWorkService
@@ -40,6 +43,7 @@ public class DLsiteWorkService(
         if (existing != null)
         {
             work.Id = existing.Id;
+            work.CreatedAt = existing.CreatedAt;
             work.UpdatedAt = DateTime.Now;
             await orm.Update(work);
         }
@@ -77,13 +81,115 @@ public class DLsiteWorkService(
             return;
         }
 
-        // TODO: DLsite purchase list API is not yet implemented in DLsiteClient.
-        // Once the purchase list parsing is available, implement the actual sync here.
-        logger.LogWarning("DLsite sync from API is not yet fully implemented");
+        var allWorks = new Dictionary<string, DLsiteWorkDbModel>();
+        var processedAccounts = 0;
 
-        if (onProgress != null)
+        foreach (var account in accounts)
         {
-            await onProgress(100, 0);
+            ct.ThrowIfCancellationRequested();
+
+            if (string.IsNullOrEmpty(account.Cookie))
+            {
+                logger.LogWarning("Skipping DLsite account '{Name}': no cookie configured", account.Name);
+                processedAccounts++;
+                continue;
+            }
+
+            try
+            {
+                logger.LogInformation("Fetching purchase list for DLsite account '{Name}'", account.Name);
+
+                // Step 1: Get purchase count
+                var count = await dlsiteClient.GetPurchaseCountAsync(account.Cookie, ct);
+                logger.LogInformation("DLsite account '{Name}' has {Count} purchased works", account.Name, count);
+
+                if (count == 0)
+                {
+                    processedAccounts++;
+                    continue;
+                }
+
+                // Step 2: Get all sales (work IDs + dates)
+                var sales = await dlsiteClient.GetPurchaseSalesAsync(account.Cookie, ct);
+                logger.LogInformation("Fetched {Count} sales records from DLsite account '{Name}'",
+                    sales.Count, account.Name);
+
+                if (sales.Count == 0)
+                {
+                    processedAccounts++;
+                    continue;
+                }
+
+                var salesDateMap = sales
+                    .Where(s => !string.IsNullOrEmpty(s.Workno))
+                    .ToDictionary(s => s.Workno, s => s.SalesDate);
+
+                // Step 3: Fetch work details in batches
+                var workIds = salesDateMap.Keys.ToList();
+                var workDetails = await dlsiteClient.GetPurchaseWorksAsync(account.Cookie, workIds, ct);
+                logger.LogInformation("Fetched {Count} work details from DLsite account '{Name}'",
+                    workDetails.Count, account.Name);
+
+                // Step 4: Map to DB models
+                foreach (var work in workDetails)
+                {
+                    if (string.IsNullOrEmpty(work.Workno)) continue;
+                    if (allWorks.ContainsKey(work.Workno)) continue;
+
+                    var dbModel = new DLsiteWorkDbModel
+                    {
+                        WorkId = work.Workno,
+                        Title = work.Name?.GetBestName(),
+                        Circle = work.Maker?.Name?.GetBestName(),
+                        WorkType = work.WorkType,
+                        IsPurchased = true,
+                        MetadataJson = JsonConvert.SerializeObject(work),
+                        MetadataFetchedAt = DateTime.Now,
+                    };
+
+                    allWorks[work.Workno] = dbModel;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to sync DLsite account '{Name}'", account.Name);
+            }
+
+            processedAccounts++;
+            if (onProgress != null)
+            {
+                await onProgress(processedAccounts * 50 / accounts.Count, allWorks.Count);
+            }
         }
+
+        // Save all works to DB
+        var total = allWorks.Count;
+        if (total == 0)
+        {
+            if (onProgress != null)
+            {
+                await onProgress(100, 0);
+            }
+
+            return;
+        }
+
+        var saved = 0;
+        foreach (var work in allWorks.Values)
+        {
+            ct.ThrowIfCancellationRequested();
+            await AddOrUpdate(work);
+            saved++;
+            if (onProgress != null)
+            {
+                await onProgress(50 + saved * 50 / total, saved);
+            }
+        }
+
+        logger.LogInformation("DLsite sync complete: {Count} works synced", total);
     }
 }
