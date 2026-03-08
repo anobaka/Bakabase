@@ -9410,21 +9410,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
-
-    /**
-     * No description
-     *
-     * @tags DLsiteWork
-     * @name SyncDLsiteWorks
-     * @request POST:/dlsite-work/sync
-     */
-    syncDLsiteWorks: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/dlsite-work/sync`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
   };
   downloadTask = {
     /**
@@ -11816,21 +11801,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/exhentai-gallery/${id}`,
         method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ExHentaiGallery
-     * @name SyncExHentaiGalleries
-     * @request POST:/exhentai-gallery/sync
-     */
-    syncExHentaiGalleries: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/exhentai-gallery/sync`,
-        method: "POST",
         format: "json",
         ...params,
       }),
@@ -17732,21 +17702,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/steam-app/${appId}`,
         method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SteamApp
-     * @name SyncSteamApps
-     * @request POST:/steam-app/sync
-     */
-    syncSteamApps: (params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/steam-app/sync`,
-        method: "POST",
         format: "json",
         ...params,
       }),

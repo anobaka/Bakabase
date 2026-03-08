@@ -121,7 +121,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineControl,
     layout: "basic",
     menu: true,
-    isBeta: true,
+    isBeta: false,
   },
   {
     name: "menu.pathMarks",
@@ -130,7 +130,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineTags,
     layout: "basic",
     menu: true,
-    isBeta: true,
+    isBeta: false,
   },
   {
     name: "menu.resourceProfile",
@@ -139,7 +139,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
     icon: AiOutlineFilter,
     layout: "basic",
     menu: true,
-    isBeta: true,
+    isBeta: false,
   },
   {
     name: "menu.data",
@@ -178,14 +178,6 @@ export const routesMenuConfig: RouteMenuItem[] = [
         layout: "basic",
         menu: true,
       },
-      // {
-      //   name: "menu.playHistory",
-      //   path: "/play-history",
-      //   component: PlayHistoryPage,
-      //   icon: AiOutlineHistory,
-      //   layout: "basic",
-      //   menu: true,
-      // },
       {
         name: "menu.bulkModification",
         path: "/bulk-modification",
@@ -211,34 +203,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         icon: AiOutlineBranches,
         layout: "basic",
         menu: true,
-      },
-      {
-        name: "menu.mediaLibrary",
-        path: "/media-library",
-        isDeprecated: true,
-        component: LegacyMediaLibraryPage,
-        icon: AiOutlineProduct,
-        layout: "basic",
-        menu: true,
-      },
-      {
-        name: "menu.mediaLibraryTemplate",
-        path: "/media-library-template",
-        component: MediaLibraryTemplatePage,
-        icon: AiOutlineAppstoreAdd,
-        layout: "basic",
-        menu: true,
-        isDeprecated: true,
-      },
-      {
-        name: "menu.synchronizationOptions",
-        path: "/synchronization-options",
-        component: SynchronizationOptionsPage,
-        icon: AiOutlineSync,
-        layout: "basic",
-        menu: true,
-        isDeprecated: true,
-      },
+      }
     ],
   },
   {
