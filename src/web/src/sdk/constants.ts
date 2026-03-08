@@ -577,27 +577,6 @@ export const ResourceCacheTypeLabel: Record<ResourceCacheType, string> = {
   [ResourceCacheType.ResourceMarkers]: 'ResourceMarkers'
 };
 
-export enum ResourceTag {
-  IsParent = 1,
-  Pinned = 2,
-  PathDoesNotExist = 4,
-  UnknownMediaLibrary = 8
-}
-
-export const resourceTags = [
-  { label: 'IsParent', value: ResourceTag.IsParent },
-  { label: 'Pinned', value: ResourceTag.Pinned },
-  { label: 'PathDoesNotExist', value: ResourceTag.PathDoesNotExist },
-  { label: 'UnknownMediaLibrary', value: ResourceTag.UnknownMediaLibrary }
-] as const;
-
-export const ResourceTagLabel: Record<ResourceTag, string> = {
-  [ResourceTag.IsParent]: 'IsParent',
-  [ResourceTag.Pinned]: 'Pinned',
-  [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
-  [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
-};
-
 export enum ResourceSource {
   FileSystem = 1,
   Steam = 2,
@@ -635,6 +614,27 @@ export const ResourceStatusLabel: Record<ResourceStatus, string> = {
   [ResourceStatus.Active]: 'Active',
   [ResourceStatus.Absent]: 'Absent',
   [ResourceStatus.Unavailable]: 'Unavailable'
+};
+
+export enum ResourceTag {
+  IsParent = 1,
+  Pinned = 2,
+  PathDoesNotExist = 4,
+  UnknownMediaLibrary = 8
+}
+
+export const resourceTags = [
+  { label: 'IsParent', value: ResourceTag.IsParent },
+  { label: 'Pinned', value: ResourceTag.Pinned },
+  { label: 'PathDoesNotExist', value: ResourceTag.PathDoesNotExist },
+  { label: 'UnknownMediaLibrary', value: ResourceTag.UnknownMediaLibrary }
+] as const;
+
+export const ResourceTagLabel: Record<ResourceTag, string> = {
+  [ResourceTag.IsParent]: 'IsParent',
+  [ResourceTag.Pinned]: 'Pinned',
+  [ResourceTag.PathDoesNotExist]: 'PathDoesNotExist',
+  [ResourceTag.UnknownMediaLibrary]: 'UnknownMediaLibrary'
 };
 
 export enum RuleQueueAction {
@@ -2122,7 +2122,8 @@ export enum EnhancerId {
   Kodi = 6,
   Tmdb = 7,
   Av = 8,
-  AI = 9
+  AI = 9,
+  Steam = 10
 }
 
 export const enhancerIds = [
@@ -2134,7 +2135,8 @@ export const enhancerIds = [
   { label: 'Kodi', value: EnhancerId.Kodi },
   { label: 'Tmdb', value: EnhancerId.Tmdb },
   { label: 'Av', value: EnhancerId.Av },
-  { label: 'AI', value: EnhancerId.AI }
+  { label: 'AI', value: EnhancerId.AI },
+  { label: 'Steam', value: EnhancerId.Steam }
 ] as const;
 
 export const EnhancerIdLabel: Record<EnhancerId, string> = {
@@ -2146,7 +2148,8 @@ export const EnhancerIdLabel: Record<EnhancerId, string> = {
   [EnhancerId.Kodi]: 'Kodi',
   [EnhancerId.Tmdb]: 'Tmdb',
   [EnhancerId.Av]: 'Av',
-  [EnhancerId.AI]: 'AI'
+  [EnhancerId.AI]: 'AI',
+  [EnhancerId.Steam]: 'Steam'
 };
 
 export enum EnhancerTag {
@@ -2219,6 +2222,42 @@ export const TmdbEnhancerTargetLabel: Record<TmdbEnhancerTarget, string> = {
   [TmdbEnhancerTarget.Revenue]: 'Revenue',
   [TmdbEnhancerTarget.Cover]: 'Cover',
   [TmdbEnhancerTarget.Backdrop]: 'Backdrop'
+};
+
+export enum SteamEnhancerTarget {
+  Name = 1,
+  Description = 2,
+  Developer = 3,
+  Publisher = 4,
+  ReleaseDate = 5,
+  Genre = 6,
+  Category = 7,
+  MetacriticScore = 8,
+  Cover = 9
+}
+
+export const steamEnhancerTargets = [
+  { label: 'Name', value: SteamEnhancerTarget.Name },
+  { label: 'Description', value: SteamEnhancerTarget.Description },
+  { label: 'Developer', value: SteamEnhancerTarget.Developer },
+  { label: 'Publisher', value: SteamEnhancerTarget.Publisher },
+  { label: 'ReleaseDate', value: SteamEnhancerTarget.ReleaseDate },
+  { label: 'Genre', value: SteamEnhancerTarget.Genre },
+  { label: 'Category', value: SteamEnhancerTarget.Category },
+  { label: 'MetacriticScore', value: SteamEnhancerTarget.MetacriticScore },
+  { label: 'Cover', value: SteamEnhancerTarget.Cover }
+] as const;
+
+export const SteamEnhancerTargetLabel: Record<SteamEnhancerTarget, string> = {
+  [SteamEnhancerTarget.Name]: 'Name',
+  [SteamEnhancerTarget.Description]: 'Description',
+  [SteamEnhancerTarget.Developer]: 'Developer',
+  [SteamEnhancerTarget.Publisher]: 'Publisher',
+  [SteamEnhancerTarget.ReleaseDate]: 'ReleaseDate',
+  [SteamEnhancerTarget.Genre]: 'Genre',
+  [SteamEnhancerTarget.Category]: 'Category',
+  [SteamEnhancerTarget.MetacriticScore]: 'MetacriticScore',
+  [SteamEnhancerTarget.Cover]: 'Cover'
 };
 
 export enum RegexEnhancerTarget {
@@ -4514,6 +4553,27 @@ export const LegacyResourcePropertyLabel: Record<LegacyResourceProperty, string>
   [LegacyResourceProperty.CustomProperty]: 'CustomProperty',
   [LegacyResourceProperty.Favorites]: 'Favorites',
   [LegacyResourceProperty.Cover]: 'Cover'
+};
+
+export enum ResolverConfigFieldType {
+  String = 1,
+  Password = 2,
+  StringList = 3,
+  DirectoryList = 4
+}
+
+export const resolverConfigFieldTypes = [
+  { label: 'String', value: ResolverConfigFieldType.String },
+  { label: 'Password', value: ResolverConfigFieldType.Password },
+  { label: 'StringList', value: ResolverConfigFieldType.StringList },
+  { label: 'DirectoryList', value: ResolverConfigFieldType.DirectoryList }
+] as const;
+
+export const ResolverConfigFieldTypeLabel: Record<ResolverConfigFieldType, string> = {
+  [ResolverConfigFieldType.String]: 'String',
+  [ResolverConfigFieldType.Password]: 'Password',
+  [ResolverConfigFieldType.StringList]: 'StringList',
+  [ResolverConfigFieldType.DirectoryList]: 'DirectoryList'
 };
 
 export enum LogLevel {

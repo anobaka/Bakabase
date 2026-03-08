@@ -37,6 +37,52 @@ export interface BakabaseAbstractionsModelsDbCategoryComponent {
   descriptor: BakabaseAbstractionsModelsDomainComponentDescriptor;
 }
 
+export interface BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
+  /** @format int32 */
+  id: number;
+  /** @minLength 1 */
+  workId: string;
+  title?: string;
+  circle?: string;
+  workType?: string;
+  metadataJson?: string;
+  /** @format date-time */
+  metadataFetchedAt?: string;
+  drmKey?: string;
+  isPurchased: boolean;
+  isDownloaded: boolean;
+  localPath?: string;
+  /** @format int32 */
+  resourceId?: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
+export interface BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
+  /** @format int32 */
+  id: number;
+  /** @format int64 */
+  galleryId: number;
+  /** @minLength 1 */
+  galleryToken: string;
+  title?: string;
+  titleJpn?: string;
+  category?: string;
+  metadataJson?: string;
+  /** @format date-time */
+  metadataFetchedAt?: string;
+  isDownloaded: boolean;
+  localPath?: string;
+  /** @format int32 */
+  resourceId?: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
 export interface BakabaseAbstractionsModelsDbPlayHistoryDbModel {
   /** @format int32 */
   id: number;
@@ -45,6 +91,31 @@ export interface BakabaseAbstractionsModelsDbPlayHistoryDbModel {
   item?: string;
   /** @format date-time */
   playedAt: string;
+}
+
+export interface BakabaseAbstractionsModelsDbSteamAppDbModel {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  appId: number;
+  name?: string;
+  /** @format int32 */
+  playtimeForever: number;
+  /** @format int32 */
+  rtimeLastPlayed: number;
+  imgIconUrl?: string;
+  hasCommunityVisibleStats: boolean;
+  metadataJson?: string;
+  /** @format date-time */
+  metadataFetchedAt?: string;
+  isInstalled: boolean;
+  installPath?: string;
+  /** @format int32 */
+  resourceId?: number;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainCategory {
@@ -207,7 +278,7 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
   | 16;
 
 /**
- * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer]
+ * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
@@ -221,7 +292,8 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
   | 1005
   | 1006
   | 1007
-  | 1008;
+  | 1008
+  | 1009;
 
 /**
  * [12: Introduction, 13: Rating, 22: Cover]
@@ -234,6 +306,18 @@ export type BakabaseAbstractionsModelsDomainConstantsReservedProperty = 12 | 13 
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsResourceCacheType = 1 | 2 | 4;
+
+/**
+ * [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceSource = 1 | 2 | 3 | 4;
+
+/**
+ * [1: Active, 2: Absent, 3: Unavailable]
+ * @format int32
+ */
+export type BakabaseAbstractionsModelsDomainConstantsResourceStatus = 1 | 2 | 3;
 
 /**
  * [1: IsParent, 2: Pinned, 4: PathDoesNotExist, 8: UnknownMediaLibrary]
@@ -334,11 +418,6 @@ export interface BakabaseAbstractionsModelsDomainEnhancerFullOptions {
   /** @format int32 */
   bangumiPrioritySubjectType?: number;
   translationOptions?: BakabaseAbstractionsModelsDomainOptionsEnhancerTranslationOptions;
-}
-
-export interface BakabaseAbstractionsModelsDomainOptionsEnhancerTranslationOptions {
-  enabled?: boolean;
-  targetLanguage?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
@@ -461,6 +540,11 @@ export interface BakabaseAbstractionsModelsDomainMediaLibraryV2 {
   template?: BakabaseAbstractionsModelsDomainMediaLibraryTemplate;
   /** @deprecated */
   syncMayBeOutdated: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainOptionsEnhancerTranslationOptions {
+  enabled: boolean;
+  targetLanguage: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainPathConfiguration {
@@ -631,10 +715,15 @@ export interface BakabaseAbstractionsModelsDomainResource {
    * @format int32
    */
   categoryId: number;
-  fileName: string;
-  directory: string;
-  path: string;
-  displayName: string;
+  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  /** [1: Active, 2: Absent, 3: Unavailable] */
+  status: BakabaseAbstractionsModelsDomainConstantsResourceStatus;
+  sourceKey: string;
+  fileName?: string;
+  directory?: string;
+  path?: string;
+  displayName?: string;
   /** @format int32 */
   parentId?: number;
   hasChildren: boolean;
@@ -760,7 +849,7 @@ export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   id: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
 }
 
@@ -1270,18 +1359,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   requestTimeout: number;
 }
 
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount {
-  name?: string;
-  apiKey?: string;
-  steamId?: string;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
-  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
-  apiKey?: string;
-  steamId?: string;
-}
-
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
   cookie?: string;
   /** @format int32 */
@@ -1444,6 +1521,18 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   autoBuyThreshold: number;
 }
 
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount {
+  name?: string;
+  apiKey?: string;
+  steamId?: string;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
+  apiKey?: string;
+  steamId?: string;
+}
+
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
   /** @format int32 */
   maxConcurrency: number;
@@ -1530,17 +1619,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputEnhancerOptionsPatchInputModel {
   regexEnhancer?: BakabaseInsideWorldModelsConfigsEnhancerOptionsRegexEnhancerModel;
-}
-
-export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
-  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
-}
-
-export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputExHentaiOptionsPatchInputModel {
@@ -1645,6 +1723,10 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputS
   cookie?: string;
   /** @format int32 */
   autoBuyThreshold?: number;
+}
+
+export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
+  accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTaskOptionsPatchInputModel {
@@ -2694,15 +2776,18 @@ export interface BakabaseModulesAIModelsInputFileNameCorrectionInputModel {
   filePaths: string[];
   workingDirectory?: string;
   targetConvention?: string;
+  referencePaths?: string[];
 }
 
 export interface BakabaseModulesAIModelsInputFileProcessorDirectoryInputModel {
   directoryPath: string;
+  referencePaths?: string[];
 }
 
 export interface BakabaseModulesAIModelsInputFileProcessorPathsInputModel {
   filePaths: string[];
   workingDirectory?: string;
+  referencePaths?: string[];
 }
 
 export interface BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel {
@@ -2900,7 +2985,7 @@ export interface BakabaseModulesComparisonModelsDomainComparisonRule {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -2946,7 +3031,7 @@ export interface BakabaseModulesComparisonModelsInputComparisonRuleInputModel {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -3035,7 +3120,7 @@ export interface BakabaseModulesComparisonModelsViewComparisonRuleViewModel {
   /** @format int32 */
   propertyId: number;
   propertyName?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -3106,7 +3191,7 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
   | 1;
 
 /**
- * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI]
+ * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI, 10: Steam]
  * @format int32
  */
 export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
@@ -3118,7 +3203,8 @@ export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
   | 6
   | 7
   | 8
-  | 9;
+  | 9
+  | 10;
 
 /**
  * [1: UseRegex, 2: UseKeyword]
@@ -3243,7 +3329,7 @@ export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePre
 }
 
 export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer {
-  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI] */
+  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI, 10: Steam] */
   id: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId;
   name: string;
   description?: string;
@@ -3443,7 +3529,7 @@ export interface BakabaseServiceModelsInputBulkModificationProcessInputModel {
 
 export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   key?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -3626,7 +3712,7 @@ export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
 }
 
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer, 1009: SteamEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -3977,6 +4063,27 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   /** @format int32 */
   code: number;
   message?: string;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbDLsiteWorkDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbExHentaiGalleryDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbSteamAppDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbSteamAppDbModel[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
@@ -4372,6 +4479,20 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   data?: BakabaseAbstractionsComponentsConfigurationTaskOptions;
 }
 
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbDLsiteWorkDbModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDbSteamAppDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbSteamAppDbModel;
+}
+
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainCategoryEnhancerOptions {
   /** @format int32 */
   code: number;
@@ -4581,6 +4702,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSoulPlusOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamOptions;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
@@ -9220,6 +9348,69 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  dlsiteWork = {
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name GetAllDLsiteWorks
+     * @request GET:/dlsite-work
+     */
+    getAllDLsiteWorks: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel,
+        any
+      >({
+        path: `/dlsite-work`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllDLsiteWorks
+     * @name getAllDLsiteWorksUrl
+     */
+    getAllDLsiteWorksUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/dlsite-work`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name GetDLsiteWorkByWorkId
+     * @request GET:/dlsite-work/{workId}
+     */
+    getDLsiteWorkByWorkId: (workId: string, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel,
+        any
+      >({
+        path: `/dlsite-work/${workId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name DeleteDLsiteWork
+     * @request DELETE:/dlsite-work/{workId}
+     */
+    deleteDLsiteWork: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
   downloadTask = {
     /**
      * No description
@@ -11565,6 +11756,51 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       >({
         path: `/resource-profile/by-resource/${resourceId}`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+  };
+  exhentaiGallery = {
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name GetAllExHentaiGalleries
+     * @request GET:/exhentai-gallery
+     */
+    getAllExHentaiGalleries: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel,
+        any
+      >({
+        path: `/exhentai-gallery`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllExHentaiGalleries
+     * @name getAllExHentaiGalleriesUrl
+     */
+    getAllExHentaiGalleriesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/exhentai-gallery`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name DeleteExHentaiGallery
+     * @request DELETE:/exhentai-gallery/{id}
+     */
+    deleteExHentaiGallery: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/exhentai-gallery/${id}`,
+        method: "DELETE",
         format: "json",
         ...params,
       }),
@@ -15704,7 +15940,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getSteamOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/steam`;
-
+      
       return baseUrl + path;
     },
 
@@ -15735,7 +15971,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchSteamOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/steam`;
-
+      
       return baseUrl + path;
     },
 
@@ -17407,6 +17643,69 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       return baseUrl + path;
     },
   };
+  steamApp = {
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name GetAllSteamApps
+     * @request GET:/steam-app
+     */
+    getAllSteamApps: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbSteamAppDbModel,
+        any
+      >({
+        path: `/steam-app`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllSteamApps
+     * @name getAllSteamAppsUrl
+     */
+    getAllSteamAppsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/steam-app`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name GetSteamAppByAppId
+     * @request GET:/steam-app/{appId}
+     */
+    getSteamAppByAppId: (appId: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDbSteamAppDbModel,
+        any
+      >({
+        path: `/steam-app/${appId}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name DeleteSteamApp
+     * @request DELETE:/steam-app/{appId}
+     */
+    deleteSteamApp: (appId: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/steam-app/${appId}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+  };
   tampermonkey = {
     /**
      * No description
@@ -18005,131 +18304,8 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     restartAndUpdateAppUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/updater/app/restart`;
-
+      
       return baseUrl + path;
     },
-  };
-  steamApp = {
-    /**
-     * No description
-     *
-     * @tags SteamApp
-     * @name GetAllSteamApps
-     * @request GET:/steam-app
-     */
-    getAllSteamApps: (params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/steam-app`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SteamApp
-     * @name GetSteamAppByAppId
-     * @request GET:/steam-app/{appId}
-     */
-    getSteamAppByAppId: (appId: number, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/steam-app/${appId}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags SteamApp
-     * @name DeleteSteamApp
-     * @request DELETE:/steam-app/{appId}
-     */
-    deleteSteamApp: (appId: number, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/steam-app/${appId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-  };
-  dlsiteWork = {
-    /**
-     * No description
-     *
-     * @tags DLsiteWork
-     * @name GetAllDLsiteWorks
-     * @request GET:/dlsite-work
-     */
-    getAllDLsiteWorks: (params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/dlsite-work`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DLsiteWork
-     * @name GetDLsiteWorkByWorkId
-     * @request GET:/dlsite-work/{workId}
-     */
-    getDLsiteWorkByWorkId: (workId: string, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/dlsite-work/${workId}`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DLsiteWork
-     * @name DeleteDLsiteWork
-     * @request DELETE:/dlsite-work/{workId}
-     */
-    deleteDLsiteWork: (workId: string, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/dlsite-work/${workId}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
-  };
-  exhentaiGallery = {
-    /**
-     * No description
-     *
-     * @tags ExHentaiGallery
-     * @name GetAllExHentaiGalleries
-     * @request GET:/exhentai-gallery
-     */
-    getAllExHentaiGalleries: (params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/exhentai-gallery`,
-        method: "GET",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags ExHentaiGallery
-     * @name DeleteExHentaiGallery
-     * @request DELETE:/exhentai-gallery/{id}
-     */
-    deleteExHentaiGallery: (id: number, params: RequestParams = {}) =>
-      this.request<any, any>({
-        path: `/exhentai-gallery/${id}`,
-        method: "DELETE",
-        format: "json",
-        ...params,
-      }),
   };
 }
