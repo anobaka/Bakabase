@@ -624,6 +624,24 @@ The version of lux is not limited.</value>
   <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
     <value>Path mark synchronization is in progress; forcibly interrupting may result in incomplete synchronization.</value>
   </data>
+  <data name="BTask_Name_SyncSteam" xml:space="preserve">
+    <value>Sync Steam apps</value>
+  </data>
+  <data name="BTask_Description_SyncSteam" xml:space="preserve">
+    <value>Synchronize games from Steam library</value>
+  </data>
+  <data name="BTask_Name_SyncExHentai" xml:space="preserve">
+    <value>Sync ExHentai galleries</value>
+  </data>
+  <data name="BTask_Description_SyncExHentai" xml:space="preserve">
+    <value>Synchronize galleries from ExHentai favorites</value>
+  </data>
+  <data name="BTask_Name_SyncDLsite" xml:space="preserve">
+    <value>Sync DLsite works</value>
+  </data>
+  <data name="BTask_Description_SyncDLsite" xml:space="preserve">
+    <value>Synchronize works from DLsite purchases</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} is not installed. Please install it in the system settings page.</value>
   </data>

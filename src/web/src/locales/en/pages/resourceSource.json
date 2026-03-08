@@ -1,5 +1,7 @@
 {
   "resourceSource.action.sync": "Sync now",
+  "resourceSource.action.stopSync": "Stop sync",
+  "resourceSource.action.refresh": "Refresh",
   "resourceSource.action.delete": "Delete",
   "resourceSource.action.configure": "Configure",
   "resourceSource.confirm.delete": "Are you sure to delete this item?",

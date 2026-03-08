@@ -9,4 +9,5 @@ public interface IExHentaiGalleryService
     Task AddOrUpdate(ExHentaiGalleryDbModel gallery);
     Task AddOrUpdateRange(IEnumerable<ExHentaiGalleryDbModel> galleries);
     Task DeleteById(int id);
+    Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
 }

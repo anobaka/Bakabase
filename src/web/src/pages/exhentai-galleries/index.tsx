@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Table,
@@ -13,18 +13,23 @@ import {
   Chip,
   Button,
   Spinner,
+  Progress,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
   AiOutlineDelete,
   AiOutlineSetting,
   AiOutlineSync,
+  AiOutlineStop,
+  AiOutlineReload,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useExHentaiOptionsStore } from "@/stores/options";
 import { ExHentaiConfig } from "@/components/ThirdPartyConfig";
+import { useBTasksStore } from "@/stores/bTasks";
+import { BTaskStatus } from "@/sdk/constants";
 
 interface ExHentaiGallery {
   id: number;
@@ -42,6 +47,8 @@ interface ExHentaiGallery {
   updatedAt: string;
 }
 
+const SYNC_TASK_ID = "SyncExHentai";
+
 export default function ExHentaiGalleriesPage() {
   const { t } = useTranslation();
   const [galleries, setGalleries] = useState<ExHentaiGallery[]>([]);
@@ -49,6 +56,9 @@ export default function ExHentaiGalleriesPage() {
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const exhentaiOptions = useExHentaiOptionsStore((s) => s.data);
+  const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
+  const isSyncing = syncTask?.status === BTaskStatus.Running;
+  const prevSyncStatusRef = useRef(syncTask?.status);
 
   const isConfigured = (exhentaiOptions?.accounts?.length ?? 0) > 0;
 
@@ -67,6 +77,21 @@ export default function ExHentaiGalleriesPage() {
   useEffect(() => {
     loadGalleries();
   }, []);
+
+  useEffect(() => {
+    if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
+      loadGalleries();
+    }
+    prevSyncStatusRef.current = syncTask?.status;
+  }, [syncTask?.status]);
+
+  const handleSync = async () => {
+    await BApi.exhentaiGallery.syncExHentaiGalleries();
+  };
+
+  const handleStopSync = async () => {
+    await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
+  };
 
   const filteredGalleries = useMemo(() => {
     if (!keyword.trim()) return galleries;
@@ -108,15 +133,43 @@ export default function ExHentaiGalleriesPage() {
             {t("resourceSource.exhentai.description")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {isSyncing ? (
+            <div className="flex items-center gap-2">
+              <Progress
+                className="w-32"
+                color="primary"
+                size="sm"
+                value={syncTask?.percentage ?? 0}
+              />
+              <Button
+                color="danger"
+                size="sm"
+                startContent={<AiOutlineStop />}
+                variant="flat"
+                onPress={handleStopSync}
+              >
+                {t("resourceSource.action.stopSync")}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              isDisabled={!isConfigured}
+              size="sm"
+              startContent={<AiOutlineSync />}
+              variant="flat"
+              onPress={handleSync}
+            >
+              {t("resourceSource.action.sync")}
+            </Button>
+          )}
           <Button
-            isDisabled={!isConfigured}
             size="sm"
-            startContent={<AiOutlineSync />}
+            startContent={<AiOutlineReload />}
             variant="flat"
             onPress={loadGalleries}
           >
-            {t("resourceSource.action.sync")}
+            {t("resourceSource.action.refresh")}
           </Button>
           <Button
             size="sm"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Table,
@@ -13,18 +13,23 @@ import {
   Chip,
   Button,
   Spinner,
+  Progress,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
   AiOutlineDelete,
   AiOutlineSetting,
   AiOutlineSync,
+  AiOutlineStop,
+  AiOutlineReload,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
+import { useBTasksStore } from "@/stores/bTasks";
+import { BTaskStatus } from "@/sdk/constants";
 
 interface SteamApp {
   id: number;
@@ -43,6 +48,8 @@ interface SteamApp {
   updatedAt: string;
 }
 
+const SYNC_TASK_ID = "SyncSteam";
+
 export default function SteamAppsPage() {
   const { t } = useTranslation();
   const [apps, setApps] = useState<SteamApp[]>([]);
@@ -50,6 +57,9 @@ export default function SteamAppsPage() {
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const steamOptions = useSteamOptionsStore((s) => s.data);
+  const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
+  const isSyncing = syncTask?.status === BTaskStatus.Running;
+  const prevSyncStatusRef = useRef(syncTask?.status);
 
   const isConfigured = (steamOptions?.accounts?.length ?? 0) > 0;
 
@@ -68,6 +78,21 @@ export default function SteamAppsPage() {
   useEffect(() => {
     loadApps();
   }, []);
+
+  useEffect(() => {
+    if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
+      loadApps();
+    }
+    prevSyncStatusRef.current = syncTask?.status;
+  }, [syncTask?.status]);
+
+  const handleSync = async () => {
+    await BApi.steamApp.syncSteamApps();
+  };
+
+  const handleStopSync = async () => {
+    await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
+  };
 
   const filteredApps = useMemo(() => {
     if (!keyword.trim()) return apps;
@@ -108,15 +133,43 @@ export default function SteamAppsPage() {
             {t("resourceSource.steam.description")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {isSyncing ? (
+            <div className="flex items-center gap-2">
+              <Progress
+                className="w-32"
+                color="primary"
+                size="sm"
+                value={syncTask?.percentage ?? 0}
+              />
+              <Button
+                color="danger"
+                size="sm"
+                startContent={<AiOutlineStop />}
+                variant="flat"
+                onPress={handleStopSync}
+              >
+                {t("resourceSource.action.stopSync")}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              isDisabled={!isConfigured}
+              size="sm"
+              startContent={<AiOutlineSync />}
+              variant="flat"
+              onPress={handleSync}
+            >
+              {t("resourceSource.action.sync")}
+            </Button>
+          )}
           <Button
-            isDisabled={!isConfigured}
             size="sm"
-            startContent={<AiOutlineSync />}
+            startContent={<AiOutlineReload />}
             variant="flat"
             onPress={loadApps}
           >
-            {t("resourceSource.action.sync")}
+            {t("resourceSource.action.refresh")}
           </Button>
           <Button
             size="sm"

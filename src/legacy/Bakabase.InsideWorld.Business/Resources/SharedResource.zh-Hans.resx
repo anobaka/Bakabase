@@ -624,6 +624,24 @@
   <data name="BTask_MessageOnInterruption_SyncPathMark_Single" xml:space="preserve">
     <value>路径标记同步正在进行中；强制中断可能导致同步不完整。</value>
   </data>
+  <data name="BTask_Name_SyncSteam" xml:space="preserve">
+    <value>同步 Steam 游戏</value>
+  </data>
+  <data name="BTask_Description_SyncSteam" xml:space="preserve">
+    <value>从 Steam 库同步游戏数据</value>
+  </data>
+  <data name="BTask_Name_SyncExHentai" xml:space="preserve">
+    <value>同步 ExHentai 画廊</value>
+  </data>
+  <data name="BTask_Description_SyncExHentai" xml:space="preserve">
+    <value>从 ExHentai 收藏夹同步画廊数据</value>
+  </data>
+  <data name="BTask_Name_SyncDLsite" xml:space="preserve">
+    <value>同步 DLsite 作品</value>
+  </data>
+  <data name="BTask_Description_SyncDLsite" xml:space="preserve">
+    <value>从 DLsite 购买列表同步作品数据</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} 尚未安装，请前往系统设置页面进行安装。</value>
   </data>

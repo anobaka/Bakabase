@@ -1,14 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
+using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Services;
 
-public class DLsiteWorkService(FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm)
+public class DLsiteWorkService(
+    FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm,
+    IBOptions<DLsiteOptions> dlsiteOptions,
+    ILogger<DLsiteWorkService> logger)
     : IDLsiteWorkService
 {
     public async Task<List<DLsiteWorkDbModel>> GetAll()
@@ -58,6 +65,25 @@ public class DLsiteWorkService(FullMemoryCacheResourceService<BakabaseDbContext,
         if (existing != null)
         {
             await orm.RemoveByKey(existing.Id);
+        }
+    }
+
+    public async Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default)
+    {
+        var accounts = dlsiteOptions.Value.Accounts;
+        if (accounts == null || accounts.Count == 0)
+        {
+            logger.LogWarning("No DLsite accounts configured, skipping sync");
+            return;
+        }
+
+        // TODO: DLsite purchase list API is not yet implemented in DLsiteClient.
+        // Once the purchase list parsing is available, implement the actual sync here.
+        logger.LogWarning("DLsite sync from API is not yet fully implemented");
+
+        if (onProgress != null)
+        {
+            await onProgress(100, 0);
         }
     }
 }

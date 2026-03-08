@@ -1,5 +1,7 @@
 {
   "resourceSource.action.sync": "立即同步",
+  "resourceSource.action.stopSync": "停止同步",
+  "resourceSource.action.refresh": "刷新",
   "resourceSource.action.delete": "删除",
   "resourceSource.action.configure": "配置",
   "resourceSource.confirm.delete": "确定要删除此项吗？",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Table,
@@ -13,18 +13,23 @@ import {
   Chip,
   Button,
   Spinner,
+  Progress,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
   AiOutlineDelete,
   AiOutlineSetting,
   AiOutlineSync,
+  AiOutlineStop,
+  AiOutlineReload,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { DLsiteConfig } from "@/components/ThirdPartyConfig";
+import { useBTasksStore } from "@/stores/bTasks";
+import { BTaskStatus } from "@/sdk/constants";
 
 interface DLsiteWork {
   id: number;
@@ -43,6 +48,8 @@ interface DLsiteWork {
   updatedAt: string;
 }
 
+const SYNC_TASK_ID = "SyncDLsite";
+
 export default function DLsiteWorksPage() {
   const { t } = useTranslation();
   const [works, setWorks] = useState<DLsiteWork[]>([]);
@@ -50,6 +57,9 @@ export default function DLsiteWorksPage() {
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
+  const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
+  const isSyncing = syncTask?.status === BTaskStatus.Running;
+  const prevSyncStatusRef = useRef(syncTask?.status);
 
   const isConfigured = (dlsiteOptions?.accounts?.length ?? 0) > 0;
 
@@ -68,6 +78,21 @@ export default function DLsiteWorksPage() {
   useEffect(() => {
     loadWorks();
   }, []);
+
+  useEffect(() => {
+    if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
+      loadWorks();
+    }
+    prevSyncStatusRef.current = syncTask?.status;
+  }, [syncTask?.status]);
+
+  const handleSync = async () => {
+    await BApi.dlsiteWork.syncDLsiteWorks();
+  };
+
+  const handleStopSync = async () => {
+    await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
+  };
 
   const filteredWorks = useMemo(() => {
     if (!keyword.trim()) return works;
@@ -99,15 +124,43 @@ export default function DLsiteWorksPage() {
             {t("resourceSource.dlsite.description")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {isSyncing ? (
+            <div className="flex items-center gap-2">
+              <Progress
+                className="w-32"
+                color="primary"
+                size="sm"
+                value={syncTask?.percentage ?? 0}
+              />
+              <Button
+                color="danger"
+                size="sm"
+                startContent={<AiOutlineStop />}
+                variant="flat"
+                onPress={handleStopSync}
+              >
+                {t("resourceSource.action.stopSync")}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              isDisabled={!isConfigured}
+              size="sm"
+              startContent={<AiOutlineSync />}
+              variant="flat"
+              onPress={handleSync}
+            >
+              {t("resourceSource.action.sync")}
+            </Button>
+          )}
           <Button
-            isDisabled={!isConfigured}
             size="sm"
-            startContent={<AiOutlineSync />}
+            startContent={<AiOutlineReload />}
             variant="flat"
             onPress={loadWorks}
           >
-            {t("resourceSource.action.sync")}
+            {t("resourceSource.action.refresh")}
           </Button>
           <Button
             size="sm"

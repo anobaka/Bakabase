@@ -10,4 +10,5 @@ public interface IDLsiteWorkService
     Task AddOrUpdate(DLsiteWorkDbModel work);
     Task AddOrUpdateRange(IEnumerable<DLsiteWorkDbModel> works);
     Task DeleteByWorkId(string workId);
+    Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
 }

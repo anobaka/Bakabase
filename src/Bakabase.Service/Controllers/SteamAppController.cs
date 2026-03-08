@@ -1,17 +1,23 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Bakabase.Abstractions.Components.Localization;
+using Bakabase.Abstractions.Components.Tasks;
 using Bakabase.Abstractions.Models.Db;
+using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Services;
 using Bootstrap.Components.Miscellaneous.ResponseBuilders;
 using Bootstrap.Models.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Bakabase.Service.Controllers;
 
 [Route("~/steam-app")]
-public class SteamAppController(ISteamAppService service) : Controller
+public class SteamAppController(ISteamAppService service, BTaskManager btm, IBakabaseLocalizer localizer) : Controller
 {
+    public const string SyncTaskId = "SyncSteam";
+
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllSteamApps")]
     public async Task<ListResponse<SteamAppDbModel>> GetAll()
@@ -33,6 +39,39 @@ public class SteamAppController(ISteamAppService service) : Controller
     public async Task<BaseResponse> Delete(int appId)
     {
         await service.DeleteByAppId(appId);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("sync")]
+    [SwaggerOperation(OperationId = "SyncSteamApps")]
+    public async Task<BaseResponse> Sync()
+    {
+        await btm.Start(SyncTaskId, () => new BTaskHandlerBuilder
+        {
+            Id = SyncTaskId,
+            GetName = () => localizer.BTask_Name(SyncTaskId),
+            GetDescription = () => localizer.BTask_Description(SyncTaskId),
+            Run = async args =>
+            {
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                var svc = scope.ServiceProvider.GetRequiredService<ISteamAppService>();
+                await svc.SyncFromApi(
+                    async (percentage, count) =>
+                    {
+                        await args.UpdateTask(t =>
+                        {
+                            t.Percentage = percentage;
+                            t.Process = count.ToString();
+                        });
+                    },
+                    args.CancellationToken);
+            },
+            Type = BTaskType.Any,
+            ResourceType = BTaskResourceType.Any,
+            IsPersistent = true,
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
+            RootServiceProvider = HttpContext.RequestServices
+        });
         return BaseResponseBuilder.Ok;
     }
 }
