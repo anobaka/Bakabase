@@ -170,10 +170,10 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var response = await PlayHttpClient.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
 
-            var works = await response.Content.ReadFromJsonAsync<List<DLsitePlayWorkDetail>>(cancellationToken: ct);
-            if (works != null)
+            var result = await response.Content.ReadFromJsonAsync<DLsitePlayWorksResponse>(cancellationToken: ct);
+            if (result?.Works != null)
             {
-                allWorks.AddRange(works);
+                allWorks.AddRange(result.Works);
             }
         }
 

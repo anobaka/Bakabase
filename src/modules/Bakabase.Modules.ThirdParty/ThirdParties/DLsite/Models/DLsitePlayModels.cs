@@ -99,6 +99,15 @@ public class DLsitePlayWorkDetail
 }
 
 /// <summary>
+/// Response wrapper from POST /api/v3/content/works
+/// </summary>
+public class DLsitePlayWorksResponse
+{
+    [JsonPropertyName("works")]
+    public List<DLsitePlayWorkDetail>? Works { get; set; }
+}
+
+/// <summary>
 /// Work files (cover images etc.)
 /// </summary>
 public class DLsitePlayWorkFiles
@@ -107,5 +116,5 @@ public class DLsitePlayWorkFiles
     public string? Main { get; set; }
 
     [JsonPropertyName("sam")]
-    public List<string>? Sam { get; set; }
+    public string? Sam { get; set; }
 }
