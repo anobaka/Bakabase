@@ -11,6 +11,8 @@ import BApi from "@/sdk/BApi";
 import { CookieValidatorTarget } from "@/sdk/constants";
 import {
   useBilibiliOptionsStore,
+  useExHentaiOptionsStore,
+  useDLsiteOptionsStore,
   usePixivOptionsStore,
   useSoulPlusOptionsStore,
   useBangumiOptionsStore,
@@ -20,7 +22,11 @@ import {
   usePatreonOptionsStore,
   useTmdbOptionsStore,
 } from "@/stores/options";
-import { DLsiteConfig, ExHentaiConfig } from "@/components/ThirdPartyConfig";
+import {
+  DLsiteConfig,
+  ExHentaiConfig,
+  DownloaderOptionsConfig,
+} from "@/components/ThirdPartyConfig";
 
 export default function ThirdPartyConfigurationPage() {
   const { t } = useTranslation();
@@ -38,6 +44,11 @@ export default function ThirdPartyConfigurationPage() {
     });
   };
 
+  const [exhentaiConfigOpen, setExhentaiConfigOpen] = useState(false);
+  const [dlsiteConfigOpen, setDlsiteConfigOpen] = useState(false);
+
+  const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
+  const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
   const bilibiliOptions = useBilibiliOptionsStore((state) => state.data);
   const pixivOptions = usePixivOptionsStore((state) => state.data);
   const soulPlusOptions = useSoulPlusOptionsStore((state) => state.data);
@@ -276,7 +287,29 @@ export default function ThirdPartyConfigurationPage() {
         key: "exhentai",
         label: "ExHentai",
         tip: "thirdPartyConfig.tip.exhentai",
-        content: <ExHentaiConfig />,
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setExhentaiConfigOpen(true)}
+              >
+                {t("resourceSource.action.configure")} ({exhentaiOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <ExHentaiConfig
+                isOpen={exhentaiConfigOpen}
+                onClose={() => setExhentaiConfigOpen(false)}
+              />
+            </div>
+            <DownloaderOptionsConfig
+              hideCookie
+              options={exhentaiOptions}
+              patchApi={BApi.options.patchExHentaiOptions}
+              cookieValidatorTarget={CookieValidatorTarget.ExHentai}
+            />
+          </div>
+        ),
       },
       {
         key: "pixiv",
@@ -440,7 +473,28 @@ export default function ThirdPartyConfigurationPage() {
         key: "dlsite",
         label: "DLsite",
         tip: "thirdPartyConfig.tip.dlsite",
-        content: <DLsiteConfig />,
+        content: (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setDlsiteConfigOpen(true)}
+              >
+                {t("resourceSource.action.configure")} ({dlsiteOptions?.accounts?.length || 0} {t("resourceSource.accounts.title", { platform: "" }).trim()})
+              </Button>
+              <DLsiteConfig
+                isOpen={dlsiteConfigOpen}
+                onClose={() => setDlsiteConfigOpen(false)}
+              />
+            </div>
+            <DownloaderOptionsConfig
+              hideCookie
+              options={dlsiteOptions}
+              patchApi={BApi.options.patchDLsiteOptions}
+            />
+          </div>
+        ),
       },
       {
         key: "fanbox",
@@ -582,6 +636,10 @@ export default function ThirdPartyConfigurationPage() {
       tmpFantiaOptions,
       tmpPatreonOptions,
       tmpTmdbOptions,
+      exhentaiOptions,
+      dlsiteOptions,
+      exhentaiConfigOpen,
+      dlsiteConfigOpen,
     ],
   );
 

@@ -12,12 +12,14 @@ interface DownloaderOptionsConfigProps {
   options: any;
   patchApi: (patches: any) => Promise<any>;
   cookieValidatorTarget?: CookieValidatorTarget;
+  hideCookie?: boolean;
 }
 
 export default function DownloaderOptionsConfig({
   options: externalOptions,
   patchApi,
   cookieValidatorTarget,
+  hideCookie,
 }: DownloaderOptionsConfigProps) {
   const { t } = useTranslation();
   const [options, setOptions] = useState<any>(externalOptions || {});
@@ -56,14 +58,16 @@ export default function DownloaderOptionsConfig({
 
   return (
     <div className="space-y-4">
-      <div>
-        <Textarea
-          label={t<string>("thirdPartyConfig.label.cookie")}
-          size="sm"
-          value={options.cookie || ""}
-          onValueChange={(v) => setOptions({ ...options, cookie: v })}
-        />
-      </div>
+      {!hideCookie && (
+        <div>
+          <Textarea
+            label={t<string>("thirdPartyConfig.label.cookie")}
+            size="sm"
+            value={options.cookie || ""}
+            onValueChange={(v) => setOptions({ ...options, cookie: v })}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <Input
           label={t<string>("thirdPartyConfig.label.maxConcurrency")}
@@ -126,7 +130,7 @@ export default function DownloaderOptionsConfig({
         <Button color="primary" size="sm" onPress={handleSave}>
           {t<string>("thirdPartyConfig.action.save")}
         </Button>
-        {cookieValidatorTarget && options.cookie && (
+        {!hideCookie && cookieValidatorTarget && options.cookie && (
           <Button
             disabled={!options.cookie?.length || validatingCookie}
             isLoading={validatingCookie}
