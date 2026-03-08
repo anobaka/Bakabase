@@ -71,27 +71,26 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
 
   const items: MenuProps["items"] = asideMenuConfig.map(convertItem);
 
-  const defaultOpenKeysRef = useRef(
-    asideMenuConfig
-      .filter((m) => m.children?.some((c) => pathname.includes(c.path!)))
-      .map((m) => m.path!),
-  );
-  const defaultSelectedKeysRef = useRef([
-    (() => {
-      for (const m of asideMenuConfig) {
-        if (m.path === pathname) {
-          return pathname;
-        }
-        for (const c of m.children || []) {
-          if (pathname.includes(c.path!)) {
-            return c.path!;
-          }
+  const findSelectedKey = (): string => {
+    for (const m of asideMenuConfig) {
+      if (m.path === pathname) {
+        return m.path;
+      }
+      for (const c of m.children || []) {
+        if (c.path === pathname) {
+          return c.path;
         }
       }
+    }
+    return "";
+  };
 
-      return "";
-    })(),
-  ]);
+  const defaultOpenKeysRef = useRef(
+    asideMenuConfig
+      .filter((m) => m.children?.some((c) => c.path === pathname))
+      .map((m) => m.path!),
+  );
+  const defaultSelectedKeysRef = useRef([findSelectedKey()]);
 
   return (
     <Menu
@@ -100,19 +99,7 @@ const Index: React.FC<IProps> = ({ collapsed }: IProps) => {
       inlineCollapsed={collapsed}
       inlineIndent={12}
       mode="inline"
-      selectedKeys={[(() => {
-        for (const m of asideMenuConfig) {
-          if (m.path === pathname) {
-            return pathname;
-          }
-          for (const c of m.children || []) {
-            if (pathname.includes(c.path!)) {
-              return c.path!;
-            }
-          }
-        }
-        return '';
-      })()]}
+      selectedKeys={[findSelectedKey()]}
       style={{
         background: 'none',
         border: 'none',

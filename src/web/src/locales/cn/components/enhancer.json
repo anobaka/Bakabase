@@ -28,6 +28,12 @@
   "enhancer.options.enhanceProperties.label": "动态属性配置",
   "enhancer.options.enhanceProperties.tip": "配置增强器的动态属性，静态属性请在外部属性列表中管理。",
 
+  "enhancer.options.translation.label": "增强后翻译",
+  "enhancer.options.translation.description": "增强完成后将结果翻译为目标语言",
+  "enhancer.options.translation.notConfigured": "翻译 AI 功能未配置，请先在 AI 设置中配置。",
+  "enhancer.options.translation.targetLanguage.label": "目标语言",
+  "enhancer.options.translation.targetLanguage.placeholder": "例如 en、zh、ja",
+
   "enhancer.categoryOptions.title": "为分类 {{categoryName}} 配置增强器 {{enhancerName}}",
 
   "enhancer.regex.captureGroups.label": "可用的捕获组：",
@@ -52,6 +58,8 @@
   "enhancer.target.dynamicLabel.tip": "这不是一个固定的增强目标，在收集数据时会被替换为其他内容",
   "enhancer.target.configured.label": "已配置",
   "enhancer.target.bindProperty.label": "绑定属性",
+  "enhancer.target.customPrompt.label": "AI 提取说明",
+  "enhancer.target.customPrompt.placeholder": "描述 AI 应如何提取此目标，例如「从文件名的 [] 中提取」",
 
   "enhancer.targetOptions.autoMatch.label": "空值自动匹配",
   "enhancer.targetOptions.autoMatch.description": "默认情况下，如果多层级数据中遇到空值，将创建一个空层。",

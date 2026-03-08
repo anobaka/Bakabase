@@ -54,7 +54,20 @@ const EventListener = (props: Props) => {
     propsRef.current.onClick?.(evt);
   }, []);
 
+  const isInsideDialog = useCallback((target: EventTarget | null): boolean => {
+    let el = target as HTMLElement | null;
+    while (el) {
+      if (el.role === "dialog") {
+        return true;
+      }
+      el = el.parentElement;
+    }
+    return false;
+  }, []);
+
   const onKeyDown = useCallback((e: KeyboardEvent) => {
+    // Modifier keys should always be tracked for selection mode,
+    // but action keys should be suppressed when a dialog is open.
     switch (e.key) {
       case "Control":
       case "Meta": // Support Command key on Mac
@@ -64,11 +77,15 @@ const EventListener = (props: Props) => {
         changeSelectionMode(SelectionMode.Shift);
         shiftHoldingRef.current = true;
         break;
-      case "Delete":
-        propsRef.current.onDelete?.();
-        break;
       default:
-        propsRef.current.onKeyDown?.(e.key, e);
+        if (isInsideDialog(e.target)) {
+          return;
+        }
+        if (e.key === "Delete") {
+          propsRef.current.onDelete?.();
+        } else {
+          propsRef.current.onKeyDown?.(e.key, e);
+        }
         break;
     }
   }, []);

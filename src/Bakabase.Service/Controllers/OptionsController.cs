@@ -913,6 +913,36 @@ namespace Bakabase.Service.Controllers
                 {
                     options.OllamaEndpoint = model.OllamaEndpoint;
                 }
+
+                if (model.DefaultProviderConfigId != null)
+                {
+                    options.DefaultProviderConfigId = model.DefaultProviderConfigId;
+                }
+
+                if (model.DefaultModelId != null)
+                {
+                    options.DefaultModelId = model.DefaultModelId;
+                }
+
+                if (model.EnableCache.HasValue)
+                {
+                    options.EnableCache = model.EnableCache.Value;
+                }
+
+                if (model.DefaultCacheTtlDays.HasValue)
+                {
+                    options.DefaultCacheTtlDays = model.DefaultCacheTtlDays.Value;
+                }
+
+                if (model.Quota != null)
+                {
+                    options.Quota = model.Quota;
+                }
+
+                if (model.AuditLogRequestContent.HasValue)
+                {
+                    options.AuditLogRequestContent = model.AuditLogRequestContent.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }

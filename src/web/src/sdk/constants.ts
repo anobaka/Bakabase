@@ -491,7 +491,8 @@ export enum PropertyValueScope {
   RegexEnhancer = 1004,
   KodiEnhancer = 1005,
   TmdbEnhancer = 1006,
-  AvEnhancer = 1007
+  AvEnhancer = 1007,
+  AiEnhancer = 1008
 }
 
 export const propertyValueScopes = [
@@ -504,7 +505,8 @@ export const propertyValueScopes = [
   { label: 'RegexEnhancer', value: PropertyValueScope.RegexEnhancer },
   { label: 'KodiEnhancer', value: PropertyValueScope.KodiEnhancer },
   { label: 'TmdbEnhancer', value: PropertyValueScope.TmdbEnhancer },
-  { label: 'AvEnhancer', value: PropertyValueScope.AvEnhancer }
+  { label: 'AvEnhancer', value: PropertyValueScope.AvEnhancer },
+  { label: 'AiEnhancer', value: PropertyValueScope.AiEnhancer }
 ] as const;
 
 export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
@@ -517,7 +519,8 @@ export const PropertyValueScopeLabel: Record<PropertyValueScope, string> = {
   [PropertyValueScope.RegexEnhancer]: 'RegexEnhancer',
   [PropertyValueScope.KodiEnhancer]: 'KodiEnhancer',
   [PropertyValueScope.TmdbEnhancer]: 'TmdbEnhancer',
-  [PropertyValueScope.AvEnhancer]: 'AvEnhancer'
+  [PropertyValueScope.AvEnhancer]: 'AvEnhancer',
+  [PropertyValueScope.AiEnhancer]: 'AiEnhancer'
 };
 
 export enum PropertyValueType {
@@ -2076,7 +2079,8 @@ export enum EnhancerId {
   Regex = 5,
   Kodi = 6,
   Tmdb = 7,
-  Av = 8
+  Av = 8,
+  AI = 9
 }
 
 export const enhancerIds = [
@@ -2087,7 +2091,8 @@ export const enhancerIds = [
   { label: 'Regex', value: EnhancerId.Regex },
   { label: 'Kodi', value: EnhancerId.Kodi },
   { label: 'Tmdb', value: EnhancerId.Tmdb },
-  { label: 'Av', value: EnhancerId.Av }
+  { label: 'Av', value: EnhancerId.Av },
+  { label: 'AI', value: EnhancerId.AI }
 ] as const;
 
 export const EnhancerIdLabel: Record<EnhancerId, string> = {
@@ -2098,7 +2103,8 @@ export const EnhancerIdLabel: Record<EnhancerId, string> = {
   [EnhancerId.Regex]: 'Regex',
   [EnhancerId.Kodi]: 'Kodi',
   [EnhancerId.Tmdb]: 'Tmdb',
-  [EnhancerId.Av]: 'Av'
+  [EnhancerId.Av]: 'Av',
+  [EnhancerId.AI]: 'AI'
 };
 
 export enum EnhancerTag {
@@ -2600,6 +2606,18 @@ export const AvEnhancerTargetLabel: Record<AvEnhancerTarget, string> = {
   [AvEnhancerTarget.Poster]: 'Poster',
   [AvEnhancerTarget.Website]: 'Website',
   [AvEnhancerTarget.Mosaic]: 'Mosaic'
+};
+
+export enum AiEnhancerTarget {
+  Properties = 1
+}
+
+export const aiEnhancerTargets = [
+  { label: 'Properties', value: AiEnhancerTarget.Properties }
+] as const;
+
+export const AiEnhancerTargetLabel: Record<AiEnhancerTarget, string> = {
+  [AiEnhancerTarget.Properties]: 'Properties'
 };
 
 export enum EnhancementAdditionalItem {
@@ -3395,6 +3413,120 @@ export const DependentComponentStatusLabel: Record<DependentComponentStatus, str
   [DependentComponentStatus.NotInstalled]: 'NotInstalled',
   [DependentComponentStatus.Installed]: 'Installed',
   [DependentComponentStatus.Installing]: 'Installing'
+};
+
+export enum FileOperationType {
+  Rename = 1,
+  Move = 2,
+  CreateDirectory = 3
+}
+
+export const fileOperationTypes = [
+  { label: 'Rename', value: FileOperationType.Rename },
+  { label: 'Move', value: FileOperationType.Move },
+  { label: 'CreateDirectory', value: FileOperationType.CreateDirectory }
+] as const;
+
+export const FileOperationTypeLabel: Record<FileOperationType, string> = {
+  [FileOperationType.Rename]: 'Rename',
+  [FileOperationType.Move]: 'Move',
+  [FileOperationType.CreateDirectory]: 'CreateDirectory'
+};
+
+export enum AiFeature {
+  Default = 0,
+  Enhancer = 1,
+  Translation = 2,
+  FileProcessor = 3
+}
+
+export const aiFeatures = [
+  { label: 'Default', value: AiFeature.Default },
+  { label: 'Enhancer', value: AiFeature.Enhancer },
+  { label: 'Translation', value: AiFeature.Translation },
+  { label: 'FileProcessor', value: AiFeature.FileProcessor }
+] as const;
+
+export const AiFeatureLabel: Record<AiFeature, string> = {
+  [AiFeature.Default]: 'Default',
+  [AiFeature.Enhancer]: 'Enhancer',
+  [AiFeature.Translation]: 'Translation',
+  [AiFeature.FileProcessor]: 'FileProcessor'
+};
+
+export enum LlmCallStatus {
+  Success = 1,
+  Error = 2,
+  Timeout = 3,
+  Cancelled = 4
+}
+
+export const llmCallStatuses = [
+  { label: 'Success', value: LlmCallStatus.Success },
+  { label: 'Error', value: LlmCallStatus.Error },
+  { label: 'Timeout', value: LlmCallStatus.Timeout },
+  { label: 'Cancelled', value: LlmCallStatus.Cancelled }
+] as const;
+
+export const LlmCallStatusLabel: Record<LlmCallStatus, string> = {
+  [LlmCallStatus.Success]: 'Success',
+  [LlmCallStatus.Error]: 'Error',
+  [LlmCallStatus.Timeout]: 'Timeout',
+  [LlmCallStatus.Cancelled]: 'Cancelled'
+};
+
+export enum LlmCapabilities {
+  None = 0,
+  Chat = 1,
+  ToolCalling = 2,
+  Vision = 4,
+  Streaming = 8,
+  Embedding = 16,
+  JsonMode = 32
+}
+
+export const llmCapabilities = [
+  { label: 'None', value: LlmCapabilities.None },
+  { label: 'Chat', value: LlmCapabilities.Chat },
+  { label: 'ToolCalling', value: LlmCapabilities.ToolCalling },
+  { label: 'Vision', value: LlmCapabilities.Vision },
+  { label: 'Streaming', value: LlmCapabilities.Streaming },
+  { label: 'Embedding', value: LlmCapabilities.Embedding },
+  { label: 'JsonMode', value: LlmCapabilities.JsonMode }
+] as const;
+
+export const LlmCapabilitiesLabel: Record<LlmCapabilities, string> = {
+  [LlmCapabilities.None]: 'None',
+  [LlmCapabilities.Chat]: 'Chat',
+  [LlmCapabilities.ToolCalling]: 'ToolCalling',
+  [LlmCapabilities.Vision]: 'Vision',
+  [LlmCapabilities.Streaming]: 'Streaming',
+  [LlmCapabilities.Embedding]: 'Embedding',
+  [LlmCapabilities.JsonMode]: 'JsonMode'
+};
+
+export enum LlmProviderType {
+  OpenAI = 1,
+  Claude = 2,
+  Ollama = 3,
+  DashScope = 4,
+  Gemini = 5
+}
+
+export const llmProviderTypes = [
+  { label: 'OpenAI', value: LlmProviderType.OpenAI },
+  { label: 'Claude', value: LlmProviderType.Claude },
+  { label: 'Ollama', value: LlmProviderType.Ollama },
+  { label: 'DashScope', value: LlmProviderType.DashScope },
+  { label: 'Gemini', value: LlmProviderType.Gemini }
+] as const;
+
+export const LlmProviderTypeLabel: Record<LlmProviderType, string> = {
+  [LlmProviderType.OpenAI]: 'OpenAI',
+  [LlmProviderType.Claude]: 'Claude',
+  [LlmProviderType.Ollama]: 'Ollama',
+  [LlmProviderType.DashScope]: 'DashScope',
+  [LlmProviderType.Gemini]: 'Gemini'
 };
 
 export enum BulkModificationProcessorOptionsItemsFilterBy {

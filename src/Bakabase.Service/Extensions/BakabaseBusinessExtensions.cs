@@ -33,6 +33,7 @@ using Bakabase.InsideWorld.Business.Models.Db;
 using Bakabase.InsideWorld.Business.Services;
 using Bakabase.InsideWorld.Models.Configs;
 using Bakabase.Migrations.V190;
+using Bakabase.Modules.AI.Extensions;
 using Bakabase.Modules.Alias.Extensions;
 using Bakabase.Modules.BulkModification.Extensions;
 using Bakabase.Modules.Enhancer.Extensions;
@@ -115,6 +116,28 @@ namespace Bakabase.Service.Extensions
 
             services.AddLegacies();
 
+            services.AddAI<BakabaseDbContext>();
+            services.AddSingleton<Bakabase.Modules.AI.Components.Tools.ILlmTool, Bakabase.Service.Components.AI.ResourceTools>();
+
+            // Bridge AiOptions → AiModuleOptions for the AI module (avoids circular dependency)
+            services.Configure<Bakabase.Modules.AI.Models.Domain.AiModuleOptions>(o =>
+            {
+                // Options will be populated via IOptionsMonitor change tracking below
+            });
+            services.AddSingleton<Microsoft.Extensions.Options.IConfigureOptions<Bakabase.Modules.AI.Models.Domain.AiModuleOptions>>(sp =>
+            {
+                var aiOpts = sp.GetRequiredService<Bootstrap.Components.Configuration.Abstractions.IBOptions<AiOptions>>();
+                return new Microsoft.Extensions.Options.ConfigureOptions<Bakabase.Modules.AI.Models.Domain.AiModuleOptions>(o =>
+                {
+                    var src = aiOpts.Value;
+                    o.DefaultProviderConfigId = src.DefaultProviderConfigId;
+                    o.DefaultModelId = src.DefaultModelId;
+                    o.Quota = src.Quota;
+                    o.EnableCache = src.EnableCache;
+                    o.DefaultCacheTtlDays = src.DefaultCacheTtlDays;
+                    o.AuditLogRequestContent = src.AuditLogRequestContent;
+                });
+            });
             services.AddAlias<BakabaseDbContext>();
             services.AddProperty<BakabaseDbContext>();
             services.AddEnhancers<BakabaseDbContext>();

@@ -12,6 +12,7 @@ import { useUpdate } from "react-use";
 import DynamicTargets from "./components/DynamicTargets";
 import FixedTargets from "./components/FixedTargets";
 import RegexEnhancerOptions from "./components/RegexEnhancerOptions";
+import TranslationOptionsSection from "../TranslationOptionsSection";
 
 import { Modal } from "@/components/bakaui";
 import { createPortalOfComponent } from "@/components/utils";
@@ -175,6 +176,18 @@ const CategoryEnhancerOptionsDialog = ({
               propertyMap={propertyMap}
               onCategoryChanged={loadCategory}
               onPropertyChanged={loadAllProperties}
+            />
+            <TranslationOptionsSection
+              value={options.translationOptions}
+              onChange={async (translationOptions) => {
+                const newOptions = { ...options, translationOptions };
+                await BApi.category.patchCategoryEnhancerOptions(
+                  categoryId,
+                  enhancer.id,
+                  { options: newOptions as any },
+                );
+                setOptions(newOptions);
+              }}
             />
           </div>
         )

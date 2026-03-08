@@ -626,6 +626,33 @@
   <data name="Enhancer_Av_Target_Mosaic_Name" xml:space="preserve">
     <value>Mosaic</value>
   </data>
+  <data name="Enhancer_AI_Name" xml:space="preserve">
+    <value>AI</value>
+  </data>
+  <data name="Enhancer_AI_Description" xml:space="preserve">
+    <value>Use AI/LLM to analyze file names and paths, and automatically extract metadata such as title, tags, series, and release date. Requires an LLM provider to be configured.</value>
+  </data>
+  <data name="Enhancer_AI_Target_Name_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Enhancer_AI_Target_Tags_Name" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Enhancer_AI_Target_Introduction_Name" xml:space="preserve">
+    <value>Introduction</value>
+  </data>
+  <data name="Enhancer_AI_Target_Rating_Name" xml:space="preserve">
+    <value>Rating</value>
+  </data>
+  <data name="Enhancer_AI_Target_Series_Name" xml:space="preserve">
+    <value>Series</value>
+  </data>
+  <data name="Enhancer_AI_Target_ReleaseDate_Name" xml:space="preserve">
+    <value>Release Date</value>
+  </data>
+  <data name="Enhancer_AI_Target_Properties_Name" xml:space="preserve">
+    <value>Custom Properties</value>
+  </data>
   <data name="Enhance" xml:space="preserve">
     <value>Enhance</value>
   </data>
