@@ -3,10 +3,9 @@ using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Modules.Enhancer.Abstractions.Components;
 using Bakabase.Modules.Enhancer.Abstractions.Models.Domain;
-using Bakabase.Modules.Enhancer.Extensions;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
+using Bakabase.Modules.Property.Components;
 using Bakabase.Modules.StandardValue.Abstractions.Components;
-using Bakabase.Modules.StandardValue.Abstractions.Services;
 using Bakabase.Modules.StandardValue.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Bootstrap.Extensions;
@@ -22,10 +21,9 @@ public class SteamEnhancer(
     ILoggerFactory loggerFactory,
     SteamClient steamClient,
     IFileManager fileManager,
-    IStandardValueService standardValueService,
     IServiceProvider serviceProvider)
     : AbstractEnhancer<SteamEnhancerTarget, SteamEnhancerContext, object?>(loggerFactory, fileManager,
-        standardValueService, serviceProvider)
+        serviceProvider)
 {
     protected override EnhancerId TypedId => EnhancerId.Steam;
 
@@ -127,26 +125,71 @@ public class SteamEnhancer(
 
         foreach (var target in SpecificEnumUtils<SteamEnhancerTarget>.Values)
         {
-            IStandardValueBuilder valueBuilder = target switch
+            switch (target)
             {
-                SteamEnhancerTarget.Name => new StringValueBuilder(context.Name),
-                SteamEnhancerTarget.Description => new StringValueBuilder(context.Description),
-                SteamEnhancerTarget.Developer => new ListStringValueBuilder(context.Developers),
-                SteamEnhancerTarget.Publisher => new ListStringValueBuilder(context.Publishers),
-                SteamEnhancerTarget.ReleaseDate => new DateTimeValueBuilder(context.ReleaseDate),
-                SteamEnhancerTarget.Genre => new ListTagValueBuilder(context.Genres
-                    ?.SelectMany(d => d.Value.Select(x => new TagValue(d.Key, x))).ToList()),
-                SteamEnhancerTarget.Category => new ListTagValueBuilder(context.Categories
-                    ?.SelectMany(d => d.Value.Select(x => new TagValue(d.Key, x))).ToList()),
-                SteamEnhancerTarget.MetacriticScore => new DecimalValueBuilder(context.MetacriticScore),
-                SteamEnhancerTarget.Cover => new ListStringValueBuilder(
-                    string.IsNullOrEmpty(context.CoverPath) ? null : [context.CoverPath]),
-                _ => throw new ArgumentOutOfRangeException()
-            };
+                case SteamEnhancerTarget.Name:
+                case SteamEnhancerTarget.Description:
+                case SteamEnhancerTarget.Developer:
+                case SteamEnhancerTarget.Publisher:
+                case SteamEnhancerTarget.ReleaseDate:
+                case SteamEnhancerTarget.MetacriticScore:
+                case SteamEnhancerTarget.Cover:
+                {
+                    IStandardValueBuilder valueBuilder = target switch
+                    {
+                        SteamEnhancerTarget.Name => new StringValueBuilder(context.Name),
+                        SteamEnhancerTarget.Description => new StringValueBuilder(context.Description),
+                        SteamEnhancerTarget.Developer => new ListStringValueBuilder(context.Developers),
+                        SteamEnhancerTarget.Publisher => new ListStringValueBuilder(context.Publishers),
+                        SteamEnhancerTarget.ReleaseDate => new DateTimeValueBuilder(context.ReleaseDate),
+                        SteamEnhancerTarget.MetacriticScore => new DecimalValueBuilder(context.MetacriticScore),
+                        SteamEnhancerTarget.Cover => new ListStringValueBuilder(
+                            string.IsNullOrEmpty(context.CoverPath) ? null : [context.CoverPath]),
+                        _ => throw new ArgumentOutOfRangeException()
+                    };
 
-            if (valueBuilder.Value != null)
-            {
-                enhancements.Add(new EnhancementTargetValue<SteamEnhancerTarget>(target, null, valueBuilder));
+                    if (valueBuilder.Value != null)
+                    {
+                        enhancements.Add(new EnhancementTargetValue<SteamEnhancerTarget>(target, null,
+                            valueBuilder));
+                    }
+
+                    break;
+                }
+                case SteamEnhancerTarget.Genre:
+                {
+                    if (context.Genres != null)
+                    {
+                        var tags = context.Genres
+                            .SelectMany(d => d.Value.Select(v => new TagValue(d.Key, v)))
+                            .ToList();
+                        if (tags.Count > 0)
+                        {
+                            enhancements.Add(new EnhancementTargetValue<SteamEnhancerTarget>(
+                                SteamEnhancerTarget.Genre, null, new ListTagValueBuilder(tags)));
+                        }
+                    }
+
+                    break;
+                }
+                case SteamEnhancerTarget.Category:
+                {
+                    if (context.Categories != null)
+                    {
+                        var tags = context.Categories
+                            .SelectMany(d => d.Value.Select(v => new TagValue(d.Key, v)))
+                            .ToList();
+                        if (tags.Count > 0)
+                        {
+                            enhancements.Add(new EnhancementTargetValue<SteamEnhancerTarget>(
+                                SteamEnhancerTarget.Category, null, new ListTagValueBuilder(tags)));
+                        }
+                    }
+
+                    break;
+                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
