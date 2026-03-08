@@ -230,7 +230,7 @@ public class DLsiteWorkService(
         // Get download links
         if (onProgress != null)
         {
-            await onProgress(0, "Fetching download links...");
+            await onProgress(0, $"[{workId}] 0%");
         }
 
         var links = await dlsiteClient.GetDownloadLinksAsync(cookie, workId, ct);
@@ -267,7 +267,7 @@ public class DLsiteWorkService(
                     var overallProgress = (fileIndex * 100 + fileProgress) / links.Count;
                     onProgress?.Invoke(
                         Math.Min(overallProgress, 95),
-                        $"Downloading {link.FileName} ({fileIndex + 1}/{links.Count}): {downloaded / 1024 / 1024}MB / {total / 1024 / 1024}MB");
+                        $"{link.FileName} ({fileIndex + 1}/{links.Count}) {downloaded / 1024 / 1024}MB/{total / 1024 / 1024}MB");
                 },
                 ct);
 
@@ -288,7 +288,7 @@ public class DLsiteWorkService(
                 hasArchives = true;
                 if (onProgress != null)
                 {
-                    await onProgress(96, $"Extracting {Path.GetFileName(file)}...");
+                    await onProgress(96, Path.GetFileName(file));
                 }
 
                 // Use codepage 932 (Shift-JIS) for Japanese filenames
@@ -305,7 +305,7 @@ public class DLsiteWorkService(
 
         if (onProgress != null)
         {
-            await onProgress(100, "Download complete");
+            await onProgress(100, "100%");
         }
 
         logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, work.LocalPath);
@@ -394,5 +394,80 @@ public class DLsiteWorkService(
             "MOV" or "video" or "anime" => VideoExtensions,
             _ => [..ExecutableExtensions, ..ImageExtensions, ..AudioExtensions, ..VideoExtensions]
         };
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex WorkIdPattern =
+        new(@"^[Rr][JjEeBbVv]\d{6,8}$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    public async Task<int> ScanFolder(string folderPath, Func<int, int, Task>? onProgress = null, CancellationToken ct = default)
+    {
+        if (!Directory.Exists(folderPath))
+        {
+            throw new Exception($"Folder does not exist: {folderPath}");
+        }
+
+        // Find subdirectories whose name matches a DLsite work ID pattern (e.g. RJ123456)
+        var dirs = Directory.GetDirectories(folderPath)
+            .Select(d => (Path: d, Name: Path.GetFileName(d)))
+            .Where(d => WorkIdPattern.IsMatch(d.Name))
+            .ToList();
+
+        logger.LogInformation("Found {Count} directories matching DLsite work ID pattern in {Path}", dirs.Count, folderPath);
+
+        var matched = 0;
+        for (var i = 0; i < dirs.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var (dirPath, dirName) = dirs[i];
+            var workId = dirName.ToUpperInvariant();
+
+            var existing = await GetByWorkId(workId);
+            if (existing != null)
+            {
+                if (!existing.IsDownloaded || string.IsNullOrEmpty(existing.LocalPath))
+                {
+                    existing.IsDownloaded = true;
+                    existing.LocalPath = dirPath;
+                    existing.UpdatedAt = DateTime.Now;
+                    await orm.Update(existing);
+                    matched++;
+                }
+            }
+            else
+            {
+                // Create a stub record for works found on disk but not in DB
+                var work = new DLsiteWorkDbModel
+                {
+                    WorkId = workId,
+                    IsDownloaded = true,
+                    LocalPath = dirPath,
+                    CreatedAt = DateTime.Now,
+                    UpdatedAt = DateTime.Now,
+                };
+                await orm.Add(work);
+                matched++;
+            }
+
+            if (onProgress != null)
+            {
+                await onProgress((i + 1) * 100 / dirs.Count, matched);
+            }
+        }
+
+        logger.LogInformation("Scan complete: {Matched} works matched out of {Total} directories", matched, dirs.Count);
+        return matched;
+    }
+
+    public async Task SetHidden(string workId, bool isHidden)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        work.IsHidden = isHidden;
+        work.UpdatedAt = DateTime.Now;
+        await orm.Update(work);
     }
 }

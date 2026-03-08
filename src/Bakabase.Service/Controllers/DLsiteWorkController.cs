@@ -138,4 +138,47 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         var files = service.FindPlayableFiles(work.LocalPath, work.WorkType);
         return new ListResponse<string>(files);
     }
+
+    [HttpPost("scan-folder")]
+    [SwaggerOperation(OperationId = "ScanDLsiteFolder")]
+    public async Task<BaseResponse> ScanFolder([FromBody] string folderPath)
+    {
+        var taskId = "ScanDLsiteFolder";
+        await btm.Start(taskId, () => new BTaskHandlerBuilder
+        {
+            Id = taskId,
+            GetName = () => localizer.BTask_Name(taskId),
+            GetDescription = () => localizer.BTask_Description(taskId),
+            Run = async args =>
+            {
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
+                await svc.ScanFolder(
+                    folderPath,
+                    async (percentage, matched) =>
+                    {
+                        await args.UpdateTask(t =>
+                        {
+                            t.Percentage = percentage;
+                            t.Process = matched.ToString();
+                        });
+                    },
+                    args.CancellationToken);
+            },
+            Type = BTaskType.Any,
+            ResourceType = BTaskResourceType.Any,
+            IsPersistent = true,
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
+            RootServiceProvider = HttpContext.RequestServices
+        });
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPut("{workId}/hidden")]
+    [SwaggerOperation(OperationId = "SetDLsiteWorkHidden")]
+    public async Task<BaseResponse> SetHidden(string workId, [FromBody] bool isHidden)
+    {
+        await service.SetHidden(workId, isHidden);
+        return BaseResponseBuilder.Ok;
+    }
 }

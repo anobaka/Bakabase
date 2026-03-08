@@ -14,4 +14,6 @@ public interface IDLsiteWorkService
     Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default);
     Task LaunchWork(string workId, CancellationToken ct = default);
     List<string> FindPlayableFiles(string localPath, string? workType);
+    Task<int> ScanFolder(string folderPath, Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
+    Task SetHidden(string workId, bool isHidden);
 }

@@ -16,19 +16,22 @@ import {
   Progress,
   Image,
   Tooltip,
+  Switch,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
-  AiOutlineDelete,
   AiOutlineSetting,
   AiOutlineSync,
   AiOutlineStop,
   AiOutlineReload,
-  AiOutlineLink,
   AiOutlineFolderOpen,
   AiOutlineDownload,
   AiOutlinePlayCircle,
+  AiOutlineScan,
+  AiOutlineEye,
+  AiOutlineEyeInvisible,
 } from "react-icons/ai";
+import { FiExternalLink } from "react-icons/fi";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
@@ -49,6 +52,7 @@ interface DLsiteWork {
   drmKey?: string;
   isPurchased: boolean;
   isDownloaded: boolean;
+  isHidden: boolean;
   localPath?: string;
   resourceId?: number;
   createdAt: string;
@@ -57,6 +61,7 @@ interface DLsiteWork {
 
 const SYNC_TASK_ID = "SyncDLsite";
 const DOWNLOAD_TASK_ID_PREFIX = "DownloadDLsite_";
+const SCAN_TASK_ID = "ScanDLsiteFolder";
 
 const DLSITE_WORK_URL = "https://www.dlsite.com/maniax/work/=/product_id/";
 
@@ -66,13 +71,19 @@ export default function DLsiteWorksPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
+  const scanTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SCAN_TASK_ID));
   const allTasks = useBTasksStore((s) => s.tasks);
   const isSyncing = syncTask?.status === BTaskStatus.Running;
+  const isScanning = scanTask?.status === BTaskStatus.Running;
   const prevSyncStatusRef = useRef(syncTask?.status);
+  const prevScanStatusRef = useRef(scanTask?.status);
 
   const isConfigured = (dlsiteOptions?.accounts?.length ?? 0) > 0;
+  const downloadDir = dlsiteOptions?.defaultPath;
+  const hasDownloadDir = !!downloadDir;
 
   const getDownloadTask = (workId: string) => {
     return allTasks.find((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`);
@@ -101,6 +112,13 @@ export default function DLsiteWorksPage() {
     prevSyncStatusRef.current = syncTask?.status;
   }, [syncTask?.status]);
 
+  useEffect(() => {
+    if (prevScanStatusRef.current === BTaskStatus.Running && scanTask?.status === BTaskStatus.Completed) {
+      loadWorks();
+    }
+    prevScanStatusRef.current = scanTask?.status;
+  }, [scanTask?.status]);
+
   // Reload works when any download task completes
   useEffect(() => {
     const downloadTasks = allTasks.filter((t) => t.id?.startsWith(DOWNLOAD_TASK_ID_PREFIX));
@@ -118,24 +136,32 @@ export default function DLsiteWorksPage() {
     await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
   };
 
-  const filteredWorks = useMemo(() => {
-    if (!keyword.trim()) return works;
-    const kw = keyword.toLowerCase();
-    return works.filter(
-      (w) =>
-        w.title?.toLowerCase().includes(kw) ||
-        w.workId.toLowerCase().includes(kw) ||
-        w.circle?.toLowerCase().includes(kw),
-    );
-  }, [works, keyword]);
-
-  const handleDelete = async (workId: string) => {
-    const rsp = await BApi.dlsiteWork.deleteDLsiteWork(workId);
+  const handleScanFolder = async () => {
+    if (!downloadDir) return;
+    const rsp = await BApi.dlsiteWork.scanDLsiteFolder(downloadDir);
     if (!rsp.code) {
-      toast.success(t("common.state.saved"));
-      setWorks((prev) => prev.filter((w) => w.workId !== workId));
+      toast.success(t("resourceSource.dlsite.action.scanning"));
     }
   };
+
+  const filteredWorks = useMemo(() => {
+    let result = works;
+    if (!showHidden) {
+      result = result.filter((w) => !w.isHidden);
+    }
+    if (keyword.trim()) {
+      const kw = keyword.toLowerCase();
+      result = result.filter(
+        (w) =>
+          w.title?.toLowerCase().includes(kw) ||
+          w.workId.toLowerCase().includes(kw) ||
+          w.circle?.toLowerCase().includes(kw),
+      );
+    }
+    return result;
+  }, [works, keyword, showHidden]);
+
+  const hiddenCount = useMemo(() => works.filter((w) => w.isHidden).length, [works]);
 
   const handleOpenDLsitePage = (workId: string) => {
     window.open(`${DLSITE_WORK_URL}${workId}.html`, "_blank");
@@ -143,6 +169,12 @@ export default function DLsiteWorksPage() {
 
   const handleOpenLocal = async (localPath: string) => {
     await BApi.tool.openFileOrDirectory({ path: localPath, openInDirectory: false });
+  };
+
+  const handleOpenDownloadDir = async () => {
+    if (downloadDir) {
+      await BApi.tool.openFileOrDirectory({ path: downloadDir, openInDirectory: false });
+    }
   };
 
   const handleDownload = async (workId: string) => {
@@ -156,6 +188,13 @@ export default function DLsiteWorksPage() {
     const rsp = await BApi.dlsiteWork.launchDLsiteWork(workId);
     if (rsp.code) {
       toast.error(rsp.message);
+    }
+  };
+
+  const handleToggleHidden = async (workId: string, isHidden: boolean) => {
+    const rsp = await BApi.dlsiteWork.setDLsiteWorkHidden(workId, isHidden);
+    if (!rsp.code) {
+      setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, isHidden } : w));
     }
   };
 
@@ -198,6 +237,51 @@ export default function DLsiteWorksPage() {
               onPress={handleSync}
             >
               {t("resourceSource.action.sync")}
+            </Button>
+          )}
+          {isScanning ? (
+            <div className="flex items-center gap-2">
+              <Progress
+                className="w-24"
+                color="secondary"
+                size="sm"
+                value={scanTask?.percentage ?? 0}
+              />
+              <span className="text-xs text-default-400">
+                {t("resourceSource.dlsite.action.scanning")}
+              </span>
+            </div>
+          ) : (
+            <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.scanFolder") : t("resourceSource.dlsite.action.setDownloadDir")}>
+              <Button
+                isDisabled={!hasDownloadDir}
+                size="sm"
+                startContent={<AiOutlineScan />}
+                variant="flat"
+                onPress={handleScanFolder}
+              >
+                {t("resourceSource.dlsite.action.scanFolder")}
+              </Button>
+            </Tooltip>
+          )}
+          {hasDownloadDir ? (
+            <Button
+              size="sm"
+              startContent={<AiOutlineFolderOpen />}
+              variant="flat"
+              onPress={handleOpenDownloadDir}
+            >
+              {t("resourceSource.dlsite.action.openDownloadDir")}
+            </Button>
+          ) : (
+            <Button
+              color="warning"
+              size="sm"
+              startContent={<AiOutlineFolderOpen />}
+              variant="flat"
+              onPress={() => setConfigOpen(true)}
+            >
+              {t("resourceSource.dlsite.action.setDownloadDir")}
             </Button>
           )}
           <Button
@@ -249,6 +333,17 @@ export default function DLsiteWorksPage() {
             <Chip size="sm" variant="flat">
               {filteredWorks.length} / {works.length}
             </Chip>
+            {hiddenCount > 0 && (
+              <Switch
+                isSelected={showHidden}
+                size="sm"
+                onValueChange={setShowHidden}
+              >
+                <span className="text-sm text-default-500">
+                  {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
+                </span>
+              </Switch>
+            )}
           </div>
 
           {loading ? (
@@ -256,9 +351,17 @@ export default function DLsiteWorksPage() {
               <Spinner size="lg" />
             </div>
           ) : (
-            <Table removeWrapper aria-label="DLsite Works" isStriped>
+            <Table
+              removeWrapper
+              aria-label="DLsite Works"
+              classNames={{
+                tr: "h-[200px]",
+                td: "align-middle",
+              }}
+              isStriped
+            >
               <TableHeader>
-                <TableColumn width={60}>{""}</TableColumn>
+                <TableColumn width={160}>{""}</TableColumn>
                 <TableColumn>{t("resourceSource.dlsite.label.workId")}</TableColumn>
                 <TableColumn>{t("resourceSource.dlsite.label.title")}</TableColumn>
                 <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
@@ -281,13 +384,13 @@ export default function DLsiteWorksPage() {
                           <Image
                             alt={work.title || work.workId}
                             className="object-contain"
-                            classNames={{ wrapper: "w-10 h-10 min-w-10" }}
+                            classNames={{ wrapper: "w-[140px] h-[180px] min-w-[140px]" }}
                             radius="sm"
                             src={work.coverUrl}
                           />
                         ) : (
-                          <div className="w-10 h-10 flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-xs font-bold">
-                            {work.workId.slice(0, 2)}
+                          <div className="w-[140px] h-[180px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
+                            {work.workId}
                           </div>
                         )}
                       </TableCell>
@@ -312,14 +415,14 @@ export default function DLsiteWorksPage() {
                       </TableCell>
                       <TableCell>
                         {isDownloading ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
                             <Progress
-                              className="w-24"
+                              className="w-full"
                               color="primary"
                               size="sm"
                               value={downloadTask?.percentage ?? 0}
                             />
-                            <span className="text-xs text-default-400 truncate max-w-[80px]">
+                            <span className="text-xs text-default-400 truncate">
                               {downloadTask?.process || t("resourceSource.dlsite.action.downloading")}
                             </span>
                           </div>
@@ -332,7 +435,7 @@ export default function DLsiteWorksPage() {
                                 variant="light"
                                 onPress={() => handleOpenDLsitePage(work.workId)}
                               >
-                                <AiOutlineLink />
+                                <FiExternalLink className="text-lg" />
                               </Button>
                             </Tooltip>
                             {work.isDownloaded && work.localPath ? (
@@ -345,7 +448,7 @@ export default function DLsiteWorksPage() {
                                     variant="light"
                                     onPress={() => handleLaunch(work.workId)}
                                   >
-                                    <AiOutlinePlayCircle />
+                                    <AiOutlinePlayCircle className="text-lg" />
                                   </Button>
                                 </Tooltip>
                                 <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
@@ -355,32 +458,34 @@ export default function DLsiteWorksPage() {
                                     variant="light"
                                     onPress={() => handleOpenLocal(work.localPath!)}
                                   >
-                                    <AiOutlineFolderOpen />
+                                    <AiOutlineFolderOpen className="text-lg" />
                                   </Button>
                                 </Tooltip>
                               </>
                             ) : (
-                              <Tooltip content={t("resourceSource.dlsite.action.download")}>
+                              <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
                                 <Button
                                   color="warning"
+                                  isDisabled={!hasDownloadDir}
                                   isIconOnly
                                   size="sm"
                                   variant="light"
                                   onPress={() => handleDownload(work.workId)}
                                 >
-                                  <AiOutlineDownload />
+                                  <AiOutlineDownload className="text-lg" />
                                 </Button>
                               </Tooltip>
                             )}
-                            <Tooltip content={t("resourceSource.action.delete")}>
+                            <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
                               <Button
-                                color="danger"
                                 isIconOnly
                                 size="sm"
                                 variant="light"
-                                onPress={() => handleDelete(work.workId)}
+                                onPress={() => handleToggleHidden(work.workId, !work.isHidden)}
                               >
-                                <AiOutlineDelete />
+                                {work.isHidden
+                                  ? <AiOutlineEye className="text-lg" />
+                                  : <AiOutlineEyeInvisible className="text-lg" />}
                               </Button>
                             </Tooltip>
                           </div>

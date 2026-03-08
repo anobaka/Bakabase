@@ -55,6 +55,7 @@ export interface BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
   localPath?: string;
   /** @format int32 */
   resourceId?: number;
+  isHidden: boolean;
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
@@ -9479,6 +9480,40 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
         path: `/dlsite-work/${workId}/playable-files`,
         method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name ScanDLsiteFolder
+     * @request POST:/dlsite-work/scan-folder
+     */
+    scanDLsiteFolder: (data: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/scan-folder`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name SetDLsiteWorkHidden
+     * @request PUT:/dlsite-work/{workId}/hidden
+     */
+    setDLsiteWorkHidden: (workId: string, data: boolean, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/hidden`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),

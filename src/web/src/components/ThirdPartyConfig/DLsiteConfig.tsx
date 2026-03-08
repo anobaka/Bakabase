@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { Input } from "@heroui/react";
 
 import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
@@ -39,6 +40,17 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
   return (
     <AccountsConfigModal
       accounts={options?.accounts || []}
+      extraContent={
+        <Input
+          label={t("resourceSource.dlsite.config.downloadDir")}
+          placeholder={t("resourceSource.dlsite.config.downloadDirPlaceholder")}
+          size="sm"
+          value={options?.defaultPath || ""}
+          onValueChange={async (v) => {
+            await patch({ defaultPath: v || undefined });
+          }}
+        />
+      }
       fields={fields}
       isOpen={isOpen}
       platform="DLsite"

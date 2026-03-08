@@ -35,6 +35,7 @@ interface AccountsConfigModalProps {
   accounts: Account[];
   fields: AccountField[];
   onSave: (accounts: Account[]) => Promise<void>;
+  extraContent?: React.ReactNode;
 }
 
 export default function AccountsConfigModal({
@@ -44,6 +45,7 @@ export default function AccountsConfigModal({
   accounts: initialAccounts,
   fields,
   onSave,
+  extraContent,
 }: AccountsConfigModalProps) {
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -99,6 +101,11 @@ export default function AccountsConfigModal({
           {t("resourceSource.accounts.title", { platform })}
         </ModalHeader>
         <ModalBody>
+          {extraContent && (
+            <div className="mb-4">
+              {extraContent}
+            </div>
+          )}
           {accounts.length > 0 && (
             <p className="text-xs text-default-400 mb-2">
               {t("resourceSource.accounts.defaultTip")}
