@@ -14,10 +14,17 @@ import {
   Button,
   Spinner,
 } from "@heroui/react";
-import { AiOutlineSearch, AiOutlineDelete } from "react-icons/ai";
+import {
+  AiOutlineSearch,
+  AiOutlineDelete,
+  AiOutlineSetting,
+  AiOutlineSync,
+} from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
+import { useThirdPartyOptionsStore } from "@/stores/options";
+import { SteamConfig } from "@/components/ThirdPartyConfig";
 
 interface SteamApp {
   id: number;
@@ -41,6 +48,10 @@ export default function SteamAppsPage() {
   const [apps, setApps] = useState<SteamApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
+  const thirdPartyOptions = useThirdPartyOptionsStore((state) => state.data);
+
+  const isConfigured = !!(thirdPartyOptions as any)?.steamApiKey;
 
   const loadApps = async () => {
     setLoading(true);
@@ -88,89 +99,134 @@ export default function SteamAppsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">
-          {t("resourceSource.steam.title")}
-        </h1>
-        <p className="text-default-500 mt-1">
-          {t("resourceSource.steam.description")}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Input
-          className="max-w-sm"
-          placeholder={t("resourceSource.filter.keyword")}
-          size="sm"
-          startContent={<AiOutlineSearch />}
-          value={keyword}
-          onValueChange={setKeyword}
-        />
-        <Chip size="sm" variant="flat">
-          {filteredApps.length} / {apps.length}
-        </Chip>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {t("resourceSource.steam.title")}
+          </h1>
+          <p className="text-default-500 mt-1">
+            {t("resourceSource.steam.description")}
+          </p>
         </div>
-      ) : (
-        <Table aria-label="Steam Apps" isStriped>
-          <TableHeader>
-            <TableColumn>{t("resourceSource.steam.label.appId")}</TableColumn>
-            <TableColumn>{t("resourceSource.steam.label.name")}</TableColumn>
-            <TableColumn>{t("resourceSource.steam.label.playtime")}</TableColumn>
-            <TableColumn>{t("resourceSource.steam.label.lastPlayed")}</TableColumn>
-            <TableColumn>{t("resourceSource.steam.label.installed")}</TableColumn>
-            <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-            <TableColumn width={80}>{""}</TableColumn>
-          </TableHeader>
-          <TableBody
-            emptyContent={t("resourceSource.empty")}
-            items={filteredApps}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            startContent={<AiOutlineSync />}
+            variant="flat"
+            onPress={loadApps}
           >
-            {(app) => (
-              <TableRow key={app.appId}>
-                <TableCell>{app.appId}</TableCell>
-                <TableCell>
-                  <span className="font-medium">{app.name || "-"}</span>
-                </TableCell>
-                <TableCell>{formatPlaytime(app.playtimeForever)}</TableCell>
-                <TableCell>{formatDate(app.rtimeLastPlayed)}</TableCell>
-                <TableCell>
-                  <Chip
-                    color={app.isInstalled ? "success" : "default"}
-                    size="sm"
-                    variant="flat"
-                  >
-                    {app.isInstalled ? "Yes" : "No"}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  {app.resourceId ? (
-                    <Chip color="primary" size="sm" variant="flat">
-                      #{app.resourceId}
-                    </Chip>
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    color="danger"
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => handleDelete(app.appId)}
-                  >
-                    <AiOutlineDelete />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            {t("resourceSource.action.sync")}
+          </Button>
+          <Button
+            color={showConfig ? "primary" : "default"}
+            size="sm"
+            startContent={<AiOutlineSetting />}
+            variant={showConfig ? "solid" : "flat"}
+            onPress={() => setShowConfig(!showConfig)}
+          >
+            {t("resourceSource.action.configure")}
+          </Button>
+        </div>
+      </div>
+
+      {showConfig && (
+        <div className="border-small border-default-200 rounded-lg p-4">
+          <SteamConfig />
+        </div>
+      )}
+
+      {!isConfigured && !showConfig && apps.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
+          <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
+          <p>{t("resourceSource.notConfigured.description", { platform: "Steam" })}</p>
+          <Button
+            color="primary"
+            size="sm"
+            onPress={() => setShowConfig(true)}
+          >
+            {t("resourceSource.notConfigured.goToConfigure")}
+          </Button>
+        </div>
+      )}
+
+      {(isConfigured || apps.length > 0) && (
+        <>
+          <div className="flex items-center gap-4">
+            <Input
+              className="max-w-sm"
+              placeholder={t("resourceSource.filter.keyword")}
+              size="sm"
+              startContent={<AiOutlineSearch />}
+              value={keyword}
+              onValueChange={setKeyword}
+            />
+            <Chip size="sm" variant="flat">
+              {filteredApps.length} / {apps.length}
+            </Chip>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <Table removeWrapper aria-label="Steam Apps" isStriped>
+              <TableHeader>
+                <TableColumn>{t("resourceSource.steam.label.appId")}</TableColumn>
+                <TableColumn>{t("resourceSource.steam.label.name")}</TableColumn>
+                <TableColumn>{t("resourceSource.steam.label.playtime")}</TableColumn>
+                <TableColumn>{t("resourceSource.steam.label.lastPlayed")}</TableColumn>
+                <TableColumn>{t("resourceSource.steam.label.installed")}</TableColumn>
+                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
+                <TableColumn width={80}>{""}</TableColumn>
+              </TableHeader>
+              <TableBody
+                emptyContent={t("resourceSource.empty")}
+                items={filteredApps}
+              >
+                {(app) => (
+                  <TableRow key={app.appId}>
+                    <TableCell>{app.appId}</TableCell>
+                    <TableCell>
+                      <span className="font-medium">{app.name || "-"}</span>
+                    </TableCell>
+                    <TableCell>{formatPlaytime(app.playtimeForever)}</TableCell>
+                    <TableCell>{formatDate(app.rtimeLastPlayed)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        color={app.isInstalled ? "success" : "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {app.isInstalled ? "Yes" : "No"}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      {app.resourceId ? (
+                        <Chip color="primary" size="sm" variant="flat">
+                          #{app.resourceId}
+                        </Chip>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        color="danger"
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleDelete(app.appId)}
+                      >
+                        <AiOutlineDelete />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </>
       )}
     </div>
   );

@@ -14,10 +14,17 @@ import {
   Button,
   Spinner,
 } from "@heroui/react";
-import { AiOutlineSearch, AiOutlineDelete } from "react-icons/ai";
+import {
+  AiOutlineSearch,
+  AiOutlineDelete,
+  AiOutlineSetting,
+  AiOutlineSync,
+} from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
+import { useDLsiteOptionsStore } from "@/stores/options";
+import { DLsiteConfig } from "@/components/ThirdPartyConfig";
 
 interface DLsiteWork {
   id: number;
@@ -41,6 +48,10 @@ export default function DLsiteWorksPage() {
   const [works, setWorks] = useState<DLsiteWork[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
+  const dlsiteOptions = useDLsiteOptionsStore((state) => state.data);
+
+  const isConfigured = !!(dlsiteOptions as any)?.cookie;
 
   const loadWorks = async () => {
     setLoading(true);
@@ -79,111 +90,156 @@ export default function DLsiteWorksPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">
-          {t("resourceSource.dlsite.title")}
-        </h1>
-        <p className="text-default-500 mt-1">
-          {t("resourceSource.dlsite.description")}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Input
-          className="max-w-sm"
-          placeholder={t("resourceSource.filter.keyword")}
-          size="sm"
-          startContent={<AiOutlineSearch />}
-          value={keyword}
-          onValueChange={setKeyword}
-        />
-        <Chip size="sm" variant="flat">
-          {filteredWorks.length} / {works.length}
-        </Chip>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {t("resourceSource.dlsite.title")}
+          </h1>
+          <p className="text-default-500 mt-1">
+            {t("resourceSource.dlsite.description")}
+          </p>
         </div>
-      ) : (
-        <Table aria-label="DLsite Works" isStriped>
-          <TableHeader>
-            <TableColumn>{t("resourceSource.dlsite.label.workId")}</TableColumn>
-            <TableColumn>{t("resourceSource.dlsite.label.title")}</TableColumn>
-            <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
-            <TableColumn>{t("resourceSource.dlsite.label.workType")}</TableColumn>
-            <TableColumn>{t("resourceSource.dlsite.label.purchased")}</TableColumn>
-            <TableColumn>{t("resourceSource.dlsite.label.downloaded")}</TableColumn>
-            <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-            <TableColumn width={80}>{""}</TableColumn>
-          </TableHeader>
-          <TableBody
-            emptyContent={t("resourceSource.empty")}
-            items={filteredWorks}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            startContent={<AiOutlineSync />}
+            variant="flat"
+            onPress={loadWorks}
           >
-            {(work) => (
-              <TableRow key={work.workId}>
-                <TableCell>
-                  <Chip size="sm" variant="flat">
-                    {work.workId}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  <span className="font-medium">{work.title || "-"}</span>
-                </TableCell>
-                <TableCell>{work.circle || "-"}</TableCell>
-                <TableCell>
-                  {work.workType ? (
-                    <Chip color="secondary" size="sm" variant="flat">
-                      {work.workType}
-                    </Chip>
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    color={work.isPurchased ? "success" : "default"}
-                    size="sm"
-                    variant="flat"
-                  >
-                    {work.isPurchased ? "Yes" : "No"}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    color={work.isDownloaded ? "success" : "default"}
-                    size="sm"
-                    variant="flat"
-                  >
-                    {work.isDownloaded ? "Yes" : "No"}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  {work.resourceId ? (
-                    <Chip color="primary" size="sm" variant="flat">
-                      #{work.resourceId}
-                    </Chip>
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    color="danger"
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => handleDelete(work.workId)}
-                  >
-                    <AiOutlineDelete />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            {t("resourceSource.action.sync")}
+          </Button>
+          <Button
+            color={showConfig ? "primary" : "default"}
+            size="sm"
+            startContent={<AiOutlineSetting />}
+            variant={showConfig ? "solid" : "flat"}
+            onPress={() => setShowConfig(!showConfig)}
+          >
+            {t("resourceSource.action.configure")}
+          </Button>
+        </div>
+      </div>
+
+      {showConfig && (
+        <div className="border-small border-default-200 rounded-lg p-4">
+          <DLsiteConfig />
+        </div>
+      )}
+
+      {!isConfigured && !showConfig && works.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
+          <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
+          <p>{t("resourceSource.notConfigured.description", { platform: "DLsite" })}</p>
+          <Button
+            color="primary"
+            size="sm"
+            onPress={() => setShowConfig(true)}
+          >
+            {t("resourceSource.notConfigured.goToConfigure")}
+          </Button>
+        </div>
+      )}
+
+      {(isConfigured || works.length > 0) && (
+        <>
+          <div className="flex items-center gap-4">
+            <Input
+              className="max-w-sm"
+              placeholder={t("resourceSource.filter.keyword")}
+              size="sm"
+              startContent={<AiOutlineSearch />}
+              value={keyword}
+              onValueChange={setKeyword}
+            />
+            <Chip size="sm" variant="flat">
+              {filteredWorks.length} / {works.length}
+            </Chip>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <Table removeWrapper aria-label="DLsite Works" isStriped>
+              <TableHeader>
+                <TableColumn>{t("resourceSource.dlsite.label.workId")}</TableColumn>
+                <TableColumn>{t("resourceSource.dlsite.label.title")}</TableColumn>
+                <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
+                <TableColumn>{t("resourceSource.dlsite.label.workType")}</TableColumn>
+                <TableColumn>{t("resourceSource.dlsite.label.purchased")}</TableColumn>
+                <TableColumn>{t("resourceSource.dlsite.label.downloaded")}</TableColumn>
+                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
+                <TableColumn width={80}>{""}</TableColumn>
+              </TableHeader>
+              <TableBody
+                emptyContent={t("resourceSource.empty")}
+                items={filteredWorks}
+              >
+                {(work) => (
+                  <TableRow key={work.workId}>
+                    <TableCell>
+                      <Chip size="sm" variant="flat">
+                        {work.workId}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-medium">{work.title || "-"}</span>
+                    </TableCell>
+                    <TableCell>{work.circle || "-"}</TableCell>
+                    <TableCell>
+                      {work.workType ? (
+                        <Chip color="secondary" size="sm" variant="flat">
+                          {work.workType}
+                        </Chip>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        color={work.isPurchased ? "success" : "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {work.isPurchased ? "Yes" : "No"}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        color={work.isDownloaded ? "success" : "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {work.isDownloaded ? "Yes" : "No"}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      {work.resourceId ? (
+                        <Chip color="primary" size="sm" variant="flat">
+                          #{work.resourceId}
+                        </Chip>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        color="danger"
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleDelete(work.workId)}
+                      >
+                        <AiOutlineDelete />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </>
       )}
     </div>
   );

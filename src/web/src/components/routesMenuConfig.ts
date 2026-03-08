@@ -70,7 +70,6 @@ import AiConfigurationPage from "@/pages/ai-configuration";
 import AiUsagePage from "@/pages/ai-usage";
 import AiAuditLogPage from "@/pages/ai-audit-log";
 import AiCachePage from "@/pages/ai-cache";
-import ResourceSourcePage from "@/pages/resource-source";
 import SteamAppsPage from "@/pages/steam-apps";
 import DLsiteWorksPage from "@/pages/dlsite-works";
 import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
@@ -108,21 +107,13 @@ export const routesMenuConfig: RouteMenuItem[] = [
     menu: true,
   },
   {
-    name: "menu.resourceSources",
+    name: "menu.otherPlatforms",
     icon: AiOutlineCloudServer,
     menu: true,
     isBeta: true,
     children: [
       {
-        name: "menu.resourceSources",
-        path: "/resource-sources",
-        component: ResourceSourcePage,
-        icon: AiOutlineCloudServer,
-        layout: "basic",
-        menu: true,
-      },
-      {
-        name: "menu.steamApps",
+        name: "menu.steam",
         path: "/steam-apps",
         component: SteamAppsPage,
         icon: AiOutlineCloud,
@@ -130,7 +121,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.dlsiteWorks",
+        name: "menu.dlsite",
         path: "/dlsite-works",
         component: DLsiteWorksPage,
         icon: AiOutlineShop,
@@ -138,7 +129,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         menu: true,
       },
       {
-        name: "menu.exhentaiGalleries",
+        name: "menu.exhentai",
         path: "/exhentai-galleries",
         component: ExHentaiGalleriesPage,
         icon: AiOutlinePicture,

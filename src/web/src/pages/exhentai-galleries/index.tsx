@@ -14,10 +14,17 @@ import {
   Button,
   Spinner,
 } from "@heroui/react";
-import { AiOutlineSearch, AiOutlineDelete } from "react-icons/ai";
+import {
+  AiOutlineSearch,
+  AiOutlineDelete,
+  AiOutlineSetting,
+  AiOutlineSync,
+} from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
+import { useExHentaiOptionsStore } from "@/stores/options";
+import { ExHentaiConfig } from "@/components/ThirdPartyConfig";
 
 interface ExHentaiGallery {
   id: number;
@@ -40,6 +47,10 @@ export default function ExHentaiGalleriesPage() {
   const [galleries, setGalleries] = useState<ExHentaiGallery[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
+  const exhentaiOptions = useExHentaiOptionsStore((state) => state.data);
+
+  const isConfigured = !!(exhentaiOptions as any)?.cookie;
 
   const loadGalleries = async () => {
     setLoading(true);
@@ -88,118 +99,163 @@ export default function ExHentaiGalleriesPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">
-          {t("resourceSource.exhentai.title")}
-        </h1>
-        <p className="text-default-500 mt-1">
-          {t("resourceSource.exhentai.description")}
-        </p>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Input
-          className="max-w-sm"
-          placeholder={t("resourceSource.filter.keyword")}
-          size="sm"
-          startContent={<AiOutlineSearch />}
-          value={keyword}
-          onValueChange={setKeyword}
-        />
-        <Chip size="sm" variant="flat">
-          {filteredGalleries.length} / {galleries.length}
-        </Chip>
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <Spinner size="lg" />
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {t("resourceSource.exhentai.title")}
+          </h1>
+          <p className="text-default-500 mt-1">
+            {t("resourceSource.exhentai.description")}
+          </p>
         </div>
-      ) : (
-        <Table aria-label="ExHentai Galleries" isStriped>
-          <TableHeader>
-            <TableColumn>{t("resourceSource.exhentai.label.galleryId")}</TableColumn>
-            <TableColumn>{t("resourceSource.exhentai.label.title")}</TableColumn>
-            <TableColumn>{t("resourceSource.exhentai.label.category")}</TableColumn>
-            <TableColumn>{t("resourceSource.exhentai.label.downloaded")}</TableColumn>
-            <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-            <TableColumn>{t("resourceSource.label.createdAt")}</TableColumn>
-            <TableColumn width={80}>{""}</TableColumn>
-          </TableHeader>
-          <TableBody
-            emptyContent={t("resourceSource.empty")}
-            items={filteredGalleries}
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            startContent={<AiOutlineSync />}
+            variant="flat"
+            onPress={loadGalleries}
           >
-            {(gallery) => (
-              <TableRow key={gallery.id}>
-                <TableCell>
-                  <span className="text-sm text-default-500">
-                    {gallery.galleryId}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <div>
-                    <span className="font-medium">
-                      {gallery.title || gallery.titleJpn || "-"}
-                    </span>
-                    {gallery.titleJpn && gallery.title && (
-                      <div className="text-xs text-default-400 mt-0.5">
-                        {gallery.titleJpn}
+            {t("resourceSource.action.sync")}
+          </Button>
+          <Button
+            color={showConfig ? "primary" : "default"}
+            size="sm"
+            startContent={<AiOutlineSetting />}
+            variant={showConfig ? "solid" : "flat"}
+            onPress={() => setShowConfig(!showConfig)}
+          >
+            {t("resourceSource.action.configure")}
+          </Button>
+        </div>
+      </div>
+
+      {showConfig && (
+        <div className="border-small border-default-200 rounded-lg p-4">
+          <ExHentaiConfig />
+        </div>
+      )}
+
+      {!isConfigured && !showConfig && galleries.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
+          <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
+          <p>{t("resourceSource.notConfigured.description", { platform: "ExHentai" })}</p>
+          <Button
+            color="primary"
+            size="sm"
+            onPress={() => setShowConfig(true)}
+          >
+            {t("resourceSource.notConfigured.goToConfigure")}
+          </Button>
+        </div>
+      )}
+
+      {(isConfigured || galleries.length > 0) && (
+        <>
+          <div className="flex items-center gap-4">
+            <Input
+              className="max-w-sm"
+              placeholder={t("resourceSource.filter.keyword")}
+              size="sm"
+              startContent={<AiOutlineSearch />}
+              value={keyword}
+              onValueChange={setKeyword}
+            />
+            <Chip size="sm" variant="flat">
+              {filteredGalleries.length} / {galleries.length}
+            </Chip>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Spinner size="lg" />
+            </div>
+          ) : (
+            <Table removeWrapper aria-label="ExHentai Galleries" isStriped>
+              <TableHeader>
+                <TableColumn>{t("resourceSource.exhentai.label.galleryId")}</TableColumn>
+                <TableColumn>{t("resourceSource.exhentai.label.title")}</TableColumn>
+                <TableColumn>{t("resourceSource.exhentai.label.category")}</TableColumn>
+                <TableColumn>{t("resourceSource.exhentai.label.downloaded")}</TableColumn>
+                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
+                <TableColumn>{t("resourceSource.label.createdAt")}</TableColumn>
+                <TableColumn width={80}>{""}</TableColumn>
+              </TableHeader>
+              <TableBody
+                emptyContent={t("resourceSource.empty")}
+                items={filteredGalleries}
+              >
+                {(gallery) => (
+                  <TableRow key={gallery.id}>
+                    <TableCell>
+                      <span className="text-sm text-default-500">
+                        {gallery.galleryId}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <span className="font-medium">
+                          {gallery.title || gallery.titleJpn || "-"}
+                        </span>
+                        {gallery.titleJpn && gallery.title && (
+                          <div className="text-xs text-default-400 mt-0.5">
+                            {gallery.titleJpn}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {gallery.category ? (
-                    <Chip
-                      color={categoryColorMap[gallery.category] || "default"}
-                      size="sm"
-                      variant="flat"
-                    >
-                      {gallery.category}
-                    </Chip>
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    color={gallery.isDownloaded ? "success" : "default"}
-                    size="sm"
-                    variant="flat"
-                  >
-                    {gallery.isDownloaded ? "Yes" : "No"}
-                  </Chip>
-                </TableCell>
-                <TableCell>
-                  {gallery.resourceId ? (
-                    <Chip color="primary" size="sm" variant="flat">
-                      #{gallery.resourceId}
-                    </Chip>
-                  ) : (
-                    "-"
-                  )}
-                </TableCell>
-                <TableCell>
-                  <span className="text-sm">
-                    {new Date(gallery.createdAt).toLocaleDateString()}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    color="danger"
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => handleDelete(gallery.id)}
-                  >
-                    <AiOutlineDelete />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+                    </TableCell>
+                    <TableCell>
+                      {gallery.category ? (
+                        <Chip
+                          color={categoryColorMap[gallery.category] || "default"}
+                          size="sm"
+                          variant="flat"
+                        >
+                          {gallery.category}
+                        </Chip>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        color={gallery.isDownloaded ? "success" : "default"}
+                        size="sm"
+                        variant="flat"
+                      >
+                        {gallery.isDownloaded ? "Yes" : "No"}
+                      </Chip>
+                    </TableCell>
+                    <TableCell>
+                      {gallery.resourceId ? (
+                        <Chip color="primary" size="sm" variant="flat">
+                          #{gallery.resourceId}
+                        </Chip>
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">
+                        {new Date(gallery.createdAt).toLocaleDateString()}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        color="danger"
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        onPress={() => handleDelete(gallery.id)}
+                      >
+                        <AiOutlineDelete />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </>
       )}
     </div>
   );
