@@ -227,16 +227,25 @@ public class DLsiteWorkService(
         var workDir = Path.Combine(defaultPath, workId);
         Directory.CreateDirectory(workDir);
 
-        // Get download links
+        // Get download links (follows redirects manually to handle both direct and serial page flows)
         if (onProgress != null)
         {
             await onProgress(0, $"[{workId}] 0%");
         }
 
-        var links = await dlsiteClient.GetDownloadLinksAsync(cookie, workId, ct);
+        var downloadInfo = await dlsiteClient.GetDownloadInfoAsync(cookie, workId, ct);
+        var links = downloadInfo.Links;
         if (links.Count == 0)
         {
             throw new Exception($"No download links found for work {workId}");
+        }
+
+        // Save DRM key if found
+        if (downloadInfo.DrmKey != null && work.DrmKey != downloadInfo.DrmKey)
+        {
+            work.DrmKey = downloadInfo.DrmKey;
+            work.UpdatedAt = DateTime.Now;
+            await orm.Update(work);
         }
 
         logger.LogInformation("Found {Count} download links for work {WorkId}", links.Count, workId);
@@ -309,6 +318,36 @@ public class DLsiteWorkService(
         }
 
         logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, work.LocalPath);
+    }
+
+    public async Task<string?> FetchDrmKey(string workId, CancellationToken ct = default)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        // Return cached DRM key if already fetched
+        if (work.DrmKey != null)
+        {
+            return work.DrmKey;
+        }
+
+        var cookie = dlsiteOptions.Value.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
+        if (string.IsNullOrEmpty(cookie))
+        {
+            throw new Exception("No DLsite account with cookie configured");
+        }
+
+        var drmKey = await dlsiteClient.GetDrmKeyAsync(cookie, workId, ct);
+
+        // Save to DB (empty string means no DRM, non-empty means DRM key found)
+        work.DrmKey = drmKey ?? string.Empty;
+        work.UpdatedAt = DateTime.Now;
+        await orm.Update(work);
+
+        return work.DrmKey;
     }
 
     public async Task LaunchWork(string workId, CancellationToken ct = default)

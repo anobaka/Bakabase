@@ -151,3 +151,12 @@ public class DLsiteDownloadLink
     public string Url { get; set; } = null!;
     public string FileName { get; set; } = null!;
 }
+
+/// <summary>
+/// Result of resolving download links, including optional DRM key.
+/// </summary>
+public class DLsiteDownloadInfo
+{
+    public List<DLsiteDownloadLink> Links { get; set; } = [];
+    public string? DrmKey { get; set; }
+}

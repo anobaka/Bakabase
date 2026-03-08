@@ -192,85 +192,198 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
     #region Download API
 
-    /// <summary>
-    /// Fetches the download page for a given work ID and extracts download links.
-    /// DLsite Play provides a download API for purchased works.
-    /// </summary>
-    public async Task<List<DLsiteDownloadLink>> GetDownloadLinksAsync(string cookie, string workId, CancellationToken ct = default)
+    // HttpClient with auto-redirect disabled for manual redirect following with cookie forwarding
+    private HttpClient? _noRedirectHttpClient;
+    private HttpClient NoRedirectHttpClient => _noRedirectHttpClient ??= new HttpClient(new HttpClientHandler
     {
-        // DLsite Play download API
-        var url = $"https://play.dlsite.com/api/v3/download?workno={workId}";
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        SetPlayApiHeaders(request, cookie);
+        AllowAutoRedirect = false,
+        AutomaticDecompression = DecompressionMethods.All
+    });
 
-        var response = await PlayHttpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+    private const int MaxRedirects = 10;
 
-        var result = await response.Content.ReadFromJsonAsync<DLsiteDownloadResponse>(cancellationToken: ct);
-        if (result?.Url != null)
+    /// <summary>
+    /// Sends a GET request following redirects manually, carrying cookie on every hop.
+    /// Returns the final response (which may be HTML or binary).
+    /// </summary>
+    private async Task<HttpResponseMessage> SendWithCookieRedirectAsync(
+        string url,
+        string cookie,
+        CancellationToken ct,
+        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
+        Action<HttpRequestMessage>? configureRequest = null)
+    {
+        var currentUrl = url;
+        for (var i = 0; i < MaxRedirects; i++)
         {
-            // Single direct download URL
-            return [new DLsiteDownloadLink { Url = result.Url, FileName = $"{workId}.zip" }];
-        }
+            var request = new HttpRequestMessage(HttpMethod.Get, currentUrl);
+            request.Headers.Add("Cookie", cookie);
+            request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+            request.Headers.Add("Referer", "https://play.dlsite.com/");
+            configureRequest?.Invoke(request);
 
-        if (result?.Files != null && result.Files.Count > 0)
-        {
-            return result.Files.Select((f, i) => new DLsiteDownloadLink
+            var response = await NoRedirectHttpClient.SendAsync(request, completionOption, ct);
+
+            if (response.StatusCode is HttpStatusCode.Redirect
+                or HttpStatusCode.MovedPermanently
+                or HttpStatusCode.TemporaryRedirect
+                or HttpStatusCode.PermanentRedirect)
             {
-                Url = f.Url ?? string.Empty,
-                FileName = f.Name ?? $"{workId}_part{i + 1}.zip"
-            }).Where(l => !string.IsNullOrEmpty(l.Url)).ToList();
+                var location = response.Headers.Location;
+                if (location == null)
+                {
+                    throw new Exception($"Redirect response from {currentUrl} has no Location header");
+                }
+
+                response.Dispose();
+                currentUrl = location.IsAbsoluteUri
+                    ? location.AbsoluteUri
+                    : new Uri(new Uri(currentUrl), location).AbsoluteUri;
+                continue;
+            }
+
+            return response;
         }
 
-        // Fallback: try the legacy download page
-        return await GetDownloadLinksFromPageAsync(cookie, workId, ct);
+        throw new Exception($"Too many redirects (>{MaxRedirects}) starting from {url}");
     }
 
     /// <summary>
-    /// Fallback method: parse download links from the HTML download page.
+    /// Resolves download links for a work. Handles two DLsite flows:
+    /// 1. Direct download: redirect chain ends at a binary file (application/octet-stream)
+    /// 2. Serial page: redirect chain ends at an HTML page with split download links and optional DRM key
     /// </summary>
-    private async Task<List<DLsiteDownloadLink>> GetDownloadLinksFromPageAsync(string cookie, string workId, CancellationToken ct)
+    public async Task<DLsiteDownloadInfo> GetDownloadInfoAsync(string cookie, string workId, CancellationToken ct = default)
     {
-        var url = $"https://www.dlsite.com/maniax/download/=/product_id/{workId}.html";
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Cookie", cookie);
-        request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+        // Use the Play download API with manual redirects so cookies are forwarded
+        var url = $"https://play.dlsite.com/api/v3/download?workno={workId}";
 
-        var response = await PlayHttpClient.SendAsync(request, ct);
+        using var response = await SendWithCookieRedirectAsync(url, cookie, ct);
         response.EnsureSuccessStatusCode();
+
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+
+        // Flow 1: Final response is a binary file (direct download)
+        if (contentType.StartsWith("application/octet-stream", StringComparison.OrdinalIgnoreCase)
+            || contentType.StartsWith("application/zip", StringComparison.OrdinalIgnoreCase))
+        {
+            var finalUrl = response.RequestMessage?.RequestUri?.AbsoluteUri ?? url;
+            var fileName = GetFileNameFromResponse(response, workId);
+            return new DLsiteDownloadInfo
+            {
+                Links = [new DLsiteDownloadLink { Url = finalUrl, FileName = fileName }]
+            };
+        }
+
+        // Flow 2: HTML page (serial/split download page)
+        var html = await response.Content.ReadAsStringAsync(ct);
+        return ParseSerialDownloadPage(html, workId);
+    }
+
+    /// <summary>
+    /// Fetches the DRM key for a work from the serial download page (via Play API with DRM info).
+    /// Returns null if the work has no DRM key, or the key string if found.
+    /// Returns empty string if the page was reached but no key was present.
+    /// </summary>
+    public async Task<string?> GetDrmKeyAsync(string cookie, string workId, CancellationToken ct = default)
+    {
+        var url = $"https://play.dlsite.com/api/v3/download?workno={workId}";
+
+        using var response = await SendWithCookieRedirectAsync(url, cookie, ct);
+        response.EnsureSuccessStatusCode();
+
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
+
+        // Direct download - no DRM key
+        if (!contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
 
         var html = await response.Content.ReadAsStringAsync(ct);
         var cq = new CQ(html);
 
-        var links = new List<DLsiteDownloadLink>();
-        var downloadAnchors = cq["a[href*='download.dlsite.com'], a[href*='/download/']"]
-            .Select(a => a.Cq())
-            .ToList();
+        // DRM key is in: .table_inframe_box_fix table td > strong.color_02
+        var keyElement = cq[".table_inframe_box_fix strong.color_02"];
+        var key = keyElement.Text().Trim();
 
-        foreach (var anchor in downloadAnchors)
+        return string.IsNullOrEmpty(key) ? string.Empty : key;
+    }
+
+    /// <summary>
+    /// Parses the serial download HTML page for download links and DRM key.
+    /// </summary>
+    private DLsiteDownloadInfo ParseSerialDownloadPage(string html, string workId)
+    {
+        var cq = new CQ(html);
+        var info = new DLsiteDownloadInfo();
+
+        // Parse DRM key: .table_inframe_box_fix table td > strong.color_02
+        var keyElement = cq[".table_inframe_box_fix strong.color_02"];
+        var key = keyElement.Text().Trim();
+        if (!string.IsNullOrEmpty(key))
         {
-            var href = anchor.Attr("href");
-            if (!string.IsNullOrEmpty(href))
-            {
-                var fileName = anchor.Text().Trim();
-                if (string.IsNullOrEmpty(fileName))
-                {
-                    fileName = Path.GetFileName(new Uri(href).AbsolutePath);
-                }
+            info.DrmKey = key;
+        }
 
-                links.Add(new DLsiteDownloadLink
-                {
-                    Url = href.StartsWith("//") ? $"https:{href}" : href,
-                    FileName = fileName
-                });
+        // Parse download links from #download_division_file table
+        var rows = cq["#download_division_file table tr"].Select(r => r.Cq()).ToList();
+        foreach (var row in rows)
+        {
+            // Skip header row (has th elements)
+            if (row.Children("th").Length > 0) continue;
+
+            var fileNameElement = row.Find("td.work_content strong");
+            var linkElement = row.Find("td.work_dl a.btn_dl");
+
+            if (linkElement.Length == 0) continue;
+
+            var href = linkElement.Attr("href");
+            if (string.IsNullOrEmpty(href)) continue;
+
+            var fileName = fileNameElement.Text().Trim();
+            if (string.IsNullOrEmpty(fileName))
+            {
+                fileName = $"{workId}_part{info.Links.Count + 1}";
+            }
+
+            info.Links.Add(new DLsiteDownloadLink
+            {
+                Url = href.StartsWith("//") ? $"https:{href}" : href,
+                FileName = fileName
+            });
+        }
+
+        return info;
+    }
+
+    /// <summary>
+    /// Extracts filename from Content-Disposition header or URL.
+    /// </summary>
+    private static string GetFileNameFromResponse(HttpResponseMessage response, string workId)
+    {
+        var contentDisposition = response.Content.Headers.ContentDisposition?.FileName?.Trim('"');
+        if (!string.IsNullOrEmpty(contentDisposition))
+        {
+            return contentDisposition;
+        }
+
+        var uri = response.RequestMessage?.RequestUri;
+        if (uri != null)
+        {
+            var pathFileName = Path.GetFileName(uri.AbsolutePath);
+            if (!string.IsNullOrEmpty(pathFileName) && pathFileName.Contains('.'))
+            {
+                return pathFileName;
             }
         }
 
-        return links;
+        return $"{workId}.zip";
     }
 
     /// <summary>
     /// Downloads a file with resume support using HTTP Range requests.
+    /// Uses manual redirect following to carry cookies across domains.
     /// </summary>
     public async Task DownloadFileAsync(
         string cookie,
@@ -287,19 +400,17 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             existingLength = new FileInfo(tempPath).Length;
         }
 
-        using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Cookie", cookie);
-        request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
-        request.Headers.Add("Referer", "https://play.dlsite.com/");
+        using var response = await SendWithCookieRedirectAsync(url, cookie, ct,
+            HttpCompletionOption.ResponseHeadersRead,
+            request =>
+            {
+                if (existingLength > 0)
+                {
+                    request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
+                }
+            });
 
-        if (existingLength > 0)
-        {
-            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
-        }
-
-        using var response = await PlayHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-
-        if (response.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
+        if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
         {
             // File already fully downloaded
             if (File.Exists(tempPath))
@@ -312,7 +423,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         response.EnsureSuccessStatusCode();
 
         var totalLength = response.Content.Headers.ContentLength ?? 0;
-        if (response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+        if (response.StatusCode == HttpStatusCode.PartialContent)
         {
             totalLength += existingLength;
         }

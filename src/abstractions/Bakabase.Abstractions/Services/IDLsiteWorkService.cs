@@ -17,4 +17,5 @@ public interface IDLsiteWorkService
     Task<int> ScanFolder(string folderPath, Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task<int> ScanConfiguredFolders(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task SetHidden(string workId, bool isHidden);
+    Task<string?> FetchDrmKey(string workId, CancellationToken ct = default);
 }

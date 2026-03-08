@@ -9460,6 +9460,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DLsiteWork
+     * @name GetDLsiteWorkDrmKey
+     * @request GET:/dlsite-work/{workId}/drm-key
+     */
+    getDLsiteWorkDrmKey: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
+        path: `/dlsite-work/${workId}/drm-key`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
      * @name LaunchDLsiteWork
      * @request POST:/dlsite-work/{workId}/launch
      */

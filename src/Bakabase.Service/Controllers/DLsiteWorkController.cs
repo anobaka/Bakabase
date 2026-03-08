@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Components.Tasks;
@@ -110,6 +111,14 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             RootServiceProvider = HttpContext.RequestServices
         });
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("{workId}/drm-key")]
+    [SwaggerOperation(OperationId = "GetDLsiteWorkDrmKey")]
+    public async Task<SingletonResponse<string>> GetDrmKey(string workId, CancellationToken ct)
+    {
+        var key = await service.FetchDrmKey(workId, ct);
+        return new SingletonResponse<string>(key);
     }
 
     [HttpPost("{workId}/launch")]

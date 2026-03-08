@@ -30,6 +30,8 @@ import {
   AiOutlineScan,
   AiOutlineEye,
   AiOutlineEyeInvisible,
+  AiOutlineCopy,
+  AiOutlineKey,
 } from "react-icons/ai";
 import { FiExternalLink } from "react-icons/fi";
 
@@ -198,6 +200,32 @@ export default function DLsiteWorksPage() {
   const handleStopDownload = async (workId: string) => {
     const taskId = `${DOWNLOAD_TASK_ID_PREFIX}${workId}`;
     await BApi.backgroundTask.stopBackgroundTask(taskId);
+  };
+
+  const [fetchingDrmKeys, setFetchingDrmKeys] = useState<Set<string>>(new Set());
+  const [revealedDrmKeys, setRevealedDrmKeys] = useState<Set<string>>(new Set());
+
+  const handleFetchDrmKey = async (workId: string) => {
+    setFetchingDrmKeys((prev) => new Set(prev).add(workId));
+    try {
+      const rsp = await BApi.dlsiteWork.getDLsiteWorkDrmKey(workId);
+      if (!rsp.code) {
+        setWorks((prev) =>
+          prev.map((w) => w.workId === workId ? { ...w, drmKey: rsp.data ?? "" } : w),
+        );
+      }
+    } finally {
+      setFetchingDrmKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(workId);
+        return next;
+      });
+    }
+  };
+
+  const handleCopyDrmKey = async (key: string) => {
+    await navigator.clipboard.writeText(key);
+    toast.success(t("resourceSource.dlsite.drmKey.copied"));
   };
 
   const handleToggleHidden = async (workId: string, isHidden: boolean) => {
@@ -377,6 +405,7 @@ export default function DLsiteWorksPage() {
                 <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
                 <TableColumn>{t("resourceSource.dlsite.label.workType")}</TableColumn>
                 <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
+                <TableColumn>{t("resourceSource.dlsite.label.drmKey")}</TableColumn>
                 <TableColumn width={200}>{""}</TableColumn>
               </TableHeader>
               <TableBody
@@ -385,7 +414,7 @@ export default function DLsiteWorksPage() {
               >
                 {(work) => {
                   const downloadTask = getDownloadTask(work.workId);
-                  const isDownloading = downloadTask?.status === BTaskStatus.Running;
+                  const isDownloading = downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
 
                   return (
                     <TableRow key={work.workId}>
@@ -422,6 +451,72 @@ export default function DLsiteWorksPage() {
                             #{work.resourceId}
                           </Chip>
                         ) : "-"}
+                      </TableCell>
+                      <TableCell>
+                        {work.drmKey === undefined || work.drmKey === null ? (
+                          // Not fetched yet
+                          fetchingDrmKeys.has(work.workId) ? (
+                            <span className="text-xs text-default-400">
+                              {t("resourceSource.dlsite.drmKey.fetching")}
+                            </span>
+                          ) : (
+                            <Button
+                              className="text-xs"
+                              size="sm"
+                              startContent={<AiOutlineKey />}
+                              variant="light"
+                              onPress={() => handleFetchDrmKey(work.workId)}
+                            >
+                              {t("resourceSource.dlsite.drmKey.fetch")}
+                            </Button>
+                          )
+                        ) : work.drmKey === "" ? (
+                          // No DRM
+                          <span className="text-xs text-default-400">
+                            {t("resourceSource.dlsite.drmKey.none")}
+                          </span>
+                        ) : (
+                          // Has DRM key
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-mono">
+                              {revealedDrmKeys.has(work.workId)
+                                ? work.drmKey
+                                : "****-****-****-****"}
+                            </span>
+                            <Tooltip content={revealedDrmKeys.has(work.workId) ? t("resourceSource.dlsite.action.hide") : t("resourceSource.dlsite.action.unhide")}>
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                variant="light"
+                                onPress={() => {
+                                  setRevealedDrmKeys((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(work.workId)) {
+                                      next.delete(work.workId);
+                                    } else {
+                                      next.add(work.workId);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              >
+                                {revealedDrmKeys.has(work.workId)
+                                  ? <AiOutlineEyeInvisible className="text-sm" />
+                                  : <AiOutlineEye className="text-sm" />}
+                              </Button>
+                            </Tooltip>
+                            <Tooltip content={t("resourceSource.dlsite.drmKey.copy")}>
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                variant="light"
+                                onPress={() => handleCopyDrmKey(work.drmKey!)}
+                              >
+                                <AiOutlineCopy className="text-sm" />
+                              </Button>
+                            </Tooltip>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
