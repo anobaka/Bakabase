@@ -1,11 +1,15 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
+using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
@@ -18,9 +22,15 @@ public class DLsiteWorkService(
     FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm,
     DLsiteClient dlsiteClient,
     IBOptions<DLsiteOptions> dlsiteOptions,
+    SevenZipService sevenZipService,
+    LocaleEmulatorService localeEmulatorService,
     ILogger<DLsiteWorkService> logger)
     : IDLsiteWorkService
 {
+    private static readonly HashSet<string> ExecutableExtensions = [".exe"];
+    private static readonly HashSet<string> ImageExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"];
+    private static readonly HashSet<string> AudioExtensions = [".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a", ".wma"];
+    private static readonly HashSet<string> VideoExtensions = [".mp4", ".avi", ".mkv", ".wmv", ".mov", ".flv", ".webm"];
     public async Task<List<DLsiteWorkDbModel>> GetAll()
     {
         return await orm.GetAll();
@@ -192,5 +202,197 @@ public class DLsiteWorkService(
         }
 
         logger.LogInformation("DLsite sync complete: {Count} works synced", total);
+    }
+
+    public async Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        var cookie = dlsiteOptions.Value.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
+        if (string.IsNullOrEmpty(cookie))
+        {
+            throw new Exception("No DLsite account with cookie configured");
+        }
+
+        var defaultPath = dlsiteOptions.Value.DefaultPath;
+        if (string.IsNullOrEmpty(defaultPath))
+        {
+            throw new Exception("Download path not configured. Please set the default download path in DLsite settings.");
+        }
+
+        var workDir = Path.Combine(defaultPath, workId);
+        Directory.CreateDirectory(workDir);
+
+        // Get download links
+        if (onProgress != null)
+        {
+            await onProgress(0, "Fetching download links...");
+        }
+
+        var links = await dlsiteClient.GetDownloadLinksAsync(cookie, workId, ct);
+        if (links.Count == 0)
+        {
+            throw new Exception($"No download links found for work {workId}");
+        }
+
+        logger.LogInformation("Found {Count} download links for work {WorkId}", links.Count, workId);
+
+        // Download all files
+        var downloadedFiles = new List<string>();
+        for (var i = 0; i < links.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var link = links[i];
+            var destPath = Path.Combine(workDir, link.FileName);
+
+            if (dlsiteOptions.Value.SkipExisting && File.Exists(destPath))
+            {
+                logger.LogInformation("Skipping existing file: {Path}", destPath);
+                downloadedFiles.Add(destPath);
+                continue;
+            }
+
+            var fileIndex = i;
+            await dlsiteClient.DownloadFileAsync(
+                cookie,
+                link.Url,
+                destPath,
+                (downloaded, total) =>
+                {
+                    var fileProgress = total > 0 ? (int)(downloaded * 100 / total) : 0;
+                    var overallProgress = (fileIndex * 100 + fileProgress) / links.Count;
+                    onProgress?.Invoke(
+                        Math.Min(overallProgress, 95),
+                        $"Downloading {link.FileName} ({fileIndex + 1}/{links.Count}): {downloaded / 1024 / 1024}MB / {total / 1024 / 1024}MB");
+                },
+                ct);
+
+            downloadedFiles.Add(destPath);
+            logger.LogInformation("Downloaded: {Path}", destPath);
+        }
+
+        // Extract archives
+        var extractDir = Path.Combine(workDir, "extracted");
+        var hasArchives = false;
+
+        foreach (var file in downloadedFiles)
+        {
+            ct.ThrowIfCancellationRequested();
+            var ext = Path.GetExtension(file).ToLowerInvariant();
+            if (ext is ".zip" or ".rar" or ".7z" or ".lzh")
+            {
+                hasArchives = true;
+                if (onProgress != null)
+                {
+                    await onProgress(96, $"Extracting {Path.GetFileName(file)}...");
+                }
+
+                // Use codepage 932 (Shift-JIS) for Japanese filenames
+                await sevenZipService.Extract(file, extractDir, ct, codePage: 932);
+                logger.LogInformation("Extracted: {Path}", file);
+            }
+        }
+
+        // Update work record
+        work.IsDownloaded = true;
+        work.LocalPath = hasArchives ? extractDir : workDir;
+        work.UpdatedAt = DateTime.Now;
+        await orm.Update(work);
+
+        if (onProgress != null)
+        {
+            await onProgress(100, "Download complete");
+        }
+
+        logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, work.LocalPath);
+    }
+
+    public async Task LaunchWork(string workId, CancellationToken ct = default)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        if (string.IsNullOrEmpty(work.LocalPath) || !Directory.Exists(work.LocalPath))
+        {
+            throw new Exception($"Local path not found for work {workId}. Please download the work first.");
+        }
+
+        var playableFiles = FindPlayableFiles(work.LocalPath, work.WorkType);
+        if (playableFiles.Count == 0)
+        {
+            throw new Exception($"No playable files found for work {workId}");
+        }
+
+        var targetFile = playableFiles[0];
+        var ext = Path.GetExtension(targetFile).ToLowerInvariant();
+
+        if (ExecutableExtensions.Contains(ext))
+        {
+            // Launch executable with Locale Emulator (for Japanese locale)
+            if (localeEmulatorService.IsAvailableOnCurrentPlatform)
+            {
+                try
+                {
+                    await localeEmulatorService.LaunchWithLocaleEmulator(targetFile, ct);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to launch with Locale Emulator, falling back to direct launch");
+                }
+            }
+
+            // Fallback: direct launch
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = targetFile,
+                UseShellExecute = true,
+                WorkingDirectory = Path.GetDirectoryName(targetFile)
+            });
+        }
+        else
+        {
+            // Non-executable files: open with system default application
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = targetFile,
+                UseShellExecute = true
+            });
+        }
+    }
+
+    public List<string> FindPlayableFiles(string localPath, string? workType)
+    {
+        if (!Directory.Exists(localPath))
+        {
+            return [];
+        }
+
+        var extensions = GetPlayableExtensions(workType);
+        var files = Directory.EnumerateFiles(localPath, "*.*", SearchOption.AllDirectories)
+            .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+            .OrderBy(f => f)
+            .ToList();
+
+        return files;
+    }
+
+    private static HashSet<string> GetPlayableExtensions(string? workType)
+    {
+        return workType?.ToLowerInvariant() switch
+        {
+            "GCM" or "GAM" or "ACN" or "game" or "tool" => ExecutableExtensions,
+            "MNG" or "manga" or "comic" => ImageExtensions,
+            "SOU" or "voice" or "asmr" or "audio" => AudioExtensions,
+            "MOV" or "video" or "anime" => VideoExtensions,
+            _ => [..ExecutableExtensions, ..ImageExtensions, ..AudioExtensions, ..VideoExtensions]
+        };
     }
 }

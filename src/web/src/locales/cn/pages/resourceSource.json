@@ -50,7 +50,13 @@
   "resourceSource.dlsite.label.downloaded": "已下载",
   "resourceSource.dlsite.action.openPage": "打开 DLsite 页面",
   "resourceSource.dlsite.action.openLocal": "打开本地文件",
+  "resourceSource.dlsite.action.download": "下载",
+  "resourceSource.dlsite.action.launch": "启动",
+  "resourceSource.dlsite.action.downloading": "下载中...",
+  "resourceSource.dlsite.action.selectFile": "选择文件",
   "resourceSource.dlsite.noLocalPath": "未设置本地路径",
+  "resourceSource.dlsite.notDownloaded": "尚未下载",
+  "resourceSource.dlsite.downloadFirst": "请先下载此作品",
 
   "resourceSource.exhentai.title": "ExHentai 画廊",
   "resourceSource.exhentai.description": "从 ExHentai 收藏夹同步的画廊。",

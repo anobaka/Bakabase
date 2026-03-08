@@ -9434,9 +9434,54 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     syncDLsiteWorksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/sync`;
-      
+
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name DownloadDLsiteWork
+     * @request POST:/dlsite-work/{workId}/download
+     */
+    downloadDLsiteWork: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/download`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name LaunchDLsiteWork
+     * @request POST:/dlsite-work/{workId}/launch
+     */
+    launchDLsiteWork: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/launch`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name GetDLsiteWorkPlayableFiles
+     * @request GET:/dlsite-work/{workId}/playable-files
+     */
+    getDLsiteWorkPlayableFiles: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsListResponse1SystemString, any>({
+        path: `/dlsite-work/${workId}/playable-files`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
   };
   downloadTask = {
     /**

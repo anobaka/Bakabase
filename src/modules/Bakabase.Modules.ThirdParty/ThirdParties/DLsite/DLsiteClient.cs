@@ -188,4 +188,159 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     }
 
     #endregion
+
+    #region Download API
+
+    /// <summary>
+    /// Fetches the download page for a given work ID and extracts download links.
+    /// DLsite Play provides a download API for purchased works.
+    /// </summary>
+    public async Task<List<DLsiteDownloadLink>> GetDownloadLinksAsync(string cookie, string workId, CancellationToken ct = default)
+    {
+        // DLsite Play download API
+        var url = $"https://play.dlsite.com/api/v3/download?workno={workId}";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        SetPlayApiHeaders(request, cookie);
+
+        var response = await PlayHttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<DLsiteDownloadResponse>(cancellationToken: ct);
+        if (result?.Url != null)
+        {
+            // Single direct download URL
+            return [new DLsiteDownloadLink { Url = result.Url, FileName = $"{workId}.zip" }];
+        }
+
+        if (result?.Files != null && result.Files.Count > 0)
+        {
+            return result.Files.Select((f, i) => new DLsiteDownloadLink
+            {
+                Url = f.Url ?? string.Empty,
+                FileName = f.Name ?? $"{workId}_part{i + 1}.zip"
+            }).Where(l => !string.IsNullOrEmpty(l.Url)).ToList();
+        }
+
+        // Fallback: try the legacy download page
+        return await GetDownloadLinksFromPageAsync(cookie, workId, ct);
+    }
+
+    /// <summary>
+    /// Fallback method: parse download links from the HTML download page.
+    /// </summary>
+    private async Task<List<DLsiteDownloadLink>> GetDownloadLinksFromPageAsync(string cookie, string workId, CancellationToken ct)
+    {
+        var url = $"https://www.dlsite.com/maniax/download/=/product_id/{workId}.html";
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Cookie", cookie);
+        request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+
+        var response = await PlayHttpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var html = await response.Content.ReadAsStringAsync(ct);
+        var cq = new CQ(html);
+
+        var links = new List<DLsiteDownloadLink>();
+        var downloadAnchors = cq["a[href*='download.dlsite.com'], a[href*='/download/']"]
+            .Select(a => a.Cq())
+            .ToList();
+
+        foreach (var anchor in downloadAnchors)
+        {
+            var href = anchor.Attr("href");
+            if (!string.IsNullOrEmpty(href))
+            {
+                var fileName = anchor.Text().Trim();
+                if (string.IsNullOrEmpty(fileName))
+                {
+                    fileName = Path.GetFileName(new Uri(href).AbsolutePath);
+                }
+
+                links.Add(new DLsiteDownloadLink
+                {
+                    Url = href.StartsWith("//") ? $"https:{href}" : href,
+                    FileName = fileName
+                });
+            }
+        }
+
+        return links;
+    }
+
+    /// <summary>
+    /// Downloads a file with resume support using HTTP Range requests.
+    /// </summary>
+    public async Task DownloadFileAsync(
+        string cookie,
+        string url,
+        string destinationPath,
+        Action<long, long>? onProgress = null,
+        CancellationToken ct = default)
+    {
+        var tempPath = destinationPath + ".downloading";
+        long existingLength = 0;
+
+        if (File.Exists(tempPath))
+        {
+            existingLength = new FileInfo(tempPath).Length;
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Add("Cookie", cookie);
+        request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+
+        if (existingLength > 0)
+        {
+            request.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(existingLength, null);
+        }
+
+        using var response = await PlayHttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.RequestedRangeNotSatisfiable)
+        {
+            // File already fully downloaded
+            if (File.Exists(tempPath))
+            {
+                File.Move(tempPath, destinationPath, true);
+            }
+            return;
+        }
+
+        response.EnsureSuccessStatusCode();
+
+        var totalLength = response.Content.Headers.ContentLength ?? 0;
+        if (response.StatusCode == System.Net.HttpStatusCode.PartialContent)
+        {
+            totalLength += existingLength;
+        }
+        else
+        {
+            // Server doesn't support range requests, start from beginning
+            existingLength = 0;
+        }
+
+        var mode = existingLength > 0 ? FileMode.Append : FileMode.Create;
+        await using var fileStream = new FileStream(tempPath, mode, FileAccess.Write, FileShare.None);
+        await using var contentStream = await response.Content.ReadAsStreamAsync(ct);
+
+        var buffer = new byte[81920];
+        long totalRead = existingLength;
+        int bytesRead;
+
+        while ((bytesRead = await contentStream.ReadAsync(buffer, ct)) > 0)
+        {
+            ct.ThrowIfCancellationRequested();
+            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), ct);
+            totalRead += bytesRead;
+            onProgress?.Invoke(totalRead, totalLength);
+        }
+
+        await fileStream.FlushAsync(ct);
+        fileStream.Close();
+
+        File.Move(tempPath, destinationPath, true);
+    }
+
+    #endregion
 }

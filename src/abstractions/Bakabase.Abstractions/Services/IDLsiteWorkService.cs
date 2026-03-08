@@ -11,4 +11,7 @@ public interface IDLsiteWorkService
     Task AddOrUpdateRange(IEnumerable<DLsiteWorkDbModel> works);
     Task DeleteByWorkId(string workId);
     Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
+    Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default);
+    Task LaunchWork(string workId, CancellationToken ct = default);
+    List<string> FindPlayableFiles(string localPath, string? workType);
 }

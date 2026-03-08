@@ -18,6 +18,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
     : Controller
 {
     public const string SyncTaskId = "SyncDLsite";
+    public const string DownloadTaskIdPrefix = "DownloadDLsite_";
 
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllDLsiteWorks")]
@@ -74,5 +75,67 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             RootServiceProvider = HttpContext.RequestServices
         });
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("{workId}/download")]
+    [SwaggerOperation(OperationId = "DownloadDLsiteWork")]
+    public async Task<BaseResponse> Download(string workId)
+    {
+        var taskId = $"{DownloadTaskIdPrefix}{workId}";
+        await btm.Start(taskId, () => new BTaskHandlerBuilder
+        {
+            Id = taskId,
+            GetName = () => $"Download DLsite: {workId}",
+            GetDescription = () => $"Downloading work {workId} from DLsite",
+            Run = async args =>
+            {
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
+                await svc.DownloadWork(
+                    workId,
+                    async (percentage, process) =>
+                    {
+                        await args.UpdateTask(t =>
+                        {
+                            t.Percentage = percentage;
+                            t.Process = process;
+                        });
+                    },
+                    args.CancellationToken);
+            },
+            Type = BTaskType.Any,
+            ResourceType = BTaskResourceType.Any,
+            IsPersistent = true,
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
+            RootServiceProvider = HttpContext.RequestServices
+        });
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("{workId}/launch")]
+    [SwaggerOperation(OperationId = "LaunchDLsiteWork")]
+    public async Task<BaseResponse> Launch(string workId)
+    {
+        await service.LaunchWork(workId);
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpGet("{workId}/playable-files")]
+    [SwaggerOperation(OperationId = "GetDLsiteWorkPlayableFiles")]
+    public async Task<ListResponse<string>> GetPlayableFiles(string workId)
+    {
+        var work = await service.GetByWorkId(workId);
+        if (work == null)
+        {
+            return new ListResponse<string>();
+        }
+
+        if (string.IsNullOrEmpty(work.LocalPath))
+        {
+            return new ListResponse<string>();
+        }
+
+        var files = service.FindPlayableFiles(work.LocalPath, work.WorkType);
+        return new ListResponse<string>(files);
     }
 }

@@ -118,3 +118,36 @@ public class DLsitePlayWorkFiles
     [JsonPropertyName("sam")]
     public string? Sam { get; set; }
 }
+
+/// <summary>
+/// Response from GET /api/v3/download
+/// </summary>
+public class DLsiteDownloadResponse
+{
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("files")]
+    public List<DLsiteDownloadFile>? Files { get; set; }
+}
+
+public class DLsiteDownloadFile
+{
+    [JsonPropertyName("url")]
+    public string? Url { get; set; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("size")]
+    public long? Size { get; set; }
+}
+
+/// <summary>
+/// Parsed download link for a DLsite work.
+/// </summary>
+public class DLsiteDownloadLink
+{
+    public string Url { get; set; } = null!;
+    public string FileName { get; set; } = null!;
+}

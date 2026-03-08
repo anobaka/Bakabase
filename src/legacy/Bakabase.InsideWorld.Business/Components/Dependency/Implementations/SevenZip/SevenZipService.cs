@@ -178,11 +178,12 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
         /// <param name="archivePath">Path to the archive file</param>
         /// <param name="destinationPath">Destination directory</param>
         /// <param name="ct">Cancellation token</param>
-        public async Task Extract(string archivePath, string destinationPath, CancellationToken ct)
+        /// <param name="codePage">Optional code page for filename encoding (e.g., 932 for Shift-JIS)</param>
+        public async Task Extract(string archivePath, string destinationPath, CancellationToken ct, int? codePage = null)
         {
             Directory.CreateDirectory(destinationPath);
 
-            var args = new[]
+            var argsList = new List<string>
             {
                 "x", // Extract with full paths
                 archivePath,
@@ -190,11 +191,16 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Se
                 "-y" // Assume Yes on all queries
             };
 
+            if (codePage.HasValue)
+            {
+                argsList.Add($"-mcp={codePage.Value}");
+            }
+
             var output = new System.Text.StringBuilder();
             var error = new System.Text.StringBuilder();
 
             var cmd = CliWrap.Cli.Wrap(SevenZipExecutable)
-                .WithArguments(args, false)
+                .WithArguments(argsList, false)
                 .WithValidation(CliWrap.CommandResultValidation.None)
                 .WithStandardOutputPipe(CliWrap.PipeTarget.ToStringBuilder(output))
                 .WithStandardErrorPipe(CliWrap.PipeTarget.ToStringBuilder(error));
