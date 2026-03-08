@@ -284,7 +284,7 @@ export default function DLsiteWorksPage() {
 
                         {/* Download progress overlay */}
                         {isDownloading && (
-                          <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-2 p-2">
+                          <div className="absolute inset-0 z-10 bg-black/70 flex flex-col items-center justify-center gap-2 p-2">
                             <Spinner color="primary" size="sm" />
                             <Progress
                               className="w-full"
@@ -300,7 +300,7 @@ export default function DLsiteWorksPage() {
 
                         {/* Overlay with actions - visible on hover */}
                         {!isDownloading && (
-                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 gap-1">
+                          <div className="absolute inset-0 z-10 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 gap-1">
                             <div className="flex gap-1">
                               <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
                                 <Button
