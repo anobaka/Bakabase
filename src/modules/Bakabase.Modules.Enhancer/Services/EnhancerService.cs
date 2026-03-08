@@ -22,6 +22,8 @@ using IEnhancer = Bakabase.Modules.Enhancer.Abstractions.Components.IEnhancer;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Bakabase.Abstractions.Components.Tracing;
+using Bakabase.Abstractions.Models.Domain.Options;
+using Bakabase.Modules.AI.Components.Enhancer;
 using Bakabase.Modules.Enhancer.Components;
 using Bakabase.Modules.Enhancer.Models.Domain.Constants;
 using Microsoft.Extensions.DependencyInjection;
@@ -46,6 +48,7 @@ namespace Bakabase.Modules.Enhancer.Services
         private readonly IPropertyService _propertyService;
         private readonly IResourceProfileService _resourceProfileService;
         private readonly BakaTracingContext _tracingContext;
+        private readonly IEnhancementPostProcessor? _postProcessor;
 
         public EnhancerService(ICustomPropertyService customPropertyService, IResourceService resourceService,
             ICustomPropertyValueService customPropertyValueService,
@@ -53,7 +56,8 @@ namespace Bakabase.Modules.Enhancer.Services
             IStandardValueService standardValueService, IEnhancerLocalizer enhancerLocalizer,
             IEnhancerDescriptors enhancerDescriptors, IEnumerable<IEnhancer> enhancers, ILogger<EnhancerService> logger, IEnhancementRecordService enhancementRecordService, IReservedPropertyValueService reservedPropertyValueService,
             IPropertyLocalizer propertyLocalizer, IServiceProvider serviceProvider, IPropertyService propertyService,
-            IResourceProfileService resourceProfileService, BakaTracingContext tracingContext)
+            IResourceProfileService resourceProfileService, BakaTracingContext tracingContext,
+            IEnhancementPostProcessor? postProcessor = null)
         {
             _customPropertyService = customPropertyService;
             _resourceService = resourceService;
@@ -70,6 +74,7 @@ namespace Bakabase.Modules.Enhancer.Services
             _propertyService = propertyService;
             _resourceProfileService = resourceProfileService;
             _tracingContext = tracingContext;
+            _postProcessor = postProcessor;
             _enhancers = enhancers.ToDictionary(d => d.Id, d => d);
         }
 
@@ -681,6 +686,11 @@ namespace Bakabase.Modules.Enhancer.Services
                                     logs = result?.Logs;
                                     errorMessage = result?.ErrorMessage;
 
+                                    if (result?.Values != null)
+                                    {
+                                        await RunPostProcessorAsync(result.Values, task.Options, task.Resource.Id, task.Enhancer.Id, ct);
+                                    }
+
                                     enhancements = result?.Values?.Any() == true
                                         ? result.Values.Select(v => new Enhancement
                                         {
@@ -773,6 +783,8 @@ namespace Bakabase.Modules.Enhancer.Services
                     var result = await enhancer.CreateEnhancements(resource, fullOptions, logCollector, CancellationToken.None);
                     if (result?.Values != null)
                     {
+                        await RunPostProcessorAsync(result.Values, fullOptions, resource.Id, enhancerId, CancellationToken.None);
+
                         var enhancerDescriptor = _enhancerDescriptors[enhancerId];
                         foreach (var rawValue in result.Values)
                         {
@@ -835,6 +847,56 @@ namespace Bakabase.Modules.Enhancer.Services
                             }
                         }
                     }
+                }
+            }
+        }
+
+        private async Task RunPostProcessorAsync(
+            List<EnhancementRawValue> values,
+            EnhancerFullOptions options,
+            int resourceId,
+            int enhancerId,
+            CancellationToken ct)
+        {
+            if (_postProcessor == null || options.TranslationOptions is not { Enabled: true })
+                return;
+
+            // Convert raw values to EnhancementValue list for the post-processor
+            var enhancementValues = values
+                .Where(v => v.Value != null)
+                .Select(v => new EnhancementValue
+                {
+                    Target = v.Target,
+                    DynamicTarget = v.DynamicTarget,
+                    Value = v.Value,
+                    ValueType = v.ValueType
+                })
+                .ToList();
+
+            if (enhancementValues.Count == 0)
+                return;
+
+            var context = new EnhancementPostProcessorContext
+            {
+                ResourceId = resourceId,
+                EnhancerId = enhancerId,
+                Values = enhancementValues,
+                TranslationOptions = options.TranslationOptions
+            };
+
+            await _postProcessor.ProcessAsync(context, ct);
+
+            // Apply post-processed values back to the raw values
+            var processedIndex = 0;
+            foreach (var v in values)
+            {
+                if (v.Value == null)
+                    continue;
+
+                if (processedIndex < enhancementValues.Count)
+                {
+                    v.Value = enhancementValues[processedIndex].Value;
+                    processedIndex++;
                 }
             }
         }

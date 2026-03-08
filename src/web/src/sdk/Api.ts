@@ -207,7 +207,7 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyType =
   | 16;
 
 /**
- * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer]
+ * [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer]
  * @format int32
  */
 export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
@@ -220,7 +220,8 @@ export type BakabaseAbstractionsModelsDomainConstantsPropertyValueScope =
   | 1004
   | 1005
   | 1006
-  | 1007;
+  | 1007
+  | 1008;
 
 /**
  * [12: Introduction, 13: Rating, 22: Cover]
@@ -332,6 +333,12 @@ export interface BakabaseAbstractionsModelsDomainEnhancerFullOptions {
   pretreatKeyword?: boolean;
   /** @format int32 */
   bangumiPrioritySubjectType?: number;
+  translationOptions?: BakabaseAbstractionsModelsDomainOptionsEnhancerTranslationOptions;
+}
+
+export interface BakabaseAbstractionsModelsDomainOptionsEnhancerTranslationOptions {
+  enabled?: boolean;
+  targetLanguage?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
@@ -345,6 +352,7 @@ export interface BakabaseAbstractionsModelsDomainEnhancerTargetFullOptions {
   /** @format int32 */
   propertyId: number;
   property?: BakabaseAbstractionsModelsDomainProperty;
+  customPrompt?: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainExtensionGroup {
@@ -564,20 +572,12 @@ export interface BakabaseAbstractionsModelsDomainProperty {
   order: number;
 }
 
-export interface BakabaseAbstractionsModelsDomainPropertyKey {
-  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
-  pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
-  /** @format int32 */
-  id: number;
-}
-
 export interface BakabaseAbstractionsModelsDomainPropertyKeyWithScopePriority {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   id: number;
-  /** Optional per-property scope priority override. Null means use global setting. */
-  scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[] | null;
+  scopePriority?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope[];
 }
 
 export interface BakabaseAbstractionsModelsDomainPropertyPathSegmentMatcherValue {
@@ -751,7 +751,7 @@ export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   id: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
 }
 
@@ -1162,6 +1162,14 @@ export interface BakabaseInsideWorldBusinessComponentsCompressionCompressedFileE
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainAiOptions {
   ollamaEndpoint?: string;
+  /** @format int32 */
+  defaultProviderConfigId?: number;
+  defaultModelId?: string;
+  quota?: BakabaseModulesAIModelsDomainLlmQuotaConfig;
+  enableCache: boolean;
+  /** @format int32 */
+  defaultCacheTtlDays: number;
+  auditLogRequestContent: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainBangumiOptions {
@@ -1420,6 +1428,14 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputAiOptionsPatchInputModel {
   ollamaEndpoint?: string;
+  /** @format int32 */
+  defaultProviderConfigId?: number;
+  defaultModelId?: string;
+  quota?: BakabaseModulesAIModelsDomainLlmQuotaConfig;
+  enableCache?: boolean;
+  /** @format int32 */
+  defaultCacheTtlDays?: number;
+  auditLogRequestContent?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputBangumiOptionsPatchInputModel {
@@ -2078,10 +2094,6 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsPropertyKey {
   id: number;
 }
 
-export interface BakabaseInsideWorldModelsConfigsUIStyleOptions {
-  cssVariableOverwrites: Record<string, string>;
-}
-
 export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   /** @format int32 */
   colCount: number;
@@ -2098,6 +2110,10 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   autoSelectFirstPlayableFile: boolean;
   displayOperations: string[];
   hideResourceBorder: boolean;
+}
+
+export interface BakabaseInsideWorldModelsConfigsUIStyleOptions {
+  cssVariableOverwrites: Record<string, string>;
 }
 
 /**
@@ -2429,6 +2445,370 @@ export interface BakabaseInsideWorldModelsRequestModelsResourceSetMediaLibraries
   mediaLibraryIds: number[];
 }
 
+export interface BakabaseModulesAIComponentsObservationLlmUsageByFeature {
+  feature: string;
+  /** @format int64 */
+  totalTokens: number;
+  /** @format int32 */
+  callCount: number;
+}
+
+export interface BakabaseModulesAIComponentsObservationLlmUsageByProvider {
+  /** @format int32 */
+  providerConfigId: number;
+  modelId: string;
+  /** @format int64 */
+  totalTokens: number;
+  /** @format int32 */
+  callCount: number;
+}
+
+export interface BakabaseModulesAIComponentsObservationLlmUsageSummary {
+  /** @format int64 */
+  totalTokens: number;
+  /** @format int64 */
+  todayTokens: number;
+  /** @format int64 */
+  monthTokens: number;
+  /** @format int32 */
+  totalCalls: number;
+  /** @format int32 */
+  cacheHits: number;
+  /** @format double */
+  cacheHitRate: number;
+  byProvider: BakabaseModulesAIComponentsObservationLlmUsageByProvider[];
+  byFeature: BakabaseModulesAIComponentsObservationLlmUsageByFeature[];
+}
+
+export interface BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
+  /** @format int32 */
+  id: number;
+  /** [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor] */
+  feature: BakabaseModulesAIModelsDomainAiFeature;
+  useDefault: boolean;
+  /** @format int32 */
+  providerConfigId?: number;
+  modelId?: string;
+  /** @format float */
+  temperature?: number;
+  /** @format int32 */
+  maxTokens?: number;
+  /** @format float */
+  topP?: number;
+}
+
+export interface BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel {
+  /** @format int64 */
+  id: number;
+  cacheKey: string;
+  responseJson: string;
+  /** @format int32 */
+  providerConfigId: number;
+  modelId: string;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  expiresAt?: string;
+  /** @format int32 */
+  hitCount: number;
+}
+
+export interface BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
+  /** @format int32 */
+  id: number;
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
+  providerType: BakabaseModulesAIModelsDomainLlmProviderType;
+  name: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled: boolean;
+  /** @format date-time */
+  createdAt: string;
+  /** @format date-time */
+  updatedAt: string;
+}
+
+export interface BakabaseModulesAIModelsDbLlmUsageLogDbModel {
+  /** @format int64 */
+  id: number;
+  /** @format int32 */
+  providerConfigId: number;
+  modelId: string;
+  feature?: string;
+  /** @format int32 */
+  inputTokens: number;
+  /** @format int32 */
+  outputTokens: number;
+  /** @format int32 */
+  totalTokens: number;
+  /** @format int32 */
+  durationMs: number;
+  cacheHit: boolean;
+  /** [1: Success, 2: Error, 3: Timeout, 4: Cancelled] */
+  status: BakabaseModulesAIModelsDomainLlmCallStatus;
+  errorMessage?: string;
+  /** @format date-time */
+  createdAt: string;
+  requestSummary?: string;
+  responseSummary?: string;
+}
+
+/**
+ * [0: Default, 1: Enhancer, 2: Translation, 3: FileProcessor]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainAiFeature = 0 | 1 | 2 | 3;
+
+/**
+ * [1: Success, 2: Error, 3: Timeout, 4: Cancelled]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainLlmCallStatus = 1 | 2 | 3 | 4;
+
+/**
+ * [0: None, 1: Chat, 2: ToolCalling, 4: Vision, 8: Streaming, 16: Embedding, 32: JsonMode]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainLlmCapabilities = 0 | 1 | 2 | 4 | 8 | 16 | 32;
+
+export interface BakabaseModulesAIModelsDomainLlmModelInfo {
+  modelId: string;
+  displayName: string;
+  /** [0: None, 1: Chat, 2: ToolCalling, 4: Vision, 8: Streaming, 16: Embedding, 32: JsonMode] */
+  capabilities: BakabaseModulesAIModelsDomainLlmCapabilities;
+}
+
+/**
+ * [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini]
+ * @format int32
+ */
+export type BakabaseModulesAIModelsDomainLlmProviderType = 1 | 2 | 3 | 4 | 5;
+
+export interface BakabaseModulesAIModelsDomainLlmProviderTypeInfo {
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
+  type: BakabaseModulesAIModelsDomainLlmProviderType;
+  displayName: string;
+  /** [0: None, 1: Chat, 2: ToolCalling, 4: Vision, 8: Streaming, 16: Embedding, 32: JsonMode] */
+  defaultCapabilities: BakabaseModulesAIModelsDomainLlmCapabilities;
+  requiresApiKey: boolean;
+  requiresEndpoint: boolean;
+  defaultEndpoint?: string;
+}
+
+export interface BakabaseModulesAIModelsDomainLlmQuotaConfig {
+  /** @format int32 */
+  dailyTokenLimit?: number;
+  /** @format int32 */
+  monthlyTokenLimit?: number;
+}
+
+export interface BakabaseModulesAIModelsDomainPropertyTranslation {
+  propertyKey: string;
+  originalText: string;
+  translatedText: string;
+  /** @format int32 */
+  propertyId: number;
+  /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
+  propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
+  propertyName?: string;
+  /** [1: SingleLineText, 2: MultilineText, 3: SingleChoice, 4: MultipleChoice, 5: Number, 6: Percentage, 7: Rating, 8: Boolean, 9: Link, 10: Attachment, 11: Date, 12: DateTime, 13: Time, 14: Formula, 15: Multilevel, 16: Tags] */
+  propertyType?: BakabaseAbstractionsModelsDomainConstantsPropertyType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  dbValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+  /** [1: String, 2: ListString, 3: Decimal, 4: Link, 5: Boolean, 6: DateTime, 7: Time, 8: ListListString, 9: ListTag] */
+  bizValueType?: BakabaseAbstractionsModelsDomainConstantsStandardValueType;
+}
+
+export interface BakabaseModulesAIModelsDomainResourceTranslationResult {
+  /** @format int32 */
+  resourceId: number;
+  translations: BakabaseModulesAIModelsDomainPropertyTranslation[];
+}
+
+export interface BakabaseModulesAIModelsInputAiFeatureConfigInputModel {
+  useDefault: boolean;
+  /** @format int32 */
+  providerConfigId?: number;
+  modelId?: string;
+  /** @format float */
+  temperature?: number;
+  /** @format int32 */
+  maxTokens?: number;
+  /** @format float */
+  topP?: number;
+}
+
+export interface BakabaseModulesAIModelsInputApplyFileOperationsInputModel {
+  operations: BakabaseModulesAIServicesFileOperation[];
+}
+
+export interface BakabaseModulesAIModelsInputFileNameCorrectionInputModel {
+  filePaths: string[];
+  workingDirectory?: string;
+  targetConvention?: string;
+}
+
+export interface BakabaseModulesAIModelsInputFileProcessorDirectoryInputModel {
+  directoryPath: string;
+}
+
+export interface BakabaseModulesAIModelsInputFileProcessorPathsInputModel {
+  filePaths: string[];
+  workingDirectory?: string;
+}
+
+export interface BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel {
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
+  providerType: BakabaseModulesAIModelsDomainLlmProviderType;
+  name: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled: boolean;
+}
+
+export interface BakabaseModulesAIModelsInputLlmProviderConfigUpdateInputModel {
+  /** [1: OpenAI, 2: Claude, 3: Ollama, 4: DashScope, 5: Gemini] */
+  providerType?: BakabaseModulesAIModelsDomainLlmProviderType;
+  name?: string;
+  endpoint?: string;
+  apiKey?: string;
+  isEnabled?: boolean;
+}
+
+export interface BakabaseModulesAIModelsInputPathSimilarityGroupInputModel {
+  filePaths: string[];
+  workingDirectory?: string;
+  customGroupingLogic?: string;
+}
+
+export interface BakabaseModulesAIModelsInputTranslateBatchInputModel {
+  texts: string[];
+  targetLanguage: string;
+  sourceLanguage?: string;
+}
+
+export interface BakabaseModulesAIModelsInputTranslateInputModel {
+  text: string;
+  targetLanguage: string;
+  sourceLanguage?: string;
+}
+
+export interface BakabaseModulesAIModelsInputTranslateResourcePropertiesInputModel {
+  targetLanguage: string;
+  sourceLanguage?: string;
+}
+
+export interface BakabaseModulesAIServicesApplyOperationsResult {
+  /** @format int32 */
+  totalOperations: number;
+  /** @format int32 */
+  successCount: number;
+  /** @format int32 */
+  failureCount: number;
+  errors: BakabaseModulesAIServicesOperationError[];
+}
+
+export interface BakabaseModulesAIServicesBatchTranslationResult {
+  results: BakabaseModulesAIServicesTranslationResult[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  successCount: number;
+}
+
+export interface BakabaseModulesAIServicesDirectoryCorrection {
+  originalPath: string;
+  suggestedPath: string;
+  reason: string;
+}
+
+export interface BakabaseModulesAIServicesDirectoryStructureCorrectionResult {
+  directoryPath: string;
+  corrections: BakabaseModulesAIServicesDirectoryCorrection[];
+  summary?: string;
+  operations: BakabaseModulesAIServicesFileOperation[];
+  rawText?: string;
+}
+
+export interface BakabaseModulesAIServicesFileNameCorrection {
+  originalPath: string;
+  suggestedName: string;
+  reason: string;
+}
+
+export interface BakabaseModulesAIServicesFileNameCorrectionResult {
+  corrections: BakabaseModulesAIServicesFileNameCorrection[];
+  appliedConvention?: string;
+  operations: BakabaseModulesAIServicesFileOperation[];
+  rawText?: string;
+}
+
+export interface BakabaseModulesAIServicesFileOperation {
+  /** [1: Rename, 2: Move, 3: CreateDirectory] */
+  type: BakabaseModulesAIServicesFileOperationType;
+  sourcePath: string;
+  destinationPath: string;
+  reason?: string;
+  /** @format int32 */
+  order: number;
+  /** @format int32 */
+  dependsOnOrder?: number;
+}
+
+/**
+ * [1: Rename, 2: Move, 3: CreateDirectory]
+ * @format int32
+ */
+export type BakabaseModulesAIServicesFileOperationType = 1 | 2 | 3;
+
+export interface BakabaseModulesAIServicesFileStructureAnalysisResult {
+  directoryPath: string;
+  /** @format int32 */
+  totalFiles: number;
+  /** @format int32 */
+  totalDirectories: number;
+  issues: string[];
+  suggestions: string[];
+  summary?: string;
+  operations: BakabaseModulesAIServicesFileOperation[];
+  rawText?: string;
+}
+
+export interface BakabaseModulesAIServicesNamingConventionAnalysisResult {
+  detectedPattern?: string;
+  inconsistencies: string[];
+  suggestions: string[];
+  summary?: string;
+  operations: BakabaseModulesAIServicesFileOperation[];
+  rawText?: string;
+}
+
+export interface BakabaseModulesAIServicesOperationError {
+  /** @format int32 */
+  operationIndex: number;
+  operation: BakabaseModulesAIServicesFileOperation;
+  errorMessage: string;
+}
+
+export interface BakabaseModulesAIServicesPathSimilarityGroup {
+  groupName: string;
+  paths: string[];
+  reason?: string;
+}
+
+export interface BakabaseModulesAIServicesPathSimilarityGroupResult {
+  groups: BakabaseModulesAIServicesPathSimilarityGroup[];
+  operations: BakabaseModulesAIServicesFileOperation[];
+  rawText?: string;
+}
+
+export interface BakabaseModulesAIServicesTranslationResult {
+  originalText: string;
+  translatedText: string;
+  detectedSourceLanguage?: string;
+  targetLanguage: string;
+}
+
 export interface BakabaseModulesAliasAbstractionsModelsDomainAlias {
   text: string;
   preferred?: string;
@@ -2472,7 +2852,7 @@ export interface BakabaseModulesComparisonModelsDomainComparisonRule {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -2518,7 +2898,7 @@ export interface BakabaseModulesComparisonModelsInputComparisonRuleInputModel {
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
   /** @format int32 */
   propertyId: number;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -2607,7 +2987,7 @@ export interface BakabaseModulesComparisonModelsViewComparisonRuleViewModel {
   /** @format int32 */
   propertyId: number;
   propertyName?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
   propertyValueScope?: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [0: StrictEqual, 2: TextSimilarity, 3: RegexExtractNumber, 4: FixedTolerance, 5: RelativeTolerance, 6: SetIntersection, 7: Subset, 8: TimeWindow, 9: SameDay, 10: ExtensionMap] */
   mode: BakabaseModulesComparisonModelsDomainConstantsComparisonMode;
@@ -2678,10 +3058,19 @@ export type BakabaseModulesEnhancerAbstractionsModelsDomainConstantsEnhancementA
   | 1;
 
 /**
- * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av]
+ * [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI]
  * @format int32
  */
-export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type BakabaseModulesEnhancerModelsDomainConstantsEnhancerId =
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9;
 
 /**
  * [1: UseRegex, 2: UseKeyword]
@@ -2806,7 +3195,7 @@ export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePre
 }
 
 export interface BakabaseModulesPresetsAbstractionsModelsMediaLibraryTemplatePresetDataPoolEnhancer {
-  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av] */
+  /** [1: Bakabase, 2: ExHentai, 3: Bangumi, 4: DLsite, 5: Regex, 6: Kodi, 7: Tmdb, 8: Av, 9: AI] */
   id: BakabaseModulesEnhancerModelsDomainConstantsEnhancerId;
   name: string;
   description?: string;
@@ -3006,7 +3395,7 @@ export interface BakabaseServiceModelsInputBulkModificationProcessInputModel {
 
 export interface BakabaseServiceModelsInputBulkModificationVariableInputModel {
   key?: string;
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -3189,7 +3578,7 @@ export interface BakabaseServiceModelsViewBulkModificationProcessViewModel {
 }
 
 export interface BakabaseServiceModelsViewBulkModificationVariableViewModel {
-  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer] */
+  /** [0: Manual, 1: Synchronization, 1000: BakabaseEnhancer, 1001: ExHentaiEnhancer, 1002: BangumiEnhancer, 1003: DLsiteEnhancer, 1004: RegexEnhancer, 1005: KodiEnhancer, 1006: TmdbEnhancer, 1007: AvEnhancer, 1008: AiEnhancer] */
   scope: BakabaseAbstractionsModelsDomainConstantsPropertyValueScope;
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   propertyPool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -3673,6 +4062,48 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseInsideWorldMo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsEntitiesPassword[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbLlmProviderConfigDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmUsageLogDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbLlmUsageLogDbModel[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmModelInfo {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainLlmModelInfo[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmProviderTypeInfo {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainLlmProviderTypeInfo[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseModulesEnhancerAbstractionsComponentsIEnhancerDescriptor {
@@ -4235,6 +4666,90 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseInsideWo
   code: number;
   message?: string;
   data?: BakabaseInsideWorldModelsModelsEntitiesComponentOptions;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIComponentsObservationLlmUsageSummary {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIComponentsObservationLlmUsageSummary;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiFeatureConfigDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbAiFeatureConfigDbModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDbLlmProviderConfigDbModel;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainResourceTranslationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIModelsDomainResourceTranslationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesApplyOperationsResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesApplyOperationsResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesBatchTranslationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesBatchTranslationResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesDirectoryStructureCorrectionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesDirectoryStructureCorrectionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesFileNameCorrectionResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesFileNameCorrectionResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesFileStructureAnalysisResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesFileStructureAnalysisResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesNamingConventionAnalysisResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesNamingConventionAnalysisResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesPathSimilarityGroupResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesPathSimilarityGroupResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesTranslationResult {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseModulesAIServicesTranslationResult;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesComparisonModelsDomainComparisonPlan {
@@ -5406,6 +5921,757 @@ export class HttpClient<SecurityDataType = unknown> {
  * @version v1
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
+  ai = {
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AddLlmProvider
+     * @request POST:/ai/providers
+     */
+    addLlmProvider: (
+      data: BakabaseModulesAIModelsInputLlmProviderConfigAddInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        any
+      >({
+        path: `/ai/providers`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for addLlmProvider
+     * @name addLlmProviderUrl
+     */
+    addLlmProviderUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/providers`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetAllLlmProviders
+     * @request GET:/ai/providers
+     */
+    getAllLlmProviders: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        any
+      >({
+        path: `/ai/providers`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllLlmProviders
+     * @name getAllLlmProvidersUrl
+     */
+    getAllLlmProvidersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/providers`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetLlmProvider
+     * @request GET:/ai/providers/{id}
+     */
+    getLlmProvider: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        any
+      >({
+        path: `/ai/providers/${id}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name UpdateLlmProvider
+     * @request PUT:/ai/providers/{id}
+     */
+    updateLlmProvider: (
+      id: number,
+      data: BakabaseModulesAIModelsInputLlmProviderConfigUpdateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbLlmProviderConfigDbModel,
+        any
+      >({
+        path: `/ai/providers/${id}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name DeleteLlmProvider
+     * @request DELETE:/ai/providers/{id}
+     */
+    deleteLlmProvider: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/ai/providers/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name TestLlmProvider
+     * @request POST:/ai/providers/{id}/test
+     */
+    testLlmProvider: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemBoolean, any>({
+        path: `/ai/providers/${id}/test`,
+        method: "POST",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetLlmProviderModels
+     * @request GET:/ai/providers/{id}/models
+     */
+    getLlmProviderModels: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmModelInfo,
+        any
+      >({
+        path: `/ai/providers/${id}/models`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetLlmProviderTypes
+     * @request GET:/ai/provider-types
+     */
+    getLlmProviderTypes: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDomainLlmProviderTypeInfo,
+        any
+      >({
+        path: `/ai/provider-types`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getLlmProviderTypes
+     * @name getLlmProviderTypesUrl
+     */
+    getLlmProviderTypesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/provider-types`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name SearchLlmUsage
+     * @request GET:/ai/usage
+     */
+    searchLlmUsage: (
+      query?: {
+        /** @format int32 */
+        providerConfigId?: number;
+        modelId?: string;
+        feature?: string;
+        /** @format date-time */
+        startTime?: string;
+        /** @format date-time */
+        endTime?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmUsageLogDbModel,
+        any
+      >({
+        path: `/ai/usage`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for searchLlmUsage
+     * @name searchLlmUsageUrl
+     */
+    searchLlmUsageUrl: (query?: {
+        /** @format int32 */
+        providerConfigId?: number;
+        modelId?: string;
+        feature?: string;
+        /** @format date-time */
+        startTime?: string;
+        /** @format date-time */
+        endTime?: string;
+        /**
+         * @format int32
+         * @default 0
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 50
+         */
+        pageSize?: number;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/usage`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetLlmUsageSummary
+     * @request GET:/ai/usage/summary
+     */
+    getLlmUsageSummary: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIComponentsObservationLlmUsageSummary,
+        any
+      >({
+        path: `/ai/usage/summary`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getLlmUsageSummary
+     * @name getLlmUsageSummaryUrl
+     */
+    getLlmUsageSummaryUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/usage/summary`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetAllLlmCacheEntries
+     * @request GET:/ai/cache
+     */
+    getAllLlmCacheEntries: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbLlmCallCacheEntryDbModel,
+        any
+      >({
+        path: `/ai/cache`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllLlmCacheEntries
+     * @name getAllLlmCacheEntriesUrl
+     */
+    getAllLlmCacheEntriesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/cache`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name ClearAllLlmCache
+     * @request DELETE:/ai/cache
+     */
+    clearAllLlmCache: (params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/ai/cache`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for clearAllLlmCache
+     * @name clearAllLlmCacheUrl
+     */
+    clearAllLlmCacheUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/cache`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name DeleteLlmCacheEntry
+     * @request DELETE:/ai/cache/{id}
+     */
+    deleteLlmCacheEntry: (id: number, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/ai/cache/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetAllAiFeatureConfigs
+     * @request GET:/ai/features
+     */
+    getAllAiFeatureConfigs: (params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseModulesAIModelsDbAiFeatureConfigDbModel,
+        any
+      >({
+        path: `/ai/features`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for getAllAiFeatureConfigs
+     * @name getAllAiFeatureConfigsUrl
+     */
+    getAllAiFeatureConfigsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/features`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name GetAiFeatureConfig
+     * @request GET:/ai/features/{feature}
+     */
+    getAiFeatureConfig: (
+      feature: BakabaseModulesAIModelsDomainAiFeature,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiFeatureConfigDbModel,
+        any
+      >({
+        path: `/ai/features/${feature}`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name SaveAiFeatureConfig
+     * @request PUT:/ai/features/{feature}
+     */
+    saveAiFeatureConfig: (
+      feature: BakabaseModulesAIModelsDomainAiFeature,
+      data: BakabaseModulesAIModelsInputAiFeatureConfigInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDbAiFeatureConfigDbModel,
+        any
+      >({
+        path: `/ai/features/${feature}`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name DeleteAiFeatureConfig
+     * @request DELETE:/ai/features/{feature}
+     */
+    deleteAiFeatureConfig: (
+      feature: BakabaseModulesAIModelsDomainAiFeature,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/ai/features/${feature}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiTranslate
+     * @request POST:/ai/translate
+     */
+    aiTranslate: (
+      data: BakabaseModulesAIModelsInputTranslateInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesTranslationResult,
+        any
+      >({
+        path: `/ai/translate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiTranslate
+     * @name aiTranslateUrl
+     */
+    aiTranslateUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/translate`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiTranslateBatch
+     * @request POST:/ai/translate/batch
+     */
+    aiTranslateBatch: (
+      data: BakabaseModulesAIModelsInputTranslateBatchInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesBatchTranslationResult,
+        any
+      >({
+        path: `/ai/translate/batch`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiTranslateBatch
+     * @name aiTranslateBatchUrl
+     */
+    aiTranslateBatchUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/translate/batch`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiTranslateResourceProperties
+     * @request POST:/ai/resource/{resourceId}/translate
+     */
+    aiTranslateResourceProperties: (
+      resourceId: number,
+      data: BakabaseModulesAIModelsInputTranslateResourcePropertiesInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIModelsDomainResourceTranslationResult,
+        any
+      >({
+        path: `/ai/resource/${resourceId}/translate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiAnalyzeFileStructure
+     * @request POST:/ai/file-processor/analyze-structure
+     */
+    aiAnalyzeFileStructure: (
+      data: BakabaseModulesAIModelsInputFileProcessorDirectoryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesFileStructureAnalysisResult,
+        any
+      >({
+        path: `/ai/file-processor/analyze-structure`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiAnalyzeFileStructure
+     * @name aiAnalyzeFileStructureUrl
+     */
+    aiAnalyzeFileStructureUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/file-processor/analyze-structure`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiAnalyzeNamingConvention
+     * @request POST:/ai/file-processor/analyze-naming
+     */
+    aiAnalyzeNamingConvention: (
+      data: BakabaseModulesAIModelsInputFileProcessorPathsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesNamingConventionAnalysisResult,
+        any
+      >({
+        path: `/ai/file-processor/analyze-naming`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiAnalyzeNamingConvention
+     * @name aiAnalyzeNamingConventionUrl
+     */
+    aiAnalyzeNamingConventionUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/file-processor/analyze-naming`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiSuggestFileNameCorrections
+     * @request POST:/ai/file-processor/suggest-names
+     */
+    aiSuggestFileNameCorrections: (
+      data: BakabaseModulesAIModelsInputFileNameCorrectionInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesFileNameCorrectionResult,
+        any
+      >({
+        path: `/ai/file-processor/suggest-names`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiSuggestFileNameCorrections
+     * @name aiSuggestFileNameCorrectionsUrl
+     */
+    aiSuggestFileNameCorrectionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/file-processor/suggest-names`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiGroupByPathSimilarity
+     * @request POST:/ai/file-processor/group-by-similarity
+     */
+    aiGroupByPathSimilarity: (
+      data: BakabaseModulesAIModelsInputPathSimilarityGroupInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesPathSimilarityGroupResult,
+        any
+      >({
+        path: `/ai/file-processor/group-by-similarity`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiGroupByPathSimilarity
+     * @name aiGroupByPathSimilarityUrl
+     */
+    aiGroupByPathSimilarityUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/file-processor/group-by-similarity`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiSuggestDirectoryCorrections
+     * @request POST:/ai/file-processor/suggest-directory-corrections
+     */
+    aiSuggestDirectoryCorrections: (
+      data: BakabaseModulesAIModelsInputFileProcessorDirectoryInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesDirectoryStructureCorrectionResult,
+        any
+      >({
+        path: `/ai/file-processor/suggest-directory-corrections`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiSuggestDirectoryCorrections
+     * @name aiSuggestDirectoryCorrectionsUrl
+     */
+    aiSuggestDirectoryCorrectionsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/file-processor/suggest-directory-corrections`;
+      
+      return baseUrl + path;
+    },
+
+    /**
+     * No description
+     *
+     * @tags AI
+     * @name AiApplyFileOperations
+     * @request POST:/ai/file-processor/apply-operations
+     */
+    aiApplyFileOperations: (
+      data: BakabaseModulesAIModelsInputApplyFileOperationsInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsSingletonResponse1BakabaseModulesAIServicesApplyOperationsResult,
+        any
+      >({
+        path: `/ai/file-processor/apply-operations`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for aiApplyFileOperations
+     * @name aiApplyFileOperationsUrl
+     */
+    aiApplyFileOperationsUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/ai/file-processor/apply-operations`;
+      
+      return baseUrl + path;
+    },
+  };
   alias = {
     /**
      * No description
@@ -13100,7 +14366,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     addLatestUsedPropertyUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui/latest-used-property`;
-
+      
       return baseUrl + path;
     },
 
@@ -13129,7 +14395,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
-
+      
       return baseUrl + path;
     },
 
@@ -13160,7 +14426,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     patchUiStyleOptionsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/options/ui-style`;
-
+      
       return baseUrl + path;
     },
 

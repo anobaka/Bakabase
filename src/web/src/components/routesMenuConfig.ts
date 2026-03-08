@@ -27,6 +27,9 @@ import {
   AiOutlineTags,
   AiOutlineFilter,
   AiOutlineDiff,
+  AiOutlineRobot,
+  AiOutlineBarChart,
+  AiOutlineAudit,
 } from "react-icons/ai";
 import { lazy } from "react";
 import { MdOutlineArticle, MdVideoLibrary } from "react-icons/md";
@@ -60,6 +63,10 @@ import PathRuleConfigPage from "@/pages/path-mark-config";
 import PathMarksPage from "@/pages/path-marks";
 import ProfilerPage from "@/pages/profiler";
 import ComparisonPage from "@/pages/comparison";
+import AiConfigurationPage from "@/pages/ai-configuration";
+import AiUsagePage from "@/pages/ai-usage";
+import AiAuditLogPage from "@/pages/ai-audit-log";
+import AiCachePage from "@/pages/ai-cache";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -294,6 +301,46 @@ export const routesMenuConfig: RouteMenuItem[] = [
         path: "/post-parser",
         component: PostParserPage,
         icon: MdOutlineArticle,
+        layout: "basic",
+        menu: true,
+      },
+    ],
+  },
+  {
+    name: "menu.ai",
+    icon: AiOutlineRobot,
+    menu: true,
+    isBeta: true,
+    children: [
+      {
+        name: "menu.ai.configuration",
+        path: "/ai/configuration",
+        component: AiConfigurationPage,
+        icon: AiOutlineSetting,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.ai.usage",
+        path: "/ai/usage",
+        component: AiUsagePage,
+        icon: AiOutlineBarChart,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.ai.auditLog",
+        path: "/ai/audit-log",
+        component: AiAuditLogPage,
+        icon: AiOutlineAudit,
+        layout: "basic",
+        menu: true,
+      },
+      {
+        name: "menu.ai.cache",
+        path: "/ai/cache",
+        component: AiCachePage,
+        icon: AiOutlineHdd,
         layout: "basic",
         menu: true,
       },

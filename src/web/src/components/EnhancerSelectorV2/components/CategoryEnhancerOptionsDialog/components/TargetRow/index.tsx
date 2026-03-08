@@ -19,11 +19,11 @@ import { defaultCategoryEnhancerTargetOptions } from "../../models";
 import PropertyTip from "./PropertyTip";
 import TargetOptions from "./TargetOptions";
 
-import { Button, Chip, Input, Tooltip } from "@/components/bakaui";
+import { Button, Chip, Input, Textarea, Tooltip } from "@/components/bakaui";
 import PropertySelector from "@/components/PropertySelector";
 import BApi from "@/sdk/BApi";
 import { PropertyLabel } from "@/components/Property";
-import { PropertyPool, SpecialTextType, StandardValueType } from "@/sdk/constants";
+import { EnhancerId, PropertyPool, SpecialTextType, StandardValueType } from "@/sdk/constants";
 import { IntegrateWithSpecialTextLabel } from "@/components/SpecialText";
 import { buildLogger } from "@/components/utils";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider.tsx";
@@ -148,7 +148,10 @@ const TargetRow = (props: Props) => {
 
   log(props, options, propsOptions, property);
 
+  const showCustomPrompt = enhancer.id === EnhancerId.AI && descriptor.isDynamic && !isDefaultTargetOfDynamic;
+
   return (
+    <div className={"flex flex-col gap-1"}>
     <div className={`flex items-center gap-1 ${noPropertyBound ? "opacity-60" : ""}`}>
       <div className={"w-5/12"}>
         <div className={"flex flex-col gap-2"}>
@@ -313,6 +316,25 @@ const TargetRow = (props: Props) => {
           )}
         </div>
       </div>
+    </div>
+    {showCustomPrompt && (
+      <div className={"ml-4"}>
+        <Textarea
+          size={"sm"}
+          label={t("enhancer.target.customPrompt.label")}
+          placeholder={t("enhancer.target.customPrompt.placeholder")}
+          defaultValue={options.customPrompt ?? ""}
+          minRows={1}
+          maxRows={3}
+          onBlur={(e) => {
+            const value = (e.target as HTMLTextAreaElement).value;
+            if (value !== (options.customPrompt ?? "")) {
+              patchTargetOptions({ customPrompt: value || undefined });
+            }
+          }}
+        />
+      </div>
+    )}
     </div>
   );
 };

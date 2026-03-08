@@ -1,4 +1,6 @@
-﻿namespace Bakabase.Abstractions.Models.Domain;
+﻿using Bakabase.Abstractions.Models.Domain.Options;
+
+namespace Bakabase.Abstractions.Models.Domain;
 
 /// <summary>
 /// Contains all possible options for enhancers. Implements specific option interfaces
@@ -34,4 +36,10 @@ public record EnhancerFullOptions : IRegexEnhancerOptions, IBangumiEnhancerOptio
     /// Values correspond to BangumiSubjectType enum.
     /// </summary>
     public int? BangumiPrioritySubjectType { get; set; }
+
+    /// <summary>
+    /// Translation post-processing options.
+    /// When enabled, text values from enhancement results will be translated to the target language.
+    /// </summary>
+    public EnhancerTranslationOptions? TranslationOptions { get; set; }
 }

@@ -44,7 +44,7 @@ const Functional: React.FC<FunctionalProps> = ({ applyPatches }) => {
             {startupPages.map((s) => {
               return (
                 <Radio key={s.value} value={String(s.value)}>
-                  {t<string>(s.label)}
+                  {t<string>(`configuration.functional.startupPage.${s.label.toLowerCase()}`)}
                 </Radio>
               );
             })}

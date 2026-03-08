@@ -97,5 +97,22 @@
   "Setup priority of property value scopes": "Setup priority of property value scopes",
   "Visible scopes": "Visible scopes",
   "This filter is used for quick check and does not change the priority of property value scopes.": "This filter is used for quick check and does not change the priority of property value scopes.",
-  "You can click on the scope button to change the priority of the property value scopes.": "You can click on the scope button to change the priority of the property value scopes."
+  "You can click on the scope button to change the priority of the property value scopes.": "You can click on the scope button to change the priority of the property value scopes.",
+
+  "resource.action.aiTranslate": "AI Translate",
+  "resource.action.aiTranslate.tooltip": "Translate all text properties to your language using AI",
+  "resource.ai.translating": "Translating...",
+  "resource.ai.translateSuccess": "Translation complete",
+  "resource.ai.translateFailed": "Translation failed",
+  "resource.ai.noTextProperties": "No text properties to translate",
+  "resource.ai.translationResults": "Translation Results",
+  "resource.ai.original": "Original",
+  "resource.ai.translated": "Translated",
+  "resource.ai.property": "Property",
+  "resource.ai.applyTranslation": "Apply",
+  "resource.ai.applyAll": "Apply All",
+  "resource.ai.applySelected": "Apply Selected",
+  "resource.ai.applied": "Applied",
+  "resource.ai.targetLanguage": "Target Language",
+  "resource.ai.modelConfig": "Model Config"
 }

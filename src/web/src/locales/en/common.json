@@ -207,6 +207,11 @@
   "menu.experimental": "Experimental",
   "menu.thirdPartyIntegration": "Third party integration",
   "menu.postParser": "Post parser",
+  "menu.ai": "AI",
+  "menu.ai.configuration": "AI Configuration",
+  "menu.ai.usage": "Usage Stats",
+  "menu.ai.auditLog": "Audit Log",
+  "menu.ai.cache": "Cache",
   "menu.system": "System",
   "menu.configuration": "Configuration",
   "menu.thirdParty": "Third party",
@@ -273,5 +278,7 @@
   "Quick filter": "Quick filter",
   "Are you sure to select this media library?": "Are you sure to select this media library?",
   "Are you sure to select this path?": "Are you sure to select this path?",
-  "Select a path": "Select a path"
+  "Select a path": "Select a path",
+  "ai.button.configureFirst": "Configure model first",
+  "ai.button.configureFirstTip": "This feature requires an AI model to be configured. Please click the settings icon above to set it up."
 }
