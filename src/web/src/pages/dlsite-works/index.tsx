@@ -290,15 +290,6 @@ export default function DLsiteWorksPage() {
               {t("resourceSource.dlsite.action.setDownloadDir")}
             </Button>
           )}
-          <Switch
-            isSelected={showHidden}
-            size="sm"
-            onValueChange={setShowHidden}
-          >
-            <span className="text-sm text-default-500 whitespace-nowrap">
-              {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
-            </span>
-          </Switch>
           <Button
             size="sm"
             startContent={<AiOutlineReload className="text-lg" />}
@@ -336,18 +327,29 @@ export default function DLsiteWorksPage() {
 
       {(isConfigured || works.length > 0) && (
         <>
-          <div className="flex items-center gap-4">
-            <Input
-              className="max-w-sm"
-              placeholder={t("resourceSource.filter.keyword")}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Input
+                className="max-w-sm"
+                placeholder={t("resourceSource.filter.keyword")}
+                size="sm"
+                startContent={<AiOutlineSearch />}
+                value={keyword}
+                onValueChange={setKeyword}
+              />
+              <Chip size="sm" variant="flat">
+                {filteredWorks.length} / {works.length}
+              </Chip>
+            </div>
+            <Switch
+              isSelected={showHidden}
               size="sm"
-              startContent={<AiOutlineSearch />}
-              value={keyword}
-              onValueChange={setKeyword}
-            />
-            <Chip size="sm" variant="flat">
-              {filteredWorks.length} / {works.length}
-            </Chip>
+              onValueChange={setShowHidden}
+            >
+              <span className="text-sm text-default-500 whitespace-nowrap">
+                {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
+              </span>
+            </Switch>
           </div>
 
           {loading ? (

@@ -57,7 +57,7 @@
   "resourceSource.dlsite.action.scanFolder": "Scan folder",
   "resourceSource.dlsite.action.scanning": "Scanning...",
   "resourceSource.dlsite.action.openDownloadDir": "Open download dir",
-  "resourceSource.dlsite.action.setDownloadDir": "Set download dir",
+  "resourceSource.dlsite.action.setDownloadDir": "Please set download dir first",
   "resourceSource.dlsite.action.hide": "Hide",
   "resourceSource.dlsite.action.unhide": "Unhide",
   "resourceSource.dlsite.action.showHidden": "Show hidden ({{count}})",

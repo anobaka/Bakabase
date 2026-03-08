@@ -57,7 +57,7 @@
   "resourceSource.dlsite.action.scanFolder": "扫描文件夹",
   "resourceSource.dlsite.action.scanning": "扫描中...",
   "resourceSource.dlsite.action.openDownloadDir": "打开下载目录",
-  "resourceSource.dlsite.action.setDownloadDir": "设置下载目录",
+  "resourceSource.dlsite.action.setDownloadDir": "请先设置下载目录",
   "resourceSource.dlsite.action.hide": "隐藏",
   "resourceSource.dlsite.action.unhide": "取消隐藏",
   "resourceSource.dlsite.action.showHidden": "显示已隐藏 ({{count}})",
