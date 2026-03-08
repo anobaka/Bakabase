@@ -75,6 +75,7 @@ export default function DLsiteWorksPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [showHidden, setShowHidden] = useState(true);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
+  const dlsiteOptionsInitialized = useDLsiteOptionsStore((s) => s.initialized);
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
   const scanTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SCAN_TASK_ID));
   const allTasks = useBTasksStore((s) => s.tasks);
@@ -107,6 +108,13 @@ export default function DLsiteWorksPage() {
 
   useEffect(() => {
     loadWorks();
+    if (!dlsiteOptionsInitialized) {
+      BApi.options.getDLsiteOptions().then((rsp) => {
+        if (!rsp.code && rsp.data) {
+          useDLsiteOptionsStore.getState().update(rsp.data);
+        }
+      });
+    }
   }, []);
 
   useEffect(() => {
