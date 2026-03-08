@@ -573,6 +573,27 @@
   <data name="BTask_Description_SearchIndex" xml:space="preserve">
     <value>构建用于快速资源搜索的倒排索引</value>
   </data>
+  <data name="SearchIndex_LoadingResources" xml:space="preserve">
+    <value>加载资源中...</value>
+  </data>
+  <data name="SearchIndex_LoadedResources" xml:space="preserve">
+    <value>已加载 {0} 个资源</value>
+  </data>
+  <data name="SearchIndex_LoadedCustomPropertyValues" xml:space="preserve">
+    <value>已加载 {0} 个自定义属性值</value>
+  </data>
+  <data name="SearchIndex_LoadedReservedPropertyValues" xml:space="preserve">
+    <value>已加载 {0} 个保留属性值</value>
+  </data>
+  <data name="SearchIndex_BuildingIndex" xml:space="preserve">
+    <value>构建索引中...</value>
+  </data>
+  <data name="SearchIndex_IndexingProgress" xml:space="preserve">
+    <value>已索引 {0}/{1} 个资源</value>
+  </data>
+  <data name="SearchIndex_Completed" xml:space="preserve">
+    <value>已完成：已索引 {0} 个资源</value>
+  </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>发现新版本</value>
   </data>

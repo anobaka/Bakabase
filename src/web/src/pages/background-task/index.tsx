@@ -235,7 +235,7 @@ const BackgroundTaskPage = () => {
                 </div>
               </TableCell>
               <TableCell>
-                {t<string>(`backgroundTask.status.${BTaskStatus[task.status].toLowerCase()}`)}
+                {t<string>(`backgroundTask.status.${BTaskStatus[task.status].charAt(0).toLowerCase() + BTaskStatus[task.status].slice(1)}`)}
                 {task.error && (
                   <Tooltip color={"danger"} content={task.error}>
                     <QuestionCircleOutlined />

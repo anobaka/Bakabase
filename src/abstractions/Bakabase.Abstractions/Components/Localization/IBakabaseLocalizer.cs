@@ -93,6 +93,15 @@ public interface IBakabaseLocalizer
     string PlayableFiles();
     string BuildingData();
 
+    // SearchIndex
+    string SearchIndex_LoadingResources();
+    string SearchIndex_LoadedResources(int count);
+    string SearchIndex_LoadedCustomPropertyValues(int count);
+    string SearchIndex_LoadedReservedPropertyValues(int count);
+    string SearchIndex_BuildingIndex();
+    string SearchIndex_IndexingProgress(int indexed, int total);
+    string SearchIndex_Completed(int count);
+
     // PathMark Sync
     string SyncPathMark_Collecting();
     string SyncPathMark_Collected(int count);

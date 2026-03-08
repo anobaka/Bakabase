@@ -573,6 +573,27 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_SearchIndex" xml:space="preserve">
     <value>Build the inverted index for fast resource searching</value>
   </data>
+  <data name="SearchIndex_LoadingResources" xml:space="preserve">
+    <value>Loading resources...</value>
+  </data>
+  <data name="SearchIndex_LoadedResources" xml:space="preserve">
+    <value>Loaded {0} resources</value>
+  </data>
+  <data name="SearchIndex_LoadedCustomPropertyValues" xml:space="preserve">
+    <value>Loaded {0} custom property values</value>
+  </data>
+  <data name="SearchIndex_LoadedReservedPropertyValues" xml:space="preserve">
+    <value>Loaded {0} reserved property values</value>
+  </data>
+  <data name="SearchIndex_BuildingIndex" xml:space="preserve">
+    <value>Building index...</value>
+  </data>
+  <data name="SearchIndex_IndexingProgress" xml:space="preserve">
+    <value>Indexed {0}/{1} resources</value>
+  </data>
+  <data name="SearchIndex_Completed" xml:space="preserve">
+    <value>Completed: {0} resources indexed</value>
+  </data>
   <data name="VersionCheck_NewVersionAvailableTitle" xml:space="preserve">
     <value>New Version Available</value>
   </data>

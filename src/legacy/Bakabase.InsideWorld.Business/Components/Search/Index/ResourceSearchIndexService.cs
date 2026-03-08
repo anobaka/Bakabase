@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Components.Events;
+using Bakabase.Abstractions.Components.Localization;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
@@ -33,6 +34,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<ResourceSearchIndexService> _logger;
+    private readonly IBakabaseLocalizer _localizer;
     private readonly ResourceSearchIndex _index = new();
 
     // Channel for async batch updates
@@ -61,10 +63,12 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
     public ResourceSearchIndexService(
         IServiceScopeFactory scopeFactory,
         IResourceDataChangeEvent resourceDataChangeEvent,
-        ILogger<ResourceSearchIndexService> logger)
+        ILogger<ResourceSearchIndexService> logger,
+        IBakabaseLocalizer localizer)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
+        _localizer = localizer;
 
         // Subscribe to resource data change events
         resourceDataChangeEvent.OnResourceDataChanged += OnResourceDataChanged;
@@ -579,7 +583,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             // Clear existing index
             _index.Clear();
 
-            await ReportProgress(progressCallback, 0, "Loading resources...");
+            await ReportProgress(progressCallback, 0, _localizer.SearchIndex_LoadingResources());
 
             // Load all data
             var resourceOrm = scope.ServiceProvider
@@ -596,7 +600,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             var allResources = await resourceOrm.GetAll(null, false);
             _logger.LogInformation("Loaded {Count} resources in {Ms}ms", allResources.Count, sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 5, $"Loaded {allResources.Count} resources");
+            await ReportProgress(progressCallback, 5, _localizer.SearchIndex_LoadedResources(allResources.Count));
 
             sw.Restart();
             var customPropertyValues = await customPropertyValueService.GetAll(null,
@@ -609,14 +613,14 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             var propertyMap = customProperties.ToDictionary(p => p.Id, p => p.ToProperty());
             _logger.LogInformation("Loaded {Count} custom properties", customProperties.Count);
 
-            await ReportProgress(progressCallback, 10, $"Loaded {customPropertyValues.Count} custom property values");
+            await ReportProgress(progressCallback, 10, _localizer.SearchIndex_LoadedCustomPropertyValues(customPropertyValues.Count));
 
             sw.Restart();
             var reservedPropertyValues = await reservedPropertyValueService.GetAll();
             _logger.LogInformation("Loaded {Count} reserved property values in {Ms}ms",
                 reservedPropertyValues.Count, sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 15, $"Loaded {reservedPropertyValues.Count} reserved property values");
+            await ReportProgress(progressCallback, 15, _localizer.SearchIndex_LoadedReservedPropertyValues(reservedPropertyValues.Count));
 
             sw.Restart();
             var allResourceIds = allResources.Select(r => r.Id).ToArray();
@@ -624,7 +628,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 .GetMediaLibraryIdsByResourceIds(allResourceIds);
             _logger.LogInformation("Loaded media library mappings in {Ms}ms", sw.ElapsedMilliseconds);
 
-            await ReportProgress(progressCallback, 20, "Building index...");
+            await ReportProgress(progressCallback, 20, _localizer.SearchIndex_BuildingIndex());
 
             // Group property values by resource ID
             var customValuesByResource = customPropertyValues
@@ -675,7 +679,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                     if (currentPercentage >= lastReportedPercentage + 5)
                     {
                         lastReportedPercentage = currentPercentage;
-                        await ReportProgress(progressCallback, currentPercentage, $"Indexed {indexedCount}/{totalCount} resources");
+                        await ReportProgress(progressCallback, currentPercentage, _localizer.SearchIndex_IndexingProgress(indexedCount, totalCount));
                     }
                 }
             }
@@ -687,7 +691,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             _isReady = true;
             _readyTcs.TrySetResult();
 
-            await ReportProgress(progressCallback, 100, $"Completed: {indexedCount} resources indexed");
+            await ReportProgress(progressCallback, 100, _localizer.SearchIndex_Completed(indexedCount));
 
             _logger.LogInformation(
                 "Index rebuild complete: {ResourceCount} resources, {ValueEntries} value entries, {RangeEntries} range entries",
