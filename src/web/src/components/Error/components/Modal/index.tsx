@@ -78,7 +78,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
       title={
         <div className="flex items-center gap-2">
           <span className="text-2xl">!</span>
-          <span>{t<string>("Something went wrong")}</span>
+          <span>{t<string>("error.modal.somethingWentWrong")}</span>
         </div>
       }
     >
@@ -90,19 +90,19 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 {error.name || "Error"}
               </span>
               <Chip color="danger" size="sm" variant="flat">
-                {t<string>("Error")}
+                {t<string>("error.modal.error")}
               </Chip>
             </div>
             <div className="p-3 flex flex-col gap-2">
               <div className="text-sm text-danger-600 bg-danger-50 p-2 rounded border border-danger-100">
-                {error.message || t<string>("Unknown error")}
+                {error.message || t<string>("error.modal.unknownError")}
               </div>
 
               {error.stack && (
                 <Accordion isCompact selectionMode="multiple">
                   <AccordionItem
                     key="stack"
-                    title={<span className="text-xs text-default-500">{t<string>("Stack Trace")}</span>}
+                    title={<span className="text-xs text-default-500">{t<string>("error.modal.stackTrace")}</span>}
                   >
                     <Snippet hideSymbol className="w-full" radius="sm" size="sm" color="default">
                       <pre
@@ -114,7 +114,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                     </Snippet>
                     {truncateStack(error.stack).truncated && (
                       <Button size="sm" variant="light" onClick={() => setShowFullStack(!showFullStack)}>
-                        {showFullStack ? t<string>("Show less") : t<string>("Show all")}
+                        {showFullStack ? t<string>("error.modal.showLess") : t<string>("error.modal.showAll")}
                       </Button>
                     )}
                   </AccordionItem>
@@ -124,7 +124,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 <Accordion isCompact selectionMode="multiple">
                   <AccordionItem
                     key="component-stack"
-                    title={<span className="text-xs text-default-500">{t<string>("Component Stack")}</span>}
+                    title={<span className="text-xs text-default-500">{t<string>("error.modal.componentStack")}</span>}
                   >
                     <Snippet hideSymbol className="w-full" radius="sm" size="sm" color="default">
                       <pre
@@ -136,7 +136,7 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                     </Snippet>
                     {truncateStack(errorInfo.componentStack).truncated && (
                       <Button size="sm" variant="light" onClick={() => setShowFullComponentStack(!showFullComponentStack)}>
-                        {showFullComponentStack ? t<string>("Show less") : t<string>("Show all")}
+                        {showFullComponentStack ? t<string>("error.modal.showLess") : t<string>("error.modal.showAll")}
                       </Button>
                     )}
                   </AccordionItem>
@@ -148,20 +148,20 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
 
         <div className="border border-default-200 rounded-lg overflow-hidden">
           <div className="bg-default-100 px-3 py-1.5 border-b border-default-200">
-            <span className="font-semibold text-sm">{t<string>("What you can try")}</span>
+            <span className="font-semibold text-sm">{t<string>("error.modal.whatYouCanTry")}</span>
           </div>
           <div className="p-2 flex flex-col gap-1">
-            <Step number={1} title={t<string>("Reload the page")}>
+            <Step number={1} title={t<string>("error.modal.reloadPage")}>
               <kbd className="px-1 py-0.5 text-xs bg-default-200 rounded font-mono">F5</kbd>
             </Step>
-            <Step number={2} title={t<string>("Restart the app")}>
-              {t<string>("Shutdown and restart completely")}
+            <Step number={2} title={t<string>("error.modal.restartApp")}>
+              {t<string>("error.modal.shutdownAndRestart")}
             </Step>
-            <Step number={3} title={t<string>("Contact support")}>
+            <Step number={3} title={t<string>("error.modal.contactSupport")}>
               <div className="flex flex gap-1.5 mt-1">
                 {appInfo?.logPath && (
                   <div className="text-xs text-default-500">
-                    {t<string>("Log file:")}
+                    {t<string>("error.modal.logFile")}
                     <Snippet
                       hideSymbol
                       className="cursor-pointer ml-1"
@@ -184,9 +184,9 @@ const ErrorModal = ({ error, errorInfo }: IProps) => {
                 </div>
               </div>
             </Step>
-            <Step number={4} title={t<string>("Continue browsing")}>
+            <Step number={4} title={t<string>("error.modal.continueBrowsing")}>
               <Link className="cursor-pointer" size="sm" onClick={() => navigate("/")}>
-                {t<string>("Return to homepage")}
+                {t<string>("error.modal.returnToHomepage")}
               </Link>
             </Step>
           </div>

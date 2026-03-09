@@ -18,13 +18,13 @@ const Label = ({ error }: IProps) => {
 
   return (
     <div className={"flex gap-2 items-center"}>
-      <span>{error ?? t<string>("We have encountered some problems.")}</span>
+      <span>{error ?? t<string>("error.label.encounteredProblems")}</span>
       <span
         className={"cursor-pointer"}
         style={{ color: "var(--bakaui-primary)" }}
         onClick={() => createPortal(ErrorModal, {})}
       >
-        {t<string>("how should I handle this problem?")}
+        {t<string>("error.label.howToHandle")}
       </span>
     </div>
   );
