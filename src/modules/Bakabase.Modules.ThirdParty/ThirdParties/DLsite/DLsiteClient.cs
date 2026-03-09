@@ -302,7 +302,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                     new DLsiteDownloadLink
                     {
                         Url = downloadUrl,
-                        FileName = ExtractFileNameFromUrl(downloadUrl) ?? $"{workId}.zip"
+                        FileName = SanitizeFileName(ExtractFileNameFromUrl(downloadUrl) ?? $"{workId}.zip", $"{workId}.zip")
                     }
                 ]
             };
@@ -342,11 +342,14 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
             var actualUrl = ResolveLocation(d, fileUrl);
 
+            var fallbackName = $"{workId}_part{i + 1}";
+            var rawFileName = i < fileNames.Length && !string.IsNullOrEmpty(fileNames[i])
+                ? fileNames[i]
+                : ExtractFileNameFromUrl(actualUrl) ?? fallbackName;
+
             info.Links.Add(new DLsiteDownloadLink
             {
-                FileName = i < fileNames.Length && !string.IsNullOrEmpty(fileNames[i])
-                    ? fileNames[i]
-                    : ExtractFileNameFromUrl(actualUrl) ?? $"{workId}_part{i + 1}",
+                FileName = SanitizeFileName(rawFileName, fallbackName),
                 Url = actualUrl
             });
         }
@@ -457,6 +460,34 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         }
 
         File.Move(tempPath, destinationPath, true);
+    }
+
+    /// <summary>
+    /// Ensures a filename is valid for the file system.
+    /// Handles cases where HTML parsing yields a URL instead of a filename.
+    /// </summary>
+    private static string SanitizeFileName(string name, string fallback)
+    {
+        // If the name looks like a URL, try to extract the filename from it
+        if (name.Contains("://"))
+        {
+            name = ExtractFileNameFromUrl(name) ?? fallback;
+        }
+
+        // Strip any directory separators (e.g. from URL-encoded paths)
+        var lastSep = name.LastIndexOfAny(['/', '\\']);
+        if (lastSep >= 0 && lastSep < name.Length - 1)
+        {
+            name = name[(lastSep + 1)..];
+        }
+
+        // Remove invalid filename characters
+        foreach (var c in Path.GetInvalidFileNameChars())
+        {
+            name = name.Replace(c, '_');
+        }
+
+        return string.IsNullOrWhiteSpace(name) ? fallback : name;
     }
 
     /// <summary>

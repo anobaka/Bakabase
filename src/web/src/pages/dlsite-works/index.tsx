@@ -38,7 +38,7 @@ export default function DLsiteWorksPage() {
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
-  const [showHidden, setShowHidden] = useState(true);
+  const [showHidden, setShowHidden] = useState(false);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
   const patchOptions = useDLsiteOptionsStore((s) => s.patch);
   const showCover = dlsiteOptions?.showCover ?? false;
