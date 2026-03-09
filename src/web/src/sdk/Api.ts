@@ -9550,6 +9550,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name DeleteDLsiteWorkLocalFiles
+     * @request DELETE:/dlsite-work/{workId}/local-files
+     */
+    deleteDLsiteWorkLocalFiles: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/local-files`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
   };
   downloadTask = {
     /**
@@ -11940,6 +11955,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     deleteExHentaiGallery: (id: number, params: RequestParams = {}) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/exhentai-gallery/${id}`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name DeleteExHentaiGalleryLocalFiles
+     * @request DELETE:/exhentai-gallery/{galleryId}/{galleryToken}/local-files
+     */
+    deleteExHentaiGalleryLocalFiles: (galleryId: number, galleryToken: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/exhentai-gallery/${galleryId}/${galleryToken}/local-files`,
         method: "DELETE",
         format: "json",
         ...params,

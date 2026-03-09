@@ -64,6 +64,26 @@ public class ExHentaiGalleryService(
         await orm.RemoveByKey(id);
     }
 
+    public async Task DeleteLocalFiles(long galleryId, string galleryToken)
+    {
+        var gallery = await GetByGalleryId(galleryId, galleryToken);
+        if (gallery == null)
+        {
+            throw new Exception($"Gallery {galleryId}/{galleryToken} not found");
+        }
+
+        if (!string.IsNullOrEmpty(gallery.LocalPath) && System.IO.Directory.Exists(gallery.LocalPath))
+        {
+            System.IO.Directory.Delete(gallery.LocalPath, true);
+            logger.LogInformation("Deleted local files for gallery {GalleryId} at {Path}", galleryId, gallery.LocalPath);
+        }
+
+        gallery.IsDownloaded = false;
+        gallery.LocalPath = null;
+        gallery.UpdatedAt = DateTime.Now;
+        await orm.Update(gallery);
+    }
+
     public async Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default)
     {
         var accounts = exHentaiOptions.Value.Accounts;

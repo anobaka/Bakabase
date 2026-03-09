@@ -11,6 +11,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
+using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Microsoft.Extensions.Logging;
@@ -235,6 +236,8 @@ public class DLsiteWorkService(
         logger.LogInformation("DLsite sync complete: {Count} works synced", total);
     }
 
+    private const int MaxLinkRefreshRetries = 3;
+
     public async Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default)
     {
         var work = await GetByWorkId(workId);
@@ -254,13 +257,12 @@ public class DLsiteWorkService(
         var workDir = Path.Combine(defaultPath, workId);
         Directory.CreateDirectory(workDir);
 
-        // Get download links (follows redirects manually to handle both direct and serial page flows)
         if (onProgress != null)
         {
             await onProgress(0, $"[{workId}] 0%");
         }
 
-        var downloadInfo = await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
+        var downloadInfo = await ResolveDownloadWithRetry(cookie, workId, ct);
         var links = downloadInfo.Links;
         if (links.Count == 0)
         {
@@ -277,7 +279,7 @@ public class DLsiteWorkService(
 
         logger.LogInformation("Found {Count} download links for work {WorkId}", links.Count, workId);
 
-        // Download all files
+        // Download all files with auto-retry on link expiration
         var downloadedFiles = new List<string>();
         for (var i = 0; i < links.Count; i++)
         {
@@ -293,19 +295,46 @@ public class DLsiteWorkService(
             }
 
             var fileIndex = i;
-            await dlsiteClient.DownloadFileAsync(
-                cookie,
-                link.Url,
-                destPath,
-                (downloaded, total) =>
+            var downloaded = false;
+
+            for (var retry = 0; retry <= MaxLinkRefreshRetries && !downloaded; retry++)
+            {
+                try
                 {
-                    var fileProgress = total > 0 ? (int)(downloaded * 100 / total) : 0;
-                    var overallProgress = (fileIndex * 100 + fileProgress) / links.Count;
-                    onProgress?.Invoke(
-                        Math.Min(overallProgress, 95),
-                        $"{link.FileName} ({fileIndex + 1}/{links.Count}) {downloaded / 1024 / 1024}MB/{total / 1024 / 1024}MB");
-                },
-                ct);
+                    await dlsiteClient.DownloadFileAsync(
+                        cookie,
+                        link.Url,
+                        destPath,
+                        (dl, total) =>
+                        {
+                            var fileProgress = total > 0 ? (int)(dl * 100 / total) : 0;
+                            var overallProgress = (fileIndex * 100 + fileProgress) / links.Count;
+                            onProgress?.Invoke(
+                                Math.Min(overallProgress, 95),
+                                $"{link.FileName} ({fileIndex + 1}/{links.Count}) {dl / 1024 / 1024}MB/{total / 1024 / 1024}MB");
+                        },
+                        ct);
+                    downloaded = true;
+                }
+                catch (DLsiteDownloadLinkExpiredException) when (retry < MaxLinkRefreshRetries)
+                {
+                    logger.LogWarning("Download link expired for {WorkId} file {Index}, refreshing links (attempt {Retry})",
+                        workId, i, retry + 1);
+
+                    // Re-resolve to get fresh download URLs
+                    downloadInfo = await ResolveDownloadWithRetry(cookie, workId, ct);
+                    links = downloadInfo.Links;
+
+                    if (i < links.Count)
+                    {
+                        link = links[i];
+                    }
+                    else
+                    {
+                        throw new Exception($"Link refresh returned fewer links than expected for {workId}");
+                    }
+                }
+            }
 
             downloadedFiles.Add(destPath);
             logger.LogInformation("Downloaded: {Path}", destPath);
@@ -345,6 +374,23 @@ public class DLsiteWorkService(
         }
 
         logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, work.LocalPath);
+    }
+
+    private async Task<DLsiteDownloadInfo> ResolveDownloadWithRetry(string cookie, string workId, CancellationToken ct)
+    {
+        try
+        {
+            return await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
+        }
+        catch (DLsiteAuthException)
+        {
+            throw; // Don't retry auth failures
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Failed to resolve download links for {WorkId}, retrying once", workId);
+            return await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
+        }
     }
 
     public async Task<string?> FetchDrmKey(string workId, CancellationToken ct = default)
@@ -534,6 +580,38 @@ public class DLsiteWorkService(
         }
 
         return totalMatched;
+    }
+
+    public async Task DeleteLocalFiles(string workId)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        if (!string.IsNullOrEmpty(work.LocalPath) && Directory.Exists(work.LocalPath))
+        {
+            Directory.Delete(work.LocalPath, true);
+            logger.LogInformation("Deleted local files for work {WorkId} at {Path}", workId, work.LocalPath);
+        }
+
+        // Also delete the work directory (parent of extracted) if it exists and is empty
+        var defaultPath = DLsiteOptionsValue.DefaultPath;
+        if (!string.IsNullOrEmpty(defaultPath))
+        {
+            var workDir = Path.Combine(defaultPath, workId);
+            if (Directory.Exists(workDir) && workDir != work.LocalPath)
+            {
+                Directory.Delete(workDir, true);
+                logger.LogInformation("Deleted work directory for {WorkId} at {Path}", workId, workDir);
+            }
+        }
+
+        work.IsDownloaded = false;
+        work.LocalPath = null;
+        work.UpdatedAt = DateTime.Now;
+        await orm.Update(work);
     }
 
     public async Task SetHidden(string workId, bool isHidden)

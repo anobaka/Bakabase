@@ -32,6 +32,7 @@ import {
   AiOutlineEyeInvisible,
   AiOutlineCopy,
   AiOutlineKey,
+  AiOutlineDelete,
 } from "react-icons/ai";
 import { FiExternalLink } from "react-icons/fi";
 
@@ -77,7 +78,7 @@ interface DLsiteTableColumn {
 function DLsiteTable({
   works, showCover, fetchingDrmKeys, revealedDrmKeys, hasDownloadDir,
   getDownloadTask, onOpenPage, onOpenLocal, onDownload, onLaunch, onStopDownload,
-  onFetchDrmKey, onCopyDrmKey, onToggleHidden, onToggleRevealDrmKey,
+  onFetchDrmKey, onCopyDrmKey, onToggleHidden, onToggleRevealDrmKey, onDeleteLocal,
 }: {
   works: DLsiteWork[];
   showCover: boolean;
@@ -94,6 +95,7 @@ function DLsiteTable({
   onCopyDrmKey: (key: string) => void;
   onToggleHidden: (workId: string, isHidden: boolean) => void;
   onToggleRevealDrmKey: (workId: string) => void;
+  onDeleteLocal: (workId: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -244,6 +246,17 @@ function DLsiteTable({
                     onPress={() => onOpenLocal(work.localPath!)}
                   >
                     <AiOutlineFolderOpen className="text-lg" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content={t("resourceSource.dlsite.action.deleteLocal")}>
+                  <Button
+                    color="danger"
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={() => onDeleteLocal(work.workId)}
+                  >
+                    <AiOutlineDelete className="text-lg" />
                   </Button>
                 </Tooltip>
               </>
@@ -496,6 +509,15 @@ export default function DLsiteWorksPage() {
     toast.success(t("resourceSource.dlsite.drmKey.copied"));
   };
 
+  const handleDeleteLocal = async (workId: string) => {
+    if (!confirm(t("resourceSource.dlsite.action.deleteLocalConfirm"))) return;
+    const rsp = await BApi.dlsiteWork.deleteDLsiteWorkLocalFiles(workId);
+    if (!rsp.code) {
+      setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, isDownloaded: false, localPath: undefined } : w));
+      toast.success(t("common.state.saved"));
+    }
+  };
+
   const handleToggleHidden = async (workId: string, isHidden: boolean) => {
     const rsp = await BApi.dlsiteWork.setDLsiteWorkHidden(workId, isHidden);
     if (!rsp.code) {
@@ -683,6 +705,7 @@ export default function DLsiteWorksPage() {
               onFetchDrmKey={handleFetchDrmKey}
               onCopyDrmKey={handleCopyDrmKey}
               onToggleHidden={handleToggleHidden}
+              onDeleteLocal={handleDeleteLocal}
               onToggleRevealDrmKey={(workId) => {
                 setRevealedDrmKeys((prev) => {
                   const next = new Set(prev);

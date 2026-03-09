@@ -17,6 +17,16 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 
+/// <summary>
+/// Thrown when DLsite returns 401/403, indicating an authentication issue.
+/// </summary>
+public class DLsiteAuthException(string message) : Exception(message);
+
+/// <summary>
+/// Thrown when a download URL has expired and needs to be re-resolved.
+/// </summary>
+public class DLsiteDownloadLinkExpiredException(string message) : Exception(message);
+
 public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
@@ -250,6 +260,12 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
         // Step 1: Hit the play download API (returns 302)
         using var a = await SendAsync(cookie, playUrl, ct);
+        if (a.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+        {
+            throw new DLsiteAuthException(
+                $"Authentication failed ({a.StatusCode}). Please check if your DLsite cookie is correct.");
+        }
+
         if (!IsRedirect(a))
         {
             throw new Exception($"Expected redirect from play API for {workId}, got {a.StatusCode}");
@@ -378,6 +394,19 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 }
 
                 return;
+            }
+
+            if (response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            {
+                // If this is a download.dlsite.com URL, likely the link has expired
+                if (currentUrl.Contains("download.dlsite.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new DLsiteDownloadLinkExpiredException(
+                        $"Download link expired ({response.StatusCode}): {currentUrl}");
+                }
+
+                throw new DLsiteAuthException(
+                    $"Authentication failed ({response.StatusCode}). Please check if your DLsite cookie is correct.");
             }
 
             response.EnsureSuccessStatusCode();

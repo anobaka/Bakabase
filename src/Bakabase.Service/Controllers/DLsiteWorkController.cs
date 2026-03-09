@@ -182,6 +182,14 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         return BaseResponseBuilder.Ok;
     }
 
+    [HttpDelete("{workId}/local-files")]
+    [SwaggerOperation(OperationId = "DeleteDLsiteWorkLocalFiles")]
+    public async Task<BaseResponse> DeleteLocalFiles(string workId)
+    {
+        await service.DeleteLocalFiles(workId);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpPut("{workId}/hidden")]
     [SwaggerOperation(OperationId = "SetDLsiteWorkHidden")]
     public async Task<BaseResponse> SetHidden(string workId, [FromBody] bool isHidden)

@@ -16,6 +16,7 @@ import {
   Progress,
   Image,
   Switch,
+  Tooltip,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -24,6 +25,7 @@ import {
   AiOutlineSync,
   AiOutlineStop,
   AiOutlineReload,
+  AiOutlineFolderOpen,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
@@ -62,11 +64,12 @@ interface SteamTableColumn {
 }
 
 function SteamTable({
-  apps, showCover, onDelete, formatPlaytime, formatDate,
+  apps, showCover, onDelete, onOpenLocal, formatPlaytime, formatDate,
 }: {
   apps: SteamApp[];
   showCover: boolean;
   onDelete: (appId: number) => void;
+  onOpenLocal: (installPath: string) => void;
   formatPlaytime: (minutes: number) => string;
   formatDate: (unixTs: number) => string;
 }) {
@@ -82,7 +85,7 @@ function SteamTable({
       { key: "lastPlayed", label: t("resourceSource.steam.label.lastPlayed") },
       { key: "installed", label: t("resourceSource.steam.label.installed") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
-      { key: "actions", label: "", width: 80 },
+      { key: "actions", label: "", width: 120 },
     );
     return cols;
   }, [showCover, t]);
@@ -125,15 +128,29 @@ function SteamTable({
         ) : "-";
       case "actions":
         return (
-          <Button
-            color="danger"
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={() => onDelete(app.appId)}
-          >
-            <AiOutlineDelete />
-          </Button>
+          <div className="flex gap-1">
+            {app.isInstalled && app.installPath && (
+              <Tooltip content={t("resourceSource.steam.action.openLocal")}>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => onOpenLocal(app.installPath!)}
+                >
+                  <AiOutlineFolderOpen className="text-lg" />
+                </Button>
+              </Tooltip>
+            )}
+            <Button
+              color="danger"
+              isIconOnly
+              size="sm"
+              variant="light"
+              onPress={() => onDelete(app.appId)}
+            >
+              <AiOutlineDelete />
+            </Button>
+          </div>
         );
       default:
         return null;
@@ -220,6 +237,10 @@ export default function SteamAppsPage() {
         String(a.appId).includes(kw),
     );
   }, [apps, keyword]);
+
+  const handleOpenLocal = async (installPath: string) => {
+    await BApi.tool.openFileOrDirectory({ path: installPath, openInDirectory: false });
+  };
 
   const handleDelete = async (appId: number) => {
     const rsp = await BApi.steamApp.deleteSteamApp(appId);
@@ -351,6 +372,7 @@ export default function SteamAppsPage() {
               apps={filteredApps}
               showCover={showCover}
               onDelete={handleDelete}
+              onOpenLocal={handleOpenLocal}
               formatPlaytime={formatPlaytime}
               formatDate={formatDate}
             />

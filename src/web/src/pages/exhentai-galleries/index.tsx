@@ -16,6 +16,7 @@ import {
   Progress,
   Image,
   Switch,
+  Tooltip,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -24,6 +25,7 @@ import {
   AiOutlineSync,
   AiOutlineStop,
   AiOutlineReload,
+  AiOutlineFolderOpen,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
@@ -59,12 +61,14 @@ interface ExHentaiTableColumn {
 }
 
 function ExHentaiTable({
-  galleries, showCover, categoryColorMap, onDelete,
+  galleries, showCover, categoryColorMap, onDelete, onOpenLocal, onDeleteLocal,
 }: {
   galleries: ExHentaiGallery[];
   showCover: boolean;
   categoryColorMap: Record<string, "primary" | "secondary" | "success" | "warning" | "danger" | "default">;
   onDelete: (id: number) => void;
+  onOpenLocal: (localPath: string) => void;
+  onDeleteLocal: (galleryId: number, galleryToken: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -78,7 +82,7 @@ function ExHentaiTable({
       { key: "downloaded", label: t("resourceSource.exhentai.label.downloaded") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
       { key: "createdAt", label: t("resourceSource.label.createdAt") },
-      { key: "actions", label: "", width: 80 },
+      { key: "actions", label: "", width: 120 },
     );
     return cols;
   }, [showCover, t]);
@@ -152,15 +156,42 @@ function ExHentaiTable({
         );
       case "actions":
         return (
-          <Button
-            color="danger"
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={() => onDelete(gallery.id)}
-          >
-            <AiOutlineDelete />
-          </Button>
+          <div className="flex gap-1">
+            {gallery.isDownloaded && gallery.localPath && (
+              <>
+                <Tooltip content={t("resourceSource.exhentai.action.openLocal")}>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={() => onOpenLocal(gallery.localPath!)}
+                  >
+                    <AiOutlineFolderOpen className="text-lg" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content={t("resourceSource.exhentai.action.deleteLocal")}>
+                  <Button
+                    color="danger"
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={() => onDeleteLocal(gallery.galleryId, gallery.galleryToken)}
+                  >
+                    <AiOutlineDelete className="text-lg" />
+                  </Button>
+                </Tooltip>
+              </>
+            )}
+            <Button
+              color="danger"
+              isIconOnly
+              size="sm"
+              variant="light"
+              onPress={() => onDelete(gallery.id)}
+            >
+              <AiOutlineDelete />
+            </Button>
+          </div>
         );
       default:
         return null;
@@ -249,6 +280,23 @@ export default function ExHentaiGalleriesPage() {
         g.category?.toLowerCase().includes(kw),
     );
   }, [galleries, keyword]);
+
+  const handleOpenLocal = async (localPath: string) => {
+    await BApi.tool.openFileOrDirectory({ path: localPath, openInDirectory: false });
+  };
+
+  const handleDeleteLocal = async (galleryId: number, galleryToken: string) => {
+    if (!confirm(t("resourceSource.exhentai.action.deleteLocalConfirm"))) return;
+    const rsp = await BApi.exhentaiGallery.deleteExHentaiGalleryLocalFiles(galleryId, galleryToken);
+    if (!rsp.code) {
+      setGalleries((prev) => prev.map((g) =>
+        g.galleryId === galleryId && g.galleryToken === galleryToken
+          ? { ...g, isDownloaded: false, localPath: undefined }
+          : g,
+      ));
+      toast.success(t("common.state.saved"));
+    }
+  };
 
   const handleDelete = async (id: number) => {
     const rsp = await BApi.exhentaiGallery.deleteExHentaiGallery(id);
@@ -380,6 +428,8 @@ export default function ExHentaiGalleriesPage() {
               showCover={showCover}
               categoryColorMap={categoryColorMap}
               onDelete={handleDelete}
+              onOpenLocal={handleOpenLocal}
+              onDeleteLocal={handleDeleteLocal}
             />
           )}
         </>

@@ -35,6 +35,14 @@ public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskMan
         return BaseResponseBuilder.Ok;
     }
 
+    [HttpDelete("{galleryId:long}/{galleryToken}/local-files")]
+    [SwaggerOperation(OperationId = "DeleteExHentaiGalleryLocalFiles")]
+    public async Task<BaseResponse> DeleteLocalFiles(long galleryId, string galleryToken)
+    {
+        await service.DeleteLocalFiles(galleryId, galleryToken);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpPost("sync")]
     [SwaggerOperation(OperationId = "SyncExHentaiGalleries")]
     public async Task<BaseResponse> Sync()

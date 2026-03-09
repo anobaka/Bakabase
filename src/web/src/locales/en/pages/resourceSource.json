@@ -80,6 +80,8 @@
   "resourceSource.dlsite.noLocalPath": "No local path set",
   "resourceSource.dlsite.notDownloaded": "Not downloaded yet",
   "resourceSource.dlsite.downloadFirst": "Please download this work first",
+  "resourceSource.dlsite.action.deleteLocal": "Delete local files",
+  "resourceSource.dlsite.action.deleteLocalConfirm": "Are you sure to delete local files for this work? This cannot be undone.",
 
   "resourceSource.exhentai.title": "ExHentai Galleries",
   "resourceSource.exhentai.description": "Galleries synced from your ExHentai favorites.",
@@ -87,6 +89,11 @@
   "resourceSource.exhentai.label.title": "Title",
   "resourceSource.exhentai.label.category": "Category",
   "resourceSource.exhentai.label.downloaded": "Downloaded",
+  "resourceSource.exhentai.action.openLocal": "Open local folder",
+  "resourceSource.exhentai.action.deleteLocal": "Delete local files",
+  "resourceSource.exhentai.action.deleteLocalConfirm": "Are you sure to delete local files for this gallery? This cannot be undone.",
+
+  "resourceSource.steam.action.openLocal": "Open local folder",
 
   "menu.otherPlatforms": "Other Platforms",
   "menu.steam": "Steam",
