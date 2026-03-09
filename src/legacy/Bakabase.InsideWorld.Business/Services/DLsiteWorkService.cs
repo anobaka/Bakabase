@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
@@ -425,10 +427,15 @@ public class DLsiteWorkService(
                     await onProgress(96, Path.GetFileName(file));
                 }
 
-                // Use codepage 932 (Shift-JIS) for Japanese filenames in ZIP/LZH archives.
-                // 7z and RAR store filenames in UTF-8 natively, so -mcp is not needed.
-                var codePage = ext is ".zip" or ".lzh" ? 932 : (int?)null;
-                await sevenZipService.Extract(file, extractDir, ct, codePage: codePage);
+                if (ext is ".zip")
+                {
+                    ExtractZipWithEncodingDetection(file, extractDir);
+                }
+                else
+                {
+                    await sevenZipService.Extract(file, extractDir, ct);
+                }
+
                 logger.LogInformation("Extracted: {Path}", file);
             }
         }
@@ -696,5 +703,49 @@ public class DLsiteWorkService(
         work.IsHidden = isHidden;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
+    }
+
+    /// <summary>
+    /// Extracts a ZIP file using .NET's ZipFile with automatic encoding detection.
+    /// If the ZIP uses UTF-8 flag (bit 11), uses UTF-8; otherwise falls back to Shift-JIS (CP932).
+    /// This avoids 7z's inability to handle -mcp on non-Windows platforms.
+    /// </summary>
+    private void ExtractZipWithEncodingDetection(string zipPath, string outputDir)
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var encoding = DetectZipEncoding(zipPath);
+        logger.LogInformation("Extracting ZIP {Path} with encoding {Encoding}", zipPath, encoding.EncodingName);
+        ZipFile.ExtractToDirectory(zipPath, outputDir, encoding, overwriteFiles: true);
+    }
+
+    /// <summary>
+    /// Detects the entry name encoding of a ZIP file by checking the UTF-8 flag (bit 11)
+    /// in the first local file header. If set, returns UTF-8; otherwise Shift-JIS (CP932).
+    /// </summary>
+    private static Encoding DetectZipEncoding(string zipPath)
+    {
+        try
+        {
+            using var fs = File.OpenRead(zipPath);
+            using var reader = new BinaryReader(fs);
+
+            // Read the local file header signature (0x04034b50)
+            if (fs.Length > 30 && reader.ReadUInt32() == 0x04034b50)
+            {
+                reader.ReadUInt16(); // version needed to extract
+                var flags = reader.ReadUInt16();
+                if ((flags & (1 << 11)) != 0)
+                {
+                    return Encoding.UTF8;
+                }
+            }
+        }
+        catch
+        {
+            // Fall through to default
+        }
+
+        // Default to Shift-JIS for DLsite (Japanese content)
+        return Encoding.GetEncoding(932);
     }
 }
