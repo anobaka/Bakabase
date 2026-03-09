@@ -236,6 +236,34 @@ public class DLsiteWorkService(
         logger.LogInformation("DLsite sync complete: {Count} works synced", total);
     }
 
+    public async Task<string> PrepareDownloadDirectory(string workId)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        var defaultPath = DLsiteOptionsValue.DefaultPath;
+        if (string.IsNullOrEmpty(defaultPath))
+        {
+            throw new Exception("Download path not configured. Please set the default download path in DLsite settings.");
+        }
+
+        var workDir = Path.Combine(defaultPath, workId);
+        Directory.CreateDirectory(workDir);
+
+        // Set LocalPath early so UI can show "open directory" while downloading
+        if (string.IsNullOrEmpty(work.LocalPath))
+        {
+            work.LocalPath = workDir;
+            work.UpdatedAt = DateTime.Now;
+            await orm.Update(work);
+        }
+
+        return work.LocalPath ?? workDir;
+    }
+
     private const int MaxLinkRefreshRetries = 3;
 
     public async Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default)

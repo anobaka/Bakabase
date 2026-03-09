@@ -9456,7 +9456,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @request POST:/dlsite-work/{workId}/download
      */
     downloadDLsiteWork: (workId: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+      this.request<BootstrapModelsResponseModelsSingletonResponse1SystemString, any>({
         path: `/dlsite-work/${workId}/download`,
         method: "POST",
         format: "json",

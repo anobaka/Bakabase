@@ -157,30 +157,30 @@ function ExHentaiTable({
       case "actions":
         return (
           <div className="flex gap-1">
+            {gallery.localPath && (
+              <Tooltip content={t("resourceSource.exhentai.action.openLocal")}>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => onOpenLocal(gallery.localPath!)}
+                >
+                  <AiOutlineFolderOpen className="text-lg" />
+                </Button>
+              </Tooltip>
+            )}
             {gallery.isDownloaded && gallery.localPath && (
-              <>
-                <Tooltip content={t("resourceSource.exhentai.action.openLocal")}>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => onOpenLocal(gallery.localPath!)}
-                  >
-                    <AiOutlineFolderOpen className="text-lg" />
-                  </Button>
-                </Tooltip>
-                <Tooltip content={t("resourceSource.exhentai.action.deleteLocal")}>
-                  <Button
-                    color="danger"
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => onDeleteLocal(gallery.galleryId, gallery.galleryToken)}
-                  >
-                    <AiOutlineDelete className="text-lg" />
-                  </Button>
-                </Tooltip>
-              </>
+              <Tooltip content={t("resourceSource.exhentai.action.deleteLocal")}>
+                <Button
+                  color="danger"
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => onDeleteLocal(gallery.galleryId, gallery.galleryToken)}
+                >
+                  <AiOutlineDelete className="text-lg" />
+                </Button>
+              </Tooltip>
             )}
             <Button
               color="danger"

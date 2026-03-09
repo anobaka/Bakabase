@@ -76,7 +76,7 @@ interface DLsiteTableColumn {
 }
 
 function DLsiteTable({
-  works, showCover, fetchingDrmKeys, revealedDrmKeys, hasDownloadDir,
+  works, showCover, fetchingDrmKeys, revealedDrmKeys, hasDownloadDir, startingDownloads,
   getDownloadTask, onOpenPage, onOpenLocal, onDownload, onLaunch, onStopDownload,
   onFetchDrmKey, onCopyDrmKey, onToggleHidden, onToggleRevealDrmKey, onDeleteLocal,
 }: {
@@ -85,6 +85,7 @@ function DLsiteTable({
   fetchingDrmKeys: Set<string>;
   revealedDrmKeys: Set<string>;
   hasDownloadDir: boolean;
+  startingDownloads: Set<string>;
   getDownloadTask: (workId: string) => { id?: string; status?: number; percentage?: number; process?: string } | undefined;
   onOpenPage: (workId: string) => void;
   onOpenLocal: (localPath: string) => void;
@@ -117,7 +118,7 @@ function DLsiteTable({
 
   const renderCell = (work: DLsiteWork, columnKey: string) => {
     const downloadTask = getDownloadTask(work.workId);
-    const isDownloading = downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
+    const isDownloading = startingDownloads.has(work.workId) || downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
 
     switch (columnKey) {
       case "cover":
@@ -225,42 +226,45 @@ function DLsiteTable({
                 <FiExternalLink className="text-lg" />
               </Button>
             </Tooltip>
-            {work.isDownloaded && work.localPath ? (
-              <>
-                <Tooltip content={t("resourceSource.dlsite.action.launch")}>
-                  <Button
-                    color="success"
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => onLaunch(work.workId)}
-                  >
-                    <AiOutlinePlayCircle className="text-lg" />
-                  </Button>
-                </Tooltip>
-                <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
-                  <Button
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => onOpenLocal(work.localPath!)}
-                  >
-                    <AiOutlineFolderOpen className="text-lg" />
-                  </Button>
-                </Tooltip>
-                <Tooltip content={t("resourceSource.dlsite.action.deleteLocal")}>
-                  <Button
-                    color="danger"
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => onDeleteLocal(work.workId)}
-                  >
-                    <AiOutlineDelete className="text-lg" />
-                  </Button>
-                </Tooltip>
-              </>
-            ) : isDownloading ? (
+            {work.isDownloaded && work.localPath && (
+              <Tooltip content={t("resourceSource.dlsite.action.launch")}>
+                <Button
+                  color="success"
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => onLaunch(work.workId)}
+                >
+                  <AiOutlinePlayCircle className="text-lg" />
+                </Button>
+              </Tooltip>
+            )}
+            {work.localPath && (
+              <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => onOpenLocal(work.localPath!)}
+                >
+                  <AiOutlineFolderOpen className="text-lg" />
+                </Button>
+              </Tooltip>
+            )}
+            {work.isDownloaded && work.localPath && (
+              <Tooltip content={t("resourceSource.dlsite.action.deleteLocal")}>
+                <Button
+                  color="danger"
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  onPress={() => onDeleteLocal(work.workId)}
+                >
+                  <AiOutlineDelete className="text-lg" />
+                </Button>
+              </Tooltip>
+            )}
+            {isDownloading ? (
               <Tooltip content={
                 <div className="text-center">
                   <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
@@ -281,7 +285,7 @@ function DLsiteTable({
                   <AiOutlineStop className="text-lg text-danger hidden group-hover:block" />
                 </div>
               </Tooltip>
-            ) : (
+            ) : !work.isDownloaded && (
               <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
                 <span>
                   <Button
@@ -374,6 +378,24 @@ export default function DLsiteWorksPage() {
     return allTasks.find((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`);
   };
 
+  // Clear startingDownloads once BTask arrives via SignalR
+  useEffect(() => {
+    if (startingDownloads.size === 0) return;
+    const arrived = new Set<string>();
+    for (const workId of startingDownloads) {
+      if (allTasks.some((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`)) {
+        arrived.add(workId);
+      }
+    }
+    if (arrived.size > 0) {
+      setStartingDownloads((prev) => {
+        const next = new Set(prev);
+        for (const id of arrived) next.delete(id);
+        return next;
+      });
+    }
+  }, [allTasks, startingDownloads]);
+
   const loadWorks = async () => {
     setLoading(true);
     try {
@@ -465,9 +487,28 @@ export default function DLsiteWorksPage() {
   };
 
   const handleDownload = async (workId: string) => {
-    const rsp = await BApi.dlsiteWork.downloadDLsiteWork(workId);
-    if (!rsp.code) {
-      toast.success(t("resourceSource.dlsite.action.downloading"));
+    setStartingDownloads((prev) => new Set(prev).add(workId));
+    try {
+      const rsp = await BApi.dlsiteWork.downloadDLsiteWork(workId);
+      if (rsp.code) {
+        // Only clear loading on error; on success, BTask via SignalR will take over
+        setStartingDownloads((prev) => {
+          const next = new Set(prev);
+          next.delete(workId);
+          return next;
+        });
+      } else if (rsp.data) {
+        // Backend returns LocalPath set during download preparation
+        setWorks((prev) => prev.map((w) =>
+          w.workId === workId ? { ...w, localPath: rsp.data as string } : w,
+        ));
+      }
+    } catch {
+      setStartingDownloads((prev) => {
+        const next = new Set(prev);
+        next.delete(workId);
+        return next;
+      });
     }
   };
 
@@ -485,6 +526,7 @@ export default function DLsiteWorksPage() {
 
   const [fetchingDrmKeys, setFetchingDrmKeys] = useState<Set<string>>(new Set());
   const [revealedDrmKeys, setRevealedDrmKeys] = useState<Set<string>>(new Set());
+  const [startingDownloads, setStartingDownloads] = useState<Set<string>>(new Set());
 
   const handleFetchDrmKey = async (workId: string) => {
     setFetchingDrmKeys((prev) => new Set(prev).add(workId));
@@ -696,6 +738,7 @@ export default function DLsiteWorksPage() {
               fetchingDrmKeys={fetchingDrmKeys}
               revealedDrmKeys={revealedDrmKeys}
               hasDownloadDir={hasDownloadDir}
+              startingDownloads={startingDownloads}
               getDownloadTask={getDownloadTask}
               onOpenPage={handleOpenDLsitePage}
               onOpenLocal={handleOpenLocal}

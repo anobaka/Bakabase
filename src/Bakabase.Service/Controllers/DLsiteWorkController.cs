@@ -80,8 +80,11 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
 
     [HttpPost("{workId}/download")]
     [SwaggerOperation(OperationId = "DownloadDLsiteWork")]
-    public async Task<BaseResponse> Download(string workId)
+    public async Task<SingletonResponse<string>> Download(string workId)
     {
+        // Prepare directory and set LocalPath before starting async task
+        var localPath = await service.PrepareDownloadDirectory(workId);
+
         var taskId = $"{DownloadTaskIdPrefix}{workId}";
         await btm.Start(taskId, () => new BTaskHandlerBuilder
         {
@@ -110,7 +113,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
             RootServiceProvider = HttpContext.RequestServices
         });
-        return BaseResponseBuilder.Ok;
+        return new SingletonResponse<string>(localPath);
     }
 
     [HttpGet("{workId}/drm-key")]
