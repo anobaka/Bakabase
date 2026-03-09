@@ -47,6 +47,7 @@
   "resourceSource.dlsite.label.title": "标题",
   "resourceSource.dlsite.label.circle": "社团",
   "resourceSource.dlsite.label.workType": "作品类型",
+  "resourceSource.dlsite.label.account": "账号",
   "resourceSource.dlsite.label.purchased": "已购入",
   "resourceSource.dlsite.label.downloaded": "已下载",
   "resourceSource.dlsite.label.drmKey": "序列号",
@@ -79,6 +80,8 @@
   "resourceSource.dlsite.noLocalPath": "未设置本地路径",
   "resourceSource.dlsite.notDownloaded": "尚未下载",
   "resourceSource.dlsite.downloadFirst": "请先下载此作品",
+  "resourceSource.dlsite.action.deleteLocal": "删除本地文件",
+  "resourceSource.dlsite.action.deleteLocalConfirm": "确定要删除此作品的本地文件吗？此操作不可撤销。",
 
   "resourceSource.exhentai.title": "ExHentai 画廊",
   "resourceSource.exhentai.description": "从 ExHentai 收藏夹同步的画廊。",
@@ -86,6 +89,11 @@
   "resourceSource.exhentai.label.title": "标题",
   "resourceSource.exhentai.label.category": "分类",
   "resourceSource.exhentai.label.downloaded": "已下载",
+  "resourceSource.exhentai.action.openLocal": "打开本地文件夹",
+  "resourceSource.exhentai.action.deleteLocal": "删除本地文件",
+  "resourceSource.exhentai.action.deleteLocalConfirm": "确定要删除此画廊的本地文件吗？此操作不可撤销。",
+
+  "resourceSource.steam.action.openLocal": "打开本地文件夹",
 
   "menu.otherPlatforms": "其他平台",
   "menu.steam": "Steam",

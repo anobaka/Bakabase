@@ -1036,19 +1036,22 @@ export const ComponentTypeLabel: Record<ComponentType, string> = {
 export enum CookieValidatorTarget {
   BiliBili = 1,
   ExHentai = 2,
-  Pixiv = 3
+  Pixiv = 3,
+  DLsite = 6
 }
 
 export const cookieValidatorTargets = [
   { label: 'BiliBili', value: CookieValidatorTarget.BiliBili },
   { label: 'ExHentai', value: CookieValidatorTarget.ExHentai },
-  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv }
+  { label: 'Pixiv', value: CookieValidatorTarget.Pixiv },
+  { label: 'DLsite', value: CookieValidatorTarget.DLsite }
 ] as const;
 
 export const CookieValidatorTargetLabel: Record<CookieValidatorTarget, string> = {
   [CookieValidatorTarget.BiliBili]: 'BiliBili',
   [CookieValidatorTarget.ExHentai]: 'ExHentai',
-  [CookieValidatorTarget.Pixiv]: 'Pixiv'
+  [CookieValidatorTarget.Pixiv]: 'Pixiv',
+  [CookieValidatorTarget.DLsite]: 'DLsite'
 };
 
 export enum CoverFit {

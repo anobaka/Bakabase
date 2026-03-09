@@ -9,6 +9,7 @@ import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import { FileSystemSelectorModal } from "@/components/FileSystemSelector";
+import { CookieValidatorTarget } from "@/sdk/constants";
 import AccountsConfigModal, {
   type AccountField,
 } from "./AccountsConfigModal";
@@ -34,6 +35,7 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
         label: t("resourceSource.accounts.cookie"),
         placeholder: t("resourceSource.accounts.cookiePlaceholder"),
         type: "textarea" as const,
+        cookieValidatorTarget: CookieValidatorTarget.DLsite,
       },
     ],
     [t],
