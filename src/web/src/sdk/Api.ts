@@ -9437,7 +9437,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     syncDLsiteWorksUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work/sync`;
-
+      
       return baseUrl + path;
     },
 
@@ -9515,6 +9515,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * @description Build URL for scanDLsiteFolders
+     * @name scanDLsiteFoldersUrl
+     */
+    scanDLsiteFoldersUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/dlsite-work/scan-folders`;
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description

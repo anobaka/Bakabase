@@ -1551,6 +1551,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dlsite-work/{workId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["DownloadDLsiteWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/drm-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDLsiteWorkDrmKey"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/launch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["LaunchDLsiteWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/playable-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetDLsiteWorkPlayableFiles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/scan-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ScanDLsiteFolders"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dlsite-work/{workId}/hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDLsiteWorkHidden"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/downloaders/definitions": {
         parameters: {
             query?: never;
@@ -5105,6 +5201,7 @@ export interface components {
             localPath?: string;
             /** Format: int32 */
             resourceId?: number;
+            isHidden: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -6161,6 +6258,7 @@ export interface components {
             /** Format: int32 */
             requestInterval: number;
             defaultPath?: string;
+            scanFolders?: string[];
             namingConvention?: string;
             skipExisting: boolean;
             /** Format: int32 */
@@ -6422,6 +6520,7 @@ export interface components {
             /** Format: int32 */
             requestInterval?: number;
             defaultPath?: string;
+            scanFolders?: string[];
             namingConvention?: string;
             skipExisting?: boolean;
             /** Format: int32 */
@@ -12973,6 +13072,155 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DownloadDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDLsiteWorkDrmKey: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    LaunchDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetDLsiteWorkPlayableFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[System.String]"];
+                };
+            };
+        };
+    };
+    ScanDLsiteFolders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetDLsiteWorkHidden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": boolean;
+                "application/json": boolean;
+                "text/json": boolean;
+                "application/*+json": boolean;
+            };
+        };
         responses: {
             /** @description OK */
             200: {
