@@ -89,8 +89,8 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         await btm.Start(taskId, () => new BTaskHandlerBuilder
         {
             Id = taskId,
-            GetName = () => $"Download DLsite: {workId}",
-            GetDescription = () => $"Downloading work {workId} from DLsite",
+            GetName = () => localizer["BTask_Name_DownloadDLsite", workId],
+            GetDescription = () => localizer["BTask_Description_DownloadDLsite", workId],
             Run = async args =>
             {
                 await using var scope = args.RootServiceProvider.CreateAsyncScope();
@@ -109,7 +109,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             },
             Type = BTaskType.Any,
             ResourceType = BTaskResourceType.Any,
-            IsPersistent = true,
+            IsPersistent = false,
             DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
             RootServiceProvider = HttpContext.RequestServices
         });

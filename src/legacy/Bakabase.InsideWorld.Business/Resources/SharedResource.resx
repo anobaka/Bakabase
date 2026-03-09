@@ -663,6 +663,18 @@ The version of lux is not limited.</value>
   <data name="BTask_Description_SyncDLsite" xml:space="preserve">
     <value>Synchronize works from DLsite purchases</value>
   </data>
+  <data name="BTask_Name_DownloadDLsite" xml:space="preserve">
+    <value>Download DLsite: {0}</value>
+  </data>
+  <data name="BTask_Description_DownloadDLsite" xml:space="preserve">
+    <value>Downloading work {0} from DLsite</value>
+  </data>
+  <data name="BTask_Name_ScanDLsiteFolder" xml:space="preserve">
+    <value>Scan DLsite folders</value>
+  </data>
+  <data name="BTask_Description_ScanDLsiteFolder" xml:space="preserve">
+    <value>Scan configured folders to match DLsite works</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} is not installed. Please install it in the system settings page.</value>
   </data>

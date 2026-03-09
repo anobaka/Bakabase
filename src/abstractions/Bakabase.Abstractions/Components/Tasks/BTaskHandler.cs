@@ -219,7 +219,7 @@ public class BTaskHandler
             }
             catch (Exception e)
             {
-                if (e is OperationCanceledException oce && oce.CancellationToken == _cts.Token)
+                if (e is OperationCanceledException && _cts!.IsCancellationRequested)
                 {
                     await UpdateTask(t => t.Status = BTaskStatus.Cancelled);
                 }

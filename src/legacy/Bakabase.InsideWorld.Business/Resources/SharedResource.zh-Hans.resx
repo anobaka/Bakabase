@@ -663,6 +663,18 @@
   <data name="BTask_Description_SyncDLsite" xml:space="preserve">
     <value>从 DLsite 购买列表同步作品数据</value>
   </data>
+  <data name="BTask_Name_DownloadDLsite" xml:space="preserve">
+    <value>下载 DLsite: {0}</value>
+  </data>
+  <data name="BTask_Description_DownloadDLsite" xml:space="preserve">
+    <value>从 DLsite 下载作品 {0}</value>
+  </data>
+  <data name="BTask_Name_ScanDLsiteFolder" xml:space="preserve">
+    <value>扫描 DLsite 文件夹</value>
+  </data>
+  <data name="BTask_Description_ScanDLsiteFolder" xml:space="preserve">
+    <value>扫描配置的文件夹以匹配 DLsite 作品</value>
+  </data>
   <data name="Dependency_NotInstalled_Message" xml:space="preserve">
     <value>{0} 尚未安装，请前往系统设置页面进行安装。</value>
   </data>

@@ -75,28 +75,182 @@ interface DLsiteTableColumn {
   width?: number;
 }
 
+/** Standalone DRM key cell - manages its own fetch/reveal state to bypass Table memoization */
+function DrmKeyCell({ work, onWorkUpdate }: {
+  work: DLsiteWork;
+  onWorkUpdate: (workId: string, patch: Partial<DLsiteWork>) => void;
+}) {
+  const { t } = useTranslation();
+  const [isFetching, setIsFetching] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
+
+  const handleFetch = async () => {
+    setIsFetching(true);
+    try {
+      const rsp = await BApi.dlsiteWork.getDLsiteWorkDrmKey(work.workId);
+      if (!rsp.code) {
+        onWorkUpdate(work.workId, { drmKey: rsp.data ?? "" });
+      }
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const handleCopy = async (key: string) => {
+    await navigator.clipboard.writeText(key);
+    toast.success(t("resourceSource.dlsite.drmKey.copied"));
+  };
+
+  if (work.drmKey === undefined || work.drmKey === null) {
+    return (
+      <Button
+        className="text-xs"
+        isLoading={isFetching}
+        size="sm"
+        startContent={!isFetching ? <AiOutlineKey className="text-lg" /> : undefined}
+        variant="light"
+        onPress={handleFetch}
+      >
+        {t("resourceSource.dlsite.drmKey.fetch")}
+      </Button>
+    );
+  }
+  if (work.drmKey === "") {
+    return (
+      <span className="text-xs text-default-400">
+        {t("resourceSource.dlsite.drmKey.none")}
+      </span>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs font-mono">
+        {isRevealed ? work.drmKey : "******"}
+      </span>
+      <Tooltip content={isRevealed ? t("resourceSource.dlsite.action.hide") : t("resourceSource.dlsite.action.unhide")}>
+        <Button
+          isIconOnly
+          size="sm"
+          variant="light"
+          onPress={() => setIsRevealed((v) => !v)}
+        >
+          {isRevealed
+            ? <AiOutlineEyeInvisible className="text-lg" />
+            : <AiOutlineEye className="text-lg" />}
+        </Button>
+      </Tooltip>
+      <Tooltip content={t("resourceSource.dlsite.drmKey.copy")}>
+        <Button
+          isIconOnly
+          size="sm"
+          variant="light"
+          onPress={() => handleCopy(work.drmKey!)}
+        >
+          <AiOutlineCopy className="text-lg" />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+}
+
+/** Standalone download button - subscribes to BTask store directly to bypass Table memoization */
+function DownloadButton({ work, hasDownloadDir, onSetWorksLocalPath }: {
+  work: DLsiteWork;
+  hasDownloadDir: boolean;
+  onSetWorksLocalPath: (workId: string, localPath: string) => void;
+}) {
+  const { t } = useTranslation();
+  const downloadTask = useBTasksStore((s) => s.tasks.find((task) => task.id === `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`));
+  const [isStarting, setIsStarting] = useState(false);
+
+  // Clear optimistic state once BTask arrives
+  useEffect(() => {
+    if (isStarting && downloadTask) {
+      setIsStarting(false);
+    }
+  }, [isStarting, downloadTask]);
+
+  const isDownloading = isStarting || downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
+
+  const handleDownload = async () => {
+    setIsStarting(true);
+    try {
+      const rsp = await BApi.dlsiteWork.downloadDLsiteWork(work.workId);
+      if (rsp.code) {
+        setIsStarting(false);
+      } else if (rsp.data) {
+        onSetWorksLocalPath(work.workId, rsp.data as string);
+      }
+    } catch {
+      setIsStarting(false);
+    }
+  };
+
+  const handleStop = async () => {
+    const taskId = `${DOWNLOAD_TASK_ID_PREFIX}${work.workId}`;
+    await BApi.backgroundTask.stopBackgroundTask(taskId);
+  };
+
+  if (isDownloading) {
+    return (
+      <Tooltip content={
+        <div className="text-center">
+          <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
+          <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
+        </div>
+      }>
+        <div
+          className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
+          onClick={handleStop}
+        >
+          <CircularProgress
+            className="group-hover:hidden"
+            color="primary"
+            showValueLabel
+            size="sm"
+            value={downloadTask?.percentage ?? 0}
+          />
+          <AiOutlineStop className="text-lg text-danger hidden group-hover:block" />
+        </div>
+      </Tooltip>
+    );
+  }
+
+  if (work.isDownloaded) return null;
+
+  return (
+    <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
+      <span>
+        <Button
+          color="warning"
+          isDisabled={!hasDownloadDir}
+          isIconOnly
+          size="sm"
+          variant="light"
+          onPress={handleDownload}
+        >
+          <AiOutlineDownload className="text-lg" />
+        </Button>
+      </span>
+    </Tooltip>
+  );
+}
+
 function DLsiteTable({
-  works, showCover, fetchingDrmKeys, revealedDrmKeys, hasDownloadDir, startingDownloads,
-  getDownloadTask, onOpenPage, onOpenLocal, onDownload, onLaunch, onStopDownload,
-  onFetchDrmKey, onCopyDrmKey, onToggleHidden, onToggleRevealDrmKey, onDeleteLocal,
+  works, showCover, hasDownloadDir,
+  onOpenPage, onOpenLocal, onLaunch,
+  onToggleHidden, onDeleteLocal, onWorkUpdate, onSetWorksLocalPath,
 }: {
   works: DLsiteWork[];
   showCover: boolean;
-  fetchingDrmKeys: Set<string>;
-  revealedDrmKeys: Set<string>;
   hasDownloadDir: boolean;
-  startingDownloads: Set<string>;
-  getDownloadTask: (workId: string) => { id?: string; status?: number; percentage?: number; process?: string } | undefined;
   onOpenPage: (workId: string) => void;
   onOpenLocal: (localPath: string) => void;
-  onDownload: (workId: string) => void;
   onLaunch: (workId: string) => void;
-  onStopDownload: (workId: string) => void;
-  onFetchDrmKey: (workId: string) => void;
-  onCopyDrmKey: (key: string) => void;
   onToggleHidden: (workId: string, isHidden: boolean) => void;
-  onToggleRevealDrmKey: (workId: string) => void;
   onDeleteLocal: (workId: string) => void;
+  onWorkUpdate: (workId: string, patch: Partial<DLsiteWork>) => void;
+  onSetWorksLocalPath: (workId: string, localPath: string) => void;
 }) {
   const { t } = useTranslation();
 
@@ -117,9 +271,6 @@ function DLsiteTable({
   }, [showCover, t]);
 
   const renderCell = (work: DLsiteWork, columnKey: string) => {
-    const downloadTask = getDownloadTask(work.workId);
-    const isDownloading = startingDownloads.has(work.workId) || downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
-
     switch (columnKey) {
       case "cover":
         return work.coverUrl ? (
@@ -160,59 +311,7 @@ function DLsiteTable({
           </Chip>
         ) : "-";
       case "drmKey":
-        if (work.drmKey === undefined || work.drmKey === null) {
-          const isFetching = fetchingDrmKeys.has(work.workId);
-          return (
-            <Button
-              className="text-xs"
-              isLoading={isFetching}
-              size="sm"
-              startContent={!isFetching ? <AiOutlineKey className="text-lg" /> : undefined}
-              variant="light"
-              onPress={() => onFetchDrmKey(work.workId)}
-            >
-              {t("resourceSource.dlsite.drmKey.fetch")}
-            </Button>
-          );
-        }
-        if (work.drmKey === "") {
-          return (
-            <span className="text-xs text-default-400">
-              {t("resourceSource.dlsite.drmKey.none")}
-            </span>
-          );
-        }
-        return (
-          <div className="flex items-center gap-1">
-            <span className="text-xs font-mono">
-              {revealedDrmKeys.has(work.workId)
-                ? work.drmKey
-                : "******"}
-            </span>
-            <Tooltip content={revealedDrmKeys.has(work.workId) ? t("resourceSource.dlsite.action.hide") : t("resourceSource.dlsite.action.unhide")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={() => onToggleRevealDrmKey(work.workId)}
-              >
-                {revealedDrmKeys.has(work.workId)
-                  ? <AiOutlineEyeInvisible className="text-lg" />
-                  : <AiOutlineEye className="text-lg" />}
-              </Button>
-            </Tooltip>
-            <Tooltip content={t("resourceSource.dlsite.drmKey.copy")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={() => onCopyDrmKey(work.drmKey!)}
-              >
-                <AiOutlineCopy className="text-lg" />
-              </Button>
-            </Tooltip>
-          </div>
-        );
+        return <DrmKeyCell work={work} onWorkUpdate={onWorkUpdate} />;
       case "actions":
         return (
           <div className="flex gap-1">
@@ -264,43 +363,7 @@ function DLsiteTable({
                 </Button>
               </Tooltip>
             )}
-            {isDownloading ? (
-              <Tooltip content={
-                <div className="text-center">
-                  <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
-                  <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
-                </div>
-              }>
-                <div
-                  className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
-                  onClick={() => onStopDownload(work.workId)}
-                >
-                  <CircularProgress
-                    className="group-hover:hidden"
-                    color="primary"
-                    showValueLabel
-                    size="sm"
-                    value={downloadTask?.percentage ?? 0}
-                  />
-                  <AiOutlineStop className="text-lg text-danger hidden group-hover:block" />
-                </div>
-              </Tooltip>
-            ) : !work.isDownloaded && (
-              <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
-                <span>
-                  <Button
-                    color="warning"
-                    isDisabled={!hasDownloadDir}
-                    isIconOnly
-                    size="sm"
-                    variant="light"
-                    onPress={() => onDownload(work.workId)}
-                  >
-                    <AiOutlineDownload className="text-lg" />
-                  </Button>
-                </span>
-              </Tooltip>
-            )}
+            <DownloadButton work={work} hasDownloadDir={hasDownloadDir} onSetWorksLocalPath={onSetWorksLocalPath} />
             <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
               <Button
                 isIconOnly
@@ -373,30 +436,6 @@ export default function DLsiteWorksPage() {
   const hasDownloadDir = !dlsiteOptionsInitialized || !!downloadDir;
   const scanFolders = dlsiteOptions?.scanFolders || [];
   const hasScanFolders = scanFolders.length > 0;
-
-  const [startingDownloads, setStartingDownloads] = useState<Set<string>>(new Set());
-
-  const getDownloadTask = (workId: string) => {
-    return allTasks.find((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`);
-  };
-
-  // Clear startingDownloads once BTask arrives via SignalR
-  useEffect(() => {
-    if (startingDownloads.size === 0) return;
-    const arrived = new Set<string>();
-    for (const workId of startingDownloads) {
-      if (allTasks.some((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`)) {
-        arrived.add(workId);
-      }
-    }
-    if (arrived.size > 0) {
-      setStartingDownloads((prev) => {
-        const next = new Set(prev);
-        for (const id of arrived) next.delete(id);
-        return next;
-      });
-    }
-  }, [allTasks, startingDownloads]);
 
   const loadWorks = async () => {
     setLoading(true);
@@ -488,32 +527,6 @@ export default function DLsiteWorksPage() {
     }
   };
 
-  const handleDownload = async (workId: string) => {
-    setStartingDownloads((prev) => new Set(prev).add(workId));
-    try {
-      const rsp = await BApi.dlsiteWork.downloadDLsiteWork(workId);
-      if (rsp.code) {
-        // Only clear loading on error; on success, BTask via SignalR will take over
-        setStartingDownloads((prev) => {
-          const next = new Set(prev);
-          next.delete(workId);
-          return next;
-        });
-      } else if (rsp.data) {
-        // Backend returns LocalPath set during download preparation
-        setWorks((prev) => prev.map((w) =>
-          w.workId === workId ? { ...w, localPath: rsp.data as string } : w,
-        ));
-      }
-    } catch {
-      setStartingDownloads((prev) => {
-        const next = new Set(prev);
-        next.delete(workId);
-        return next;
-      });
-    }
-  };
-
   const handleLaunch = async (workId: string) => {
     const rsp = await BApi.dlsiteWork.launchDLsiteWork(workId);
     if (rsp.code) {
@@ -521,36 +534,13 @@ export default function DLsiteWorksPage() {
     }
   };
 
-  const handleStopDownload = async (workId: string) => {
-    const taskId = `${DOWNLOAD_TASK_ID_PREFIX}${workId}`;
-    await BApi.backgroundTask.stopBackgroundTask(taskId);
-  };
+  const handleWorkUpdate = useCallback((workId: string, patch: Partial<DLsiteWork>) => {
+    setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, ...patch } : w));
+  }, []);
 
-  const [fetchingDrmKeys, setFetchingDrmKeys] = useState<Set<string>>(new Set());
-  const [revealedDrmKeys, setRevealedDrmKeys] = useState<Set<string>>(new Set());
-
-  const handleFetchDrmKey = async (workId: string) => {
-    setFetchingDrmKeys((prev) => new Set(prev).add(workId));
-    try {
-      const rsp = await BApi.dlsiteWork.getDLsiteWorkDrmKey(workId);
-      if (!rsp.code) {
-        setWorks((prev) =>
-          prev.map((w) => w.workId === workId ? { ...w, drmKey: rsp.data ?? "" } : w),
-        );
-      }
-    } finally {
-      setFetchingDrmKeys((prev) => {
-        const next = new Set(prev);
-        next.delete(workId);
-        return next;
-      });
-    }
-  };
-
-  const handleCopyDrmKey = async (key: string) => {
-    await navigator.clipboard.writeText(key);
-    toast.success(t("resourceSource.dlsite.drmKey.copied"));
-  };
+  const handleSetWorksLocalPath = useCallback((workId: string, localPath: string) => {
+    setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, localPath } : w));
+  }, []);
 
   const handleDeleteLocal = async (workId: string) => {
     if (!confirm(t("resourceSource.dlsite.action.deleteLocalConfirm"))) return;
@@ -736,31 +726,14 @@ export default function DLsiteWorksPage() {
             <DLsiteTable
               works={filteredWorks}
               showCover={showCover}
-              fetchingDrmKeys={fetchingDrmKeys}
-              revealedDrmKeys={revealedDrmKeys}
               hasDownloadDir={hasDownloadDir}
-              startingDownloads={startingDownloads}
-              getDownloadTask={getDownloadTask}
               onOpenPage={handleOpenDLsitePage}
               onOpenLocal={handleOpenLocal}
-              onDownload={handleDownload}
               onLaunch={handleLaunch}
-              onStopDownload={handleStopDownload}
-              onFetchDrmKey={handleFetchDrmKey}
-              onCopyDrmKey={handleCopyDrmKey}
               onToggleHidden={handleToggleHidden}
               onDeleteLocal={handleDeleteLocal}
-              onToggleRevealDrmKey={(workId) => {
-                setRevealedDrmKeys((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(workId)) {
-                    next.delete(workId);
-                  } else {
-                    next.add(workId);
-                  }
-                  return next;
-                });
-              }}
+              onWorkUpdate={handleWorkUpdate}
+              onSetWorksLocalPath={handleSetWorksLocalPath}
             />
           )}
         </>
