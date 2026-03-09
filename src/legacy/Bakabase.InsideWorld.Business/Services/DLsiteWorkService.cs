@@ -707,7 +707,7 @@ public class DLsiteWorkService(
 
     /// <summary>
     /// Extracts a ZIP file using .NET's ZipFile with automatic encoding detection.
-    /// If the ZIP uses UTF-8 flag (bit 11), uses UTF-8; otherwise falls back to Shift-JIS (CP932).
+    /// Tries UTF-8, Shift-JIS, GBK, Big5 and picks the encoding that produces valid-looking entry names.
     /// This avoids 7z's inability to handle -mcp on non-Windows platforms.
     /// </summary>
     private void ExtractZipWithEncodingDetection(string zipPath, string outputDir)
@@ -718,34 +718,101 @@ public class DLsiteWorkService(
         ZipFile.ExtractToDirectory(zipPath, outputDir, encoding, overwriteFiles: true);
     }
 
-    /// <summary>
-    /// Detects the entry name encoding of a ZIP file by checking the UTF-8 flag (bit 11)
-    /// in the first local file header. If set, returns UTF-8; otherwise Shift-JIS (CP932).
-    /// </summary>
+    private static readonly Lazy<Encoding[]> EncodingCandidates = new(() =>
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return
+        [
+            Encoding.UTF8,
+            Encoding.GetEncoding(932), // Shift-JIS (Japanese)
+            Encoding.GetEncoding(936), // GBK (Simplified Chinese)
+            Encoding.GetEncoding(950)  // Big5 (Traditional Chinese)
+        ];
+    });
+
     private static Encoding DetectZipEncoding(string zipPath)
+    {
+        // If UTF-8 flag (bit 11) is set in the ZIP header, use UTF-8 directly
+        if (IsUtf8FlagSet(zipPath))
+        {
+            return Encoding.UTF8;
+        }
+
+        // Try each candidate encoding; pick the first one with no garbled entry names
+        var candidates = EncodingCandidates.Value;
+        foreach (var encoding in candidates)
+        {
+            try
+            {
+                using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Read, encoding);
+                var allClean = true;
+                foreach (var entry in archive.Entries)
+                {
+                    if (string.IsNullOrEmpty(entry.Name))
+                    {
+                        continue;
+                    }
+
+                    if (HasGarbledCharacters(entry.Name))
+                    {
+                        allClean = false;
+                        break;
+                    }
+                }
+
+                if (allClean)
+                {
+                    return encoding;
+                }
+            }
+            catch
+            {
+                // This encoding failed to open the archive, try next
+            }
+        }
+
+        // Fallback to Shift-JIS (most common for DLsite)
+        return Encoding.GetEncoding(932);
+    }
+
+    private static bool IsUtf8FlagSet(string zipPath)
     {
         try
         {
             using var fs = File.OpenRead(zipPath);
             using var reader = new BinaryReader(fs);
-
-            // Read the local file header signature (0x04034b50)
             if (fs.Length > 30 && reader.ReadUInt32() == 0x04034b50)
             {
                 reader.ReadUInt16(); // version needed to extract
                 var flags = reader.ReadUInt16();
-                if ((flags & (1 << 11)) != 0)
-                {
-                    return Encoding.UTF8;
-                }
+                return (flags & (1 << 11)) != 0;
             }
         }
         catch
         {
-            // Fall through to default
+            // Ignore
         }
 
-        // Default to Shift-JIS for DLsite (Japanese content)
-        return Encoding.GetEncoding(932);
+        return false;
+    }
+
+    private static bool HasGarbledCharacters(string text)
+    {
+        foreach (var c in text)
+        {
+            // Unicode replacement character - definite sign of decoding failure
+            if (c == '\uFFFD')
+            {
+                return true;
+            }
+
+            // Latin Extended characters that commonly appear when CJK bytes are misread as Latin-1
+            if (c is (>= '\u00C0' and <= '\u00FF') or (>= '\u0100' and <= '\u024F'))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
