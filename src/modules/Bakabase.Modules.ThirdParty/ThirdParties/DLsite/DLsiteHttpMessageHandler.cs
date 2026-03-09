@@ -13,4 +13,12 @@ public class DLsiteHttpMessageHandler<TDLsiteOptions>(
     IThirdPartyCookieContainer cookieContainer)
     : BakabaseOptionsBasedThirdPartyHttpMessageHandler<TDLsiteOptions>(logger, ThirdPartyId.DLsite, optionsManager,
         webProxy, cookieContainer)
-    where TDLsiteOptions : class, IThirdPartyHttpClientOptions, new();
+    where TDLsiteOptions : class, IThirdPartyHttpClientOptions, new()
+{
+    protected override void ConfigureHandler()
+    {
+        // Disable auto-redirect so DLsiteClient can follow redirects manually
+        // and carry cookies across different DLsite subdomains.
+        AllowAutoRedirect = false;
+    }
+}

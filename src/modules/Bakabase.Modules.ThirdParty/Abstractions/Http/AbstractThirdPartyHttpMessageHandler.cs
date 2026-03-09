@@ -5,6 +5,22 @@ using Microsoft.Extensions.Options;
 
 namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 {
+    /// <summary>
+    /// Non-generic holder for HttpRequestMessage.Options keys used by third-party handlers.
+    /// </summary>
+    public static class ThirdPartyRequestOptions
+    {
+        /// <summary>
+        /// Per-request account key. When set, the handler uses this instead of "default" for the cookie container.
+        /// </summary>
+        public static readonly HttpRequestOptionsKey<string> AccountKey = new("ThirdParty.AccountKey");
+
+        /// <summary>
+        /// Per-request cookie string. When set, the handler uses this instead of Options.Cookie.
+        /// </summary>
+        public static readonly HttpRequestOptionsKey<string> Cookie = new("ThirdParty.Cookie");
+    }
+
     public abstract class AbstractThirdPartyHttpMessageHandler<TOptions> : HttpClientHandler
         where TOptions : class, IThirdPartyHttpClientOptions, new()
     {
@@ -33,6 +49,15 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             // Disable automatic cookie handling since we manage cookies manually via headers
             UseCookies = false;
             _threadsSemaphore = new SemaphoreSlim(options.MaxConcurrency, int.MaxValue);
+            ConfigureHandler();
+        }
+
+        /// <summary>
+        /// Override to configure HttpClientHandler properties (e.g. AllowAutoRedirect).
+        /// Called at the end of the constructor.
+        /// </summary>
+        protected virtual void ConfigureHandler()
+        {
         }
 
         protected TOptions Options
@@ -82,6 +107,13 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             return Task.CompletedTask;
         }
 
+        private (string accountKey, string? cookie) GetRequestCookieInfo(HttpRequestMessage request)
+        {
+            request.Options.TryGetValue(ThirdPartyRequestOptions.AccountKey, out var accountKey);
+            request.Options.TryGetValue(ThirdPartyRequestOptions.Cookie, out var cookie);
+            return (accountKey ?? "default", cookie ?? Options.Cookie);
+        }
+
         private void _populateRequest(HttpRequestMessage request)
         {
             if (Options.UserAgent.IsNotEmpty())
@@ -93,18 +125,19 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
             if (!request.Headers.Contains("Cookie"))
             {
+                var (accountKey, cookie) = GetRequestCookieInfo(request);
                 if (_cookieContainer != null && request.RequestUri != null)
                 {
                     var cookieHeader = _cookieContainer.GetCookieHeader(
-                        $"{CookieContainerKeyPrefix}default", Options.Cookie, request.RequestUri);
+                        $"{CookieContainerKeyPrefix}{accountKey}", cookie, request.RequestUri);
                     if (cookieHeader != null)
                     {
                         request.Headers.Add("Cookie", cookieHeader);
                     }
                 }
-                else if (Options.Cookie.IsNotEmpty())
+                else if (cookie.IsNotEmpty())
                 {
-                    request.Headers.Add("Cookie", Options.Cookie);
+                    request.Headers.Add("Cookie", cookie);
                 }
             }
 
@@ -126,8 +159,9 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         {
             if (_cookieContainer != null && request.RequestUri != null)
             {
+                var (accountKey, cookie) = GetRequestCookieInfo(request);
                 _cookieContainer.ProcessResponse(
-                    $"{CookieContainerKeyPrefix}default", Options.Cookie, request.RequestUri, response);
+                    $"{CookieContainerKeyPrefix}{accountKey}", cookie, request.RequestUri, response);
             }
         }
 

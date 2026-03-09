@@ -181,6 +181,13 @@ public class DLsiteWorkService(
                     if (string.IsNullOrEmpty(work.Workno)) continue;
                     if (allWorks.ContainsKey(work.Workno)) continue;
 
+                    DateTime? salesDate = null;
+                    if (salesDateMap.TryGetValue(work.Workno, out var salesDateStr) &&
+                        DateTime.TryParse(salesDateStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+                    {
+                        salesDate = parsedDate;
+                    }
+
                     var dbModel = new DLsiteWorkDbModel
                     {
                         WorkId = work.Workno,
@@ -189,6 +196,7 @@ public class DLsiteWorkService(
                         WorkType = work.WorkType,
                         CoverUrl = work.WorkFiles?.Main,
                         Account = account.Name,
+                        SalesDate = salesDate,
                         IsPurchased = true,
                         MetadataJson = JsonConvert.SerializeObject(work),
                         MetadataFetchedAt = DateTime.Now,
@@ -389,8 +397,10 @@ public class DLsiteWorkService(
                     await onProgress(96, Path.GetFileName(file));
                 }
 
-                // Use codepage 932 (Shift-JIS) for Japanese filenames
-                await sevenZipService.Extract(file, extractDir, ct, codePage: 932);
+                // Use codepage 932 (Shift-JIS) for Japanese filenames in ZIP/LZH archives.
+                // 7z and RAR store filenames in UTF-8 natively, so -mcp is not needed.
+                var codePage = ext is ".zip" or ".lzh" ? 932 : (int?)null;
+                await sevenZipService.Extract(file, extractDir, ct, codePage: codePage);
                 logger.LogInformation("Extracted: {Path}", file);
             }
         }

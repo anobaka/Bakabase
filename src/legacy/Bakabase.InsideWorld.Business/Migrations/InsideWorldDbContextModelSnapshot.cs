@@ -145,6 +145,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<int?>("ResourceId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("SalesDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .HasColumnType("TEXT");
 

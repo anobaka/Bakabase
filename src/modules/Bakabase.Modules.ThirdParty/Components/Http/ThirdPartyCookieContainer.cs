@@ -41,15 +41,76 @@ public class ThirdPartyCookieContainer : IThirdPartyCookieContainer
         if (!response.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders)) return;
 
         var container = GetOrCreate(key, staticCookie, requestUri);
+        var baseDomain = GetBaseDomain(requestUri);
+
         foreach (var setCookie in setCookieHeaders)
         {
             try
             {
+                // Parse the cookie name from the Set-Cookie header
+                var cookieName = ExtractCookieName(setCookie);
+                if (cookieName != null)
+                {
+                    // Remove any existing cookies with the same name from domains that have
+                    // a containment relationship with the request domain.
+                    // e.g., if Set-Cookie comes from play.dlsite.com with name "foo",
+                    // remove "foo" from .dlsite.com (and vice versa) to prevent duplicates.
+                    RemoveCookiesByNameFromRelatedDomains(container, cookieName, requestUri, baseDomain);
+                }
+
                 container.SetCookies(requestUri, setCookie);
             }
             catch
             {
                 // Skip malformed Set-Cookie headers
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extracts the cookie name from a Set-Cookie header value.
+    /// </summary>
+    private static string? ExtractCookieName(string setCookieHeader)
+    {
+        var eqIndex = setCookieHeader.IndexOf('=');
+        if (eqIndex <= 0) return null;
+        return setCookieHeader[..eqIndex].Trim();
+    }
+
+    /// <summary>
+    /// Removes cookies with the given name from domains that have a containment relationship
+    /// with the request domain. Two domains have a containment relationship if they share
+    /// the same base domain (e.g., .dlsite.com and play.dlsite.com).
+    /// </summary>
+    private static void RemoveCookiesByNameFromRelatedDomains(
+        CookieContainer container, string cookieName, Uri requestUri, string baseDomain)
+    {
+        try
+        {
+            // Check cookies at the base domain level (covers .dlsite.com)
+            var baseDomainUri = new Uri($"{requestUri.Scheme}://{baseDomain}");
+            ExpireCookieByName(container, baseDomainUri, cookieName);
+
+            // Also check cookies at the request host level
+            ExpireCookieByName(container, requestUri, cookieName);
+        }
+        catch
+        {
+            // Best effort - don't fail if cleanup has issues
+        }
+    }
+
+    /// <summary>
+    /// Expires (removes) a cookie by name from a specific URI in the container.
+    /// </summary>
+    private static void ExpireCookieByName(CookieContainer container, Uri uri, string cookieName)
+    {
+        var cookies = container.GetCookies(uri);
+        foreach (System.Net.Cookie cookie in cookies)
+        {
+            if (string.Equals(cookie.Name, cookieName, StringComparison.OrdinalIgnoreCase))
+            {
+                cookie.Expired = true;
             }
         }
     }

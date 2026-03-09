@@ -27,11 +27,9 @@ public class DLsiteAuthException(string message) : Exception(message);
 /// </summary>
 public class DLsiteDownloadLinkExpiredException(string message) : Exception(message);
 
-public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IThirdPartyCookieContainer cookieContainer)
+public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
-    private const string CookieContainerKeyPrefix = "DLsite:";
-    private static readonly Uri DLsiteSeedUri = new("https://www.dlsite.com");
     protected override string HttpClientName => InternalOptions.HttpClientNames.DLsite;
 
     /// <summary>
@@ -205,19 +203,13 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
     #region Download API
 
-    // HttpClient with auto-redirect disabled for manual cookie forwarding
-    private HttpClient? _noRedirectHttpClient;
-    private HttpClient NoRedirectHttpClient => _noRedirectHttpClient ??= new HttpClient(new HttpClientHandler
-    {
-        AllowAutoRedirect = false,
-        AutomaticDecompression = DecompressionMethods.All
-    });
-
     private static readonly Regex DrmKeyPattern = new(@"\b[A-Z0-9-]{16,}\b", RegexOptions.Compiled);
 
     /// <summary>
-    /// Sends a single GET request with cookie container, no auto-redirect.
-    /// Accumulates Set-Cookie headers from responses into the container.
+    /// Sends a single GET request using the DLsite named HttpClient (with handler-managed
+    /// throttling, proxy, and cookie container). Account key and cookie are passed via
+    /// HttpRequestMessage.Options so the handler uses the correct per-account container.
+    /// AllowAutoRedirect is disabled in DLsiteHttpMessageHandler.
     /// </summary>
     private async Task<HttpResponseMessage> SendAsync(
         string cookie,
@@ -227,21 +219,12 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
         Action<HttpRequestMessage>? configureRequest = null)
     {
-        var requestUri = new Uri(url);
-        var containerKey = $"{CookieContainerKeyPrefix}{accountKey}";
-
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        var cookieHeader = cookieContainer.GetCookieHeader(containerKey, cookie, requestUri);
-        if (!string.IsNullOrEmpty(cookieHeader))
-        {
-            request.Headers.Add("Cookie", cookieHeader);
-        }
-        request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
+        request.Options.Set(ThirdPartyRequestOptions.AccountKey, accountKey);
+        request.Options.Set(ThirdPartyRequestOptions.Cookie, cookie);
         configureRequest?.Invoke(request);
 
-        var response = await NoRedirectHttpClient.SendAsync(request, completionOption, ct);
-        cookieContainer.ProcessResponse(containerKey, cookie, requestUri, response);
-        return response;
+        return await HttpClient.SendAsync(request, completionOption, ct);
     }
 
     private static string ResolveLocation(HttpResponseMessage response, string currentUrl)
