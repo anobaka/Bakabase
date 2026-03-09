@@ -9,7 +9,8 @@ namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 public class DLsiteHttpMessageHandler<TDLsiteOptions>(
     ThirdPartyHttpRequestLogger logger,
     AspNetCoreOptionsManager<TDLsiteOptions> optionsManager,
-    BakabaseWebProxy webProxy)
+    BakabaseWebProxy webProxy,
+    IThirdPartyCookieContainer cookieContainer)
     : BakabaseOptionsBasedThirdPartyHttpMessageHandler<TDLsiteOptions>(logger, ThirdPartyId.DLsite, optionsManager,
-        webProxy)
+        webProxy, cookieContainer)
     where TDLsiteOptions : class, IThirdPartyHttpClientOptions, new();

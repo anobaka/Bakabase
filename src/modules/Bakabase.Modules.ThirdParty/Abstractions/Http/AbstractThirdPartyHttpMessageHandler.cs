@@ -9,6 +9,7 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
         where TOptions : class, IThirdPartyHttpClientOptions, new()
     {
         private readonly ThirdPartyHttpRequestLogger _logger;
+        private readonly IThirdPartyCookieContainer? _cookieContainer;
         private ThirdPartyId ThirdPartyId { get; }
         private int _threadDebts;
         private DateTime _prevRequestDt;
@@ -17,10 +18,16 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
 
         private TOptions _options;
 
-        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy, TOptions options)
+        /// <summary>
+        /// Cookie container key prefix for this handler. Used to scope containers per source.
+        /// </summary>
+        protected string CookieContainerKeyPrefix => $"{ThirdPartyId}:";
+
+        protected AbstractThirdPartyHttpMessageHandler(ThirdPartyHttpRequestLogger logger, ThirdPartyId thirdPartyId, BakabaseWebProxy webProxy, TOptions options, IThirdPartyCookieContainer? cookieContainer = null)
         {
             _logger = logger;
             ThirdPartyId = thirdPartyId;
+            _cookieContainer = cookieContainer;
             _options = options;
             Proxy = webProxy;
             // Disable automatic cookie handling since we manage cookies manually via headers
@@ -84,9 +91,21 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                     Options.UserAgent ?? IThirdPartyHttpClientOptions.DefaultUserAgent);
             }
 
-            if (Options.Cookie.IsNotEmpty())
+            if (!request.Headers.Contains("Cookie"))
             {
-                request.Headers.Add("Cookie", Options.Cookie);
+                if (_cookieContainer != null && request.RequestUri != null)
+                {
+                    var cookieHeader = _cookieContainer.GetCookieHeader(
+                        $"{CookieContainerKeyPrefix}default", Options.Cookie, request.RequestUri);
+                    if (cookieHeader != null)
+                    {
+                        request.Headers.Add("Cookie", cookieHeader);
+                    }
+                }
+                else if (Options.Cookie.IsNotEmpty())
+                {
+                    request.Headers.Add("Cookie", Options.Cookie);
+                }
             }
 
             if (Options.Referer.IsNotEmpty())
@@ -100,6 +119,15 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
                 {
                     request.Headers.Add(k, v);
                 }
+            }
+        }
+
+        private void _processResponse(HttpRequestMessage request, HttpResponseMessage response)
+        {
+            if (_cookieContainer != null && request.RequestUri != null)
+            {
+                _cookieContainer.ProcessResponse(
+                    $"{CookieContainerKeyPrefix}default", Options.Cookie, request.RequestUri, response);
             }
         }
 
@@ -138,8 +166,10 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             try
             {
                 _prevRequestDt = DateTime.Now;
-                return _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
+                var response = _logger.Capture(ThirdPartyId, () => base.Send(request, cancellationToken),
                     request.RequestUri?.ToString(), ct: cancellationToken);
+                _processResponse(request, response);
+                return response;
             }
             finally
             {
@@ -167,9 +197,11 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             try
             {
                 _prevRequestDt = DateTime.Now;
-                return await _logger.CaptureAsync(ThirdPartyId,
+                var response = await _logger.CaptureAsync(ThirdPartyId,
                     async () => await base.SendAsync(request, cancellationToken), request.RequestUri?.ToString(),
                     ct: cancellationToken);
+                _processResponse(request, response);
+                return response;
             }
             finally
             {

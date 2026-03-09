@@ -34,7 +34,7 @@ public class DLsiteWorkService(
     /// Finds the cookie for the account associated with a work.
     /// Falls back to the first account with a cookie if the associated account is not found.
     /// </summary>
-    private string GetCookieForWork(DLsiteWorkDbModel work)
+    private (string Cookie, string AccountKey) GetCookieForWork(DLsiteWorkDbModel work)
     {
         var accounts = DLsiteOptionsValue.Accounts;
         if (accounts == null || accounts.Count == 0)
@@ -49,13 +49,17 @@ public class DLsiteWorkService(
                 a.Name == work.Account && !string.IsNullOrEmpty(a.Cookie));
             if (account != null)
             {
-                return account.Cookie!;
+                return (account.Cookie!, account.Name);
             }
         }
 
         // Fallback to first account with cookie
         var fallback = accounts.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie));
-        return fallback?.Cookie ?? throw new Exception("No DLsite account with cookie configured");
+        if (fallback == null)
+        {
+            throw new Exception("No DLsite account with cookie configured");
+        }
+        return (fallback.Cookie!, fallback.Name);
     }
     private static readonly HashSet<string> ExecutableExtensions = [".exe"];
     private static readonly HashSet<string> ImageExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"];
@@ -274,7 +278,7 @@ public class DLsiteWorkService(
             throw new Exception($"Work {workId} not found");
         }
 
-        var cookie = GetCookieForWork(work);
+        var (cookie, accountKey) = GetCookieForWork(work);
 
         var defaultPath = DLsiteOptionsValue.DefaultPath;
         if (string.IsNullOrEmpty(defaultPath))
@@ -290,7 +294,7 @@ public class DLsiteWorkService(
             await onProgress(0, $"[{workId}] 0%");
         }
 
-        var downloadInfo = await ResolveDownloadWithRetry(cookie, workId, ct);
+        var downloadInfo = await ResolveDownloadWithRetry(cookie, accountKey, workId, ct);
         var links = downloadInfo.Links;
         if (links.Count == 0)
         {
@@ -333,6 +337,7 @@ public class DLsiteWorkService(
                         cookie,
                         link.Url,
                         destPath,
+                        accountKey,
                         (dl, total) =>
                         {
                             var fileProgress = total > 0 ? (int)(dl * 100 / total) : 0;
@@ -350,7 +355,7 @@ public class DLsiteWorkService(
                         workId, i, retry + 1);
 
                     // Re-resolve to get fresh download URLs
-                    downloadInfo = await ResolveDownloadWithRetry(cookie, workId, ct);
+                    downloadInfo = await ResolveDownloadWithRetry(cookie, accountKey, workId, ct);
                     links = downloadInfo.Links;
 
                     if (i < links.Count)
@@ -404,11 +409,11 @@ public class DLsiteWorkService(
         logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, work.LocalPath);
     }
 
-    private async Task<DLsiteDownloadInfo> ResolveDownloadWithRetry(string cookie, string workId, CancellationToken ct)
+    private async Task<DLsiteDownloadInfo> ResolveDownloadWithRetry(string cookie, string accountKey, string workId, CancellationToken ct)
     {
         try
         {
-            return await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
+            return await dlsiteClient.ResolveDownloadAsync(cookie, workId, accountKey, ct);
         }
         catch (DLsiteAuthException)
         {
@@ -417,7 +422,7 @@ public class DLsiteWorkService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Failed to resolve download links for {WorkId}, retrying once", workId);
-            return await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
+            return await dlsiteClient.ResolveDownloadAsync(cookie, workId, accountKey, ct);
         }
     }
 
@@ -435,9 +440,9 @@ public class DLsiteWorkService(
             return work.DrmKey;
         }
 
-        var cookie = GetCookieForWork(work);
+        var (cookie, accountKey) = GetCookieForWork(work);
 
-        var downloadInfo = await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
+        var downloadInfo = await dlsiteClient.ResolveDownloadAsync(cookie, workId, accountKey, ct);
 
         // Save to DB (empty string means no DRM, non-empty means DRM key found)
         work.DrmKey = downloadInfo.DrmKey ?? string.Empty;

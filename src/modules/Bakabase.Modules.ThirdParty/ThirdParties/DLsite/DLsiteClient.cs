@@ -27,9 +27,11 @@ public class DLsiteAuthException(string message) : Exception(message);
 /// </summary>
 public class DLsiteDownloadLinkExpiredException(string message) : Exception(message);
 
-public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
+public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory, IThirdPartyCookieContainer cookieContainer)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
+    private const string CookieContainerKeyPrefix = "DLsite:";
+    private static readonly Uri DLsiteSeedUri = new("https://www.dlsite.com");
     protected override string HttpClientName => InternalOptions.HttpClientNames.DLsite;
 
     /// <summary>
@@ -214,20 +216,32 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     private static readonly Regex DrmKeyPattern = new(@"\b[A-Z0-9-]{16,}\b", RegexOptions.Compiled);
 
     /// <summary>
-    /// Sends a single GET request with cookie, no auto-redirect.
+    /// Sends a single GET request with cookie container, no auto-redirect.
+    /// Accumulates Set-Cookie headers from responses into the container.
     /// </summary>
     private async Task<HttpResponseMessage> SendAsync(
         string cookie,
+        string accountKey,
         string url,
         CancellationToken ct,
         HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead,
         Action<HttpRequestMessage>? configureRequest = null)
     {
+        var requestUri = new Uri(url);
+        var containerKey = $"{CookieContainerKeyPrefix}{accountKey}";
+
         var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("Cookie", cookie);
+        var cookieHeader = cookieContainer.GetCookieHeader(containerKey, cookie, requestUri);
+        if (!string.IsNullOrEmpty(cookieHeader))
+        {
+            request.Headers.Add("Cookie", cookieHeader);
+        }
         request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
         configureRequest?.Invoke(request);
-        return await NoRedirectHttpClient.SendAsync(request, completionOption, ct);
+
+        var response = await NoRedirectHttpClient.SendAsync(request, completionOption, ct);
+        cookieContainer.ProcessResponse(containerKey, cookie, requestUri, response);
+        return response;
     }
 
     private static string ResolveLocation(HttpResponseMessage response, string currentUrl)
@@ -254,12 +268,12 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     ///         If redirect URL contains "/serial/", also extract DRM key.
     ///     2.2 302 (direct download): single file, extract filename from Location URL.
     /// </summary>
-    public async Task<DLsiteDownloadInfo> ResolveDownloadAsync(string cookie, string workId, CancellationToken ct = default)
+    public async Task<DLsiteDownloadInfo> ResolveDownloadAsync(string cookie, string workId, string accountKey = "default", CancellationToken ct = default)
     {
         var playUrl = $"https://play.dlsite.com/api/v3/download?workno={workId}";
 
         // Step 1: Hit the play download API (returns 302)
-        using var a = await SendAsync(cookie, playUrl, ct);
+        using var a = await SendAsync(cookie, accountKey, playUrl, ct);
         if (a.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
         {
             throw new DLsiteAuthException(
@@ -275,7 +289,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         var isSerialPage = redirectUrl.Contains("/serial/", StringComparison.OrdinalIgnoreCase);
 
         // Step 2: Follow the redirect
-        using var c = await SendAsync(cookie, redirectUrl, ct);
+        using var c = await SendAsync(cookie, accountKey, redirectUrl, ct);
 
         // Case 2.2: Second response is also a redirect → direct single-file download
         if (IsRedirect(c))
@@ -320,7 +334,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             var fileUrl = fileUrls[i];
             if (fileUrl.StartsWith("//")) fileUrl = $"https:{fileUrl}";
 
-            using var d = await SendAsync(cookie, fileUrl, ct, HttpCompletionOption.ResponseHeadersRead);
+            using var d = await SendAsync(cookie, accountKey, fileUrl, ct, HttpCompletionOption.ResponseHeadersRead);
             if (!IsRedirect(d))
             {
                 throw new Exception($"Expected redirect for file download URL: {fileUrl}, got {d.StatusCode}");
@@ -348,6 +362,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         string cookie,
         string url,
         string destinationPath,
+        string accountKey = "default",
         Action<long, long>? onProgress = null,
         CancellationToken ct = default)
     {
@@ -364,7 +379,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         HttpResponseMessage response;
         while (true)
         {
-            response = await SendAsync(cookie, currentUrl, ct,
+            response = await SendAsync(cookie, accountKey, currentUrl, ct,
                 HttpCompletionOption.ResponseHeadersRead,
                 request =>
                 {

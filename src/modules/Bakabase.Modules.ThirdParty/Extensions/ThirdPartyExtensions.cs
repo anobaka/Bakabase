@@ -159,7 +159,8 @@ public static class ThirdPartyExtensions
 
         services.AddTransient<IThirdPartyLocalizer, ThirdPartyLocalizer>();
         services.TryAddSingleton<ThirdPartyHttpRequestLogger>();
-        
+        services.TryAddSingleton<IThirdPartyCookieContainer, ThirdPartyCookieContainer>();
+
         services.AddSingleton<IThirdPartyService, ThirdPartyService>();
 
         return services;
