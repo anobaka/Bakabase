@@ -413,14 +413,16 @@ export default function DLsiteWorksPage() {
               isStriped
             >
               <TableHeader>
-                {showCover && <TableColumn width={160}>{""}</TableColumn>}
-                <TableColumn>{t("resourceSource.dlsite.label.workId")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.title")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.workType")}</TableColumn>
-                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-                <TableColumn>{t("resourceSource.dlsite.label.drmKey")}</TableColumn>
-                <TableColumn width={200}>{""}</TableColumn>
+                {[
+                  showCover && <TableColumn key="cover" width={160}>{""}</TableColumn>,
+                  <TableColumn key="workId">{t("resourceSource.dlsite.label.workId")}</TableColumn>,
+                  <TableColumn key="title">{t("resourceSource.dlsite.label.title")}</TableColumn>,
+                  <TableColumn key="circle">{t("resourceSource.dlsite.label.circle")}</TableColumn>,
+                  <TableColumn key="workType">{t("resourceSource.dlsite.label.workType")}</TableColumn>,
+                  <TableColumn key="resourceId">{t("resourceSource.label.resourceId")}</TableColumn>,
+                  <TableColumn key="drmKey">{t("resourceSource.dlsite.label.drmKey")}</TableColumn>,
+                  <TableColumn key="actions" width={200}>{""}</TableColumn>,
+                ].filter(Boolean)}
               </TableHeader>
               <TableBody
                 emptyContent={t("resourceSource.empty")}
@@ -432,7 +434,7 @@ export default function DLsiteWorksPage() {
 
                   return (
                     <TableRow key={work.workId}>
-                      {showCover && (
+                      {showCover ? (
                         <TableCell>
                           {work.coverUrl ? (
                             <Image
@@ -448,7 +450,7 @@ export default function DLsiteWorksPage() {
                             </div>
                           )}
                         </TableCell>
-                      )}
+                      ) : null}
                       <TableCell>{work.workId}</TableCell>
                       <TableCell>
                         <span className="font-medium">{work.title || "-"}</span>

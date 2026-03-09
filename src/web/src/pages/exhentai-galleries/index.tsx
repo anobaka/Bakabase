@@ -237,14 +237,16 @@ export default function ExHentaiGalleriesPage() {
           ) : (
             <Table removeWrapper aria-label="ExHentai Galleries" isStriped>
               <TableHeader>
-                {showCover && <TableColumn width={160}>{""}</TableColumn>}
-                <TableColumn>{t("resourceSource.exhentai.label.galleryId")}</TableColumn>
-                <TableColumn>{t("resourceSource.exhentai.label.title")}</TableColumn>
-                <TableColumn>{t("resourceSource.exhentai.label.category")}</TableColumn>
-                <TableColumn>{t("resourceSource.exhentai.label.downloaded")}</TableColumn>
-                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-                <TableColumn>{t("resourceSource.label.createdAt")}</TableColumn>
-                <TableColumn width={80}>{""}</TableColumn>
+                {[
+                  showCover && <TableColumn key="cover" width={160}>{""}</TableColumn>,
+                  <TableColumn key="galleryId">{t("resourceSource.exhentai.label.galleryId")}</TableColumn>,
+                  <TableColumn key="title">{t("resourceSource.exhentai.label.title")}</TableColumn>,
+                  <TableColumn key="category">{t("resourceSource.exhentai.label.category")}</TableColumn>,
+                  <TableColumn key="downloaded">{t("resourceSource.exhentai.label.downloaded")}</TableColumn>,
+                  <TableColumn key="resourceId">{t("resourceSource.label.resourceId")}</TableColumn>,
+                  <TableColumn key="createdAt">{t("resourceSource.label.createdAt")}</TableColumn>,
+                  <TableColumn key="actions" width={80}>{""}</TableColumn>,
+                ].filter(Boolean)}
               </TableHeader>
               <TableBody
                 emptyContent={t("resourceSource.empty")}
@@ -252,7 +254,7 @@ export default function ExHentaiGalleriesPage() {
               >
                 {(gallery) => (
                   <TableRow key={gallery.id}>
-                    {showCover && (
+                    {showCover ? (
                       <TableCell>
                         {gallery.coverUrl ? (
                           <Image
@@ -268,7 +270,7 @@ export default function ExHentaiGalleriesPage() {
                           </div>
                         )}
                       </TableCell>
-                    )}
+                    ) : null}
                     <TableCell>
                       <span className="text-sm text-default-500">
                         {gallery.galleryId}

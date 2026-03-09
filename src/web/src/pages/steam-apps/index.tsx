@@ -239,14 +239,16 @@ export default function SteamAppsPage() {
           ) : (
             <Table removeWrapper aria-label="Steam Apps" isStriped>
               <TableHeader>
-                {showCover && <TableColumn width={240}>{""}</TableColumn>}
-                <TableColumn>{t("resourceSource.steam.label.appId")}</TableColumn>
-                <TableColumn>{t("resourceSource.steam.label.name")}</TableColumn>
-                <TableColumn>{t("resourceSource.steam.label.playtime")}</TableColumn>
-                <TableColumn>{t("resourceSource.steam.label.lastPlayed")}</TableColumn>
-                <TableColumn>{t("resourceSource.steam.label.installed")}</TableColumn>
-                <TableColumn>{t("resourceSource.label.resourceId")}</TableColumn>
-                <TableColumn width={80}>{""}</TableColumn>
+                {[
+                  showCover && <TableColumn key="cover" width={240}>{""}</TableColumn>,
+                  <TableColumn key="appId">{t("resourceSource.steam.label.appId")}</TableColumn>,
+                  <TableColumn key="name">{t("resourceSource.steam.label.name")}</TableColumn>,
+                  <TableColumn key="playtime">{t("resourceSource.steam.label.playtime")}</TableColumn>,
+                  <TableColumn key="lastPlayed">{t("resourceSource.steam.label.lastPlayed")}</TableColumn>,
+                  <TableColumn key="installed">{t("resourceSource.steam.label.installed")}</TableColumn>,
+                  <TableColumn key="resourceId">{t("resourceSource.label.resourceId")}</TableColumn>,
+                  <TableColumn key="actions" width={80}>{""}</TableColumn>,
+                ].filter(Boolean)}
               </TableHeader>
               <TableBody
                 emptyContent={t("resourceSource.empty")}
@@ -254,7 +256,7 @@ export default function SteamAppsPage() {
               >
                 {(app) => (
                   <TableRow key={app.appId}>
-                    {showCover && (
+                    {showCover ? (
                       <TableCell>
                         <Image
                           alt={app.name || String(app.appId)}
@@ -264,7 +266,7 @@ export default function SteamAppsPage() {
                           src={getSteamHeaderImage(app.appId)}
                         />
                       </TableCell>
-                    )}
+                    ) : null}
                     <TableCell>{app.appId}</TableCell>
                     <TableCell>
                       <span className="font-medium">{app.name || "-"}</span>
