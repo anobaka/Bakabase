@@ -23,6 +23,8 @@ namespace Bakabase.Modules.ThirdParty.Abstractions.Http
             ThirdPartyId = thirdPartyId;
             _options = options;
             Proxy = webProxy;
+            // Disable automatic cookie handling since we manage cookies manually via headers
+            UseCookies = false;
             _threadsSemaphore = new SemaphoreSlim(options.MaxConcurrency, int.MaxValue);
         }
 

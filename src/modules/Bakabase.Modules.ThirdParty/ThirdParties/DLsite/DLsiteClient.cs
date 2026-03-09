@@ -16,6 +16,11 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 
+/// <summary>
+/// Result from an HTTP operation that tracks cookie changes.
+/// </summary>
+public record DLsiteCookieTrackingResult<T>(T Value, string UpdatedCookie);
+
 public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory)
     : BakabaseHttpClient(httpClientFactory, loggerFactory)
 {
@@ -124,7 +129,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     /// <summary>
     /// Get the total count of purchased works from DLsite Play.
     /// </summary>
-    public async Task<int> GetPurchaseCountAsync(string cookie, CancellationToken ct = default)
+    public async Task<DLsiteCookieTrackingResult<int>> GetPurchaseCountAsync(string cookie, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{PlayApiContentCount}?last=0");
         SetPlayApiHeaders(request, cookie);
@@ -132,14 +137,15 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         var response = await PlayHttpClient.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
+        var updatedCookie = MergeCookiesFromResponse(cookie, response);
         var data = await response.Content.ReadFromJsonAsync<DLsitePlayContentCount>(cancellationToken: ct);
-        return data?.User ?? 0;
+        return new DLsiteCookieTrackingResult<int>(data?.User ?? 0, updatedCookie);
     }
 
     /// <summary>
     /// Get all purchased work IDs and their sales dates.
     /// </summary>
-    public async Task<List<DLsitePlaySaleItem>> GetPurchaseSalesAsync(string cookie, CancellationToken ct = default)
+    public async Task<DLsiteCookieTrackingResult<List<DLsitePlaySaleItem>>> GetPurchaseSalesAsync(string cookie, CancellationToken ct = default)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, $"{PlayApiContentSales}?last=0");
         SetPlayApiHeaders(request, cookie);
@@ -147,16 +153,18 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         var response = await PlayHttpClient.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
+        var updatedCookie = MergeCookiesFromResponse(cookie, response);
         var items = await response.Content.ReadFromJsonAsync<List<DLsitePlaySaleItem>>(cancellationToken: ct);
-        return items ?? [];
+        return new DLsiteCookieTrackingResult<List<DLsitePlaySaleItem>>(items ?? [], updatedCookie);
     }
 
     /// <summary>
     /// Get work details for a batch of work IDs (max 100 per request).
     /// </summary>
-    public async Task<List<DLsitePlayWorkDetail>> GetPurchaseWorksAsync(string cookie, List<string> workIds, CancellationToken ct = default)
+    public async Task<DLsiteCookieTrackingResult<List<DLsitePlayWorkDetail>>> GetPurchaseWorksAsync(string cookie, List<string> workIds, CancellationToken ct = default)
     {
         var allWorks = new List<DLsitePlayWorkDetail>();
+        var currentCookie = cookie;
 
         for (var i = 0; i < workIds.Count; i += PlayApiBatchSize)
         {
@@ -164,11 +172,13 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
             var batch = workIds.Skip(i).Take(PlayApiBatchSize).ToList();
             using var request = new HttpRequestMessage(HttpMethod.Post, PlayApiContentWorks);
-            SetPlayApiHeaders(request, cookie);
+            SetPlayApiHeaders(request, currentCookie);
             request.Content = JsonContent.Create(batch);
 
             var response = await PlayHttpClient.SendAsync(request, ct);
             response.EnsureSuccessStatusCode();
+
+            currentCookie = MergeCookiesFromResponse(currentCookie, response);
 
             var result = await response.Content.ReadFromJsonAsync<DLsitePlayWorksResponse>(cancellationToken: ct);
             if (result?.Works != null)
@@ -177,7 +187,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             }
         }
 
-        return allWorks;
+        return new DLsiteCookieTrackingResult<List<DLsitePlayWorkDetail>>(allWorks, currentCookie);
     }
 
     private static void SetPlayApiHeaders(HttpRequestMessage request, string cookie)
@@ -203,10 +213,15 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     private const int MaxRedirects = 10;
 
     /// <summary>
-    /// Sends a GET request following redirects manually, carrying cookie on every hop.
-    /// Returns the final response (which may be HTML or binary).
+    /// Result from redirect-following request, including the final accumulated cookie string.
     /// </summary>
-    private async Task<HttpResponseMessage> SendWithCookieRedirectAsync(
+    private record RedirectResult(HttpResponseMessage Response, string UpdatedCookie);
+
+    /// <summary>
+    /// Sends a GET request following redirects manually, carrying cookie on every hop.
+    /// Returns the final response and the accumulated cookie string (including Set-Cookie from all hops).
+    /// </summary>
+    private async Task<RedirectResult> SendWithCookieRedirectAsync(
         string url,
         string cookie,
         CancellationToken ct,
@@ -215,19 +230,11 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     {
         var currentUrl = url;
         // Accumulate cookies from Set-Cookie headers during redirect chain
-        var cookieJar = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var part in cookie.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            var eqIdx = part.IndexOf('=');
-            if (eqIdx > 0)
-            {
-                cookieJar[part[..eqIdx].Trim()] = part[(eqIdx + 1)..].Trim();
-            }
-        }
+        var cookieJar = ParseCookieString(cookie);
 
         for (var i = 0; i < MaxRedirects; i++)
         {
-            var cookieHeader = string.Join("; ", cookieJar.Select(kv => $"{kv.Key}={kv.Value}"));
+            var cookieHeader = SerializeCookieJar(cookieJar);
             var request = new HttpRequestMessage(HttpMethod.Get, currentUrl);
             request.Headers.Add("Cookie", cookieHeader);
             request.Headers.Add("User-Agent", IThirdPartyHttpClientOptions.DefaultUserAgent);
@@ -235,6 +242,9 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             configureRequest?.Invoke(request);
 
             var response = await NoRedirectHttpClient.SendAsync(request, completionOption, ct);
+
+            // Merge Set-Cookie headers from every response (including the final one)
+            MergeSetCookieHeaders(cookieJar, response);
 
             if (response.StatusCode is HttpStatusCode.Redirect
                 or HttpStatusCode.MovedPermanently
@@ -247,21 +257,6 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                     throw new Exception($"Redirect response from {currentUrl} has no Location header");
                 }
 
-                // Merge Set-Cookie headers into the cookie jar
-                if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
-                {
-                    foreach (var sc in setCookies)
-                    {
-                        // Set-Cookie value format: name=value; path=...; domain=...
-                        var cookiePart = sc.Split(';', 2)[0].Trim();
-                        var eqIdx = cookiePart.IndexOf('=');
-                        if (eqIdx > 0)
-                        {
-                            cookieJar[cookiePart[..eqIdx].Trim()] = cookiePart[(eqIdx + 1)..].Trim();
-                        }
-                    }
-                }
-
                 response.Dispose();
                 currentUrl = location.IsAbsoluteUri
                     ? location.AbsoluteUri
@@ -269,23 +264,81 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 continue;
             }
 
-            return response;
+            return new RedirectResult(response, SerializeCookieJar(cookieJar));
         }
 
         throw new Exception($"Too many redirects (>{MaxRedirects}) starting from {url}");
     }
 
+    #region Cookie Helpers
+
+    private static Dictionary<string, string> ParseCookieString(string cookie)
+    {
+        var jar = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var part in cookie.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            var eqIdx = part.IndexOf('=');
+            if (eqIdx > 0)
+            {
+                jar[part[..eqIdx].Trim()] = part[(eqIdx + 1)..].Trim();
+            }
+        }
+        return jar;
+    }
+
+    private static string SerializeCookieJar(Dictionary<string, string> jar)
+    {
+        return string.Join("; ", jar.Select(kv => $"{kv.Key}={kv.Value}"));
+    }
+
+    private static void MergeSetCookieHeaders(Dictionary<string, string> jar, HttpResponseMessage response)
+    {
+        if (response.Headers.TryGetValues("Set-Cookie", out var setCookies))
+        {
+            foreach (var sc in setCookies)
+            {
+                // Set-Cookie value format: name=value; path=...; domain=...
+                var cookiePart = sc.Split(';', 2)[0].Trim();
+                var eqIdx = cookiePart.IndexOf('=');
+                if (eqIdx > 0)
+                {
+                    jar[cookiePart[..eqIdx].Trim()] = cookiePart[(eqIdx + 1)..].Trim();
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Merges Set-Cookie headers from a response into the original cookie string.
+    /// Returns the updated cookie string.
+    /// </summary>
+    private static string MergeCookiesFromResponse(string originalCookie, HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out _))
+        {
+            return originalCookie;
+        }
+
+        var jar = ParseCookieString(originalCookie);
+        MergeSetCookieHeaders(jar, response);
+        return SerializeCookieJar(jar);
+    }
+
+    #endregion
+
     /// <summary>
     /// Resolves download links for a work. Handles two DLsite flows:
     /// 1. Direct download: redirect chain ends at a binary file (application/octet-stream)
     /// 2. Serial page: redirect chain ends at an HTML page with split download links and optional DRM key
+    /// Returns the download info and the updated cookie string (with any Set-Cookie changes applied).
     /// </summary>
-    public async Task<DLsiteDownloadInfo> GetDownloadInfoAsync(string cookie, string workId, CancellationToken ct = default)
+    public async Task<DLsiteCookieTrackingResult<DLsiteDownloadInfo>> GetDownloadInfoAsync(string cookie, string workId, CancellationToken ct = default)
     {
         // Use the Play download API with manual redirects so cookies are forwarded
         var url = $"https://play.dlsite.com/api/v3/download?workno={workId}";
 
-        using var response = await SendWithCookieRedirectAsync(url, cookie, ct);
+        var result = await SendWithCookieRedirectAsync(url, cookie, ct);
+        using var response = result.Response;
         response.EnsureSuccessStatusCode();
 
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
@@ -296,27 +349,33 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         {
             var finalUrl = response.RequestMessage?.RequestUri?.AbsoluteUri ?? url;
             var fileName = GetFileNameFromResponse(response, workId);
-            return new DLsiteDownloadInfo
-            {
-                Links = [new DLsiteDownloadLink { Url = finalUrl, FileName = fileName }]
-            };
+            return new DLsiteCookieTrackingResult<DLsiteDownloadInfo>(
+                new DLsiteDownloadInfo
+                {
+                    Links = [new DLsiteDownloadLink { Url = finalUrl, FileName = fileName }]
+                },
+                result.UpdatedCookie);
         }
 
         // Flow 2: HTML page (serial/split download page)
         var html = await response.Content.ReadAsStringAsync(ct);
-        return ParseSerialDownloadPage(html, workId);
+        return new DLsiteCookieTrackingResult<DLsiteDownloadInfo>(
+            ParseSerialDownloadPage(html, workId),
+            result.UpdatedCookie);
     }
 
     /// <summary>
     /// Fetches the DRM key for a work from the serial download page (via Play API with DRM info).
     /// Returns null if the work has no DRM key, or the key string if found.
     /// Returns empty string if the page was reached but no key was present.
+    /// Also returns the updated cookie string (with any Set-Cookie changes applied).
     /// </summary>
-    public async Task<string?> GetDrmKeyAsync(string cookie, string workId, CancellationToken ct = default)
+    public async Task<DLsiteCookieTrackingResult<string?>> GetDrmKeyAsync(string cookie, string workId, CancellationToken ct = default)
     {
         var url = $"https://play.dlsite.com/api/v3/download?workno={workId}";
 
-        using var response = await SendWithCookieRedirectAsync(url, cookie, ct);
+        var result = await SendWithCookieRedirectAsync(url, cookie, ct);
+        using var response = result.Response;
         response.EnsureSuccessStatusCode();
 
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "";
@@ -324,7 +383,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         // Direct download - no DRM key
         if (!contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase))
         {
-            return string.Empty;
+            return new DLsiteCookieTrackingResult<string?>(string.Empty, result.UpdatedCookie);
         }
 
         var html = await response.Content.ReadAsStringAsync(ct);
@@ -334,7 +393,9 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         var keyElement = cq[".table_inframe_box_fix strong.color_02"];
         var key = keyElement.Text().Trim();
 
-        return string.IsNullOrEmpty(key) ? string.Empty : key;
+        return new DLsiteCookieTrackingResult<string?>(
+            string.IsNullOrEmpty(key) ? string.Empty : key,
+            result.UpdatedCookie);
     }
 
     /// <summary>
@@ -411,8 +472,9 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     /// <summary>
     /// Downloads a file with resume support using HTTP Range requests.
     /// Uses manual redirect following to carry cookies across domains.
+    /// Returns the updated cookie string (with any Set-Cookie changes applied).
     /// </summary>
-    public async Task DownloadFileAsync(
+    public async Task<string> DownloadFileAsync(
         string cookie,
         string url,
         string destinationPath,
@@ -427,7 +489,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             existingLength = new FileInfo(tempPath).Length;
         }
 
-        using var response = await SendWithCookieRedirectAsync(url, cookie, ct,
+        var result = await SendWithCookieRedirectAsync(url, cookie, ct,
             HttpCompletionOption.ResponseHeadersRead,
             request =>
             {
@@ -437,6 +499,8 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
                 }
             });
 
+        using var response = result.Response;
+
         if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
         {
             // File already fully downloaded
@@ -444,7 +508,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             {
                 File.Move(tempPath, destinationPath, true);
             }
-            return;
+            return result.UpdatedCookie;
         }
 
         response.EnsureSuccessStatusCode();
@@ -480,6 +544,7 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         fileStream.Close();
 
         File.Move(tempPath, destinationPath, true);
+        return result.UpdatedCookie;
     }
 
     #endregion
