@@ -21,36 +21,14 @@ namespace Bakabase.InsideWorld.Business.Services;
 public class DLsiteWorkService(
     FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm,
     DLsiteClient dlsiteClient,
-    IBOptionsManager<DLsiteOptions> dlsiteOptionsManager,
+    IBOptions<DLsiteOptions> dlsiteOptions,
     SevenZipService sevenZipService,
     LocaleEmulatorService localeEmulatorService,
     ILogger<DLsiteWorkService> logger)
     : IDLsiteWorkService
 {
     // IBOptionsManager extends IBOptions, so we can read via .Value
-    private DLsiteOptions DLsiteOptionsValue => dlsiteOptionsManager.Value;
-
-    /// <summary>
-    /// Saves updated cookie back to options if it changed during a request.
-    /// Matches the account by original cookie value and updates it.
-    /// </summary>
-    private async Task SaveCookieIfChangedAsync(string originalCookie, string updatedCookie)
-    {
-        if (string.Equals(originalCookie, updatedCookie, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        logger.LogInformation("DLsite cookie updated during request, saving back to configuration");
-        await dlsiteOptionsManager.SaveAsync(options =>
-        {
-            var account = options.Accounts?.FirstOrDefault(a => a.Cookie == originalCookie);
-            if (account != null)
-            {
-                account.Cookie = updatedCookie;
-            }
-        });
-    }
+    private DLsiteOptions DLsiteOptionsValue => dlsiteOptions.Value;
     private static readonly HashSet<string> ExecutableExtensions = [".exe"];
     private static readonly HashSet<string> ImageExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"];
     private static readonly HashSet<string> AudioExtensions = [".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a", ".wma"];
@@ -132,32 +110,25 @@ public class DLsiteWorkService(
             try
             {
                 logger.LogInformation("Fetching purchase list for DLsite account '{Name}'", account.Name);
-                var currentCookie = account.Cookie;
-                var originalCookie = account.Cookie;
+                var cookie = account.Cookie;
 
                 // Step 1: Get purchase count
-                var countResult = await dlsiteClient.GetPurchaseCountAsync(currentCookie, ct);
-                currentCookie = countResult.UpdatedCookie;
-                var count = countResult.Value;
+                var count = await dlsiteClient.GetPurchaseCountAsync(cookie, ct);
                 logger.LogInformation("DLsite account '{Name}' has {Count} purchased works", account.Name, count);
 
                 if (count == 0)
                 {
-                    await SaveCookieIfChangedAsync(originalCookie, currentCookie);
                     processedAccounts++;
                     continue;
                 }
 
                 // Step 2: Get all sales (work IDs + dates)
-                var salesResult = await dlsiteClient.GetPurchaseSalesAsync(currentCookie, ct);
-                currentCookie = salesResult.UpdatedCookie;
-                var sales = salesResult.Value;
+                var sales = await dlsiteClient.GetPurchaseSalesAsync(cookie, ct);
                 logger.LogInformation("Fetched {Count} sales records from DLsite account '{Name}'",
                     sales.Count, account.Name);
 
                 if (sales.Count == 0)
                 {
-                    await SaveCookieIfChangedAsync(originalCookie, currentCookie);
                     processedAccounts++;
                     continue;
                 }
@@ -168,14 +139,9 @@ public class DLsiteWorkService(
 
                 // Step 3: Fetch work details in batches
                 var workIds = salesDateMap.Keys.ToList();
-                var workDetailsResult = await dlsiteClient.GetPurchaseWorksAsync(currentCookie, workIds, ct);
-                currentCookie = workDetailsResult.UpdatedCookie;
-                var workDetails = workDetailsResult.Value;
+                var workDetails = await dlsiteClient.GetPurchaseWorksAsync(cookie, workIds, ct);
                 logger.LogInformation("Fetched {Count} work details from DLsite account '{Name}'",
                     workDetails.Count, account.Name);
-
-                // Save updated cookie after all API calls
-                await SaveCookieIfChangedAsync(originalCookie, currentCookie);
 
                 // Step 4: Map to DB models
                 foreach (var work in workDetails)
@@ -249,13 +215,11 @@ public class DLsiteWorkService(
             throw new Exception($"Work {workId} not found");
         }
 
-        var originalCookie = DLsiteOptionsValue.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
-        if (string.IsNullOrEmpty(originalCookie))
+        var cookie = DLsiteOptionsValue.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
+        if (string.IsNullOrEmpty(cookie))
         {
             throw new Exception("No DLsite account with cookie configured");
         }
-
-        var currentCookie = originalCookie;
 
         var defaultPath = DLsiteOptionsValue.DefaultPath;
         if (string.IsNullOrEmpty(defaultPath))
@@ -272,13 +236,10 @@ public class DLsiteWorkService(
             await onProgress(0, $"[{workId}] 0%");
         }
 
-        var downloadInfoResult = await dlsiteClient.GetDownloadInfoAsync(currentCookie, workId, ct);
-        currentCookie = downloadInfoResult.UpdatedCookie;
-        var downloadInfo = downloadInfoResult.Value;
+        var downloadInfo = await dlsiteClient.GetDownloadInfoAsync(cookie, workId, ct);
         var links = downloadInfo.Links;
         if (links.Count == 0)
         {
-            await SaveCookieIfChangedAsync(originalCookie, currentCookie);
             throw new Exception($"No download links found for work {workId}");
         }
 
@@ -308,8 +269,8 @@ public class DLsiteWorkService(
             }
 
             var fileIndex = i;
-            currentCookie = await dlsiteClient.DownloadFileAsync(
-                currentCookie,
+            await dlsiteClient.DownloadFileAsync(
+                cookie,
                 link.Url,
                 destPath,
                 (downloaded, total) =>
@@ -354,9 +315,6 @@ public class DLsiteWorkService(
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
 
-        // Save updated cookie after all downloads
-        await SaveCookieIfChangedAsync(originalCookie, currentCookie);
-
         if (onProgress != null)
         {
             await onProgress(100, "100%");
@@ -379,17 +337,16 @@ public class DLsiteWorkService(
             return work.DrmKey;
         }
 
-        var originalCookie = DLsiteOptionsValue.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
-        if (string.IsNullOrEmpty(originalCookie))
+        var cookie = DLsiteOptionsValue.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
+        if (string.IsNullOrEmpty(cookie))
         {
             throw new Exception("No DLsite account with cookie configured");
         }
 
-        var drmKeyResult = await dlsiteClient.GetDrmKeyAsync(originalCookie, workId, ct);
-        await SaveCookieIfChangedAsync(originalCookie, drmKeyResult.UpdatedCookie);
+        var drmKey = await dlsiteClient.GetDrmKeyAsync(cookie, workId, ct);
 
         // Save to DB (empty string means no DRM, non-empty means DRM key found)
-        work.DrmKey = drmKeyResult.Value ?? string.Empty;
+        work.DrmKey = drmKey ?? string.Empty;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
 
