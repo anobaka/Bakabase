@@ -15,6 +15,7 @@ public record DLsiteWorkDbModel
     public string? DrmKey { get; set; }
     public string? Account { get; set; }
     public DateTime? SalesDate { get; set; }
+    public DateTime? PurchasedAt { get; set; }
     public bool IsPurchased { get; set; }
     public bool IsDownloaded { get; set; }
     public string? LocalPath { get; set; }

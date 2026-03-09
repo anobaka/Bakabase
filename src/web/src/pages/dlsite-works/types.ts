@@ -10,6 +10,7 @@ export interface DLsiteWork {
   drmKey?: string;
   account?: string;
   salesDate?: string;
+  purchasedAt?: string;
   isPurchased: boolean;
   isDownloaded: boolean;
   isHidden: boolean;

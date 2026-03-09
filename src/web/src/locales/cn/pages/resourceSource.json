@@ -48,6 +48,7 @@
   "resourceSource.dlsite.label.circle": "社团",
   "resourceSource.dlsite.label.workType": "作品类型",
   "resourceSource.dlsite.label.salesDate": "发售日",
+  "resourceSource.dlsite.label.purchasedAt": "购入日期",
   "resourceSource.dlsite.label.account": "账号",
   "resourceSource.dlsite.label.purchased": "已购入",
   "resourceSource.dlsite.label.downloaded": "已下载",

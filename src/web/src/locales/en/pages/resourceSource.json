@@ -48,6 +48,7 @@
   "resourceSource.dlsite.label.circle": "Circle",
   "resourceSource.dlsite.label.workType": "Work type",
   "resourceSource.dlsite.label.salesDate": "Sales date",
+  "resourceSource.dlsite.label.purchasedAt": "Purchased at",
   "resourceSource.dlsite.label.account": "Account",
   "resourceSource.dlsite.label.purchased": "Purchased",
   "resourceSource.dlsite.label.downloaded": "Downloaded",

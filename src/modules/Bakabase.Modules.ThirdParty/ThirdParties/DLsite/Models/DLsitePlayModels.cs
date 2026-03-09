@@ -91,6 +91,9 @@ public class DLsitePlayWorkDetail
     [JsonPropertyName("regist_date")]
     public string? RegistDate { get; set; }
 
+    [JsonPropertyName("sales_date")]
+    public string? SalesDate { get; set; }
+
     [JsonPropertyName("upgrade_date")]
     public string? UpgradeDate { get; set; }
 

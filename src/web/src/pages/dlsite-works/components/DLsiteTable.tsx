@@ -58,6 +58,7 @@ export function DLsiteTable({
       { key: "circle", label: t("resourceSource.dlsite.label.circle") },
       { key: "workType", label: t("resourceSource.dlsite.label.workType") },
       { key: "salesDate", label: t("resourceSource.dlsite.label.salesDate") },
+      { key: "purchasedAt", label: t("resourceSource.dlsite.label.purchasedAt") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
       { key: "account", label: t("resourceSource.dlsite.label.account") },
       { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
@@ -97,6 +98,10 @@ export function DLsiteTable({
       case "salesDate":
         return work.salesDate
           ? new Date(work.salesDate).toLocaleDateString()
+          : "-";
+      case "purchasedAt":
+        return work.purchasedAt
+          ? new Date(work.purchasedAt).toLocaleDateString()
           : "-";
       case "resourceId":
         return work.resourceId ? (

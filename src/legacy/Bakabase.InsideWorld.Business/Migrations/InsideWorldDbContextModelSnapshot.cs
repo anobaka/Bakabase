@@ -142,6 +142,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<string>("MetadataJson")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("PurchasedAt")
+                        .HasColumnType("TEXT");
+
                     b.Property<int?>("ResourceId")
                         .HasColumnType("INTEGER");
 

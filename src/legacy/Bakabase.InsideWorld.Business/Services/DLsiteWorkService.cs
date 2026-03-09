@@ -92,6 +92,7 @@ public class DLsiteWorkService(
             existing.WorkType = work.WorkType;
             existing.CoverUrl = work.CoverUrl;
             existing.SalesDate = work.SalesDate;
+            existing.PurchasedAt = work.PurchasedAt;
             existing.IsPurchased = work.IsPurchased;
             existing.MetadataJson = work.MetadataJson;
             existing.MetadataFetchedAt = work.MetadataFetchedAt;
@@ -181,12 +182,12 @@ public class DLsiteWorkService(
                     continue;
                 }
 
-                var salesDateMap = sales
+                var purchaseDateMap = sales
                     .Where(s => !string.IsNullOrEmpty(s.Workno))
                     .ToDictionary(s => s.Workno, s => s.SalesDate);
 
                 // Step 3: Fetch work details in batches
-                var workIds = salesDateMap.Keys.ToList();
+                var workIds = purchaseDateMap.Keys.ToList();
                 var workDetails = await dlsiteClient.GetPurchaseWorksAsync(cookie, workIds, ct);
                 logger.LogInformation("Fetched {Count} work details from DLsite account '{Name}'",
                     workDetails.Count, account.Name);
@@ -197,11 +198,21 @@ public class DLsiteWorkService(
                     if (string.IsNullOrEmpty(work.Workno)) continue;
                     if (allWorks.ContainsKey(work.Workno)) continue;
 
+                    // SalesDate = work release date (from work detail's sales_date or regist_date)
                     DateTime? salesDate = null;
-                    if (salesDateMap.TryGetValue(work.Workno, out var salesDateStr) &&
-                        DateTime.TryParse(salesDateStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+                    var salesDateSource = work.SalesDate ?? work.RegistDate;
+                    if (salesDateSource != null &&
+                        DateTime.TryParse(salesDateSource, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedSalesDate))
                     {
-                        salesDate = parsedDate;
+                        salesDate = parsedSalesDate;
+                    }
+
+                    // PurchasedAt = when the user bought it (from sales API)
+                    DateTime? purchasedAt = null;
+                    if (purchaseDateMap.TryGetValue(work.Workno, out var purchaseDateStr) &&
+                        DateTime.TryParse(purchaseDateStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedPurchaseDate))
+                    {
+                        purchasedAt = parsedPurchaseDate;
                     }
 
                     var dbModel = new DLsiteWorkDbModel
@@ -213,6 +224,7 @@ public class DLsiteWorkService(
                         CoverUrl = work.WorkFiles?.Main,
                         Account = account.Name,
                         SalesDate = salesDate,
+                        PurchasedAt = purchasedAt,
                         IsPurchased = true,
                         MetadataJson = JsonConvert.SerializeObject(work),
                         MetadataFetchedAt = DateTime.Now,
