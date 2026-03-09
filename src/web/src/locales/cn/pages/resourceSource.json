@@ -4,6 +4,7 @@
   "resourceSource.action.refresh": "刷新",
   "resourceSource.action.delete": "删除",
   "resourceSource.action.configure": "配置",
+  "resourceSource.action.showCover": "显示封面",
   "resourceSource.confirm.delete": "确定要删除此项吗？",
   "resourceSource.empty": "暂无数据",
   "resourceSource.filter.keyword": "按名称搜索...",

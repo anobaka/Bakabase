@@ -18,4 +18,5 @@ public class DLsiteOptionsPatchInputModel
     public bool? SkipExisting { get; set; }
     public int? MaxRetries { get; set; }
     public int? RequestTimeout { get; set; }
+    public bool? ShowCover { get; set; }
 }

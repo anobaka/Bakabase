@@ -72,6 +72,7 @@ export interface BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
   title?: string;
   titleJpn?: string;
   category?: string;
+  coverUrl?: string;
   metadataJson?: string;
   /** @format date-time */
   metadataFetchedAt?: string;
@@ -1336,6 +1337,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   maxRetries: number;
   /** @format int32 */
   requestTimeout: number;
+  showCover: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
@@ -1360,6 +1362,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   maxRetries: number;
   /** @format int32 */
   requestTimeout: number;
+  showCover: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainFanboxOptions {
@@ -1534,6 +1537,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
   apiKey?: string;
   steamId?: string;
+  showCover: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainTmdbOptions {
@@ -1619,6 +1623,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
   maxRetries?: number;
   /** @format int32 */
   requestTimeout?: number;
+  showCover?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputEnhancerOptionsPatchInputModel {
@@ -1639,6 +1644,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputE
   maxRetries?: number;
   /** @format int32 */
   requestTimeout?: number;
+  showCover?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputFanboxOptionsPatchInputModel {
@@ -1731,6 +1737,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputS
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputSteamOptionsPatchInputModel {
   accounts?: BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainSteamAccount[];
+  showCover?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputTaskOptionsPatchInputModel {

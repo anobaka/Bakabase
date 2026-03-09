@@ -6,4 +6,5 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Input;
 public class SteamOptionsPatchInputModel
 {
     public List<SteamAccount>? Accounts { get; set; }
+    public bool? ShowCover { get; set; }
 }

@@ -10,6 +10,7 @@ public record ExHentaiGalleryDbModel
     public string? Title { get; set; }
     public string? TitleJpn { get; set; }
     public string? Category { get; set; }
+    public string? CoverUrl { get; set; }
     public string? MetadataJson { get; set; }
     public DateTime? MetadataFetchedAt { get; set; }
     public bool IsDownloaded { get; set; }

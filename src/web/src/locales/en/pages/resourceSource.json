@@ -4,6 +4,7 @@
   "resourceSource.action.refresh": "Refresh",
   "resourceSource.action.delete": "Delete",
   "resourceSource.action.configure": "Configure",
+  "resourceSource.action.showCover": "Show covers",
   "resourceSource.confirm.delete": "Are you sure to delete this item?",
   "resourceSource.empty": "No items found",
   "resourceSource.filter.keyword": "Search by name...",

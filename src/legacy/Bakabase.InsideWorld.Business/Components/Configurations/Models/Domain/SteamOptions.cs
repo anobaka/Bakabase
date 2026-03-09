@@ -25,4 +25,6 @@ public class SteamOptions
     /// Convenience: gets the first account's Steam ID.
     /// </summary>
     public string? SteamId => Accounts?.FirstOrDefault()?.SteamId;
+
+    public bool ShowCover { get; set; }
 }

@@ -14,6 +14,8 @@ import {
   Button,
   Spinner,
   Progress,
+  Image,
+  Switch,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -38,6 +40,7 @@ interface ExHentaiGallery {
   title?: string;
   titleJpn?: string;
   category?: string;
+  coverUrl?: string;
   metadataJson?: string;
   metadataFetchedAt?: string;
   isDownloaded: boolean;
@@ -56,6 +59,8 @@ export default function ExHentaiGalleriesPage() {
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const exhentaiOptions = useExHentaiOptionsStore((s) => s.data);
+  const patchOptions = useExHentaiOptionsStore((s) => s.patch);
+  const showCover = exhentaiOptions?.showCover ?? false;
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
   const isSyncing = syncTask?.status === BTaskStatus.Running;
   const prevSyncStatusRef = useRef(syncTask?.status);
@@ -200,18 +205,29 @@ export default function ExHentaiGalleriesPage() {
 
       {(isConfigured || galleries.length > 0) && (
         <>
-          <div className="flex items-center gap-4">
-            <Input
-              className="max-w-sm"
-              placeholder={t("resourceSource.filter.keyword")}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Input
+                className="max-w-sm"
+                placeholder={t("resourceSource.filter.keyword")}
+                size="sm"
+                startContent={<AiOutlineSearch />}
+                value={keyword}
+                onValueChange={setKeyword}
+              />
+              <Chip size="sm" variant="flat">
+                {filteredGalleries.length} / {galleries.length}
+              </Chip>
+            </div>
+            <Switch
+              isSelected={showCover}
               size="sm"
-              startContent={<AiOutlineSearch />}
-              value={keyword}
-              onValueChange={setKeyword}
-            />
-            <Chip size="sm" variant="flat">
-              {filteredGalleries.length} / {galleries.length}
-            </Chip>
+              onValueChange={(v) => patchOptions({ showCover: v })}
+            >
+              <span className="text-sm text-default-500 whitespace-nowrap">
+                {t("resourceSource.action.showCover")}
+              </span>
+            </Switch>
           </div>
 
           {loading ? (
@@ -221,6 +237,7 @@ export default function ExHentaiGalleriesPage() {
           ) : (
             <Table removeWrapper aria-label="ExHentai Galleries" isStriped>
               <TableHeader>
+                {showCover && <TableColumn width={160}>{""}</TableColumn>}
                 <TableColumn>{t("resourceSource.exhentai.label.galleryId")}</TableColumn>
                 <TableColumn>{t("resourceSource.exhentai.label.title")}</TableColumn>
                 <TableColumn>{t("resourceSource.exhentai.label.category")}</TableColumn>
@@ -235,6 +252,23 @@ export default function ExHentaiGalleriesPage() {
               >
                 {(gallery) => (
                   <TableRow key={gallery.id}>
+                    {showCover && (
+                      <TableCell>
+                        {gallery.coverUrl ? (
+                          <Image
+                            alt={gallery.title || String(gallery.galleryId)}
+                            className="object-contain"
+                            classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
+                            radius="sm"
+                            src={gallery.coverUrl}
+                          />
+                        ) : (
+                          <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-xs">
+                            {gallery.galleryId}
+                          </div>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <span className="text-sm text-default-500">
                         {gallery.galleryId}

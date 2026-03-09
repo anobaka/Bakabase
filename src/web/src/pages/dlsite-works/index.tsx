@@ -75,6 +75,8 @@ export default function DLsiteWorksPage() {
   const [configOpen, setConfigOpen] = useState(false);
   const [showHidden, setShowHidden] = useState(true);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
+  const patchOptions = useDLsiteOptionsStore((s) => s.patch);
+  const showCover = dlsiteOptions?.showCover ?? false;
   const dlsiteOptionsInitialized = useDLsiteOptionsStore((s) => s.initialized);
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
   const scanTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SCAN_TASK_ID));
@@ -374,15 +376,26 @@ export default function DLsiteWorksPage() {
                 {filteredWorks.length} / {works.length}
               </Chip>
             </div>
-            <Switch
-              isSelected={showHidden}
-              size="sm"
-              onValueChange={setShowHidden}
-            >
-              <span className="text-sm text-default-500 whitespace-nowrap">
-                {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
-              </span>
-            </Switch>
+            <div className="flex items-center gap-4">
+              <Switch
+                isSelected={showCover}
+                size="sm"
+                onValueChange={(v) => patchOptions({ showCover: v })}
+              >
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.action.showCover")}
+                </span>
+              </Switch>
+              <Switch
+                isSelected={showHidden}
+                size="sm"
+                onValueChange={setShowHidden}
+              >
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
+                </span>
+              </Switch>
+            </div>
           </div>
 
           {loading ? (
@@ -400,7 +413,7 @@ export default function DLsiteWorksPage() {
               isStriped
             >
               <TableHeader>
-                <TableColumn width={160}>{""}</TableColumn>
+                {showCover && <TableColumn width={160}>{""}</TableColumn>}
                 <TableColumn>{t("resourceSource.dlsite.label.workId")}</TableColumn>
                 <TableColumn>{t("resourceSource.dlsite.label.title")}</TableColumn>
                 <TableColumn>{t("resourceSource.dlsite.label.circle")}</TableColumn>
@@ -419,21 +432,23 @@ export default function DLsiteWorksPage() {
 
                   return (
                     <TableRow key={work.workId}>
-                      <TableCell>
-                        {work.coverUrl ? (
-                          <Image
-                            alt={work.title || work.workId}
-                            className="object-contain"
-                            classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
-                            radius="sm"
-                            src={work.coverUrl}
-                          />
-                        ) : (
-                          <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
-                            {work.workId}
-                          </div>
-                        )}
-                      </TableCell>
+                      {showCover && (
+                        <TableCell>
+                          {work.coverUrl ? (
+                            <Image
+                              alt={work.title || work.workId}
+                              className="object-contain"
+                              classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
+                              radius="sm"
+                              src={work.coverUrl}
+                            />
+                          ) : (
+                            <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
+                              {work.workId}
+                            </div>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>{work.workId}</TableCell>
                       <TableCell>
                         <span className="font-medium">{work.title || "-"}</span>

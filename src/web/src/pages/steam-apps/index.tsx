@@ -14,6 +14,8 @@ import {
   Button,
   Spinner,
   Progress,
+  Image,
+  Switch,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -50,6 +52,9 @@ interface SteamApp {
 
 const SYNC_TASK_ID = "SyncSteam";
 
+const getSteamHeaderImage = (appId: number) =>
+  `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
+
 export default function SteamAppsPage() {
   const { t } = useTranslation();
   const [apps, setApps] = useState<SteamApp[]>([]);
@@ -57,6 +62,8 @@ export default function SteamAppsPage() {
   const [keyword, setKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const steamOptions = useSteamOptionsStore((s) => s.data);
+  const patchOptions = useSteamOptionsStore((s) => s.patch);
+  const showCover = steamOptions?.showCover ?? false;
   const syncTask = useBTasksStore((s) => s.tasks.find((t) => t.id === SYNC_TASK_ID));
   const isSyncing = syncTask?.status === BTaskStatus.Running;
   const prevSyncStatusRef = useRef(syncTask?.status);
@@ -200,18 +207,29 @@ export default function SteamAppsPage() {
 
       {(isConfigured || apps.length > 0) && (
         <>
-          <div className="flex items-center gap-4">
-            <Input
-              className="max-w-sm"
-              placeholder={t("resourceSource.filter.keyword")}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Input
+                className="max-w-sm"
+                placeholder={t("resourceSource.filter.keyword")}
+                size="sm"
+                startContent={<AiOutlineSearch />}
+                value={keyword}
+                onValueChange={setKeyword}
+              />
+              <Chip size="sm" variant="flat">
+                {filteredApps.length} / {apps.length}
+              </Chip>
+            </div>
+            <Switch
+              isSelected={showCover}
               size="sm"
-              startContent={<AiOutlineSearch />}
-              value={keyword}
-              onValueChange={setKeyword}
-            />
-            <Chip size="sm" variant="flat">
-              {filteredApps.length} / {apps.length}
-            </Chip>
+              onValueChange={(v) => patchOptions({ showCover: v })}
+            >
+              <span className="text-sm text-default-500 whitespace-nowrap">
+                {t("resourceSource.action.showCover")}
+              </span>
+            </Switch>
           </div>
 
           {loading ? (
@@ -221,6 +239,7 @@ export default function SteamAppsPage() {
           ) : (
             <Table removeWrapper aria-label="Steam Apps" isStriped>
               <TableHeader>
+                {showCover && <TableColumn width={240}>{""}</TableColumn>}
                 <TableColumn>{t("resourceSource.steam.label.appId")}</TableColumn>
                 <TableColumn>{t("resourceSource.steam.label.name")}</TableColumn>
                 <TableColumn>{t("resourceSource.steam.label.playtime")}</TableColumn>
@@ -235,6 +254,17 @@ export default function SteamAppsPage() {
               >
                 {(app) => (
                   <TableRow key={app.appId}>
+                    {showCover && (
+                      <TableCell>
+                        <Image
+                          alt={app.name || String(app.appId)}
+                          className="object-contain"
+                          classNames={{ wrapper: "w-[220px] min-w-[220px]" }}
+                          radius="sm"
+                          src={getSteamHeaderImage(app.appId)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell>{app.appId}</TableCell>
                     <TableCell>
                       <span className="font-medium">{app.name || "-"}</span>

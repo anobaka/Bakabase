@@ -105,7 +105,8 @@ public class ExHentaiGalleryService(
                             GalleryToken = galleryToken,
                             Title = resource.Name,
                             TitleJpn = resource.RawName != resource.Name ? resource.RawName : null,
-                            Category = resource.Category.ToString()
+                            Category = resource.Category.ToString(),
+                            CoverUrl = resource.CoverUrl
                         });
                     }
 
