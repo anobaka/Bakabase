@@ -86,10 +86,26 @@ public class DLsiteWorkService(
         var existing = await orm.GetFirstOrDefault(x => x.WorkId == work.WorkId);
         if (existing != null)
         {
-            work.Id = existing.Id;
-            work.CreatedAt = existing.CreatedAt;
-            work.UpdatedAt = DateTime.Now;
-            await orm.Update(work);
+            // Overwrite DLsite-sourced data
+            existing.Title = work.Title;
+            existing.Circle = work.Circle;
+            existing.WorkType = work.WorkType;
+            existing.CoverUrl = work.CoverUrl;
+            existing.SalesDate = work.SalesDate;
+            existing.IsPurchased = work.IsPurchased;
+            existing.MetadataJson = work.MetadataJson;
+            existing.MetadataFetchedAt = work.MetadataFetchedAt;
+
+            // If account changed, update account and reset DRM key
+            if (existing.Account != work.Account)
+            {
+                existing.Account = work.Account;
+                existing.DrmKey = null;
+            }
+
+            // Preserve: ResourceId, IsDownloaded, IsHidden, LocalPath, DrmKey (unless account changed)
+            existing.UpdatedAt = DateTime.Now;
+            await orm.Update(existing);
         }
         else
         {

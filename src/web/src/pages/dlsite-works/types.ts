@@ -9,6 +9,7 @@ export interface DLsiteWork {
   metadataFetchedAt?: string;
   drmKey?: string;
   account?: string;
+  salesDate?: string;
   isPurchased: boolean;
   isDownloaded: boolean;
   isHidden: boolean;

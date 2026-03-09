@@ -57,6 +57,7 @@ export function DLsiteTable({
       { key: "title", label: t("resourceSource.dlsite.label.title") },
       { key: "circle", label: t("resourceSource.dlsite.label.circle") },
       { key: "workType", label: t("resourceSource.dlsite.label.workType") },
+      { key: "salesDate", label: t("resourceSource.dlsite.label.salesDate") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
       { key: "account", label: t("resourceSource.dlsite.label.account") },
       { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
@@ -93,6 +94,10 @@ export function DLsiteTable({
             {work.workType}
           </Chip>
         ) : "-";
+      case "salesDate":
+        return work.salesDate
+          ? new Date(work.salesDate).toLocaleDateString()
+          : "-";
       case "resourceId":
         return work.resourceId ? (
           <Chip color="primary" size="sm" variant="flat">

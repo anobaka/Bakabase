@@ -354,8 +354,15 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
     {
         var tempPath = destinationPath + ".downloading";
         long existingLength = 0;
+        var resumeFromFinalFile = false;
 
-        if (File.Exists(tempPath))
+        // Check if final file already exists (previous complete download)
+        if (File.Exists(destinationPath))
+        {
+            existingLength = new FileInfo(destinationPath).Length;
+            resumeFromFinalFile = true;
+        }
+        else if (File.Exists(tempPath))
         {
             existingLength = new FileInfo(tempPath).Length;
         }
@@ -389,7 +396,8 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
         {
             if (response.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
             {
-                if (File.Exists(tempPath))
+                // File is already fully downloaded
+                if (File.Exists(tempPath) && !resumeFromFinalFile)
                 {
                     File.Move(tempPath, destinationPath, true);
                 }
@@ -420,6 +428,13 @@ public class DLsiteClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             else
             {
                 existingLength = 0;
+                resumeFromFinalFile = false;
+            }
+
+            // If resuming from the final file, copy it to temp first for append
+            if (resumeFromFinalFile && existingLength > 0)
+            {
+                File.Copy(destinationPath, tempPath, true);
             }
 
             var mode = existingLength > 0 ? FileMode.Append : FileMode.Create;
