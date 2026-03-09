@@ -404,6 +404,7 @@ export default function DLsiteWorksPage() {
             </div>
           ) : (
             <Table
+              key={String(showCover)}
               removeWrapper
               aria-label="DLsite Works"
               classNames={{
@@ -434,7 +435,7 @@ export default function DLsiteWorksPage() {
 
                   return (
                     <TableRow key={work.workId}>
-                      {showCover ? (
+                      {showCover && (
                         <TableCell>
                           {work.coverUrl ? (
                             <Image
@@ -450,7 +451,7 @@ export default function DLsiteWorksPage() {
                             </div>
                           )}
                         </TableCell>
-                      ) : null}
+                      )}
                       <TableCell>{work.workId}</TableCell>
                       <TableCell>
                         <span className="font-medium">{work.title || "-"}</span>

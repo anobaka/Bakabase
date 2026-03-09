@@ -237,7 +237,7 @@ export default function SteamAppsPage() {
               <Spinner size="lg" />
             </div>
           ) : (
-            <Table removeWrapper aria-label="Steam Apps" isStriped>
+            <Table key={String(showCover)} removeWrapper aria-label="Steam Apps" isStriped>
               <TableHeader>
                 {[
                   showCover && <TableColumn key="cover" width={240}>{""}</TableColumn>,
@@ -256,7 +256,7 @@ export default function SteamAppsPage() {
               >
                 {(app) => (
                   <TableRow key={app.appId}>
-                    {showCover ? (
+                    {showCover && (
                       <TableCell>
                         <Image
                           alt={app.name || String(app.appId)}
@@ -266,7 +266,7 @@ export default function SteamAppsPage() {
                           src={getSteamHeaderImage(app.appId)}
                         />
                       </TableCell>
-                    ) : null}
+                    )}
                     <TableCell>{app.appId}</TableCell>
                     <TableCell>
                       <span className="font-medium">{app.name || "-"}</span>

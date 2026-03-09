@@ -235,7 +235,7 @@ export default function ExHentaiGalleriesPage() {
               <Spinner size="lg" />
             </div>
           ) : (
-            <Table removeWrapper aria-label="ExHentai Galleries" isStriped>
+            <Table key={String(showCover)} removeWrapper aria-label="ExHentai Galleries" isStriped>
               <TableHeader>
                 {[
                   showCover && <TableColumn key="cover" width={160}>{""}</TableColumn>,
@@ -254,7 +254,7 @@ export default function ExHentaiGalleriesPage() {
               >
                 {(gallery) => (
                   <TableRow key={gallery.id}>
-                    {showCover ? (
+                    {showCover && (
                       <TableCell>
                         {gallery.coverUrl ? (
                           <Image
@@ -270,7 +270,7 @@ export default function ExHentaiGalleriesPage() {
                           </div>
                         )}
                       </TableCell>
-                    ) : null}
+                    )}
                     <TableCell>
                       <span className="text-sm text-default-500">
                         {gallery.galleryId}
