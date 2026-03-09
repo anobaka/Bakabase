@@ -374,6 +374,8 @@ export default function DLsiteWorksPage() {
   const scanFolders = dlsiteOptions?.scanFolders || [];
   const hasScanFolders = scanFolders.length > 0;
 
+  const [startingDownloads, setStartingDownloads] = useState<Set<string>>(new Set());
+
   const getDownloadTask = (workId: string) => {
     return allTasks.find((t) => t.id === `${DOWNLOAD_TASK_ID_PREFIX}${workId}`);
   };
@@ -526,7 +528,6 @@ export default function DLsiteWorksPage() {
 
   const [fetchingDrmKeys, setFetchingDrmKeys] = useState<Set<string>>(new Set());
   const [revealedDrmKeys, setRevealedDrmKeys] = useState<Set<string>>(new Set());
-  const [startingDownloads, setStartingDownloads] = useState<Set<string>>(new Set());
 
   const handleFetchDrmKey = async (workId: string) => {
     setFetchingDrmKeys((prev) => new Set(prev).add(workId));
