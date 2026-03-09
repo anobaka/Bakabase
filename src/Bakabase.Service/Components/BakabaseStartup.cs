@@ -26,6 +26,7 @@ using Bakabase.Migrations;
 using Bakabase.Modules.ThirdParty.Abstractions.Http;
 using Bakabase.Modules.ThirdParty.Abstractions.Http.Cookie;
 using Bakabase.Modules.ThirdParty.ThirdParties.Bilibili;
+using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bakabase.Modules.ThirdParty.ThirdParties.Pixiv;
 using Bakabase.Service.Components.Tasks;
@@ -70,6 +71,7 @@ namespace Bakabase.Service.Components
 
 
             services.TryAddSingleton<BilibiliCookieValidator>();
+            services.TryAddSingleton<DLsiteCookieValidator>();
             services.TryAddSingleton<ExHentaiCookieValidator>();
             services.TryAddSingleton<PixivCookieValidator>();
 
