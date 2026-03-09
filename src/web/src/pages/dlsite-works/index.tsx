@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Table,
@@ -66,6 +66,265 @@ const DOWNLOAD_TASK_ID_PREFIX = "DownloadDLsite_";
 const SCAN_TASK_ID = "ScanDLsiteFolder";
 
 const DLSITE_WORK_URL = "https://www.dlsite.com/maniax/work/=/product_id/";
+
+interface DLsiteTableColumn {
+  key: string;
+  label: string;
+  width?: number;
+}
+
+function DLsiteTable({
+  works, showCover, fetchingDrmKeys, revealedDrmKeys, hasDownloadDir,
+  getDownloadTask, onOpenPage, onOpenLocal, onDownload, onLaunch, onStopDownload,
+  onFetchDrmKey, onCopyDrmKey, onToggleHidden, onToggleRevealDrmKey,
+}: {
+  works: DLsiteWork[];
+  showCover: boolean;
+  fetchingDrmKeys: Set<string>;
+  revealedDrmKeys: Set<string>;
+  hasDownloadDir: boolean;
+  getDownloadTask: (workId: string) => { id?: string; status?: number; percentage?: number; process?: string } | undefined;
+  onOpenPage: (workId: string) => void;
+  onOpenLocal: (localPath: string) => void;
+  onDownload: (workId: string) => void;
+  onLaunch: (workId: string) => void;
+  onStopDownload: (workId: string) => void;
+  onFetchDrmKey: (workId: string) => void;
+  onCopyDrmKey: (key: string) => void;
+  onToggleHidden: (workId: string, isHidden: boolean) => void;
+  onToggleRevealDrmKey: (workId: string) => void;
+}) {
+  const { t } = useTranslation();
+
+  const columns = useMemo<DLsiteTableColumn[]>(() => {
+    const cols: DLsiteTableColumn[] = [];
+    if (showCover) cols.push({ key: "cover", label: "", width: 160 });
+    cols.push(
+      { key: "workId", label: t("resourceSource.dlsite.label.workId") },
+      { key: "title", label: t("resourceSource.dlsite.label.title") },
+      { key: "circle", label: t("resourceSource.dlsite.label.circle") },
+      { key: "workType", label: t("resourceSource.dlsite.label.workType") },
+      { key: "resourceId", label: t("resourceSource.label.resourceId") },
+      { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
+      { key: "actions", label: "", width: 200 },
+    );
+    return cols;
+  }, [showCover, t]);
+
+  const renderCell = (work: DLsiteWork, columnKey: string) => {
+    const downloadTask = getDownloadTask(work.workId);
+    const isDownloading = downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
+
+    switch (columnKey) {
+      case "cover":
+        return work.coverUrl ? (
+          <Image
+            alt={work.title || work.workId}
+            className="object-contain"
+            classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
+            radius="sm"
+            src={work.coverUrl}
+          />
+        ) : (
+          <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
+            {work.workId}
+          </div>
+        );
+      case "workId":
+        return work.workId;
+      case "title":
+        return <span className="font-medium">{work.title || "-"}</span>;
+      case "circle":
+        return work.circle || "-";
+      case "workType":
+        return work.workType ? (
+          <Chip className="text-[10px]" color="secondary" size="sm" variant="flat">
+            {work.workType}
+          </Chip>
+        ) : "-";
+      case "resourceId":
+        return work.resourceId ? (
+          <Chip color="primary" size="sm" variant="flat">
+            #{work.resourceId}
+          </Chip>
+        ) : "-";
+      case "drmKey":
+        if (work.drmKey === undefined || work.drmKey === null) {
+          return fetchingDrmKeys.has(work.workId) ? (
+            <span className="text-xs text-default-400">
+              {t("resourceSource.dlsite.drmKey.fetching")}
+            </span>
+          ) : (
+            <Button
+              className="text-xs"
+              size="sm"
+              startContent={<AiOutlineKey />}
+              variant="light"
+              onPress={() => onFetchDrmKey(work.workId)}
+            >
+              {t("resourceSource.dlsite.drmKey.fetch")}
+            </Button>
+          );
+        }
+        if (work.drmKey === "") {
+          return (
+            <span className="text-xs text-default-400">
+              {t("resourceSource.dlsite.drmKey.none")}
+            </span>
+          );
+        }
+        return (
+          <div className="flex items-center gap-1">
+            <span className="text-xs font-mono">
+              {revealedDrmKeys.has(work.workId)
+                ? work.drmKey
+                : "****-****-****-****"}
+            </span>
+            <Tooltip content={revealedDrmKeys.has(work.workId) ? t("resourceSource.dlsite.action.hide") : t("resourceSource.dlsite.action.unhide")}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => onToggleRevealDrmKey(work.workId)}
+              >
+                {revealedDrmKeys.has(work.workId)
+                  ? <AiOutlineEyeInvisible className="text-sm" />
+                  : <AiOutlineEye className="text-sm" />}
+              </Button>
+            </Tooltip>
+            <Tooltip content={t("resourceSource.dlsite.drmKey.copy")}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => onCopyDrmKey(work.drmKey!)}
+              >
+                <AiOutlineCopy className="text-sm" />
+              </Button>
+            </Tooltip>
+          </div>
+        );
+      case "actions":
+        return (
+          <div className="flex gap-1">
+            <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => onOpenPage(work.workId)}
+              >
+                <FiExternalLink className="text-lg" />
+              </Button>
+            </Tooltip>
+            {work.isDownloaded && work.localPath ? (
+              <>
+                <Tooltip content={t("resourceSource.dlsite.action.launch")}>
+                  <Button
+                    color="success"
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={() => onLaunch(work.workId)}
+                  >
+                    <AiOutlinePlayCircle className="text-lg" />
+                  </Button>
+                </Tooltip>
+                <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={() => onOpenLocal(work.localPath!)}
+                  >
+                    <AiOutlineFolderOpen className="text-lg" />
+                  </Button>
+                </Tooltip>
+              </>
+            ) : isDownloading ? (
+              <Tooltip content={
+                <div className="text-center">
+                  <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
+                  <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
+                </div>
+              }>
+                <div
+                  className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
+                  onClick={() => onStopDownload(work.workId)}
+                >
+                  <CircularProgress
+                    className="group-hover:hidden"
+                    color="primary"
+                    showValueLabel
+                    size="sm"
+                    value={downloadTask?.percentage ?? 0}
+                  />
+                  <AiOutlineStop className="text-lg text-danger hidden group-hover:block" />
+                </div>
+              </Tooltip>
+            ) : (
+              <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
+                <span>
+                  <Button
+                    color="warning"
+                    isDisabled={!hasDownloadDir}
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                    onPress={() => onDownload(work.workId)}
+                  >
+                    <AiOutlineDownload className="text-lg" />
+                  </Button>
+                </span>
+              </Tooltip>
+            )}
+            <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => onToggleHidden(work.workId, !work.isHidden)}
+              >
+                {work.isHidden
+                  ? <AiOutlineEye className="text-lg" />
+                  : <AiOutlineEyeInvisible className="text-lg" />}
+              </Button>
+            </Tooltip>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Table
+      removeWrapper
+      aria-label="DLsite Works"
+      isStriped
+    >
+      <TableHeader columns={columns}>
+        {(column) => (
+          <TableColumn key={column.key} width={column.width}>
+            {column.label}
+          </TableColumn>
+        )}
+      </TableHeader>
+      <TableBody
+        emptyContent={t("resourceSource.empty")}
+        items={works}
+      >
+        {(work) => (
+          <TableRow key={work.workId}>
+            {(columnKey) => (
+              <TableCell>{renderCell(work, columnKey as string)}</TableCell>
+            )}
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+}
 
 export default function DLsiteWorksPage() {
   const { t } = useTranslation();
@@ -403,232 +662,33 @@ export default function DLsiteWorksPage() {
               <Spinner size="lg" />
             </div>
           ) : (
-            <Table
-              key={String(showCover)}
-              removeWrapper
-              aria-label="DLsite Works"
-              classNames={{
-                // tr: "h-[200px]",
-                // td: "align-middle",
+            <DLsiteTable
+              works={filteredWorks}
+              showCover={showCover}
+              fetchingDrmKeys={fetchingDrmKeys}
+              revealedDrmKeys={revealedDrmKeys}
+              hasDownloadDir={hasDownloadDir}
+              getDownloadTask={getDownloadTask}
+              onOpenPage={handleOpenDLsitePage}
+              onOpenLocal={handleOpenLocal}
+              onDownload={handleDownload}
+              onLaunch={handleLaunch}
+              onStopDownload={handleStopDownload}
+              onFetchDrmKey={handleFetchDrmKey}
+              onCopyDrmKey={handleCopyDrmKey}
+              onToggleHidden={handleToggleHidden}
+              onToggleRevealDrmKey={(workId) => {
+                setRevealedDrmKeys((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(workId)) {
+                    next.delete(workId);
+                  } else {
+                    next.add(workId);
+                  }
+                  return next;
+                });
               }}
-              isStriped
-            >
-              <TableHeader>
-                {[
-                  showCover && <TableColumn key="cover" width={160}>{""}</TableColumn>,
-                  <TableColumn key="workId">{t("resourceSource.dlsite.label.workId")}</TableColumn>,
-                  <TableColumn key="title">{t("resourceSource.dlsite.label.title")}</TableColumn>,
-                  <TableColumn key="circle">{t("resourceSource.dlsite.label.circle")}</TableColumn>,
-                  <TableColumn key="workType">{t("resourceSource.dlsite.label.workType")}</TableColumn>,
-                  <TableColumn key="resourceId">{t("resourceSource.label.resourceId")}</TableColumn>,
-                  <TableColumn key="drmKey">{t("resourceSource.dlsite.label.drmKey")}</TableColumn>,
-                  <TableColumn key="actions" width={200}>{""}</TableColumn>,
-                ].filter(Boolean)}
-              </TableHeader>
-              <TableBody
-                emptyContent={t("resourceSource.empty")}
-                items={filteredWorks}
-              >
-                {(work) => {
-                  const downloadTask = getDownloadTask(work.workId);
-                  const isDownloading = downloadTask?.status === BTaskStatus.Running || downloadTask?.status === BTaskStatus.NotStarted;
-
-                  return (
-                    <TableRow key={work.workId}>
-                      {showCover && (
-                        <TableCell>
-                          {work.coverUrl ? (
-                            <Image
-                              alt={work.title || work.workId}
-                              className="object-contain"
-                              classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
-                              radius="sm"
-                              src={work.coverUrl}
-                            />
-                          ) : (
-                            <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-lg font-bold">
-                              {work.workId}
-                            </div>
-                          )}
-                        </TableCell>
-                      )}
-                      <TableCell>{work.workId}</TableCell>
-                      <TableCell>
-                        <span className="font-medium">{work.title || "-"}</span>
-                      </TableCell>
-                      <TableCell>{work.circle || "-"}</TableCell>
-                      <TableCell>
-                        {work.workType ? (
-                          <Chip className="text-[10px]" color="secondary" size="sm" variant="flat">
-                            {work.workType}
-                          </Chip>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {work.resourceId ? (
-                          <Chip color="primary" size="sm" variant="flat">
-                            #{work.resourceId}
-                          </Chip>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {work.drmKey === undefined || work.drmKey === null ? (
-                          // Not fetched yet
-                          fetchingDrmKeys.has(work.workId) ? (
-                            <span className="text-xs text-default-400">
-                              {t("resourceSource.dlsite.drmKey.fetching")}
-                            </span>
-                          ) : (
-                            <Button
-                              className="text-xs"
-                              size="sm"
-                              startContent={<AiOutlineKey />}
-                              variant="light"
-                              onPress={() => handleFetchDrmKey(work.workId)}
-                            >
-                              {t("resourceSource.dlsite.drmKey.fetch")}
-                            </Button>
-                          )
-                        ) : work.drmKey === "" ? (
-                          // No DRM
-                          <span className="text-xs text-default-400">
-                            {t("resourceSource.dlsite.drmKey.none")}
-                          </span>
-                        ) : (
-                          // Has DRM key
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-mono">
-                              {revealedDrmKeys.has(work.workId)
-                                ? work.drmKey
-                                : "****-****-****-****"}
-                            </span>
-                            <Tooltip content={revealedDrmKeys.has(work.workId) ? t("resourceSource.dlsite.action.hide") : t("resourceSource.dlsite.action.unhide")}>
-                              <Button
-                                isIconOnly
-                                size="sm"
-                                variant="light"
-                                onPress={() => {
-                                  setRevealedDrmKeys((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(work.workId)) {
-                                      next.delete(work.workId);
-                                    } else {
-                                      next.add(work.workId);
-                                    }
-                                    return next;
-                                  });
-                                }}
-                              >
-                                {revealedDrmKeys.has(work.workId)
-                                  ? <AiOutlineEyeInvisible className="text-sm" />
-                                  : <AiOutlineEye className="text-sm" />}
-                              </Button>
-                            </Tooltip>
-                            <Tooltip content={t("resourceSource.dlsite.drmKey.copy")}>
-                              <Button
-                                isIconOnly
-                                size="sm"
-                                variant="light"
-                                onPress={() => handleCopyDrmKey(work.drmKey!)}
-                              >
-                                <AiOutlineCopy className="text-sm" />
-                              </Button>
-                            </Tooltip>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
-                            <Button
-                              isIconOnly
-                              size="sm"
-                              variant="light"
-                              onPress={() => handleOpenDLsitePage(work.workId)}
-                            >
-                              <FiExternalLink className="text-lg" />
-                            </Button>
-                          </Tooltip>
-                          {work.isDownloaded && work.localPath ? (
-                            <>
-                              <Tooltip content={t("resourceSource.dlsite.action.launch")}>
-                                <Button
-                                  color="success"
-                                  isIconOnly
-                                  size="sm"
-                                  variant="light"
-                                  onPress={() => handleLaunch(work.workId)}
-                                >
-                                  <AiOutlinePlayCircle className="text-lg" />
-                                </Button>
-                              </Tooltip>
-                              <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
-                                <Button
-                                  isIconOnly
-                                  size="sm"
-                                  variant="light"
-                                  onPress={() => handleOpenLocal(work.localPath!)}
-                                >
-                                  <AiOutlineFolderOpen className="text-lg" />
-                                </Button>
-                              </Tooltip>
-                            </>
-                          ) : isDownloading ? (
-                            <Tooltip content={
-                              <div className="text-center">
-                                <div>{downloadTask?.process || t("resourceSource.dlsite.action.downloading")}</div>
-                                <div className="text-xs mt-1">{t("resourceSource.dlsite.action.stopDownload")}</div>
-                              </div>
-                            }>
-                              <div
-                                className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
-                                onClick={() => handleStopDownload(work.workId)}
-                              >
-                                <CircularProgress
-                                  className="group-hover:hidden"
-                                  color="primary"
-                                  showValueLabel
-                                  size="sm"
-                                  value={downloadTask?.percentage ?? 0}
-                                />
-                                <AiOutlineStop className="text-lg text-danger hidden group-hover:block" />
-                              </div>
-                            </Tooltip>
-                          ) : (
-                            <Tooltip content={hasDownloadDir ? t("resourceSource.dlsite.action.download") : t("resourceSource.dlsite.action.setDownloadDir")}>
-                              <span>
-                                <Button
-                                  color="warning"
-                                  isDisabled={!hasDownloadDir}
-                                  isIconOnly
-                                  size="sm"
-                                  variant="light"
-                                  onPress={() => handleDownload(work.workId)}
-                                >
-                                  <AiOutlineDownload className="text-lg" />
-                                </Button>
-                              </span>
-                            </Tooltip>
-                          )}
-                          <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
-                            <Button
-                              isIconOnly
-                              size="sm"
-                              variant="light"
-                              onPress={() => handleToggleHidden(work.workId, !work.isHidden)}
-                            >
-                              {work.isHidden
-                                ? <AiOutlineEye className="text-lg" />
-                                : <AiOutlineEyeInvisible className="text-lg" />}
-                            </Button>
-                          </Tooltip>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                }}
-              </TableBody>
-            </Table>
+            />
           )}
         </>
       )}

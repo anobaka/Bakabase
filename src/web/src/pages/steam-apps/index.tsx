@@ -55,6 +55,116 @@ const SYNC_TASK_ID = "SyncSteam";
 const getSteamHeaderImage = (appId: number) =>
   `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
 
+interface SteamTableColumn {
+  key: string;
+  label: string;
+  width?: number;
+}
+
+function SteamTable({
+  apps, showCover, onDelete, formatPlaytime, formatDate,
+}: {
+  apps: SteamApp[];
+  showCover: boolean;
+  onDelete: (appId: number) => void;
+  formatPlaytime: (minutes: number) => string;
+  formatDate: (unixTs: number) => string;
+}) {
+  const { t } = useTranslation();
+
+  const columns = useMemo<SteamTableColumn[]>(() => {
+    const cols: SteamTableColumn[] = [];
+    if (showCover) cols.push({ key: "cover", label: "", width: 240 });
+    cols.push(
+      { key: "appId", label: t("resourceSource.steam.label.appId") },
+      { key: "name", label: t("resourceSource.steam.label.name") },
+      { key: "playtime", label: t("resourceSource.steam.label.playtime") },
+      { key: "lastPlayed", label: t("resourceSource.steam.label.lastPlayed") },
+      { key: "installed", label: t("resourceSource.steam.label.installed") },
+      { key: "resourceId", label: t("resourceSource.label.resourceId") },
+      { key: "actions", label: "", width: 80 },
+    );
+    return cols;
+  }, [showCover, t]);
+
+  const renderCell = (app: SteamApp, columnKey: string) => {
+    switch (columnKey) {
+      case "cover":
+        return (
+          <Image
+            alt={app.name || String(app.appId)}
+            className="object-contain"
+            classNames={{ wrapper: "w-[220px] min-w-[220px]" }}
+            radius="sm"
+            src={getSteamHeaderImage(app.appId)}
+          />
+        );
+      case "appId":
+        return app.appId;
+      case "name":
+        return <span className="font-medium">{app.name || "-"}</span>;
+      case "playtime":
+        return formatPlaytime(app.playtimeForever);
+      case "lastPlayed":
+        return formatDate(app.rtimeLastPlayed);
+      case "installed":
+        return (
+          <Chip
+            color={app.isInstalled ? "success" : "default"}
+            size="sm"
+            variant="flat"
+          >
+            {app.isInstalled ? "Yes" : "No"}
+          </Chip>
+        );
+      case "resourceId":
+        return app.resourceId ? (
+          <Chip color="primary" size="sm" variant="flat">
+            #{app.resourceId}
+          </Chip>
+        ) : "-";
+      case "actions":
+        return (
+          <Button
+            color="danger"
+            isIconOnly
+            size="sm"
+            variant="light"
+            onPress={() => onDelete(app.appId)}
+          >
+            <AiOutlineDelete />
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Table removeWrapper aria-label="Steam Apps" isStriped>
+      <TableHeader columns={columns}>
+        {(column) => (
+          <TableColumn key={column.key} width={column.width}>
+            {column.label}
+          </TableColumn>
+        )}
+      </TableHeader>
+      <TableBody
+        emptyContent={t("resourceSource.empty")}
+        items={apps}
+      >
+        {(app) => (
+          <TableRow key={app.appId}>
+            {(columnKey) => (
+              <TableCell>{renderCell(app, columnKey as string)}</TableCell>
+            )}
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+}
+
 export default function SteamAppsPage() {
   const { t } = useTranslation();
   const [apps, setApps] = useState<SteamApp[]>([]);
@@ -237,75 +347,13 @@ export default function SteamAppsPage() {
               <Spinner size="lg" />
             </div>
           ) : (
-            <Table key={String(showCover)} removeWrapper aria-label="Steam Apps" isStriped>
-              <TableHeader>
-                {[
-                  showCover && <TableColumn key="cover" width={240}>{""}</TableColumn>,
-                  <TableColumn key="appId">{t("resourceSource.steam.label.appId")}</TableColumn>,
-                  <TableColumn key="name">{t("resourceSource.steam.label.name")}</TableColumn>,
-                  <TableColumn key="playtime">{t("resourceSource.steam.label.playtime")}</TableColumn>,
-                  <TableColumn key="lastPlayed">{t("resourceSource.steam.label.lastPlayed")}</TableColumn>,
-                  <TableColumn key="installed">{t("resourceSource.steam.label.installed")}</TableColumn>,
-                  <TableColumn key="resourceId">{t("resourceSource.label.resourceId")}</TableColumn>,
-                  <TableColumn key="actions" width={80}>{""}</TableColumn>,
-                ].filter(Boolean)}
-              </TableHeader>
-              <TableBody
-                emptyContent={t("resourceSource.empty")}
-                items={filteredApps}
-              >
-                {(app) => (
-                  <TableRow key={app.appId}>
-                    {showCover && (
-                      <TableCell>
-                        <Image
-                          alt={app.name || String(app.appId)}
-                          className="object-contain"
-                          classNames={{ wrapper: "w-[220px] min-w-[220px]" }}
-                          radius="sm"
-                          src={getSteamHeaderImage(app.appId)}
-                        />
-                      </TableCell>
-                    )}
-                    <TableCell>{app.appId}</TableCell>
-                    <TableCell>
-                      <span className="font-medium">{app.name || "-"}</span>
-                    </TableCell>
-                    <TableCell>{formatPlaytime(app.playtimeForever)}</TableCell>
-                    <TableCell>{formatDate(app.rtimeLastPlayed)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        color={app.isInstalled ? "success" : "default"}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {app.isInstalled ? "Yes" : "No"}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      {app.resourceId ? (
-                        <Chip color="primary" size="sm" variant="flat">
-                          #{app.resourceId}
-                        </Chip>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        color="danger"
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        onPress={() => handleDelete(app.appId)}
-                      >
-                        <AiOutlineDelete />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <SteamTable
+              apps={filteredApps}
+              showCover={showCover}
+              onDelete={handleDelete}
+              formatPlaytime={formatPlaytime}
+              formatDate={formatDate}
+            />
           )}
         </>
       )}

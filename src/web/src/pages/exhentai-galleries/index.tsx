@@ -52,6 +52,146 @@ interface ExHentaiGallery {
 
 const SYNC_TASK_ID = "SyncExHentai";
 
+interface ExHentaiTableColumn {
+  key: string;
+  label: string;
+  width?: number;
+}
+
+function ExHentaiTable({
+  galleries, showCover, categoryColorMap, onDelete,
+}: {
+  galleries: ExHentaiGallery[];
+  showCover: boolean;
+  categoryColorMap: Record<string, "primary" | "secondary" | "success" | "warning" | "danger" | "default">;
+  onDelete: (id: number) => void;
+}) {
+  const { t } = useTranslation();
+
+  const columns = useMemo<ExHentaiTableColumn[]>(() => {
+    const cols: ExHentaiTableColumn[] = [];
+    if (showCover) cols.push({ key: "cover", label: "", width: 160 });
+    cols.push(
+      { key: "galleryId", label: t("resourceSource.exhentai.label.galleryId") },
+      { key: "title", label: t("resourceSource.exhentai.label.title") },
+      { key: "category", label: t("resourceSource.exhentai.label.category") },
+      { key: "downloaded", label: t("resourceSource.exhentai.label.downloaded") },
+      { key: "resourceId", label: t("resourceSource.label.resourceId") },
+      { key: "createdAt", label: t("resourceSource.label.createdAt") },
+      { key: "actions", label: "", width: 80 },
+    );
+    return cols;
+  }, [showCover, t]);
+
+  const renderCell = (gallery: ExHentaiGallery, columnKey: string) => {
+    switch (columnKey) {
+      case "cover":
+        return gallery.coverUrl ? (
+          <Image
+            alt={gallery.title || String(gallery.galleryId)}
+            className="object-contain"
+            classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
+            radius="sm"
+            src={gallery.coverUrl}
+          />
+        ) : (
+          <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-xs">
+            {gallery.galleryId}
+          </div>
+        );
+      case "galleryId":
+        return (
+          <span className="text-sm text-default-500">
+            {gallery.galleryId}
+          </span>
+        );
+      case "title":
+        return (
+          <div>
+            <span className="font-medium">
+              {gallery.title || gallery.titleJpn || "-"}
+            </span>
+            {gallery.titleJpn && gallery.title && (
+              <div className="text-xs text-default-400 mt-0.5">
+                {gallery.titleJpn}
+              </div>
+            )}
+          </div>
+        );
+      case "category":
+        return gallery.category ? (
+          <Chip
+            color={categoryColorMap[gallery.category] || "default"}
+            size="sm"
+            variant="flat"
+          >
+            {gallery.category}
+          </Chip>
+        ) : "-";
+      case "downloaded":
+        return (
+          <Chip
+            color={gallery.isDownloaded ? "success" : "default"}
+            size="sm"
+            variant="flat"
+          >
+            {gallery.isDownloaded ? "Yes" : "No"}
+          </Chip>
+        );
+      case "resourceId":
+        return gallery.resourceId ? (
+          <Chip color="primary" size="sm" variant="flat">
+            #{gallery.resourceId}
+          </Chip>
+        ) : "-";
+      case "createdAt":
+        return (
+          <span className="text-sm">
+            {new Date(gallery.createdAt).toLocaleDateString()}
+          </span>
+        );
+      case "actions":
+        return (
+          <Button
+            color="danger"
+            isIconOnly
+            size="sm"
+            variant="light"
+            onPress={() => onDelete(gallery.id)}
+          >
+            <AiOutlineDelete />
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Table removeWrapper aria-label="ExHentai Galleries" isStriped>
+      <TableHeader columns={columns}>
+        {(column) => (
+          <TableColumn key={column.key} width={column.width}>
+            {column.label}
+          </TableColumn>
+        )}
+      </TableHeader>
+      <TableBody
+        emptyContent={t("resourceSource.empty")}
+        items={galleries}
+      >
+        {(gallery) => (
+          <TableRow key={gallery.id}>
+            {(columnKey) => (
+              <TableCell>{renderCell(gallery, columnKey as string)}</TableCell>
+            )}
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
+  );
+}
+
 export default function ExHentaiGalleriesPage() {
   const { t } = useTranslation();
   const [galleries, setGalleries] = useState<ExHentaiGallery[]>([]);
@@ -235,110 +375,12 @@ export default function ExHentaiGalleriesPage() {
               <Spinner size="lg" />
             </div>
           ) : (
-            <Table key={String(showCover)} removeWrapper aria-label="ExHentai Galleries" isStriped>
-              <TableHeader>
-                {[
-                  showCover && <TableColumn key="cover" width={160}>{""}</TableColumn>,
-                  <TableColumn key="galleryId">{t("resourceSource.exhentai.label.galleryId")}</TableColumn>,
-                  <TableColumn key="title">{t("resourceSource.exhentai.label.title")}</TableColumn>,
-                  <TableColumn key="category">{t("resourceSource.exhentai.label.category")}</TableColumn>,
-                  <TableColumn key="downloaded">{t("resourceSource.exhentai.label.downloaded")}</TableColumn>,
-                  <TableColumn key="resourceId">{t("resourceSource.label.resourceId")}</TableColumn>,
-                  <TableColumn key="createdAt">{t("resourceSource.label.createdAt")}</TableColumn>,
-                  <TableColumn key="actions" width={80}>{""}</TableColumn>,
-                ].filter(Boolean)}
-              </TableHeader>
-              <TableBody
-                emptyContent={t("resourceSource.empty")}
-                items={filteredGalleries}
-              >
-                {(gallery) => (
-                  <TableRow key={gallery.id}>
-                    {showCover && (
-                      <TableCell>
-                        {gallery.coverUrl ? (
-                          <Image
-                            alt={gallery.title || String(gallery.galleryId)}
-                            className="object-contain"
-                            classNames={{ wrapper: "w-[140px] min-w-[140px]" }}
-                            radius="sm"
-                            src={gallery.coverUrl}
-                          />
-                        ) : (
-                          <div className="w-[140px] flex items-center justify-center bg-default-100 rounded-sm text-default-300 text-xs">
-                            {gallery.galleryId}
-                          </div>
-                        )}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <span className="text-sm text-default-500">
-                        {gallery.galleryId}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <span className="font-medium">
-                          {gallery.title || gallery.titleJpn || "-"}
-                        </span>
-                        {gallery.titleJpn && gallery.title && (
-                          <div className="text-xs text-default-400 mt-0.5">
-                            {gallery.titleJpn}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {gallery.category ? (
-                        <Chip
-                          color={categoryColorMap[gallery.category] || "default"}
-                          size="sm"
-                          variant="flat"
-                        >
-                          {gallery.category}
-                        </Chip>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        color={gallery.isDownloaded ? "success" : "default"}
-                        size="sm"
-                        variant="flat"
-                      >
-                        {gallery.isDownloaded ? "Yes" : "No"}
-                      </Chip>
-                    </TableCell>
-                    <TableCell>
-                      {gallery.resourceId ? (
-                        <Chip color="primary" size="sm" variant="flat">
-                          #{gallery.resourceId}
-                        </Chip>
-                      ) : (
-                        "-"
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        {new Date(gallery.createdAt).toLocaleDateString()}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        color="danger"
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        onPress={() => handleDelete(gallery.id)}
-                      >
-                        <AiOutlineDelete />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <ExHentaiTable
+              galleries={filteredGalleries}
+              showCover={showCover}
+              categoryColorMap={categoryColorMap}
+              onDelete={handleDelete}
+            />
           )}
         </>
       )}
