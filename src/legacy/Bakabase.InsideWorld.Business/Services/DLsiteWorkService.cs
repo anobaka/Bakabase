@@ -236,7 +236,7 @@ public class DLsiteWorkService(
             await onProgress(0, $"[{workId}] 0%");
         }
 
-        var downloadInfo = await dlsiteClient.GetDownloadInfoAsync(cookie, workId, ct);
+        var downloadInfo = await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
         var links = downloadInfo.Links;
         if (links.Count == 0)
         {
@@ -343,10 +343,10 @@ public class DLsiteWorkService(
             throw new Exception("No DLsite account with cookie configured");
         }
 
-        var drmKey = await dlsiteClient.GetDrmKeyAsync(cookie, workId, ct);
+        var downloadInfo = await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
 
         // Save to DB (empty string means no DRM, non-empty means DRM key found)
-        work.DrmKey = drmKey ?? string.Empty;
+        work.DrmKey = downloadInfo.DrmKey ?? string.Empty;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
 
