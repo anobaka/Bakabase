@@ -730,6 +730,9 @@ public class DLsiteWorkService(
         ];
     });
 
+    // Latin-1 maps each byte 0x00-0xFF to the same Unicode code point, acting as a raw byte passthrough
+    private static readonly Lazy<Encoding> Latin1 = new(() => Encoding.GetEncoding(28591));
+
     private static Encoding DetectZipEncoding(string zipPath)
     {
         // If UTF-8 flag (bit 11) is set in the ZIP header, use UTF-8 directly
@@ -738,41 +741,60 @@ public class DLsiteWorkService(
             return Encoding.UTF8;
         }
 
-        // Try each candidate encoding; pick the first one with no garbled entry names
-        var candidates = EncodingCandidates.Value;
-        foreach (var encoding in candidates)
+        // Open with Latin-1 passthrough to extract raw entry name bytes
+        List<byte[]> rawNames;
+        try
         {
-            try
-            {
-                using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Read, encoding);
-                var allClean = true;
-                foreach (var entry in archive.Entries)
-                {
-                    if (string.IsNullOrEmpty(entry.Name))
-                    {
-                        continue;
-                    }
+            using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Read, Latin1.Value);
+            rawNames = archive.Entries
+                .Where(e => !string.IsNullOrEmpty(e.Name))
+                .Select(e => Latin1.Value.GetBytes(e.FullName))
+                .ToList();
+        }
+        catch
+        {
+            return Encoding.GetEncoding(932);
+        }
 
-                    if (HasGarbledCharacters(entry.Name))
-                    {
-                        allClean = false;
-                        break;
-                    }
-                }
+        if (rawNames.Count == 0)
+        {
+            return Encoding.GetEncoding(932);
+        }
 
-                if (allClean)
-                {
-                    return encoding;
-                }
-            }
-            catch
+        // Try each candidate encoding with strict decoding
+        foreach (var encoding in EncodingCandidates.Value)
+        {
+            if (IsEncodingValid(rawNames, encoding))
             {
-                // This encoding failed to open the archive, try next
+                return encoding;
             }
         }
 
         // Fallback to Shift-JIS (most common for DLsite)
         return Encoding.GetEncoding(932);
+    }
+
+    /// <summary>
+    /// Tests whether raw byte sequences are all valid under the specified encoding
+    /// using strict mode (DecoderFallback.ExceptionFallback).
+    /// </summary>
+    private static bool IsEncodingValid(List<byte[]> rawNames, Encoding encoding)
+    {
+        var strictEncoding = (Encoding)encoding.Clone();
+        strictEncoding.DecoderFallback = DecoderFallback.ExceptionFallback;
+        try
+        {
+            foreach (var bytes in rawNames)
+            {
+                strictEncoding.GetString(bytes);
+            }
+
+            return true;
+        }
+        catch (DecoderFallbackException)
+        {
+            return false;
+        }
     }
 
     private static bool IsUtf8FlagSet(string zipPath)
@@ -791,26 +813,6 @@ public class DLsiteWorkService(
         catch
         {
             // Ignore
-        }
-
-        return false;
-    }
-
-    private static bool HasGarbledCharacters(string text)
-    {
-        foreach (var c in text)
-        {
-            // Unicode replacement character - definite sign of decoding failure
-            if (c == '\uFFFD')
-            {
-                return true;
-            }
-
-            // Latin Extended characters that commonly appear when CJK bytes are misread as Latin-1
-            if (c is (>= '\u00C0' and <= '\u00FF') or (>= '\u0100' and <= '\u024F'))
-            {
-                return true;
-            }
         }
 
         return false;
