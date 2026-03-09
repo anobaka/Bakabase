@@ -52,6 +52,7 @@ interface DLsiteWork {
   metadataJson?: string;
   metadataFetchedAt?: string;
   drmKey?: string;
+  account?: string;
   isPurchased: boolean;
   isDownloaded: boolean;
   isHidden: boolean;
@@ -105,6 +106,7 @@ function DLsiteTable({
       { key: "circle", label: t("resourceSource.dlsite.label.circle") },
       { key: "workType", label: t("resourceSource.dlsite.label.workType") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
+      { key: "account", label: t("resourceSource.dlsite.label.account") },
       { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
       { key: "actions", label: "", width: 200 },
     );
@@ -148,17 +150,21 @@ function DLsiteTable({
             #{work.resourceId}
           </Chip>
         ) : "-";
+      case "account":
+        return work.account ? (
+          <Chip size="sm" variant="flat">
+            {work.account}
+          </Chip>
+        ) : "-";
       case "drmKey":
         if (work.drmKey === undefined || work.drmKey === null) {
-          return fetchingDrmKeys.has(work.workId) ? (
-            <span className="text-xs text-default-400">
-              {t("resourceSource.dlsite.drmKey.fetching")}
-            </span>
-          ) : (
+          const isFetching = fetchingDrmKeys.has(work.workId);
+          return (
             <Button
               className="text-xs"
+              isLoading={isFetching}
               size="sm"
-              startContent={<AiOutlineKey />}
+              startContent={!isFetching ? <AiOutlineKey className="text-lg" /> : undefined}
               variant="light"
               onPress={() => onFetchDrmKey(work.workId)}
             >
@@ -178,7 +184,7 @@ function DLsiteTable({
             <span className="text-xs font-mono">
               {revealedDrmKeys.has(work.workId)
                 ? work.drmKey
-                : "****-****-****-****"}
+                : "******"}
             </span>
             <Tooltip content={revealedDrmKeys.has(work.workId) ? t("resourceSource.dlsite.action.hide") : t("resourceSource.dlsite.action.unhide")}>
               <Button
@@ -188,8 +194,8 @@ function DLsiteTable({
                 onPress={() => onToggleRevealDrmKey(work.workId)}
               >
                 {revealedDrmKeys.has(work.workId)
-                  ? <AiOutlineEyeInvisible className="text-sm" />
-                  : <AiOutlineEye className="text-sm" />}
+                  ? <AiOutlineEyeInvisible className="text-lg" />
+                  : <AiOutlineEye className="text-lg" />}
               </Button>
             </Tooltip>
             <Tooltip content={t("resourceSource.dlsite.drmKey.copy")}>
@@ -199,7 +205,7 @@ function DLsiteTable({
                 variant="light"
                 onPress={() => onCopyDrmKey(work.drmKey!)}
               >
-                <AiOutlineCopy className="text-sm" />
+                <AiOutlineCopy className="text-lg" />
               </Button>
             </Tooltip>
           </div>

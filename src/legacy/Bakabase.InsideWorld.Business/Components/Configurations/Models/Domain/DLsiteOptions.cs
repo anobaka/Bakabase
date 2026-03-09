@@ -9,7 +9,7 @@ namespace Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 
 public class DLsiteAccount
 {
-    public string? Name { get; set; }
+    public string Name { get; set; } = null!;
     public string? Cookie { get; set; }
 }
 

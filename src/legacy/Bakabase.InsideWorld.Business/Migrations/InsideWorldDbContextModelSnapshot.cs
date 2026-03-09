@@ -109,6 +109,9 @@ namespace Bakabase.InsideWorld.Business.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Account")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Circle")
                         .HasColumnType("TEXT");
 

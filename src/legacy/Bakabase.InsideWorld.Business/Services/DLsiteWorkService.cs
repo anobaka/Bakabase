@@ -27,8 +27,35 @@ public class DLsiteWorkService(
     ILogger<DLsiteWorkService> logger)
     : IDLsiteWorkService
 {
-    // IBOptionsManager extends IBOptions, so we can read via .Value
     private DLsiteOptions DLsiteOptionsValue => dlsiteOptions.Value;
+
+    /// <summary>
+    /// Finds the cookie for the account associated with a work.
+    /// Falls back to the first account with a cookie if the associated account is not found.
+    /// </summary>
+    private string GetCookieForWork(DLsiteWorkDbModel work)
+    {
+        var accounts = DLsiteOptionsValue.Accounts;
+        if (accounts == null || accounts.Count == 0)
+        {
+            throw new Exception("No DLsite accounts configured");
+        }
+
+        // Try the associated account first
+        if (!string.IsNullOrEmpty(work.Account))
+        {
+            var account = accounts.FirstOrDefault(a =>
+                a.Name == work.Account && !string.IsNullOrEmpty(a.Cookie));
+            if (account != null)
+            {
+                return account.Cookie!;
+            }
+        }
+
+        // Fallback to first account with cookie
+        var fallback = accounts.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie));
+        return fallback?.Cookie ?? throw new Exception("No DLsite account with cookie configured");
+    }
     private static readonly HashSet<string> ExecutableExtensions = [".exe"];
     private static readonly HashSet<string> ImageExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"];
     private static readonly HashSet<string> AudioExtensions = [".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a", ".wma"];
@@ -156,6 +183,7 @@ public class DLsiteWorkService(
                         Circle = work.Maker?.Name?.GetBestName(),
                         WorkType = work.WorkType,
                         CoverUrl = work.WorkFiles?.Main,
+                        Account = account.Name,
                         IsPurchased = true,
                         MetadataJson = JsonConvert.SerializeObject(work),
                         MetadataFetchedAt = DateTime.Now,
@@ -215,11 +243,7 @@ public class DLsiteWorkService(
             throw new Exception($"Work {workId} not found");
         }
 
-        var cookie = DLsiteOptionsValue.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
-        if (string.IsNullOrEmpty(cookie))
-        {
-            throw new Exception("No DLsite account with cookie configured");
-        }
+        var cookie = GetCookieForWork(work);
 
         var defaultPath = DLsiteOptionsValue.DefaultPath;
         if (string.IsNullOrEmpty(defaultPath))
@@ -337,11 +361,7 @@ public class DLsiteWorkService(
             return work.DrmKey;
         }
 
-        var cookie = DLsiteOptionsValue.Accounts?.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie))?.Cookie;
-        if (string.IsNullOrEmpty(cookie))
-        {
-            throw new Exception("No DLsite account with cookie configured");
-        }
+        var cookie = GetCookieForWork(work);
 
         var downloadInfo = await dlsiteClient.ResolveDownloadAsync(cookie, workId, ct);
 

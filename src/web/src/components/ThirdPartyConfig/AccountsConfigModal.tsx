@@ -146,6 +146,7 @@ export default function AccountsConfigModal({
                   </div>
 
                   <Input
+                    isRequired
                     label={t("resourceSource.accounts.name")}
                     placeholder={t("resourceSource.accounts.namePlaceholder")}
                     size="sm"
