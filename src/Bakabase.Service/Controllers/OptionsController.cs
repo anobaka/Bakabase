@@ -333,6 +333,11 @@ namespace Bakabase.Service.Controllers
                 {
                     options.RequestTimeout = model.RequestTimeout.Value;
                 }
+
+                if (model.ShowCover.HasValue)
+                {
+                    options.ShowCover = model.ShowCover.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }
