@@ -30,7 +30,7 @@ export function LaunchButton({
   const isLeAvailable = leContext?.isAvailableOnCurrentPlatform !== false;
   const isLeInstalled = leContext?.status === DependentComponentStatus.Installed;
   const isLeInstalling = leContext?.status === DependentComponentStatus.Installing;
-  const launchDisabled = isLeAvailable && useLocaleEmulator && !isLeInstalled;
+  const launchDisabled = useLocaleEmulator && (!isLeAvailable || !isLeInstalled);
 
   const handleInstallLe = async () => {
     await BApi.component.installDependentComponent({ id: dependentComponentIds.LocaleEmulator });
@@ -89,21 +89,22 @@ export function LaunchButton({
     <Tooltip
       content={
         <div className="flex flex-col gap-2 p-1">
-          {isLeAvailable && (
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-sm whitespace-nowrap">
-                {t("resourceSource.dlsite.label.useLocaleEmulator")}
-              </span>
-              <Switch
-                isSelected={useLocaleEmulator}
-                size="sm"
-                onValueChange={(v) => onToggleUseLocaleEmulator(workId, v)}
-              />
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm whitespace-nowrap">
+              {t("resourceSource.dlsite.label.useLocaleEmulator")}
+            </span>
+            <Switch
+              isDisabled={!isLeAvailable}
+              isSelected={useLocaleEmulator}
+              size="sm"
+              onValueChange={(v) => onToggleUseLocaleEmulator(workId, v)}
+            />
+          </div>
+          {useLocaleEmulator && (
+            <div className="flex items-center">
+              {renderLeStatus()}
             </div>
           )}
-          <div className="flex items-center">
-            {renderLeStatus()}
-          </div>
         </div>
       }
       placement="bottom"
