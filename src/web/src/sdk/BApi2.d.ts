@@ -1679,6 +1679,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dlsite-work/{workId}/use-locale-emulator": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["SetDLsiteWorkUseLocaleEmulator"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/download-task/downloaders/definitions": {
         parameters: {
             query?: never;
@@ -5255,6 +5271,7 @@ export interface components {
             /** Format: int32 */
             resourceId?: number;
             isHidden: boolean;
+            useLocaleEmulator: boolean;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -13315,6 +13332,37 @@ export interface operations {
         };
     };
     SetDLsiteWorkHidden: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json-patch+json": boolean;
+                "application/json": boolean;
+                "text/json": boolean;
+                "application/*+json": boolean;
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    SetDLsiteWorkUseLocaleEmulator: {
         parameters: {
             query?: never;
             header?: never;

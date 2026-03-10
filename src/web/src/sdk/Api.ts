@@ -61,6 +61,7 @@ export interface BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
   /** @format int32 */
   resourceId?: number;
   isHidden: boolean;
+  useLocaleEmulator: boolean;
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
