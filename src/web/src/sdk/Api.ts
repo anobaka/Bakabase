@@ -1338,6 +1338,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   /** @format int32 */
   requestTimeout: number;
   showCover: boolean;
+  deleteArchiveAfterExtraction: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
@@ -1624,6 +1625,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
   /** @format int32 */
   requestTimeout?: number;
   showCover?: boolean;
+  deleteArchiveAfterExtraction?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputEnhancerOptionsPatchInputModel {
@@ -9547,6 +9549,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name ExtractDLsiteWork
+     * @request POST:/dlsite-work/{workId}/extract
+     */
+    extractDLsiteWork: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/extract`,
+        method: "POST",
         format: "json",
         ...params,
       }),

@@ -84,6 +84,9 @@
   "resourceSource.dlsite.downloadFirst": "Please download this work first",
   "resourceSource.dlsite.action.deleteLocal": "Delete local files",
   "resourceSource.dlsite.action.deleteLocalConfirm": "Are you sure to delete local files for this work? This cannot be undone.",
+  "resourceSource.dlsite.action.reExtract": "Re-extract",
+  "resourceSource.dlsite.action.more": "More",
+  "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "Delete archives after extraction",
 
   "resourceSource.exhentai.title": "ExHentai Galleries",
   "resourceSource.exhentai.description": "Galleries synced from your ExHentai favorites.",

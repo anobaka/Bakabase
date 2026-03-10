@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Divider } from "@heroui/react";
+import { Button, Chip, Divider, Switch } from "@heroui/react";
 import { AiOutlineDelete, AiOutlinePlus } from "react-icons/ai";
 
 import { toast } from "@/components/bakaui";
@@ -91,6 +91,20 @@ export default function DLsiteConfig({ isOpen, onClose }: DLsiteConfigProps) {
             >
               {downloadDir || t("resourceSource.dlsite.config.downloadDirPlaceholder")}
             </Button>
+          </div>
+
+          <Divider />
+
+          <div>
+            <Switch
+              isSelected={options?.deleteArchiveAfterExtraction ?? false}
+              size="sm"
+              onValueChange={(v) => patch({ deleteArchiveAfterExtraction: v })}
+            >
+              <span className="text-sm font-medium">
+                {t("resourceSource.dlsite.config.deleteArchiveAfterExtraction")}
+              </span>
+            </Switch>
           </div>
 
           <Divider />

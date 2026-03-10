@@ -12,6 +12,7 @@ public interface IDLsiteWorkService
     Task DeleteByWorkId(string workId);
     Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task DownloadWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default);
+    Task ExtractWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default);
     Task<string> PrepareDownloadDirectory(string workId);
     Task LaunchWork(string workId, CancellationToken ct = default);
     List<string> FindPlayableFiles(string localPath, string? workType);

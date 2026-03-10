@@ -84,6 +84,9 @@
   "resourceSource.dlsite.downloadFirst": "请先下载此作品",
   "resourceSource.dlsite.action.deleteLocal": "删除本地文件",
   "resourceSource.dlsite.action.deleteLocalConfirm": "确定要删除此作品的本地文件吗？此操作不可撤销。",
+  "resourceSource.dlsite.action.reExtract": "重新解压",
+  "resourceSource.dlsite.action.more": "更多",
+  "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "解压后删除压缩包",
 
   "resourceSource.exhentai.title": "ExHentai 画廊",
   "resourceSource.exhentai.description": "从 ExHentai 收藏夹同步的画廊。",

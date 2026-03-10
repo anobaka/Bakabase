@@ -409,15 +409,78 @@ public class DLsiteWorkService(
             logger.LogInformation("Downloaded: {Path}", destPath);
         }
 
-        // Extract archives (handles split archives with SFX .exe first part)
-        var extractDir = Path.Combine(workDir, "extracted");
-
+        // Extract archives
         if (onProgress != null)
         {
             await onProgress(96, "Extracting...");
         }
 
+        await ExtractWork(workId, onProgress, ct);
+
+        if (onProgress != null)
+        {
+            await onProgress(100, "100%");
+        }
+
+        logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, (await GetByWorkId(workId))?.LocalPath);
+    }
+
+    public async Task ExtractWork(string workId, Func<int, string, Task>? onProgress = null, CancellationToken ct = default)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        var defaultPath = DLsiteOptionsValue.DefaultPath;
+        if (string.IsNullOrEmpty(defaultPath))
+        {
+            throw new Exception("Download path not configured.");
+        }
+
+        var workDir = Path.Combine(defaultPath, workId);
+        if (!Directory.Exists(workDir))
+        {
+            throw new Exception($"Work directory not found: {workDir}");
+        }
+
+        // Find all archive files in the work directory (not in extracted subfolder)
+        var downloadedFiles = Directory.EnumerateFiles(workDir)
+            .Where(f => !f.EndsWith(".downloading", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (downloadedFiles.Count == 0)
+        {
+            throw new Exception($"No files found in work directory: {workDir}");
+        }
+
+        var extractDir = Path.Combine(workDir, "extracted");
+
+        // Delete existing extracted folder if re-extracting
+        if (Directory.Exists(extractDir))
+        {
+            Directory.Delete(extractDir, true);
+        }
+
         var hasArchives = await archiveExtractor.ExtractAsync(downloadedFiles, extractDir, ct);
+
+        // Delete archives after extraction if configured
+        if (hasArchives && DLsiteOptionsValue.DeleteArchiveAfterExtraction)
+        {
+            foreach (var file in downloadedFiles)
+            {
+                try
+                {
+                    File.Delete(file);
+                    logger.LogInformation("Deleted archive after extraction: {Path}", file);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to delete archive: {Path}", file);
+                }
+            }
+        }
 
         // Update work record
         work.IsDownloaded = true;
@@ -425,12 +488,7 @@ public class DLsiteWorkService(
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
 
-        if (onProgress != null)
-        {
-            await onProgress(100, "100%");
-        }
-
-        logger.LogInformation("Download complete for work {WorkId} at {Path}", workId, work.LocalPath);
+        logger.LogInformation("Extraction complete for work {WorkId} at {Path}", workId, work.LocalPath);
     }
 
     private async Task<DLsiteDownloadInfo> ResolveDownloadWithRetry(string cookie, string accountKey, string workId, CancellationToken ct)

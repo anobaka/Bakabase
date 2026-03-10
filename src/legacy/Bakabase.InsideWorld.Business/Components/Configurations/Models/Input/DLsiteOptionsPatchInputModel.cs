@@ -19,4 +19,5 @@ public class DLsiteOptionsPatchInputModel
     public int? MaxRetries { get; set; }
     public int? RequestTimeout { get; set; }
     public bool? ShowCover { get; set; }
+    public bool? DeleteArchiveAfterExtraction { get; set; }
 }

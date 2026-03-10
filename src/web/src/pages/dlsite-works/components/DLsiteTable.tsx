@@ -11,6 +11,10 @@ import {
   Button,
   Image,
   Tooltip,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@heroui/react";
 import {
   AiOutlineFolderOpen,
@@ -18,8 +22,10 @@ import {
   AiOutlineEye,
   AiOutlineEyeInvisible,
   AiOutlineDelete,
+  AiOutlineMore,
 } from "react-icons/ai";
 import { FiExternalLink } from "react-icons/fi";
+import { GoPackage } from "react-icons/go";
 
 import type { DLsiteWork } from "../types";
 import { DrmKeyCell } from "./DrmKeyCell";
@@ -34,7 +40,7 @@ interface DLsiteTableColumn {
 export function DLsiteTable({
   works, showCover, hasDownloadDir,
   onOpenPage, onOpenLocal, onLaunch,
-  onToggleHidden, onDeleteLocal, onWorkUpdate, onSetWorksLocalPath,
+  onToggleHidden, onDeleteLocal, onReExtract, onWorkUpdate, onSetWorksLocalPath,
 }: {
   works: DLsiteWork[];
   showCover: boolean;
@@ -44,6 +50,7 @@ export function DLsiteTable({
   onLaunch: (workId: string) => void;
   onToggleHidden: (workId: string, isHidden: boolean) => void;
   onDeleteLocal: (workId: string) => void;
+  onReExtract: (workId: string) => void;
   onWorkUpdate: (workId: string, patch: Partial<DLsiteWork>) => void;
   onSetWorksLocalPath: (workId: string, localPath: string) => void;
 }) {
@@ -55,8 +62,6 @@ export function DLsiteTable({
     cols.push(
       { key: "workId", label: t("resourceSource.dlsite.label.workId") },
       { key: "title", label: t("resourceSource.dlsite.label.title") },
-      { key: "circle", label: t("resourceSource.dlsite.label.circle") },
-      { key: "workType", label: t("resourceSource.dlsite.label.workType") },
       { key: "salesDate", label: t("resourceSource.dlsite.label.salesDate") },
       { key: "purchasedAt", label: t("resourceSource.dlsite.label.purchasedAt") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
@@ -86,15 +91,32 @@ export function DLsiteTable({
       case "workId":
         return work.workId;
       case "title":
-        return <span className="font-medium">{work.title || "-"}</span>;
-      case "circle":
-        return work.circle || "-";
-      case "workType":
-        return work.workType ? (
-          <Chip className="text-[10px]" color="secondary" size="sm" variant="flat">
-            {work.workType}
-          </Chip>
-        ) : "-";
+        return (
+          <div>
+            <span className="font-medium">{work.title || "-"}</span>
+            <div className="flex items-center gap-2 mt-1">
+              {work.circle && (
+                <span className="text-xs text-default-400">{work.circle}</span>
+              )}
+              {work.workType && (
+                <Chip className="text-[10px]" color="secondary" size="sm" variant="flat">
+                  {work.workType}
+                </Chip>
+              )}
+              <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
+                <Button
+                  isIconOnly
+                  className="min-w-5 w-5 h-5"
+                  size="sm"
+                  variant="light"
+                  onPress={() => onOpenPage(work.workId)}
+                >
+                  <FiExternalLink className="text-sm" />
+                </Button>
+              </Tooltip>
+            </div>
+          </div>
+        );
       case "salesDate":
         return work.salesDate
           ? new Date(work.salesDate).toLocaleDateString()
@@ -120,16 +142,6 @@ export function DLsiteTable({
       case "actions":
         return (
           <div className="flex gap-1">
-            <Tooltip content={t("resourceSource.dlsite.action.openPage")}>
-              <Button
-                isIconOnly
-                size="sm"
-                variant="light"
-                onPress={() => onOpenPage(work.workId)}
-              >
-                <FiExternalLink className="text-lg" />
-              </Button>
-            </Tooltip>
             {work.isDownloaded && work.localPath && (
               <Tooltip content={t("resourceSource.dlsite.action.launch")}>
                 <Button
@@ -155,19 +167,6 @@ export function DLsiteTable({
                 </Button>
               </Tooltip>
             )}
-            {work.isDownloaded && work.localPath && (
-              <Tooltip content={t("resourceSource.dlsite.action.deleteLocal")}>
-                <Button
-                  color="danger"
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={() => onDeleteLocal(work.workId)}
-                >
-                  <AiOutlineDelete className="text-lg" />
-                </Button>
-              </Tooltip>
-            )}
             <DownloadButton work={work} hasDownloadDir={hasDownloadDir} onSetWorksLocalPath={onSetWorksLocalPath} />
             <Tooltip content={work.isHidden ? t("resourceSource.dlsite.action.unhide") : t("resourceSource.dlsite.action.hide")}>
               <Button
@@ -181,6 +180,37 @@ export function DLsiteTable({
                   : <AiOutlineEyeInvisible className="text-lg" />}
               </Button>
             </Tooltip>
+            {work.isDownloaded && work.localPath && (
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button
+                    isIconOnly
+                    size="sm"
+                    variant="light"
+                  >
+                    <AiOutlineMore className="text-lg" />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu aria-label={t("resourceSource.dlsite.action.more")}>
+                  <DropdownItem
+                    key="reExtract"
+                    startContent={<GoPackage />}
+                    onPress={() => onReExtract(work.workId)}
+                  >
+                    {t("resourceSource.dlsite.action.reExtract")}
+                  </DropdownItem>
+                  <DropdownItem
+                    key="deleteLocal"
+                    className="text-danger"
+                    color="danger"
+                    startContent={<AiOutlineDelete />}
+                    onPress={() => onDeleteLocal(work.workId)}
+                  >
+                    {t("resourceSource.dlsite.action.deleteLocal")}
+                  </DropdownItem>
+                </DropdownMenu>
+              </Dropdown>
+            )}
           </div>
         );
       default:

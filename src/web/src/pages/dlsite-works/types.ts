@@ -22,5 +22,6 @@ export interface DLsiteWork {
 
 export const SYNC_TASK_ID = "SyncDLsite";
 export const DOWNLOAD_TASK_ID_PREFIX = "DownloadDLsite_";
+export const EXTRACT_TASK_ID_PREFIX = "ExtractDLsite_";
 export const SCAN_TASK_ID = "ScanDLsiteFolder";
 export const DLSITE_WORK_URL = "https://www.dlsite.com/maniax/work/=/product_id/";

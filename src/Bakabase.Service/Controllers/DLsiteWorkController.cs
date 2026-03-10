@@ -20,6 +20,7 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
 {
     public const string SyncTaskId = "SyncDLsite";
     public const string DownloadTaskIdPrefix = "DownloadDLsite_";
+    public const string ExtractTaskIdPrefix = "ExtractDLsite_";
 
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllDLsiteWorks")]
@@ -179,6 +180,41 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
             Type = BTaskType.Any,
             ResourceType = BTaskResourceType.Any,
             IsPersistent = true,
+            DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
+            RootServiceProvider = HttpContext.RequestServices
+        });
+        return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("{workId}/extract")]
+    [SwaggerOperation(OperationId = "ExtractDLsiteWork")]
+    public async Task<BaseResponse> Extract(string workId)
+    {
+        var taskId = $"{ExtractTaskIdPrefix}{workId}";
+        await btm.Start(taskId, () => new BTaskHandlerBuilder
+        {
+            Id = taskId,
+            GetName = () => localizer["BTask_Name_ExtractDLsite", workId],
+            GetDescription = () => localizer["BTask_Description_ExtractDLsite", workId],
+            Run = async args =>
+            {
+                await using var scope = args.RootServiceProvider.CreateAsyncScope();
+                var svc = scope.ServiceProvider.GetRequiredService<IDLsiteWorkService>();
+                await svc.ExtractWork(
+                    workId,
+                    async (percentage, process) =>
+                    {
+                        await args.UpdateTask(t =>
+                        {
+                            t.Percentage = percentage;
+                            t.Process = process;
+                        });
+                    },
+                    args.CancellationToken);
+            },
+            Type = BTaskType.Any,
+            ResourceType = BTaskResourceType.Any,
+            IsPersistent = false,
             DuplicateIdHandling = BTaskDuplicateIdHandling.Replace,
             RootServiceProvider = HttpContext.RequestServices
         });

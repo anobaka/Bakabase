@@ -29,7 +29,7 @@ import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
 
 import type { DLsiteWork } from "./types";
-import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, SCAN_TASK_ID } from "./types";
+import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX, SCAN_TASK_ID } from "./types";
 import { DLsiteTable } from "./components/DLsiteTable";
 
 export default function DLsiteWorksPage() {
@@ -89,7 +89,8 @@ export default function DLsiteWorksPage() {
 
   useEffect(() => {
     const downloadTasks = allTasks.filter((t) => t.id?.startsWith(DOWNLOAD_TASK_ID_PREFIX));
-    const justCompleted = downloadTasks.some((t) => t.status === BTaskStatus.Completed);
+    const extractTasks = allTasks.filter((t) => t.id?.startsWith(EXTRACT_TASK_ID_PREFIX));
+    const justCompleted = [...downloadTasks, ...extractTasks].some((t) => t.status === BTaskStatus.Completed);
     if (justCompleted) {
       loadWorks();
     }
@@ -161,6 +162,13 @@ export default function DLsiteWorksPage() {
   const handleSetWorksLocalPath = useCallback((workId: string, localPath: string) => {
     setWorks((prev) => prev.map((w) => w.workId === workId ? { ...w, localPath } : w));
   }, []);
+
+  const handleReExtract = async (workId: string) => {
+    const rsp = await BApi.dlsiteWork.extractDLsiteWork(workId);
+    if (!rsp.code) {
+      toast.success(t("resourceSource.dlsite.action.reExtract"));
+    }
+  };
 
   const handleDeleteLocal = async (workId: string) => {
     if (!confirm(t("resourceSource.dlsite.action.deleteLocalConfirm"))) return;
@@ -352,6 +360,7 @@ export default function DLsiteWorksPage() {
               onLaunch={handleLaunch}
               onToggleHidden={handleToggleHidden}
               onDeleteLocal={handleDeleteLocal}
+              onReExtract={handleReExtract}
               onWorkUpdate={handleWorkUpdate}
               onSetWorksLocalPath={handleSetWorksLocalPath}
             />
