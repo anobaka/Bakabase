@@ -480,11 +480,51 @@ public class DLsiteWorkService(
                     logger.LogWarning(ex, "Failed to delete archive: {Path}", file);
                 }
             }
+
+            // Move extracted contents to work directory and remove the extracted subfolder
+            if (Directory.Exists(extractDir))
+            {
+                try
+                {
+                    foreach (var dir in Directory.GetDirectories(extractDir))
+                    {
+                        var destDir = Path.Combine(workDir, Path.GetFileName(dir));
+                        if (Directory.Exists(destDir))
+                        {
+                            Directory.Delete(destDir, true);
+                        }
+
+                        Directory.Move(dir, destDir);
+                    }
+
+                    foreach (var file in Directory.GetFiles(extractDir))
+                    {
+                        var destFile = Path.Combine(workDir, Path.GetFileName(file));
+                        if (File.Exists(destFile))
+                        {
+                            File.Delete(destFile);
+                        }
+
+                        File.Move(file, destFile);
+                    }
+
+                    Directory.Delete(extractDir, true);
+                    logger.LogInformation(
+                        "Moved extracted contents to work directory: {Path}", workDir);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex,
+                        "Failed to flatten extracted directory, keeping extracted subfolder");
+                }
+            }
         }
 
         // Update work record
         work.IsDownloaded = true;
-        work.LocalPath = hasArchives ? extractDir : workDir;
+        work.LocalPath = hasArchives
+            ? Directory.Exists(extractDir) ? extractDir : workDir
+            : workDir;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
 
