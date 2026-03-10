@@ -65,6 +65,40 @@ public class DLsiteWorkService(
     private static readonly HashSet<string> ImageExtensions = [".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"];
     private static readonly HashSet<string> AudioExtensions = [".mp3", ".wav", ".flac", ".ogg", ".aac", ".m4a", ".wma"];
     private static readonly HashSet<string> VideoExtensions = [".mp4", ".avi", ".mkv", ".wmv", ".mov", ".flv", ".webm"];
+
+    /// <summary>
+    /// Executable filenames (case-insensitive) that should never be selected as the main game executable.
+    /// </summary>
+    private static readonly HashSet<string> ExeBlacklist = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "UnityCrashHandler.exe",
+        "UnityCrashHandler32.exe",
+        "UnityCrashHandler64.exe",
+        "UnityBugReporter.exe",
+        "unins000.exe",
+        "unins001.exe",
+        "uninstall.exe",
+        "dxwebsetup.exe",
+        "DXSETUP.exe",
+        "setup.exe",
+    };
+
+    /// <summary>
+    /// Subdirectory names (case-insensitive) that typically contain runtime/engine files rather than the main executable.
+    /// </summary>
+    private static readonly HashSet<string> LowPriorityDirNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "_CommonRedist",
+        "__support",
+        "lib",
+        "engine",
+        "redist",
+        "DirectX",
+        "vcredist",
+        "dotnet",
+        "Mono",
+        "MonoBleedingEdge",
+    };
     public async Task<List<DLsiteWorkDbModel>> GetAll()
     {
         return await orm.GetAll();
@@ -595,12 +629,57 @@ public class DLsiteWorkService(
         }
 
         var extensions = GetPlayableExtensions(workType);
+        var isExeOnly = extensions.SetEquals(ExecutableExtensions);
+
         var files = Directory.EnumerateFiles(localPath, "*.*", SearchOption.AllDirectories)
             .Where(f => extensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-            .OrderBy(f => f)
+            .ToList();
+
+        if (isExeOnly)
+        {
+            // Filter out blacklisted executables
+            var filtered = files
+                .Where(f => !ExeBlacklist.Contains(Path.GetFileName(f)))
+                .ToList();
+
+            // Fall back to unfiltered list only if filtering removed everything
+            if (filtered.Count > 0)
+            {
+                files = filtered;
+            }
+        }
+
+        // Sort by priority: shallower depth first, then deprioritize known low-priority directories
+        var normalizedRoot = NormalizeDirPath(localPath);
+        files = files
+            .OrderBy(f => IsInLowPriorityDir(f, normalizedRoot) ? 1 : 0)
+            .ThenBy(f => GetRelativeDepth(f, normalizedRoot))
+            .ThenBy(f => f, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
         return files;
+    }
+
+    private static string NormalizeDirPath(string path)
+    {
+        var full = Path.GetFullPath(path);
+        return full.EndsWith(Path.DirectorySeparatorChar)
+            ? full
+            : full + Path.DirectorySeparatorChar;
+    }
+
+    private static int GetRelativeDepth(string filePath, string normalizedRoot)
+    {
+        var relativePath = Path.GetFullPath(filePath).Substring(normalizedRoot.Length);
+        return relativePath.Count(c => c == Path.DirectorySeparatorChar);
+    }
+
+    private static bool IsInLowPriorityDir(string filePath, string normalizedRoot)
+    {
+        var relativePath = Path.GetFullPath(filePath).Substring(normalizedRoot.Length);
+        var dirParts = Path.GetDirectoryName(relativePath)?
+            .Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+        return dirParts != null && dirParts.Any(d => LowPriorityDirNames.Contains(d));
     }
 
     private static HashSet<string> GetPlayableExtensions(string? workType)
