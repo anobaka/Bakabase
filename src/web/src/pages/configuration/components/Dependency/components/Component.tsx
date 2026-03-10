@@ -123,7 +123,7 @@ const Component = ({ id }: { id: string }) => {
               </Button>,
             );
           }
-        } else {
+        } else if (context?.status === DependentComponentStatus.Installed) {
           elements.push(
             <CheckCircleOutlined className={"text-base text-success"} />,
           );

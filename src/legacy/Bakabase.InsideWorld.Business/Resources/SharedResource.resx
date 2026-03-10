@@ -696,6 +696,12 @@ The version of lux is not limited.</value>
   <data name="Dependency_Component_7z_Description" xml:space="preserve">
     <value>This component is used for archive compression and extraction. It is required by other components such as ffmpeg and lux for their installation.</value>
   </data>
+  <data name="Dependency_Component_LocaleEmulator_Name" xml:space="preserve">
+    <value>Locale Emulator</value>
+  </data>
+  <data name="Dependency_Component_LocaleEmulator_Description" xml:space="preserve">
+    <value>This component allows running applications with a different system locale (e.g., Japanese locale). Windows only.</value>
+  </data>
   <data name="CodecNotSupportedByBrowsers" xml:space="preserve">
     <value>Codec '{0}' is not supported by browsers</value>
   </data>

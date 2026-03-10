@@ -696,6 +696,12 @@
   <data name="Dependency_Component_7z_Description" xml:space="preserve">
     <value>该组件用于压缩包的压缩和解压。它是 ffmpeg、lux 等组件安装过程中所必需的依赖。</value>
   </data>
+  <data name="Dependency_Component_LocaleEmulator_Name" xml:space="preserve">
+    <value>Locale Emulator</value>
+  </data>
+  <data name="Dependency_Component_LocaleEmulator_Description" xml:space="preserve">
+    <value>该组件用于以不同的系统区域设置运行应用程序（例如日语区域设置）。仅限 Windows。</value>
+  </data>
   <data name="CodecNotSupportedByBrowsers" xml:space="preserve">
     <value>编码格式 '{0}' 不被浏览器支持</value>
   </data>
