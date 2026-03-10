@@ -17,6 +17,7 @@ namespace Bakabase.InsideWorld.Business.Services;
 public class SteamAppService(
     FullMemoryCacheResourceService<BakabaseDbContext, SteamAppDbModel, int> orm,
     SteamClient steamClient,
+    SteamLocalLibrary steamLocalLibrary,
     IBOptions<SteamOptions> steamOptions,
     ILogger<SteamAppService> logger)
     : ISteamAppService
@@ -213,6 +214,50 @@ public class SteamAppService(
 
         logger.LogInformation("Steam sync complete: {Count} games synced ({Added} added, {Updated} updated)",
             total, toAdd.Count, toUpdate.Count);
+
+        // Detect locally installed apps and update installation status
+        await UpdateInstallationStatus();
+    }
+
+    public async Task UpdateInstallationStatus()
+    {
+        var installedApps = steamLocalLibrary.DetectInstalledApps();
+        var allApps = await orm.GetAll();
+        var toUpdate = new List<SteamAppDbModel>();
+        var now = DateTime.Now;
+
+        foreach (var app in allApps)
+        {
+            var wasInstalled = app.IsInstalled;
+            var oldPath = app.InstallPath;
+
+            if (installedApps.TryGetValue(app.AppId, out var installPath))
+            {
+                app.IsInstalled = true;
+                app.InstallPath = installPath;
+            }
+            else
+            {
+                app.IsInstalled = false;
+                app.InstallPath = null;
+            }
+
+            if (app.IsInstalled != wasInstalled || app.InstallPath != oldPath)
+            {
+                app.UpdatedAt = now;
+                toUpdate.Add(app);
+            }
+        }
+
+        if (toUpdate.Count > 0)
+        {
+            await orm.UpdateRange(toUpdate);
+            logger.LogInformation(
+                "Updated installation status for {Count} Steam app(s): {Installed} installed, {Uninstalled} not installed",
+                toUpdate.Count,
+                toUpdate.Count(a => a.IsInstalled),
+                toUpdate.Count(a => !a.IsInstalled));
+        }
     }
 
     public async Task SetHidden(int appId, bool isHidden)

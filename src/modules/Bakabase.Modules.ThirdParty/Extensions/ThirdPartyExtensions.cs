@@ -92,6 +92,7 @@ public static class ThirdPartyExtensions
         services.TryAddSingleton<ExHentaiClient>();
 
         services.TryAddSingleton<SteamClient>();
+        services.TryAddSingleton<SteamLocalLibrary>();
 
         services.AddBakabaseHttpClient<PixivHttpMessageHandler<TPixivOptions>>(InternalOptions
             .HttpClientNames

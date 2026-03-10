@@ -14,4 +14,5 @@ public interface ISteamAppService
     Task DeleteByAppId(int appId);
     Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task SetHidden(int appId, bool isHidden);
+    Task UpdateInstallationStatus();
 }
