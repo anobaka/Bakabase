@@ -1197,6 +1197,11 @@ namespace Bakabase.Service.Controllers
                 {
                     options.Accounts = model.Accounts;
                 }
+
+                if (model.ShowCover.HasValue)
+                {
+                    options.ShowCover = model.ShowCover.Value;
+                }
             });
             return BaseResponseBuilder.Ok;
         }
