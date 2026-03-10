@@ -29,7 +29,7 @@ import { GoPackage } from "react-icons/go";
 import type { DLsiteWork } from "../types";
 import { DrmKeyCell } from "./DrmKeyCell";
 import { DownloadButton } from "./DownloadButton";
-import { LeWorkControls } from "./LeWorkControls";
+import { LaunchButton } from "./LaunchButton";
 
 interface DLsiteTableColumn {
   key: string;
@@ -145,7 +145,7 @@ export function DLsiteTable({
         return (
           <div className="flex gap-1 items-center">
             {work.isDownloaded && work.localPath && (
-              <LeWorkControls
+              <LaunchButton
                 workId={work.workId}
                 useLocaleEmulator={work.useLocaleEmulator}
                 onLaunch={onLaunch}
