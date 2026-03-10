@@ -2,16 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Bakabase.Abstractions.Models.Db;
 using Bakabase.Abstractions.Services;
+using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
-using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.SevenZip;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
 using Bootstrap.Components.Configuration.Abstractions;
@@ -25,7 +23,7 @@ public class DLsiteWorkService(
     FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm,
     DLsiteClient dlsiteClient,
     IBOptions<DLsiteOptions> dlsiteOptions,
-    SevenZipService sevenZipService,
+    DLsiteArchiveExtractor archiveExtractor,
     LocaleEmulatorService localeEmulatorService,
     ILogger<DLsiteWorkService> logger)
     : IDLsiteWorkService
@@ -411,34 +409,15 @@ public class DLsiteWorkService(
             logger.LogInformation("Downloaded: {Path}", destPath);
         }
 
-        // Extract archives
+        // Extract archives (handles split archives with SFX .exe first part)
         var extractDir = Path.Combine(workDir, "extracted");
-        var hasArchives = false;
 
-        foreach (var file in downloadedFiles)
+        if (onProgress != null)
         {
-            ct.ThrowIfCancellationRequested();
-            var ext = Path.GetExtension(file).ToLowerInvariant();
-            if (ext is ".zip" or ".rar" or ".7z" or ".lzh")
-            {
-                hasArchives = true;
-                if (onProgress != null)
-                {
-                    await onProgress(96, Path.GetFileName(file));
-                }
-
-                if (ext is ".zip")
-                {
-                    ExtractZipWithEncodingDetection(file, extractDir);
-                }
-                else
-                {
-                    await sevenZipService.Extract(file, extractDir, ct);
-                }
-
-                logger.LogInformation("Extracted: {Path}", file);
-            }
+            await onProgress(96, "Extracting...");
         }
+
+        var hasArchives = await archiveExtractor.ExtractAsync(downloadedFiles, extractDir, ct);
 
         // Update work record
         work.IsDownloaded = true;
@@ -705,116 +684,4 @@ public class DLsiteWorkService(
         await orm.Update(work);
     }
 
-    /// <summary>
-    /// Extracts a ZIP file using .NET's ZipFile with automatic encoding detection.
-    /// Tries UTF-8, Shift-JIS, GBK, Big5 and picks the encoding that produces valid-looking entry names.
-    /// This avoids 7z's inability to handle -mcp on non-Windows platforms.
-    /// </summary>
-    private void ExtractZipWithEncodingDetection(string zipPath, string outputDir)
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        var encoding = DetectZipEncoding(zipPath);
-        logger.LogInformation("Extracting ZIP {Path} with encoding {Encoding}", zipPath, encoding.EncodingName);
-        ZipFile.ExtractToDirectory(zipPath, outputDir, encoding, overwriteFiles: true);
-    }
-
-    private static readonly Lazy<Encoding[]> EncodingCandidates = new(() =>
-    {
-        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        return
-        [
-            Encoding.UTF8,
-            Encoding.GetEncoding(932), // Shift-JIS (Japanese)
-            Encoding.GetEncoding(936), // GBK (Simplified Chinese)
-            Encoding.GetEncoding(950)  // Big5 (Traditional Chinese)
-        ];
-    });
-
-    // Latin-1 maps each byte 0x00-0xFF to the same Unicode code point, acting as a raw byte passthrough
-    private static readonly Lazy<Encoding> Latin1 = new(() => Encoding.GetEncoding(28591));
-
-    private static Encoding DetectZipEncoding(string zipPath)
-    {
-        // If UTF-8 flag (bit 11) is set in the ZIP header, use UTF-8 directly
-        if (IsUtf8FlagSet(zipPath))
-        {
-            return Encoding.UTF8;
-        }
-
-        // Open with Latin-1 passthrough to extract raw entry name bytes
-        List<byte[]> rawNames;
-        try
-        {
-            using var archive = ZipFile.Open(zipPath, ZipArchiveMode.Read, Latin1.Value);
-            rawNames = archive.Entries
-                .Where(e => !string.IsNullOrEmpty(e.Name))
-                .Select(e => Latin1.Value.GetBytes(e.FullName))
-                .ToList();
-        }
-        catch
-        {
-            return Encoding.GetEncoding(932);
-        }
-
-        if (rawNames.Count == 0)
-        {
-            return Encoding.GetEncoding(932);
-        }
-
-        // Try each candidate encoding with strict decoding
-        foreach (var encoding in EncodingCandidates.Value)
-        {
-            if (IsEncodingValid(rawNames, encoding))
-            {
-                return encoding;
-            }
-        }
-
-        // Fallback to Shift-JIS (most common for DLsite)
-        return Encoding.GetEncoding(932);
-    }
-
-    /// <summary>
-    /// Tests whether raw byte sequences are all valid under the specified encoding
-    /// using strict mode (DecoderFallback.ExceptionFallback).
-    /// </summary>
-    private static bool IsEncodingValid(List<byte[]> rawNames, Encoding encoding)
-    {
-        var strictEncoding = (Encoding)encoding.Clone();
-        strictEncoding.DecoderFallback = DecoderFallback.ExceptionFallback;
-        try
-        {
-            foreach (var bytes in rawNames)
-            {
-                strictEncoding.GetString(bytes);
-            }
-
-            return true;
-        }
-        catch (DecoderFallbackException)
-        {
-            return false;
-        }
-    }
-
-    private static bool IsUtf8FlagSet(string zipPath)
-    {
-        try
-        {
-            using var fs = File.OpenRead(zipPath);
-            using var reader = new BinaryReader(fs);
-            if (fs.Length > 30 && reader.ReadUInt32() == 0x04034b50)
-            {
-                reader.ReadUInt16(); // version needed to extract
-                var flags = reader.ReadUInt16();
-                return (flags & (1 << 11)) != 0;
-            }
-        }
-        catch
-        {
-            // Ignore
-        }
-
-        return false;
-    }
 }

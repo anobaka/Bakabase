@@ -7,6 +7,7 @@ using Bakabase.Abstractions.Services;
 using Bakabase.InsideWorld.Business;
 using Bakabase.InsideWorld.Business.Components;
 using Bakabase.InsideWorld.Business.Components.Ai;
+using Bakabase.InsideWorld.Business.Components.Compression;
 using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions;
 using Bakabase.InsideWorld.Business.Components.Downloader.Abstractions.Components;
@@ -183,6 +184,7 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<ISteamAppService, SteamAppService>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int>>();
+            services.AddScoped<DLsiteArchiveExtractor>();
             services.AddScoped<IDLsiteWorkService, DLsiteWorkService>();
 
             services.AddScoped<FullMemoryCacheResourceService<BakabaseDbContext, ExHentaiGalleryDbModel, int>>();
