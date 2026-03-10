@@ -137,7 +137,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           color={resource.pinned ? "warning" : "default"}
           size={"sm"}
           title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
-          onClick={() => {
+          onPress={() => {
             BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
               reload?.();
             });
@@ -154,7 +154,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Open folder")}
-          onClick={() =>
+          onPress={() =>
             BApi.tool.openFileOrDirectory({
               path: resource.path,
               openInDirectory: resource.isFile,
@@ -172,7 +172,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Enhancements")}
-          onClick={() => {
+          onPress={() => {
             BApi.resource
               .getResourceEnhancements(resource.id, {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
@@ -197,7 +197,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Preview")}
-          onClick={showResourceMediaPlayer}
+          onPress={showResourceMediaPlayer}
         >
           <AiOutlinePicture className={"text-lg"} />
         </Button>,
@@ -210,7 +210,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Add to playlist")}
-          onClick={() => {
+          onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
               title: t<string>("Add to playlist"),
@@ -251,7 +251,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           color={resource.pinned ? "warning" : "default"}
           size={"sm"}
           title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
-          onClick={() => {
+          onPress={() => {
             BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
               reload?.();
             });
@@ -264,7 +264,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Open folder")}
-          onClick={() =>
+          onPress={() =>
             BApi.tool.openFileOrDirectory({
               path: resource.path,
               openInDirectory: resource.isFile,
@@ -278,7 +278,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Enhancements")}
-          onClick={() => {
+          onPress={() => {
             BApi.resource
               .getResourceEnhancements(resource.id, {
                 additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
@@ -299,7 +299,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Preview")}
-          onClick={showResourceMediaPlayer}
+          onPress={showResourceMediaPlayer}
         >
           <AiOutlinePicture className={"text-lg"} />
         </Button>,
@@ -308,7 +308,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           isIconOnly
           size={"sm"}
           title={t<string>("Add to playlist")}
-          onClick={() => {
+          onPress={() => {
             createPortal(Modal, {
               defaultVisible: true,
               title: t<string>("Add to playlist"),
@@ -371,7 +371,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         className={buttonClassName}
         color={resource.pinned ? "warning" : "default"}
         title={resource.pinned ? t<string>("Unpin") : t<string>("Pin")}
-        onClick={() => {
+        onPress={() => {
           BApi.resource.pinResource(resource.id, { pin: !resource.pinned }).then((r) => {
             reload?.();
           });
@@ -388,7 +388,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         isIconOnly
         className={buttonClassName}
         title={t<string>("Open folder")}
-        onClick={() =>
+        onPress={() =>
           BApi.tool.openFileOrDirectory({
             path: resource.path,
             openInDirectory: resource.isFile,
@@ -406,7 +406,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         isIconOnly
         className={buttonClassName}
         title={t<string>("Enhancements")}
-        onClick={() => {
+        onPress={() => {
           BApi.resource
             .getResourceEnhancements(resource.id, {
               additionalItem: EnhancementAdditionalItem.GeneratedPropertyValue,
@@ -431,7 +431,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         isIconOnly
         className={buttonClassName}
         title={t<string>("Preview")}
-        onClick={showResourceMediaPlayer}
+        onPress={showResourceMediaPlayer}
       >
         <AiOutlinePicture className={iconClassName} />
       </Button>,
@@ -444,7 +444,7 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         isIconOnly
         className={buttonClassName}
         title={t<string>("Add to playlist")}
-        onClick={() => {
+        onPress={() => {
           createPortal(Modal, {
             defaultVisible: true,
             title: t<string>("Add to playlist"),
