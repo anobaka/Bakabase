@@ -293,15 +293,11 @@ public class DLsiteWorkService(
         var workDir = Path.Combine(defaultPath, workId);
         Directory.CreateDirectory(workDir);
 
-        // Set LocalPath early so UI can show "open directory" while downloading
-        if (string.IsNullOrEmpty(work.LocalPath))
-        {
-            work.LocalPath = workDir;
-            work.UpdatedAt = DateTime.Now;
-            await orm.Update(work);
-        }
+        work.LocalPath = workDir;
+        work.UpdatedAt = DateTime.Now;
+        await orm.Update(work);
 
-        return work.LocalPath ?? workDir;
+        return workDir;
     }
 
     private const int MaxLinkRefreshRetries = 3;
@@ -522,9 +518,7 @@ public class DLsiteWorkService(
 
         // Update work record
         work.IsDownloaded = true;
-        work.LocalPath = hasArchives
-            ? Directory.Exists(extractDir) ? extractDir : workDir
-            : workDir;
+        work.LocalPath = workDir;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
 
@@ -749,18 +743,6 @@ public class DLsiteWorkService(
         {
             Directory.Delete(work.LocalPath, true);
             logger.LogInformation("Deleted local files for work {WorkId} at {Path}", workId, work.LocalPath);
-        }
-
-        // Also delete the work directory (parent of extracted) if it exists and is empty
-        var defaultPath = DLsiteOptionsValue.DefaultPath;
-        if (!string.IsNullOrEmpty(defaultPath))
-        {
-            var workDir = Path.Combine(defaultPath, workId);
-            if (Directory.Exists(workDir) && workDir != work.LocalPath)
-            {
-                Directory.Delete(workDir, true);
-                logger.LogInformation("Deleted work directory for {WorkId} at {Path}", workId, workDir);
-            }
         }
 
         work.IsDownloaded = false;
