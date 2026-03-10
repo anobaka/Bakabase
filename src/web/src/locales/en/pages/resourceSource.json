@@ -93,6 +93,7 @@
   "resourceSource.dlsite.le.installed": "LE ready",
   "resourceSource.dlsite.le.notInstalled": "LE not installed",
   "resourceSource.dlsite.le.installing": "LE installing",
+  "resourceSource.dlsite.le.notAvailableOnPlatform": "LE not available on this platform",
   "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "Delete archives after extraction",
 
   "resourceSource.exhentai.title": "ExHentai Galleries",

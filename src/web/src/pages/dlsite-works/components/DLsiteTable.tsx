@@ -15,11 +15,9 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
-  Switch,
 } from "@heroui/react";
 import {
   AiOutlineFolderOpen,
-  AiOutlinePlayCircle,
   AiOutlineEye,
   AiOutlineEyeInvisible,
   AiOutlineDelete,
@@ -31,6 +29,7 @@ import { GoPackage } from "react-icons/go";
 import type { DLsiteWork } from "../types";
 import { DrmKeyCell } from "./DrmKeyCell";
 import { DownloadButton } from "./DownloadButton";
+import { LeWorkControls } from "./LeWorkControls";
 
 interface DLsiteTableColumn {
   key: string;
@@ -39,7 +38,7 @@ interface DLsiteTableColumn {
 }
 
 export function DLsiteTable({
-  works, showCover, hasDownloadDir, isLeReady,
+  works, showCover, hasDownloadDir,
   onOpenPage, onOpenLocal, onLaunch,
   onToggleHidden, onDeleteLocal, onReExtract, onWorkUpdate, onSetWorksLocalPath,
   onToggleUseLocaleEmulator,
@@ -47,7 +46,6 @@ export function DLsiteTable({
   works: DLsiteWork[];
   showCover: boolean;
   hasDownloadDir: boolean;
-  isLeReady: boolean;
   onOpenPage: (workId: string) => void;
   onOpenLocal: (localPath: string) => void;
   onLaunch: (workId: string) => void;
@@ -144,42 +142,15 @@ export function DLsiteTable({
       case "drmKey":
         return <DrmKeyCell work={work} onWorkUpdate={onWorkUpdate} />;
       case "actions": {
-        const launchDisabled = work.useLocaleEmulator && !isLeReady;
         return (
           <div className="flex gap-1 items-center">
             {work.isDownloaded && work.localPath && (
-              <>
-                <Tooltip
-                  content={
-                    launchDisabled
-                      ? t("resourceSource.dlsite.le.notReady")
-                      : t("resourceSource.dlsite.action.launch")
-                  }
-                >
-                  {/* Wrap in span so Tooltip works on disabled button */}
-                  <span>
-                    <Button
-                      color="success"
-                      isDisabled={launchDisabled}
-                      isIconOnly
-                      size="sm"
-                      variant="light"
-                      onPress={() => onLaunch(work.workId)}
-                    >
-                      <AiOutlinePlayCircle className="text-lg" />
-                    </Button>
-                  </span>
-                </Tooltip>
-                <Tooltip content={t("resourceSource.dlsite.label.useLocaleEmulator")}>
-                  <div>
-                    <Switch
-                      isSelected={work.useLocaleEmulator}
-                      size="sm"
-                      onValueChange={(v) => onToggleUseLocaleEmulator(work.workId, v)}
-                    />
-                  </div>
-                </Tooltip>
-              </>
+              <LeWorkControls
+                workId={work.workId}
+                useLocaleEmulator={work.useLocaleEmulator}
+                onLaunch={onLaunch}
+                onToggleUseLocaleEmulator={onToggleUseLocaleEmulator}
+              />
             )}
             {work.localPath && (
               <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>

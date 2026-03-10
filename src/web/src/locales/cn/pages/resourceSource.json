@@ -93,6 +93,7 @@
   "resourceSource.dlsite.le.installed": "LE 已就绪",
   "resourceSource.dlsite.le.notInstalled": "LE 未安装",
   "resourceSource.dlsite.le.installing": "LE 安装中",
+  "resourceSource.dlsite.le.notAvailableOnPlatform": "LE 在当前平台不可用",
   "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "解压后删除压缩包",
 
   "resourceSource.exhentai.title": "ExHentai 画廊",

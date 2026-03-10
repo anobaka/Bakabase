@@ -19,22 +19,19 @@ import {
   AiOutlineReload,
   AiOutlineFolderOpen,
   AiOutlineScan,
-  AiOutlineDownload,
 } from "react-icons/ai";
-import { CheckCircleOutlined } from "@ant-design/icons";
 
 import BApi from "@/sdk/BApi";
 import { toast } from "@/components/bakaui";
 import { useDLsiteOptionsStore } from "@/stores/options";
 import { DLsiteConfig } from "@/components/ThirdPartyConfig";
 import { useBTasksStore } from "@/stores/bTasks";
-import { BTaskStatus, DependentComponentStatus } from "@/sdk/constants";
-import { useDependentComponentContextsStore } from "@/stores/dependentComponentContexts";
-import dependentComponentIds from "@/core/models/Constants/DependentComponentIds";
+import { BTaskStatus } from "@/sdk/constants";
 
 import type { DLsiteWork } from "./types";
 import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX, SCAN_TASK_ID } from "./types";
 import { DLsiteTable } from "./components/DLsiteTable";
+import { LeStatusIndicator } from "./components/LeStatusIndicator";
 
 export default function DLsiteWorksPage() {
   const { t } = useTranslation();
@@ -60,13 +57,6 @@ export default function DLsiteWorksPage() {
   const hasDownloadDir = !dlsiteOptionsInitialized || !!downloadDir;
   const scanFolders = dlsiteOptions?.scanFolders || [];
   const hasScanFolders = scanFolders.length > 0;
-
-  // LE status
-  const leContext = useDependentComponentContextsStore(
-    (s) => s.contexts.find((c) => c.id === dependentComponentIds.LocaleEmulator),
-  );
-  const isLeInstalled = leContext?.status === DependentComponentStatus.Installed;
-  const isLeInstalling = leContext?.status === DependentComponentStatus.Installing;
 
   const loadWorks = async () => {
     setLoading(true);
@@ -204,10 +194,6 @@ export default function DLsiteWorksPage() {
     }
   };
 
-  const handleInstallLe = async () => {
-    await BApi.component.installDependentComponent({ id: dependentComponentIds.LocaleEmulator });
-  };
-
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -220,39 +206,7 @@ export default function DLsiteWorksPage() {
           </p>
         </div>
         <div className="flex gap-2 items-center">
-          {/* LE status indicator */}
-          {isLeInstalling ? (
-            <Chip
-              color="warning"
-              size="sm"
-              startContent={<Spinner size="sm" />}
-              variant="flat"
-            >
-              {t("resourceSource.dlsite.le.installing")}
-              {leContext?.installationProgress != null && ` ${leContext.installationProgress}%`}
-            </Chip>
-          ) : isLeInstalled ? (
-            <Chip
-              color="success"
-              size="sm"
-              startContent={<CheckCircleOutlined className="text-xs" />}
-              variant="flat"
-            >
-              {t("resourceSource.dlsite.le.installed")}
-            </Chip>
-          ) : (
-            <Tooltip content={t("resourceSource.dlsite.le.notReady")}>
-              <Button
-                color="warning"
-                size="sm"
-                startContent={<AiOutlineDownload className="text-lg" />}
-                variant="flat"
-                onPress={handleInstallLe}
-              >
-                {t("resourceSource.dlsite.le.install")}
-              </Button>
-            </Tooltip>
-          )}
+          <LeStatusIndicator />
           {isSyncing ? (
             <div className="flex items-center gap-2">
               <CircularProgress
@@ -410,7 +364,6 @@ export default function DLsiteWorksPage() {
               works={filteredWorks}
               showCover={showCover}
               hasDownloadDir={hasDownloadDir}
-              isLeReady={isLeInstalled}
               onOpenPage={handleOpenDLsitePage}
               onOpenLocal={handleOpenLocal}
               onLaunch={handleLaunch}
