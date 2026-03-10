@@ -1631,6 +1631,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dlsite-work/{workId}/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["ExtractDLsiteWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dlsite-work/{workId}/local-files": {
         parameters: {
             query?: never;
@@ -6304,6 +6320,7 @@ export interface components {
             /** Format: int32 */
             requestTimeout: number;
             showCover: boolean;
+            deleteArchiveAfterExtraction: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount": {
             name?: string;
@@ -6569,6 +6586,7 @@ export interface components {
             /** Format: int32 */
             requestTimeout?: number;
             showCover?: boolean;
+            deleteArchiveAfterExtraction?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel": {
             regexEnhancer?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.EnhancerOptions+RegexEnhancerModel"];
@@ -13231,6 +13249,30 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    ExtractDLsiteWork: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
