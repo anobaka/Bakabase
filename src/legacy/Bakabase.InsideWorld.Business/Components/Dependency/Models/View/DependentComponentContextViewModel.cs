@@ -9,6 +9,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Models.View
         public string Name { get; set; } = null!;
         public string DefaultLocation { get; set; } = null!;
         public DependentComponentStatus Status { get; set; }
+        public bool IsAvailableOnCurrentPlatform { get; set; }
         public string? Description { get; set; }
     }
 }

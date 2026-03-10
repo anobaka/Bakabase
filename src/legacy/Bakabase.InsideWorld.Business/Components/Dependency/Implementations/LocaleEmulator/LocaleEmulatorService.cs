@@ -47,11 +47,7 @@ namespace Bakabase.InsideWorld.Business.Components.Dependency.Implementations.Lo
         /// </summary>
         public string LEProcExecutable => GetExecutableWithValidation("LEProc");
 
-        /// <summary>
-        /// Whether this component is available on the current platform.
-        /// Locale Emulator only works on Windows.
-        /// </summary>
-        public bool IsAvailableOnCurrentPlatform => AppService.OsPlatform == OsPlatform.Windows;
+        public override bool IsAvailableOnCurrentPlatform => AppService.OsPlatform == OsPlatform.Windows;
 
         public override async Task<DependentComponentVersion> GetLatestVersion(CancellationToken ct)
         {

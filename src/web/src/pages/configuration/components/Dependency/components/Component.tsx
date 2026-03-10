@@ -39,6 +39,11 @@ const Component = ({ id }: { id: string }) => {
   }, [context]);
 
   const init = useCallback(async () => {
+    if (context && !context.isAvailableOnCurrentPlatform) {
+      setDiscovering(false);
+      return;
+    }
+
     try {
       await BApi.component.discoverDependentComponent({ id });
     } finally {
@@ -169,6 +174,27 @@ const Component = ({ id }: { id: string }) => {
 
     return elements;
   }, [latestVersion, context, discovering]);
+
+  if (context && !context.isAvailableOnCurrentPlatform) {
+    return (
+      <div
+        className={"third-party-component"}
+        style={{
+          display: "flex",
+          gap: 10,
+          alignItems: "center",
+        }}
+      >
+        <Chip
+          radius={"sm"}
+          size={"sm"}
+          color={"default"}
+        >
+          {t<string>("configuration.dependency.notAvailableOnCurrentPlatform")}
+        </Chip>
+      </div>
+    );
+  }
 
   return (
     <div

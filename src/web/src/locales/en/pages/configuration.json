@@ -9,6 +9,7 @@
   "configuration.dependency.clickToUpdate": "Click to update to version",
   "configuration.dependency.updating": "Updating",
   "configuration.dependency.failedToGetVersion": "Failed to get information of new version",
+  "configuration.dependency.notAvailableOnCurrentPlatform": "Not available on current platform",
 
   "configuration.thirdParty.title": "Third Party Configurations",
   "configuration.thirdParty.validateCookie": "Validate cookie",
