@@ -108,6 +108,9 @@
 
   "resourceSource.steam.action.openLocal": "Open local folder",
 
+  "resourceSource.pagination.pageSize": "Per page",
+  "resourceSource.pagination.total": "{{total}} total",
+
   "menu.otherPlatforms": "Other Platforms",
   "menu.steam": "Steam",
   "menu.dlsite": "DLsite",

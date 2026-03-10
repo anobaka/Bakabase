@@ -21,10 +21,9 @@ public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskMan
 
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllExHentaiGalleries")]
-    public async Task<ListResponse<ExHentaiGalleryDbModel>> GetAll()
+    public async Task<SearchResponse<ExHentaiGalleryDbModel>> GetAll([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20)
     {
-        var data = await service.GetAll();
-        return new ListResponse<ExHentaiGalleryDbModel>(data);
+        return await service.Search(keyword, pageIndex, pageSize);
     }
 
     [HttpDelete("{id:int}")]

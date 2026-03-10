@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Input,
@@ -9,6 +9,9 @@ import {
   Spinner,
   Progress,
   Switch,
+  Pagination,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -44,13 +47,18 @@ export interface ExHentaiGallery {
 }
 
 const SYNC_TASK_ID = "SyncExHentai";
+const PAGE_SIZE_OPTIONS = [20, 50];
 
 export default function ExHentaiGalleriesPage() {
   const { t } = useTranslation();
   const [galleries, setGalleries] = useState<ExHentaiGallery[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
   const exhentaiOptions = useExHentaiOptionsStore((s) => s.data);
   const patchOptions = useExHentaiOptionsStore((s) => s.patch);
   const showCover = exhentaiOptions?.showCover ?? false;
@@ -60,25 +68,32 @@ export default function ExHentaiGalleriesPage() {
 
   const isConfigured = (exhentaiOptions?.accounts?.length ?? 0) > 0;
 
-  const loadGalleries = async () => {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const loadGalleries = useCallback(async (pageNum: number, ps: number, kw: string) => {
     setLoading(true);
     try {
-      const rsp = await BApi.exhentaiGallery.getAllExHentaiGalleries();
+      const rsp = await BApi.exhentaiGallery.getAllExHentaiGalleries({
+        keyword: kw || undefined,
+        pageIndex: pageNum,
+        pageSize: ps,
+      });
       if (!rsp.code) {
         setGalleries(rsp.data || []);
+        setTotalCount(rsp.totalCount ?? 0);
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadGalleries();
   }, []);
 
   useEffect(() => {
+    loadGalleries(page, pageSize, searchKeyword);
+  }, [page, pageSize, searchKeyword]);
+
+  useEffect(() => {
     if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
-      loadGalleries();
+      loadGalleries(page, pageSize, searchKeyword);
     }
     prevSyncStatusRef.current = syncTask?.status;
   }, [syncTask?.status]);
@@ -91,17 +106,10 @@ export default function ExHentaiGalleriesPage() {
     await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
   };
 
-  const filteredGalleries = useMemo(() => {
-    if (!keyword.trim()) return galleries;
-    const kw = keyword.toLowerCase();
-    return galleries.filter(
-      (g) =>
-        g.title?.toLowerCase().includes(kw) ||
-        g.titleJpn?.toLowerCase().includes(kw) ||
-        String(g.galleryId).includes(kw) ||
-        g.category?.toLowerCase().includes(kw),
-    );
-  }, [galleries, keyword]);
+  const handleSearch = () => {
+    setPage(1);
+    setSearchKeyword(keyword);
+  };
 
   const handleOpenLocal = async (localPath: string) => {
     await BApi.tool.openFileOrDirectory({ path: localPath, openInDirectory: false });
@@ -124,7 +132,7 @@ export default function ExHentaiGalleriesPage() {
     const rsp = await BApi.exhentaiGallery.deleteExHentaiGallery(id);
     if (!rsp.code) {
       toast.success(t("common.state.saved"));
-      setGalleries((prev) => prev.filter((g) => g.id !== id));
+      loadGalleries(page, pageSize, searchKeyword);
     }
   };
 
@@ -182,7 +190,7 @@ export default function ExHentaiGalleriesPage() {
             size="sm"
             startContent={<AiOutlineReload />}
             variant="flat"
-            onPress={loadGalleries}
+            onPress={() => loadGalleries(page, pageSize, searchKeyword)}
           >
             {t("resourceSource.action.refresh")}
           </Button>
@@ -199,7 +207,7 @@ export default function ExHentaiGalleriesPage() {
 
       <ExHentaiConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
 
-      {!isConfigured && galleries.length === 0 && (
+      {!isConfigured && galleries.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "ExHentai" })}</p>
@@ -213,7 +221,7 @@ export default function ExHentaiGalleriesPage() {
         </div>
       )}
 
-      {(isConfigured || galleries.length > 0) && (
+      {(isConfigured || galleries.length > 0 || loading) && (
         <>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -224,20 +232,42 @@ export default function ExHentaiGalleriesPage() {
                 startContent={<AiOutlineSearch />}
                 value={keyword}
                 onValueChange={setKeyword}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
               <Chip size="sm" variant="flat">
-                {filteredGalleries.length} / {galleries.length}
+                {t("resourceSource.pagination.total", { total: totalCount })}
               </Chip>
             </div>
-            <Switch
-              isSelected={showCover}
-              size="sm"
-              onValueChange={(v) => patchOptions({ showCover: v })}
-            >
-              <span className="text-sm text-default-500 whitespace-nowrap">
-                {t("resourceSource.action.showCover")}
-              </span>
-            </Switch>
+            <div className="flex items-center gap-4">
+              <Switch
+                isSelected={showCover}
+                size="sm"
+                onValueChange={(v) => patchOptions({ showCover: v })}
+              >
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.action.showCover")}
+                </span>
+              </Switch>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-default-500 whitespace-nowrap">{t("resourceSource.pagination.pageSize")}</span>
+                <Select
+                  size="sm"
+                  className="w-20"
+                  selectedKeys={[String(pageSize)]}
+                  onSelectionChange={(keys) => {
+                    const val = Number(Array.from(keys)[0]);
+                    if (val) {
+                      setPageSize(val);
+                      setPage(1);
+                    }
+                  }}
+                >
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={String(s)}>{String(s)}</SelectItem>
+                  ))}
+                </Select>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -246,13 +276,23 @@ export default function ExHentaiGalleriesPage() {
             </div>
           ) : (
             <ExHentaiTable
-              galleries={filteredGalleries}
+              galleries={galleries}
               showCover={showCover}
               categoryColorMap={categoryColorMap}
               onDelete={handleDelete}
               onOpenLocal={handleOpenLocal}
               onDeleteLocal={handleDeleteLocal}
             />
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center">
+              <Pagination
+                page={page}
+                total={totalPages}
+                onChange={setPage}
+              />
+            </div>
           )}
         </>
       )}

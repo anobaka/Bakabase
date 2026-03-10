@@ -1,10 +1,12 @@
 using Bakabase.Abstractions.Models.Db;
+using Bootstrap.Models.ResponseModels;
 
 namespace Bakabase.Abstractions.Services;
 
 public interface IDLsiteWorkService
 {
     Task<List<DLsiteWorkDbModel>> GetAll();
+    Task<SearchResponse<DLsiteWorkDbModel>> Search(string? keyword, bool showHidden, int pageIndex, int pageSize);
     Task<DLsiteWorkDbModel?> GetByWorkId(string workId);
     Task<List<DLsiteWorkDbModel>> GetByWorkIds(IEnumerable<string> workIds);
     Task AddOrUpdate(DLsiteWorkDbModel work);

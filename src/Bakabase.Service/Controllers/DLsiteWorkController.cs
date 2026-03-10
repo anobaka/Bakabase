@@ -24,10 +24,9 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
 
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllDLsiteWorks")]
-    public async Task<ListResponse<DLsiteWorkDbModel>> GetAll()
+    public async Task<SearchResponse<DLsiteWorkDbModel>> GetAll([FromQuery] string? keyword, [FromQuery] bool showHidden = false, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20)
     {
-        var data = await service.GetAll();
-        return new ListResponse<DLsiteWorkDbModel>(data);
+        return await service.Search(keyword, showHidden, pageIndex, pageSize);
     }
 
     [HttpGet("{workId}")]

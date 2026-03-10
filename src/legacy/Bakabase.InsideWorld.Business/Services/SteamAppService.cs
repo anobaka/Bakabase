@@ -9,6 +9,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.Steam;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
+using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Services;
@@ -23,6 +24,20 @@ public class SteamAppService(
     public async Task<List<SteamAppDbModel>> GetAll()
     {
         return await orm.GetAll();
+    }
+
+    public async Task<SearchResponse<SteamAppDbModel>> Search(string? keyword, int pageIndex, int pageSize)
+    {
+        Func<SteamAppDbModel, bool>? selector = null;
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = keyword.ToLowerInvariant();
+            selector = x =>
+                (x.Name != null && x.Name.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                x.AppId.ToString().Contains(kw);
+        }
+
+        return await orm.Search(selector, pageIndex, pageSize, x => (object)x.UpdatedAt, asc: false);
     }
 
     public async Task<SteamAppDbModel?> GetByAppId(int appId)
@@ -145,23 +160,59 @@ public class SteamAppService(
             }
         }
 
-        // Save all games to DB
+        // Save all games to DB in batch
         var total = allGames.Count;
         if (total == 0) return;
 
-        var saved = 0;
+        var existingApps = (await orm.GetAll()).ToDictionary(x => x.AppId);
+        var toAdd = new List<SteamAppDbModel>();
+        var toUpdate = new List<SteamAppDbModel>();
+        var now = DateTime.Now;
+
         foreach (var game in allGames)
         {
             ct.ThrowIfCancellationRequested();
-            await AddOrUpdate(game);
-            saved++;
-            if (onProgress != null)
+
+            if (existingApps.TryGetValue(game.AppId, out var existing))
             {
-                await onProgress(50 + saved * 50 / total, saved);
+                existing.Name = game.Name;
+                existing.PlaytimeForever = game.PlaytimeForever;
+                existing.RtimeLastPlayed = game.RtimeLastPlayed;
+                existing.ImgIconUrl = game.ImgIconUrl;
+                existing.HasCommunityVisibleStats = game.HasCommunityVisibleStats;
+                existing.MetadataJson = game.MetadataJson;
+                if (existing.Account != game.Account && game.Account != null)
+                {
+                    existing.Account = game.Account;
+                }
+                existing.UpdatedAt = now;
+                toUpdate.Add(existing);
+            }
+            else
+            {
+                game.CreatedAt = now;
+                game.UpdatedAt = now;
+                toAdd.Add(game);
             }
         }
 
-        logger.LogInformation("Steam sync complete: {Count} games synced", total);
+        if (toUpdate.Count > 0)
+        {
+            await orm.UpdateRange(toUpdate);
+        }
+
+        if (toAdd.Count > 0)
+        {
+            await orm.AddRange(toAdd);
+        }
+
+        if (onProgress != null)
+        {
+            await onProgress(100, total);
+        }
+
+        logger.LogInformation("Steam sync complete: {Count} games synced ({Added} added, {Updated} updated)",
+            total, toAdd.Count, toUpdate.Count);
     }
 
     public async Task SetHidden(int appId, bool isHidden)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Input,
@@ -10,6 +10,9 @@ import {
   CircularProgress,
   Tooltip,
   Switch,
+  Pagination,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -33,13 +36,19 @@ import { SYNC_TASK_ID, DOWNLOAD_TASK_ID_PREFIX, EXTRACT_TASK_ID_PREFIX, SCAN_TAS
 import { DLsiteTable } from "./components/DLsiteTable";
 import { LeStatusIndicator } from "./components/LeStatusIndicator";
 
+const PAGE_SIZE_OPTIONS = [20, 50];
+
 export default function DLsiteWorksPage() {
   const { t } = useTranslation();
   const [works, setWorks] = useState<DLsiteWork[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
   const dlsiteOptions = useDLsiteOptionsStore((s) => s.data);
   const patchOptions = useDLsiteOptionsStore((s) => s.patch);
   const showCover = dlsiteOptions?.showCover ?? false;
@@ -58,32 +67,40 @@ export default function DLsiteWorksPage() {
   const scanFolders = dlsiteOptions?.scanFolders || [];
   const hasScanFolders = scanFolders.length > 0;
 
-  const loadWorks = async () => {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const loadWorks = useCallback(async (pageNum: number, ps: number, kw: string, sh: boolean) => {
     setLoading(true);
     try {
-      const rsp = await BApi.dlsiteWork.getAllDLsiteWorks();
+      const rsp = await BApi.dlsiteWork.getAllDLsiteWorks({
+        keyword: kw || undefined,
+        showHidden: sh,
+        pageIndex: pageNum,
+        pageSize: ps,
+      });
       if (!rsp.code) {
         setWorks(rsp.data || []);
+        setTotalCount(rsp.totalCount ?? 0);
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadWorks();
   }, []);
 
   useEffect(() => {
+    loadWorks(page, pageSize, searchKeyword, showHidden);
+  }, [page, pageSize, searchKeyword, showHidden]);
+
+  useEffect(() => {
     if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
-      loadWorks();
+      loadWorks(page, pageSize, searchKeyword, showHidden);
     }
     prevSyncStatusRef.current = syncTask?.status;
   }, [syncTask?.status]);
 
   useEffect(() => {
     if (prevScanStatusRef.current === BTaskStatus.Running && scanTask?.status === BTaskStatus.Completed) {
-      loadWorks();
+      loadWorks(page, pageSize, searchKeyword, showHidden);
     }
     prevScanStatusRef.current = scanTask?.status;
   }, [scanTask?.status]);
@@ -93,7 +110,7 @@ export default function DLsiteWorksPage() {
     const extractTasks = allTasks.filter((t) => t.id?.startsWith(EXTRACT_TASK_ID_PREFIX));
     const justCompleted = [...downloadTasks, ...extractTasks].some((t) => t.status === BTaskStatus.Completed);
     if (justCompleted) {
-      loadWorks();
+      loadWorks(page, pageSize, searchKeyword, showHidden);
     }
   }, [allTasks]);
 
@@ -116,24 +133,10 @@ export default function DLsiteWorksPage() {
     }
   };
 
-  const filteredWorks = useMemo(() => {
-    let result = works;
-    if (!showHidden) {
-      result = result.filter((w) => !w.isHidden);
-    }
-    if (keyword.trim()) {
-      const kw = keyword.toLowerCase();
-      result = result.filter(
-        (w) =>
-          w.title?.toLowerCase().includes(kw) ||
-          w.workId.toLowerCase().includes(kw) ||
-          w.circle?.toLowerCase().includes(kw),
-      );
-    }
-    return result;
-  }, [works, keyword, showHidden]);
-
-  const hiddenCount = useMemo(() => works.filter((w) => w.isHidden).length, [works]);
+  const handleSearch = () => {
+    setPage(1);
+    setSearchKeyword(keyword);
+  };
 
   const handleOpenDLsitePage = (workId: string) => {
     window.open(`https://www.dlsite.com/maniax/work/=/product_id/${workId}.html`, "_blank");
@@ -286,7 +289,7 @@ export default function DLsiteWorksPage() {
             size="sm"
             startContent={<AiOutlineReload className="text-lg" />}
             variant="flat"
-            onPress={loadWorks}
+            onPress={() => loadWorks(page, pageSize, searchKeyword, showHidden)}
           >
             {t("resourceSource.action.refresh")}
           </Button>
@@ -303,7 +306,7 @@ export default function DLsiteWorksPage() {
 
       <DLsiteConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
 
-      {!isConfigured && works.length === 0 && (
+      {!isConfigured && works.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "DLsite" })}</p>
@@ -317,7 +320,7 @@ export default function DLsiteWorksPage() {
         </div>
       )}
 
-      {(isConfigured || works.length > 0) && (
+      {(isConfigured || works.length > 0 || loading) && (
         <>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -328,9 +331,10 @@ export default function DLsiteWorksPage() {
                 startContent={<AiOutlineSearch />}
                 value={keyword}
                 onValueChange={setKeyword}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
               <Chip size="sm" variant="flat">
-                {filteredWorks.length} / {works.length}
+                {t("resourceSource.pagination.total", { total: totalCount })}
               </Chip>
             </div>
             <div className="flex items-center gap-4">
@@ -346,12 +350,34 @@ export default function DLsiteWorksPage() {
               <Switch
                 isSelected={showHidden}
                 size="sm"
-                onValueChange={setShowHidden}
+                onValueChange={(v) => {
+                  setShowHidden(v);
+                  setPage(1);
+                }}
               >
                 <span className="text-sm text-default-500 whitespace-nowrap">
-                  {t("resourceSource.dlsite.action.showHidden", { count: hiddenCount })}
+                  {t("resourceSource.dlsite.action.showHidden", { count: "" })}
                 </span>
               </Switch>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-default-500 whitespace-nowrap">{t("resourceSource.pagination.pageSize")}</span>
+                <Select
+                  size="sm"
+                  className="w-20"
+                  selectedKeys={[String(pageSize)]}
+                  onSelectionChange={(keys) => {
+                    const val = Number(Array.from(keys)[0]);
+                    if (val) {
+                      setPageSize(val);
+                      setPage(1);
+                    }
+                  }}
+                >
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={String(s)}>{String(s)}</SelectItem>
+                  ))}
+                </Select>
+              </div>
             </div>
           </div>
 
@@ -361,7 +387,7 @@ export default function DLsiteWorksPage() {
             </div>
           ) : (
             <DLsiteTable
-              works={filteredWorks}
+              works={works}
               showCover={showCover}
               hasDownloadDir={hasDownloadDir}
               onOpenPage={handleOpenDLsitePage}
@@ -374,6 +400,16 @@ export default function DLsiteWorksPage() {
               onSetWorksLocalPath={handleSetWorksLocalPath}
               onToggleUseLocaleEmulator={handleToggleUseLocaleEmulator}
             />
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center">
+              <Pagination
+                page={page}
+                total={totalPages}
+                onChange={setPage}
+              />
+            </div>
           )}
         </>
       )}

@@ -20,10 +20,9 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
 
     [HttpGet]
     [SwaggerOperation(OperationId = "GetAllSteamApps")]
-    public async Task<ListResponse<SteamAppDbModel>> GetAll()
+    public async Task<SearchResponse<SteamAppDbModel>> GetAll([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20)
     {
-        var data = await service.GetAll();
-        return new ListResponse<SteamAppDbModel>(data);
+        return await service.Search(keyword, pageIndex, pageSize);
     }
 
     [HttpGet("{appId:int}")]

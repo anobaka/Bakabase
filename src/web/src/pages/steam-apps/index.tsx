@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Input,
@@ -9,6 +9,9 @@ import {
   Spinner,
   Progress,
   Switch,
+  Pagination,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
@@ -44,13 +47,18 @@ export interface SteamApp {
 }
 
 const SYNC_TASK_ID = "SyncSteam";
+const PAGE_SIZE_OPTIONS = [20, 50];
 
 export default function SteamAppsPage() {
   const { t } = useTranslation();
   const [apps, setApps] = useState<SteamApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [keyword, setKeyword] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [configOpen, setConfigOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
   const steamOptions = useSteamOptionsStore((s) => s.data);
   const patchOptions = useSteamOptionsStore((s) => s.patch);
   const showCover = steamOptions?.showCover ?? false;
@@ -60,25 +68,32 @@ export default function SteamAppsPage() {
 
   const isConfigured = (steamOptions?.accounts?.length ?? 0) > 0;
 
-  const loadApps = async () => {
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const loadApps = useCallback(async (pageNum: number, ps: number, kw: string) => {
     setLoading(true);
     try {
-      const rsp = await BApi.steamApp.getAllSteamApps();
+      const rsp = await BApi.steamApp.getAllSteamApps({
+        keyword: kw || undefined,
+        pageIndex: pageNum,
+        pageSize: ps,
+      });
       if (!rsp.code) {
         setApps(rsp.data || []);
+        setTotalCount(rsp.totalCount ?? 0);
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadApps();
   }, []);
 
   useEffect(() => {
+    loadApps(page, pageSize, searchKeyword);
+  }, [page, pageSize, searchKeyword]);
+
+  useEffect(() => {
     if (prevSyncStatusRef.current === BTaskStatus.Running && syncTask?.status === BTaskStatus.Completed) {
-      loadApps();
+      loadApps(page, pageSize, searchKeyword);
     }
     prevSyncStatusRef.current = syncTask?.status;
   }, [syncTask?.status]);
@@ -91,15 +106,10 @@ export default function SteamAppsPage() {
     await BApi.backgroundTask.stopBackgroundTask(SYNC_TASK_ID);
   };
 
-  const filteredApps = useMemo(() => {
-    if (!keyword.trim()) return apps;
-    const kw = keyword.toLowerCase();
-    return apps.filter(
-      (a) =>
-        a.name?.toLowerCase().includes(kw) ||
-        String(a.appId).includes(kw),
-    );
-  }, [apps, keyword]);
+  const handleSearch = () => {
+    setPage(1);
+    setSearchKeyword(keyword);
+  };
 
   const handleOpenLocal = async (installPath: string) => {
     await BApi.tool.openFileOrDirectory({ path: installPath, openInDirectory: false });
@@ -109,7 +119,7 @@ export default function SteamAppsPage() {
     const rsp = await BApi.steamApp.deleteSteamApp(appId);
     if (!rsp.code) {
       toast.success(t("common.state.saved"));
-      setApps((prev) => prev.filter((a) => a.appId !== appId));
+      loadApps(page, pageSize, searchKeyword);
     }
   };
 
@@ -168,7 +178,7 @@ export default function SteamAppsPage() {
             size="sm"
             startContent={<AiOutlineReload />}
             variant="flat"
-            onPress={loadApps}
+            onPress={() => loadApps(page, pageSize, searchKeyword)}
           >
             {t("resourceSource.action.refresh")}
           </Button>
@@ -185,7 +195,7 @@ export default function SteamAppsPage() {
 
       <SteamConfig isOpen={configOpen} onClose={() => setConfigOpen(false)} />
 
-      {!isConfigured && apps.length === 0 && (
+      {!isConfigured && apps.length === 0 && !loading && (
         <div className="flex flex-col items-center justify-center py-16 gap-4 text-default-500">
           <p className="text-lg font-medium">{t("resourceSource.notConfigured.title")}</p>
           <p>{t("resourceSource.notConfigured.description", { platform: "Steam" })}</p>
@@ -199,7 +209,7 @@ export default function SteamAppsPage() {
         </div>
       )}
 
-      {(isConfigured || apps.length > 0) && (
+      {(isConfigured || apps.length > 0 || loading) && (
         <>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -210,20 +220,42 @@ export default function SteamAppsPage() {
                 startContent={<AiOutlineSearch />}
                 value={keyword}
                 onValueChange={setKeyword}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               />
               <Chip size="sm" variant="flat">
-                {filteredApps.length} / {apps.length}
+                {t("resourceSource.pagination.total", { total: totalCount })}
               </Chip>
             </div>
-            <Switch
-              isSelected={showCover}
-              size="sm"
-              onValueChange={(v) => patchOptions({ showCover: v })}
-            >
-              <span className="text-sm text-default-500 whitespace-nowrap">
-                {t("resourceSource.action.showCover")}
-              </span>
-            </Switch>
+            <div className="flex items-center gap-4">
+              <Switch
+                isSelected={showCover}
+                size="sm"
+                onValueChange={(v) => patchOptions({ showCover: v })}
+              >
+                <span className="text-sm text-default-500 whitespace-nowrap">
+                  {t("resourceSource.action.showCover")}
+                </span>
+              </Switch>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-default-500 whitespace-nowrap">{t("resourceSource.pagination.pageSize")}</span>
+                <Select
+                  size="sm"
+                  className="w-20"
+                  selectedKeys={[String(pageSize)]}
+                  onSelectionChange={(keys) => {
+                    const val = Number(Array.from(keys)[0]);
+                    if (val) {
+                      setPageSize(val);
+                      setPage(1);
+                    }
+                  }}
+                >
+                  {PAGE_SIZE_OPTIONS.map((s) => (
+                    <SelectItem key={String(s)}>{String(s)}</SelectItem>
+                  ))}
+                </Select>
+              </div>
+            </div>
           </div>
 
           {loading ? (
@@ -232,13 +264,23 @@ export default function SteamAppsPage() {
             </div>
           ) : (
             <SteamTable
-              apps={filteredApps}
+              apps={apps}
               showCover={showCover}
               onDelete={handleDelete}
               onOpenLocal={handleOpenLocal}
               formatPlaytime={formatPlaytime}
               formatDate={formatDate}
             />
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center">
+              <Pagination
+                page={page}
+                total={totalPages}
+                onChange={setPage}
+              />
+            </div>
           )}
         </>
       )}

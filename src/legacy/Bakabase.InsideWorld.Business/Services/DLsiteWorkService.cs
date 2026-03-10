@@ -14,6 +14,7 @@ using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
+using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -102,6 +103,30 @@ public class DLsiteWorkService(
     public async Task<List<DLsiteWorkDbModel>> GetAll()
     {
         return await orm.GetAll();
+    }
+
+    public async Task<SearchResponse<DLsiteWorkDbModel>> Search(string? keyword, bool showHidden, int pageIndex, int pageSize)
+    {
+        Func<DLsiteWorkDbModel, bool>? selector = null;
+        var hasKeyword = !string.IsNullOrWhiteSpace(keyword);
+
+        if (hasKeyword || !showHidden)
+        {
+            var kw = keyword?.ToLowerInvariant();
+            selector = x =>
+            {
+                if (!showHidden && x.IsHidden) return false;
+                if (hasKeyword && kw != null)
+                {
+                    return (x.Title != null && x.Title.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                           x.WorkId.Contains(kw, StringComparison.OrdinalIgnoreCase) ||
+                           (x.Circle != null && x.Circle.Contains(kw, StringComparison.OrdinalIgnoreCase));
+                }
+                return true;
+            };
+        }
+
+        return await orm.Search(selector, pageIndex, pageSize, x => (object)x.UpdatedAt, asc: false);
     }
 
     public async Task<DLsiteWorkDbModel?> GetByWorkId(string workId)
@@ -284,7 +309,7 @@ public class DLsiteWorkService(
             }
         }
 
-        // Save all works to DB
+        // Save all works to DB in batch
         var total = allWorks.Count;
         if (total == 0)
         {
@@ -296,19 +321,59 @@ public class DLsiteWorkService(
             return;
         }
 
-        var saved = 0;
+        var existingWorks = (await orm.GetAll()).ToDictionary(x => x.WorkId, StringComparer.OrdinalIgnoreCase);
+        var toAdd = new List<DLsiteWorkDbModel>();
+        var toUpdate = new List<DLsiteWorkDbModel>();
+        var now = DateTime.Now;
+
         foreach (var work in allWorks.Values)
         {
             ct.ThrowIfCancellationRequested();
-            await AddOrUpdate(work);
-            saved++;
-            if (onProgress != null)
+
+            if (existingWorks.TryGetValue(work.WorkId, out var existing))
             {
-                await onProgress(50 + saved * 50 / total, saved);
+                existing.Title = work.Title;
+                existing.Circle = work.Circle;
+                existing.WorkType = work.WorkType;
+                existing.CoverUrl = work.CoverUrl;
+                existing.SalesDate = work.SalesDate;
+                existing.PurchasedAt = work.PurchasedAt;
+                existing.IsPurchased = work.IsPurchased;
+                existing.MetadataJson = work.MetadataJson;
+                existing.MetadataFetchedAt = work.MetadataFetchedAt;
+                if (existing.Account != work.Account)
+                {
+                    existing.Account = work.Account;
+                    existing.DrmKey = null;
+                }
+                existing.UpdatedAt = now;
+                toUpdate.Add(existing);
+            }
+            else
+            {
+                work.CreatedAt = now;
+                work.UpdatedAt = now;
+                toAdd.Add(work);
             }
         }
 
-        logger.LogInformation("DLsite sync complete: {Count} works synced", total);
+        if (toUpdate.Count > 0)
+        {
+            await orm.UpdateRange(toUpdate);
+        }
+
+        if (toAdd.Count > 0)
+        {
+            await orm.AddRange(toAdd);
+        }
+
+        if (onProgress != null)
+        {
+            await onProgress(100, total);
+        }
+
+        logger.LogInformation("DLsite sync complete: {Count} works synced ({Added} added, {Updated} updated)",
+            total, toAdd.Count, toUpdate.Count);
     }
 
     public async Task<string> PrepareDownloadDirectory(string workId)

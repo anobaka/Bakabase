@@ -108,6 +108,9 @@
 
   "resourceSource.steam.action.openLocal": "打开本地文件夹",
 
+  "resourceSource.pagination.pageSize": "每页",
+  "resourceSource.pagination.total": "共 {{total}} 条",
+
   "menu.otherPlatforms": "其他平台",
   "menu.steam": "Steam",
   "menu.dlsite": "DLsite",

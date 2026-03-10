@@ -4413,6 +4413,45 @@ export interface BootstrapModelsResponseModelsListResponse1SystemString {
   data?: string[];
 }
 
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbSteamAppDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbSteamAppDbModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbDLsiteWorkDbModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbExHentaiGalleryDbModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbPlayHistoryDbModel {
   /** @format int32 */
   code: number;
@@ -9375,13 +9414,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllDLsiteWorks
      * @request GET:/dlsite-work
      */
-    getAllDLsiteWorks: (params: RequestParams = {}) =>
+    getAllDLsiteWorks: (query?: { keyword?: string; showHidden?: boolean; pageIndex?: number; pageSize?: number }, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel,
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel,
         any
       >({
         path: `/dlsite-work`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -11963,13 +12003,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllExHentaiGalleries
      * @request GET:/exhentai-gallery
      */
-    getAllExHentaiGalleries: (params: RequestParams = {}) =>
+    getAllExHentaiGalleries: (query?: { keyword?: string; pageIndex?: number; pageSize?: number }, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel,
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel,
         any
       >({
         path: `/exhentai-gallery`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),
@@ -17891,13 +17932,14 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllSteamApps
      * @request GET:/steam-app
      */
-    getAllSteamApps: (params: RequestParams = {}) =>
+    getAllSteamApps: (query?: { keyword?: string; pageIndex?: number; pageSize?: number }, params: RequestParams = {}) =>
       this.request<
-        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbSteamAppDbModel,
+        BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbSteamAppDbModel,
         any
       >({
         path: `/steam-app`,
         method: "GET",
+        query: query,
         format: "json",
         ...params,
       }),

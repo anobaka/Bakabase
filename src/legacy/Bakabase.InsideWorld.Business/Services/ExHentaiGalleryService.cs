@@ -10,6 +10,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.Modules.ThirdParty.ThirdParties.ExHentai;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
+using Bootstrap.Models.ResponseModels;
 using Microsoft.Extensions.Logging;
 
 namespace Bakabase.InsideWorld.Business.Services;
@@ -26,6 +27,22 @@ public class ExHentaiGalleryService(
     public async Task<List<ExHentaiGalleryDbModel>> GetAll()
     {
         return await orm.GetAll();
+    }
+
+    public async Task<SearchResponse<ExHentaiGalleryDbModel>> Search(string? keyword, int pageIndex, int pageSize)
+    {
+        Func<ExHentaiGalleryDbModel, bool>? selector = null;
+        if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var kw = keyword.ToLowerInvariant();
+            selector = x =>
+                (x.Title != null && x.Title.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                (x.TitleJpn != null && x.TitleJpn.Contains(kw, StringComparison.OrdinalIgnoreCase)) ||
+                x.GalleryId.ToString().Contains(kw) ||
+                (x.Category != null && x.Category.Contains(kw, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return await orm.Search(selector, pageIndex, pageSize, x => (object)x.UpdatedAt, asc: false);
     }
 
     public async Task<ExHentaiGalleryDbModel?> GetByGalleryId(long galleryId, string galleryToken)
@@ -180,19 +197,55 @@ public class ExHentaiGalleryService(
             .Select(g => g.First())
             .ToList();
 
-        // Save all galleries to DB
+        // Save all galleries to DB in batch
         var total = uniqueGalleries.Count;
         if (total == 0) return;
 
-        var saved = 0;
+        var existingGalleries = (await orm.GetAll())
+            .ToDictionary(x => (x.GalleryId, x.GalleryToken));
+        var toAdd = new List<ExHentaiGalleryDbModel>();
+        var toUpdate = new List<ExHentaiGalleryDbModel>();
+        var now = DateTime.Now;
+
         foreach (var gallery in uniqueGalleries)
         {
             ct.ThrowIfCancellationRequested();
-            await AddOrUpdate(gallery);
-            saved++;
+
+            if (existingGalleries.TryGetValue((gallery.GalleryId, gallery.GalleryToken), out var existing))
+            {
+                existing.Title = gallery.Title;
+                existing.TitleJpn = gallery.TitleJpn;
+                existing.Category = gallery.Category;
+                existing.CoverUrl = gallery.CoverUrl;
+                existing.MetadataJson = gallery.MetadataJson;
+                existing.MetadataFetchedAt = gallery.MetadataFetchedAt;
+                if (existing.Account != gallery.Account && gallery.Account != null)
+                {
+                    existing.Account = gallery.Account;
+                }
+                existing.UpdatedAt = now;
+                toUpdate.Add(existing);
+            }
+            else
+            {
+                gallery.CreatedAt = now;
+                gallery.UpdatedAt = now;
+                toAdd.Add(gallery);
+            }
         }
 
-        logger.LogInformation("ExHentai sync complete: {Count} galleries synced", total);
+        if (toUpdate.Count > 0)
+        {
+            await orm.UpdateRange(toUpdate);
+        }
+
+        if (toAdd.Count > 0)
+        {
+            await orm.AddRange(toAdd);
+        }
+
+        logger.LogInformation("ExHentai sync complete: {Count} galleries synced ({Added} added, {Updated} updated)",
+            total, toAdd.Count, toUpdate.Count);
     }
 
     public async Task SetHidden(long galleryId, string galleryToken, bool isHidden)
