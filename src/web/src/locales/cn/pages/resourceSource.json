@@ -30,7 +30,7 @@
   "resourceSource.accounts.default": "默认",
   "resourceSource.accounts.defaultTip": "增强器和下载器等功能将默认使用第一个账号",
 
-  "resourceSource.steam.title": "Steam 游戏",
+  "resourceSource.steam.title": "Steam",
   "resourceSource.steam.description": "从 Steam 库同步的游戏。",
   "resourceSource.steam.label.appId": "App ID",
   "resourceSource.steam.label.name": "名称",
@@ -96,7 +96,7 @@
   "resourceSource.dlsite.le.notAvailableOnPlatform": "LE 在当前平台不可用",
   "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "解压后删除压缩包",
 
-  "resourceSource.exhentai.title": "ExHentai 画廊",
+  "resourceSource.exhentai.title": "ExHentai",
   "resourceSource.exhentai.description": "从 ExHentai 收藏夹同步的画廊。",
   "resourceSource.exhentai.label.galleryId": "画廊 ID",
   "resourceSource.exhentai.label.title": "标题",

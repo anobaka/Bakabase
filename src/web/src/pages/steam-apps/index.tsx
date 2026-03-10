@@ -3,29 +3,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  Table,
-  TableHeader,
-  TableColumn,
-  TableBody,
-  TableRow,
-  TableCell,
   Input,
   Chip,
   Button,
   Spinner,
   Progress,
-  Image,
   Switch,
-  Tooltip,
 } from "@heroui/react";
 import {
   AiOutlineSearch,
-  AiOutlineDelete,
   AiOutlineSetting,
   AiOutlineSync,
   AiOutlineStop,
   AiOutlineReload,
-  AiOutlineFolderOpen,
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
@@ -34,8 +24,9 @@ import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
 import { useBTasksStore } from "@/stores/bTasks";
 import { BTaskStatus } from "@/sdk/constants";
+import SteamTable from "./components/SteamTable";
 
-interface SteamApp {
+export interface SteamApp {
   id: number;
   appId: number;
   name?: string;
@@ -53,134 +44,6 @@ interface SteamApp {
 }
 
 const SYNC_TASK_ID = "SyncSteam";
-
-const getSteamHeaderImage = (appId: number) =>
-  `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
-
-interface SteamTableColumn {
-  key: string;
-  label: string;
-  width?: number;
-}
-
-function SteamTable({
-  apps, showCover, onDelete, onOpenLocal, formatPlaytime, formatDate,
-}: {
-  apps: SteamApp[];
-  showCover: boolean;
-  onDelete: (appId: number) => void;
-  onOpenLocal: (installPath: string) => void;
-  formatPlaytime: (minutes: number) => string;
-  formatDate: (unixTs: number) => string;
-}) {
-  const { t } = useTranslation();
-
-  const columns = useMemo<SteamTableColumn[]>(() => {
-    const cols: SteamTableColumn[] = [];
-    if (showCover) cols.push({ key: "cover", label: "", width: 240 });
-    cols.push(
-      { key: "appId", label: t("resourceSource.steam.label.appId") },
-      { key: "name", label: t("resourceSource.steam.label.name") },
-      { key: "playtime", label: t("resourceSource.steam.label.playtime") },
-      { key: "lastPlayed", label: t("resourceSource.steam.label.lastPlayed") },
-      { key: "installed", label: t("resourceSource.steam.label.installed") },
-      { key: "resourceId", label: t("resourceSource.label.resourceId") },
-      { key: "actions", label: "", width: 120 },
-    );
-    return cols;
-  }, [showCover, t]);
-
-  const renderCell = (app: SteamApp, columnKey: string) => {
-    switch (columnKey) {
-      case "cover":
-        return (
-          <Image
-            alt={app.name || String(app.appId)}
-            className="object-contain"
-            classNames={{ wrapper: "w-[220px] min-w-[220px]" }}
-            radius="sm"
-            src={getSteamHeaderImage(app.appId)}
-          />
-        );
-      case "appId":
-        return app.appId;
-      case "name":
-        return <span className="font-medium">{app.name || "-"}</span>;
-      case "playtime":
-        return formatPlaytime(app.playtimeForever);
-      case "lastPlayed":
-        return formatDate(app.rtimeLastPlayed);
-      case "installed":
-        return (
-          <Chip
-            color={app.isInstalled ? "success" : "default"}
-            size="sm"
-            variant="flat"
-          >
-            {app.isInstalled ? "Yes" : "No"}
-          </Chip>
-        );
-      case "resourceId":
-        return app.resourceId ? (
-          <Chip color="primary" size="sm" variant="flat">
-            #{app.resourceId}
-          </Chip>
-        ) : "-";
-      case "actions":
-        return (
-          <div className="flex gap-1">
-            {app.isInstalled && app.installPath && (
-              <Tooltip content={t("resourceSource.steam.action.openLocal")}>
-                <Button
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={() => onOpenLocal(app.installPath!)}
-                >
-                  <AiOutlineFolderOpen className="text-lg" />
-                </Button>
-              </Tooltip>
-            )}
-            <Button
-              color="danger"
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => onDelete(app.appId)}
-            >
-              <AiOutlineDelete />
-            </Button>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  return (
-    <Table removeWrapper aria-label="Steam Apps" isStriped>
-      <TableHeader columns={columns}>
-        {(column) => (
-          <TableColumn key={column.key} width={column.width}>
-            {column.label}
-          </TableColumn>
-        )}
-      </TableHeader>
-      <TableBody
-        emptyContent={t("resourceSource.empty")}
-        items={apps}
-      >
-        {(app) => (
-          <TableRow key={app.appId}>
-            {(columnKey) => (
-              <TableCell>{renderCell(app, columnKey as string)}</TableCell>
-            )}
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
-  );
-}
 
 export default function SteamAppsPage() {
   const { t } = useTranslation();

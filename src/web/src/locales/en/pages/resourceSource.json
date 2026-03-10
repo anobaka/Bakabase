@@ -30,7 +30,7 @@
   "resourceSource.accounts.default": "Default",
   "resourceSource.accounts.defaultTip": "Enhancers and downloaders will use the first account by default",
 
-  "resourceSource.steam.title": "Steam Apps",
+  "resourceSource.steam.title": "Steam",
   "resourceSource.steam.description": "Games synced from your Steam library.",
   "resourceSource.steam.label.appId": "App ID",
   "resourceSource.steam.label.name": "Name",
@@ -96,7 +96,7 @@
   "resourceSource.dlsite.le.notAvailableOnPlatform": "LE not available on this platform",
   "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "Delete archives after extraction",
 
-  "resourceSource.exhentai.title": "ExHentai Galleries",
+  "resourceSource.exhentai.title": "ExHentai",
   "resourceSource.exhentai.description": "Galleries synced from your ExHentai favorites.",
   "resourceSource.exhentai.label.galleryId": "Gallery ID",
   "resourceSource.exhentai.label.title": "Title",
