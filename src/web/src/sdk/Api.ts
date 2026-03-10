@@ -50,6 +50,11 @@ export interface BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
   metadataFetchedAt?: string;
   coverUrl?: string;
   drmKey?: string;
+  account?: string;
+  /** @format date-time */
+  salesDate?: string;
+  /** @format date-time */
+  purchasedAt?: string;
   isPurchased: boolean;
   isDownloaded: boolean;
   localPath?: string;
@@ -1315,7 +1320,7 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainDLsiteAccount {
-  name?: string;
+  name: string;
   cookie?: string;
 }
 
@@ -1338,7 +1343,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomain
   /** @format int32 */
   requestTimeout: number;
   showCover: boolean;
-  deleteArchiveAfterExtraction: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsDomainExHentaiAccount {
@@ -1625,7 +1629,6 @@ export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputD
   /** @format int32 */
   requestTimeout?: number;
   showCover?: boolean;
-  deleteArchiveAfterExtraction?: boolean;
 }
 
 export interface BakabaseInsideWorldBusinessComponentsConfigurationsModelsInputEnhancerOptionsPatchInputModel {
@@ -2348,10 +2351,10 @@ export type BakabaseInsideWorldModelsConstantsComponentDescriptorType = 0 | 1 | 
 export type BakabaseInsideWorldModelsConstantsComponentType = 1 | 2 | 3;
 
 /**
- * [1: BiliBili, 2: ExHentai, 3: Pixiv]
+ * [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
  * @format int32
  */
-export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3;
+export type BakabaseInsideWorldModelsConstantsCookieValidatorTarget = 1 | 2 | 3 | 6;
 
 /**
  * [1: Contain, 2: Cover]
@@ -9540,6 +9543,21 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags DLsiteWork
+     * @name DeleteDLsiteWorkLocalFiles
+     * @request DELETE:/dlsite-work/{workId}/local-files
+     */
+    deleteDLsiteWorkLocalFiles: (workId: string, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/local-files`,
+        method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
      * @name SetDLsiteWorkHidden
      * @request PUT:/dlsite-work/{workId}/hidden
      */
@@ -9549,36 +9567,6 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         method: "PUT",
         body: data,
         type: ContentType.Json,
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DLsiteWork
-     * @name ExtractDLsiteWork
-     * @request POST:/dlsite-work/{workId}/extract
-     */
-    extractDLsiteWork: (workId: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/dlsite-work/${workId}/extract`,
-        method: "POST",
-        format: "json",
-        ...params,
-      }),
-
-    /**
-     * No description
-     *
-     * @tags DLsiteWork
-     * @name DeleteDLsiteWorkLocalFiles
-     * @request DELETE:/dlsite-work/{workId}/local-files
-     */
-    deleteDLsiteWorkLocalFiles: (workId: string, params: RequestParams = {}) =>
-      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
-        path: `/dlsite-work/${workId}/local-files`,
-        method: "DELETE",
         format: "json",
         ...params,
       }),
@@ -11984,7 +11972,11 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name DeleteExHentaiGalleryLocalFiles
      * @request DELETE:/exhentai-gallery/{galleryId}/{galleryToken}/local-files
      */
-    deleteExHentaiGalleryLocalFiles: (galleryId: number, galleryToken: string, params: RequestParams = {}) =>
+    deleteExHentaiGalleryLocalFiles: (
+      galleryId: number,
+      galleryToken: string,
+      params: RequestParams = {},
+    ) =>
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/exhentai-gallery/${galleryId}/${galleryToken}/local-files`,
         method: "DELETE",
@@ -18212,7 +18204,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     validateCookie: (
       query?: {
-        /** [1: BiliBili, 2: ExHentai, 3: Pixiv] */
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
       },
@@ -18231,7 +18223,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name validateCookieUrl
      */
     validateCookieUrl: (query?: {
-        /** [1: BiliBili, 2: ExHentai, 3: Pixiv] */
+        /** [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
         target?: BakabaseInsideWorldModelsConstantsCookieValidatorTarget;
         cookie?: string;
       }) => {

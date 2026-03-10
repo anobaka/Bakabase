@@ -1631,6 +1631,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/dlsite-work/{workId}/local-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteDLsiteWorkLocalFiles"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/dlsite-work/{workId}/hidden": {
         parameters: {
             query?: never;
@@ -1946,6 +1962,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["DeleteExHentaiGallery"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhentai-gallery/{galleryId}/{galleryToken}/local-files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["DeleteExHentaiGalleryLocalFiles"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5196,6 +5228,11 @@ export interface components {
             metadataFetchedAt?: string;
             coverUrl?: string;
             drmKey?: string;
+            account?: string;
+            /** Format: date-time */
+            salesDate?: string;
+            /** Format: date-time */
+            purchasedAt?: string;
             isPurchased: boolean;
             isDownloaded: boolean;
             localPath?: string;
@@ -5216,6 +5253,7 @@ export interface components {
             title?: string;
             titleJpn?: string;
             category?: string;
+            coverUrl?: string;
             metadataJson?: string;
             /** Format: date-time */
             metadataFetchedAt?: string;
@@ -6242,7 +6280,7 @@ export interface components {
             requestTimeout: number;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteAccount": {
-            name?: string;
+            name: string;
             cookie?: string;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.DLsiteOptions": {
@@ -6265,6 +6303,7 @@ export interface components {
             maxRetries: number;
             /** Format: int32 */
             requestTimeout: number;
+            showCover: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.ExHentaiAccount": {
             name?: string;
@@ -6289,6 +6328,7 @@ export interface components {
             maxRetries: number;
             /** Format: int32 */
             requestTimeout: number;
+            showCover: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.FanboxOptions": {
             cookie?: string;
@@ -6442,6 +6482,7 @@ export interface components {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount"][];
             readonly apiKey?: string;
             readonly steamId?: string;
+            showCover: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.TmdbOptions": {
             /** Format: int32 */
@@ -6527,6 +6568,7 @@ export interface components {
             maxRetries?: number;
             /** Format: int32 */
             requestTimeout?: number;
+            showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.EnhancerOptionsPatchInputModel": {
             regexEnhancer?: components["schemas"]["Bakabase.InsideWorld.Models.Configs.EnhancerOptions+RegexEnhancerModel"];
@@ -6545,6 +6587,7 @@ export interface components {
             maxRetries?: number;
             /** Format: int32 */
             requestTimeout?: number;
+            showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.FanboxOptionsPatchInputModel": {
             cookie?: string;
@@ -6627,6 +6670,7 @@ export interface components {
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.SteamOptionsPatchInputModel": {
             accounts?: components["schemas"]["Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain.SteamAccount"][];
+            showCover?: boolean;
         };
         "Bakabase.InsideWorld.Business.Components.Configurations.Models.Input.TaskOptionsPatchInputModel": {
             tasks?: components["schemas"]["Bakabase.Abstractions.Models.Db.BTaskDbModel"][];
@@ -7111,10 +7155,10 @@ export interface components {
         "Bakabase.InsideWorld.Models.Constants.ComponentType": 1 | 2 | 3;
         /**
          * Format: int32
-         * @description [1: BiliBili, 2: ExHentai, 3: Pixiv]
+         * @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite]
          * @enum {integer}
          */
-        "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3;
+        "Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget": 1 | 2 | 3 | 6;
         /**
          * Format: int32
          * @description [1: Contain, 2: Cover]
@@ -13103,9 +13147,9 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
-                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.SingletonResponse`1[System.String]"];
                 };
             };
         };
@@ -13187,6 +13231,30 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteDLsiteWorkLocalFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -13895,6 +13963,31 @@ export interface operations {
             header?: never;
             path: {
                 id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    DeleteExHentaiGalleryLocalFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                galleryId: number;
+                galleryToken: string;
             };
             cookie?: never;
         };
@@ -20631,7 +20724,7 @@ export interface operations {
     ValidateCookie: {
         parameters: {
             query?: {
-                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv] */
+                /** @description [1: BiliBili, 2: ExHentai, 3: Pixiv, 6: DLsite] */
                 target?: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CookieValidatorTarget"];
                 cookie?: string;
             };
