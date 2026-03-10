@@ -19,6 +19,7 @@ public interface IDLsiteWorkService
     Task<int> ScanFolder(string folderPath, Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task<int> ScanConfiguredFolders(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task SetHidden(string workId, bool isHidden);
+    Task SetUseLocaleEmulator(string workId, bool useLocaleEmulator);
     Task<string?> FetchDrmKey(string workId, CancellationToken ct = default);
     Task DeleteLocalFiles(string workId);
 }

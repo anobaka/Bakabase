@@ -86,6 +86,13 @@
   "resourceSource.dlsite.action.deleteLocalConfirm": "Are you sure to delete local files for this work? This cannot be undone.",
   "resourceSource.dlsite.action.reExtract": "Re-extract",
   "resourceSource.dlsite.action.more": "More",
+  "resourceSource.dlsite.label.useLocaleEmulator": "Launch with LE (JP)",
+  "resourceSource.dlsite.le.notReady": "Locale Emulator is not ready. You can disable \"Launch with LE (JP)\" to launch directly.",
+  "resourceSource.dlsite.le.status": "Locale Emulator",
+  "resourceSource.dlsite.le.install": "Install LE",
+  "resourceSource.dlsite.le.installed": "LE ready",
+  "resourceSource.dlsite.le.notInstalled": "LE not installed",
+  "resourceSource.dlsite.le.installing": "LE installing",
   "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "Delete archives after extraction",
 
   "resourceSource.exhentai.title": "ExHentai Galleries",

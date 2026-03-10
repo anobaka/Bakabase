@@ -236,4 +236,12 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
         await service.SetHidden(workId, isHidden);
         return BaseResponseBuilder.Ok;
     }
+
+    [HttpPut("{workId}/use-locale-emulator")]
+    [SwaggerOperation(OperationId = "SetDLsiteWorkUseLocaleEmulator")]
+    public async Task<BaseResponse> SetUseLocaleEmulator(string workId, [FromBody] bool useLocaleEmulator)
+    {
+        await service.SetUseLocaleEmulator(workId, useLocaleEmulator);
+        return BaseResponseBuilder.Ok;
+    }
 }

@@ -14,6 +14,7 @@ export interface DLsiteWork {
   isPurchased: boolean;
   isDownloaded: boolean;
   isHidden: boolean;
+  useLocaleEmulator: boolean;
   localPath?: string;
   resourceId?: number;
   createdAt: string;

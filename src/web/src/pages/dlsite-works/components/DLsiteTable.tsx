@@ -15,6 +15,7 @@ import {
   DropdownTrigger,
   DropdownMenu,
   DropdownItem,
+  Switch,
 } from "@heroui/react";
 import {
   AiOutlineFolderOpen,
@@ -38,13 +39,15 @@ interface DLsiteTableColumn {
 }
 
 export function DLsiteTable({
-  works, showCover, hasDownloadDir,
+  works, showCover, hasDownloadDir, isLeReady,
   onOpenPage, onOpenLocal, onLaunch,
   onToggleHidden, onDeleteLocal, onReExtract, onWorkUpdate, onSetWorksLocalPath,
+  onToggleUseLocaleEmulator,
 }: {
   works: DLsiteWork[];
   showCover: boolean;
   hasDownloadDir: boolean;
+  isLeReady: boolean;
   onOpenPage: (workId: string) => void;
   onOpenLocal: (localPath: string) => void;
   onLaunch: (workId: string) => void;
@@ -53,6 +56,7 @@ export function DLsiteTable({
   onReExtract: (workId: string) => void;
   onWorkUpdate: (workId: string, patch: Partial<DLsiteWork>) => void;
   onSetWorksLocalPath: (workId: string, localPath: string) => void;
+  onToggleUseLocaleEmulator: (workId: string, useLocaleEmulator: boolean) => void;
 }) {
   const { t } = useTranslation();
 
@@ -67,7 +71,7 @@ export function DLsiteTable({
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
       { key: "account", label: t("resourceSource.dlsite.label.account") },
       { key: "drmKey", label: t("resourceSource.dlsite.label.drmKey") },
-      { key: "actions", label: "", width: 200 },
+      { key: "actions", label: "", width: 260 },
     );
     return cols;
   }, [showCover, t]);
@@ -139,21 +143,43 @@ export function DLsiteTable({
         ) : "-";
       case "drmKey":
         return <DrmKeyCell work={work} onWorkUpdate={onWorkUpdate} />;
-      case "actions":
+      case "actions": {
+        const launchDisabled = work.useLocaleEmulator && !isLeReady;
         return (
-          <div className="flex gap-1">
+          <div className="flex gap-1 items-center">
             {work.isDownloaded && work.localPath && (
-              <Tooltip content={t("resourceSource.dlsite.action.launch")}>
-                <Button
-                  color="success"
-                  isIconOnly
-                  size="sm"
-                  variant="light"
-                  onPress={() => onLaunch(work.workId)}
+              <>
+                <Tooltip
+                  content={
+                    launchDisabled
+                      ? t("resourceSource.dlsite.le.notReady")
+                      : t("resourceSource.dlsite.action.launch")
+                  }
                 >
-                  <AiOutlinePlayCircle className="text-lg" />
-                </Button>
-              </Tooltip>
+                  {/* Wrap in span so Tooltip works on disabled button */}
+                  <span>
+                    <Button
+                      color="success"
+                      isDisabled={launchDisabled}
+                      isIconOnly
+                      size="sm"
+                      variant="light"
+                      onPress={() => onLaunch(work.workId)}
+                    >
+                      <AiOutlinePlayCircle className="text-lg" />
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip content={t("resourceSource.dlsite.label.useLocaleEmulator")}>
+                  <div>
+                    <Switch
+                      isSelected={work.useLocaleEmulator}
+                      size="sm"
+                      onValueChange={(v) => onToggleUseLocaleEmulator(work.workId, v)}
+                    />
+                  </div>
+                </Tooltip>
+              </>
             )}
             {work.localPath && (
               <Tooltip content={t("resourceSource.dlsite.action.openLocal")}>
@@ -213,6 +239,7 @@ export function DLsiteTable({
             )}
           </div>
         );
+      }
       default:
         return null;
     }

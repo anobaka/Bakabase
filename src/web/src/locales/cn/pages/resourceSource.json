@@ -86,6 +86,13 @@
   "resourceSource.dlsite.action.deleteLocalConfirm": "确定要删除此作品的本地文件吗？此操作不可撤销。",
   "resourceSource.dlsite.action.reExtract": "重新解压",
   "resourceSource.dlsite.action.more": "更多",
+  "resourceSource.dlsite.label.useLocaleEmulator": "使用 LE（JP）运行",
+  "resourceSource.dlsite.le.notReady": "Locale Emulator 尚未准备完成，无法使用 LE 启动。您可以关闭「使用 LE（JP）运行」来直接启动。",
+  "resourceSource.dlsite.le.status": "Locale Emulator",
+  "resourceSource.dlsite.le.install": "安装 LE",
+  "resourceSource.dlsite.le.installed": "LE 已就绪",
+  "resourceSource.dlsite.le.notInstalled": "LE 未安装",
+  "resourceSource.dlsite.le.installing": "LE 安装中",
   "resourceSource.dlsite.config.deleteArchiveAfterExtraction": "解压后删除压缩包",
 
   "resourceSource.exhentai.title": "ExHentai 画廊",

@@ -262,6 +262,7 @@ public class DLsiteWorkService(
                         IsPurchased = true,
                         MetadataJson = JsonConvert.SerializeObject(work),
                         MetadataFetchedAt = DateTime.Now,
+                        UseLocaleEmulator = ShouldUseLocaleEmulator(work.WorkType),
                     };
 
                     allWorks[work.Workno] = dbModel;
@@ -588,8 +589,8 @@ public class DLsiteWorkService(
 
         if (ExecutableExtensions.Contains(ext))
         {
-            // Launch executable with Locale Emulator (for Japanese locale)
-            if (localeEmulatorService.IsAvailableOnCurrentPlatform)
+            // Launch executable with Locale Emulator if enabled for this work
+            if (work.UseLocaleEmulator && localeEmulatorService.IsAvailableOnCurrentPlatform)
             {
                 try
                 {
@@ -691,6 +692,19 @@ public class DLsiteWorkService(
             "SOU" or "voice" or "asmr" or "audio" => AudioExtensions,
             "MOV" or "video" or "anime" => VideoExtensions,
             _ => [..ExecutableExtensions, ..ImageExtensions, ..AudioExtensions, ..VideoExtensions]
+        };
+    }
+
+    /// <summary>
+    /// Infers whether a work should be launched with Locale Emulator based on its work type.
+    /// Currently always returns true for game/executable types.
+    /// </summary>
+    private static bool ShouldUseLocaleEmulator(string? workType)
+    {
+        return workType?.ToLowerInvariant() switch
+        {
+            "GCM" or "GAM" or "ACN" or "game" or "tool" => true,
+            _ => true // Default to true for now; can be refined later
         };
     }
 
@@ -801,6 +815,19 @@ public class DLsiteWorkService(
         }
 
         work.IsHidden = isHidden;
+        work.UpdatedAt = DateTime.Now;
+        await orm.Update(work);
+    }
+
+    public async Task SetUseLocaleEmulator(string workId, bool useLocaleEmulator)
+    {
+        var work = await GetByWorkId(workId);
+        if (work == null)
+        {
+            throw new Exception($"Work {workId} not found");
+        }
+
+        work.UseLocaleEmulator = useLocaleEmulator;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
     }

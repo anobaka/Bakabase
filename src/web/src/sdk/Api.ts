@@ -9587,6 +9587,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * No description
+     *
+     * @tags DLsiteWork
+     * @name SetDLsiteWorkUseLocaleEmulator
+     * @request PUT:/dlsite-work/{workId}/use-locale-emulator
+     */
+    setDLsiteWorkUseLocaleEmulator: (workId: string, data: boolean, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/dlsite-work/${workId}/use-locale-emulator`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
   };
   downloadTask = {
     /**

@@ -21,6 +21,7 @@ public record DLsiteWorkDbModel
     public string? LocalPath { get; set; }
     public int? ResourceId { get; set; }
     public bool IsHidden { get; set; }
+    public bool UseLocaleEmulator { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }
