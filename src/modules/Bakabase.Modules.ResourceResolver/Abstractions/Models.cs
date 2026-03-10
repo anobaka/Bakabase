@@ -31,6 +31,22 @@ public record ResolvedResource
 }
 
 /// <summary>
+/// A filesystem resource discovered from a PathMark's resource mark configuration.
+/// </summary>
+public record FileSystemDiscoveredResource
+{
+    /// <summary>
+    /// The mark ID that discovered this resource.
+    /// </summary>
+    public int MarkId { get; init; }
+
+    /// <summary>
+    /// The standardized filesystem path of the discovered resource.
+    /// </summary>
+    public string Path { get; init; } = null!;
+}
+
+/// <summary>
 /// A FileSystem resource identified as a candidate for migration to another source.
 /// </summary>
 public record MigrationCandidate

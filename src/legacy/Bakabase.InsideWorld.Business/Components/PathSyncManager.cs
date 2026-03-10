@@ -19,7 +19,7 @@ namespace Bakabase.InsideWorld.Business.Components;
 /// <summary>
 /// Background service that manages path mark synchronization queue and BTask lifecycle.
 /// This service is responsible for:
-/// - Maintaining a queue of pending mark IDs
+/// - Maintaining a queue of pending mark IDs (FileSystem) and source-based sync requests
 /// - Polling the queue periodically
 /// - Managing BTask creation and lifecycle based on task status
 /// </summary>
@@ -30,6 +30,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     private readonly BTaskManager _btm;
     private readonly IBakabaseLocalizer _localizer;
     private readonly ConcurrentQueue<int> _pendingMarkIds = new();
+    private readonly ConcurrentQueue<ResourceSource> _pendingSources = new();
     private readonly TimeSpan _pollInterval = TimeSpan.FromSeconds(5);
 
     private const string SyncTaskId = "SyncPathMarks";
@@ -47,7 +48,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
     }
 
     /// <summary>
-    /// Enqueue mark IDs for synchronization.
+    /// Enqueue mark IDs for FileSystem synchronization.
     /// If markIds is empty, loads all pending marks from the database.
     /// </summary>
     public async Task EnqueueSync(params int[] markIds)
@@ -68,7 +69,24 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             _pendingMarkIds.Enqueue(id);
         }
 
-        _logger.LogDebug("Enqueued {Count} mark IDs for synchronization", markIds.Length);
+        _logger.LogDebug("Enqueued {Count} mark IDs for FileSystem synchronization", markIds.Length);
+    }
+
+    /// <summary>
+    /// Enqueue a source-based sync request.
+    /// For non-FileSystem sources, markIds are ignored (resolver handles discovery).
+    /// For FileSystem, this delegates to the mark-based EnqueueSync.
+    /// </summary>
+    public async Task EnqueueSync(ResourceSource source, params int[] markIds)
+    {
+        if (source == ResourceSource.FileSystem)
+        {
+            await EnqueueSync(markIds);
+            return;
+        }
+
+        _pendingSources.Enqueue(source);
+        _logger.LogDebug("Enqueued {Source} source for synchronization", source);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -111,8 +129,8 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
     private async Task ProcessQueueIfNeeded(CancellationToken ct)
     {
-        // Check if queue is empty
-        if (_pendingMarkIds.IsEmpty)
+        // Check if both queues are empty
+        if (_pendingMarkIds.IsEmpty && _pendingSources.IsEmpty)
         {
             return;
         }
@@ -137,7 +155,7 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
         }
 
         // Enqueue a new task
-        _logger.LogInformation("Creating new sync task to process {Count} pending mark(s)", _pendingMarkIds.Count);
+        _logger.LogInformation("Creating new sync task to process pending sync(s)");
         await EnqueueNewSyncTask();
     }
 
@@ -199,15 +217,24 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
 
     private async Task RunSyncLoop(BTaskArgs args)
     {
-        // 1. Drain queue
+        // 1. Drain mark ID queue (FileSystem)
         var markIds = new List<int>();
         while (_pendingMarkIds.TryDequeue(out var id))
         {
             markIds.Add(id);
         }
 
-        // 2. If queue is empty, task is done
-        if (markIds.Count == 0)
+        // 2. Drain source queue (non-FileSystem)
+        var pendingSources = new List<ResourceSource>();
+        while (_pendingSources.TryDequeue(out var source))
+        {
+            pendingSources.Add(source);
+        }
+
+        var hasFileSystemWork = markIds.Count > 0;
+        var hasSourceWork = pendingSources.Count > 0;
+
+        if (!hasFileSystemWork && !hasSourceWork)
         {
             return;
         }
@@ -219,16 +246,37 @@ public class PathSyncManager : BackgroundService, IPathMarkSyncService
             t.Process = null;
         });
 
-        // 4. Call SyncMarks (handles deduplication internally)
         await using var scope = args.RootServiceProvider.CreateAsyncScope();
         var syncService = scope.ServiceProvider.GetRequiredService<PathMarkSyncService>();
-        var result = await syncService.SyncMarks(
-            markIds.ToArray(),
-            async p => await args.UpdateTask(t => t.Percentage = p),
-            async p => await args.UpdateTask(t => t.Process = p),
-            args.PauseToken,
-            args.CancellationToken);
 
-        await args.UpdateTask(t => t.Data = result);
+        // 4. Run FileSystem sync if there are pending marks
+        if (hasFileSystemWork)
+        {
+            var result = await syncService.SyncMarks(
+                ResourceSource.FileSystem,
+                markIds.ToArray(),
+                async p => await args.UpdateTask(t => t.Percentage = p),
+                async p => await args.UpdateTask(t => t.Process = p),
+                args.PauseToken,
+                args.CancellationToken);
+
+            await args.UpdateTask(t => t.Data = result);
+        }
+
+        // 5. Run non-FileSystem source syncs
+        foreach (var source in pendingSources.Distinct())
+        {
+            args.CancellationToken.ThrowIfCancellationRequested();
+
+            var result = await syncService.SyncMarks(
+                source,
+                null,
+                async p => await args.UpdateTask(t => t.Percentage = p),
+                async p => await args.UpdateTask(t => t.Process = p),
+                args.PauseToken,
+                args.CancellationToken);
+
+            await args.UpdateTask(t => t.Data = result);
+        }
     }
 }

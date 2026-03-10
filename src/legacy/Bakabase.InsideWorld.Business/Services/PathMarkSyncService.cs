@@ -20,6 +20,7 @@ using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
 using Bakabase.Modules.ResourceResolver.Abstractions;
+using Bakabase.Modules.ResourceResolver.Components;
 using Bootstrap.Components.Configuration.Abstractions;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using Bootstrap.Components.DependencyInjection;
@@ -48,7 +49,6 @@ public class PathMarkSyncService : ScopedService
     private readonly IBakabaseLocalizer _localizer;
     private readonly ILogger<PathMarkSyncService> _logger;
 
-    private readonly IExtensionGroupService _extensionGroupService;
     private readonly IEnumerable<IResourceResolver> _resourceResolvers;
 
     public PathMarkSyncService(
@@ -63,7 +63,6 @@ public class PathMarkSyncService : ScopedService
         IBOptions<ResourceOptions> resourceOptions,
         IBakabaseLocalizer localizer,
         ILogger<PathMarkSyncService> logger,
-        IExtensionGroupService extensionGroupService,
         IEnumerable<IResourceResolver> resourceResolvers) : base(serviceProvider)
     {
         _pathMarkService = pathMarkService;
@@ -76,7 +75,6 @@ public class PathMarkSyncService : ScopedService
         _resourceOptions = resourceOptions;
         _localizer = localizer;
         _logger = logger;
-        _extensionGroupService = extensionGroupService;
         _resourceResolvers = resourceResolvers;
     }
 
@@ -89,9 +87,20 @@ public class PathMarkSyncService : ScopedService
     /// 3. Phase 3: Apply Changes - Create/update/delete based on final state
     /// 4. Phase 4: Persist Effects - Save effects to DB
     ///
+    /// The <paramref name="source"/> parameter controls which resolver is used for resource discovery.
+    /// Only the specified source's resources are discovered, but preloading all resources and
+    /// processing property/media library marks are not affected.
+    ///
     /// WARNING: This method is NOT thread-safe. Use <see cref="Components.PathSyncManager"/> to coordinate.
     /// </summary>
+    /// <param name="source">The resource source to discover from.</param>
+    /// <param name="markIds">Mark IDs to sync (only relevant for FileSystem source).</param>
+    /// <param name="onProgressChange">Progress callback (0-100).</param>
+    /// <param name="onProcessChange">Process description callback.</param>
+    /// <param name="pt">Pause token.</param>
+    /// <param name="ct">Cancellation token.</param>
     public async Task<PathMarkSyncResult> SyncMarks(
+        ResourceSource source,
         int[]? markIds,
         Func<int, Task>? onProgressChange,
         Func<string?, Task>? onProcessChange,
@@ -142,54 +151,101 @@ public class PathMarkSyncService : ScopedService
             var activePropertyMarks = propertyMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
             var activeMediaLibraryMarks = mediaLibraryMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
 
-            // Pre-collect resource boundary paths
-            foreach (var mark in activeResourceMarks)
-            {
-                var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
-                if (config is { IsResourceBoundary: true })
-                {
-                    var normalizedPath = ctx.GetStandardizedPath(mark.Path);
-                    if (!string.IsNullOrEmpty(normalizedPath))
-                    {
-                        ctx.ResourceBoundaryPaths[normalizedPath] = mark.Id;
-                    }
-                }
-            }
-
             await ReportProgress(onProgressChange, onProcessChange, 5, _localizer.SyncPathMark_Collected(marks.Count));
 
             // ===== Phase 1: Collect Effects (5-30%) =====
             await ReportProgress(onProgressChange, onProcessChange, 5, "Collecting resource effects...");
 
-            // 1a. Collect resource effects
+            // 1a. Collect resource effects based on source
             var collectedResourcePaths = new List<string>();
-            for (var i = 0; i < activeResourceMarks.Count; i++)
+
+            if (source == ResourceSource.FileSystem)
             {
-                ct.ThrowIfCancellationRequested();
-                await pt.WaitWhilePausedAsync(ct);
-
-                var mark = activeResourceMarks[i];
-                var progress = 5 + (int)(10.0 * (i + 1) / Math.Max(1, activeResourceMarks.Count));
-                await ReportProgress(onProgressChange, onProcessChange, progress,
-                    _localizer.SyncPathMark_ProcessingResource(mark.Path));
-
-                try
+                // Discover filesystem resources via FileSystemResolver
+                var fsResolver = _resourceResolvers.OfType<FileSystemResolver>().FirstOrDefault();
+                if (fsResolver != null && activeResourceMarks.Count > 0)
                 {
-                    await _pathMarkService.MarkAsSyncing(mark.Id);
-                    var paths = await CollectResourceEffects(mark, ctx, ct);
-                    collectedResourcePaths.AddRange(paths);
-                    ctx.SuccessfulMarkIds.Add(mark.Id);
+                    // Mark all active resource marks as syncing
+                    foreach (var mark in activeResourceMarks)
+                    {
+                        await _pathMarkService.MarkAsSyncing(mark.Id);
+                    }
+
+                    await ReportProgress(onProgressChange, onProcessChange, 8,
+                        _localizer.SyncPathMark_ProcessingResource(activeResourceMarks.First().Path));
+
+                    try
+                    {
+                        var discovered = await fsResolver.DiscoverFromMarks(activeResourceMarks, ct);
+
+                        // Convert discovered resources into effects
+                        var successfulMarkIds = new HashSet<int>();
+                        foreach (var d in discovered)
+                        {
+                            ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
+                            {
+                                MarkId = d.MarkId,
+                                Path = d.Path
+                            });
+                            ctx.CurrentResourceEffectKeys.Add((d.MarkId, d.Path));
+
+                            if (!ctx.FinalResourcePaths.TryGetValue(d.Path, out var markList))
+                            {
+                                markList = new List<int>();
+                                ctx.FinalResourcePaths[d.Path] = markList;
+                            }
+                            markList.Add(d.MarkId);
+
+                            collectedResourcePaths.Add(d.Path);
+                            successfulMarkIds.Add(d.MarkId);
+                        }
+
+                        // Track successful marks
+                        foreach (var markId in successfulMarkIds)
+                        {
+                            ctx.SuccessfulMarkIds.Add(markId);
+                        }
+
+                        // Marks that had no discovered resources are also successful (just empty)
+                        foreach (var mark in activeResourceMarks)
+                        {
+                            if (!successfulMarkIds.Contains(mark.Id))
+                            {
+                                ctx.SuccessfulMarkIds.Add(mark.Id);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // If discovery fails, mark all resource marks as failed
+                        foreach (var mark in activeResourceMarks)
+                        {
+                            ctx.FailedMarks.Add((mark.Id, ex.Message));
+                            result.FailedMarks++;
+                            result.Errors.Add(new PathMarkSyncError { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
+                        }
+                    }
                 }
-                catch (Exception ex)
+
+                // Also populate boundary paths in ctx for other phases
+                foreach (var mark in activeResourceMarks)
                 {
-                    ctx.FailedMarks.Add((mark.Id, ex.Message));
-                    result.FailedMarks++;
-                    result.Errors.Add(new PathMarkSyncError { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
+                    var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
+                    if (config is { IsResourceBoundary: true })
+                    {
+                        var normalizedPath = ctx.GetStandardizedPath(mark.Path);
+                        if (!string.IsNullOrEmpty(normalizedPath))
+                        {
+                            ctx.ResourceBoundaryPaths[normalizedPath] = mark.Id;
+                        }
+                    }
                 }
             }
-
-            // 1a-ext. Collect resources from external resolvers (non-FileSystem)
-            await CollectResolverResourceEffects(ctx, onProgressChange, onProcessChange, ct);
+            else
+            {
+                // Discover resources from a specific non-FileSystem resolver
+                await CollectSingleResolverResourceEffects(source, ctx, onProgressChange, onProcessChange, ct);
+            }
 
             // Find related Property/MediaLibrary marks
             var additionalPropertyMarks = await FindRelatedMarksAsync(collectedResourcePaths, PathMarkType.Property, propertyMarks, ctx);
@@ -384,72 +440,6 @@ public class PathMarkSyncService : ScopedService
     #region Phase 1: Collect Effects
 
     /// <summary>
-    /// Collects resource effects from a mark WITHOUT creating any resources.
-    /// Returns the list of paths that the mark wants to create resources for.
-    /// </summary>
-    private async Task<List<string>> CollectResourceEffects(PathMark mark, SyncContext ctx, CancellationToken ct)
-    {
-        var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
-        if (config == null) return new List<string>();
-
-        // Resolve extension group IDs to actual extensions and merge with config.Extensions
-        if (config.ExtensionGroupIds is { Count: > 0 })
-        {
-            var allGroups = await _extensionGroupService.GetAll();
-            var groupMap = allGroups.ToDictionary(g => g.Id, g => g);
-            var groupExtensions = config.ExtensionGroupIds
-                .Select(id => groupMap.GetValueOrDefault(id))
-                .Where(g => g?.Extensions != null)
-                .SelectMany(g => g!.Extensions!);
-
-            var merged = new List<string>(config.Extensions ?? []);
-            merged.AddRange(groupExtensions);
-            config.Extensions = merged.Distinct().ToList();
-        }
-
-        var matchedPaths = GetMatchingPathsForResourceMark(mark.Path, config, ctx);
-        var collectedPaths = new List<string>();
-
-        foreach (var path in matchedPaths)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var standardizedPath = ctx.GetStandardizedPath(path);
-
-            // Skip if blocked by another mark's boundary
-            if (ctx.IsPathBlockedByBoundary(standardizedPath, mark.Id))
-                continue;
-
-            // Check if path exists on filesystem
-            var isFile = File.Exists(path);
-            var isDirectory = Directory.Exists(path);
-            if (!isFile && !isDirectory)
-                continue;
-
-            // Record the effect - this mark wants a resource at this path
-            ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
-            {
-                MarkId = mark.Id,
-                Path = standardizedPath
-            });
-            ctx.CurrentResourceEffectKeys.Add((mark.Id, standardizedPath));
-
-            // Track for finding related marks
-            collectedPaths.Add(path);
-
-            // Build FinalResourcePaths - aggregate all marks that want this path
-            if (!ctx.FinalResourcePaths.TryGetValue(standardizedPath, out var markList))
-            {
-                markList = new List<int>();
-                ctx.FinalResourcePaths[standardizedPath] = markList;
-            }
-            markList.Add(mark.Id);
-        }
-
-        return collectedPaths;
-    }
-
-    /// <summary>
     /// Virtual mark ID offset for resolver-generated effects.
     /// Each resolver gets a unique virtual mark ID to track its effects.
     /// </summary>
@@ -473,78 +463,74 @@ public class PathMarkSyncService : ScopedService
     }
 
     /// <summary>
-    /// Collects resource effects from all registered non-FileSystem resolvers.
-    /// Each resolver's discovered resources are converted to ResourceMarkEffects.
+    /// Collects resource effects from a specific non-FileSystem resolver.
+    /// The resolver's discovered resources are converted to ResourceMarkEffects.
     /// </summary>
-    private async Task CollectResolverResourceEffects(
+    private async Task CollectSingleResolverResourceEffects(
+        ResourceSource source,
         SyncContext ctx,
         Func<int, Task>? onProgressChange,
         Func<string?, Task>? onProcessChange,
         CancellationToken ct)
     {
-        var nonFsResolvers = _resourceResolvers
-            .Where(r => r.Source != ResourceSource.FileSystem)
-            .ToList();
-
-        if (nonFsResolvers.Count == 0) return;
-
-        var resolverIndex = 0;
-        foreach (var resolver in nonFsResolvers)
+        var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == source);
+        if (resolver == null)
         {
-            ct.ThrowIfCancellationRequested();
+            _logger.LogWarning("[Sync] No resolver found for source {Source}", source);
+            return;
+        }
 
-            var virtualMarkId = ResolverVirtualMarkIdBase - (int)resolver.Source;
-            var sourceName = resolver.Source.ToString();
+        ct.ThrowIfCancellationRequested();
 
-            try
+        var virtualMarkId = ResolverVirtualMarkIdBase - (int)resolver.Source;
+        var sourceName = resolver.Source.ToString();
+
+        try
+        {
+            _logger.LogInformation("[Sync] Discovering resources from {Source}...", sourceName);
+            await ReportProgress(onProgressChange, onProcessChange, 14,
+                $"Discovering {sourceName} resources...");
+
+            var resolvedResources = await resolver.DiscoverResources(ct);
+            _logger.LogInformation("[Sync] {Source} discovered {Count} resources", sourceName, resolvedResources.Count);
+
+            foreach (var resolved in resolvedResources)
             {
-                _logger.LogInformation("[Sync] Discovering resources from {Source}...", sourceName);
-                await ReportProgress(onProgressChange, onProcessChange, 14,
-                    $"Discovering {sourceName} resources...");
+                ct.ThrowIfCancellationRequested();
 
-                var resolvedResources = await resolver.DiscoverResources(ct);
-                _logger.LogInformation("[Sync] {Source} discovered {Count} resources", sourceName, resolvedResources.Count);
+                // Use the real local path if available, otherwise build a virtual path
+                var effectPath = !string.IsNullOrEmpty(resolved.Path)
+                    ? ctx.GetStandardizedPath(resolved.Path)
+                    : BuildVirtualPath(resolved.Source, resolved.SourceKey);
 
-                foreach (var resolved in resolvedResources)
+                // Record the effect
+                ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
                 {
-                    ct.ThrowIfCancellationRequested();
+                    MarkId = virtualMarkId,
+                    Path = effectPath
+                });
+                ctx.CurrentResourceEffectKeys.Add((virtualMarkId, effectPath));
 
-                    // Use the real local path if available, otherwise build a virtual path
-                    var effectPath = !string.IsNullOrEmpty(resolved.Path)
-                        ? ctx.GetStandardizedPath(resolved.Path)
-                        : BuildVirtualPath(resolved.Source, resolved.SourceKey);
-
-                    // Record the effect
-                    ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
-                    {
-                        MarkId = virtualMarkId,
-                        Path = effectPath
-                    });
-                    ctx.CurrentResourceEffectKeys.Add((virtualMarkId, effectPath));
-
-                    // Build FinalResourcePaths
-                    if (!ctx.FinalResourcePaths.TryGetValue(effectPath, out var markList))
-                    {
-                        markList = new List<int>();
-                        ctx.FinalResourcePaths[effectPath] = markList;
-                    }
-                    markList.Add(virtualMarkId);
-
-                    // Track resolver metadata for resource creation
-                    ctx.ResolverDiscoveredResources[effectPath] = resolved;
+                // Build FinalResourcePaths
+                if (!ctx.FinalResourcePaths.TryGetValue(effectPath, out var markList))
+                {
+                    markList = new List<int>();
+                    ctx.FinalResourcePaths[effectPath] = markList;
                 }
+                markList.Add(virtualMarkId);
 
-                // Track resolver status for Absent resource detection
-                ctx.ResolverSyncResults[resolver.Source] = true;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "[Sync] Failed to discover resources from {Source}: {Message}", sourceName, ex.Message);
-                // Mark as unavailable - don't mark resources as Absent when resolver fails
-                ctx.ResolverSyncResults[resolver.Source] = false;
+                // Track resolver metadata for resource creation
+                ctx.ResolverDiscoveredResources[effectPath] = resolved;
             }
 
-            resolverIndex++;
+            // Track resolver status for Absent resource detection
+            ctx.ResolverSyncResults[resolver.Source] = true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[Sync] Failed to discover resources from {Source}: {Message}", sourceName, ex.Message);
+            // Mark as unavailable - don't mark resources as Absent when resolver fails
+            ctx.ResolverSyncResults[resolver.Source] = false;
         }
     }
 
@@ -1989,227 +1975,8 @@ public class PathMarkSyncService : ScopedService
         }
     }
 
-    private List<string> GetMatchingPathsForResourceMark(string rootPath, ResourceMarkConfig config, SyncContext ctx)
-    {
-        var matchedPaths = new List<string>();
-        var normalizedRoot = ctx.GetStandardizedPath(rootPath);
-
-        if (!Directory.Exists(normalizedRoot)) return matchedPaths;
-
-        try
-        {
-            List<string> initialMatches;
-
-            if (config.MatchMode == PathMatchMode.Layer)
-            {
-                if (config.Layer == null) return matchedPaths;
-
-                var layer = config.Layer.Value;
-                if (layer < 0)
-                {
-                    initialMatches = GetParentAtLayer(normalizedRoot, Math.Abs(layer), config.FsTypeFilter, ctx);
-                }
-                else
-                {
-                    initialMatches = GetEntriesAtLayer(normalizedRoot, layer, config.FsTypeFilter, config.Extensions,
-                        ctx);
-                }
-            }
-            else if (config.MatchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(config.Regex))
-            {
-                // For MatchedOnly: modify regex to not match sub-paths
-                // by ensuring no path separator follows the match
-                var regexPattern = config.Regex;
-                if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
-                {
-                    // If pattern ends with $, replace it; otherwise append
-                    regexPattern = regexPattern.EndsWith("$")
-                        ? regexPattern.Substring(0, regexPattern.Length - 1) + @"[^/\\]*$"
-                        : regexPattern + @"[^/\\]*$";
-                }
-
-                var regex = ctx.GetOrCreateRegex(regexPattern);
-                var entries = GetAllEntries(normalizedRoot, config.FsTypeFilter, config.Extensions, ctx);
-                initialMatches = new List<string>();
-
-                foreach (var entry in entries)
-                {
-                    var relativePath = entry.Substring(normalizedRoot.Length)
-                        .TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                    if (regex.IsMatch(relativePath))
-                    {
-                        initialMatches.Add(entry);
-                    }
-                }
-            }
-            else
-            {
-                return matchedPaths;
-            }
-
-            if (config.ApplyScope == PathMarkApplyScope.MatchedOnly)
-            {
-                matchedPaths.AddRange(initialMatches);
-            }
-            else if (config.ApplyScope == PathMarkApplyScope.MatchedAndSubdirectories)
-            {
-                matchedPaths.AddRange(initialMatches);
-                foreach (var match in initialMatches)
-                {
-                    if (Directory.Exists(match))
-                    {
-                        var subdirEntries = GetAllEntries(match, config.FsTypeFilter, config.Extensions, ctx);
-                        matchedPaths.AddRange(subdirEntries);
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore access errors
-        }
-
-        return matchedPaths;
-    }
-
-    private List<string> GetAllEntries(string rootPath, PathFilterFsType? fsTypeFilter, List<string>? extensions,
-        SyncContext ctx)
-    {
-        var entries = new List<string>();
-
-        try
-        {
-            // Use EnumerateDirectories/EnumerateFiles for better memory efficiency
-            if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.Directory)
-            {
-                foreach (var dir in Directory.EnumerateDirectories(rootPath, "*", SearchOption.AllDirectories))
-                {
-                    entries.Add(ctx.GetStandardizedPath(dir));
-                }
-            }
-
-            if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File)
-            {
-                var extensionSet = extensions?.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                foreach (var file in Directory.EnumerateFiles(rootPath, "*", SearchOption.AllDirectories))
-                {
-                    if (extensionSet == null || extensionSet.Count == 0 ||
-                        extensionSet.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        entries.Add(ctx.GetStandardizedPath(file));
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore access errors
-        }
-
-        return entries;
-    }
-
-    private List<string> GetEntriesAtLayer(string rootPath, int layer, PathFilterFsType? fsTypeFilter,
-        List<string>? extensions, SyncContext ctx)
-    {
-        var entries = new List<string>();
-
-        try
-        {
-            var currentPaths = new List<string> { rootPath };
-
-            for (int i = 1; i <= layer; i++)
-            {
-                var nextPaths = new List<string>();
-                foreach (var path in currentPaths)
-                {
-                    try
-                    {
-                        nextPaths.AddRange(Directory.EnumerateDirectories(path));
-                        if (i == layer && (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File))
-                        {
-                            var extensionSet = extensions?.ToHashSet(StringComparer.OrdinalIgnoreCase);
-                            foreach (var file in Directory.EnumerateFiles(path))
-                            {
-                                if (extensionSet == null || extensionSet.Count == 0 ||
-                                    extensionSet.Any(ext => file.EndsWith(ext, StringComparison.OrdinalIgnoreCase)))
-                                {
-                                    nextPaths.Add(file);
-                                }
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // Ignore access errors
-                    }
-                }
-
-                currentPaths = nextPaths;
-            }
-
-            if (fsTypeFilter == PathFilterFsType.Directory)
-            {
-                entries.AddRange(currentPaths.Where(Directory.Exists));
-            }
-            else if (fsTypeFilter == PathFilterFsType.File)
-            {
-                entries.AddRange(currentPaths.Where(File.Exists));
-            }
-            else
-            {
-                entries.AddRange(currentPaths);
-            }
-        }
-        catch
-        {
-            // Ignore access errors
-        }
-
-        return entries.Select(x => ctx.GetStandardizedPath(x)).ToList();
-    }
-
-    private List<string> GetParentAtLayer(string rootPath, int absLayer, PathFilterFsType? fsTypeFilter,
-        SyncContext ctx)
-    {
-        var entries = new List<string>();
-
-        try
-        {
-            var currentPath = rootPath;
-            for (int i = 0; i < absLayer; i++)
-            {
-                var parentPath = Path.GetDirectoryName(currentPath);
-                if (string.IsNullOrEmpty(parentPath))
-                {
-                    return entries;
-                }
-
-                currentPath = parentPath;
-            }
-
-            if (Directory.Exists(currentPath))
-            {
-                if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.Directory)
-                {
-                    entries.Add(ctx.GetStandardizedPath(currentPath));
-                }
-            }
-            else if (File.Exists(currentPath))
-            {
-                if (fsTypeFilter == null || fsTypeFilter == PathFilterFsType.File)
-                {
-                    entries.Add(ctx.GetStandardizedPath(currentPath));
-                }
-            }
-        }
-        catch
-        {
-            // Ignore access errors
-        }
-
-        return entries;
-    }
+    // Resource discovery methods (GetMatchingPathsForResourceMark, GetAllEntries, GetEntriesAtLayer,
+    // GetParentAtLayer) have been moved to FileSystemResolver.
 
     // Unified filter method for both PropertyMarkConfig and MediaLibraryMarkConfig
     private List<Resource> FilterResourcesByMarkConfig<TConfig>(List<Resource> resources, string markPath,

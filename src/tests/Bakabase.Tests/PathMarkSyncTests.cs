@@ -54,6 +54,7 @@ public class PathMarkSyncTests
         // 直接使用 PathMarkSyncService 执行同步，而不是依赖 BackgroundService
         var syncServiceImpl = _sp.GetRequiredService<PathMarkSyncService>();
         await syncServiceImpl.SyncMarks(
+            ResourceSource.FileSystem,
             markIds.Length > 0 ? markIds : null,
             null,
             null,
