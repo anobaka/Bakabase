@@ -16,6 +16,8 @@ public record ExHentaiGalleryDbModel
     public bool IsDownloaded { get; set; }
     public string? LocalPath { get; set; }
     public int? ResourceId { get; set; }
+    public string? Account { get; set; }
+    public bool IsHidden { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
 }

@@ -39,9 +39,23 @@ public class ExHentaiGalleryService(
             x.GalleryId == gallery.GalleryId && x.GalleryToken == gallery.GalleryToken);
         if (existing != null)
         {
-            gallery.Id = existing.Id;
-            gallery.UpdatedAt = DateTime.Now;
-            await orm.Update(gallery);
+            // Overwrite API-sourced data
+            existing.Title = gallery.Title;
+            existing.TitleJpn = gallery.TitleJpn;
+            existing.Category = gallery.Category;
+            existing.CoverUrl = gallery.CoverUrl;
+            existing.MetadataJson = gallery.MetadataJson;
+            existing.MetadataFetchedAt = gallery.MetadataFetchedAt;
+
+            // Update account if changed
+            if (existing.Account != gallery.Account && gallery.Account != null)
+            {
+                existing.Account = gallery.Account;
+            }
+
+            // Preserve: ResourceId, IsHidden, IsDownloaded, LocalPath
+            existing.UpdatedAt = DateTime.Now;
+            await orm.Update(existing);
         }
         else
         {
@@ -95,6 +109,10 @@ public class ExHentaiGalleryService(
 
         var allGalleries = new List<ExHentaiGalleryDbModel>();
 
+        // Determine the active account name (the one whose cookie is used by the HTTP client)
+        var activeAccount = accounts.FirstOrDefault(a => !string.IsNullOrEmpty(a.Cookie));
+        var accountName = activeAccount?.Name;
+
         // Parse favorites pages for each favorite category (0-9)
         for (var favCat = 0; favCat < 10; favCat++)
         {
@@ -126,7 +144,8 @@ public class ExHentaiGalleryService(
                             Title = resource.Name,
                             TitleJpn = resource.RawName != resource.Name ? resource.RawName : null,
                             Category = resource.Category.ToString(),
-                            CoverUrl = resource.CoverUrl
+                            CoverUrl = resource.CoverUrl,
+                            Account = accountName
                         });
                     }
 
@@ -174,5 +193,18 @@ public class ExHentaiGalleryService(
         }
 
         logger.LogInformation("ExHentai sync complete: {Count} galleries synced", total);
+    }
+
+    public async Task SetHidden(long galleryId, string galleryToken, bool isHidden)
+    {
+        var gallery = await GetByGalleryId(galleryId, galleryToken);
+        if (gallery == null)
+        {
+            throw new Exception($"Gallery {galleryId}/{galleryToken} not found");
+        }
+
+        gallery.IsHidden = isHidden;
+        gallery.UpdatedAt = DateTime.Now;
+        await orm.Update(gallery);
     }
 }

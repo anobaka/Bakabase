@@ -42,6 +42,14 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
         return BaseResponseBuilder.Ok;
     }
 
+    [HttpPut("{appId:int}/hidden")]
+    [SwaggerOperation(OperationId = "SetSteamAppHidden")]
+    public async Task<BaseResponse> SetHidden(int appId, [FromBody] bool isHidden)
+    {
+        await service.SetHidden(appId, isHidden);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpPost("sync")]
     [SwaggerOperation(OperationId = "SyncSteamApps")]
     public async Task<BaseResponse> Sync()

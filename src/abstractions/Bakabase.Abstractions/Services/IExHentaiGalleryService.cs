@@ -11,4 +11,5 @@ public interface IExHentaiGalleryService
     Task DeleteById(int id);
     Task SyncFromApi(Func<int, int, Task>? onProgress = null, CancellationToken ct = default);
     Task DeleteLocalFiles(long galleryId, string galleryToken);
+    Task SetHidden(long galleryId, string galleryToken, bool isHidden);
 }

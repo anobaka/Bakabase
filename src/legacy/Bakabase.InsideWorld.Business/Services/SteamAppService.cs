@@ -41,9 +41,24 @@ public class SteamAppService(
         var existing = await orm.GetFirstOrDefault(x => x.AppId == app.AppId);
         if (existing != null)
         {
-            app.Id = existing.Id;
-            app.UpdatedAt = DateTime.Now;
-            await orm.Update(app);
+            // Overwrite API-sourced data
+            existing.Name = app.Name;
+            existing.PlaytimeForever = app.PlaytimeForever;
+            existing.RtimeLastPlayed = app.RtimeLastPlayed;
+            existing.ImgIconUrl = app.ImgIconUrl;
+            existing.HasCommunityVisibleStats = app.HasCommunityVisibleStats;
+            existing.MetadataJson = app.MetadataJson;
+            existing.MetadataFetchedAt = app.MetadataFetchedAt;
+
+            // Update account if changed
+            if (existing.Account != app.Account && app.Account != null)
+            {
+                existing.Account = app.Account;
+            }
+
+            // Preserve: ResourceId, IsHidden, IsInstalled, InstallPath
+            existing.UpdatedAt = DateTime.Now;
+            await orm.Update(existing);
         }
         else
         {
@@ -107,7 +122,8 @@ public class SteamAppService(
                         PlaytimeForever = game.PlaytimeForever,
                         RtimeLastPlayed = (int)game.RtimeLastPlayed,
                         ImgIconUrl = game.ImgIconUrl,
-                        HasCommunityVisibleStats = game.HasCommunityVisibleStats
+                        HasCommunityVisibleStats = game.HasCommunityVisibleStats,
+                        Account = account.Name
                     });
                 }
 
@@ -146,5 +162,18 @@ public class SteamAppService(
         }
 
         logger.LogInformation("Steam sync complete: {Count} games synced", total);
+    }
+
+    public async Task SetHidden(int appId, bool isHidden)
+    {
+        var app = await GetByAppId(appId);
+        if (app == null)
+        {
+            throw new Exception($"Steam app {appId} not found");
+        }
+
+        app.IsHidden = isHidden;
+        app.UpdatedAt = DateTime.Now;
+        await orm.Update(app);
     }
 }

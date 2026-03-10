@@ -43,6 +43,14 @@ public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskMan
         return BaseResponseBuilder.Ok;
     }
 
+    [HttpPut("{galleryId:long}/{galleryToken}/hidden")]
+    [SwaggerOperation(OperationId = "SetExHentaiGalleryHidden")]
+    public async Task<BaseResponse> SetHidden(long galleryId, string galleryToken, [FromBody] bool isHidden)
+    {
+        await service.SetHidden(galleryId, galleryToken, isHidden);
+        return BaseResponseBuilder.Ok;
+    }
+
     [HttpPost("sync")]
     [SwaggerOperation(OperationId = "SyncExHentaiGalleries")]
     public async Task<BaseResponse> Sync()
