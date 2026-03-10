@@ -476,43 +476,43 @@ public class DLsiteWorkService(
                     logger.LogWarning(ex, "Failed to delete archive: {Path}", file);
                 }
             }
+        }
 
-            // Move extracted contents to work directory and remove the extracted subfolder
-            if (Directory.Exists(extractDir))
+        // Move extracted contents to work directory and remove the extracted subfolder
+        if (hasArchives && Directory.Exists(extractDir))
+        {
+            try
             {
-                try
+                foreach (var dir in Directory.GetDirectories(extractDir))
                 {
-                    foreach (var dir in Directory.GetDirectories(extractDir))
+                    var destDir = Path.Combine(workDir, Path.GetFileName(dir));
+                    if (Directory.Exists(destDir))
                     {
-                        var destDir = Path.Combine(workDir, Path.GetFileName(dir));
-                        if (Directory.Exists(destDir))
-                        {
-                            Directory.Delete(destDir, true);
-                        }
-
-                        Directory.Move(dir, destDir);
+                        Directory.Delete(destDir, true);
                     }
 
-                    foreach (var file in Directory.GetFiles(extractDir))
-                    {
-                        var destFile = Path.Combine(workDir, Path.GetFileName(file));
-                        if (File.Exists(destFile))
-                        {
-                            File.Delete(destFile);
-                        }
+                    Directory.Move(dir, destDir);
+                }
 
-                        File.Move(file, destFile);
+                foreach (var file in Directory.GetFiles(extractDir))
+                {
+                    var destFile = Path.Combine(workDir, Path.GetFileName(file));
+                    if (File.Exists(destFile))
+                    {
+                        File.Delete(destFile);
                     }
 
-                    Directory.Delete(extractDir, true);
-                    logger.LogInformation(
-                        "Moved extracted contents to work directory: {Path}", workDir);
+                    File.Move(file, destFile);
                 }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex,
-                        "Failed to flatten extracted directory, keeping extracted subfolder");
-                }
+
+                Directory.Delete(extractDir, true);
+                logger.LogInformation(
+                    "Moved extracted contents to work directory: {Path}", workDir);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Failed to flatten extracted directory, keeping extracted subfolder");
             }
         }
 
