@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Button, Chip, Popover, PopoverContent, PopoverTrigger, Spinner, Switch } from "@heroui/react";
+import { Button, Chip, Spinner, Switch, Tooltip } from "@heroui/react";
 import { AiOutlineDownload, AiOutlinePlayCircle } from "react-icons/ai";
 import { MdOutlineRocketLaunch } from "react-icons/md";
 import { CheckCircleOutlined } from "@ant-design/icons";
@@ -9,7 +9,7 @@ import dependentComponentIds from "@/core/models/Constants/DependentComponentIds
 import { DependentComponentStatus } from "@/sdk/constants";
 import BApi from "@/sdk/BApi";
 
-/** Launch button with integrated LE configuration popover. */
+/** Launch button with integrated LE configuration tooltip. */
 export function LaunchButton({
   workId,
   useLocaleEmulator,
@@ -86,26 +86,9 @@ export function LaunchButton({
   };
 
   return (
-    <Popover placement="bottom">
-      <PopoverTrigger>
-        {/* Wrap in span so Popover works on disabled button */}
-        <span>
-          <Button
-            color="success"
-            isDisabled={launchDisabled}
-            isIconOnly
-            size="sm"
-            variant="light"
-            onPress={() => onLaunch(workId)}
-          >
-            {useLocaleEmulator && isLeAvailable
-              ? <MdOutlineRocketLaunch className="text-lg" />
-              : <AiOutlinePlayCircle className="text-lg" />}
-          </Button>
-        </span>
-      </PopoverTrigger>
-      <PopoverContent>
-        <div className="flex flex-col gap-2 p-2">
+    <Tooltip
+      content={
+        <div className="flex flex-col gap-2 p-1">
           {isLeAvailable && (
             <div className="flex items-center justify-between gap-4">
               <span className="text-sm whitespace-nowrap">
@@ -122,7 +105,24 @@ export function LaunchButton({
             {renderLeStatus()}
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      }
+      placement="bottom"
+    >
+      {/* Wrap in span so Tooltip works on disabled button */}
+      <span>
+        <Button
+          color="success"
+          isDisabled={launchDisabled}
+          isIconOnly
+          size="sm"
+          variant="light"
+          onPress={() => onLaunch(workId)}
+        >
+          {useLocaleEmulator && isLeAvailable
+            ? <MdOutlineRocketLaunch className="text-lg" />
+            : <AiOutlinePlayCircle className="text-lg" />}
+        </Button>
+      </span>
+    </Tooltip>
   );
 }
