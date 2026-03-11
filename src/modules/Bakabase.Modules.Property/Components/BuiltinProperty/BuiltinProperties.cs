@@ -66,6 +66,11 @@ public static class BuiltinProperties
         public static readonly ParentResourcePropertyAccessor ParentResource = new(ResourceProperty.ParentResource);
 
         /// <summary>
+        /// Resource source links (MultipleChoice)
+        /// </summary>
+        public static readonly MultipleChoicePropertyAccessor Source = new(ResourceProperty.Source);
+
+        /// <summary>
         /// Category (SingleChoice) - DEPRECATED
         /// </summary>
         [Obsolete]

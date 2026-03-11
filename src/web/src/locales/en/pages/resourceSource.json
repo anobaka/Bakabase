@@ -108,6 +108,7 @@
   "resourceSource.exhentai.action.deleteLocal": "Delete local files",
   "resourceSource.exhentai.action.deleteLocalConfirm": "Are you sure to delete local files for this gallery? This cannot be undone.",
 
+  "resourceSource.steam.action.launch": "Launch in Steam",
   "resourceSource.steam.action.openLocal": "Open local folder",
 
   "resourceSource.pagination.pageSize": "Per page",

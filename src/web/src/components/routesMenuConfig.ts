@@ -30,8 +30,6 @@ import {
   AiOutlineRobot,
   AiOutlineBarChart,
   AiOutlineAudit,
-  AiOutlineCloud,
-  AiOutlineShop,
   AiOutlineCloudServer,
 } from "react-icons/ai";
 import { lazy } from "react";
@@ -73,6 +71,7 @@ import AiCachePage from "@/pages/ai-cache";
 import SteamAppsPage from "@/pages/steam-apps";
 import DLsiteWorksPage from "@/pages/dlsite-works";
 import ExHentaiGalleriesPage from "@/pages/exhentai-galleries";
+import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 
 // Lazy load test page to avoid circular dependency
 const Test = lazy(() => import("@/pages/test"));
@@ -216,7 +215,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         name: "menu.steam",
         path: "/steam-apps",
         component: SteamAppsPage,
-        icon: AiOutlineCloud,
+        icon: SteamIcon,
         layout: "basic",
         menu: true,
       },
@@ -224,7 +223,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         name: "menu.dlsite",
         path: "/dlsite-works",
         component: DLsiteWorksPage,
-        icon: AiOutlineShop,
+        icon: DLsiteIcon,
         layout: "basic",
         menu: true,
       },
@@ -232,7 +231,7 @@ export const routesMenuConfig: RouteMenuItem[] = [
         name: "menu.exhentai",
         path: "/exhentai-galleries",
         component: ExHentaiGalleriesPage,
-        icon: AiOutlinePicture,
+        icon: ExHentaiIcon,
         layout: "basic",
         menu: true,
       },

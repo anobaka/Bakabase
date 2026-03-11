@@ -108,6 +108,7 @@
   "resourceSource.exhentai.action.deleteLocal": "删除本地文件",
   "resourceSource.exhentai.action.deleteLocalConfirm": "确定要删除此画廊的本地文件吗？此操作不可撤销。",
 
+  "resourceSource.steam.action.launch": "通过 Steam 启动",
   "resourceSource.steam.action.openLocal": "打开本地文件夹",
 
   "resourceSource.pagination.pageSize": "每页",

@@ -22,7 +22,7 @@ import {
 } from "react-icons/ai";
 
 import BApi from "@/sdk/BApi";
-import { toast } from "@/components/bakaui";
+
 import { useSteamOptionsStore } from "@/stores/options";
 import { SteamConfig } from "@/components/ThirdPartyConfig";
 import { useBTasksStore } from "@/stores/bTasks";
@@ -116,12 +116,8 @@ export default function SteamAppsPage() {
     await BApi.tool.openFileOrDirectory({ path: installPath, openInDirectory: false });
   };
 
-  const handleDelete = async (appId: number) => {
-    const rsp = await BApi.steamApp.deleteSteamApp(appId);
-    if (!rsp.code) {
-      toast.success(t("common.state.saved"));
-      loadApps(page, pageSize, searchKeyword);
-    }
+  const handleLaunch = (appId: number) => {
+    window.open(`steam://rungameid/${appId}`);
   };
 
   const formatPlaytime = (minutes: number) => {
@@ -267,7 +263,7 @@ export default function SteamAppsPage() {
             <SteamTable
               apps={apps}
               showCover={showCover}
-              onDelete={handleDelete}
+              onLaunch={handleLaunch}
               onOpenLocal={handleOpenLocal}
               formatPlaytime={formatPlaytime}
               formatDate={formatDate}

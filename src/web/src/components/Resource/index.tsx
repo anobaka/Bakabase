@@ -39,7 +39,6 @@ import {
   ResourceAdditionalItem,
   ResourceProperty,
   ResourceSource,
-  ResourceSourceLabel,
   ResourceStatus,
   ResourceTag,
   StandardValueType,
@@ -48,6 +47,7 @@ import { useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
 import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
+import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
 
 // PlayButton component defined outside Resource to maintain stable reference
@@ -257,18 +257,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
             </Tooltip>
           )}
           {resource.source != null && resource.source !== ResourceSource.FileSystem && (
-            <Chip
-              color={
-                resource.source === ResourceSource.Steam ? "primary" :
-                resource.source === ResourceSource.DLsite ? "secondary" :
-                resource.source === ResourceSource.ExHentai ? "warning" : "default"
-              }
-              radius={"sm"}
-              size={"sm"}
-              variant={"flat"}
-            >
-              {ResourceSourceLabel[resource.source] || "Unknown"}
-            </Chip>
+            <ResourceSourceIcon source={resource.source} />
           )}
           {resource.status === ResourceStatus.Absent && (
             <Chip color="danger" radius={"sm"} size={"sm"} variant={"flat"}>

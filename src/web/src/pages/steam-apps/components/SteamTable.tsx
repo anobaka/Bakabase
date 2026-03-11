@@ -13,8 +13,8 @@ import {
   Tooltip,
 } from "@heroui/react";
 import {
-  AiOutlineDelete,
   AiOutlineFolderOpen,
+  AiOutlinePlayCircle,
 } from "react-icons/ai";
 
 import type { SteamApp } from "..";
@@ -29,11 +29,11 @@ interface SteamTableColumn {
 }
 
 export default function SteamTable({
-  apps, showCover, onDelete, onOpenLocal, formatPlaytime, formatDate,
+  apps, showCover, onLaunch, onOpenLocal, formatPlaytime, formatDate,
 }: {
   apps: SteamApp[];
   showCover: boolean;
-  onDelete: (appId: number) => void;
+  onLaunch: (appId: number) => void;
   onOpenLocal: (installPath: string) => void;
   formatPlaytime: (minutes: number) => string;
   formatDate: (unixTs: number) => string;
@@ -101,6 +101,16 @@ export default function SteamTable({
       case "actions":
         return (
           <div className="flex gap-1">
+            <Tooltip content={t("resourceSource.steam.action.launch")}>
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                onPress={() => onLaunch(app.appId)}
+              >
+                <AiOutlinePlayCircle className="text-lg" />
+              </Button>
+            </Tooltip>
             {app.isInstalled && app.installPath && (
               <Tooltip content={t("resourceSource.steam.action.openLocal")}>
                 <Button
@@ -113,15 +123,6 @@ export default function SteamTable({
                 </Button>
               </Tooltip>
             )}
-            <Button
-              color="danger"
-              isIconOnly
-              size="sm"
-              variant="light"
-              onPress={() => onDelete(app.appId)}
-            >
-              <AiOutlineDelete />
-            </Button>
           </div>
         );
       default:

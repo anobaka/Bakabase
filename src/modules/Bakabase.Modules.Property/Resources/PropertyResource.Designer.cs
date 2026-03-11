@@ -203,7 +203,16 @@ namespace Bakabase.Modules.Property.Resources {
                 return ResourceManager.GetString("BuiltinPropertyName_RootPath", resourceCulture);
             }
         }
-        
+
+        /// <summary>
+        ///   Looks up a localized string similar to Source.
+        /// </summary>
+        internal static string BuiltinPropertyName_Source {
+            get {
+                return ResourceManager.GetString("BuiltinPropertyName_Source", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Property descriptor is not found for pool: {0}, id: {1}.
         /// </summary>

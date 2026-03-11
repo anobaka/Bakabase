@@ -62,6 +62,10 @@ namespace Bakabase.Abstractions.Extensions
                 ),
                 InternalProperty.ParentResource => (resource.ParentId?.ToString(), resource.Parent?.FileName),
                 InternalProperty.PlayedAt => (resource.PlayedAt, resource.PlayedAt),
+                InternalProperty.Source => (
+                    resource.SourceLinks?.Select(l => ((int)l.Source).ToString()).Distinct().ToList(),
+                    resource.SourceLinks?.Select(l => l.Source.ToString()).Distinct().ToList()
+                ),
                 _ => (null, null)
             };
         }

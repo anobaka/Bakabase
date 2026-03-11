@@ -234,6 +234,13 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             var mediaLibraryMappings = await mediaLibraryResourceMappingService
                 .GetMediaLibraryIdsByResourceIds(resourceIds);
 
+            var sourceLinkService = scope.ServiceProvider
+                .GetRequiredService<IResourceSourceLinkService>();
+            var sourceLinks = await sourceLinkService.GetByResourceIds(resourceIds);
+            var sourceLinkMappings = sourceLinks
+                .GroupBy(l => l.ResourceId)
+                .ToDictionary(g => g.Key, g => g.Select(l => l.Source).ToHashSet());
+
             // Group property values by resource ID
             var customValuesByResource = customPropertyValues
                 .GroupBy(v => v.ResourceId)
@@ -256,7 +263,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 var dbModel = dbResourceMap.GetValueOrDefault(resourceId);
                 if (dbModel != null)
                 {
-                    IndexInternalProperties(resourceId, dbModel, mediaLibraryMappings, indexKeys);
+                    IndexInternalProperties(resourceId, dbModel, mediaLibraryMappings, sourceLinkMappings, indexKeys);
                 }
 
                 // Index reserved properties
@@ -347,6 +354,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
         int resourceId,
         ResourceDbModel dbModel,
         Dictionary<int, HashSet<int>>? mediaLibraryMappings,
+        Dictionary<int, HashSet<ResourceSource>>? sourceLinkMappings,
         HashSet<IndexKey> indexKeys)
     {
         // Filename
@@ -402,6 +410,16 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
             {
                 AddToValueIndex(PropertyPool.Internal, (int)InternalProperty.MediaLibraryV2Multi,
                     mlId.ToString(), resourceId, indexKeys);
+            }
+        }
+
+        // Source links
+        if (sourceLinkMappings?.TryGetValue(resourceId, out var sources) == true && sources.Count > 0)
+        {
+            foreach (var source in sources)
+            {
+                AddToValueIndex(PropertyPool.Internal, (int)InternalProperty.Source,
+                    ((int)source).ToString(), resourceId, indexKeys);
             }
         }
     }
@@ -596,6 +614,8 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 .GetRequiredService<IReservedPropertyValueService>();
             var mediaLibraryResourceMappingService = scope.ServiceProvider
                 .GetRequiredService<IMediaLibraryResourceMappingService>();
+            var sourceLinkService = scope.ServiceProvider
+                .GetRequiredService<IResourceSourceLinkService>();
 
             var allResources = await resourceOrm.GetAll(null, false);
             _logger.LogInformation("Loaded {Count} resources in {Ms}ms", allResources.Count, sw.ElapsedMilliseconds);
@@ -628,6 +648,13 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
                 .GetMediaLibraryIdsByResourceIds(allResourceIds);
             _logger.LogInformation("Loaded media library mappings in {Ms}ms", sw.ElapsedMilliseconds);
 
+            sw.Restart();
+            var allSourceLinks = await sourceLinkService.GetAll();
+            var sourceLinkMappings = allSourceLinks
+                .GroupBy(l => l.ResourceId)
+                .ToDictionary(g => g.Key, g => g.Select(l => l.Source).ToHashSet());
+            _logger.LogInformation("Loaded {Count} source links in {Ms}ms", allSourceLinks.Count, sw.ElapsedMilliseconds);
+
             await ReportProgress(progressCallback, 20, _localizer.SearchIndex_BuildingIndex());
 
             // Group property values by resource ID
@@ -650,7 +677,7 @@ public class ResourceSearchIndexService : IResourceSearchIndexService
 
                 var indexKeys = new HashSet<IndexKey>();
 
-                IndexInternalProperties(resource.Id, resource, mediaLibraryMappings, indexKeys);
+                IndexInternalProperties(resource.Id, resource, mediaLibraryMappings, sourceLinkMappings, indexKeys);
 
                 if (reservedValuesByResource.TryGetValue(resource.Id, out var reserved))
                 {

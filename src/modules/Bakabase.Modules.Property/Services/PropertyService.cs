@@ -88,6 +88,19 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
         };
     }
 
+    private static MultipleChoicePropertyOptions BuildOptionsForSource()
+    {
+        return new MultipleChoicePropertyOptions
+        {
+            Choices = Enum.GetValues<ResourceSource>().Select(s => new ChoiceOptions
+            {
+                Color = null,
+                Label = s.ToString(),
+                Value = ((int)s).ToString()
+            }).ToList(),
+        };
+    }
+
     public async Task<Bakabase.Abstractions.Models.Domain.Property> GetProperty(PropertyPool pool, int id)
     {
         switch (pool)
@@ -144,6 +157,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                     case InternalProperty.MediaLibraryV2Multi:
                     {
                         tmpProperty.Options = BuildOptionsForMediaLibraryV2Multi(mediaLibrariesV2!);
+                        break;
+                    }
+                    case InternalProperty.Source:
+                    {
+                        tmpProperty.Options = BuildOptionsForSource();
                         break;
                     }
                     case InternalProperty.RootPath:
@@ -249,6 +267,11 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
                                         {
                                             tmpProperty.Options = BuildOptionsForMediaLibraryV2Multi(mediaLibrariesV2);
                                         }
+                                        break;
+                                    }
+                                    case InternalProperty.Source:
+                                    {
+                                        tmpProperty.Options = BuildOptionsForSource();
                                         break;
                                     }
                                     case InternalProperty.ParentResource:
