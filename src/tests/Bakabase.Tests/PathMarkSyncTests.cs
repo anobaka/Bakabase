@@ -47,15 +47,31 @@ public class PathMarkSyncTests
     }
 
     /// <summary>
-    /// 直接调用 PathMarkSyncService.SyncMarks 来执行同步
+    /// 直接调用 ResourceSyncService + PathMarkSyncService 来执行同步
+    /// Step 1: Resource sync discovers resources and marks related path marks as pending
+    /// Step 2: PathMark sync applies property/media library effects
     /// </summary>
     private async Task EnqueueAndWaitSync(IPathMarkSyncService syncService, params int[] markIds)
     {
-        // 直接使用 PathMarkSyncService 执行同步，而不是依赖 BackgroundService
-        var syncServiceImpl = _sp.GetRequiredService<PathMarkSyncService>();
-        await syncServiceImpl.SyncMarks(
+        // If mark IDs specified, mark them as pending first
+        if (markIds.Length > 0)
+        {
+            var pathMarkService = _sp.GetRequiredService<IPathMarkService>();
+            await pathMarkService.MarkAsPendingBatch(markIds);
+        }
+
+        // Step 1: Resource sync (discovers filesystem resources, marks related property marks as pending)
+        var resourceSyncService = _sp.GetRequiredService<ResourceSyncService>();
+        await resourceSyncService.SyncResources(
             ResourceSource.FileSystem,
-            markIds.Length > 0 ? markIds : null,
+            null,
+            null,
+            new PauseToken(),
+            CancellationToken.None);
+
+        // Step 2: PathMark sync (applies property/media library effects for pending marks)
+        var pathMarkSyncService = _sp.GetRequiredService<PathMarkSyncService>();
+        await pathMarkSyncService.SyncMarks(
             null,
             null,
             new PauseToken(),

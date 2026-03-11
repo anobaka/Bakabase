@@ -19,8 +19,6 @@ using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
 using Bakabase.Modules.Property.Abstractions.Services;
-using Bakabase.Modules.ResourceResolver.Abstractions;
-using Bakabase.Modules.ResourceResolver.Components;
 using Bootstrap.Components.Configuration.Abstractions;
 using CustomProperty = Bakabase.Abstractions.Models.Domain.CustomProperty;
 using Bootstrap.Components.DependencyInjection;
@@ -31,7 +29,13 @@ using Newtonsoft.Json;
 namespace Bakabase.InsideWorld.Business.Services;
 
 /// <summary>
-/// Service that handles the actual synchronization logic for path marks.
+/// Service that handles property and media library synchronization for path marks.
+/// This service processes pending Property and MediaLibrary path marks only.
+/// Resource discovery is handled separately by <see cref="ResourceSyncService"/>.
+///
+/// This service always loads ALL resources to compute property/media library effects.
+/// Only marks with status=Pending are processed.
+///
 /// This service is NOT thread-safe. Callers must ensure that only one synchronization
 /// operation is running at a time. Use <see cref="Components.PathSyncManager"/> to
 /// coordinate synchronization requests.
@@ -46,11 +50,8 @@ public class PathMarkSyncService : ScopedService
     private readonly ICustomPropertyService _customPropertyService;
     private readonly IPathMarkEffectService _effectService;
     private readonly IResourceSourceLinkService _sourceLinkService;
-    private readonly IBOptions<ResourceOptions> _resourceOptions;
     private readonly IBakabaseLocalizer _localizer;
     private readonly ILogger<PathMarkSyncService> _logger;
-
-    private readonly IEnumerable<IResourceResolver> _resourceResolvers;
 
     public PathMarkSyncService(
         IServiceProvider serviceProvider,
@@ -62,10 +63,8 @@ public class PathMarkSyncService : ScopedService
         ICustomPropertyService customPropertyService,
         IPathMarkEffectService effectService,
         IResourceSourceLinkService sourceLinkService,
-        IBOptions<ResourceOptions> resourceOptions,
         IBakabaseLocalizer localizer,
-        ILogger<PathMarkSyncService> logger,
-        IEnumerable<IResourceResolver> resourceResolvers) : base(serviceProvider)
+        ILogger<PathMarkSyncService> logger) : base(serviceProvider)
     {
         _pathMarkService = pathMarkService;
         _resourceService = resourceService;
@@ -75,36 +74,28 @@ public class PathMarkSyncService : ScopedService
         _customPropertyService = customPropertyService;
         _effectService = effectService;
         _sourceLinkService = sourceLinkService;
-        _resourceOptions = resourceOptions;
         _localizer = localizer;
         _logger = logger;
-        _resourceResolvers = resourceResolvers;
     }
 
     /// <summary>
-    /// Synchronize the specified path marks using Effect-Centric flow.
+    /// Synchronize pending Property and MediaLibrary path marks.
     ///
     /// Flow:
-    /// 1. Phase 1: Collect Effects - Process marks and collect what they WANT to do
+    /// 1. Phase 1: Collect Effects - Process pending marks and collect what they WANT to do
     /// 2. Phase 2: Compute Final State - Use Combine to merge effects into final values
-    /// 3. Phase 3: Apply Changes - Create/update/delete based on final state
+    /// 3. Phase 3: Apply Changes - Create/update/delete property values and media library mappings
     /// 4. Phase 4: Persist Effects - Save effects to DB
     ///
-    /// The <paramref name="source"/> parameter controls which resolver is used for resource discovery.
-    /// Only the specified source's resources are discovered, but preloading all resources and
-    /// processing property/media library marks are not affected.
+    /// All resources are loaded as context for effect computation.
     ///
     /// WARNING: This method is NOT thread-safe. Use <see cref="Components.PathSyncManager"/> to coordinate.
     /// </summary>
-    /// <param name="source">The resource source to discover from.</param>
-    /// <param name="markIds">Mark IDs to sync (only relevant for FileSystem source).</param>
     /// <param name="onProgressChange">Progress callback (0-100).</param>
     /// <param name="onProcessChange">Process description callback.</param>
     /// <param name="pt">Pause token.</param>
     /// <param name="ct">Cancellation token.</param>
     public async Task<PathMarkSyncResult> SyncMarks(
-        ResourceSource source,
-        int[]? markIds,
         Func<int, Task>? onProgressChange,
         Func<string?, Task>? onProcessChange,
         PauseToken pt,
@@ -118,169 +109,79 @@ public class PathMarkSyncService : ScopedService
             // ===== Initialization (0-5%) =====
             await ReportProgress(onProgressChange, onProcessChange, 0, _localizer.SyncPathMark_Collecting());
 
-            List<PathMark> marks;
-            if (markIds != null && markIds.Length > 0)
-            {
-                markIds = markIds.Distinct().ToArray();
-                var allMarks = await _pathMarkService.GetAll();
-                marks = allMarks.Where(m => markIds.Contains(m.Id)).ToList();
-            }
-            else
-            {
-                marks = await _pathMarkService.GetPendingMarks();
-            }
+            // Load all pending Property and MediaLibrary marks
+            var allMarks = await _pathMarkService.GetAll();
+            var pendingMarks = allMarks
+                .Where(m => m.SyncStatus is PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete)
+                .Where(m => m.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
+                .ToList();
 
-            if (marks.Count == 0)
+            if (pendingMarks.Count == 0)
             {
                 await ReportProgress(onProgressChange, onProcessChange, 100, _localizer.SyncPathMark_Complete());
                 return result;
             }
 
-            // Preload all resources and source links
+            // Preload ALL resources (context for property/ML sync)
             ctx.AllResources = await _resourceService.GetAll();
             var allSourceLinks = await _sourceLinkService.GetAll();
             ctx.BuildIndexes(allSourceLinks);
 
+            // Separate marks by type and status
+            var propertyMarks = pendingMarks
+                .Where(m => m.Type == PathMarkType.Property)
+                .OrderByDescending(m => m.Priority)
+                .ToList();
+            var mediaLibraryMarks = pendingMarks
+                .Where(m => m.Type == PathMarkType.MediaLibrary)
+                .OrderByDescending(m => m.Priority)
+                .ToList();
+
+            var marksToDelete = pendingMarks
+                .Where(m => m.SyncStatus == PathMarkSyncStatus.PendingDelete)
+                .Select(m => m.Id)
+                .ToList();
+            var activePropertyMarks = propertyMarks
+                .Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete)
+                .ToList();
+            var activeMediaLibraryMarks = mediaLibraryMarks
+                .Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete)
+                .ToList();
+
             // Load old effects for diff calculation
-            var allMarkIds = marks.Select(m => m.Id).ToList();
+            var allMarkIds = pendingMarks.Select(m => m.Id).ToList();
             await LoadOldEffects(allMarkIds, ctx);
 
-            // Separate marks by type and status
-            var resourceMarks = marks.Where(m => m.Type == PathMarkType.Resource).OrderByDescending(m => m.Priority).ToList();
-            var propertyMarks = marks.Where(m => m.Type == PathMarkType.Property).OrderByDescending(m => m.Priority).ToList();
-            var mediaLibraryMarks = marks.Where(m => m.Type == PathMarkType.MediaLibrary).OrderByDescending(m => m.Priority).ToList();
-
-            var marksToDelete = marks.Where(m => m.SyncStatus == PathMarkSyncStatus.PendingDelete).Select(m => m.Id).ToList();
-            var activeResourceMarks = resourceMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
-            var activePropertyMarks = propertyMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
-            var activeMediaLibraryMarks = mediaLibraryMarks.Where(m => m.SyncStatus != PathMarkSyncStatus.PendingDelete).ToList();
-
-            await ReportProgress(onProgressChange, onProcessChange, 5, _localizer.SyncPathMark_Collected(marks.Count));
-
-            // ===== Phase 1: Collect Effects (5-30%) =====
-            await ReportProgress(onProgressChange, onProcessChange, 5, "Collecting resource effects...");
-
-            // 1a. Collect resource effects based on source
-            var collectedResourcePaths = new List<string>();
-
-            if (source == ResourceSource.FileSystem)
-            {
-                // Discover filesystem resources via FileSystemResolver
-                var fsResolver = _resourceResolvers.OfType<FileSystemResolver>().FirstOrDefault();
-                if (fsResolver != null && activeResourceMarks.Count > 0)
-                {
-                    // Mark all active resource marks as syncing
-                    foreach (var mark in activeResourceMarks)
-                    {
-                        await _pathMarkService.MarkAsSyncing(mark.Id);
-                    }
-
-                    await ReportProgress(onProgressChange, onProcessChange, 8,
-                        _localizer.SyncPathMark_ProcessingResource(activeResourceMarks.First().Path));
-
-                    try
-                    {
-                        var discovered = await fsResolver.DiscoverFromMarks(activeResourceMarks, ct);
-
-                        // Convert discovered resources into effects
-                        var successfulMarkIds = new HashSet<int>();
-                        foreach (var d in discovered)
-                        {
-                            ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
-                            {
-                                MarkId = d.MarkId,
-                                Path = d.Path
-                            });
-                            ctx.CurrentResourceEffectKeys.Add((d.MarkId, d.Path));
-
-                            if (!ctx.FinalResourcePaths.TryGetValue(d.Path, out var markList))
-                            {
-                                markList = new List<int>();
-                                ctx.FinalResourcePaths[d.Path] = markList;
-                            }
-                            markList.Add(d.MarkId);
-
-                            collectedResourcePaths.Add(d.Path);
-                            successfulMarkIds.Add(d.MarkId);
-                        }
-
-                        // Track successful marks
-                        foreach (var markId in successfulMarkIds)
-                        {
-                            ctx.SuccessfulMarkIds.Add(markId);
-                        }
-
-                        // Marks that had no discovered resources are also successful (just empty)
-                        foreach (var mark in activeResourceMarks)
-                        {
-                            if (!successfulMarkIds.Contains(mark.Id))
-                            {
-                                ctx.SuccessfulMarkIds.Add(mark.Id);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        // If discovery fails, mark all resource marks as failed
-                        foreach (var mark in activeResourceMarks)
-                        {
-                            ctx.FailedMarks.Add((mark.Id, ex.Message));
-                            result.FailedMarks++;
-                            result.Errors.Add(new PathMarkSyncError { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
-                        }
-                    }
-                }
-
-                // Also populate boundary paths in ctx for other phases
-                foreach (var mark in activeResourceMarks)
-                {
-                    var config = JsonConvert.DeserializeObject<ResourceMarkConfig>(mark.ConfigJson);
-                    if (config is { IsResourceBoundary: true })
-                    {
-                        var normalizedPath = ctx.GetStandardizedPath(mark.Path);
-                        if (!string.IsNullOrEmpty(normalizedPath))
-                        {
-                            ctx.ResourceBoundaryPaths[normalizedPath] = mark.Id;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Discover resources from a specific non-FileSystem resolver
-                await CollectSingleResolverResourceEffects(source, ctx, onProgressChange, onProcessChange, ct);
-            }
-
-            // Find related Property/MediaLibrary marks
-            var additionalPropertyMarks = await FindRelatedMarksAsync(collectedResourcePaths, PathMarkType.Property, propertyMarks, ctx);
-            var allActivePropertyMarks = activePropertyMarks.Concat(additionalPropertyMarks).DistinctBy(m => m.Id).OrderByDescending(m => m.Priority).ToList();
-
-            var additionalMediaLibraryMarks = await FindRelatedMarksAsync(collectedResourcePaths, PathMarkType.MediaLibrary, mediaLibraryMarks, ctx);
-            var allActiveMediaLibraryMarks = activeMediaLibraryMarks.Concat(additionalMediaLibraryMarks).DistinctBy(m => m.Id).OrderByDescending(m => m.Priority).ToList();
-
-            // Load old effects for additional marks (they were not loaded initially because they are already synced)
-            var additionalMarkIds = additionalPropertyMarks.Concat(additionalMediaLibraryMarks)
+            // Also load old effects from all synced marks that might be relevant
+            // (to correctly compute final state considering all marks, not just pending ones)
+            var syncedMarkIds = allMarks
+                .Where(m => m.SyncStatus == PathMarkSyncStatus.Synced
+                            && m.Type is PathMarkType.Property or PathMarkType.MediaLibrary)
                 .Select(m => m.Id)
                 .Where(id => !allMarkIds.Contains(id))
-                .Distinct()
                 .ToList();
-            if (additionalMarkIds.Count > 0)
+            if (syncedMarkIds.Count > 0)
             {
-                await LoadOldEffects(additionalMarkIds, ctx);
+                await LoadOldEffects(syncedMarkIds, ctx);
             }
 
-            // Pre-create dynamic media libraries
-            await PreCreateDynamicMediaLibraries(allActiveMediaLibraryMarks, ctx, ct);
+            await ReportProgress(onProgressChange, onProcessChange, 5,
+                _localizer.SyncPathMark_Collected(pendingMarks.Count));
 
-            // 1b. Collect property effects
-            await ReportProgress(onProgressChange, onProcessChange, 15, "Collecting property effects...");
-            for (var i = 0; i < allActivePropertyMarks.Count; i++)
+            // Pre-create dynamic media libraries
+            await PreCreateDynamicMediaLibraries(activeMediaLibraryMarks, ctx, ct);
+
+            // ===== Phase 1: Collect Effects (5-30%) =====
+
+            // 1a. Collect property effects
+            await ReportProgress(onProgressChange, onProcessChange, 5, "Collecting property effects...");
+            for (var i = 0; i < activePropertyMarks.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 await pt.WaitWhilePausedAsync(ct);
 
-                var mark = allActivePropertyMarks[i];
-                var progress = 15 + (int)(10.0 * (i + 1) / Math.Max(1, allActivePropertyMarks.Count));
+                var mark = activePropertyMarks[i];
+                var progress = 5 + (int)(15.0 * (i + 1) / Math.Max(1, activePropertyMarks.Count));
                 await ReportProgress(onProgressChange, onProcessChange, progress,
                     _localizer.SyncPathMark_ProcessingProperty(mark.Path));
 
@@ -294,19 +195,20 @@ public class PathMarkSyncService : ScopedService
                 {
                     ctx.FailedMarks.Add((mark.Id, ex.Message));
                     result.FailedMarks++;
-                    result.Errors.Add(new PathMarkSyncError { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
+                    result.Errors.Add(new PathMarkSyncError
+                        { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
                 }
             }
 
-            // 1c. Collect media library effects
-            await ReportProgress(onProgressChange, onProcessChange, 25, "Collecting media library effects...");
-            for (var i = 0; i < allActiveMediaLibraryMarks.Count; i++)
+            // 1b. Collect media library effects
+            await ReportProgress(onProgressChange, onProcessChange, 20, "Collecting media library effects...");
+            for (var i = 0; i < activeMediaLibraryMarks.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
                 await pt.WaitWhilePausedAsync(ct);
 
-                var mark = allActiveMediaLibraryMarks[i];
-                var progress = 25 + (int)(5.0 * (i + 1) / Math.Max(1, allActiveMediaLibraryMarks.Count));
+                var mark = activeMediaLibraryMarks[i];
+                var progress = 20 + (int)(10.0 * (i + 1) / Math.Max(1, activeMediaLibraryMarks.Count));
                 await ReportProgress(onProgressChange, onProcessChange, progress,
                     _localizer.SyncPathMark_ProcessingMediaLibrary(mark.Path));
 
@@ -320,46 +222,23 @@ public class PathMarkSyncService : ScopedService
                 {
                     ctx.FailedMarks.Add((mark.Id, ex.Message));
                     result.FailedMarks++;
-                    result.Errors.Add(new PathMarkSyncError { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
+                    result.Errors.Add(new PathMarkSyncError
+                        { MarkId = mark.Id, Path = mark.Path, ErrorMessage = ex.Message });
                 }
             }
 
-            // ===== Phase 2: Compute Final State (30-40%) =====
+            // ===== Phase 2: Compute Final State (30-50%) =====
             await ReportProgress(onProgressChange, onProcessChange, 30, "Computing final state...");
-            await ComputeFinalResourceState(ctx);
             await ComputeFinalPropertyState(ctx);
             await ComputeFinalMediaLibraryState(ctx);
 
-            // ===== Phase 3: Apply Changes (40-80%) =====
-            await ReportProgress(onProgressChange, onProcessChange, 40, "Applying resource changes...");
-            var resourceResult = await ApplyResourceChanges(ctx, ct);
-            result.ResourcesCreated = resourceResult.Created;
-            result.ResourcesDeleted = resourceResult.Deleted;
-
-            // Refresh context after resource changes
-            if (resourceResult.Created > 0 || resourceResult.Deleted > 0)
-            {
-                ctx.AllResources = await _resourceService.GetAll();
-                ctx.BuildIndexes();
-
-                // For newly created resources, collect effects from all related Property/MediaLibrary marks
-                if (resourceResult.Created > 0)
-                {
-                    var newResourcePaths = ctx.ResourcesToCreate.Keys.ToList();
-                    await CollectEffectsForNewResources(newResourcePaths, allActivePropertyMarks, allActiveMediaLibraryMarks, ctx, ct);
-
-                    // Recompute final state for the new effects
-                    await ComputeFinalPropertyState(ctx);
-                    await ComputeFinalMediaLibraryState(ctx);
-                }
-            }
-
-            await ReportProgress(onProgressChange, onProcessChange, 55, "Applying property changes...");
+            // ===== Phase 3: Apply Changes (50-80%) =====
+            await ReportProgress(onProgressChange, onProcessChange, 50, "Applying property changes...");
             var propertyResult = await ApplyPropertyChanges(ctx, ct);
             result.PropertiesApplied = propertyResult.Applied;
             result.PropertiesDeleted = propertyResult.Deleted;
 
-            await ReportProgress(onProgressChange, onProcessChange, 70, "Applying media library changes...");
+            await ReportProgress(onProgressChange, onProcessChange, 65, "Applying media library changes...");
             var mappingResult = await ApplyMediaLibraryChanges(ctx, ct);
             result.MediaLibraryMappingsCreated = mappingResult.Created;
             result.MediaLibraryMappingsDeleted = mappingResult.Deleted;
@@ -377,31 +256,18 @@ public class PathMarkSyncService : ScopedService
                 {
                     await _mediaLibraryV2Service.RefreshResourceCount(mlId);
                 }
-                _logger.LogInformation("[Sync] Refreshed resource count for {Count} media libraries", affectedMediaLibraryIds.Count);
+
+                _logger.LogInformation("[Sync] Refreshed resource count for {Count} media libraries",
+                    affectedMediaLibraryIds.Count);
             }
 
-            // ===== Phase 4: Persist Effects (80-90%) =====
+            // ===== Phase 4: Persist Effects (80-95%) =====
             await ReportProgress(onProgressChange, onProcessChange, 80, "Persisting effects...");
             await ComputeEffectDiff(ctx);
             await PersistEffects(ctx);
 
-            // ===== Update Resource Statuses (90-92%) =====
-            await ReportProgress(onProgressChange, onProcessChange, 90, "Updating resource statuses...");
-            await UpdateResolverResourceStatuses(ctx, ct);
-
-            // ===== Cleanup (92-100%) =====
-            await ReportProgress(onProgressChange, onProcessChange, 92, _localizer.SyncPathMark_EstablishingRelationships());
-
-            // Establish parent-child relationships
-            var createdPaths = ctx.ResourcesToCreate.Keys.ToList();
-            if (createdPaths.Count > 0)
-            {
-                await EstablishParentChildRelationships(createdPaths, ctx, ct);
-            }
-
-            await _resourceService.RefreshParentTag();
-
-            // Update mark statuses
+            // ===== Cleanup (95-100%) =====
+            await ReportProgress(onProgressChange, onProcessChange, 95, "Updating mark statuses...");
             await BatchUpdateMarkStatuses(ctx, marksToDelete);
 
             await ReportProgress(onProgressChange, onProcessChange, 100, _localizer.SyncPathMark_Complete());
@@ -416,17 +282,6 @@ public class PathMarkSyncService : ScopedService
 
     private async Task LoadOldEffects(List<int> markIds, SyncContext ctx)
     {
-        var oldResourceEffects = await _effectService.GetResourceEffectsByMarkIds(markIds);
-        foreach (var effect in oldResourceEffects)
-        {
-            if (!ctx.OldResourceEffectsByMarkId.TryGetValue(effect.MarkId, out var list))
-            {
-                list = new List<ResourceMarkEffect>();
-                ctx.OldResourceEffectsByMarkId[effect.MarkId] = list;
-            }
-            list.Add(effect);
-        }
-
         var oldPropertyEffects = await _effectService.GetPropertyEffectsByMarkIds(markIds);
         foreach (var effect in oldPropertyEffects)
         {
@@ -435,121 +290,14 @@ public class PathMarkSyncService : ScopedService
                 list = new List<PropertyMarkEffect>();
                 ctx.OldPropertyEffectsByMarkId[effect.MarkId] = list;
             }
+
             list.Add(effect);
         }
     }
 
-    private const int BatchSize = 500; // Process in chunks to reduce lock contention
+    private const int BatchSize = 500;
 
     #region Phase 1: Collect Effects
-
-    /// <summary>
-    /// Virtual mark ID offset for resolver-generated effects.
-    /// Each resolver gets a unique virtual mark ID to track its effects.
-    /// </summary>
-    private const int ResolverVirtualMarkIdBase = -1000;
-
-    /// <summary>
-    /// Builds a virtual path for a non-FileSystem resource that has no local path.
-    /// Format: source://{SourceKey}
-    /// </summary>
-    internal static string BuildVirtualPath(ResourceSource source, string sourceKey)
-    {
-        return $"{source.ToString().ToLowerInvariant()}://{sourceKey}";
-    }
-
-    /// <summary>
-    /// Checks if a path is a virtual path (non-filesystem resource).
-    /// </summary>
-    internal static bool IsVirtualPath(string path)
-    {
-        return path.Contains("://");
-    }
-
-    /// <summary>
-    /// Ensures the resource has a source link entry for the given source+key in its SourceLinks list.
-    /// This is used during sync to supplement source links on existing resources.
-    /// </summary>
-    private static void EnsureSourceLinkOnResource(Resource resource, ResourceSource source, string sourceKey)
-    {
-        resource.SourceLinks ??= [];
-        if (!resource.SourceLinks.Any(l => l.Source == source && l.SourceKey == sourceKey))
-        {
-            resource.SourceLinks.Add(new ResourceSourceLink { Source = source, SourceKey = sourceKey });
-        }
-    }
-
-    /// <summary>
-    /// Collects resource effects from a specific non-FileSystem resolver.
-    /// The resolver's discovered resources are converted to ResourceMarkEffects.
-    /// </summary>
-    private async Task CollectSingleResolverResourceEffects(
-        ResourceSource source,
-        SyncContext ctx,
-        Func<int, Task>? onProgressChange,
-        Func<string?, Task>? onProcessChange,
-        CancellationToken ct)
-    {
-        var resolver = _resourceResolvers.FirstOrDefault(r => r.Source == source);
-        if (resolver == null)
-        {
-            _logger.LogWarning("[Sync] No resolver found for source {Source}", source);
-            return;
-        }
-
-        ct.ThrowIfCancellationRequested();
-
-        var virtualMarkId = ResolverVirtualMarkIdBase - (int)resolver.Source;
-        var sourceName = resolver.Source.ToString();
-
-        try
-        {
-            _logger.LogInformation("[Sync] Discovering resources from {Source}...", sourceName);
-            await ReportProgress(onProgressChange, onProcessChange, 14,
-                $"Discovering {sourceName} resources...");
-
-            var resolvedResources = await resolver.DiscoverResources(ct);
-            _logger.LogInformation("[Sync] {Source} discovered {Count} resources", sourceName, resolvedResources.Count);
-
-            foreach (var resolved in resolvedResources)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                // Use the real local path if available, otherwise build a virtual path
-                var effectPath = !string.IsNullOrEmpty(resolved.Path)
-                    ? ctx.GetStandardizedPath(resolved.Path)
-                    : BuildVirtualPath(resolved.Source, resolved.SourceKey);
-
-                // Record the effect
-                ctx.CollectedResourceEffects.Add(new ResourceMarkEffect
-                {
-                    MarkId = virtualMarkId,
-                    Path = effectPath
-                });
-                ctx.CurrentResourceEffectKeys.Add((virtualMarkId, effectPath));
-
-                // Build FinalResourcePaths
-                if (!ctx.FinalResourcePaths.TryGetValue(effectPath, out var markList))
-                {
-                    markList = new List<int>();
-                    ctx.FinalResourcePaths[effectPath] = markList;
-                }
-                markList.Add(virtualMarkId);
-
-                // Track resolver metadata for resource creation
-                ctx.ResolverDiscoveredResources[effectPath] = resolved;
-            }
-
-            // Track resolver status for Absent resource detection
-            ctx.ResolverSyncResults[resolver.Source] = true;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[Sync] Failed to discover resources from {Source}: {Message}", sourceName, ex.Message);
-            // Mark as unavailable - don't mark resources as Absent when resolver fails
-            ctx.ResolverSyncResults[resolver.Source] = false;
-        }
-    }
 
     /// <summary>
     /// Collects property effects from a mark WITHOUT setting any property values.
@@ -562,7 +310,7 @@ public class PathMarkSyncService : ScopedService
         // Only support Custom properties for now
         if (config.Pool != PropertyPool.Custom) return Task.CompletedTask;
 
-        // Use cached resources
+        // Use cached resources - match ALL resources under this mark's path
         var matchedResources = ctx.AllResources
             .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
             .ToList();
@@ -574,7 +322,8 @@ public class PathMarkSyncService : ScopedService
 
         var valueType = config.ValueType;
         var valueLayer = config.ValueLayer;
-        var needsPerResourceExtraction = valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
+        var needsPerResourceExtraction =
+            valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
 
         // For fixed values or dynamic values with valueLayer <= 0, extract once
         object? sharedValue = null;
@@ -596,7 +345,8 @@ public class PathMarkSyncService : ScopedService
             object? value;
             if (needsPerResourceExtraction)
             {
-                value = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer, config.ValueRegex, ctx);
+                value = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer, config.ValueRegex,
+                    ctx);
                 if (value == null) continue;
             }
             else
@@ -644,7 +394,8 @@ public class PathMarkSyncService : ScopedService
 
         var valueType = config.ValueType;
         var valueLayer = config.LayerToMediaLibrary;
-        var needsPerResourceExtraction = valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
+        var needsPerResourceExtraction =
+            valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
 
         // For fixed values
         int? sharedMediaLibraryId = null;
@@ -657,7 +408,8 @@ public class PathMarkSyncService : ScopedService
         }
         else if (!needsPerResourceExtraction)
         {
-            sharedMediaLibraryName = ExtractDynamicValue(mark.Path, null, config.MatchMode, valueLayer, config.RegexToMediaLibrary, ctx);
+            sharedMediaLibraryName = ExtractDynamicValue(mark.Path, null, config.MatchMode, valueLayer,
+                config.RegexToMediaLibrary, ctx);
             if (string.IsNullOrEmpty(sharedMediaLibraryName)) return Task.CompletedTask;
             if (!ctx.MediaLibraryCache.TryGetValue(sharedMediaLibraryName, out var id)) return Task.CompletedTask;
             sharedMediaLibraryId = id;
@@ -670,7 +422,8 @@ public class PathMarkSyncService : ScopedService
             int mediaLibraryId;
             if (needsPerResourceExtraction)
             {
-                var name = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer, config.RegexToMediaLibrary, ctx);
+                var name = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer,
+                    config.RegexToMediaLibrary, ctx);
                 if (string.IsNullOrEmpty(name)) continue;
                 if (!ctx.MediaLibraryCache.TryGetValue(name, out mediaLibraryId)) continue;
             }
@@ -695,407 +448,9 @@ public class PathMarkSyncService : ScopedService
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Collects Property and MediaLibrary effects for newly created resources.
-    /// This includes effects from all related marks that cover the new resource paths.
-    /// Note: currentPropertyMarks/currentMediaLibraryMarks were processed in Phase 1, but they
-    /// couldn't collect effects for new resources (which didn't exist at that time).
-    /// So we need to process them again here for the new resources.
-    /// </summary>
-    private async Task CollectEffectsForNewResources(
-        List<string> newResourcePaths,
-        List<PathMark> currentPropertyMarks,
-        List<PathMark> currentMediaLibraryMarks,
-        SyncContext ctx,
-        CancellationToken ct)
-    {
-        if (newResourcePaths.Count == 0) return;
-
-        // Get all synced Property/MediaLibrary marks (not just the ones being synced now)
-        var allSyncedPropertyMarks = await _pathMarkService.GetAll(m =>
-            m.Type == PathMarkType.Property &&
-            m.SyncStatus == PathMarkSyncStatus.Synced);
-
-        var allSyncedMediaLibraryMarks = await _pathMarkService.GetAll(m =>
-            m.Type == PathMarkType.MediaLibrary &&
-            m.SyncStatus == PathMarkSyncStatus.Synced);
-
-        // Combine all marks: currentMarks + syncedMarks (deduplicated)
-        var currentPropertyMarkIds = currentPropertyMarks.Select(m => m.Id).ToHashSet();
-        var currentMediaLibraryMarkIds = currentMediaLibraryMarks.Select(m => m.Id).ToHashSet();
-
-        var allPropertyMarks = currentPropertyMarks
-            .Concat(allSyncedPropertyMarks.Where(m => !currentPropertyMarkIds.Contains(m.Id)))
-            .ToList();
-
-        var allMediaLibraryMarks = currentMediaLibraryMarks
-            .Concat(allSyncedMediaLibraryMarks.Where(m => !currentMediaLibraryMarkIds.Contains(m.Id)))
-            .ToList();
-
-        // Find which marks cover the new resource paths
-        var relevantPropertyMarks = new List<PathMark>();
-        var relevantMediaLibraryMarks = new List<PathMark>();
-
-        foreach (var resourcePath in newResourcePaths)
-        {
-            var standardizedPath = ctx.GetStandardizedPath(resourcePath);
-            if (string.IsNullOrEmpty(standardizedPath)) continue;
-
-            foreach (var mark in allPropertyMarks)
-            {
-                var markPath = ctx.GetStandardizedPath(mark.Path);
-                if (ctx.IsPathUnderParent(standardizedPath, markPath))
-                {
-                    if (!relevantPropertyMarks.Any(m => m.Id == mark.Id))
-                    {
-                        relevantPropertyMarks.Add(mark);
-                    }
-                }
-            }
-
-            foreach (var mark in allMediaLibraryMarks)
-            {
-                var markPath = ctx.GetStandardizedPath(mark.Path);
-                if (ctx.IsPathUnderParent(standardizedPath, markPath))
-                {
-                    if (!relevantMediaLibraryMarks.Any(m => m.Id == mark.Id))
-                    {
-                        relevantMediaLibraryMarks.Add(mark);
-                    }
-                }
-            }
-        }
-
-        // Collect effects from relevant marks for new resources only
-        foreach (var mark in relevantPropertyMarks.OrderByDescending(m => m.Priority))
-        {
-            ct.ThrowIfCancellationRequested();
-            await CollectPropertyEffectsForNewResources(mark, newResourcePaths, ctx, ct);
-        }
-
-        foreach (var mark in relevantMediaLibraryMarks.OrderByDescending(m => m.Priority))
-        {
-            ct.ThrowIfCancellationRequested();
-            await CollectMediaLibraryEffectsForNewResources(mark, newResourcePaths, ctx, ct);
-        }
-    }
-
-    /// <summary>
-    /// Collects property effects from a mark for specific new resources only.
-    /// </summary>
-    private Task CollectPropertyEffectsForNewResources(PathMark mark, List<string> newResourcePaths, SyncContext ctx, CancellationToken ct)
-    {
-        var config = JsonConvert.DeserializeObject<PropertyMarkConfig>(mark.ConfigJson);
-        if (config == null) return Task.CompletedTask;
-
-        // Only support Custom properties for now
-        if (config.Pool != PropertyPool.Custom) return Task.CompletedTask;
-
-        // Get new resources that are under this mark's path
-        var newResources = newResourcePaths
-            .Select(p => ctx.GetStandardizedPath(p))
-            .Where(p => !string.IsNullOrEmpty(p) && ctx.PathToResource.ContainsKey(p))
-            .Select(p => ctx.PathToResource[p])
-            .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
-            .ToList();
-
-        if (newResources.Count == 0) return Task.CompletedTask;
-
-        var filteredResources = FilterResourcesByMarkConfig(newResources, mark.Path, config, ctx);
-        if (filteredResources.Count == 0) return Task.CompletedTask;
-
-        var valueType = config.ValueType;
-        var valueLayer = config.ValueLayer;
-        var needsPerResourceExtraction = valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
-
-        // For fixed values or dynamic values with valueLayer <= 0, extract once
-        object? sharedValue = null;
-        if (valueType == PropertyValueType.Fixed)
-        {
-            sharedValue = config.FixedValue;
-            if (sharedValue == null) return Task.CompletedTask;
-        }
-        else if (!needsPerResourceExtraction)
-        {
-            sharedValue = ExtractDynamicValue(mark.Path, null, config.MatchMode, valueLayer, config.ValueRegex, ctx);
-            if (sharedValue == null) return Task.CompletedTask;
-        }
-
-        foreach (var resource in filteredResources)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            object? value;
-            if (needsPerResourceExtraction)
-            {
-                value = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer, config.ValueRegex, ctx);
-                if (value == null) continue;
-            }
-            else
-            {
-                value = sharedValue!;
-            }
-
-            var valueString = value is string s ? s : System.Text.Json.JsonSerializer.Serialize(value);
-
-            // Record the effect
-            ctx.CollectedPropertyEffects.Add(new PropertyMarkEffect
-            {
-                MarkId = mark.Id,
-                PropertyPool = config.Pool,
-                PropertyId = config.PropertyId,
-                ResourceId = resource.Id,
-                Value = valueString,
-                Priority = mark.Priority
-            });
-            ctx.CurrentPropertyEffectKeys.Add((mark.Id, config.Pool, config.PropertyId, resource.Id));
-        }
-
-        return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Collects media library effects from a mark for specific new resources only.
-    /// </summary>
-    private Task CollectMediaLibraryEffectsForNewResources(PathMark mark, List<string> newResourcePaths, SyncContext ctx, CancellationToken ct)
-    {
-        var config = JsonConvert.DeserializeObject<MediaLibraryMarkConfig>(mark.ConfigJson);
-        if (config == null) return Task.CompletedTask;
-
-        const int mediaLibraryPropertyId = 25;
-
-        // Get new resources that are under this mark's path
-        var newResources = newResourcePaths
-            .Select(p => ctx.GetStandardizedPath(p))
-            .Where(p => !string.IsNullOrEmpty(p) && ctx.PathToResource.ContainsKey(p))
-            .Select(p => ctx.PathToResource[p])
-            .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
-            .ToList();
-
-        if (newResources.Count == 0) return Task.CompletedTask;
-
-        var filteredResources = FilterResourcesByMarkConfig(newResources, mark.Path, config, ctx);
-        if (filteredResources.Count == 0) return Task.CompletedTask;
-
-        var valueType = config.ValueType;
-        var valueLayer = config.LayerToMediaLibrary;
-        var needsPerResourceExtraction = valueType == PropertyValueType.Dynamic && valueLayer.HasValue && valueLayer.Value > 0;
-
-        // For fixed values
-        int? sharedMediaLibraryId = null;
-
-        if (valueType == PropertyValueType.Fixed)
-        {
-            sharedMediaLibraryId = config.MediaLibraryId;
-            if (!sharedMediaLibraryId.HasValue) return Task.CompletedTask;
-        }
-        else if (!needsPerResourceExtraction)
-        {
-            var mediaLibraryName = ExtractDynamicValue(mark.Path, null, config.MatchMode, valueLayer, config.RegexToMediaLibrary, ctx);
-            if (string.IsNullOrEmpty(mediaLibraryName)) return Task.CompletedTask;
-            if (!ctx.MediaLibraryCache.TryGetValue(mediaLibraryName, out var id)) return Task.CompletedTask;
-            sharedMediaLibraryId = id;
-        }
-
-        foreach (var resource in filteredResources)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            int mediaLibraryId;
-            if (needsPerResourceExtraction)
-            {
-                var name = ExtractDynamicValue(mark.Path, resource.Path, config.MatchMode, valueLayer, config.RegexToMediaLibrary, ctx);
-                if (string.IsNullOrEmpty(name)) continue;
-                if (!ctx.MediaLibraryCache.TryGetValue(name, out mediaLibraryId)) continue;
-            }
-            else
-            {
-                mediaLibraryId = sharedMediaLibraryId!.Value;
-            }
-
-            // Record the effect
-            ctx.CollectedPropertyEffects.Add(new PropertyMarkEffect
-            {
-                MarkId = mark.Id,
-                PropertyPool = PropertyPool.Internal,
-                PropertyId = mediaLibraryPropertyId,
-                ResourceId = resource.Id,
-                Value = mediaLibraryId.ToString(),
-                Priority = mark.Priority
-            });
-            ctx.CurrentPropertyEffectKeys.Add((mark.Id, PropertyPool.Internal, mediaLibraryPropertyId, resource.Id));
-        }
-
-        return Task.CompletedTask;
-    }
-
     #endregion
 
     #region Phase 2: Compute Final State
-
-    /// <summary>
-    /// Computes which resources should exist based on collected effects.
-    /// Prepares ResourcesToCreate for resources that don't exist yet.
-    /// Handles both filesystem paths and virtual paths (source://sourceKey).
-    /// </summary>
-    private async Task ComputeFinalResourceState(SyncContext ctx)
-    {
-        foreach (var (path, markIds) in ctx.FinalResourcePaths)
-        {
-            // Check if this is a resolver-discovered resource with a virtual path
-            var isVirtual = IsVirtualPath(path);
-
-            // Determine the source link for this discovered resource
-            ResourceSource discoveredSource;
-            string discoveredSourceKey;
-            ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolvedMeta);
-            if (isVirtual && resolvedMeta != null)
-            {
-                discoveredSource = resolvedMeta.Source;
-                discoveredSourceKey = resolvedMeta.SourceKey;
-            }
-            else
-            {
-                discoveredSource = ResourceSource.FileSystem;
-                discoveredSourceKey = path;
-            }
-
-            // If resource already exists by path, check if we need to supplement source links
-            if (ctx.ExistingPathSet.Contains(path))
-            {
-                if (!isVirtual)
-                {
-                    // Check for bakabase.json marker for path recovery
-                    var existingResourceId = await CheckBakabaseJsonMarker(path);
-                    if (existingResourceId.HasValue && ctx.IdToResource.TryGetValue(existingResourceId.Value, out var existingResource))
-                    {
-                        if (!existingResource.Path!.Equals(path, StringComparison.OrdinalIgnoreCase))
-                        {
-                            existingResource.Path = path;
-                            existingResource.UpdatedAt = DateTime.Now;
-                            ctx.ResourcesToCreate[path] = existingResource;
-                        }
-                    }
-                }
-
-                // Supplement source link for the existing resource at this path
-                if (ctx.PathToResource.TryGetValue(path, out var pathResource))
-                {
-                    EnsureSourceLinkOnResource(pathResource, discoveredSource, discoveredSourceKey);
-                    // Mark for update so AddOrPutRange will call EnsureLinks
-                    if (!ctx.ResourcesToCreate.ContainsKey(path))
-                    {
-                        ctx.ResourcesToCreate[path] = pathResource;
-                    }
-                }
-
-                continue;
-            }
-
-            // Check source link index: does an existing resource already have this (Source, SourceKey)?
-            if (ctx.SourceLinkToResourceId.TryGetValue((discoveredSource, discoveredSourceKey), out var linkedResourceId)
-                && ctx.IdToResource.TryGetValue(linkedResourceId, out var linkedResource))
-            {
-                // Found an existing resource via source link match - update path if changed
-                var newPath = isVirtual ? resolvedMeta?.Path : path;
-                if (newPath != linkedResource.Path)
-                {
-                    linkedResource.Path = newPath;
-                    linkedResource.UpdatedAt = DateTime.Now;
-                }
-                EnsureSourceLinkOnResource(linkedResource, discoveredSource, discoveredSourceKey);
-                ctx.ResourcesToCreate[path] = linkedResource;
-                continue;
-            }
-
-            if (!isVirtual)
-            {
-                // Check for bakabase.json recovery
-                var markerResourceId = await CheckBakabaseJsonMarker(path);
-                if (markerResourceId.HasValue && ctx.IdToResource.TryGetValue(markerResourceId.Value, out var markerResource))
-                {
-                    markerResource.Path = path;
-                    markerResource.UpdatedAt = DateTime.Now;
-                    EnsureSourceLinkOnResource(markerResource, discoveredSource, discoveredSourceKey);
-                    ctx.ResourcesToCreate[path] = markerResource;
-                    continue;
-                }
-            }
-
-            // Need to create new resource
-            if (isVirtual)
-            {
-                if (!ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolved)) continue;
-
-                var resource = new Resource
-                {
-                    Path = resolved.Path,
-                    IsFile = false,
-                    Status = ResourceStatus.Active,
-                    DisplayName = resolved.DisplayName,
-                    CategoryId = 0,
-                    MediaLibraryId = 0,
-                    FileCreatedAt = DateTime.Now,
-                    FileModifiedAt = DateTime.Now,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now,
-                    SourceLinks = [new ResourceSourceLink { Source = resolved.Source, SourceKey = resolved.SourceKey }]
-                };
-
-                ctx.ResourcesToCreate[path] = resource;
-            }
-            else
-            {
-                var isFile = File.Exists(path);
-                var isDirectory = Directory.Exists(path);
-
-                if (!isFile && !isDirectory) continue;
-
-                DateTime fileCreatedAt, fileModifiedAt;
-                if (isFile)
-                {
-                    var fileInfo = new FileInfo(path);
-                    fileCreatedAt = fileInfo.CreationTime;
-                    fileModifiedAt = fileInfo.LastWriteTime;
-                }
-                else
-                {
-                    var dirInfo = new DirectoryInfo(path);
-                    fileCreatedAt = dirInfo.CreationTime;
-                    fileModifiedAt = dirInfo.LastWriteTime;
-                }
-
-                var resource = new Resource
-                {
-                    Path = path,
-                    IsFile = isFile,
-                    Status = ResourceStatus.Active,
-                    CategoryId = 0,
-                    MediaLibraryId = 0,
-                    FileCreatedAt = fileCreatedAt,
-                    FileModifiedAt = fileModifiedAt,
-                    CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now,
-                    SourceLinks = [new ResourceSourceLink { Source = ResourceSource.FileSystem, SourceKey = path }]
-                };
-
-                ctx.ResourcesToCreate[path] = resource;
-            }
-        }
-
-        // Determine resources to delete: paths that had effects before but don't anymore
-        foreach (var (markId, oldEffects) in ctx.OldResourceEffectsByMarkId)
-        {
-            foreach (var effect in oldEffects)
-            {
-                // If this path is no longer in FinalResourcePaths, it might need deletion
-                if (!ctx.FinalResourcePaths.ContainsKey(effect.Path))
-                {
-                    ctx.ResourcePathsToDelete.Add(effect.Path);
-                }
-            }
-        }
-    }
 
     /// <summary>
     /// Computes final property values by combining all effects using PropertySystem.Combine.
@@ -1239,17 +594,14 @@ public class PathMarkSyncService : ScopedService
         }
 
         // Find media library mappings to delete: existed before but no longer have any effects
-        // Build a set of current mappings for fast lookup
         var currentMappings = new HashSet<(int ResourceId, int MediaLibraryId)>(ctx.FinalMappingsToEnsure);
 
-        // Collect all potential mappings to delete (from old effects of synced marks)
         var potentialDeletes = new HashSet<(int ResourceId, int MediaLibraryId)>();
 
         foreach (var (markId, oldEffects) in ctx.OldPropertyEffectsByMarkId)
         {
             foreach (var effect in oldEffects)
             {
-                // Only process media library effects (Internal pool, PropertyId = 25)
                 if (effect.PropertyPool != PropertyPool.Internal || effect.PropertyId != mediaLibraryPropertyId)
                     continue;
 
@@ -1258,7 +610,6 @@ public class PathMarkSyncService : ScopedService
 
                 var mapping = (effect.ResourceId, mediaLibraryId);
 
-                // If this mapping is no longer in the final state of synced marks, it's a potential delete
                 if (!currentMappings.Contains(mapping))
                 {
                     potentialDeletes.Add(mapping);
@@ -1266,20 +617,18 @@ public class PathMarkSyncService : ScopedService
             }
         }
 
-        // For each potential delete, check if there are other marks (not being synced) that still need this mapping
+        // For each potential delete, check if there are other marks that still need this mapping
         if (potentialDeletes.Count > 0)
         {
             var syncedMarkIds = ctx.OldPropertyEffectsByMarkId.Keys.ToHashSet();
             var resourceIds = potentialDeletes.Select(m => m.ResourceId).Distinct().ToList();
 
-            // Get all effects for these resources (including effects from marks not being synced)
-            var allEffects = await _effectService.GetPropertyEffectsByResources(resourceIds, PropertyPool.Internal, mediaLibraryPropertyId);
+            var allEffects = await _effectService.GetPropertyEffectsByResources(resourceIds, PropertyPool.Internal,
+                mediaLibraryPropertyId);
 
-            // Build a set of mappings that are still needed by other marks (not being synced)
             var mappingsStillNeeded = new HashSet<(int ResourceId, int MediaLibraryId)>();
             foreach (var effect in allEffects)
             {
-                // Skip effects from marks that are being synced (we already know their new state)
                 if (syncedMarkIds.Contains(effect.MarkId))
                     continue;
 
@@ -1289,7 +638,6 @@ public class PathMarkSyncService : ScopedService
                 }
             }
 
-            // Only delete mappings that are not needed by any other marks
             foreach (var mapping in potentialDeletes)
             {
                 if (!mappingsStillNeeded.Contains(mapping))
@@ -1303,77 +651,6 @@ public class PathMarkSyncService : ScopedService
     #endregion
 
     #region Phase 3: Apply Changes
-
-    /// <summary>
-    /// Creates and deletes resources based on computed final state.
-    /// </summary>
-    private async Task<(int Created, int Deleted)> ApplyResourceChanges(SyncContext ctx, CancellationToken ct)
-    {
-        var created = 0;
-        var deleted = 0;
-
-        // Create new resources
-        if (ctx.ResourcesToCreate.Count > 0)
-        {
-            var resourcesToCreate = ctx.ResourcesToCreate.Values.ToList();
-            var sw = Stopwatch.StartNew();
-
-            var batches = resourcesToCreate.Chunk(BatchSize).ToList();
-            for (var i = 0; i < batches.Count; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                await _resourceService.AddOrPutRange(batches[i].ToList());
-                if (i < batches.Count - 1) await Task.Delay(5);
-            }
-
-            sw.Stop();
-            _logger.LogInformation("[Sync] Created {Count} resources in {ElapsedMs}ms",
-                resourcesToCreate.Count, sw.ElapsedMilliseconds);
-
-            created = resourcesToCreate.Count;
-
-            // Create bakabase.json markers for new folder resources
-            if (_resourceOptions.Value.KeepResourcesOnPathChange)
-            {
-                foreach (var resource in resourcesToCreate.Where(r => !r.IsFile && r.Id > 0))
-                {
-                    await CreateBakabaseJsonMarker(resource.Path, resource.Id);
-                }
-            }
-        }
-
-        // Delete resources that no longer have any effects
-        if (ctx.ResourcePathsToDelete.Count > 0)
-        {
-            var resourcesToDelete = new List<int>();
-            foreach (var path in ctx.ResourcePathsToDelete)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                if (!ctx.PathToResource.TryGetValue(path, out var resource))
-                    continue;
-
-                // Check bakabase.json preservation
-                if (_resourceOptions.Value.KeepResourcesOnPathChange && !resource.IsFile)
-                {
-                    var markerPath = Path.Combine(path, InternalOptions.ResourceMarkerFileName);
-                    if (File.Exists(markerPath))
-                        continue;
-                }
-
-                resourcesToDelete.Add(resource.Id);
-            }
-
-            if (resourcesToDelete.Count > 0)
-            {
-                await _resourceService.DeleteByKeys(resourcesToDelete.ToArray());
-                deleted = resourcesToDelete.Count;
-                _logger.LogInformation("[Sync] Deleted {Count} resources", deleted);
-            }
-        }
-
-        return (created, deleted);
-    }
 
     /// <summary>
     /// Applies final property values to database.
@@ -1398,6 +675,7 @@ public class PathMarkSyncService : ScopedService
                     await _customPropertyValueService.AddDbModelRange(batches[i].ToList());
                     if (i < batches.Count - 1) await Task.Delay(5);
                 }
+
                 _logger.LogInformation("[Sync] Added {Count} property values", toAdd.Count);
             }
 
@@ -1410,6 +688,7 @@ public class PathMarkSyncService : ScopedService
                     await _customPropertyValueService.UpdateDbModelRange(batches[i].ToList());
                     if (i < batches.Count - 1) await Task.Delay(5);
                 }
+
                 _logger.LogInformation("[Sync] Updated {Count} property values", toUpdate.Count);
             }
 
@@ -1428,6 +707,7 @@ public class PathMarkSyncService : ScopedService
                     x.PropertyId == propertyId &&
                     x.Scope == (int)PropertyValueScope.Synchronization);
             }
+
             deleted = distinctDeletes.Count;
             _logger.LogInformation("[Sync] Deleted {Count} property values", deleted);
         }
@@ -1454,6 +734,7 @@ public class PathMarkSyncService : ScopedService
                 await _mappingService.DeleteMappingsRange(batches[i].ToList());
                 if (i < batches.Count - 1) await Task.Delay(5);
             }
+
             deleted = distinctDeletes.Count;
             _logger.LogInformation("[Sync] Deleted {Count} media library mappings", deleted);
         }
@@ -1468,6 +749,7 @@ public class PathMarkSyncService : ScopedService
                 await _mappingService.EnsureMappingsRange(batches[i].ToList());
                 if (i < batches.Count - 1) await Task.Delay(5);
             }
+
             created = ctx.FinalMappingsToEnsure.Count;
             _logger.LogInformation("[Sync] Ensured {Count} media library mappings", created);
         }
@@ -1484,42 +766,13 @@ public class PathMarkSyncService : ScopedService
     /// </summary>
     private Task ComputeEffectDiff(SyncContext ctx)
     {
-        // Resource effects to add: in collected but not in old
-        var oldResourceKeys = ctx.OldResourceEffectsByMarkId
-            .SelectMany(kvp => kvp.Value.Select(e => (e.MarkId, e.Path)))
-            .ToHashSet(new ResourceEffectKeyComparer());
-
-        // Track added keys to avoid duplicates in CollectedResourceEffects
-        var addedResourceKeys = new HashSet<(int MarkId, string Path)>(new ResourceEffectKeyComparer());
-
-        foreach (var effect in ctx.CollectedResourceEffects)
-        {
-            var key = (effect.MarkId, effect.Path);
-            if (!oldResourceKeys.Contains(key) && addedResourceKeys.Add(key))
-            {
-                ctx.ResourceEffectsToAdd.Add(effect);
-            }
-        }
-
-        // Resource effects to delete: in old but not in collected
-        foreach (var (markId, oldEffects) in ctx.OldResourceEffectsByMarkId)
-        {
-            foreach (var effect in oldEffects)
-            {
-                if (!ctx.CurrentResourceEffectKeys.Contains((effect.MarkId, effect.Path)))
-                {
-                    ctx.ResourceEffectIdsToDelete.Add(effect.Id);
-                }
-            }
-        }
-
         // Property effects to add: in collected but not in old
         var oldPropertyKeys = ctx.OldPropertyEffectsByMarkId
             .SelectMany(kvp => kvp.Value.Select(e => (e.MarkId, e.PropertyPool, e.PropertyId, e.ResourceId)))
             .ToHashSet();
 
-        // Track added keys to avoid duplicates in CollectedPropertyEffects
-        var addedPropertyKeys = new HashSet<(int MarkId, PropertyPool Pool, int PropertyId, int ResourceId)>();
+        var addedPropertyKeys =
+            new HashSet<(int MarkId, PropertyPool Pool, int PropertyId, int ResourceId)>();
 
         foreach (var effect in ctx.CollectedPropertyEffects)
         {
@@ -1535,7 +788,8 @@ public class PathMarkSyncService : ScopedService
         {
             foreach (var effect in oldEffects)
             {
-                if (!ctx.CurrentPropertyEffectKeys.Contains((effect.MarkId, effect.PropertyPool, effect.PropertyId, effect.ResourceId)))
+                if (!ctx.CurrentPropertyEffectKeys.Contains((effect.MarkId, effect.PropertyPool, effect.PropertyId,
+                        effect.ResourceId)))
                 {
                     ctx.PropertyEffectIdsToDelete.Add(effect.Id);
                 }
@@ -1543,20 +797,10 @@ public class PathMarkSyncService : ScopedService
         }
 
         _logger.LogInformation(
-            "[Sync] Effect diff: ResourceEffects +{AddRes}/-{DelRes}, PropertyEffects +{AddProp}/-{DelProp}",
-            ctx.ResourceEffectsToAdd.Count, ctx.ResourceEffectIdsToDelete.Count,
+            "[Sync] Effect diff: PropertyEffects +{AddProp}/-{DelProp}",
             ctx.PropertyEffectsToAdd.Count, ctx.PropertyEffectIdsToDelete.Count);
 
         return Task.CompletedTask;
-    }
-
-    private class ResourceEffectKeyComparer : IEqualityComparer<(int MarkId, string Path)>
-    {
-        public bool Equals((int MarkId, string Path) x, (int MarkId, string Path) y)
-            => x.MarkId == y.MarkId && string.Equals(x.Path, y.Path, StringComparison.OrdinalIgnoreCase);
-
-        public int GetHashCode((int MarkId, string Path) obj)
-            => HashCode.Combine(obj.MarkId, obj.Path?.ToLowerInvariant());
     }
 
     /// <summary>
@@ -1565,23 +809,6 @@ public class PathMarkSyncService : ScopedService
     private async Task PersistEffects(SyncContext ctx)
     {
         var sw = Stopwatch.StartNew();
-
-        // Add new resource effects
-        if (ctx.ResourceEffectsToAdd.Count > 0)
-        {
-            var batches = ctx.ResourceEffectsToAdd.Chunk(BatchSize).ToList();
-            for (var i = 0; i < batches.Count; i++)
-            {
-                await _effectService.AddResourceEffects(batches[i]);
-                if (i < batches.Count - 1) await Task.Delay(5);
-            }
-        }
-
-        // Delete stale resource effects
-        if (ctx.ResourceEffectIdsToDelete.Count > 0)
-        {
-            await _effectService.DeleteResourceEffects(ctx.ResourceEffectIdsToDelete);
-        }
 
         // Add new property effects
         if (ctx.PropertyEffectsToAdd.Count > 0)
@@ -1619,7 +846,8 @@ public class PathMarkSyncService : ScopedService
             var sw = Stopwatch.StartNew();
             await _pathMarkService.MarkAsSyncedBatch(ctx.SuccessfulMarkIds);
             sw.Stop();
-            _logger.LogInformation("[Sync] MarkAsSyncedBatch ({Count}) took {ElapsedMs}ms", count, sw.ElapsedMilliseconds);
+            _logger.LogInformation("[Sync] MarkAsSyncedBatch ({Count}) took {ElapsedMs}ms", count,
+                sw.ElapsedMilliseconds);
         }
 
         // Batch mark as failed
@@ -1635,11 +863,13 @@ public class PathMarkSyncService : ScopedService
             var sw = Stopwatch.StartNew();
             await _pathMarkService.HardDeleteBatch(marksToDelete);
             sw.Stop();
-            _logger.LogInformation("[Sync] HardDeleteBatch ({Count}) took {ElapsedMs}ms", count, sw.ElapsedMilliseconds);
+            _logger.LogInformation("[Sync] HardDeleteBatch ({Count}) took {ElapsedMs}ms", count,
+                sw.ElapsedMilliseconds);
         }
 
         totalSw.Stop();
-        _logger.LogInformation("[Sync] BatchUpdateMarkStatuses total took {ElapsedMs}ms", totalSw.ElapsedMilliseconds);
+        _logger.LogInformation("[Sync] BatchUpdateMarkStatuses total took {ElapsedMs}ms",
+            totalSw.ElapsedMilliseconds);
     }
 
     #endregion
@@ -1655,14 +885,6 @@ public class PathMarkSyncService : ScopedService
 
     /// <summary>
     /// Unified dynamic value extraction method for both Property and MediaLibrary marks.
-    ///
-    /// Layer semantics (consistent with FilterByLayer):
-    /// - valueLayer = 0: mark path's directory name itself
-    /// - valueLayer &lt; 0 (e.g., -1, -2): go UP from mark path (parent directories)
-    /// - valueLayer &gt; 0 (e.g., 1, 2): go DOWN from mark path (child directories), requires resourcePath
-    ///
-    /// When valueLayer &gt; 0, there can be multiple values (one per child), so we use resourcePath
-    /// to determine which child directory's name to extract.
     /// </summary>
     private string? ExtractDynamicValue(
         string markPath,
@@ -1680,43 +902,36 @@ public class PathMarkSyncService : ScopedService
 
             if (layer == 0)
             {
-                // layer=0 means the mark path's directory name itself
                 var targetIndex = markSegments.Length - 1;
                 if (targetIndex < 0) return null;
                 return markSegments[targetIndex];
             }
             else if (layer < 0)
             {
-                // Negative layer: go UP from mark path (parent directories)
-                // -1 = parent, -2 = grandparent, etc.
-                var targetIndex = markSegments.Length - 1 + layer; // layer is negative, so this goes up
+                var targetIndex = markSegments.Length - 1 + layer;
                 if (targetIndex < 0 || targetIndex >= markSegments.Length)
                 {
                     return null;
                 }
+
                 return markSegments[targetIndex];
             }
             else
             {
-                // Positive layer: go DOWN from mark path (child directories)
-                // 1 = first level child, 2 = second level child, etc.
-                // We need resourcePath to determine which child directory to use
                 if (string.IsNullOrEmpty(resourcePath)) return null;
 
                 var resourceSegments = ctx.GetPathSegments(resourcePath);
-                // The target segment is markSegments.Length + layer - 1
-                // e.g., mark = /a/b (2 segments), layer = 1, target = segment index 2 (first child)
                 var targetIndex = markSegments.Length + layer - 1;
                 if (targetIndex < 0 || targetIndex >= resourceSegments.Length)
                 {
                     return null;
                 }
+
                 return resourceSegments[targetIndex];
             }
         }
         else if (matchMode == PathMatchMode.Regex && !string.IsNullOrEmpty(valueRegex))
         {
-            // For regex mode, apply regex on the mark path's directory name
             var normalizedMarkPath = ctx.GetStandardizedPath(markPath);
             var markDirectoryName = Path.GetFileName(normalizedMarkPath);
             try
@@ -1727,6 +942,7 @@ public class PathMarkSyncService : ScopedService
                 {
                     return match.Groups.Count > 1 ? match.Groups[1].Value : match.Value;
                 }
+
                 return null;
             }
             catch
@@ -1767,7 +983,6 @@ public class PathMarkSyncService : ScopedService
 
             if (valueLayer > 0)
             {
-                // When valueLayer > 0, we need to extract values from each relevant resource
                 var matchedResources = ctx.AllResources
                     .Where(r => ctx.IsPathUnderParent(r.Path, mark.Path))
                     .ToList();
@@ -1783,7 +998,8 @@ public class PathMarkSyncService : ScopedService
                         config.RegexToMediaLibrary,
                         ctx);
 
-                    if (!string.IsNullOrEmpty(mediaLibraryName) && !ctx.MediaLibraryCache.ContainsKey(mediaLibraryName))
+                    if (!string.IsNullOrEmpty(mediaLibraryName) &&
+                        !ctx.MediaLibraryCache.ContainsKey(mediaLibraryName))
                     {
                         newMediaLibraryNames.Add(mediaLibraryName);
                     }
@@ -1791,7 +1007,6 @@ public class PathMarkSyncService : ScopedService
             }
             else
             {
-                // When valueLayer <= 0, extract once from mark path
                 var mediaLibraryName = ExtractDynamicValue(
                     mark.Path,
                     null,
@@ -1820,207 +1035,6 @@ public class PathMarkSyncService : ScopedService
         }
     }
 
-    private async Task<List<PathMark>> FindRelatedMarksAsync(List<string> resourcePaths, PathMarkType type,
-        List<PathMark> excludeMarks, SyncContext ctx)
-    {
-        var excludeIds = excludeMarks.Select(m => m.Id).ToHashSet();
-
-        // Precompute standardized resource paths for efficient lookup
-        var standardizedResourcePaths = resourcePaths
-            .Select(p => ctx.GetStandardizedPath(p))
-            .Where(p => !string.IsNullOrEmpty(p))
-            .ToList();
-
-        // Sort paths to enable prefix-based optimization
-        standardizedResourcePaths.Sort(StringComparer.OrdinalIgnoreCase);
-
-        var allMarks = await _pathMarkService.GetAll(m => m.Type == type && !excludeIds.Contains(m.Id));
-
-        var relatedMarks = new List<PathMark>();
-
-        foreach (var mark in allMarks)
-        {
-            if (mark.SyncStatus is not (PathMarkSyncStatus.Pending or PathMarkSyncStatus.PendingDelete
-                or PathMarkSyncStatus.Synced))
-                continue;
-
-            var markPath = ctx.GetStandardizedPath(mark.Path);
-            if (string.IsNullOrEmpty(markPath)) continue;
-
-            // Check if any resource path starts with this mark's path
-            var markPathWithSeparator = markPath + InternalOptions.DirSeparator;
-
-            foreach (var resourcePath in standardizedResourcePaths)
-            {
-                if (resourcePath.StartsWith(markPathWithSeparator, StringComparison.OrdinalIgnoreCase) ||
-                    resourcePath.Equals(markPath, StringComparison.OrdinalIgnoreCase))
-                {
-                    relatedMarks.Add(mark);
-                    break;
-                }
-            }
-        }
-
-        return relatedMarks;
-    }
-
-    /// <summary>
-    /// Updates resource statuses based on resolver sync results.
-    /// - Resources whose resolver succeeded but weren't discovered → Absent
-    /// - Resources whose resolver failed → Unavailable
-    /// - Resources that were Absent but are now discovered → Active (recovery)
-    /// </summary>
-    private async Task UpdateResolverResourceStatuses(SyncContext ctx, CancellationToken ct)
-    {
-        var resourcesToUpdate = new List<Resource>();
-
-        foreach (var (source, success) in ctx.ResolverSyncResults)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            // Get all existing resources that have a source link for this source
-            var sourceResources = ctx.AllResources
-                .Where(r => ctx.ResourceIdToSourceLinks.TryGetValue(r.Id, out var links)
-                             && links.Any(l => l.Source == source))
-                .ToList();
-
-            if (sourceResources.Count == 0) continue;
-
-            // Get all discovered (Source, SourceKey) pairs for this resolver
-            var discoveredKeys = ctx.ResolverDiscoveredResources.Values
-                .Where(r => r.Source == source)
-                .Select(r => (r.Source, r.SourceKey))
-                .ToHashSet();
-
-            if (success)
-            {
-                // Resolver succeeded - we can determine Absent vs Active
-                foreach (var resource in sourceResources)
-                {
-                    var resourceLinks = ctx.ResourceIdToSourceLinks.GetValueOrDefault(resource.Id);
-                    var hasDiscoveredLink = resourceLinks != null
-                        && resourceLinks.Any(l => l.Source == source && discoveredKeys.Contains(l));
-
-                    if (hasDiscoveredLink)
-                    {
-                        // Resource found - ensure it's Active
-                        if (resource.Status != ResourceStatus.Active)
-                        {
-                            resource.Status = ResourceStatus.Active;
-                            resource.UpdatedAt = DateTime.Now;
-                            resourcesToUpdate.Add(resource);
-                        }
-                    }
-                    else
-                    {
-                        // Resource not found by resolver - mark as Absent
-                        if (resource.Status != ResourceStatus.Absent)
-                        {
-                            resource.Status = ResourceStatus.Absent;
-                            resource.UpdatedAt = DateTime.Now;
-                            resourcesToUpdate.Add(resource);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                // Resolver failed - mark all as Unavailable (don't delete anything)
-                foreach (var resource in sourceResources)
-                {
-                    if (resource.Status != ResourceStatus.Unavailable)
-                    {
-                        resource.Status = ResourceStatus.Unavailable;
-                        resource.UpdatedAt = DateTime.Now;
-                        resourcesToUpdate.Add(resource);
-                    }
-                }
-            }
-        }
-
-        if (resourcesToUpdate.Count > 0)
-        {
-            await _resourceService.AddOrPutRange(resourcesToUpdate);
-            _logger.LogInformation("[Sync] Updated status for {Count} resources from external resolvers", resourcesToUpdate.Count);
-        }
-    }
-
-    private async Task EstablishParentChildRelationships(List<string> resourcePaths, SyncContext ctx,
-        CancellationToken ct)
-    {
-        var changedResources = new Dictionary<int, Resource>();
-
-        foreach (var path in resourcePaths)
-        {
-            ct.ThrowIfCancellationRequested();
-
-            var standardizedPath = ctx.GetStandardizedPath(path);
-            if (string.IsNullOrEmpty(standardizedPath) || !ctx.PathToResource.TryGetValue(standardizedPath, out var resource))
-                continue;
-
-            // 1. Walk up the directory tree to find the closest parent resource
-            var parentPath = Path.GetDirectoryName(standardizedPath);
-            int? parentResourceId = null;
-
-            while (!string.IsNullOrEmpty(parentPath))
-            {
-                if (ctx.PathToResource.TryGetValue(parentPath, out var parentResource))
-                {
-                    parentResourceId = parentResource.Id;
-                    break;
-                }
-                parentPath = Path.GetDirectoryName(parentPath);
-            }
-
-            if (resource.ParentId != parentResourceId)
-            {
-                resource.ParentId = parentResourceId;
-                changedResources[resource.Id] = resource;
-            }
-
-            // 2. Find child resources that should have this resource as their parent
-            var pathWithSeparator = standardizedPath + Path.DirectorySeparatorChar;
-            foreach (var (childPath, childResource) in ctx.PathToResource)
-            {
-                // Skip self
-                if (childPath.Equals(standardizedPath, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                // Check if childPath is under this resource's path
-                if (!childPath.StartsWith(pathWithSeparator, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                // Find the closest parent for this child (it might be this resource or a deeper one)
-                var childParentPath = Path.GetDirectoryName(childPath);
-                int? childParentResourceId = null;
-
-                while (!string.IsNullOrEmpty(childParentPath))
-                {
-                    if (ctx.PathToResource.TryGetValue(childParentPath, out var childParentResource))
-                    {
-                        childParentResourceId = childParentResource.Id;
-                        break;
-                    }
-                    childParentPath = Path.GetDirectoryName(childParentPath);
-                }
-
-                if (childResource.ParentId != childParentResourceId)
-                {
-                    childResource.ParentId = childParentResourceId;
-                    changedResources[childResource.Id] = childResource;
-                }
-            }
-        }
-
-        if (changedResources.Count > 0)
-        {
-            await _resourceService.AddOrPutRange(changedResources.Values.ToList());
-        }
-    }
-
-    // Resource discovery methods (GetMatchingPathsForResourceMark, GetAllEntries, GetEntriesAtLayer,
-    // GetParentAtLayer) have been moved to FileSystemResolver.
-
     // Unified filter method for both PropertyMarkConfig and MediaLibraryMarkConfig
     private List<Resource> FilterResourcesByMarkConfig<TConfig>(List<Resource> resources, string markPath,
         TConfig config, SyncContext ctx)
@@ -2048,7 +1062,6 @@ public class PathMarkSyncService : ScopedService
             applyScope = mlmc.ApplyScope;
         }
 
-        // If no valid matchMode is configured, return empty list (no resources should be processed)
         if (matchMode == null) return new List<Resource>();
 
         var includeSubdirectories = applyScope == PathMarkApplyScope.MatchedAndSubdirectories;
@@ -2057,7 +1070,8 @@ public class PathMarkSyncService : ScopedService
         {
             PathMatchMode.Layer when layer.HasValue => FilterByLayer(resources, normalizedMarkPath, layer.Value,
                 includeSubdirectories, ctx),
-            PathMatchMode.Regex when !string.IsNullOrEmpty(regex) => FilterByRegex(resources, normalizedMarkPath, regex,
+            PathMatchMode.Regex when !string.IsNullOrEmpty(regex) => FilterByRegex(resources, normalizedMarkPath,
+                regex,
                 includeSubdirectories, ctx),
             _ => new List<Resource>()
         };
@@ -2079,7 +1093,6 @@ public class PathMarkSyncService : ScopedService
                 var resourceSegments = ctx.GetPathSegments(r.Path);
                 if (includeSubdirectories)
                 {
-                    // Include resources at target layer and below (deeper)
                     return resourceSegments.Length >= targetSegmentCount;
                 }
 
@@ -2094,7 +1107,6 @@ public class PathMarkSyncService : ScopedService
             var relativeDepth = resourceSegments.Length - rootSegments.Length;
             if (includeSubdirectories)
             {
-                // Include resources at target layer and below (deeper)
                 return relativeDepth >= targetDepth;
             }
 
@@ -2107,7 +1119,6 @@ public class PathMarkSyncService : ScopedService
     {
         var regex = ctx.GetOrCreateRegex(pattern);
 
-        // First find resources that match the regex
         var matchedResources = resources.Where(r =>
         {
             var standardizedPath = ctx.GetStandardizedPath(r.Path);
@@ -2121,7 +1132,6 @@ public class PathMarkSyncService : ScopedService
             return matchedResources;
         }
 
-        // Include subdirectories of matched resources
         var matchedPaths = matchedResources.Select(r => ctx.GetStandardizedPath(r.Path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var result = new List<Resource>(matchedResources);
@@ -2143,47 +1153,6 @@ public class PathMarkSyncService : ScopedService
         }
 
         return result;
-    }
-
-    private async Task<int?> CheckBakabaseJsonMarker(string path)
-    {
-        if (!_resourceOptions.Value.KeepResourcesOnPathChange) return null;
-        if (File.Exists(path)) return null; // Only for directories
-
-        var markerPath = Path.Combine(path, InternalOptions.ResourceMarkerFileName);
-        if (!File.Exists(markerPath)) return null;
-
-        try
-        {
-            var json = await File.ReadAllTextAsync(markerPath);
-            var markerData = System.Text.Json.JsonDocument.Parse(json);
-            if (markerData.RootElement.TryGetProperty("ids", out var idsElement))
-            {
-                var ids = idsElement.EnumerateArray().Select(e => e.GetInt32()).ToArray();
-                return ids.FirstOrDefault();
-            }
-        }
-        catch
-        {
-            // Ignore marker read errors
-        }
-
-        return null;
-    }
-
-    private async Task CreateBakabaseJsonMarker(string path, int resourceId)
-    {
-        try
-        {
-            var markerPath = Path.Combine(path, InternalOptions.ResourceMarkerFileName);
-            var content = System.Text.Json.JsonSerializer.Serialize(new { ids = new[] { resourceId } });
-            await File.WriteAllTextAsync(markerPath, content);
-            File.SetAttributes(markerPath, File.GetAttributes(markerPath) | FileAttributes.Hidden);
-        }
-        catch
-        {
-            // Ignore marker creation errors
-        }
     }
 
     #endregion

@@ -56,6 +56,7 @@ public static class MediaLibraryTemplateExtensions
         services.AddScoped<IPathMarkEffectService, PathMarkEffectService<TDbContext>>();
 
         services.AddScoped<PathMarkSyncService>();
+        services.AddScoped<ResourceSyncService>();
         services.AddSingleton<PathSyncManager>();
         services.AddHostedService(sp => sp.GetRequiredService<PathSyncManager>());
         services.AddSingleton<IPathMarkSyncService>(sp => sp.GetRequiredService<PathSyncManager>());
