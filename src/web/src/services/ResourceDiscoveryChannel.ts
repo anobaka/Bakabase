@@ -1,9 +1,11 @@
 import envConfig from "@/config/env";
+import type { PlayableItem } from "@/core/models/Resource";
 import { ResourceCacheType } from "@/sdk/constants";
 
 export type DiscoveryData = {
   coverPaths?: string[];
   playableFilePaths?: string[];
+  playableItems?: PlayableItem[];
   hasMorePlayableFiles?: boolean;
 };
 
@@ -12,6 +14,7 @@ export type DiscoveryResult = {
   success: boolean;
   coverPaths?: string[];
   playableFilePaths?: string[];
+  playableItems?: PlayableItem[];
   hasMorePlayableFiles?: boolean;
   error?: string;
 };
@@ -142,6 +145,7 @@ class ResourceDiscoveryChannel {
       const data: DiscoveryData = {
         coverPaths: result.coverPaths,
         playableFilePaths: result.playableFilePaths,
+        playableItems: result.playableItems,
         hasMorePlayableFiles: result.hasMorePlayableFiles,
       };
       subscribers.forEach((cb) => cb(data));

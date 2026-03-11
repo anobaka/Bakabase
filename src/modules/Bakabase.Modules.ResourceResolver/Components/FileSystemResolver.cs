@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Bakabase.Abstractions.Components;
 using Bakabase.Abstractions.Components.Configuration;
 using Bakabase.Abstractions.Extensions;
 using Bakabase.Abstractions.Models.Domain;
@@ -18,13 +20,19 @@ namespace Bakabase.Modules.ResourceResolver.Components;
 public class FileSystemResolver : IResourceResolver
 {
     private readonly IExtensionGroupService _extensionGroupService;
+    private readonly IResourceProfileService _resourceProfileService;
+    private readonly ISystemPlayer _systemPlayer;
     private readonly ILogger<FileSystemResolver> _logger;
 
     public FileSystemResolver(
         IExtensionGroupService extensionGroupService,
+        IResourceProfileService resourceProfileService,
+        ISystemPlayer systemPlayer,
         ILogger<FileSystemResolver> logger)
     {
         _extensionGroupService = extensionGroupService;
+        _resourceProfileService = resourceProfileService;
+        _systemPlayer = systemPlayer;
         _logger = logger;
     }
 
@@ -419,6 +427,122 @@ public class FileSystemResolver : IResourceResolver
         }
 
         return Task.FromResult(result);
+    }
+
+    #endregion
+
+    #region Playable Items
+
+    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct)
+    {
+        var items = new List<PlayableItem>();
+
+        if (string.IsNullOrEmpty(resource.Path))
+            return items;
+
+        // For file resources, the file itself is playable
+        if (resource.IsFile)
+        {
+            if (File.Exists(resource.Path))
+            {
+                items.Add(new PlayableItem
+                {
+                    Source = ResourceSource.FileSystem,
+                    Key = resource.Path.StandardizePath()!,
+                    DisplayName = Path.GetFileName(resource.Path)
+                });
+            }
+            return items;
+        }
+
+        // For directory resources, use ResourceProfile playable file options
+        var playableFileOptions = await _resourceProfileService.GetEffectivePlayableFileOptions(resource);
+        if (playableFileOptions?.Extensions is not { Count: > 0 })
+            return items;
+
+        var extensions = playableFileOptions.Extensions
+            .Select(e => e.StartsWith('.') ? e : $".{e}")
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var files = Directory.Exists(resource.Path)
+            ? Directory.EnumerateFiles(resource.Path, "*", SearchOption.AllDirectories)
+            : [];
+
+        var result = files.Where(f => extensions.Contains(Path.GetExtension(f))).ToList();
+
+        // Apply file name pattern filter if configured
+        if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
+        {
+            try
+            {
+                var regex = new Regex(playableFileOptions.FileNamePattern, RegexOptions.IgnoreCase);
+                result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToList();
+            }
+            catch
+            {
+                // Invalid regex, ignore the filter
+            }
+        }
+
+        items.AddRange(result.Select(f => new PlayableItem
+        {
+            Source = ResourceSource.FileSystem,
+            Key = f.StandardizePath()!,
+            DisplayName = Path.GetFileName(f)
+        }));
+
+        return items;
+    }
+
+    public async Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct)
+    {
+        var file = item.Key;
+        var playedByCustomPlayer = false;
+
+        // Use ResourceProfile player options
+        var playerOptions = await _resourceProfileService.GetEffectivePlayerOptions(resource);
+        if (playerOptions?.Players is { Count: > 0 })
+        {
+            var fileExtension = Path.GetExtension(file);
+            var player =
+                playerOptions.Players.FirstOrDefault(p =>
+                    p.Extensions?.Contains(fileExtension, StringComparer.OrdinalIgnoreCase) == true) ??
+                playerOptions.Players.FirstOrDefault(x => x.Extensions?.Any() != true);
+            if (player != null)
+            {
+                var cmd = player.Command;
+                _ = Task.Run(async () =>
+                {
+                    var template = string.IsNullOrEmpty(cmd) ? "{0}" : cmd;
+                    var escapedFile = file.Replace("\"", "\\\"");
+                    var args = Regex.Replace(template, @"([""']?)\{(\d+)\}([""']?)", match =>
+                    {
+                        var prefix = match.Groups[1].Value;
+                        var suffix = match.Groups[3].Value;
+                        var alreadyQuoted = (prefix == "\"" && suffix == "\"") ||
+                                            (prefix == "'" && suffix == "'");
+                        return alreadyQuoted
+                            ? $"{prefix}{escapedFile}{suffix}"
+                            : $"\"{escapedFile}\"";
+                    });
+                    var process = new Process
+                    {
+                        StartInfo = new ProcessStartInfo(player.ExecutablePath, args)
+                        {
+                            UseShellExecute = false
+                        }
+                    };
+                    process.Start();
+                    await process.WaitForExitAsync();
+                });
+                playedByCustomPlayer = true;
+            }
+        }
+
+        if (!playedByCustomPlayer)
+        {
+            await _systemPlayer.Play(file);
+        }
     }
 
     #endregion

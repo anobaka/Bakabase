@@ -499,6 +499,21 @@ namespace Bakabase.Service.Controllers
             return await service.Play(resourceId, file);
         }
 
+        [HttpGet("{resourceId}/play-item")]
+        [SwaggerOperation(OperationId = "PlayResourceItem")]
+        public async Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key)
+        {
+            return await service.PlayItem(resourceId, source, key);
+        }
+
+        [HttpGet("{id}/playable-items")]
+        [SwaggerOperation(OperationId = "GetResourcePlayableItems")]
+        public async Task<ListResponse<PlayableItem>> GetPlayableItems(int id)
+        {
+            var items = await service.DiscoverAndCachePlayableItems(id, HttpContext.RequestAborted);
+            return new ListResponse<PlayableItem>(items);
+        }
+
         [HttpGet("play/random")]
         [SwaggerOperation(OperationId = "PlayRandomResource")]
         public async Task<BaseResponse> PlayRandom()

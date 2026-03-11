@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { resourceDiscoveryChannel, type DiscoveryData } from "@/services/ResourceDiscoveryChannel";
 import { ResourceCacheType } from "@/sdk/constants";
-import type { Resource } from "@/core/models/Resource";
+import type { PlayableItem, Resource } from "@/core/models/Resource";
 
 // Data source for discovery
 export type DiscoverySource = "cache" | "realtime";
@@ -12,6 +12,7 @@ export type DiscoveryState = {
   cacheEnabled: boolean;            // Whether cache is enabled
   coverPaths?: string[];
   playableFilePaths?: string[];
+  playableItems?: PlayableItem[];
   hasMorePlayableFiles?: boolean;
   error?: string;
 };
@@ -38,6 +39,7 @@ export function useResourceDiscovery(
   const cachedTypesKey = resource.cache?.cachedTypes?.sort().join(",") ?? "";
   const coverPathsKey = resource.cache?.coverPaths?.join(",") ?? "";
   const playableFilePathsKey = resource.cache?.playableFilePaths?.join(",") ?? "";
+  const playableItemsKey = resource.cache?.playableItems?.map(i => `${i.source}:${i.key}`).join(",") ?? "";
   const hasMorePlayableFiles = resource.cache?.hasMorePlayableFiles;
 
   // Check if we already have cached data
@@ -53,6 +55,7 @@ export function useResourceDiscovery(
         cacheEnabled,
         coverPaths: resource.cache?.coverPaths,
         playableFilePaths: resource.cache?.playableFilePaths,
+        playableItems: resource.cache?.playableItems,
         hasMorePlayableFiles: resource.cache?.hasMorePlayableFiles,
       };
     }
@@ -65,7 +68,7 @@ export function useResourceDiscovery(
       source: "realtime",  // Always realtime when loading via SSE
       cacheEnabled,
     };
-  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, hasMorePlayableFiles, typesKey, cacheEnabled]);
+  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMorePlayableFiles, typesKey, cacheEnabled]);
 
   const [state, setState] = useState<DiscoveryState>(initialState);
   const mountedRef = useRef(true);
@@ -83,6 +86,7 @@ export function useResourceDiscovery(
         cacheEnabled,
         coverPaths: resource.cache?.coverPaths,
         playableFilePaths: resource.cache?.playableFilePaths,
+        playableItems: resource.cache?.playableItems,
         hasMorePlayableFiles: resource.cache?.hasMorePlayableFiles,
       });
       subscribedRef.current = false;
@@ -95,7 +99,7 @@ export function useResourceDiscovery(
       });
       subscribedRef.current = false;
     }
-  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, hasMorePlayableFiles, typesKey, cacheEnabled]);
+  }, [resource.id, cachedTypesKey, coverPathsKey, playableFilePathsKey, playableItemsKey, hasMorePlayableFiles, typesKey, cacheEnabled]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -131,6 +135,7 @@ export function useResourceDiscovery(
             cacheEnabled,
             coverPaths: data.coverPaths,
             playableFilePaths: data.playableFilePaths,
+            playableItems: data.playableItems,
             hasMorePlayableFiles: data.hasMorePlayableFiles,
           });
         }

@@ -53,4 +53,23 @@ public interface IResourceResolver
     /// <param name="sourceKeys">Source keys to look up.</param>
     /// <returns>A dictionary mapping source key to display name. Keys not found are omitted.</returns>
     Task<Dictionary<string, string>> GetDefaultDisplayNames(IEnumerable<string> sourceKeys);
+
+    /// <summary>
+    /// Discovers playable items for a resource from this source.
+    /// Returns items that can be played (files, URIs, etc.).
+    /// </summary>
+    /// <param name="resource">The resource to discover playable items for.</param>
+    /// <param name="sourceKey">The source key identifying the resource in this source.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>List of playable items, or empty if none found.</returns>
+    Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct);
+
+    /// <summary>
+    /// Plays a specific playable item from this source.
+    /// Each resolver knows how to launch its own items (file, URI, etc.).
+    /// </summary>
+    /// <param name="resource">The resource being played.</param>
+    /// <param name="item">The playable item to play.</param>
+    /// <param name="ct">Cancellation token.</param>
+    Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct);
 }

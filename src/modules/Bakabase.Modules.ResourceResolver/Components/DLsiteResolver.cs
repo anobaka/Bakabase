@@ -142,4 +142,37 @@ public class DLsiteResolver : IResourceResolver
 
         return result;
     }
+
+    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct)
+    {
+        var works = await _workService.GetByWorkIds([sourceKey]);
+        var work = works.FirstOrDefault();
+        var displayName = work?.Title ?? sourceKey;
+
+        // DLsite works can be opened via their product page
+        return
+        [
+            new PlayableItem
+            {
+                Source = ResourceSource.DLsite,
+                Key = sourceKey,
+                DisplayName = displayName
+            }
+        ];
+    }
+
+    public Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct)
+    {
+        // Open DLsite product page
+        var url = $"https://www.dlsite.com/maniax/work/=/product_id/{item.Key}.html";
+        var process = new System.Diagnostics.Process
+        {
+            StartInfo = new System.Diagnostics.ProcessStartInfo(url)
+            {
+                UseShellExecute = true
+            }
+        };
+        process.Start();
+        return Task.CompletedTask;
+    }
 }

@@ -24,6 +24,12 @@ export type Property = {
   order: number;
 };
 
+export type PlayableItem = {
+  source: ResourceSource;
+  key: string;
+  displayName?: string;
+};
+
 export type Resource = {
   id: number;
   mediaLibraryId: number;
@@ -57,6 +63,7 @@ export type Resource = {
   playedAt?: string;
   cache?: {
     playableFilePaths?: string[];
+    playableItems?: PlayableItem[];
     hasMorePlayableFiles: boolean;
     coverPaths?: string[];
     cachedTypes: ResourceCacheType[];

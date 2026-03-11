@@ -57,6 +57,11 @@ public interface IResourceService
     Task RefreshParentTag();
     Task<string[]> DiscoverAndCachePlayableFiles(int id, CancellationToken ct);
 
+    /// <summary>
+    /// Discovers playable items from all sources linked to a resource and caches them.
+    /// </summary>
+    Task<List<PlayableItem>> DiscoverAndCachePlayableItems(int id, CancellationToken ct);
+
     Task<bool> Any(Func<Abstractions.Models.Db.ResourceDbModel, bool>? selector = null);
 
     Task<List<Abstractions.Models.Db.ResourceDbModel>> AddAll(
@@ -79,6 +84,11 @@ public interface IResourceService
     Task<string?> DiscoverAndCacheCover(int id, CancellationToken ct);
 
     Task<BaseResponse> Play(int resourceId, string file);
+
+    /// <summary>
+    /// Plays a specific playable item, dispatching to the appropriate resolver based on source.
+    /// </summary>
+    Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key);
 
     Task<BaseResponse> ChangeMediaLibrary(int[] ids, int mediaLibraryId, Dictionary<int, string>? newPaths = null);
     Task<BaseResponse> ChangePath(int[] ids, Dictionary<int, string> newPaths);

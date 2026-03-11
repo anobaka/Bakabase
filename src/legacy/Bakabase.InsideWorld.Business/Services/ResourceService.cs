@@ -53,6 +53,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.Threading;
@@ -76,6 +77,8 @@ namespace Bakabase.InsideWorld.Business.Services
         private IMediaLibraryResourceMappingService MediaLibraryResourceMappingService => GetRequiredService<IMediaLibraryResourceMappingService>();
         private IResourceDataChangeEventPublisher ResourceDataChangeEventPublisher => GetRequiredService<IResourceDataChangeEventPublisher>();
         private IResourceSearchIndexService ResourceSearchIndexService => GetRequiredService<IResourceSearchIndexService>();
+        private IEnumerable<IResourceResolver> ResourceResolvers => GetRequiredService<IEnumerable<IResourceResolver>>();
+        private IResourceSourceLinkService ResourceSourceLinkService => GetRequiredService<IResourceSourceLinkService>();
         private readonly ICategoryService _categoryService;
         private readonly ILogger<ResourceService> _logger;
         private readonly SemaphoreSlim _addOrUpdateLock = new(1, 1);
@@ -1186,6 +1189,92 @@ namespace Bakabase.InsideWorld.Business.Services
             return playableFiles;
         }
 
+        public async Task<List<PlayableItem>> DiscoverAndCachePlayableItems(int id, CancellationToken ct)
+        {
+            var r = await Get(id, ResourceAdditionalItem.None);
+            if (r == null)
+                return [];
+
+            var allItems = new List<PlayableItem>();
+
+            // Get source links for this resource
+            var sourceLinks = await ResourceSourceLinkService.GetByResourceId(id);
+
+            // Discover playable items from each linked source
+            foreach (var link in sourceLinks)
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == link.Source);
+                if (resolver == null) continue;
+
+                try
+                {
+                    var items = await resolver.DiscoverPlayableItemsAsync(r, link.SourceKey, ct);
+                    allItems.AddRange(items);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to discover playable items from {Source} for resource {Id}",
+                        link.Source, id);
+                }
+            }
+
+            // If no source links found, fallback to FileSystem discovery (backward compat)
+            if (sourceLinks.Count == 0 && !string.IsNullOrEmpty(r.Path))
+            {
+                var fsResolver = ResourceResolvers.FirstOrDefault(x => x.Source == ResourceSource.FileSystem);
+                if (fsResolver != null)
+                {
+                    var items = await fsResolver.DiscoverPlayableItemsAsync(r, r.Path, ct);
+                    allItems.AddRange(items);
+                }
+            }
+
+            // Save to cache
+            var cache = await _resourceCacheOrm.GetByKey(id, true);
+            var isNewCache = cache == null;
+            cache ??= new ResourceCacheDbModel { ResourceId = id };
+
+            // Serialize PlayableItems as JSON
+            cache.PlayableItems = allItems.Count > 0
+                ? System.Text.Json.JsonSerializer.Serialize(allItems, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                })
+                : null;
+
+            // Also update legacy PlayableFilePaths for backward compatibility
+            var fileSystemPaths = allItems
+                .Where(i => i.Source == ResourceSource.FileSystem)
+                .Select(i => i.Key)
+                .ToList();
+
+            // Apply trimming for cache (same logic as PrepareCache)
+            if (fileSystemPaths.Count > 0)
+            {
+                var trimmedPaths = fileSystemPaths
+                    .GroupBy(d => $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
+                    .SelectMany(x => x.Take(InternalOptions.MaxPlayableFilesPerTypeAndSubDir))
+                    .ToList();
+                cache.PlayableFilePaths = trimmedPaths.SerializeAsStandardValue(StandardValueType.ListString);
+                cache.HasMorePlayableFiles = trimmedPaths.Count < fileSystemPaths.Count;
+            }
+            else
+            {
+                cache.PlayableFilePaths = null;
+                cache.HasMorePlayableFiles = allItems.Count > InternalOptions.MaxPlayableFilesPerTypeAndSubDir;
+            }
+
+            cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+            if (isNewCache)
+                await _resourceCacheOrm.Add(cache);
+            else
+                await _resourceCacheOrm.Update(cache);
+
+            return allItems;
+        }
+
         public async Task<BaseResponse> PlayRandomResource()
         {
             var playableCaches = await _resourceCacheOrm.GetAll(x => !string.IsNullOrEmpty(x.PlayableFilePaths));
@@ -1347,58 +1436,56 @@ namespace Bakabase.InsideWorld.Business.Services
                                             break;
                                         }
 
-                                        string[]? playableFiles = null;
+                                        // Discover playable items from all linked sources
+                                        var allPlayableItems = new List<PlayableItem>();
+                                        var sourceLinks = await ResourceSourceLinkService.GetByResourceId(resource.Id);
 
-                                        // For file resources, directly use the file itself as playable
-                                        if (resource.IsFile)
+                                        foreach (var link in sourceLinks)
                                         {
-                                            if (File.Exists(resource.Path))
+                                            var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == link.Source);
+                                            if (resolver == null) continue;
+
+                                            try
                                             {
-                                                playableFiles = [resource.Path.StandardizePath()!];
+                                                var items = await resolver.DiscoverPlayableItemsAsync(resource, link.SourceKey, ct);
+                                                allPlayableItems.AddRange(items);
                                             }
-                                        }
-                                        else
-                                        {
-                                            // Use ResourceProfile to get effective playable file options for folder resources
-                                            var playableFileOptions =
-                                                await ResourceProfileService.GetEffectivePlayableFileOptions(resource);
-                                            if (playableFileOptions?.Extensions is { Count: > 0 })
+                                            catch (Exception ex)
                                             {
-                                                // Normalize extensions to ensure they start with a dot (Path.GetExtension returns ".ext")
-                                                var extensions = playableFileOptions.Extensions
-                                                    .Select(e => e.StartsWith('.') ? e : $".{e}")
-                                                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                                                var files = Directory.Exists(resource.Path)
-                                                    ? Directory.EnumerateFiles(resource.Path, "*",
-                                                        SearchOption.AllDirectories)
-                                                    : [];
-
-                                                var result = files.Where(f =>
-                                                    extensions.Contains(Path.GetExtension(f))).ToArray();
-
-                                                // Apply file name pattern filter if configured
-                                                if (!string.IsNullOrEmpty(playableFileOptions.FileNamePattern))
-                                                {
-                                                    try
-                                                    {
-                                                        var regex = new System.Text.RegularExpressions.Regex(
-                                                            playableFileOptions.FileNamePattern,
-                                                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-                                                        result = result.Where(f => regex.IsMatch(Path.GetFileName(f))).ToArray();
-                                                    }
-                                                    catch
-                                                    {
-                                                        // Invalid regex, ignore the filter
-                                                    }
-                                                }
-
-                                                playableFiles = result.Select(f => f.StandardizePath()!).ToArray();
+                                                _logger.LogWarning(ex,
+                                                    "Failed to discover playable items from {Source} for resource {Id}",
+                                                    link.Source, resource.Id);
                                             }
                                         }
 
-                                        if (playableFiles?.Any() == true)
+                                        // Fallback: if no source links, try FileSystem discovery
+                                        if (sourceLinks.Count == 0 && !string.IsNullOrEmpty(resource.Path))
                                         {
-                                            var trimmedPlayableFiles = playableFiles
+                                            var fsResolver = ResourceResolvers.FirstOrDefault(x => x.Source == ResourceSource.FileSystem);
+                                            if (fsResolver != null)
+                                            {
+                                                var items = await fsResolver.DiscoverPlayableItemsAsync(resource, resource.Path, ct);
+                                                allPlayableItems.AddRange(items);
+                                            }
+                                        }
+
+                                        // Serialize PlayableItems as JSON
+                                        cache.PlayableItems = allPlayableItems.Count > 0
+                                            ? JsonSerializer.Serialize(allPlayableItems, new JsonSerializerOptions
+                                            {
+                                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                                            })
+                                            : null;
+
+                                        // Also update legacy PlayableFilePaths for backward compat
+                                        var fileSystemPaths = allPlayableItems
+                                            .Where(i => i.Source == ResourceSource.FileSystem)
+                                            .Select(i => i.Key)
+                                            .ToArray();
+
+                                        if (fileSystemPaths.Length > 0)
+                                        {
+                                            var trimmedPlayableFiles = fileSystemPaths
                                                 .GroupBy(d =>
                                                     $"{Path.GetDirectoryName(d)}-{Path.GetExtension(d)}")
                                                 .SelectMany(x =>
@@ -1410,7 +1497,8 @@ namespace Bakabase.InsideWorld.Business.Services
                                                     StandardValueType
                                                         .ListString);
                                             cache.HasMorePlayableFiles =
-                                                trimmedPlayableFiles.Count < playableFiles.Length;
+                                                trimmedPlayableFiles.Count < fileSystemPaths.Length ||
+                                                allPlayableItems.Count > trimmedPlayableFiles.Count;
                                         }
                                         else
                                         {
@@ -2376,6 +2464,36 @@ namespace Bakabase.InsideWorld.Business.Services
             await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
             await _playHistoryService.Add(new PlayHistoryDbModel
                 {ResourceId = resourceId, Item = file, PlayedAt = now});
+
+            return BaseResponseBuilder.Ok;
+        }
+
+        public async Task<BaseResponse> PlayItem(int resourceId, ResourceSource source, string key)
+        {
+            var resource = await Get(resourceId, ResourceAdditionalItem.None);
+            if (resource == null)
+                return BaseResponseBuilder.NotFound;
+
+            var resolver = ResourceResolvers.FirstOrDefault(x => x.Source == source);
+            if (resolver == null)
+                return BaseResponseBuilder.BuildBadRequest($"No resolver found for source {source}.");
+
+            var item = new PlayableItem { Source = source, Key = key };
+
+            try
+            {
+                await resolver.PlayAsync(resource, item, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to play item from {Source} for resource {ResourceId}", source, resourceId);
+                return BaseResponseBuilder.BuildBadRequest($"Failed to play: {ex.Message}");
+            }
+
+            var now = DateTime.Now;
+            await _orm.UpdateByKey(resourceId, r => r.PlayedAt = now);
+            await _playHistoryService.Add(new PlayHistoryDbModel
+                { ResourceId = resourceId, Item = $"{source}:{key}", PlayedAt = now });
 
             return BaseResponseBuilder.Ok;
         }

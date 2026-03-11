@@ -109,4 +109,36 @@ public class ExHentaiResolver : IResourceResolver
 
         return result;
     }
+
+    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct)
+    {
+        var galleries = await _galleryService.GetAll();
+        var gallery = galleries.FirstOrDefault(g => $"{g.GalleryId}/{g.GalleryToken}" == sourceKey);
+        var displayName = gallery?.Title ?? gallery?.TitleJpn ?? $"Gallery {sourceKey}";
+
+        return
+        [
+            new PlayableItem
+            {
+                Source = ResourceSource.ExHentai,
+                Key = sourceKey,
+                DisplayName = displayName
+            }
+        ];
+    }
+
+    public Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct)
+    {
+        // Open ExHentai gallery page
+        var url = $"https://exhentai.org/g/{item.Key}/";
+        var process = new System.Diagnostics.Process
+        {
+            StartInfo = new System.Diagnostics.ProcessStartInfo(url)
+            {
+                UseShellExecute = true
+            }
+        };
+        process.Start();
+        return Task.CompletedTask;
+    }
 }

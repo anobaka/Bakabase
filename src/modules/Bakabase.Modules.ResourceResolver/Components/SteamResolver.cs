@@ -175,4 +175,38 @@ public class SteamResolver : IResourceResolver
 
         return result;
     }
+
+    public async Task<List<PlayableItem>> DiscoverPlayableItemsAsync(Resource resource, string sourceKey, CancellationToken ct)
+    {
+        // Steam games have a single playable item: launch via steam:// URI
+        var app = int.TryParse(sourceKey, out var appId)
+            ? (await _steamAppService.GetByAppIds([appId])).FirstOrDefault()
+            : null;
+
+        var displayName = app?.Name ?? $"Steam App {sourceKey}";
+
+        return
+        [
+            new PlayableItem
+            {
+                Source = ResourceSource.Steam,
+                Key = sourceKey,
+                DisplayName = displayName
+            }
+        ];
+    }
+
+    public Task PlayAsync(Resource resource, PlayableItem item, CancellationToken ct)
+    {
+        var uri = $"steam://rungameid/{item.Key}";
+        var process = new System.Diagnostics.Process
+        {
+            StartInfo = new System.Diagnostics.ProcessStartInfo(uri)
+            {
+                UseShellExecute = true
+            }
+        };
+        process.Start();
+        return Task.CompletedTask;
+    }
 }
