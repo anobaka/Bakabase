@@ -808,9 +808,9 @@ namespace Bakabase.InsideWorld.Business.Services
         /// <returns></returns>
         public async Task<List<DataChangeViewModel>> AddOrPutRange(List<Resource> resources)
         {
-            var resourceDtoMap = resources.GroupBy(d => d.Path).ToDictionary(d => d.Key, d => d.First());
-
-            var parents = resources.Select(a => a.Parent).Where(a => a != null).GroupBy(a => a!.Path)
+            var parents = resources.Select(a => a.Parent)
+                .Where(a => a != null && !string.IsNullOrEmpty(a!.Path))
+                .GroupBy(a => a!.Path)
                 .Select(a => a.FirstOrDefault()).ToList();
             if (parents.Any())
             {
@@ -820,13 +820,33 @@ namespace Bakabase.InsideWorld.Business.Services
             await _addOrUpdateLock.WaitAsync();
             try
             {
-                // Resource
-                var dbResources = resources.Select(a => a.ToDbModel()).ToList();
-                var existedResources = dbResources.Where(a => a.Id > 0).ToList();
-                var newResources = dbResources.Except(existedResources).ToList();
-                await _orm.UpdateRange(existedResources);
-                dbResources = (await _orm.AddRange(newResources)).Data!.Concat(existedResources).ToList();
-                dbResources.ForEach(a => { resourceDtoMap[a.Path].Id = a.Id; });
+                // Resource - maintain index correspondence for ID writeback
+                var dbModels = resources.Select(a => a.ToDbModel()).ToList();
+                var existedModels = new List<ResourceDbModel>();
+                var newModelIndices = new List<int>();
+                var newModels = new List<ResourceDbModel>();
+
+                for (var i = 0; i < dbModels.Count; i++)
+                {
+                    if (dbModels[i].Id > 0)
+                        existedModels.Add(dbModels[i]);
+                    else
+                    {
+                        newModelIndices.Add(i);
+                        newModels.Add(dbModels[i]);
+                    }
+                }
+
+                await _orm.UpdateRange(existedModels);
+                var addedModels = (await _orm.AddRange(newModels)).Data!.ToList();
+
+                // Write back auto-generated IDs using index correspondence
+                for (var i = 0; i < addedModels.Count; i++)
+                {
+                    resources[newModelIndices[i]].Id = addedModels[i].Id;
+                }
+
+                var dbResources = addedModels.Concat(existedModels).ToList();
 
                 // Alias
                 await _aliasService.SaveByResources(resources);
@@ -852,7 +872,7 @@ namespace Bakabase.InsideWorld.Business.Services
                 var allChangedIds = dbResources.Select(r => r.Id).ToArray();
                 ResourceDataChangeEventPublisher.PublishResourcesChanged(allChangedIds);
 
-                return [new DataChangeViewModel("Resource", newResources.Count, existedResources.Count, 0)];
+                return [new DataChangeViewModel("Resource", newModels.Count, existedModels.Count, 0)];
             }
             finally
             {
