@@ -86,6 +86,8 @@ export interface BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
   localPath?: string;
   /** @format int32 */
   resourceId?: number;
+  account?: string;
+  isHidden: boolean;
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
@@ -121,6 +123,8 @@ export interface BakabaseAbstractionsModelsDbSteamAppDbModel {
   installPath?: string;
   /** @format int32 */
   resourceId?: number;
+  account?: string;
+  isHidden: boolean;
   /** @format date-time */
   createdAt: string;
   /** @format date-time */
@@ -724,11 +728,9 @@ export interface BakabaseAbstractionsModelsDomainResource {
    * @format int32
    */
   categoryId: number;
-  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
-  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
   /** [1: Active, 2: Absent, 3: Unavailable] */
   status: BakabaseAbstractionsModelsDomainConstantsResourceStatus;
-  sourceKey: string;
+  sourceLinks?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
   fileName?: string;
   directory?: string;
   path?: string;
@@ -761,26 +763,6 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @deprecated */
   mediaLibraryColor?: string;
   mediaLibraries?: BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo[];
-  sourceLinks?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
-}
-
-export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
-  /** @format int32 */
-  id: number;
-  /** @format int32 */
-  resourceId: number;
-  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
-  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
-  sourceKey: string;
-  /** @format date-time */
-  createDt: string;
-}
-
-export interface BakabaseAbstractionsModelsInputResourceMergeInputModel {
-  /** @format int32 */
-  targetResourceId: number;
-  sourceResourceIds: number[];
-  deleteResourceIds: number[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
@@ -871,6 +853,18 @@ export interface BakabaseAbstractionsModelsDomainResourceSearchFilterGroup {
   groups?: BakabaseAbstractionsModelsDomainResourceSearchFilterGroup[];
   filters?: BakabaseAbstractionsModelsDomainResourceSearchFilter[];
   disabled: boolean;
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  sourceKey: string;
+  /** @format date-time */
+  createDt: string;
 }
 
 export interface BakabaseAbstractionsModelsDomainScopePropertyKey {
@@ -1035,6 +1029,13 @@ export interface BakabaseAbstractionsModelsInputPathMarkPreviewRequest {
   /** [1: Resource, 2: Property, 3: MediaLibrary] */
   type: BakabaseAbstractionsModelsDomainConstantsPathMarkType;
   configJson: string;
+}
+
+export interface BakabaseAbstractionsModelsInputResourceMergeInputModel {
+  /** @format int32 */
+  targetResourceId: number;
+  sourceResourceIds: number[];
+  deleteResourceIds: number[];
 }
 
 export interface BakabaseAbstractionsModelsInputResourcePropertyValuePutInputModel {
@@ -2330,7 +2331,7 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsMediaLibraryAdditio
   | 4;
 
 /**
- * [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All]
+ * [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All]
  * @format int32
  */
 export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem =
@@ -2342,7 +2343,8 @@ export type BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalI
   | 512
   | 2048
   | 4096
-  | 7008;
+  | 8192
+  | 15200;
 
 /**
  * [1: Latest, 2: Frequency]
@@ -4104,34 +4106,6 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   message?: string;
 }
 
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDbDLsiteWorkDbModel[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDbExHentaiGalleryDbModel[];
-}
-
-export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbSteamAppDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDbSteamAppDbModel[];
-}
-
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainComponentDescriptor {
   /** @format int32 */
   code: number;
@@ -4193,6 +4167,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathMark[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource {
@@ -4440,19 +4421,6 @@ export interface BootstrapModelsResponseModelsListResponse1SystemString {
   data?: string[];
 }
 
-export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbSteamAppDbModel {
-  /** @format int32 */
-  code: number;
-  message?: string;
-  data?: BakabaseAbstractionsModelsDbSteamAppDbModel[];
-  /** @format int32 */
-  totalCount: number;
-  /** @format int32 */
-  pageIndex: number;
-  /** @format int32 */
-  pageSize: number;
-}
-
 export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
   /** @format int32 */
   code: number;
@@ -4484,6 +4452,19 @@ export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstraction
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDbPlayHistoryDbModel[];
+  /** @format int32 */
+  totalCount: number;
+  /** @format int32 */
+  pageIndex: number;
+  /** @format int32 */
+  pageSize: number;
+}
+
+export interface BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbSteamAppDbModel {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDbSteamAppDbModel[];
   /** @format int32 */
   totalCount: number;
   /** @format int32 */
@@ -9441,7 +9422,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllDLsiteWorks
      * @request GET:/dlsite-work
      */
-    getAllDLsiteWorks: (query?: { keyword?: string; showHidden?: boolean; pageIndex?: number; pageSize?: number }, params: RequestParams = {}) =>
+    getAllDLsiteWorks: (
+      query?: {
+        keyword?: string;
+        /** @default false */
+        showHidden?: boolean;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 20
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel,
         any
@@ -9457,9 +9455,33 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for getAllDLsiteWorks
      * @name getAllDLsiteWorksUrl
      */
-    getAllDLsiteWorksUrl: () => {
+    getAllDLsiteWorksUrl: (query?: {
+        keyword?: string;
+        /** @default false */
+        showHidden?: boolean;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 20
+         */
+        pageSize?: number;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/dlsite-work`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -10570,7 +10592,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       query?: {
         saveSearch?: boolean;
         searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -10595,7 +10617,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     searchResourcesUrl: (query?: {
         saveSearch?: boolean;
         searchId?: string;
-        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -10655,7 +10677,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     getResourcesByKeys: (
       query?: {
         ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       },
       params: RequestParams = {},
@@ -10677,7 +10699,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      */
     getResourcesByKeysUrl: (query?: {
         ids?: number[];
-        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 7008: All] */
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
         additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
       }) => {
       const baseUrl = this.baseUrl || "";
@@ -11307,12 +11329,12 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     bulkAddResourceMediaLibraryMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/bulk/media-libraries`;
-
+      
       return baseUrl + path;
     },
 
     /**
-     * Get source links for a resource
+     * No description
      *
      * @tags Resource
      * @name GetResourceSourceLinks
@@ -11330,7 +11352,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * Get conflicting resources for a given resource
+     * No description
      *
      * @tags Resource
      * @name GetResourceConflicts
@@ -11356,7 +11378,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       }),
 
     /**
-     * Merge multiple resources into one target resource
+     * No description
      *
      * @tags Resource
      * @name MergeResources
@@ -11374,6 +11396,17 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         format: "json",
         ...params,
       }),
+
+    /**
+     * @description Build URL for mergeResources
+     * @name mergeResourcesUrl
+     */
+    mergeResourcesUrl: () => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/resource/merge`;
+      
+      return baseUrl + path;
+    },
 
     /**
      * No description
@@ -12094,7 +12127,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllExHentaiGalleries
      * @request GET:/exhentai-gallery
      */
-    getAllExHentaiGalleries: (query?: { keyword?: string; pageIndex?: number; pageSize?: number }, params: RequestParams = {}) =>
+    getAllExHentaiGalleries: (
+      query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 20
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbExHentaiGalleryDbModel,
         any
@@ -12110,9 +12158,31 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for getAllExHentaiGalleries
      * @name getAllExHentaiGalleriesUrl
      */
-    getAllExHentaiGalleriesUrl: () => {
+    getAllExHentaiGalleriesUrl: (query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 20
+         */
+        pageSize?: number;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/exhentai-gallery`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -12147,6 +12217,28 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/exhentai-gallery/${galleryId}/${galleryToken}/local-files`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags ExHentaiGallery
+     * @name SetExHentaiGalleryHidden
+     * @request PUT:/exhentai-gallery/{galleryId}/{galleryToken}/hidden
+     */
+    setExHentaiGalleryHidden: (
+      galleryId: number,
+      galleryToken: string,
+      data: boolean,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/exhentai-gallery/${galleryId}/${galleryToken}/hidden`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
@@ -17346,6 +17438,52 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       
       return baseUrl + path;
     },
+
+    /**
+     * No description
+     *
+     * @tags PathMark
+     * @name StartSyncBySource
+     * @request POST:/path-mark/sync/by-source
+     */
+    startSyncBySource: (
+      query?: {
+        /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+        source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/path-mark/sync/by-source`,
+        method: "POST",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * @description Build URL for startSyncBySource
+     * @name startSyncBySourceUrl
+     */
+    startSyncBySourceUrl: (query?: {
+        /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+        source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+      }) => {
+      const baseUrl = this.baseUrl || "";
+      let path = `/path-mark/sync/by-source`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
+      
+      return baseUrl + path;
+    },
   };
   playHistory = {
     /**
@@ -18023,7 +18161,22 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @name GetAllSteamApps
      * @request GET:/steam-app
      */
-    getAllSteamApps: (query?: { keyword?: string; pageIndex?: number; pageSize?: number }, params: RequestParams = {}) =>
+    getAllSteamApps: (
+      query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 20
+         */
+        pageSize?: number;
+      },
+      params: RequestParams = {},
+    ) =>
       this.request<
         BootstrapModelsResponseModelsSearchResponse1BakabaseAbstractionsModelsDbSteamAppDbModel,
         any
@@ -18039,9 +18192,31 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * @description Build URL for getAllSteamApps
      * @name getAllSteamAppsUrl
      */
-    getAllSteamAppsUrl: () => {
+    getAllSteamAppsUrl: (query?: {
+        keyword?: string;
+        /**
+         * @format int32
+         * @default 1
+         */
+        pageIndex?: number;
+        /**
+         * @format int32
+         * @default 20
+         */
+        pageSize?: number;
+      }) => {
       const baseUrl = this.baseUrl || "";
       let path = `/steam-app`;
+      
+      // Build query string
+      if (query) {
+        const queryString = Object.keys(query)
+          .filter(key => query[key] !== undefined && query[key] !== null)
+          .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(String(query[key]))}`)
+          .join("&");
+        
+        return baseUrl + path + (queryString ? `?${queryString}` : "");
+      }
       
       return baseUrl + path;
     },
@@ -18075,6 +18250,23 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/steam-app/${appId}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags SteamApp
+     * @name SetSteamAppHidden
+     * @request PUT:/steam-app/{appId}/hidden
+     */
+    setSteamAppHidden: (appId: number, data: boolean, params: RequestParams = {}) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/steam-app/${appId}/hidden`,
+        method: "PUT",
+        body: data,
+        type: ContentType.Json,
         format: "json",
         ...params,
       }),
