@@ -203,7 +203,8 @@ export enum InternalProperty {
   MediaLibrary = 21,
   PlayedAt = 23,
   MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25
+  MediaLibraryV2Multi = 25,
+  Source = 26
 }
 
 export const internalProperties = [
@@ -219,7 +220,8 @@ export const internalProperties = [
   { label: 'MediaLibrary', value: InternalProperty.MediaLibrary },
   { label: 'PlayedAt', value: InternalProperty.PlayedAt },
   { label: 'MediaLibraryV2', value: InternalProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi }
+  { label: 'MediaLibraryV2Multi', value: InternalProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: InternalProperty.Source }
 ] as const;
 
 export const InternalPropertyLabel: Record<InternalProperty, string> = {
@@ -235,7 +237,8 @@ export const InternalPropertyLabel: Record<InternalProperty, string> = {
   [InternalProperty.MediaLibrary]: 'MediaLibrary',
   [InternalProperty.PlayedAt]: 'PlayedAt',
   [InternalProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
+  [InternalProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [InternalProperty.Source]: 'Source'
 };
 
 export enum MediaLibraryTemplateAdditionalItem {
@@ -1477,7 +1480,8 @@ export enum SearchableReservedProperty {
   MediaLibrary = 21,
   Cover = 22,
   MediaLibraryV2 = 24,
-  MediaLibraryV2Multi = 25
+  MediaLibraryV2Multi = 25,
+  Source = 26
 }
 
 export const searchableReservedProperties = [
@@ -1492,7 +1496,8 @@ export const searchableReservedProperties = [
   { label: 'MediaLibrary', value: SearchableReservedProperty.MediaLibrary },
   { label: 'Cover', value: SearchableReservedProperty.Cover },
   { label: 'MediaLibraryV2', value: SearchableReservedProperty.MediaLibraryV2 },
-  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi }
+  { label: 'MediaLibraryV2Multi', value: SearchableReservedProperty.MediaLibraryV2Multi },
+  { label: 'Source', value: SearchableReservedProperty.Source }
 ] as const;
 
 export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty, string> = {
@@ -1507,7 +1512,8 @@ export const SearchableReservedPropertyLabel: Record<SearchableReservedProperty,
   [SearchableReservedProperty.MediaLibrary]: 'MediaLibrary',
   [SearchableReservedProperty.Cover]: 'Cover',
   [SearchableReservedProperty.MediaLibraryV2]: 'MediaLibraryV2',
-  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi'
+  [SearchableReservedProperty.MediaLibraryV2Multi]: 'MediaLibraryV2Multi',
+  [SearchableReservedProperty.Source]: 'Source'
 };
 
 export enum StartupPage {

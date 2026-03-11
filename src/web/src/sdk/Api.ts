@@ -656,6 +656,13 @@ export interface BakabaseAbstractionsModelsDomainPathPropertyExtractor {
   regex?: string;
 }
 
+export interface BakabaseAbstractionsModelsDomainPlayableItem {
+  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  key: string;
+  displayName?: string;
+}
+
 export interface BakabaseAbstractionsModelsDomainProperty {
   /** [1: Internal, 2: Reserved, 4: Custom, 7: All] */
   pool: BakabaseAbstractionsModelsDomainConstantsPropertyPool;
@@ -799,6 +806,7 @@ export interface BakabaseAbstractionsModelsDomainResourceCache {
   coverPaths?: string[];
   hasMorePlayableFiles: boolean;
   playableFilePaths?: string[];
+  playableItems?: BakabaseAbstractionsModelsDomainPlayableItem[];
   cachedTypes: BakabaseAbstractionsModelsDomainConstantsResourceCacheType[];
 }
 
@@ -4167,6 +4175,13 @@ export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsM
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathMark[];
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPlayableItem {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainPlayableItem[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
@@ -10982,6 +10997,48 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
         path: `/resource/${resourceId}/play`,
         method: "GET",
         query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name PlayResourceItem
+     * @request GET:/resource/{resourceId}/play-item
+     */
+    playResourceItem: (
+      resourceId: number,
+      query?: {
+        /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+        source?: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+        key?: string;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/play-item`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Resource
+     * @name GetResourcePlayableItems
+     * @request GET:/resource/{id}/playable-items
+     */
+    getResourcePlayableItems: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainPlayableItem,
+        any
+      >({
+        path: `/resource/${id}/playable-items`,
+        method: "GET",
         format: "json",
         ...params,
       }),

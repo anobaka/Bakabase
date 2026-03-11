@@ -4649,6 +4649,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/resource/{resourceId}/play-item": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PlayResourceItem"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/resource/{id}/playable-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["GetResourcePlayableItems"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/resource/play/random": {
         parameters: {
             query?: never;
@@ -5858,6 +5890,11 @@ export interface components {
             layer?: number;
             regex?: string;
         };
+        "Bakabase.Abstractions.Models.Domain.PlayableItem": {
+            source: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+            key: string;
+            displayName?: string;
+        };
         "Bakabase.Abstractions.Models.Domain.Property": {
             pool: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.PropertyPool"];
             /** Format: int32 */
@@ -5987,6 +6024,7 @@ export interface components {
             coverPaths?: string[];
             hasMorePlayableFiles: boolean;
             playableFilePaths?: string[];
+            playableItems?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
             cachedTypes: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceCacheType"][];
         };
         "Bakabase.Abstractions.Models.Domain.ResourceProfileEnhancerOptions": {
@@ -8710,6 +8748,12 @@ export interface components {
             code: number;
             message?: string;
             data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PathMark"][];
+        };
+        "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]": {
+            /** Format: int32 */
+            code: number;
+            message?: string;
+            data?: components["schemas"]["Bakabase.Abstractions.Models.Domain.PlayableItem"][];
         };
         "Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.ResourceSourceLink]": {
             /** Format: int32 */
@@ -20053,6 +20097,58 @@ export interface operations {
                     "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
                     "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    PlayResourceItem: {
+        parameters: {
+            query?: {
+                /** @description [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+                source?: components["schemas"]["Bakabase.Abstractions.Models.Domain.Constants.ResourceSource"];
+                key?: string;
+            };
+            header?: never;
+            path: {
+                resourceId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.BaseResponse"];
+                };
+            };
+        };
+    };
+    GetResourcePlayableItems: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]"];
+                    "application/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]"];
+                    "text/json": components["schemas"]["Bootstrap.Models.ResponseModels.ListResponse`1[Bakabase.Abstractions.Models.Domain.PlayableItem]"];
                 };
             };
         };
