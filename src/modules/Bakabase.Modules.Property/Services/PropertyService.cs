@@ -88,14 +88,14 @@ public class PropertyService(IServiceProvider serviceProvider, IPropertyLocalize
         };
     }
 
-    private static MultipleChoicePropertyOptions BuildOptionsForSource()
+    private MultipleChoicePropertyOptions BuildOptionsForSource()
     {
         return new MultipleChoicePropertyOptions
         {
             Choices = Enum.GetValues<ResourceSource>().Select(s => new ChoiceOptions
             {
                 Color = null,
-                Label = s.ToString(),
+                Label = propertyLocalizer.ResourceSourceName(s),
                 Value = ((int)s).ToString()
             }).ToList(),
         };
