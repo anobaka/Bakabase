@@ -191,6 +191,8 @@ namespace Bakabase.Service.Extensions
             services.AddScoped<IExHentaiGalleryService, ExHentaiGalleryService>();
 
             services.AddSingleton<ISystemPlayer, SelfPlayer>();
+            services.AddSingleton<Bakabase.Abstractions.Components.ISystemPlayer>(sp =>
+                sp.GetRequiredService<ISystemPlayer>());
 
             services.AddPostParser<BakabaseDbContext>();
             services.AddSingleton<OllamaApiClientAccessor>();
