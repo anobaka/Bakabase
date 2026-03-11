@@ -403,5 +403,23 @@ public class FileSystemResolver : IResourceResolver
         return Task.CompletedTask;
     }
 
+    public Task<Dictionary<string, string>> GetDefaultDisplayNames(IEnumerable<string> sourceKeys)
+    {
+        var result = new Dictionary<string, string>();
+        foreach (var sourceKey in sourceKeys)
+        {
+            if (!string.IsNullOrEmpty(sourceKey))
+            {
+                var fileName = Path.GetFileName(sourceKey);
+                if (!string.IsNullOrEmpty(fileName))
+                {
+                    result[sourceKey] = fileName;
+                }
+            }
+        }
+
+        return Task.FromResult(result);
+    }
+
     #endregion
 }

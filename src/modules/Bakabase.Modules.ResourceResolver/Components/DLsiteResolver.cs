@@ -126,4 +126,20 @@ public class DLsiteResolver : IResourceResolver
         _logger.LogInformation("Migrating {Count} resources to DLsite source", candidates.Count);
         return Task.CompletedTask;
     }
+
+    public async Task<Dictionary<string, string>> GetDefaultDisplayNames(IEnumerable<string> sourceKeys)
+    {
+        var result = new Dictionary<string, string>();
+        var keys = sourceKeys.ToList();
+        if (keys.Count == 0) return result;
+
+        var works = await _workService.GetByWorkIds(keys);
+        foreach (var work in works)
+        {
+            var name = work.Title ?? work.WorkId;
+            result[work.WorkId] = name;
+        }
+
+        return result;
+    }
 }

@@ -45,4 +45,12 @@ public interface IResourceResolver
     /// Executes migration for the given candidates.
     /// </summary>
     Task MigrateResources(List<MigrationCandidate> candidates, CancellationToken ct);
+
+    /// <summary>
+    /// Gets default display names for the given source keys.
+    /// Used to populate DisplayName when no name template is configured.
+    /// </summary>
+    /// <param name="sourceKeys">Source keys to look up.</param>
+    /// <returns>A dictionary mapping source key to display name. Keys not found are omitted.</returns>
+    Task<Dictionary<string, string>> GetDefaultDisplayNames(IEnumerable<string> sourceKeys);
 }

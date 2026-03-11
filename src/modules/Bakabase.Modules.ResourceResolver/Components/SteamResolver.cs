@@ -155,4 +155,24 @@ public class SteamResolver : IResourceResolver
         // Migration is handled by the sync flow - just need to update the source records
         _logger.LogInformation("Migrating {Count} resources to Steam source", candidates.Count);
     }
+
+    public async Task<Dictionary<string, string>> GetDefaultDisplayNames(IEnumerable<string> sourceKeys)
+    {
+        var result = new Dictionary<string, string>();
+        var appIds = sourceKeys
+            .Where(k => int.TryParse(k, out _))
+            .Select(k => int.Parse(k))
+            .ToList();
+
+        if (appIds.Count == 0) return result;
+
+        var apps = await _steamAppService.GetByAppIds(appIds);
+        foreach (var app in apps)
+        {
+            var name = app.Name ?? $"Steam App {app.AppId}";
+            result[app.AppId.ToString()] = name;
+        }
+
+        return result;
+    }
 }

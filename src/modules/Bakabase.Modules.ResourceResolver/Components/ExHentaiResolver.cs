@@ -89,4 +89,24 @@ public class ExHentaiResolver : IResourceResolver
     {
         return Task.CompletedTask;
     }
+
+    public async Task<Dictionary<string, string>> GetDefaultDisplayNames(IEnumerable<string> sourceKeys)
+    {
+        var result = new Dictionary<string, string>();
+        var keySet = sourceKeys.ToHashSet();
+        if (keySet.Count == 0) return result;
+
+        var galleries = await _galleryService.GetAll();
+        foreach (var gallery in galleries)
+        {
+            var key = $"{gallery.GalleryId}/{gallery.GalleryToken}";
+            if (keySet.Contains(key))
+            {
+                var name = gallery.Title ?? gallery.TitleJpn ?? $"Gallery {gallery.GalleryId}";
+                result[key] = name;
+            }
+        }
+
+        return result;
+    }
 }

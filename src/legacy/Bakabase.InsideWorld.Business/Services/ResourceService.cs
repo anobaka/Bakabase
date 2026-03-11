@@ -22,6 +22,7 @@ using Bakabase.InsideWorld.Business.Models.Domain.Constants;
 using Bakabase.InsideWorld.Models.Constants;
 using Bakabase.InsideWorld.Models.Constants.AdditionalItems;
 using Bakabase.Modules.Alias.Abstractions.Services;
+using Bakabase.Modules.ResourceResolver.Abstractions;
 using Bakabase.Modules.Property.Abstractions.Components;
 using Bakabase.Modules.Property;
 using Bakabase.Modules.Property.Abstractions.Models.Db;
@@ -616,6 +617,69 @@ namespace Bakabase.InsideWorld.Business.Services
                                                 if (templateMap.TryGetValue(resource.Id, out var tpl) && !string.IsNullOrEmpty(tpl))
                                                 {
                                                     resource.DisplayName = BuildDisplayNameForResourceOptimized(resource, tpl, wrappers, builtinPropertyKeyMap);
+                                                }
+                                            }
+                                        }
+
+                                        // Fill display names from resolvers for resources that still have empty display names
+                                        using (MiniProfiler.Current.Step("DisplayName from resolvers"))
+                                        {
+                                            var resourcesWithEmptyDisplayName = doList.Where(r => string.IsNullOrEmpty(r.DisplayName)).ToList();
+                                            if (resourcesWithEmptyDisplayName.Count > 0)
+                                            {
+                                                var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                                                var linksGrouped = await sourceLinkService.GetByResourceIdsGrouped(
+                                                    resourcesWithEmptyDisplayName.Select(r => r.Id).ToArray());
+
+                                                // Group source keys by source type
+                                                var sourceKeysBySource = new Dictionary<ResourceSource, HashSet<string>>();
+                                                var resourceSourceLinks = new Dictionary<int, List<ResourceSourceLink>>();
+                                                foreach (var resource in resourcesWithEmptyDisplayName)
+                                                {
+                                                    if (linksGrouped.TryGetValue(resource.Id, out var links))
+                                                    {
+                                                        resourceSourceLinks[resource.Id] = links;
+                                                        foreach (var link in links)
+                                                        {
+                                                            if (!sourceKeysBySource.TryGetValue(link.Source, out var keys))
+                                                            {
+                                                                keys = [];
+                                                                sourceKeysBySource[link.Source] = keys;
+                                                            }
+
+                                                            keys.Add(link.SourceKey);
+                                                        }
+                                                    }
+                                                }
+
+                                                // Batch fetch display names from each resolver
+                                                var resolvers = GetRequiredService<IEnumerable<IResourceResolver>>();
+                                                var resolverMap = resolvers.ToDictionary(r => r.Source);
+                                                var displayNamesBySource = new Dictionary<ResourceSource, Dictionary<string, string>>();
+
+                                                foreach (var (source, keys) in sourceKeysBySource)
+                                                {
+                                                    if (resolverMap.TryGetValue(source, out var resolver))
+                                                    {
+                                                        displayNamesBySource[source] = await resolver.GetDefaultDisplayNames(keys);
+                                                    }
+                                                }
+
+                                                // Apply display names (prefer non-filesystem sources)
+                                                foreach (var resource in resourcesWithEmptyDisplayName)
+                                                {
+                                                    if (!resourceSourceLinks.TryGetValue(resource.Id, out var links)) continue;
+
+                                                    // Try non-filesystem sources first, then filesystem
+                                                    foreach (var link in links.OrderBy(l => l.Source == ResourceSource.FileSystem ? 1 : 0))
+                                                    {
+                                                        if (displayNamesBySource.TryGetValue(link.Source, out var names) &&
+                                                            names.TryGetValue(link.SourceKey, out var name))
+                                                        {
+                                                            resource.DisplayName = name;
+                                                            break;
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
