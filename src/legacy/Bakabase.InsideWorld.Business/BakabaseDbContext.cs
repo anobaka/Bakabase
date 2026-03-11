@@ -233,9 +233,7 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<ResourceDbModel>(r =>
             {
                 r.HasIndex(x => x.Path);
-                r.HasIndex(x => x.Source);
                 r.HasIndex(x => x.Status);
-                r.HasIndex(x => new { x.Source, x.SourceKey });
             });
 
             modelBuilder.Entity<EnhancementRecord>(er =>

@@ -56,10 +56,6 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 Path = dbModel.Path,
                 Tags = TagsCache.GetValueOrDefault(validTagBits, EmptyTags),
                 PlayedAt = dbModel.PlayedAt,
-#pragma warning disable CS0612 // Type or member is obsolete
-                Source = dbModel.Source,
-                SourceKey = dbModel.SourceKey,
-#pragma warning restore CS0612
                 Status = dbModel.Status,
             };
             return domainModel;
@@ -81,10 +77,6 @@ namespace Bakabase.InsideWorld.Business.Extensions
                 Path = domainModel.Path,
                 Tags = domainModel.Tags.Aggregate(default(ResourceTag), (s, t) => (s | t)),
                 PlayedAt = domainModel.PlayedAt,
-#pragma warning disable CS0612 // Type or member is obsolete
-                Source = domainModel.Source,
-                SourceKey = domainModel.SourceKey,
-#pragma warning restore CS0612
                 Status = domainModel.Status,
             };
             return dbModel;

@@ -22,9 +22,6 @@ internal class SyncContext
     public HashSet<string> ExistingPathSet { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<int, Resource> IdToResource { get; } = new();
 
-    // SourceKey -> Resource for non-FileSystem resources
-    public Dictionary<string, Resource> SourceKeyToResource { get; } = new(StringComparer.OrdinalIgnoreCase);
-
     // Source link index: (Source, SourceKey) -> ResourceId, built from ResourceSourceLinks table
     public Dictionary<(ResourceSource Source, string SourceKey), int> SourceLinkToResourceId { get; } = new();
 
@@ -137,7 +134,6 @@ internal class SyncContext
         PathToResource.Clear();
         ExistingPathSet.Clear();
         IdToResource.Clear();
-        SourceKeyToResource.Clear();
         SourceLinkToResourceId.Clear();
         ResourceIdToSourceLinks.Clear();
 
@@ -150,12 +146,6 @@ internal class SyncContext
                 ExistingPathSet.Add(standardizedPath);
             }
             IdToResource[resource.Id] = resource;
-
-            // Index non-FileSystem resources by SourceKey
-            if (resource.Source != ResourceSource.FileSystem && !string.IsNullOrEmpty(resource.SourceKey))
-            {
-                SourceKeyToResource[resource.SourceKey] = resource;
-            }
         }
 
         // Build source link indexes

@@ -1008,24 +1008,6 @@ public class PathMarkSyncService : ScopedService
                 continue;
             }
 
-            // Legacy fallback: For resolver-discovered resources, check by SourceKey
-            if (isVirtual && ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolvedResource))
-            {
-                if (ctx.SourceKeyToResource.ContainsKey(resolvedResource.SourceKey))
-                {
-                    var existing = ctx.SourceKeyToResource[resolvedResource.SourceKey];
-                    var newPath = resolvedResource.Path;
-                    if (newPath != existing.Path)
-                    {
-                        existing.Path = newPath;
-                        existing.UpdatedAt = DateTime.Now;
-                    }
-                    EnsureSourceLinkOnResource(existing, discoveredSource, discoveredSourceKey);
-                    ctx.ResourcesToCreate[path] = existing;
-                    continue;
-                }
-            }
-
             if (!isVirtual)
             {
                 // Check for bakabase.json recovery
@@ -1049,9 +1031,7 @@ public class PathMarkSyncService : ScopedService
                 {
                     Path = resolved.Path,
                     IsFile = false,
-                    Source = resolved.Source,
                     Status = ResourceStatus.Active,
-                    SourceKey = resolved.SourceKey,
                     DisplayName = resolved.DisplayName,
                     CategoryId = 0,
                     MediaLibraryId = 0,
@@ -1089,9 +1069,7 @@ public class PathMarkSyncService : ScopedService
                 {
                     Path = path,
                     IsFile = isFile,
-                    Source = ResourceSource.FileSystem,
                     Status = ResourceStatus.Active,
-                    SourceKey = path,
                     CategoryId = 0,
                     MediaLibraryId = 0,
                     FileCreatedAt = fileCreatedAt,
@@ -1900,25 +1878,30 @@ public class PathMarkSyncService : ScopedService
         {
             ct.ThrowIfCancellationRequested();
 
-            // Get all existing resources from this source
+            // Get all existing resources that have a source link for this source
             var sourceResources = ctx.AllResources
-                .Where(r => r.Source == source)
+                .Where(r => ctx.ResourceIdToSourceLinks.TryGetValue(r.Id, out var links)
+                             && links.Any(l => l.Source == source))
                 .ToList();
 
             if (sourceResources.Count == 0) continue;
 
-            // Get all SourceKeys discovered by this resolver
-            var discoveredSourceKeys = ctx.ResolverDiscoveredResources.Values
+            // Get all discovered (Source, SourceKey) pairs for this resolver
+            var discoveredKeys = ctx.ResolverDiscoveredResources.Values
                 .Where(r => r.Source == source)
-                .Select(r => r.SourceKey)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                .Select(r => (r.Source, r.SourceKey))
+                .ToHashSet();
 
             if (success)
             {
                 // Resolver succeeded - we can determine Absent vs Active
                 foreach (var resource in sourceResources)
                 {
-                    if (discoveredSourceKeys.Contains(resource.SourceKey))
+                    var resourceLinks = ctx.ResourceIdToSourceLinks.GetValueOrDefault(resource.Id);
+                    var hasDiscoveredLink = resourceLinks != null
+                        && resourceLinks.Any(l => l.Source == source && discoveredKeys.Contains(l));
+
+                    if (hasDiscoveredLink)
                     {
                         // Resource found - ensure it's Active
                         if (resource.Status != ResourceStatus.Active)

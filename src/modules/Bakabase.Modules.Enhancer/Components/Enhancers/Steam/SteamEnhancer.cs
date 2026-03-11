@@ -15,7 +15,7 @@ namespace Bakabase.Modules.Enhancer.Components.Enhancers.Steam;
 
 /// <summary>
 /// Enhancer that fetches game metadata from Steam Store API.
-/// Uses the resource's SourceKey (AppId) to look up game details.
+/// Uses the resource's Steam source link (AppId) to look up game details.
 /// </summary>
 public class SteamEnhancer(
     ILoggerFactory loggerFactory,
@@ -31,18 +31,19 @@ public class SteamEnhancer(
         Resource resource, object? options,
         EnhancementLogCollector logCollector, CancellationToken ct)
     {
-        // Steam resources use SourceKey as AppId
-        if (resource.Source != ResourceSource.Steam || string.IsNullOrEmpty(resource.SourceKey))
+        // Find Steam source link to get AppId
+        var steamLink = resource.SourceLinks?.FirstOrDefault(l => l.Source == ResourceSource.Steam);
+        if (steamLink == null || string.IsNullOrEmpty(steamLink.SourceKey))
         {
             logCollector.LogWarning(EnhancementLogEvent.Configuration,
-                "Resource is not a Steam resource or has no SourceKey");
+                "Resource has no Steam source link");
             return null;
         }
 
-        if (!int.TryParse(resource.SourceKey, out var appId))
+        if (!int.TryParse(steamLink.SourceKey, out var appId))
         {
             logCollector.LogWarning(EnhancementLogEvent.Configuration,
-                $"Invalid Steam AppId: {resource.SourceKey}");
+                $"Invalid Steam AppId: {steamLink.SourceKey}");
             return null;
         }
 

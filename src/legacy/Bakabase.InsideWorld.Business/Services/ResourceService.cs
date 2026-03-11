@@ -2390,8 +2390,32 @@ namespace Bakabase.InsideWorld.Business.Services
 
         public async Task<List<int>> GetConflictingResourceIds(int resourceId)
         {
+            var conflictIds = new HashSet<int>();
+
+            // 1. Find conflicts by overlapping source links
             var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
-            return await sourceLinkService.FindConflictingResourceIds(resourceId);
+            var sourceLinkConflicts = await sourceLinkService.FindConflictingResourceIds(resourceId);
+            foreach (var id in sourceLinkConflicts)
+            {
+                conflictIds.Add(id);
+            }
+
+            // 2. Find conflicts by same Path
+            var resource = await _orm.GetByKey(resourceId);
+            if (resource != null && !string.IsNullOrEmpty(resource.Path))
+            {
+                var allResources = await _orm.GetAll(r => r.Id != resourceId, false);
+                var pathConflicts = allResources
+                    .Where(r => !string.IsNullOrEmpty(r.Path) &&
+                                string.Equals(r.Path, resource.Path, StringComparison.OrdinalIgnoreCase))
+                    .Select(r => r.Id);
+                foreach (var id in pathConflicts)
+                {
+                    conflictIds.Add(id);
+                }
+            }
+
+            return conflictIds.ToList();
         }
 
         public async Task MergeResources(ResourceMergeInputModel model)

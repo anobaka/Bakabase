@@ -19,10 +19,6 @@ namespace Bakabase.Abstractions.Models.Db
         public int? ParentId { get; set; }
         public ResourceTag Tags { get; set; }
         public DateTime? PlayedAt { get; set; }
-        [Obsolete("Use ResourceSourceLinkDbModel instead")]
-        public ResourceSource Source { get; set; } = ResourceSource.FileSystem;
         public ResourceStatus Status { get; set; } = ResourceStatus.Active;
-        [Obsolete("Use ResourceSourceLinkDbModel instead")]
-        [Required] public string SourceKey { get; set; } = null!;
     }
 }

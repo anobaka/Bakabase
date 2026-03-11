@@ -663,13 +663,6 @@ namespace Bakabase.InsideWorld.Business.Migrations
                     b.Property<DateTime?>("PlayedAt")
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Source")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("SourceKey")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -683,11 +676,7 @@ namespace Bakabase.InsideWorld.Business.Migrations
 
                     b.HasIndex("Path");
 
-                    b.HasIndex("Source");
-
                     b.HasIndex("Status");
-
-                    b.HasIndex("Source", "SourceKey");
 
                     b.ToTable("ResourcesV2");
                 });
