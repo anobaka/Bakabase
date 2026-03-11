@@ -50,6 +50,7 @@ export default function SteamTable({
       { key: "lastPlayed", label: t("resourceSource.steam.label.lastPlayed") },
       { key: "installed", label: t("resourceSource.steam.label.installed") },
       { key: "resourceId", label: t("resourceSource.label.resourceId") },
+      { key: "account", label: t("resourceSource.steam.label.account") },
       { key: "actions", label: "", width: 120 },
     );
     return cols;
@@ -89,6 +90,12 @@ export default function SteamTable({
         return app.resourceId ? (
           <Chip color="primary" size="sm" variant="flat">
             #{app.resourceId}
+          </Chip>
+        ) : "-";
+      case "account":
+        return app.account ? (
+          <Chip size="sm" variant="flat">
+            {app.account}
           </Chip>
         ) : "-";
       case "actions":

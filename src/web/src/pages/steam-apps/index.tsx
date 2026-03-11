@@ -42,6 +42,7 @@ export interface SteamApp {
   isInstalled: boolean;
   installPath?: string;
   resourceId?: number;
+  account?: string;
   createdAt: string;
   updatedAt: string;
 }

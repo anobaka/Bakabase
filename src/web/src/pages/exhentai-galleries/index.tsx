@@ -42,6 +42,7 @@ export interface ExHentaiGallery {
   isDownloaded: boolean;
   localPath?: string;
   resourceId?: number;
+  account?: string;
   createdAt: string;
   updatedAt: string;
 }
