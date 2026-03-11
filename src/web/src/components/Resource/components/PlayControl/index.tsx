@@ -1,14 +1,13 @@
 "use client";
 
 import type { PlayableItem, Resource as ResourceModel } from "@/core/models/Resource";
-import type { DiscoverySource } from "@/hooks/useResourceDiscovery";
 
 import { FolderOutlined, PlayCircleOutlined } from "@ant-design/icons";
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 
-import { Button, Chip, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Modal } from "@/components/bakaui";
+import { Button, Chip, Modal } from "@/components/bakaui";
 import { splitPathIntoSegments, standardizePath } from "@/components/utils";
 import BApi from "@/sdk/BApi";
 import BusinessConstants from "@/components/BusinessConstants";
@@ -21,14 +20,27 @@ import envConfig from "@/config/env";
 import NoPlayableFilesModal from "./NoPlayableFilesModal";
 
 // Play control status for UI rendering
-export type PlayControlStatus = "loading" | "ready" | "not-found";
+export type PlayControlStatus = "idle" | "loading" | "ready" | "not-found";
+
+export type SourceEntry = {
+  source: ResourceSource;
+  items: PlayableItem[];
+};
 
 export type PlayControlPortalProps = {
   status: PlayControlStatus;
-  source: DiscoverySource;
-  cacheEnabled: boolean;
-  onClick: () => void;
-  tooltipContent?: string;
+  /** Ordered list of sources that have playable items */
+  sources: SourceEntry[];
+  /** Whether the resource has a local file path */
+  hasPath: boolean;
+  /** Whether the resource is a file (affects open folder behavior) */
+  isFile: boolean;
+  /** Play items from a specific source */
+  onPlaySource: (source: ResourceSource) => void;
+  /** Open the resource's folder */
+  onOpenFolder: () => void;
+  /** Handle click when no playable items found */
+  onNotFound: () => void;
 };
 
 type Props = {
@@ -102,7 +114,9 @@ const playItemApi = async (resourceId: number, source: ResourceSource, key: stri
   return rsp.json();
 };
 
-export type PlayControlRef = {};
+export type PlayControlRef = {
+  triggerDiscovery: () => void;
+};
 
 const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   { resource, PortalComponent, afterPlaying },
@@ -116,11 +130,15 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   // Get playable file cache enabled status from UI options
   const cacheEnabled = !resourceUiOptions?.disablePlayableFileCache;
 
+  // Defer discovery when cache is enabled (wait for hover trigger)
+  const autoDiscover = !cacheEnabled;
+
   // Use SSE-based discovery for playable files
-  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled);
+  const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled, autoDiscover);
 
   const [dirs, setDirs] = useState<Directory[]>();
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalSource, setModalSource] = useState<ResourceSource | null>(null);
   const [loadingAllFiles, setLoadingAllFiles] = useState(false);
   const [allFilesLoaded, setAllFilesLoaded] = useState(false);
 
@@ -138,18 +156,17 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     return groups;
   }, [playableItems]);
 
-  const hasMultipleSources = sourceGroups.size > 1;
-
-  // Compute playable files context from discovery state (legacy compat for FileSystem)
-  const portalCtx = discoveryState.status === "ready"
-    ? {
-        files: discoveryState.playableFilePaths ?? [],
-        hasMore: discoveryState.hasMorePlayableFiles ?? false,
-      }
-    : null;
+  // Ordered source entries (sources with playable items)
+  const sources: SourceEntry[] = useMemo(() => {
+    return Array.from(sourceGroups.entries()).map(([source, items]) => ({ source, items }));
+  }, [sourceGroups]);
 
   // Compute status for PortalComponent
   const computeStatus = (): PlayControlStatus => {
+    if (discoveryState.status === "idle") {
+      return "idle";
+    }
+
     if (discoveryState.status === "loading") {
       return "loading";
     }
@@ -158,31 +175,14 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
       return "not-found";
     }
 
-    // Check if we have any playable items (multi-source) or legacy files
-    if (playableItems.length > 0 || (portalCtx?.files && portalCtx.files.length > 0)) {
+    // Check if we have any playable items
+    if (playableItems.length > 0) {
       return "ready";
     }
     return "not-found";
   };
 
-  // Compute tooltip content based on status and source
-  const computeTooltipContent = (): string | undefined => {
-    if (discoveryState.status === "loading") {
-      if (discoveryState.cacheEnabled) {
-        return t("resource.playControl.tooltip.cachePreparing");
-      }
-      return t("resource.playControl.tooltip.loading");
-    }
-
-    if (computeStatus() === "not-found") {
-      return t("resource.playControl.tooltip.notFound");
-    }
-
-    return undefined;
-  };
-
   const status = computeStatus();
-  const tooltipContent = computeTooltipContent();
 
   // Update dirs when discovery completes
   useEffect(() => {
@@ -195,9 +195,12 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   useEffect(() => {
     setDirs(undefined);
     setAllFilesLoaded(false);
+    setModalSource(null);
   }, [resource.id]);
 
-  useImperativeHandle(ref, () => ({}), []);
+  useImperativeHandle(ref, () => ({
+    triggerDiscovery: discoveryState.trigger,
+  }), [discoveryState.trigger]);
 
   // Play a file via legacy API (FileSystem source)
   const playFile = (file: string) =>
@@ -230,61 +233,60 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
     }
   };
 
-  const handleClick = useCallback(() => {
-    // If not found, show the NoPlayableFilesModal
-    if (status === "not-found") {
-      createPortal(NoPlayableFilesModal, {
-        resourceId: resource.id,
-      });
+  /** Play items from a specific source, handling single/multiple items */
+  const handlePlaySource = useCallback((source: ResourceSource) => {
+    const items = sourceGroups.get(source) ?? [];
+    if (items.length === 0) return;
+
+    if (items.length === 1) {
+      playItem(items[0]!);
       return;
     }
 
-    // If loading, do nothing
-    if (status === "loading") {
+    // Multiple items - check auto-select preference
+    if (resourceUiOptions?.autoSelectFirstPlayableFile) {
+      playItem(items[0]!);
       return;
     }
 
-    // If there are items from multiple sources and more than 1 non-FileSystem source items,
-    // we need to show source selection - but this is handled by the dropdown in render.
-    // If only one source or auto-select, play directly.
-
-    if (playableItems.length === 1) {
-      playItem(playableItems[0]!);
-      return;
+    // Show modal filtered to this source
+    if (source === ResourceSource.FileSystem && discoveryState.playableFilePaths?.length && !resource.isFile) {
+      const computedDirs = splitIntoDirs(discoveryState.playableFilePaths, resource.path);
+      setDirs(computedDirs);
     }
-
-    // For single-source FileSystem items, use existing logic
-    if (!hasMultipleSources && portalCtx?.files && portalCtx.files.length > 0) {
-      if (portalCtx.files.length === 1 && !portalCtx.hasMore) {
-        playFile(portalCtx.files[0]!);
-      } else if (
-        resourceUiOptions?.autoSelectFirstPlayableFile &&
-        portalCtx.files.length > 0
-      ) {
-        playFile(portalCtx.files[0]!);
-      } else {
-        // Compute dirs synchronously to avoid race condition with useEffect
-        if (!resource.isFile && portalCtx.files.length > 0) {
-          const computedDirs = splitIntoDirs(portalCtx.files, resource.path);
-          setDirs(computedDirs);
-        }
-        setModalVisible(true);
-      }
-      return;
-    }
-
-    // For multiple sources or non-FileSystem items, show the selection modal
+    setModalSource(source);
     setModalVisible(true);
-  }, [status, portalCtx, playableItems, hasMultipleSources, resource.isFile, resource.path, resourceUiOptions?.autoSelectFirstPlayableFile]);
+  }, [sourceGroups, resourceUiOptions?.autoSelectFirstPlayableFile, discoveryState.playableFilePaths, resource.path, resource.isFile]);
+
+  /** Open the resource's folder */
+  const handleOpenFolder = useCallback(() => {
+    BApi.tool.openFileOrDirectory({
+      path: resource.path,
+      openInDirectory: resource.isFile,
+    });
+  }, [resource.path, resource.isFile]);
+
+  /** Handle click when no playable files found */
+  const handleNotFound = useCallback(() => {
+    createPortal(NoPlayableFilesModal, {
+      resourceId: resource.id,
+    });
+  }, [resource.id]);
+
+  // Get items to display in modal (filtered by selected source or all)
+  const modalItems = modalSource ? (sourceGroups.get(modalSource) ?? []) : playableItems;
+  const isFileSystemModal = modalSource === ResourceSource.FileSystem || (!modalSource && sourceGroups.has(ResourceSource.FileSystem));
 
   return (
     <>
       <PortalComponent
         status={status}
-        source={discoveryState.source}
-        cacheEnabled={discoveryState.cacheEnabled}
-        onClick={handleClick}
-        tooltipContent={tooltipContent}
+        sources={sources}
+        hasPath={!!resource.path}
+        isFile={resource.isFile}
+        onPlaySource={handlePlaySource}
+        onOpenFolder={handleOpenFolder}
+        onNotFound={handleNotFound}
       />
       <Modal
         footer={false}
@@ -293,170 +295,100 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
         visible={modalVisible}
         onClose={() => {
           setModalVisible(false);
+          setModalSource(null);
         }}
       >
-        {/* Multi-source: show source tabs/sections when multiple sources exist */}
-        {hasMultipleSources && (
-          <div className={"flex flex-col gap-4 pb-2"}>
-            {Array.from(sourceGroups.entries()).map(([source, items]) => (
-              <div key={source} className={"flex flex-col gap-2"}>
-                <div className={"flex items-center gap-2"}>
-                  <Chip radius={"sm"} size={"sm"} color={"primary"} variant={"flat"}>
-                    {ResourceSourceLabel[source] ?? `Source ${source}`}
-                  </Chip>
-                </div>
-                <div className={"flex flex-wrap gap-1"}>
-                  {source === ResourceSource.FileSystem ? (
-                    // For FileSystem items, show directory-grouped file list
-                    dirs?.map((d) => (
-                      <div key={d.relativePath} className={"w-full"}>
-                        {dirs.length > 1 && (
-                          <div className={"flex items-center"}>
-                            <FolderOutlined className={"text-base"} />
-                            <Chip radius={"sm"} size={"sm"} variant={"light"}>
-                              {d.relativePath}
+        {/* FileSystem source: directory-grouped file list */}
+        {isFileSystemModal && (
+          <div className={"flex flex-col gap-2 pb-2"}>
+            {dirs?.map((d) => {
+              return (
+                <div key={d.relativePath}>
+                  {dirs.length > 1 && (
+                    <div className={"flex items-center"}>
+                      <FolderOutlined className={"text-base"} />
+                      <Chip radius={"sm"} size={"sm"} variant={"light"}>
+                        {d.relativePath}
+                      </Chip>
+                    </div>
+                  )}
+                  <div className={"flex gap-1 flex-col"}>
+                    {d.groups.map((g) => {
+                      const showCount = g.showAll
+                        ? g.files.length
+                        : Math.min(DefaultVisibleFileCount, g.files.length);
+
+                      return (
+                        <div key={g.extension} className={"flex flex-wrap items-center gap-1"}>
+                          {d.groups.length > 1 && (
+                            <Chip radius={"sm"} size={"sm"} variant={"flat"}>
+                              {g.extension}
                             </Chip>
-                          </div>
-                        )}
-                        <div className={"flex gap-1 flex-wrap"}>
-                          {d.groups.map((g) => {
-                            const showCount = g.showAll
-                              ? g.files.length
-                              : Math.min(DefaultVisibleFileCount, g.files.length);
-                            return g.files.slice(0, showCount).map((file) => (
+                          )}
+                          {g.files.slice(0, showCount).map((file) => {
+                            return (
                               <Button
                                 key={file.path}
                                 className={"whitespace-break-spaces py-2 h-auto text-left"}
                                 radius={"sm"}
                                 size={"sm"}
-                                onPress={() => playFile(file.path)}
+                                onPress={() => {
+                                  playFile(file.path);
+                                }}
                               >
                                 <PlayCircleOutlined className={"text-base"} />
                                 <span className={"break-all overflow-hidden text-ellipsis"}>
                                   {file.name}
                                 </span>
                               </Button>
-                            ));
+                            );
                           })}
+                          {g.files.length > DefaultVisibleFileCount && !g.showAll && (
+                            <Button
+                              color={"primary"}
+                              size={"sm"}
+                              variant={"light"}
+                              onPress={() => {
+                                g.showAll = true;
+                                setDirs([...dirs]);
+                              }}
+                            >
+                              {t<string>("resource.playControl.modal.showAllFiles", {
+                                count: g.files.length,
+                              })}
+                            </Button>
+                          )}
                         </div>
-                      </div>
-                    ))
-                  ) : (
-                    // For non-FileSystem items, show each item as a button
-                    items.map((item) => (
-                      <Button
-                        key={`${item.source}-${item.key}`}
-                        className={"whitespace-break-spaces py-2 h-auto text-left"}
-                        radius={"sm"}
-                        size={"sm"}
-                        onPress={() => playItem(item)}
-                      >
-                        <PlayCircleOutlined className={"text-base"} />
-                        <span className={"break-all overflow-hidden text-ellipsis"}>
-                          {item.displayName ?? item.key}
-                        </span>
-                      </Button>
-                    ))
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Non-FileSystem source items */}
+        {!isFileSystemModal && (
+          <div className={"flex flex-wrap gap-1 pb-2"}>
+            {modalItems.map((item) => (
+              <Button
+                key={`${item.source}-${item.key}`}
+                className={"whitespace-break-spaces py-2 h-auto text-left"}
+                radius={"sm"}
+                size={"sm"}
+                onPress={() => playItem(item)}
+              >
+                <PlayCircleOutlined className={"text-base"} />
+                <span className={"break-all overflow-hidden text-ellipsis"}>
+                  {item.displayName ?? item.key}
+                </span>
+              </Button>
             ))}
           </div>
         )}
 
-        {/* Single source: existing file browser */}
-        {!hasMultipleSources && (
-          <>
-            <div className={"flex flex-col gap-2 pb-2"}>
-              {dirs?.map((d) => {
-                return (
-                  <div key={d.relativePath}>
-                    {dirs.length > 1 && (
-                      <div className={"flex items-center"}>
-                        <FolderOutlined className={"text-base"} />
-                        <Chip radius={"sm"} size={"sm"} variant={"light"}>
-                          {d.relativePath}
-                        </Chip>
-                      </div>
-                    )}
-                    <div className={"flex gap-1 flex-col"}>
-                      {d.groups.map((g) => {
-                        const showCount = g.showAll
-                          ? g.files.length
-                          : Math.min(DefaultVisibleFileCount, g.files.length);
-
-                        return (
-                          <div key={g.extension} className={"flex flex-wrap items-center gap-1"}>
-                            {d.groups.length > 1 && (
-                              <Chip radius={"sm"} size={"sm"} variant={"flat"}>
-                                {g.extension}
-                              </Chip>
-                            )}
-                            {g.files.slice(0, showCount).map((file) => {
-                              return (
-                                <Button
-                                  key={file.path}
-                                  className={"whitespace-break-spaces py-2 h-auto text-left"}
-                                  radius={"sm"}
-                                  size={"sm"}
-                                  onPress={() => {
-                                    playFile(file.path);
-                                  }}
-                                >
-                                  <PlayCircleOutlined className={"text-base"} />
-                                  <span className={"break-all overflow-hidden text-ellipsis"}>
-                                    {file.name}
-                                  </span>
-                                </Button>
-                              );
-                            })}
-                            {g.files.length > DefaultVisibleFileCount && !g.showAll && (
-                              <Button
-                                color={"primary"}
-                                size={"sm"}
-                                variant={"light"}
-                                onPress={() => {
-                                  g.showAll = true;
-                                  setDirs([...dirs]);
-                                }}
-                              >
-                                {t<string>("resource.playControl.modal.showAllFiles", {
-                                  count: g.files.length,
-                                })}
-                              </Button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Non-FileSystem single source items */}
-              {sourceGroups.size === 1 && !sourceGroups.has(ResourceSource.FileSystem) && (
-                <div className={"flex flex-wrap gap-1"}>
-                  {playableItems.map((item) => (
-                    <Button
-                      key={`${item.source}-${item.key}`}
-                      className={"whitespace-break-spaces py-2 h-auto text-left"}
-                      radius={"sm"}
-                      size={"sm"}
-                      onPress={() => playItem(item)}
-                    >
-                      <PlayCircleOutlined className={"text-base"} />
-                      <span className={"break-all overflow-hidden text-ellipsis"}>
-                        {item.displayName ?? item.key}
-                      </span>
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        )}
-
-        {portalCtx?.hasMore && !allFilesLoaded && (
+        {discoveryState.hasMorePlayableFiles && !allFilesLoaded && isFileSystemModal && (
           <div className={"pt-2"}>
             <Button
               color={"primary"}
@@ -481,7 +413,7 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
             </Button>
           </div>
         )}
-        {!resourceUiOptions?.autoSelectFirstPlayableFile && portalCtx && portalCtx.files.length > 1 && (
+        {!resourceUiOptions?.autoSelectFirstPlayableFile && modalItems.length > 1 && (
           <div className={"pt-3 border-t mt-3"}>
             <Button
               color={"primary"}

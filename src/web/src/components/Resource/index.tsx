@@ -13,6 +13,7 @@ import {
   CheckCircleFilled,
   DisconnectOutlined,
   FileUnknownOutlined,
+  FolderOpenOutlined,
   HistoryOutlined,
   LoadingOutlined,
   PlayCircleOutlined,
@@ -39,49 +40,129 @@ import {
   ResourceAdditionalItem,
   ResourceProperty,
   ResourceSource,
+  ResourceSourceLabel,
   ResourceStatus,
   ResourceTag,
   StandardValueType,
 } from "@/sdk/constants";
 import { useUiOptionsStore } from "@/stores/options";
 import PlayControl from "@/components/Resource/components/PlayControl";
-import type { PlayControlPortalProps } from "@/components/Resource/components/PlayControl";
+import type { PlayControlPortalProps, PlayControlRef } from "@/components/Resource/components/PlayControl";
 import ContextMenuItems from "@/components/Resource/components/ContextMenuItems";
 import ResourceSourceIcon from "@/components/Resource/components/ResourceSourceIcon";
+import { SteamIcon, DLsiteIcon, ExHentaiIcon } from "@/components/SourceIcons";
 import { autoBackgroundColor } from "@/components/utils"; // adjust the path as needed
 
+/** Render a source-specific icon */
+const renderSourceIcon = (source: ResourceSource, className: string): React.ReactNode => {
+  switch (source) {
+    case ResourceSource.Steam:
+      return <SteamIcon className={className} />;
+    case ResourceSource.DLsite:
+      return <DLsiteIcon className={className} />;
+    case ResourceSource.ExHentai:
+      return <ExHentaiIcon className={className} />;
+    case ResourceSource.FileSystem:
+    default:
+      return <PlayCircleOutlined className={className} />;
+  }
+};
+
+type IconEntry = {
+  key: string;
+  type: "source" | "openFolder" | "notFound";
+  source?: ResourceSource;
+  renderIcon: (className: string) => React.ReactNode;
+  onClick: () => void;
+  tooltip?: string;
+};
+
 // PlayButton component defined outside Resource to maintain stable reference
-const PlayButton: React.FC<PlayControlPortalProps> = ({ status, onClick, tooltipContent, cacheEnabled }) => {
-  // Only show tooltip when preparing cache (loading + cacheEnabled)
-  const showTooltip = status === "loading" && cacheEnabled;
+const PlayButton: React.FC<PlayControlPortalProps> = ({
+  status, sources, hasPath, isFile, onPlaySource, onOpenFolder, onNotFound,
+}) => {
+  const { t } = useTranslation();
 
   // Button size: ~22% of container (between 1/4 and 1/5), min 32px, max 64px
-  // Using cqw (container query width) units for proper sizing relative to container
   const iconClass = "text-lg @[150px]:text-xl @[250px]:text-3xl";
   const buttonClass = "!w-[22cqw] !h-[22cqw] !min-w-8 !min-h-8 !max-w-16 !max-h-16 !p-0";
+  const smallIconClass = "text-sm @[150px]:text-base @[250px]:text-xl";
+  const smallButtonClass = "!w-[16cqw] !h-[16cqw] !min-w-6 !min-h-6 !max-w-12 !max-h-12 !p-0";
 
-  const button = (
-    <Button
-      onPress={onClick}
-      isIconOnly
-      isDisabled={status === "loading"}
-      className={buttonClass}
-    >
-      {status === "loading" ? (
-        <LoadingOutlined className={iconClass} spin />
-      ) : status === "not-found" ? (
-        <QuestionCircleOutlined className={`${iconClass} text-warning`} />
-      ) : (
-        <PlayCircleOutlined className={iconClass} />
-      )}
-    </Button>
-  );
+  // Loading/idle state: show spinner
+  if (status === "idle" || status === "loading") {
+    return (
+      <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
+        <Button isIconOnly isDisabled className={buttonClass}>
+          <LoadingOutlined className={iconClass} spin />
+        </Button>
+      </div>
+    );
+  }
+
+  // Build icon entries by priority:
+  // 1. Sources with playable items (first = main icon)
+  // 2. Open folder (if resource has path)
+  // 3. Question mark (if no playable items)
+  const entries: IconEntry[] = [];
+
+  for (const { source } of sources) {
+    entries.push({
+      key: `source-${source}`,
+      type: "source",
+      source,
+      renderIcon: (cls) => renderSourceIcon(source, cls),
+      onClick: () => onPlaySource(source),
+      tooltip: ResourceSourceLabel[source],
+    });
+  }
+
+  if (hasPath) {
+    entries.push({
+      key: "openFolder",
+      type: "openFolder",
+      renderIcon: (cls) => <FolderOpenOutlined className={cls} />,
+      onClick: onOpenFolder,
+      tooltip: t("common.action.openFolder"),
+    });
+  }
+
+  if (sources.length === 0) {
+    entries.push({
+      key: "notFound",
+      type: "notFound",
+      renderIcon: (cls) => <QuestionCircleOutlined className={`${cls} text-warning`} />,
+      onClick: onNotFound,
+    });
+  }
+
+  const mainEntry = entries[0];
+  const secondaryEntries = entries.slice(1);
+
+  if (!mainEntry) return null;
+
+  // Question mark as main icon = no tooltip
+  const showSecondary = mainEntry.type !== "notFound" && secondaryEntries.length > 0;
 
   return (
-    <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1]">
-      <Tooltip content={tooltipContent} isDisabled={!showTooltip}>
-        {button}
+    <div className="hidden group-hover/cover:flex absolute left-0 bottom-0 z-[1] items-end gap-0.5 group/play">
+      <Tooltip content={mainEntry.tooltip} isDisabled={!mainEntry.tooltip}>
+        <Button isIconOnly className={buttonClass} onPress={mainEntry.onClick}>
+          {mainEntry.renderIcon(iconClass)}
+        </Button>
       </Tooltip>
+
+      {showSecondary && (
+        <div className="flex gap-0.5 items-end opacity-0 group-hover/play:opacity-100 transition-opacity">
+          {secondaryEntries.map((entry) => (
+            <Tooltip key={entry.key} content={entry.tooltip} isDisabled={!entry.tooltip}>
+              <Button isIconOnly className={smallButtonClass} onPress={entry.onClick}>
+                {entry.renderIcon(smallIconClass)}
+              </Button>
+            </Tooltip>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -180,6 +261,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
   // Discovery happens automatically via SSE now
 
   const coverRef = useRef<IResourceCoverRef>();
+  const playControlRef = useRef<PlayControlRef>(null);
 
   // Keep a ref to the latest resource to avoid stale closure in reload
   const resourceRef = useRef(resource);
@@ -225,6 +307,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
       <div
         className="resource-cover-rectangle w-full max-w-full min-w-full pb-[100%] relative rounded group/cover @container [container-type:inline-size]"
         id={elementId}
+        onMouseEnter={() => playControlRef.current?.triggerDiscovery()}
       >
         <div className="absolute inset-0">
           <ResourceCover
@@ -423,6 +506,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
           </div>
         )}
         <PlayControl
+          ref={playControlRef}
           PortalComponent={PlayButton}
           afterPlaying={reload}
           resource={resource}

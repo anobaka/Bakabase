@@ -119,7 +119,6 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
 
   const showAggregate = displayOperations.includes("aggregate");
   const showPin = displayOperations.includes("pin");
-  const showOpenFolder = displayOperations.includes("openFolder");
   const showEnhancements = displayOperations.includes("enhancements");
   const showPreview = displayOperations.includes("preview");
   const showAddToPlaylist = displayOperations.includes("addToPlaylist");
@@ -144,24 +143,6 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           }}
         >
           <PushpinOutlined className={"text-lg"} />
-        </Button>,
-      );
-    }
-    if (showOpenFolder) {
-      buttons.push(
-        <Button
-          key="openFolder"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Open folder")}
-          onPress={() =>
-            BApi.tool.openFileOrDirectory({
-              path: resource.path,
-              openInDirectory: resource.isFile,
-            })
-          }
-        >
-          <FolderOpenOutlined className={"text-lg"} />
         </Button>,
       );
     }
@@ -258,20 +239,6 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           }}
         >
           <PushpinOutlined className={"text-lg"} />
-        </Button>,
-        <Button
-          key="openFolder"
-          isIconOnly
-          size={"sm"}
-          title={t<string>("Open folder")}
-          onPress={() =>
-            BApi.tool.openFileOrDirectory({
-              path: resource.path,
-              openInDirectory: resource.isFile,
-            })
-          }
-        >
-          <FolderOpenOutlined className={"text-lg"} />
         </Button>,
         <Button
           key="enhancements"
@@ -378,24 +345,6 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         }}
       >
         <PushpinOutlined className={iconClassName} />
-      </Button>,
-    );
-  }
-  if (showOpenFolder) {
-    individualButtons.push(
-      <Button
-        key="openFolder"
-        isIconOnly
-        className={buttonClassName}
-        title={t<string>("Open folder")}
-        onPress={() =>
-          BApi.tool.openFileOrDirectory({
-            path: resource.path,
-            openInDirectory: resource.isFile,
-          })
-        }
-      >
-        <FolderOpenOutlined className={iconClassName} />
       </Button>,
     );
   }
