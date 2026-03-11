@@ -1717,7 +1717,8 @@ export enum ResourceAdditionalItem {
   HasChildren = 512,
   MediaLibraryName = 2048,
   Cache = 4096,
-  All = 7008
+  SourceLinks = 8192,
+  All = 15200
 }
 
 export const resourceAdditionalItems = [
@@ -1729,6 +1730,7 @@ export const resourceAdditionalItems = [
   { label: 'HasChildren', value: ResourceAdditionalItem.HasChildren },
   { label: 'MediaLibraryName', value: ResourceAdditionalItem.MediaLibraryName },
   { label: 'Cache', value: ResourceAdditionalItem.Cache },
+  { label: 'SourceLinks', value: ResourceAdditionalItem.SourceLinks },
   { label: 'All', value: ResourceAdditionalItem.All }
 ] as const;
 
@@ -1741,6 +1743,7 @@ export const ResourceAdditionalItemLabel: Record<ResourceAdditionalItem, string>
   [ResourceAdditionalItem.HasChildren]: 'HasChildren',
   [ResourceAdditionalItem.MediaLibraryName]: 'MediaLibraryName',
   [ResourceAdditionalItem.Cache]: 'Cache',
+  [ResourceAdditionalItem.SourceLinks]: 'SourceLinks',
   [ResourceAdditionalItem.All]: 'All'
 };
 

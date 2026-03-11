@@ -127,6 +127,18 @@ public interface IResourceService
     /// <returns>Response indicating success or failure</returns>
     Task<BaseResponse> SetMediaLibraries(int[] resourceIds, int[] mediaLibraryIds);
 
+    /// <summary>
+    /// Get conflicting resource IDs for a given resource.
+    /// Conflict = resources sharing some source links but not being the same resource.
+    /// </summary>
+    Task<List<int>> GetConflictingResourceIds(int resourceId);
+
+    /// <summary>
+    /// Merge multiple resources into one target resource.
+    /// Transfers selected property values and source links to the target, then deletes the others.
+    /// </summary>
+    Task MergeResources(ResourceMergeInputModel model);
+
     Segment[] BuildDisplayNameSegmentsForResource(Resource resource, string template,
         (string Left, string Right)[] wrappers);
 

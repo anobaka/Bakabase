@@ -675,6 +675,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
                                     break;
                                 }
+                                case ResourceAdditionalItem.SourceLinks:
+                                {
+                                    var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                                    var linksGrouped = await sourceLinkService.GetByResourceIdsGrouped(resourceIds.ToArray());
+                                    foreach (var r in doList)
+                                    {
+                                        r.SourceLinks = linksGrouped.GetValueOrDefault(r.Id) ?? [];
+                                    }
+
+                                    break;
+                                }
                                 default:
                                     throw new ArgumentOutOfRangeException();
                             }
@@ -825,6 +836,17 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 // Custom properties
                 await _customPropertyValueService.SaveByResources(resources);
+
+                // Source links
+                var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+                foreach (var resource in resources)
+                {
+                    if (resource.SourceLinks is { Count: > 0 })
+                    {
+                        await sourceLinkService.EnsureLinks(resource.Id,
+                            resource.SourceLinks.Select(l => (l.Source, l.SourceKey)));
+                    }
+                }
 
                 // Publish resource data changed event (triggers index updates via event subscription)
                 var allChangedIds = dbResources.Select(r => r.Id).ToArray();
@@ -2366,9 +2388,54 @@ namespace Bakabase.InsideWorld.Business.Services
             ResourceDataChangeEventPublisher.PublishResourceChanged(id);
         }
 
+        public async Task<List<int>> GetConflictingResourceIds(int resourceId)
+        {
+            var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+            return await sourceLinkService.FindConflictingResourceIds(resourceId);
+        }
+
+        public async Task MergeResources(ResourceMergeInputModel model)
+        {
+            var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+
+            // 1. Collect all source links from merge-source resources and add to target
+            var mergeSourceIds = model.SourceResourceIds.Concat([model.TargetResourceId]).Distinct().ToArray();
+            var sourceLinks = await sourceLinkService.GetByResourceIds(mergeSourceIds);
+            var allLinks = sourceLinks.Select(l => (l.Source, l.SourceKey)).Distinct().ToList();
+            await sourceLinkService.EnsureLinks(model.TargetResourceId, allLinks);
+
+            // 2. Transfer media library mappings from source resources to target
+            var mappingService = MediaLibraryResourceMappingService;
+            var sourceMappings = await mappingService.GetByResourceIds(model.SourceResourceIds);
+            if (sourceMappings.Count > 0)
+            {
+                var targetMappings = sourceMappings
+                    .Select(m => (model.TargetResourceId, m.MediaLibraryId))
+                    .Distinct()
+                    .ToList();
+                await mappingService.EnsureMappingsRange(targetMappings);
+            }
+
+            // 3. Delete source resources and explicitly-deleted resources
+            // Note: Property value selections should be applied via separate PutPropertyValue calls
+            // before calling merge.
+            var idsToDelete = model.SourceResourceIds
+                .Concat(model.DeleteResourceIds)
+                .Where(id => id != model.TargetResourceId)
+                .Distinct()
+                .ToArray();
+
+            if (idsToDelete.Length > 0)
+            {
+                await DeleteByKeys(idsToDelete);
+            }
+        }
+
         private async Task DeleteRelatedData(List<int> ids)
         {
             await _customPropertyValueService.RemoveAll(x => ids.Contains(x.ResourceId));
+            var sourceLinkService = GetRequiredService<IResourceSourceLinkService>();
+            await sourceLinkService.DeleteByResourceIds(ids);
         }
 
         public string BuildDisplayNameForResource(Resource resource, string template,

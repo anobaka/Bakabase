@@ -726,6 +726,58 @@ namespace Bakabase.Service.Controllers
         }
 
         #endregion
+
+        #region Source Links & Conflict Resolution
+
+        /// <summary>
+        /// Get source links for a resource
+        /// </summary>
+        [HttpGet("{id:int}/source-links")]
+        [SwaggerOperation(OperationId = "GetResourceSourceLinks")]
+        public async Task<ListResponse<ResourceSourceLink>> GetResourceSourceLinks(int id)
+        {
+            var sourceLinkService = HttpContext.RequestServices.GetRequiredService<IResourceSourceLinkService>();
+            var links = await sourceLinkService.GetByResourceId(id);
+            return new ListResponse<ResourceSourceLink>(links);
+        }
+
+        /// <summary>
+        /// Get conflicting resources for a given resource.
+        /// Conflicting resources share source links but are not the same resource.
+        /// </summary>
+        [HttpGet("{id:int}/conflicts")]
+        [SwaggerOperation(OperationId = "GetResourceConflicts")]
+        public async Task<ListResponse<Resource>> GetResourceConflicts(int id,
+            ResourceAdditionalItem additionalItems = ResourceAdditionalItem.All)
+        {
+            var conflictIds = await service.GetConflictingResourceIds(id);
+            if (conflictIds.Count == 0)
+            {
+                return new ListResponse<Resource>([]);
+            }
+
+            var resources = await service.GetByKeys(conflictIds.ToArray(), additionalItems);
+            return new ListResponse<Resource>(resources);
+        }
+
+        /// <summary>
+        /// Merge multiple resources into one target resource.
+        /// </summary>
+        [HttpPost("merge")]
+        [SwaggerOperation(OperationId = "MergeResources")]
+        public async Task<BaseResponse> MergeResources([FromBody] ResourceMergeInputModel model)
+        {
+            var targetResource = await service.Get(model.TargetResourceId);
+            if (targetResource == null)
+            {
+                return BaseResponseBuilder.BuildBadRequest($"Target resource {model.TargetResourceId} not found");
+            }
+
+            await service.MergeResources(model);
+            return BaseResponseBuilder.Ok;
+        }
+
+        #endregion
     }
 }
 

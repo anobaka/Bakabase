@@ -761,6 +761,26 @@ export interface BakabaseAbstractionsModelsDomainResource {
   /** @deprecated */
   mediaLibraryColor?: string;
   mediaLibraries?: BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo[];
+  sourceLinks?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
+}
+
+export interface BakabaseAbstractionsModelsDomainResourceSourceLink {
+  /** @format int32 */
+  id: number;
+  /** @format int32 */
+  resourceId: number;
+  /** [1: FileSystem, 2: Steam, 3: DLsite, 4: ExHentai] */
+  source: BakabaseAbstractionsModelsDomainConstantsResourceSource;
+  sourceKey: string;
+  /** @format date-time */
+  createDt: string;
+}
+
+export interface BakabaseAbstractionsModelsInputResourceMergeInputModel {
+  /** @format int32 */
+  targetResourceId: number;
+  sourceResourceIds: number[];
+  deleteResourceIds: number[];
 }
 
 export interface BakabaseAbstractionsModelsDomainResourceMediaLibraryInfo {
@@ -4082,6 +4102,13 @@ export interface BootstrapModelsResponseModelsBaseResponse {
   /** @format int32 */
   code: number;
   message?: string;
+}
+
+export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceSourceLink[];
 }
 
 export interface BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDbDLsiteWorkDbModel {
@@ -11280,9 +11307,73 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     bulkAddResourceMediaLibraryMappingsUrl: () => {
       const baseUrl = this.baseUrl || "";
       let path = `/resource/bulk/media-libraries`;
-      
+
       return baseUrl + path;
     },
+
+    /**
+     * Get source links for a resource
+     *
+     * @tags Resource
+     * @name GetResourceSourceLinks
+     * @request GET:/resource/{id}/source-links
+     */
+    getResourceSourceLinks: (id: number, params: RequestParams = {}) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResourceSourceLink,
+        any
+      >({
+        path: `/resource/${id}/source-links`,
+        method: "GET",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * Get conflicting resources for a given resource
+     *
+     * @tags Resource
+     * @name GetResourceConflicts
+     * @request GET:/resource/{id}/conflicts
+     */
+    getResourceConflicts: (
+      id: number,
+      query?: {
+        /** [0: None, 32: Properties, 64: Alias, 128: Category, 288: DisplayName, 512: HasChildren, 2048: MediaLibraryName, 4096: Cache, 8192: SourceLinks, 15200: All] */
+        additionalItems?: BakabaseInsideWorldModelsConstantsAdditionalItemsResourceAdditionalItem;
+      },
+      params: RequestParams = {},
+    ) =>
+      this.request<
+        BootstrapModelsResponseModelsListResponse1BakabaseAbstractionsModelsDomainResource,
+        any
+      >({
+        path: `/resource/${id}/conflicts`,
+        method: "GET",
+        query: query,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * Merge multiple resources into one target resource
+     *
+     * @tags Resource
+     * @name MergeResources
+     * @request POST:/resource/merge
+     */
+    mergeResources: (
+      data: BakabaseAbstractionsModelsInputResourceMergeInputModel,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/merge`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
 
     /**
      * No description

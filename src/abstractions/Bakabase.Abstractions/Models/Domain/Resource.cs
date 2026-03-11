@@ -17,9 +17,16 @@ public record Resource
     [Obsolete]
     public int CategoryId { get; set; }
 
+    [Obsolete("Use SourceLinks instead")]
     public ResourceSource Source { get; set; } = ResourceSource.FileSystem;
     public ResourceStatus Status { get; set; } = ResourceStatus.Active;
+    [Obsolete("Use SourceLinks instead")]
     public string SourceKey { get; set; } = null!;
+
+    /// <summary>
+    /// Source links for this resource. A resource can be discovered by multiple sources.
+    /// </summary>
+    public List<ResourceSourceLink>? SourceLinks { get; set; }
 
     private string? _fileName;
 

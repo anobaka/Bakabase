@@ -64,6 +64,9 @@ public static class MediaLibraryTemplateExtensions
         services.AddSingleton<MediaLibraryResourceMappingIndexService>();
         services.AddScoped<IMediaLibraryResourceMappingService, MediaLibraryResourceMappingService<TDbContext>>();
 
+        services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceSourceLinkDbModel, int>>();
+        services.AddScoped<IResourceSourceLinkService, ResourceSourceLinkService<TDbContext>>();
+
         services.AddScoped<FullMemoryCacheResourceService<TDbContext, ResourceProfileDbModel, int>>();
         services.AddScoped<IResourceProfileService, ResourceProfileService<TDbContext>>();
 

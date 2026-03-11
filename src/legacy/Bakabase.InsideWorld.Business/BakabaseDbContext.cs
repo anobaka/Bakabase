@@ -100,6 +100,7 @@ namespace Bakabase.InsideWorld.Business
         public DbSet<AiFeatureConfigDbModel> AiFeatureConfigs { get; set; }
 
         // Resource source tables
+        public DbSet<ResourceSourceLinkDbModel> ResourceSourceLinks { get; set; }
         public DbSet<SteamAppDbModel> SteamApps { get; set; }
         public DbSet<DLsiteWorkDbModel> DLsiteWorks { get; set; }
         public DbSet<ExHentaiGalleryDbModel> ExHentaiGalleries { get; set; }
@@ -329,6 +330,14 @@ namespace Bakabase.InsideWorld.Business
             modelBuilder.Entity<AiFeatureConfigDbModel>(t =>
             {
                 t.HasIndex(x => x.Feature).IsUnique();
+            });
+
+            // Resource source link table
+            modelBuilder.Entity<ResourceSourceLinkDbModel>(t =>
+            {
+                t.HasIndex(x => x.ResourceId);
+                t.HasIndex(x => new { x.Source, x.SourceKey });
+                t.HasIndex(x => new { x.ResourceId, x.Source, x.SourceKey }).IsUnique();
             });
 
             // Resource source tables
