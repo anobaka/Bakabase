@@ -35,7 +35,7 @@ public class JavdayClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             }
 
             var cq = new CQ(html);
-            var title = cq["h1.h4.b"].Text().Trim();
+            var title = cq["h1.h4.b"].First().Text().Trim();
             if (string.IsNullOrEmpty(title)) return null;
             var series = cq["#videoInfo div div p:nth-child(3) span:nth-child(2) a"].Text().Trim();
             var tags = cq["#videoInfo div div p:nth-child(1) span:nth-child(2) a"].Select(a => a.InnerText);

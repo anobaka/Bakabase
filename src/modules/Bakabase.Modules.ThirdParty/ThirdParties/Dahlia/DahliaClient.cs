@@ -75,7 +75,7 @@ public class DahliaClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
 
     private static string GetTitle(CQ html)
     {
-        var result = html["h1"].Text().Trim();
+        var result = html["h1"].First().Text().Trim();
         return result;
     }
 

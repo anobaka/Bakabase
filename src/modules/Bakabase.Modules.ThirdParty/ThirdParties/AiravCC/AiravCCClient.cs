@@ -159,7 +159,7 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
     private static string GetTitle(CQ html)
     {
-        var result = html["div.video-title.my-3 h1"].Text().Trim();
+        var result = html["div.video-title.my-3 h1"].First().Text().Trim();
         return result;
     }
 

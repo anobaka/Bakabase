@@ -47,7 +47,7 @@ public class MadouquClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
             var htmlDetail = await HttpClient.GetStringAsync(realUrl);
             var docDetail = new CQ(htmlDetail);
 
-            var title = docDetail.Select("div.cao_entry_header header h1").Text().Trim();
+            var title = docDetail.Select("div.cao_entry_header header h1").First().Text().Trim();
             if (string.IsNullOrWhiteSpace(title)) return null;
 
             // cover

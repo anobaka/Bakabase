@@ -28,7 +28,7 @@ public class Fc2ppvdbClient(IHttpClientFactory httpClientFactory, ILoggerFactory
             try { html = await HttpClient.GetStringAsync(url); } catch { return null; }
             var doc = new CQ(html);
 
-            var title = doc.Select("h2 a").Text().Trim();
+            var title = doc.Select("h2 a").First().Text().Trim();
             if (string.IsNullOrWhiteSpace(title)) return null;
 
             var cover = doc.Select($"img[alt*='{normalized}']").Attr("src") ?? "";

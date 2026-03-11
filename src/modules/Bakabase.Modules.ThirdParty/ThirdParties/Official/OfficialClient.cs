@@ -37,7 +37,7 @@ public class OfficialClient(IHttpClientFactory httpClientFactory, ILoggerFactory
 
             var html = await HttpClient.GetStringAsync(realUrl);
             var cq = new CQ(html);
-            var title = cq["h2.p-workPage__title"].Text().Trim();
+            var title = cq["h2.p-workPage__title"].First().Text().Trim();
             if (string.IsNullOrEmpty(title)) return null;
             var outline = cq["p.p-workPage__text"].Text().Trim();
             var actor = string.Join(",", cq["a.c-tag.c-main-bg-hover.c-main-font.c-main-bd[href*='/actress/']"].Select(a => a.InnerText).Select(x => x.Trim()));

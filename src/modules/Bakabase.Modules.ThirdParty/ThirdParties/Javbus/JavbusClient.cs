@@ -32,7 +32,7 @@ public class JavbusClient(IHttpClientFactory httpClientFactory, ILoggerFactory l
             }
 
             var cq = new CQ(html);
-            var title = cq["h3"].Text().Trim();
+            var title = cq["h3"].First().Text().Trim();
             if (string.IsNullOrEmpty(title))
             {
                 return null;

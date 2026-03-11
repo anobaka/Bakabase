@@ -146,7 +146,7 @@ public class AvsoxClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetTitle(CQ html)
     {
-        return html["div.container h3"].Text();
+        return html["div.container h3"].First().Text();
     }
 
     private static string GetCover(CQ html)

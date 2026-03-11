@@ -138,7 +138,7 @@ public class AvsexClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
 
     private static string GetTitle(CQ html)
     {
-        var result = html["span.truncate.p-2.text-primary.font-bold.dark\\:text-primary-200"].Text();
+        var result = html["span.truncate.p-2.text-primary.font-bold.dark\\:text-primary-200"].First().Text();
         
         var replaceList = new[]
         {
