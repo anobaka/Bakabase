@@ -14,7 +14,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers;
 
 [Route("~/steam-app")]
-public class SteamAppController(ISteamAppService service, BTaskManager btm, IBakabaseLocalizer localizer) : Controller
+public class SteamAppController(ISteamAppService service, BTaskManager btm, IBakabaseLocalizer localizer, IPathMarkSyncService pathMarkSyncService) : Controller
 {
     public const string SyncTaskId = "SyncSteam";
 
@@ -72,6 +72,9 @@ public class SteamAppController(ISteamAppService service, BTaskManager btm, IBak
                         });
                     },
                     args.CancellationToken);
+
+                // Enqueue resource sync for Steam source after API sync completes
+                await pathMarkSyncService.EnqueueSync(ResourceSource.Steam);
             },
             Type = BTaskType.Any,
             ResourceType = BTaskResourceType.Any,

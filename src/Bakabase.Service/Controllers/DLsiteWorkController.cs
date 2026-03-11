@@ -15,7 +15,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers;
 
 [Route("~/dlsite-work")]
-public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, IBakabaseLocalizer localizer)
+public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, IBakabaseLocalizer localizer, IPathMarkSyncService pathMarkSyncService)
     : Controller
 {
     public const string SyncTaskId = "SyncDLsite";
@@ -68,6 +68,9 @@ public class DLsiteWorkController(IDLsiteWorkService service, BTaskManager btm, 
                         });
                     },
                     args.CancellationToken);
+
+                // Enqueue resource sync for DLsite source after API sync completes
+                await pathMarkSyncService.EnqueueSync(ResourceSource.DLsite);
             },
             Type = BTaskType.Any,
             ResourceType = BTaskResourceType.Any,

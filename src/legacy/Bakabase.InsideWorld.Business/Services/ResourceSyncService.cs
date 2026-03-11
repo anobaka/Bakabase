@@ -318,8 +318,19 @@ public class ResourceSyncService : ScopedService
         // Check if resource already exists by path
         if (ctx.PathToResource.TryGetValue(entry.EffectivePath, out var existingByPath))
         {
-            EnsureSourceLink(existingByPath, entry.Source, entry.SourceKey);
-            return existingByPath;
+            // Check for conflicting source links: same source but different key means they are different resources
+            if (HasConflictingSourceLink(existingByPath, entry.Source, entry.SourceKey, ctx))
+            {
+                // Cannot merge - same source with different key indicates a different resource
+                _logger.LogDebug(
+                    "[ResourceSync] Path {Path} matched existing resource {ResourceId} but has conflicting source link ({Source}), creating new resource",
+                    entry.EffectivePath, existingByPath.Id, entry.Source);
+            }
+            else
+            {
+                EnsureSourceLink(existingByPath, entry.Source, entry.SourceKey);
+                return existingByPath;
+            }
         }
 
         // Check if resource exists by source link
@@ -605,6 +616,25 @@ public class ResourceSyncService : ScopedService
         {
             resource.SourceLinks.Add(new ResourceSourceLink { Source = source, SourceKey = sourceKey });
         }
+    }
+
+    /// <summary>
+    /// Checks if the existing resource has a source link with the same source but a different key.
+    /// This indicates they are different resources from the same source and should NOT be merged.
+    /// </summary>
+    private static bool HasConflictingSourceLink(Resource existingResource, ResourceSource newSource, string newSourceKey, ResourceSyncContext ctx)
+    {
+        if (!ctx.ResourceIdToSourceLinks.TryGetValue(existingResource.Id, out var existingLinks))
+        {
+            // Also check in-memory source links (for newly created resources not yet in ctx)
+            if (existingResource.SourceLinks != null)
+            {
+                return existingResource.SourceLinks.Any(l => l.Source == newSource && l.SourceKey != newSourceKey);
+            }
+            return false;
+        }
+
+        return existingLinks.Any(l => l.Source == newSource && l.SourceKey != newSourceKey);
     }
 
     private int? CheckBakabaseJsonMarkerSync(string path)

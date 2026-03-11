@@ -14,7 +14,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Bakabase.Service.Controllers;
 
 [Route("~/exhentai-gallery")]
-public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskManager btm, IBakabaseLocalizer localizer)
+public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskManager btm, IBakabaseLocalizer localizer, IPathMarkSyncService pathMarkSyncService)
     : Controller
 {
     public const string SyncTaskId = "SyncExHentai";
@@ -73,6 +73,9 @@ public class ExHentaiGalleryController(IExHentaiGalleryService service, BTaskMan
                         });
                     },
                     args.CancellationToken);
+
+                // Enqueue resource sync for ExHentai source after API sync completes
+                await pathMarkSyncService.EnqueueSync(ResourceSource.ExHentai);
             },
             Type = BTaskType.Any,
             ResourceType = BTaskResourceType.Any,
