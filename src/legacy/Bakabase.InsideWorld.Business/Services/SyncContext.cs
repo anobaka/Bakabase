@@ -25,6 +25,12 @@ internal class SyncContext
     // SourceKey -> Resource for non-FileSystem resources
     public Dictionary<string, Resource> SourceKeyToResource { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    // Source link index: (Source, SourceKey) -> ResourceId, built from ResourceSourceLinks table
+    public Dictionary<(ResourceSource Source, string SourceKey), int> SourceLinkToResourceId { get; } = new();
+
+    // ResourceId -> Set of source links, built from ResourceSourceLinks table
+    public Dictionary<int, HashSet<(ResourceSource Source, string SourceKey)>> ResourceIdToSourceLinks { get; } = new();
+
     // Caches for standardized paths
     public Dictionary<string, string> StandardizedPaths { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, string[]> PathSegments { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -126,12 +132,14 @@ internal class SyncContext
 
     #endregion
 
-    public void BuildIndexes()
+    public void BuildIndexes(List<ResourceSourceLink>? allSourceLinks = null)
     {
         PathToResource.Clear();
         ExistingPathSet.Clear();
         IdToResource.Clear();
         SourceKeyToResource.Clear();
+        SourceLinkToResourceId.Clear();
+        ResourceIdToSourceLinks.Clear();
 
         foreach (var resource in AllResources)
         {
@@ -147,6 +155,22 @@ internal class SyncContext
             if (resource.Source != ResourceSource.FileSystem && !string.IsNullOrEmpty(resource.SourceKey))
             {
                 SourceKeyToResource[resource.SourceKey] = resource;
+            }
+        }
+
+        // Build source link indexes
+        if (allSourceLinks != null)
+        {
+            foreach (var link in allSourceLinks)
+            {
+                SourceLinkToResourceId[(link.Source, link.SourceKey)] = link.ResourceId;
+
+                if (!ResourceIdToSourceLinks.TryGetValue(link.ResourceId, out var linkSet))
+                {
+                    linkSet = new HashSet<(ResourceSource Source, string SourceKey)>();
+                    ResourceIdToSourceLinks[link.ResourceId] = linkSet;
+                }
+                linkSet.Add((link.Source, link.SourceKey));
             }
         }
     }

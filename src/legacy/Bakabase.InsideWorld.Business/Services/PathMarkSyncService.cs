@@ -45,6 +45,7 @@ public class PathMarkSyncService : ScopedService
     private readonly ICustomPropertyValueService _customPropertyValueService;
     private readonly ICustomPropertyService _customPropertyService;
     private readonly IPathMarkEffectService _effectService;
+    private readonly IResourceSourceLinkService _sourceLinkService;
     private readonly IBOptions<ResourceOptions> _resourceOptions;
     private readonly IBakabaseLocalizer _localizer;
     private readonly ILogger<PathMarkSyncService> _logger;
@@ -60,6 +61,7 @@ public class PathMarkSyncService : ScopedService
         ICustomPropertyValueService customPropertyValueService,
         ICustomPropertyService customPropertyService,
         IPathMarkEffectService effectService,
+        IResourceSourceLinkService sourceLinkService,
         IBOptions<ResourceOptions> resourceOptions,
         IBakabaseLocalizer localizer,
         ILogger<PathMarkSyncService> logger,
@@ -72,6 +74,7 @@ public class PathMarkSyncService : ScopedService
         _customPropertyValueService = customPropertyValueService;
         _customPropertyService = customPropertyService;
         _effectService = effectService;
+        _sourceLinkService = sourceLinkService;
         _resourceOptions = resourceOptions;
         _localizer = localizer;
         _logger = logger;
@@ -133,9 +136,10 @@ public class PathMarkSyncService : ScopedService
                 return result;
             }
 
-            // Preload all resources
+            // Preload all resources and source links
             ctx.AllResources = await _resourceService.GetAll();
-            ctx.BuildIndexes();
+            var allSourceLinks = await _sourceLinkService.GetAll();
+            ctx.BuildIndexes(allSourceLinks);
 
             // Load old effects for diff calculation
             var allMarkIds = marks.Select(m => m.Id).ToList();
@@ -460,6 +464,19 @@ public class PathMarkSyncService : ScopedService
     internal static bool IsVirtualPath(string path)
     {
         return path.Contains("://");
+    }
+
+    /// <summary>
+    /// Ensures the resource has a source link entry for the given source+key in its SourceLinks list.
+    /// This is used during sync to supplement source links on existing resources.
+    /// </summary>
+    private static void EnsureSourceLinkOnResource(Resource resource, ResourceSource source, string sourceKey)
+    {
+        resource.SourceLinks ??= [];
+        if (!resource.SourceLinks.Any(l => l.Source == source && l.SourceKey == sourceKey))
+        {
+            resource.SourceLinks.Add(new ResourceSourceLink { Source = source, SourceKey = sourceKey });
+        }
     }
 
     /// <summary>
@@ -928,41 +945,83 @@ public class PathMarkSyncService : ScopedService
             // Check if this is a resolver-discovered resource with a virtual path
             var isVirtual = IsVirtualPath(path);
 
-            // If resource already exists, no need to create
+            // Determine the source link for this discovered resource
+            ResourceSource discoveredSource;
+            string discoveredSourceKey;
+            ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolvedMeta);
+            if (isVirtual && resolvedMeta != null)
+            {
+                discoveredSource = resolvedMeta.Source;
+                discoveredSourceKey = resolvedMeta.SourceKey;
+            }
+            else
+            {
+                discoveredSource = ResourceSource.FileSystem;
+                discoveredSourceKey = path;
+            }
+
+            // If resource already exists by path, check if we need to supplement source links
             if (ctx.ExistingPathSet.Contains(path))
             {
                 if (!isVirtual)
                 {
-                    // But check for bakabase.json marker for path recovery
+                    // Check for bakabase.json marker for path recovery
                     var existingResourceId = await CheckBakabaseJsonMarker(path);
                     if (existingResourceId.HasValue && ctx.IdToResource.TryGetValue(existingResourceId.Value, out var existingResource))
                     {
                         if (!existingResource.Path!.Equals(path, StringComparison.OrdinalIgnoreCase))
                         {
-                            // Resource exists but path changed - update it
                             existingResource.Path = path;
                             existingResource.UpdatedAt = DateTime.Now;
                             ctx.ResourcesToCreate[path] = existingResource;
                         }
                     }
                 }
+
+                // Supplement source link for the existing resource at this path
+                if (ctx.PathToResource.TryGetValue(path, out var pathResource))
+                {
+                    EnsureSourceLinkOnResource(pathResource, discoveredSource, discoveredSourceKey);
+                    // Mark for update so AddOrPutRange will call EnsureLinks
+                    if (!ctx.ResourcesToCreate.ContainsKey(path))
+                    {
+                        ctx.ResourcesToCreate[path] = pathResource;
+                    }
+                }
+
                 continue;
             }
 
-            // For resolver-discovered resources, check if already exists by SourceKey
+            // Check source link index: does an existing resource already have this (Source, SourceKey)?
+            if (ctx.SourceLinkToResourceId.TryGetValue((discoveredSource, discoveredSourceKey), out var linkedResourceId)
+                && ctx.IdToResource.TryGetValue(linkedResourceId, out var linkedResource))
+            {
+                // Found an existing resource via source link match - update path if changed
+                var newPath = isVirtual ? resolvedMeta?.Path : path;
+                if (newPath != linkedResource.Path)
+                {
+                    linkedResource.Path = newPath;
+                    linkedResource.UpdatedAt = DateTime.Now;
+                }
+                EnsureSourceLinkOnResource(linkedResource, discoveredSource, discoveredSourceKey);
+                ctx.ResourcesToCreate[path] = linkedResource;
+                continue;
+            }
+
+            // Legacy fallback: For resolver-discovered resources, check by SourceKey
             if (isVirtual && ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolvedResource))
             {
                 if (ctx.SourceKeyToResource.ContainsKey(resolvedResource.SourceKey))
                 {
-                    // Resource already exists by SourceKey - update path if changed
                     var existing = ctx.SourceKeyToResource[resolvedResource.SourceKey];
                     var newPath = resolvedResource.Path;
                     if (newPath != existing.Path)
                     {
                         existing.Path = newPath;
                         existing.UpdatedAt = DateTime.Now;
-                        ctx.ResourcesToCreate[path] = existing;
                     }
+                    EnsureSourceLinkOnResource(existing, discoveredSource, discoveredSourceKey);
+                    ctx.ResourcesToCreate[path] = existing;
                     continue;
                 }
             }
@@ -975,6 +1034,7 @@ public class PathMarkSyncService : ScopedService
                 {
                     markerResource.Path = path;
                     markerResource.UpdatedAt = DateTime.Now;
+                    EnsureSourceLinkOnResource(markerResource, discoveredSource, discoveredSourceKey);
                     ctx.ResourcesToCreate[path] = markerResource;
                     continue;
                 }
@@ -983,12 +1043,11 @@ public class PathMarkSyncService : ScopedService
             // Need to create new resource
             if (isVirtual)
             {
-                // Virtual path - create resource from resolver data
                 if (!ctx.ResolverDiscoveredResources.TryGetValue(path, out var resolved)) continue;
 
                 var resource = new Resource
                 {
-                    Path = resolved.Path, // May be null for uninstalled games, etc.
+                    Path = resolved.Path,
                     IsFile = false,
                     Source = resolved.Source,
                     Status = ResourceStatus.Active,
@@ -999,14 +1058,14 @@ public class PathMarkSyncService : ScopedService
                     FileCreatedAt = DateTime.Now,
                     FileModifiedAt = DateTime.Now,
                     CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    UpdatedAt = DateTime.Now,
+                    SourceLinks = [new ResourceSourceLink { Source = resolved.Source, SourceKey = resolved.SourceKey }]
                 };
 
                 ctx.ResourcesToCreate[path] = resource;
             }
             else
             {
-                // Filesystem path - existing logic
                 var isFile = File.Exists(path);
                 var isDirectory = Directory.Exists(path);
 
@@ -1038,7 +1097,8 @@ public class PathMarkSyncService : ScopedService
                     FileCreatedAt = fileCreatedAt,
                     FileModifiedAt = fileModifiedAt,
                     CreatedAt = DateTime.Now,
-                    UpdatedAt = DateTime.Now
+                    UpdatedAt = DateTime.Now,
+                    SourceLinks = [new ResourceSourceLink { Source = ResourceSource.FileSystem, SourceKey = path }]
                 };
 
                 ctx.ResourcesToCreate[path] = resource;
