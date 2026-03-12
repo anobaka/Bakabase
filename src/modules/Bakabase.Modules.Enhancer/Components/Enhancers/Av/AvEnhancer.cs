@@ -298,7 +298,7 @@ public class AvEnhancer(
                     AddStringEnhancement(context.Details, d => d.OriginalTitle, target, enhancements);
                     break;
                 case AvEnhancerTarget.Actor:
-                    AddStringEnhancement(context.Details, d => d.Actor, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Actor?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Tags:
                     AddListStringEnhancement(context.Details, d => d.Tag?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
@@ -313,16 +313,16 @@ public class AvEnhancer(
                     AddStringEnhancement(context.Details, d => d.Studio, target, enhancements);
                     break;
                 case AvEnhancerTarget.Publisher:
-                    AddStringEnhancement(context.Details, d => d.Publisher, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Publisher?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Series:
-                    AddStringEnhancement(context.Details, d => d.Series, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Series?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Runtime:
                     AddStringEnhancement(context.Details, d => d.Runtime, target, enhancements);
                     break;
                 case AvEnhancerTarget.Director:
-                    AddStringEnhancement(context.Details, d => d.Director, target, enhancements);
+                    AddListStringEnhancement(context.Details, d => d.Director?.Split(',', StringSplitOptions.RemoveEmptyEntries), target, enhancements);
                     break;
                 case AvEnhancerTarget.Source:
                     AddStringEnhancement(context.Details, d => d.Source, target, enhancements);
@@ -411,7 +411,7 @@ public class AvEnhancer(
     private static void AddListStringEnhancement(List<IAvDetail> details, Func<IAvDetail, string[]?> selector,
         AvEnhancerTarget target, List<EnhancementTargetValue<AvEnhancerTarget>> enhancements)
     {
-        var values = details.SelectMany(d => selector(d) ?? []).Distinct().Where(v => !string.IsNullOrEmpty(v)).ToList();
+        var values = details.SelectMany(d => selector(d) ?? []).Select(v => v.Trim()).Where(v => !string.IsNullOrEmpty(v)).Distinct().ToList();
         if (values.Any())
         {
             enhancements.Add(new EnhancementTargetValue<AvEnhancerTarget>(target, null,
