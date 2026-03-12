@@ -432,6 +432,41 @@ export function extractEnhancerLevelConfigs(
   return result;
 }
 
+/** Get the set of groups that cover all enabled enhancers in source states */
+export function getGroupsForEnabledEnhancers(
+  sourceStates: Map<string, SourceState>
+): Set<PropertyGroup> {
+  // Collect enhancer IDs that have at least one enabled source
+  const enabledEnhancerIds = new Set<EnhancerId>();
+  for (const [, state] of sourceStates) {
+    if (state.enabled) {
+      enabledEnhancerIds.add(state.enhancerId);
+    }
+  }
+
+  if (enabledEnhancerIds.size === 0) {
+    return new Set([PropertyGroup.General]);
+  }
+
+  // For each enabled enhancer, find the first group that contains it
+  const groups = new Set<PropertyGroup>();
+  for (const enhancerId of enabledEnhancerIds) {
+    for (const group of groupOrder) {
+      if (groupEnhancerMap[group].includes(enhancerId)) {
+        groups.add(group);
+        break;
+      }
+    }
+  }
+
+  // Fallback to General if no groups found
+  if (groups.size === 0) {
+    groups.add(PropertyGroup.General);
+  }
+
+  return groups;
+}
+
 /** Check if an enhancer needs additional configuration */
 export function enhancerNeedsConfig(
   descriptor: EnhancerDescriptor,

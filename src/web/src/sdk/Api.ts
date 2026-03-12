@@ -9626,6 +9626,27 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
      * No description
      *
      * @tags Enhancement
+     * @name ValidateEnhancerConfiguration
+     * @request POST:/resource/{resourceId}/enhancement/validate
+     */
+    validateEnhancerConfiguration: (
+      resourceId: number,
+      data: BakabaseAbstractionsModelsDomainEnhancerFullOptions[],
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsBaseResponse, any>({
+        path: `/resource/${resourceId}/enhancement/validate`,
+        method: "POST",
+        body: data,
+        type: ContentType.Json,
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Enhancement
      * @name ApplyEnhancementContextDataForResourceByEnhancer
      * @request POST:/resource/{resourceId}/enhancer/{enhancerId}/enhancement/apply
      */

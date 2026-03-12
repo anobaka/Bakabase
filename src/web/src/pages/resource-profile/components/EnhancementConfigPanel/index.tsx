@@ -8,6 +8,7 @@ import type { BakabaseAbstractionsModelsDomainEnhancerFullOptions } from "@/sdk/
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { AiOutlineSetting, AiOutlineWarning, AiOutlineInfoCircle } from "react-icons/ai";
+import { ExperimentOutlined } from "@ant-design/icons";
 
 import {
   buildSourceStates,
@@ -24,6 +25,7 @@ import {
   sourceKey,
   groupOrder,
   PropertyGroup,
+  getGroupsForEnabledEnhancers,
 } from "./utils";
 import type { PropertyRow, SourceState } from "./utils";
 
@@ -54,6 +56,7 @@ import PropertyTypeIcon from "@/components/Property/components/PropertyTypeIcon"
 import PropertyMatcher from "@/components/PropertyMatcher";
 import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContextProvider";
 import EnhancerOptionsModal from "@/components/EnhancerSelectorV2/components/EnhancerOptionsModal";
+import EnhancerValidationModal from "./EnhancerValidationModal";
 
 type ApiEnhancerOptions = BakabaseAbstractionsModelsDomainEnhancerFullOptions;
 
@@ -82,6 +85,9 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       const states = buildSourceStates(descs, existingConfig);
       setSourceStates(states);
       setEnhancerLevelConfigs(extractEnhancerLevelConfigs(existingConfig));
+
+      // Auto-select groups that contain already-configured enhancers
+      setSelectedGroups(getGroupsForEnabledEnhancers(states));
 
       // Load bound properties into cache
       const propertyIds = new Map<PropertyPool, Set<number>>();
@@ -352,9 +358,24 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
     });
   };
 
+  const getCurrentOptions = useCallback(() => {
+    return convertStatesToEnhancerOptions(sourceStates, enhancerLevelConfigs);
+  }, [sourceStates, enhancerLevelConfigs]);
+
   const handleSubmit = () => {
-    const result = convertStatesToEnhancerOptions(sourceStates, enhancerLevelConfigs);
+    const result = getCurrentOptions();
     onSubmit?.(result);
+    onDestroyed?.();
+  };
+
+  const handleValidate = () => {
+    const currentOptions = getCurrentOptions();
+    if (currentOptions.length === 0) {
+      return;
+    }
+    createPortal(EnhancerValidationModal, {
+      enhancerOptions: currentOptions,
+    });
   };
 
   // Stats for select-all checkbox across all selected groups
@@ -501,7 +522,33 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       size="7xl"
       title={t<string>("enhancementConfig.title")}
       onDestroyed={onDestroyed}
-      onOk={handleSubmit}
+      footer={(
+        <div className="flex justify-between items-center w-full">
+          <Button
+            color="secondary"
+            variant="flat"
+            startContent={<ExperimentOutlined />}
+            onPress={handleValidate}
+          >
+            {t<string>("enhancementConfig.validation.action")}
+          </Button>
+          <div className="flex gap-2">
+            <Button
+              color="default"
+              variant="light"
+              onPress={() => onDestroyed?.()}
+            >
+              {t<string>("common.action.cancel")}
+            </Button>
+            <Button
+              color="primary"
+              onPress={handleSubmit}
+            >
+              {t<string>("common.action.confirm")}
+            </Button>
+          </div>
+        </div>
+      )}
     >
       <div className="flex flex-col" style={{ height: "70vh" }}>
         {/* ─── Intro tip ─── */}

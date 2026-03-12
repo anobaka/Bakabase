@@ -184,6 +184,15 @@
   "enhancementConfig.introStep2": "Check the data sources (enhancers) for each property — select multiple for fallback",
   "enhancementConfig.introStep3": "Bind properties to make enhanced data visible on resources",
 
+  "enhancementConfig.validation.action": "Validate Configuration",
+  "enhancementConfig.validation.title": "Enhancer Configuration Validation",
+  "enhancementConfig.validation.description": "Select a resource to validate the current enhancer configuration. The validation will run enhancement on the selected resource using the current configuration, and you can view the results.",
+  "enhancementConfig.validation.selectResource": "Select Resource",
+  "enhancementConfig.validation.changeResource": "Change Resource",
+  "enhancementConfig.validation.validate": "Validate",
+  "enhancementConfig.validation.running": "Running enhancement validation...",
+  "enhancementConfig.validation.failed": "Validation failed",
+
   "resourceProfile.propertyPool.title": "Property Pool Configuration",
   "resourceProfile.propertyPool.description": "Configure which properties should be displayed for resources matching this profile, and the value display priority for each property.",
   "resourceProfile.propertyPool.addProperty": "Add Property",
