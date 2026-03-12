@@ -184,6 +184,15 @@
   "enhancementConfig.introStep2": "勾选属性的数据来源（增强器），可勾选多个以防某些数据源失效",
   "enhancementConfig.introStep3": "将属性绑定到系统属性，使增强后的数据可见",
 
+  "enhancementConfig.validation.action": "验证配置",
+  "enhancementConfig.validation.title": "增强器配置验证",
+  "enhancementConfig.validation.description": "选择一个资源来验证当前的增强器配置。验证将使用当前配置对所选资源执行增强，您可以查看增强结果。",
+  "enhancementConfig.validation.selectResource": "选择资源",
+  "enhancementConfig.validation.changeResource": "更换资源",
+  "enhancementConfig.validation.validate": "验证",
+  "enhancementConfig.validation.running": "正在执行增强验证...",
+  "enhancementConfig.validation.failed": "验证失败",
+
   "resourceProfile.propertyPool.title": "属性池配置",
   "resourceProfile.propertyPool.description": "配置匹配此方案的资源应显示哪些属性，以及每个属性的值展示优先级。",
   "resourceProfile.propertyPool.addProperty": "添加属性",
