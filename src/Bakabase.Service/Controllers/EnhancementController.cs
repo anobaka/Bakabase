@@ -131,6 +131,21 @@ namespace Bakabase.Service.Controllers
             return BaseResponseBuilder.Ok;
         }
 
+        [HttpPost("~/resource/{resourceId:int}/enhancement/validate")]
+        [SwaggerOperation(OperationId = "ValidateEnhancerConfiguration")]
+        public async Task<BaseResponse> ValidateEnhancerConfiguration(int resourceId,
+            [FromBody] List<Bakabase.Abstractions.Models.Domain.EnhancerFullOptions> enhancerOptions)
+        {
+            var resource = await resourceService.Get(resourceId, ResourceAdditionalItem.None);
+            if (resource == null)
+            {
+                return BaseResponseBuilder.NotFound;
+            }
+
+            await enhancerService.EnhanceResourceWithOptions(resourceId, enhancerOptions, CancellationToken.None);
+            return BaseResponseBuilder.Ok;
+        }
+
         [HttpDelete("~/media-library/{mediaLibraryId:int}/enhancement")]
         [SwaggerOperation(OperationId = "DeleteByEnhancementsMediaLibrary")]
         public async Task<BaseResponse> DeleteMediaLibraryEnhancementRecords(int mediaLibraryId, bool deleteEmptyOnly)

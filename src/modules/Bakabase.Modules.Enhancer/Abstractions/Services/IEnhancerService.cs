@@ -16,6 +16,7 @@ public interface IEnhancerService
     Task ReapplyEnhancementsByResources(int[] resourceIds, int[] enhancerIds, CancellationToken ct);
     Task ReapplyEnhancementsByResources(Dictionary<int, int[]> resourceIdsEnhancerIdsMap, CancellationToken ct);
     Task Enhance(Resource resource, Dictionary<int, EnhancerFullOptions> optionsMap);
+    Task EnhanceResourceWithOptions(int resourceId, List<EnhancerFullOptions> enhancerOptionsList, CancellationToken ct);
     Task ApplyEnhancementsToResources(Dictionary<int, HashSet<int>> resourceIdEnhancerIdsMap,
         List<Enhancement> enhancements, CancellationToken ct);
 }

@@ -851,6 +851,78 @@ namespace Bakabase.Modules.Enhancer.Services
             }
         }
 
+        public async Task EnhanceResourceWithOptions(int resourceId, List<EnhancerFullOptions> enhancerOptionsList, CancellationToken ct)
+        {
+            var resource = (await _resourceService.Get(resourceId, ResourceAdditionalItem.All))!;
+
+            foreach (var options in enhancerOptionsList)
+            {
+                var enhancerId = options.EnhancerId;
+                var enhancer = _enhancers.GetValueOrDefault(enhancerId);
+                if (enhancer == null) continue;
+
+                // Delete existing enhancement data for this resource + enhancer
+                await _enhancementService.RemoveAll(x => x.ResourceId == resourceId && x.EnhancerId == enhancerId, true);
+                await _enhancementRecordService.DeleteAll(t => t.ResourceId == resourceId && t.EnhancerId == enhancerId);
+
+                var logCollector = new EnhancementLogCollector();
+                string? errorMessage = null;
+                List<Enhancement>? enhancements = null;
+                List<EnhancementLog>? logs = null;
+
+                try
+                {
+                    var result = await enhancer.CreateEnhancements(resource, options, logCollector, ct);
+                    logs = result?.Logs;
+                    errorMessage = result?.ErrorMessage;
+
+                    if (result?.Values != null)
+                    {
+                        await RunPostProcessorAsync(result.Values, options, resourceId, enhancerId, ct);
+
+                        enhancements = result.Values.Any()
+                            ? result.Values.Select(v => new Enhancement
+                            {
+                                Target = v.Target,
+                                EnhancerId = enhancerId,
+                                ResourceId = resourceId,
+                                Value = v.Value,
+                                ValueType = v.ValueType,
+                                DynamicTarget = v.DynamicTarget
+                            }).ToList()!
+                            : [];
+                    }
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = ex.Message;
+                    logs = logCollector.Logs;
+                }
+
+                enhancements ??= [];
+                if (enhancements.Any())
+                {
+                    await _enhancementService.AddRange(enhancements);
+                }
+
+                var record = new EnhancementRecord
+                {
+                    EnhancerId = enhancerId,
+                    ResourceId = resourceId,
+                    ContextCreatedAt = DateTime.Now,
+                    Status = EnhancementRecordStatus.ContextCreated,
+                    Logs = logs,
+                    OptionsSnapshot = options,
+                    ErrorMessage = errorMessage
+                };
+                await _enhancementRecordService.Add(record);
+
+                // Apply enhancements
+                await ApplyEnhancementsToResources(
+                    new Dictionary<int, HashSet<int>> { { resourceId, [enhancerId] } }, enhancements, ct);
+            }
+        }
+
         private async Task RunPostProcessorAsync(
             List<EnhancementRawValue> values,
             EnhancerFullOptions options,
