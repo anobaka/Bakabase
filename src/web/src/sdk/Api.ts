@@ -2099,7 +2099,8 @@ export interface BakabaseInsideWorldModelsConfigsUIOptionsUIResourceOptions {
   colCount: number;
   showBiggerCoverWhileHover: boolean;
   disableMediaPreviewer: boolean;
-  disableCache: boolean;
+  disableCoverCache: boolean;
+  disablePlayableFileCache: boolean;
   /** [1: Contain, 2: Cover] */
   coverFit: BakabaseInsideWorldModelsConstantsCoverFit;
   disableCoverCarousel: boolean;
@@ -4386,6 +4387,13 @@ export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstract
   code: number;
   message?: string;
   data?: BakabaseAbstractionsModelsDomainPathConfigurationTestResult;
+}
+
+export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache {
+  /** @format int32 */
+  code: number;
+  message?: string;
+  data?: BakabaseAbstractionsModelsDomainResourceCache;
 }
 
 export interface BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainPathMark {
@@ -7602,6 +7610,24 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
       this.request<BootstrapModelsResponseModelsBaseResponse, any>({
         path: `/cache/unassociated/type/${type}`,
         method: "DELETE",
+        format: "json",
+        ...params,
+      }),
+
+    /**
+     * No description
+     *
+     * @tags Cache
+     * @name RefreshResourceCache
+     * @request POST:/cache/resource/{resourceId}/refresh
+     */
+    refreshResourceCache: (
+      resourceId: number,
+      params: RequestParams = {},
+    ) =>
+      this.request<BootstrapModelsResponseModelsSingletonResponse1BakabaseAbstractionsModelsDomainResourceCache, any>({
+        path: `/cache/resource/${resourceId}/refresh`,
+        method: "POST",
         format: "json",
         ...params,
       }),

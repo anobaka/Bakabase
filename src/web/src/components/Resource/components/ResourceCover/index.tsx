@@ -63,9 +63,9 @@ const ResourceCover = React.forwardRef((props: Props, ref) => {
 
   const forceUpdate = useUpdate();
 
-  // Get cache enabled status from UI options
+  // Get cover cache enabled status from UI options
   const resourceUiOptions = useUiOptionsStore((state) => state.data?.resource);
-  const cacheEnabled = !resourceUiOptions?.disableCache;
+  const cacheEnabled = !resourceUiOptions?.disableCoverCache;
 
   // Use SSE-based discovery for covers
   const discoveryState = useCoverDiscovery(resource, cacheEnabled);

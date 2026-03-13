@@ -6658,7 +6658,8 @@ export interface components {
             colCount: number;
             showBiggerCoverWhileHover: boolean;
             disableMediaPreviewer: boolean;
-            disableCache: boolean;
+            disableCoverCache: boolean;
+            disablePlayableFileCache: boolean;
             coverFit: components["schemas"]["Bakabase.InsideWorld.Models.Constants.CoverFit"];
             disableCoverCarousel: boolean;
             displayResourceId: boolean;

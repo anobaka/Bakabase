@@ -47,7 +47,8 @@ namespace Bakabase.InsideWorld.Models.Configs
             public int ColCount { get; set; }
             public bool ShowBiggerCoverWhileHover { get; set; }
             public bool DisableMediaPreviewer { get; set; }
-            public bool DisableCache { get; set; }
+            public bool DisableCoverCache { get; set; }
+            public bool DisablePlayableFileCache { get; set; }
             public CoverFit CoverFit { get; set; } = CoverFit.Contain;
             public bool DisableCoverCarousel { get; set; }
             public bool DisplayResourceId { get; set; }

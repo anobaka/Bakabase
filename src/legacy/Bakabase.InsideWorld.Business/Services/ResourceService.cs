@@ -93,6 +93,7 @@ namespace Bakabase.InsideWorld.Business.Services
         private readonly LogService _logService;
         private readonly IResourceLegacySearchService _legacySearchService;
         private readonly IPrepareCacheTrigger _prepareCacheTrigger;
+        private readonly IBOptions<InsideWorld.Models.Configs.UIOptions> _uiOptions;
 
         /// <summary>
         /// Gets the ParallelOptions configured with the user's max parallelism setting.
@@ -116,7 +117,8 @@ namespace Bakabase.InsideWorld.Business.Services
             IFileManager fileManager, IPlayHistoryService playHistoryService,
             ISystemPlayer systemPlayer, IPropertyLocalizer propertyLocalizer, LogService logService,
             IResourceLegacySearchService legacySearchService,
-            IPrepareCacheTrigger prepareCacheTrigger) : base(serviceProvider)
+            IPrepareCacheTrigger prepareCacheTrigger,
+            IBOptions<InsideWorld.Models.Configs.UIOptions> uiOptions) : base(serviceProvider)
         {
             _specialTextService = specialTextService;
             _aliasService = aliasService;
@@ -138,6 +140,7 @@ namespace Bakabase.InsideWorld.Business.Services
             _logService = logService;
             _legacySearchService = legacySearchService;
             _prepareCacheTrigger = prepareCacheTrigger;
+            _uiOptions = uiOptions;
             _orm = orm;
         }
 
@@ -1124,14 +1127,21 @@ namespace Bakabase.InsideWorld.Business.Services
             await _resourceCacheOrm.RemoveRange(badCaches);
             _resourceCacheOrm.DbContext.DetachAll(caches.Concat(newCaches));
 
-            // Calculate fullCacheType based on KeepResourcesOnPathChange option
-            // When enabled: include ResourceMarkers (resources should have markers)
-            // When disabled: exclude ResourceMarkers (resources should not have markers)
+            // Calculate fullCacheType based on options
             var keepResourcesOnPathChange = _optionsManager.Value.KeepResourcesOnPathChange;
+            var uiResourceOptions = _uiOptions.Value.Resource;
             var fullCacheType = (ResourceCacheType)SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int)x);
             if (!keepResourcesOnPathChange)
             {
                 fullCacheType &= ~ResourceCacheType.ResourceMarkers;
+            }
+            if (uiResourceOptions.DisableCoverCache)
+            {
+                fullCacheType &= ~ResourceCacheType.Covers;
+            }
+            if (uiResourceOptions.DisablePlayableFileCache)
+            {
+                fullCacheType &= ~ResourceCacheType.PlayableFiles;
             }
 
             var percentage = 0m;
@@ -1164,11 +1174,20 @@ namespace Bakabase.InsideWorld.Business.Services
 
                 // Re-check option state at each iteration (user might toggle during long operation)
                 var currentKeepResourcesOnPathChange = _optionsManager.Value.KeepResourcesOnPathChange;
+                var currentUiResourceOptions = _uiOptions.Value.Resource;
                 var currentFullCacheType =
                     (ResourceCacheType)SpecificEnumUtils<ResourceCacheType>.Values.Sum(x => (int)x);
                 if (!currentKeepResourcesOnPathChange)
                 {
                     currentFullCacheType &= ~ResourceCacheType.ResourceMarkers;
+                }
+                if (currentUiResourceOptions.DisableCoverCache)
+                {
+                    currentFullCacheType &= ~ResourceCacheType.Covers;
+                }
+                if (currentUiResourceOptions.DisablePlayableFileCache)
+                {
+                    currentFullCacheType &= ~ResourceCacheType.PlayableFiles;
                 }
 
                 try
@@ -1657,6 +1676,79 @@ namespace Bakabase.InsideWorld.Business.Services
             await _resourceCacheOrm.UpdateAll(c => unassociatedResourceIds.Contains(c.ResourceId),
                 x => { x.CachedTypes &= ~type; });
             _prepareCacheTrigger.RequestTrigger();
+        }
+
+        public async Task<ResourceCache?> RefreshResourceCache(int resourceId, CancellationToken ct)
+        {
+            var resource = await Get(resourceId, ResourceAdditionalItem.None);
+            if (resource == null) return null;
+
+            // Clear existing cache
+            var cache = await _resourceCacheOrm.GetByKey(resourceId, true);
+            var isNew = cache == null;
+            cache ??= new ResourceCacheDbModel { ResourceId = resourceId };
+
+            var uiResource = _uiOptions.Value.Resource;
+
+            // Refresh covers if enabled
+            if (!uiResource.DisableCoverCache)
+            {
+                cache.CoverPaths = null;
+                cache.CachedTypes &= ~ResourceCacheType.Covers;
+
+                // Check for existing covers from ReservedPropertyValue first
+                var existingCovers = (await _reservedPropertyValueService.GetAll(
+                        x => x.ResourceId == resourceId && x.CoverPaths != null && x.CoverPaths.Any()))
+                    .OrderBy(x => x.Scope)
+                    .FirstOrDefault()?.CoverPaths;
+
+                if (existingCovers?.Any() == true)
+                {
+                    cache.CoverPaths = new ListStringValueBuilder(existingCovers).Value
+                        ?.SerializeAsStandardValue(StandardValueType.ListString);
+                }
+                else
+                {
+                    var coverPath = await DiscoverAndCacheCover(resourceId, ct);
+                    cache.CoverPaths = coverPath.IsNotEmpty()
+                        ? new ListStringValueBuilder([coverPath]).Value
+                            ?.SerializeAsStandardValue(StandardValueType.ListString)
+                        : null;
+                }
+
+                cache.CachedTypes |= ResourceCacheType.Covers;
+            }
+
+            // Refresh playable files if enabled
+            if (!uiResource.DisablePlayableFileCache)
+            {
+                cache.PlayableFilePaths = null;
+                cache.HasMorePlayableFiles = false;
+                cache.CachedTypes &= ~ResourceCacheType.PlayableFiles;
+
+                await DiscoverAndCachePlayableFiles(resourceId, ct);
+
+                // Re-read cache since DiscoverAndCachePlayableFiles updates it directly
+                var updatedCache = await _resourceCacheOrm.GetByKey(resourceId, false);
+                if (updatedCache != null)
+                {
+                    cache.PlayableFilePaths = updatedCache.PlayableFilePaths;
+                    cache.HasMorePlayableFiles = updatedCache.HasMorePlayableFiles;
+                }
+
+                cache.CachedTypes |= ResourceCacheType.PlayableFiles;
+            }
+
+            if (isNew)
+            {
+                await _resourceCacheOrm.Add(cache);
+            }
+            else
+            {
+                await _resourceCacheOrm.Update(cache);
+            }
+
+            return await GetResourceCache(resourceId);
         }
 
         public async Task MarkAsNotPlayed(int id)
