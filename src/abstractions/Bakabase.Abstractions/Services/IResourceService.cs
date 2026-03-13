@@ -102,6 +102,11 @@ public interface IResourceService
     Task DeleteResourceCacheByResourceIdsAndCacheType(IEnumerable<int> resourceIds, ResourceCacheType type);
     Task DeleteUnassociatedResourceCacheByCacheType(ResourceCacheType type);
 
+    /// <summary>
+    /// Clears cache for a resource and rebuilds it, respecting individual cache toggles.
+    /// </summary>
+    Task<ResourceCache?> RefreshResourceCache(int resourceId, CancellationToken ct);
+
     Task MarkAsNotPlayed(int id);
 
     Task<Resource[]> GetAllGeneratedByMediaLibraryV2(int[]? ids = null, ResourceAdditionalItem additionalItems = ResourceAdditionalItem.None);

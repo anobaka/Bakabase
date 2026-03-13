@@ -103,8 +103,8 @@ const PlayControl = forwardRef<PlayControlRef, Props>(function PlayControl(
   const uiOptionsStore = useUiOptionsStore();
   const resourceUiOptions = uiOptionsStore.data?.resource;
 
-  // Get cache enabled status from UI options
-  const cacheEnabled = !resourceUiOptions?.disableCache;
+  // Get playable file cache enabled status from UI options
+  const cacheEnabled = !resourceUiOptions?.disablePlayableFileCache;
 
   // Use SSE-based discovery for playable files
   const discoveryState = usePlayableFilesDiscovery(resource, cacheEnabled);

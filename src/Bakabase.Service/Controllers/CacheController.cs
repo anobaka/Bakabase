@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Models.Domain.Constants;
 using Bakabase.Abstractions.Models.View;
 using Bakabase.Abstractions.Services;
@@ -55,5 +57,13 @@ public class CacheController(IResourceService resourceService) : Controller
     {
         await resourceService.DeleteUnassociatedResourceCacheByCacheType(type);
         return BaseResponseBuilder.Ok;
+    }
+
+    [HttpPost("resource/{resourceId:int}/refresh")]
+    [SwaggerOperation(OperationId = "RefreshResourceCache")]
+    public async Task<SingletonResponse<ResourceCache>> RefreshResourceCache(int resourceId, CancellationToken ct)
+    {
+        var cache = await resourceService.RefreshResourceCache(resourceId, ct);
+        return new SingletonResponse<ResourceCache>(cache);
     }
 }

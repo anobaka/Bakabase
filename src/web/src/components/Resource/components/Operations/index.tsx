@@ -6,12 +6,14 @@ import type { BakabaseInsideWorldBusinessComponentsFileExplorerIwFsEntry } from 
 import type { MediaType } from "@/sdk/constants";
 
 import { useTranslation } from "react-i18next";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   FireOutlined,
   FolderOpenOutlined,
+  LoadingOutlined,
   ProductOutlined,
   PushpinOutlined,
+  ReloadOutlined,
   VideoCameraAddOutlined,
 } from "@ant-design/icons";
 import { AiOutlinePicture } from "react-icons/ai";
@@ -35,6 +37,23 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
   const { t } = useTranslation();
   const { createPortal, createWindow } = useBakabaseContext();
   const uiOptions = useUiOptionsStore((state) => state.data);
+  const [refreshingCache, setRefreshingCache] = useState(false);
+
+  const hasCacheData = (resource.cache?.cachedTypes?.length ?? 0) > 0;
+
+  const handleRefreshCache = async () => {
+    if (refreshingCache) return;
+    setRefreshingCache(true);
+    try {
+      const rsp = await BApi.cache.refreshResourceCache(resource.id);
+      if (!rsp.code) {
+        toast.success(t<string>("resource.action.refreshCache.success"));
+        await reload?.();
+      }
+    } finally {
+      setRefreshingCache(false);
+    }
+  };
 
   // Get displayOperations from options, default to ["aggregate"] for new users
   const displayOperations = useMemo(() => {
@@ -208,6 +227,21 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
       );
     }
 
+    if (hasCacheData) {
+      buttons.push(
+        <Button
+          key="refreshCache"
+          isIconOnly
+          size={"sm"}
+          title={t<string>("resource.action.refreshCache")}
+          isDisabled={refreshingCache}
+          onClick={handleRefreshCache}
+        >
+          {refreshingCache ? <LoadingOutlined className={"text-lg"} spin /> : <ReloadOutlined className={"text-lg"} />}
+        </Button>,
+      );
+    }
+
     // If no individual operations selected, show all buttons (default behavior)
     if (buttons.length === 0) {
       buttons.push(
@@ -289,6 +323,21 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
           <VideoCameraAddOutlined className={"text-lg"} />
         </Button>,
       );
+
+      if (hasCacheData) {
+        buttons.push(
+          <Button
+            key="refreshCache"
+            isIconOnly
+            size={"sm"}
+            title={t<string>("resource.action.refreshCache")}
+            isDisabled={refreshingCache}
+            onClick={handleRefreshCache}
+          >
+            {refreshingCache ? <LoadingOutlined className={"text-lg"} spin /> : <ReloadOutlined className={"text-lg"} />}
+          </Button>,
+        );
+      }
     }
 
     return (
@@ -408,6 +457,20 @@ const Operations = ({ resource, coverRef, reload }: IProps) => {
         }}
       >
         <VideoCameraAddOutlined className={iconClassName} />
+      </Button>,
+    );
+  }
+  if (hasCacheData) {
+    individualButtons.push(
+      <Button
+        key="refreshCache"
+        isIconOnly
+        className={buttonClassName}
+        title={t<string>("resource.action.refreshCache")}
+        isDisabled={refreshingCache}
+        onClick={handleRefreshCache}
+      >
+        {refreshingCache ? <LoadingOutlined className={iconClassName} spin /> : <ReloadOutlined className={iconClassName} />}
       </Button>,
     );
   }
