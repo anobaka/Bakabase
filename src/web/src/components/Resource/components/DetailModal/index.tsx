@@ -14,6 +14,7 @@ import {
   PlayCircleOutlined,
   ProfileOutlined,
   QuestionCircleOutlined,
+  ReloadOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
 import { MdCalendarMonth } from "react-icons/md";
@@ -45,6 +46,7 @@ import {
   Popover,
   Spinner,
   Tooltip,
+  toast,
 } from "@/components/bakaui";
 
 import type { DestroyableProps } from "@/components/bakaui/types";
@@ -75,6 +77,7 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
   const [loading, setLoading] = useState(!initialResource);
   const uiOptions = useUiOptionsStore((state) => state.data);
   const [columns, setColumns] = useLocalStorage<ColumnCount>(PROPERTIES_COLUMNS_KEY, 2);
+  const [refreshingCache, setRefreshingCache] = useState(false);
 
   const loadResource = async () => {
     // @ts-ignore
@@ -302,6 +305,34 @@ const DetailModal = ({ id, initialResource, onRemoved, ...props }: Props) => {
                           }}
                         >
                           <TiFlowChildren className="text-lg" />
+                        </Button>
+                      </Tooltip>
+                    )}
+                    {(resource.cache?.cachedTypes?.length ?? 0) > 0 && (
+                      <Tooltip content={t("resource.action.refreshCache.tooltip")}>
+                        <Button
+                          isIconOnly
+                          color="default"
+                          variant="light"
+                          isDisabled={refreshingCache}
+                          onPress={async () => {
+                            setRefreshingCache(true);
+                            try {
+                              const rsp = await BApi.cache.refreshResourceCache(resource.id);
+                              if (!rsp.code) {
+                                toast.success(t<string>("resource.action.refreshCache.success"));
+                                await loadResource();
+                              }
+                            } finally {
+                              setRefreshingCache(false);
+                            }
+                          }}
+                        >
+                          {refreshingCache ? (
+                            <LoadingOutlined className="text-lg" spin />
+                          ) : (
+                            <ReloadOutlined className="text-lg" />
+                          )}
                         </Button>
                       </Tooltip>
                     )}

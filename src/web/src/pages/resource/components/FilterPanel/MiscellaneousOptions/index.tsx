@@ -180,12 +180,22 @@ const MiscellaneousOptions = ({ rearrangeResources }: Props) => {
       <div className={"flex flex-col gap-1"}>
         <Checkbox
           size="sm"
-          isSelected={!resourceUiOptions?.disableCache}
-          onValueChange={(checked) => patchOptions({ disableCache: !checked })}
+          isSelected={!resourceUiOptions?.disableCoverCache}
+          onValueChange={(checked) => patchOptions({ disableCoverCache: !checked })}
         >
           <div className={"flex items-center gap-1"}>
             <DatabaseOutlined className={"text-base"} />
-            {t<string>("resource.display.useCache")}
+            {t<string>("resource.display.useCoverCache")}
+          </div>
+        </Checkbox>
+        <Checkbox
+          size="sm"
+          isSelected={!resourceUiOptions?.disablePlayableFileCache}
+          onValueChange={(checked) => patchOptions({ disablePlayableFileCache: !checked })}
+        >
+          <div className={"flex items-center gap-1"}>
+            <DatabaseOutlined className={"text-base"} />
+            {t<string>("resource.display.usePlayableFileCache")}
           </div>
         </Checkbox>
         <div>

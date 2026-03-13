@@ -21,7 +21,8 @@ public class PrepareCacheTask : AbstractPredefinedBTaskBuilder
     public override bool IsEnabled()
     {
         var uiOptions = ServiceProvider.GetRequiredService<IBOptions<UIOptions>>();
-        return !uiOptions.Value.Resource.DisableCache;
+        var resource = uiOptions.Value.Resource;
+        return !resource.DisableCoverCache || !resource.DisablePlayableFileCache;
     }
 
     public override Type[] WatchedOptionsTypes => [typeof(UIOptions)];
