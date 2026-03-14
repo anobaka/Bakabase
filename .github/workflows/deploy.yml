@@ -222,7 +222,7 @@ jobs:
 
       - name: Upload zip to OSS
         run: |
-          ./ossutil64 cp bakabase.zip oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/installer/bakabase.zip
+          ./ossutil64 cp bakabase.zip oss://anobaka-public/app/bakabase/inside-world/${{ needs.prepare.outputs.version }}/installer/win-x64/bakabase.zip
 
   deploy-docker:
     runs-on: ubuntu-latest
