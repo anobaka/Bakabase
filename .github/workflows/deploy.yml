@@ -32,9 +32,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup .NET for NBGV
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
       - name: Get NBGV version info
         id: nbvg
-        uses: dotnet/nbgv@master
+        uses: dotnet/nbgv@v0.4.2
         with:
           setAllVars: true
 
