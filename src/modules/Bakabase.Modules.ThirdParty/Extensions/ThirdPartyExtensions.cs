@@ -29,7 +29,6 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Freejavbt;
 using Bakabase.Modules.ThirdParty.ThirdParties.Getchu;
 using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl;
 using Bakabase.Modules.ThirdParty.ThirdParties.Giga;
-using Bakabase.Modules.ThirdParty.ThirdParties.Guochan;
 using Bakabase.Modules.ThirdParty.ThirdParties.Hdouban;
 using Bakabase.Modules.ThirdParty.ThirdParties.Hscangku;
 using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv;
@@ -132,7 +131,6 @@ public static class ThirdPartyExtensions
         services.TryAddSingleton<GetchuClient>();
         services.TryAddSingleton<GetchuDlClient>();
         services.TryAddSingleton<GigaClient>();
-        services.TryAddSingleton<GuochanClient>();
         services.TryAddSingleton<HdoubanClient>();
         services.TryAddSingleton<HscangkuClient>();
         services.TryAddSingleton<IqqtvClient>();

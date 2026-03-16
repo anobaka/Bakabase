@@ -180,11 +180,12 @@ const ConfigureEnhancerButton = ({
 type EmptyStateProps = {
   type: "no-profile" | "no-enhancements";
   enhancerName: string;
+  isLoading?: boolean;
   onConfigureClick?: () => void;
   onNavigateToProfiles?: () => void;
 };
 
-const EmptyState = ({ type, enhancerName, onConfigureClick, onNavigateToProfiles }: EmptyStateProps) => {
+const EmptyState = ({ type, enhancerName, isLoading, onConfigureClick, onNavigateToProfiles }: EmptyStateProps) => {
   const { t } = useTranslation();
 
   if (type === "no-profile") {
@@ -228,6 +229,7 @@ const EmptyState = ({ type, enhancerName, onConfigureClick, onNavigateToProfiles
         {onConfigureClick && (
           <Button
             color={"primary"}
+            isLoading={isLoading}
             variant={"flat"}
             onClick={onConfigureClick}
           >
@@ -557,12 +559,15 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                 <EmptyState
                   type="no-enhancements"
                   enhancerName={enhancer.name}
+                  isLoading={enhancing}
                   onConfigureClick={() => {
                     setEnhancing(true);
                     BApi.resource
                       .enhanceResourceByEnhancer(resourceId, enhancer.id)
                       .then(() => {
                         loadEnhancements();
+                      })
+                      .finally(() => {
                         setEnhancing(false);
                       });
                   }}
@@ -667,6 +672,8 @@ function ResourceEnhancementsModal({ resourceId, ...props }: Props) {
                           .enhanceResourceByEnhancer(resourceId, enhancer.id)
                           .then(() => {
                             loadEnhancements();
+                          })
+                          .finally(() => {
                             setEnhancing(false);
                           });
                       }}

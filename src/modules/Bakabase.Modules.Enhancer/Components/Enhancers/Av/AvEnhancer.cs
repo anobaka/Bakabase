@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Bakabase.Abstractions.Components.FileSystem;
 using Bakabase.Abstractions.Models.Domain;
 using Bakabase.Abstractions.Services;
@@ -28,7 +29,6 @@ using Bakabase.Modules.ThirdParty.ThirdParties.Freejavbt;
 using Bakabase.Modules.ThirdParty.ThirdParties.Getchu;
 using Bakabase.Modules.ThirdParty.ThirdParties.GetchuDl;
 using Bakabase.Modules.ThirdParty.ThirdParties.Giga;
-using Bakabase.Modules.ThirdParty.ThirdParties.Guochan;
 using Bakabase.Modules.ThirdParty.ThirdParties.Hdouban;
 using Bakabase.Modules.ThirdParty.ThirdParties.Hscangku;
 using Bakabase.Modules.ThirdParty.ThirdParties.Iqqtv;
@@ -77,7 +77,6 @@ public class AvEnhancer(
     GetchuClient getchuClient,
     GetchuDlClient getchuDlClient,
     GigaClient gigaClient,
-    GuochanClient guochanClient,
     HdoubanClient hdoubanClient,
     HscangkuClient hscangkuClient,
     IqqtvClient iqqtvClient,
@@ -110,8 +109,8 @@ public class AvEnhancer(
         try
         {
             logCollector.LogInfo(EnhancementLogEvent.HttpRequest,
-                $"Searching AV with keyword: {keyword} using 38 data sources",
-                new { Keyword = keyword, SourceCount = 38, Sources = new[] { "airav", "airavcc", "avsex", "avsox", "cableav", "cnmdb", "dmm", "dahlia", "fc2", "faleno", "fantastica", "fc2club", "fc2hub", "fc2ppvdb", "freejavbt", "getchu", "getchudl", "giga", "guochan", "hdouban", "hscangku", "iqqtv", "iqqtvnew", "jav321", "javbus", "javday", "javdb", "javlibrary", "kin8", "love6", "lulubar", "madouqu", "mdtv", "mgstage", "mmtv", "mywife", "official", "prestige", "theporndb", "theporndbmovies", "xcity" } });
+                $"Searching AV with keyword: {keyword} using 37 data sources",
+                new { Keyword = keyword, SourceCount = 37, Sources = new[] { "airav", "airavcc", "avsex", "avsox", "cableav", "cnmdb", "dmm", "dahlia", "fc2", "faleno", "fantastica", "fc2club", "fc2hub", "fc2ppvdb", "freejavbt", "getchu", "getchudl", "giga", "hdouban", "hscangku", "iqqtv", "iqqtvnew", "jav321", "javbus", "javday", "javdb", "javlibrary", "kin8", "love6", "lulubar", "madouqu", "mdtv", "mgstage", "mmtv", "mywife", "official", "prestige", "theporndb", "theporndbmovies", "xcity" } });
 
             var context = new AvEnhancerContext();
 
@@ -136,7 +135,6 @@ public class AvEnhancer(
                 { "getchu", (num, url) => getchuClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
                 { "getchudl", (num, url) => getchuDlClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
                 { "giga", (num, url) => gigaClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
-                { "guochan", (num, url) => guochanClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
                 { "hdouban", (num, url) => hdoubanClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
                 { "hscangku", (num, url) => hscangkuClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
                 { "iqqtv", (num, url) => iqqtvClient.SearchAndParseVideo(num, appointUrl: url).ContinueWith(t => (IAvDetail?)t.Result, ct) },
@@ -201,6 +199,45 @@ public class AvEnhancer(
                     FailedSourceCount = failedSources.Count,
                     Sources = context.Details.Select(d => new { Source = d.Source, SearchUrl = d.SearchUrl }).ToList()
                 });
+
+            // Dump per-source parsed results to a debug file for diagnosis
+            try
+            {
+                var perSourceData = context.Details.Select(d => new Dictionary<string, string?>
+                {
+                    ["Source"] = d.Source,
+                    ["Number"] = d.Number,
+                    ["Title"] = d.Title,
+                    ["OriginalTitle"] = d.OriginalTitle,
+                    ["Actor"] = d.Actor,
+                    ["Publisher"] = d.Publisher,
+                    ["Studio"] = d.Studio,
+                    ["Series"] = d.Series,
+                    ["Director"] = d.Director,
+                    ["Tag"] = d.Tag,
+                    ["Release"] = d.Release,
+                    ["Year"] = d.Year,
+                    ["Runtime"] = d.Runtime,
+                    ["Mosaic"] = d.Mosaic,
+                    ["Website"] = d.Website,
+                    ["SearchUrl"] = d.SearchUrl,
+                    ["CoverUrl"] = d.CoverUrl,
+                    ["PosterUrl"] = d.PosterUrl,
+                }).ToList();
+                var debugJson = JsonSerializer.Serialize(perSourceData, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+                var debugDir = Path.Combine(Path.GetTempPath(), "bakabase_av_debug");
+                Directory.CreateDirectory(debugDir);
+                var debugFilePath = Path.Combine(debugDir, $"{keyword}_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+                await File.WriteAllTextAsync(debugFilePath, debugJson, ct);
+                Logger.LogInformation("AV enhancer per-source debug results saved to {DebugFilePath}", debugFilePath);
+                logCollector.LogInfo(EnhancementLogEvent.DataFetched,
+                    $"Per-source debug results saved to {debugFilePath}",
+                    new { DebugFilePath = debugFilePath, SourceCount = perSourceData.Count });
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to save AV enhancer debug results");
+            }
 
             if (!context.Details.Any())
             {

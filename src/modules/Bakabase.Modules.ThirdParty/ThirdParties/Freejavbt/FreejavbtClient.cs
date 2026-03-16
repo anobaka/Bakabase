@@ -33,27 +33,26 @@ public class FreejavbtClient(IHttpClientFactory httpClientFactory, ILoggerFactor
             string parsedNumber = number;
             try
             {
-                var cleaned = pageTitle.Replace("| FREE JAV BT", "");
-                var parts = cleaned.Split('|');
-                if (parts.Length == 2)
+                // Strip site suffix: handles both 毎(U+6BCE) and 每(U+6BCF), both | and ｜
+                var cleaned = Regex.Replace(pageTitle, @"[|｜]\s*[毎每]日更新.*$", "").Trim();
+                cleaned = Regex.Replace(cleaned, @"[|｜]\s*FREE\s*JAV\s*BT.*$", "", RegexOptions.IgnoreCase).Trim();
+
+                // Extract the number (pattern like ABC-123) from the beginning
+                var numberMatch = Regex.Match(cleaned, @"^([A-Za-z]{2,10}-?\d{2,8})");
+                if (numberMatch.Success)
                 {
-                    var num = parts[0].Trim();
-                    var ttl = string.Join(" ", parts.Skip(1)).Trim();
-                    ttl = ttl.Replace(num.ToUpperInvariant(), "").Replace(num, "").Replace("_", "-").Trim();
-                    parsedNumber = num;
-                    parsedTitle = ttl;
-                }
-                else
-                {
-                    var sp = cleaned.Split(' ');
-                    if (sp.Length > 2)
+                    parsedNumber = numberMatch.Groups[1].Value;
+                    var titlePart = cleaned.Substring(numberMatch.Length).Trim();
+
+                    // Handle CsQuery .Text() duplication (mobile+desktop concatenated)
+                    // If the number appears again, the content is duplicated - take only the first copy
+                    var secondIdx = titlePart.IndexOf(parsedNumber, StringComparison.OrdinalIgnoreCase);
+                    if (secondIdx >= 0)
                     {
-                        var num = sp[0].Trim();
-                        var ttl = string.Join(" ", sp.Skip(1)).Trim();
-                        ttl = ttl.Replace(num.ToUpperInvariant(), "").Replace(num, "").Replace("_", "-").Trim();
-                        parsedNumber = num;
-                        parsedTitle = ttl;
+                        titlePart = titlePart.Substring(0, secondIdx).Trim();
                     }
+
+                    parsedTitle = titlePart;
                 }
             }
             catch { /* ignore */ }
