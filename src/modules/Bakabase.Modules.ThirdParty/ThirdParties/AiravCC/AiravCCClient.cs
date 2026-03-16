@@ -165,30 +165,14 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
     private static string GetActor(CQ html)
     {
-        var elements = html["*:contains('女優'), *:contains('女优')"];
-        var actors = new List<string>();
-        
-        foreach (var element in elements)
-        {
-            var links = element.Cq().Find("a");
-            actors.AddRange(links.Select(a => a.Cq().Text().Trim()).Where(text => !string.IsNullOrEmpty(text)));
-        }
-        
-        return string.Join(", ", actors.Distinct());
+        var links = FindLinksNearLabel(html, "女優", "女优");
+        return string.Join(", ", links);
     }
 
     private static string GetStudio(CQ html)
     {
-        var elements = html["*:contains('廠商'), *:contains('厂商')"];
-        foreach (var element in elements)
-        {
-            var linkText = element.Cq().Find("a").Text();
-            if (!string.IsNullOrWhiteSpace(linkText))
-            {
-                return linkText.Trim();
-            }
-        }
-        return "";
+        var links = FindLinksNearLabel(html, "廠商", "厂商");
+        return links.FirstOrDefault() ?? "";
     }
 
     private static string GetRelease(CQ html)
@@ -211,16 +195,8 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
     private static string GetTag(CQ html)
     {
-        var elements = html["*:contains('標籤'), *:contains('标籤')"];
-        var tags = new List<string>();
-        
-        foreach (var element in elements)
-        {
-            var links = element.Cq().Find("a");
-            tags.AddRange(links.Select(a => a.Cq().Text().Trim()).Where(text => !string.IsNullOrEmpty(text)));
-        }
-        
-        return string.Join(", ", tags.Distinct());
+        var links = FindLinksNearLabel(html, "標籤", "标籤", "标签");
+        return string.Join(", ", links);
     }
 
     private static string GetCover(CQ html, string baseUrl)
@@ -264,16 +240,59 @@ public class AiravCCClient(IHttpClientFactory httpClientFactory, ILoggerFactory 
 
     private static string GetSeries(CQ html)
     {
-        var elements = html["*:contains('系列')"];
-        foreach (var element in elements)
+        var links = FindLinksNearLabel(html, "系列");
+        return links.FirstOrDefault() ?? "";
+    }
+
+    /// <summary>
+    /// Finds an element whose own text nodes (not descendants) contain one of the label texts,
+    /// then returns text from &lt;a&gt; elements within that element's scope.
+    /// This avoids the problem where <c>*:contains('label')</c> matches &lt;body&gt; and grabs
+    /// every link on the page.
+    /// </summary>
+    private static List<string> FindLinksNearLabel(CQ html, params string[] labelTexts)
+    {
+        var selectorParts = labelTexts.Select(l => $"*:contains('{l}')");
+        var candidates = html[string.Join(", ", selectorParts)];
+
+        foreach (var el in candidates)
         {
-            var linkText = element.Cq().Find("a").Text();
-            if (!string.IsNullOrWhiteSpace(linkText))
-            {
-                return linkText.Trim();
-            }
+            // Skip <a> elements - they are links themselves, not labels
+            if (el.NodeName.Equals("A", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var cq = el.Cq();
+
+            // Check if this element's own text nodes (not descendant text) contain the label
+            var hasDirectLabel = cq.Contents()
+                .Any(child => child.NodeType == NodeType.TEXT_NODE &&
+                              labelTexts.Any(l => child.NodeValue?.Contains(l) == true));
+
+            if (!hasDirectLabel)
+                continue;
+
+            // Found the label element. Get links from this element.
+            var links = cq.Find("a")
+                .Select(a => a.Cq().Text().Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .Distinct()
+                .ToList();
+
+            if (links.Count > 0)
+                return links;
+
+            // If no child links, try the parent element
+            links = cq.Parent().Find("a")
+                .Select(a => a.Cq().Text().Trim())
+                .Where(t => !string.IsNullOrEmpty(t) && labelTexts.All(l => !t.Contains(l)))
+                .Distinct()
+                .ToList();
+
+            if (links.Count > 0)
+                return links;
         }
-        return "";
+
+        return [];
     }
 
     private static string CleanTitle(string title)

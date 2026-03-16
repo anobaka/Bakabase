@@ -25,12 +25,14 @@ public class Love6Client(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var items = docSearch.Select("div.col-sm-2.search_item a");
+                var upperNumber = number.ToUpperInvariant();
                 foreach (var a in items)
                 {
                     var href = a.GetAttribute("href") ?? "";
                     var tmpTitle = a.Cq().Find("div.album_text").Text();
                     var img = a.Cq().Find("div.search_img img").Attr("src") ?? "";
-                    if (!string.IsNullOrWhiteSpace(tmpTitle) && !string.IsNullOrWhiteSpace(href))
+                    if (!string.IsNullOrWhiteSpace(tmpTitle) && !string.IsNullOrWhiteSpace(href) &&
+                        tmpTitle.ToUpperInvariant().Contains(upperNumber))
                     {
                         realUrl = "https://love6.tv" + href;
                         poster = img;

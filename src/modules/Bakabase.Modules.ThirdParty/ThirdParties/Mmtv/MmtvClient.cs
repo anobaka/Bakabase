@@ -32,11 +32,13 @@ public class MmtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 var htmlSearch = await HttpClient.GetStringAsync(searchUrl);
                 var docSearch = new CQ(htmlSearch);
                 var cand = docSearch.Select("figure.video-preview a");
+                var upperNumber = number.ToUpperInvariant();
                 foreach (var a in cand)
                 {
                     var href = a.GetAttribute("href") ?? "";
                     var imgAlt = a.Cq().Find("img").Attr("alt") ?? "";
-                    if (!string.IsNullOrWhiteSpace(href))
+                    if (!string.IsNullOrWhiteSpace(href) &&
+                        (imgAlt.ToUpperInvariant().Contains(upperNumber) || href.ToUpperInvariant().Contains(upperNumber)))
                     {
                         realUrl = href;
                         break;

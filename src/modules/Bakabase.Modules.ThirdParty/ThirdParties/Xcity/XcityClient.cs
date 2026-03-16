@@ -28,9 +28,20 @@ public class XcityClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
                 }
 
                 var searchDoc = new CQ(searchHtml);
-                var firstHref = searchDoc.Select("table.resultList tr td a").FirstOrDefault()?.GetAttribute("href");
-                if (string.IsNullOrWhiteSpace(firstHref)) return null;
-                realUrl = "https://xcity.jp" + firstHref;
+                // Validate search results contain the requested number before using them
+                string? matchedHref = null;
+                var normalizedNumber = number.Replace("-", "").ToUpperInvariant();
+                foreach (var row in searchDoc.Select("table.resultList tr"))
+                {
+                    var rowText = row.Cq().Text().ToUpperInvariant().Replace("-", "");
+                    if (rowText.Contains(normalizedNumber))
+                    {
+                        matchedHref = row.Cq().Find("td a").FirstOrDefault()?.GetAttribute("href");
+                        if (!string.IsNullOrWhiteSpace(matchedHref)) break;
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(matchedHref)) return null;
+                realUrl = "https://xcity.jp" + matchedHref;
             }
 
             var html = await HttpClient.GetStringAsync(realUrl);
@@ -41,6 +52,12 @@ public class XcityClient(IHttpClientFactory httpClientFactory, ILoggerFactory lo
             var title = TextOf("#program_detail_title");
             if (string.IsNullOrWhiteSpace(title)) return null;
             var webNumber = TextOf("#hinban");
+            // Verify the detail page's number matches the requested number
+            if (!string.IsNullOrWhiteSpace(webNumber) &&
+                !webNumber.Replace("-", "").Equals(number.Replace("-", ""), StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
             if (!string.IsNullOrWhiteSpace(webNumber))
             {
                 title = title.Replace(" " + webNumber, string.Empty).Trim();

@@ -25,12 +25,17 @@ public class MdtvClient(IHttpClientFactory httpClientFactory, ILoggerFactory log
                 // simple search post replaced by get for offline simulation
                 var htmlSearch = await HttpClient.GetStringAsync($"{searchUrl}?wd={Uri.EscapeDataString(number)}");
                 var docSearch = new CQ(htmlSearch);
-                // pick first
-                var a = docSearch.Select("h4.post-title a").FirstOrDefault();
-                if (a != null)
+                // pick the first result whose title contains the requested number
+                var upperNumber = number.ToUpperInvariant();
+                foreach (var candidate in docSearch.Select("h4.post-title a"))
                 {
-                    var href = a.GetAttribute("href") ?? "";
-                    realUrl = baseUrl + href;
+                    var candidateTitle = (candidate.GetAttribute("title") ?? candidate.Cq().Text() ?? "").ToUpperInvariant();
+                    if (candidateTitle.Contains(upperNumber))
+                    {
+                        var href = candidate.GetAttribute("href") ?? "";
+                        realUrl = baseUrl + href;
+                        break;
+                    }
                 }
             }
 
