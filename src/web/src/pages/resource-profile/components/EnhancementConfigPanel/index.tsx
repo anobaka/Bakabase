@@ -25,6 +25,7 @@ import {
   sourceKey,
   groupOrder,
   PropertyGroup,
+  getGroupsForEnabledEnhancers,
 } from "./utils";
 import type { PropertyRow, SourceState } from "./utils";
 
@@ -84,6 +85,9 @@ const EnhancementConfigPanel = ({ enhancerOptions: propEnhancerOptions, onSubmit
       const states = buildSourceStates(descs, existingConfig);
       setSourceStates(states);
       setEnhancerLevelConfigs(extractEnhancerLevelConfigs(existingConfig));
+
+      // Auto-select groups that contain already-configured enhancers
+      setSelectedGroups(getGroupsForEnabledEnhancers(states));
 
       // Load bound properties into cache
       const propertyIds = new Map<PropertyPool, Set<number>>();
