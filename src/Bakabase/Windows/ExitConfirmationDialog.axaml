@@ -1,13 +1,11 @@
-﻿<Window
+<Window
     x:Class="Bakabase.Windows.ExitConfirmationDialog"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="Exiting"
-    Background="{StaticResource WindowBackgroundBrush}"
-    Foreground="{StaticResource FontBrush}"
-    ResizeMode="NoResize"
+    CanResize="False"
     SizeToContent="WidthAndHeight"
     Topmost="True"
     WindowStartupLocation="CenterScreen"
@@ -21,9 +19,7 @@
             Name="RememberCheckBox"
             Margin="0,15,0,15"
             VerticalContentAlignment="Center"
-            Checked="RememberCheckBox_Checked"
-            FontSize="14"
-            Foreground="{StaticResource FontBrush}">
+            FontSize="14">
             Remember my choice
         </CheckBox>
         <StackPanel Orientation="Horizontal">
@@ -32,33 +28,28 @@
                 Width="100"
                 Height="30"
                 Margin="0,0,30,0"
+                Padding="0"
+                HorizontalContentAlignment="Center"
                 VerticalContentAlignment="Center"
                 Background="#03c1fd"
-                BorderBrush="{x:Null}"
+                BorderBrush="Transparent"
                 FontSize="16"
-                Foreground="White">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="3" />
-                    </Style>
-                </Button.Resources>
+                Foreground="White"
+                CornerRadius="3">
                 Minimize
             </Button>
-
             <Button
                 Name="ExitBtn"
                 Width="100"
                 Height="30"
+                Padding="0"
+                HorizontalContentAlignment="Center"
                 VerticalContentAlignment="Center"
-                Background="#fff"
+                Background="#ffffff"
                 BorderBrush="#FFD9DBDE"
                 FontSize="16"
-                Foreground="#1f2633">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="3" />
-                    </Style>
-                </Button.Resources>
+                Foreground="#1f2633"
+                CornerRadius="3">
                 Exit
             </Button>
         </StackPanel>
