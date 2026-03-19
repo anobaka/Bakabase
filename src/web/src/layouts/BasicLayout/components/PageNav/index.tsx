@@ -13,8 +13,7 @@ import {
 import AntdMenu from "./components/AntdMenu";
 import styles from "./index.module.scss";
 
-import { Button, Divider } from "@/components/bakaui";
-import LanguageDropdown from "@/components/LanguageDropdown";
+import { Button, Divider, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from "@/components/bakaui";
 import BApi from "@/sdk/BApi";
 import { useAppOptionsStore, useUiOptionsStore } from "@/stores/options";
 import { UiTheme } from "@/sdk/constants";
@@ -22,8 +21,8 @@ import { UiTheme } from "@/sdk/constants";
 const OptIconStyle = { fontSize: 20 };
 
 const SUPPORTED_LANGUAGES = [
-  { code: "zh-CN", label: "简体中文" },
-  { code: "en-US", label: "English" },
+  { code: "zh-CN", label: "简体中文", shortLabel: "中" },
+  { code: "en-US", label: "English", shortLabel: "EN" },
 ];
 
 const Navigation = () => {
@@ -99,21 +98,33 @@ const Navigation = () => {
             <MoonOutlined style={OptIconStyle} />
           )}
         </Button>
-        <LanguageDropdown
-          size="sm"
-          availableLocales={SUPPORTED_LANGUAGES}
-          value={currentLanguageCode}
-          onValueChange={(v) => {
-            if (v !== currentLanguageCode) {
-              setLoading(true);
-              BApi.options
-                .patchAppOptions({ language: v })
-                .then(() => {
-                  location.reload();
-                });
-            }
-          }}
-        />
+        <Dropdown>
+          <DropdownTrigger>
+            <Button isIconOnly size="sm" variant="light">
+              {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguageCode)?.shortLabel ?? "EN"}
+            </Button>
+          </DropdownTrigger>
+          <DropdownMenu
+            aria-label="Language"
+            selectionMode="single"
+            selectedKeys={[currentLanguageCode]}
+            onSelectionChange={(keys) => {
+              const selected = Array.from(keys)[0] as string;
+              if (selected && selected !== currentLanguageCode) {
+                setLoading(true);
+                BApi.options
+                  .patchAppOptions({ language: selected })
+                  .then(() => {
+                    location.reload();
+                  });
+              }
+            }}
+          >
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <DropdownItem key={lang.code}>{lang.label}</DropdownItem>
+            ))}
+          </DropdownMenu>
+        </Dropdown>
         <Button
           isIconOnly
           color={"default"}

@@ -125,18 +125,18 @@ public partial class NativeWebViewHost
     {
         // Try to find favicon.png relative to the executable
         var exeDir = AppContext.BaseDirectory;
-        var iconPath = System.IO.Path.Combine(exeDir, "Assets", "favicon.png");
+        var iconPath = System.IO.Path.Combine(exeDir, "Assets", "dock-icon.png");
         if (!System.IO.File.Exists(iconPath))
-            iconPath = System.IO.Path.Combine(exeDir, "favicon.png");
+            iconPath = System.IO.Path.Combine(exeDir, "dock-icon.png");
         if (!System.IO.File.Exists(iconPath))
         {
             // Try relative to working directory
-            iconPath = System.IO.Path.Combine("Assets", "favicon.png");
+            iconPath = System.IO.Path.Combine("Assets", "dock-icon.png");
         }
 
         if (!System.IO.File.Exists(iconPath))
         {
-            Console.WriteLine($"[NativeWebViewHost] Icon file not found, tried Assets/favicon.png");
+            Console.WriteLine($"[NativeWebViewHost] Icon file not found, tried Assets/dock-icon.png");
             return;
         }
 

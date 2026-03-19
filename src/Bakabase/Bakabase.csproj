@@ -33,7 +33,7 @@
 
     <!-- Copy favicon.png to output for macOS Dock icon -->
     <ItemGroup>
-        <None Include="Assets\favicon.png" CopyToOutputDirectory="PreserveNewest" />
+        <None Include="Assets\dock-icon.png" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
     <!-- macOS app bundle configuration -->
