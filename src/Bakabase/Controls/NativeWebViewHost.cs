@@ -27,6 +27,8 @@ public partial class NativeWebViewHost : NativeControlHost
 
     protected override IPlatformHandle CreateNativeControlCore(IPlatformHandle parent)
     {
+        Console.WriteLine($"[NativeWebViewHost] CreateNativeControlCore called, pendingUrl={_pendingUrl}");
+
         if (OperatingSystem.IsMacOS())
             return CreateMacOS(parent);
         if (OperatingSystem.IsWindows())
