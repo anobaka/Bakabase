@@ -13,8 +13,7 @@
         <PackageReference Include="Avalonia" Version="11.3.0" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.0" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
-        <PackageReference Include="WebView.Avalonia" Version="11.0.0.1" />
-        <PackageReference Include="WebView.Avalonia.Desktop" Version="11.0.0.1" />
+        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
         <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

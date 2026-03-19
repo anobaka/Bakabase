@@ -7,6 +7,7 @@ using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
 using Bakabase.Infrastructures.Resources;
 using Bakabase.InsideWorld.Models.Models.Aos;
+using Bakabase.Controls;
 using Bakabase.Windows;
 using Bootstrap.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -122,8 +123,8 @@ public class AvaloniaGuiAdapter : GuiAdapter
             _mainWindow.Show();
             _mainWindow.Title = title;
 
-            var webView = _mainWindow.FindControl<AvaloniaWebView.WebView>("WebView")!;
-            webView.Url = new Uri(url);
+            var webView = _mainWindow.FindControl<NativeWebViewHost>("WebView")!;
+            webView.Navigate(url);
 
             _mainWindow.Closing += async (_, args) =>
             {

@@ -4,11 +4,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:wv="clr-namespace:AvaloniaWebView;assembly=Avalonia.WebView"
+    xmlns:controls="clr-namespace:Bakabase.Controls;assembly=Bakabase"
     Title="MainWindow"
     WindowStartupLocation="CenterScreen"
     mc:Ignorable="d">
     <DockPanel>
-        <wv:WebView Name="WebView" />
+        <controls:NativeWebViewHost Name="WebView" />
     </DockPanel>
 </Window>
