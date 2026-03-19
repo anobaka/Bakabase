@@ -1,6 +1,6 @@
-﻿<Window
+<Window
     x:Class="Bakabase.Windows.ErrorWindow"
-    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -9,8 +9,6 @@
     MinHeight="600"
     MaxWidth="1000"
     MaxHeight="800"
-    Background="{StaticResource WindowBackgroundBrush}"
-    Foreground="{StaticResource FontBrush}"
     SizeToContent="WidthAndHeight"
     Topmost="True"
     WindowStartupLocation="CenterScreen"
@@ -21,19 +19,16 @@
                 x:Name="Title"
                 Margin="0,0,0,30"
                 HorizontalAlignment="Left"
-                Background="{StaticResource WindowBackgroundBrush}"
                 FontSize="32"
                 FontWeight="Bold"
-                Foreground="{StaticResource FontBrush}"
                 Text="[DesignTime]Error" />
             <TextBox
                 x:Name="StackTrace"
                 HorizontalAlignment="Left"
-                Background="{StaticResource WindowBackgroundBrush}"
                 BorderThickness="0"
                 FontSize="14"
-                Foreground="{StaticResource FontBrush}"
-                Text="[DesignTime]Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail Exception detail"
+                IsReadOnly="True"
+                Text="[DesignTime]Exception detail"
                 TextWrapping="Wrap" />
         </StackPanel>
     </StackPanel>

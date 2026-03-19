@@ -1,26 +1,24 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net9.0-windows</TargetFramework>
-        <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
-        <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+        <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
-        <UseWPF>true</UseWPF>
         <ImplicitUsings>enable</ImplicitUsings>
         <ApplicationIcon>Assets/favicon.ico</ApplicationIcon>
         <AssemblyName>Bakabase</AssemblyName>
-        <UseWindowsForms>True</UseWindowsForms>
-        <EnableWindowsTargeting>true</EnableWindowsTargeting>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+        <PackageReference Include="Avalonia" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
+        <PackageReference Include="WebView.Avalonia" Version="11.0.0.1" />
+        <PackageReference Include="WebView.Avalonia.Desktop" Version="11.0.0.1" />
         <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="WpfAnimatedGif" Version="2.0.2" />
     </ItemGroup>
 
     <ItemGroup>
@@ -28,30 +26,15 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Remove="Assets\favicon.ico" />
-        <None Remove="Assets\favicon.png" />
-        <None Remove="Assets\loading.gif" />
-        <None Remove="Assets\tray-running.ico" />
+        <AvaloniaResource Include="Assets\favicon.ico" />
+        <AvaloniaResource Include="Assets\favicon.png" />
+        <AvaloniaResource Include="Assets\loading.gif" />
+        <AvaloniaResource Include="Assets\tray-running.ico" />
     </ItemGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
         <OutputType>Exe</OutputType>
     </PropertyGroup>
-
-    <ItemGroup>
-        <Content Include="Assets\favicon.ico">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-        <Content Include="Assets\favicon.png">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-        <Content Include="Assets\loading.gif">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-        <Content Include="Assets\tray-running.ico">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
 
     <Target Name="CreateWwwRoot" AfterTargets="Publish">
         <Message Text="Try create wwwroot folder" Importance="high" />
