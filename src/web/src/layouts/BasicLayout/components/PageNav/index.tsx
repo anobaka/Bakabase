@@ -100,8 +100,10 @@ const Navigation = () => {
         </Button>
         <Dropdown>
           <DropdownTrigger>
-            <Button isIconOnly size="sm" variant="light">
-              {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguageCode)?.shortLabel ?? "EN"}
+            <Button isIconOnly color="default" variant="light">
+              <span style={{ fontSize: 16, fontWeight: 500 }}>
+                {SUPPORTED_LANGUAGES.find((l) => l.code === currentLanguageCode)?.shortLabel ?? "EN"}
+              </span>
             </Button>
           </DropdownTrigger>
           <DropdownMenu
