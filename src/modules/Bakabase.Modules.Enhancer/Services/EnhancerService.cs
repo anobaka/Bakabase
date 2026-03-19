@@ -896,7 +896,7 @@ namespace Bakabase.Modules.Enhancer.Services
                 catch (Exception ex)
                 {
                     errorMessage = ex.Message;
-                    logs = logCollector.Logs;
+                    logs = logCollector.GetLogs();
                 }
 
                 enhancements ??= [];
