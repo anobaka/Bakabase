@@ -51,9 +51,8 @@ public partial class NativeWebViewHost
             0, 0, 0, 0, // CGRectZero - NativeControlHost manages sizing
             _macConfig);
 
-        // Set autoresizing mask so it fills the host area when resized
-        // NSViewWidthSizable (2) | NSViewHeightSizable (16) = 18
-        ObjC.SendVoid_ULong(_macWebView, ObjC.Sel("setAutoresizingMask:"), 18);
+        // Do NOT set autoresizingMask - NativeControlHost manages the frame directly.
+        // Setting autoresizingMask causes double-sizing issues on Retina displays.
 
         // Enable Web Inspector (macOS 13.3+ Ventura)
         // setInspectable: is only available on macOS 13.3+, use respondsToSelector: to check
@@ -63,12 +62,27 @@ public partial class NativeWebViewHost
             ObjC.SendVoid_Bool(_macWebView, inspectableSel, true);
         }
 
+        // Listen for size changes to manually sync WKWebView frame
+        SizeChanged += OnSizeChangedMacOS;
+
         _initialized = true;
 
         if (_pendingUrl != null)
             NavigateMacOS(_pendingUrl);
 
         return new PlatformHandle(_macWebView, "NSView");
+    }
+
+    private void OnSizeChangedMacOS(object? sender, Avalonia.Controls.SizeChangedEventArgs e)
+    {
+        if (_macWebView == IntPtr.Zero) return;
+
+        var w = e.NewSize.Width;
+        var h = e.NewSize.Height;
+        Console.WriteLine($"[NativeWebViewHost] SizeChanged: Avalonia={w}x{h}");
+
+        // Set the WKWebView frame to match Avalonia's layout size (in points)
+        ObjC.SendVoid_CGRect(_macWebView, ObjC.Sel("setFrame:"), 0, 0, w, h);
     }
 
     private void NavigateMacOS(string url)
@@ -147,6 +161,8 @@ public partial class NativeWebViewHost
 
     private void DestroyMacOS()
     {
+        SizeChanged -= OnSizeChangedMacOS;
+
         if (_macWebView != IntPtr.Zero)
         {
             ObjC.SendVoid(_macWebView, ObjC.Sel("release"));
@@ -214,6 +230,11 @@ public partial class NativeWebViewHost
         // objc_msgSend: (ulong) -> void [setAutoresizingMask:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern void SendVoid_ULong(IntPtr receiver, IntPtr selector, ulong arg1);
+
+        // objc_msgSend: (CGRect) -> void [setFrame:]
+        [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
+        public static extern void SendVoid_CGRect(IntPtr receiver, IntPtr selector,
+            double x, double y, double width, double height);
 
         // objc_msgSend: (bool) -> void [setInspectable:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
