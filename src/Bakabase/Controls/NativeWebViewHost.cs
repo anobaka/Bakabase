@@ -19,6 +19,7 @@ public partial class NativeWebViewHost : NativeControlHost
 
     public void Navigate(string url)
     {
+        Console.WriteLine($"[NativeWebViewHost] Navigate called: url={url}, initialized={_initialized}");
         _pendingUrl = url;
         if (_initialized)
             PlatformNavigate(url);

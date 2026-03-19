@@ -19,6 +19,14 @@ public partial class NativeWebViewHost
             ObjC.SendIntPtr(ObjC.objc_getClass("WKWebViewConfiguration"), ObjC.Sel("alloc")),
             ObjC.Sel("init"));
 
+        // Enable developer extras on preferences (for Safari Web Inspector)
+        var prefs = ObjC.SendIntPtr(_macConfig, ObjC.Sel("preferences"));
+        var devExtrasKey = ObjC.CreateNSString("developerExtrasEnabled");
+        var nsYes = ObjC.SendIntPtr_Bool(
+            ObjC.objc_getClass("NSNumber"), ObjC.Sel("numberWithBool:"), true);
+        ObjC.SendVoid_IntPtr_IntPtr(prefs, ObjC.Sel("setValue:forKey:"), nsYes, devExtrasKey);
+        ObjC.SendVoid(devExtrasKey, ObjC.Sel("release"));
+
         // Create WKWebView with initWithFrame:CGRectZero configuration:config
         var wkClass = ObjC.objc_getClass("WKWebView");
         var alloc = ObjC.SendIntPtr(wkClass, ObjC.Sel("alloc"));
@@ -30,6 +38,14 @@ public partial class NativeWebViewHost
         // Set autoresizing mask so it fills the host area when resized
         // NSViewWidthSizable (2) | NSViewHeightSizable (16) = 18
         ObjC.SendVoid_ULong(_macWebView, ObjC.Sel("setAutoresizingMask:"), 18);
+
+        // Enable Web Inspector (macOS 13.3+ Ventura)
+        // setInspectable: is only available on macOS 13.3+, use respondsToSelector: to check
+        var inspectableSel = ObjC.Sel("setInspectable:");
+        if (ObjC.SendBool(_macWebView, ObjC.Sel("respondsToSelector:"), inspectableSel))
+        {
+            ObjC.SendVoid_Bool(_macWebView, inspectableSel, true);
+        }
 
         _initialized = true;
 
@@ -43,20 +59,35 @@ public partial class NativeWebViewHost
     {
         if (_macWebView == IntPtr.Zero) return;
 
+        System.Diagnostics.Debug.WriteLine($"NativeWebViewHost: Navigating to {url}");
+
         // Create NSURL from string
         var nsUrlString = ObjC.CreateNSString(url);
         var nsUrl = ObjC.SendIntPtr_IntPtr(
             ObjC.objc_getClass("NSURL"), ObjC.Sel("URLWithString:"), nsUrlString);
 
+        if (nsUrl == IntPtr.Zero)
+        {
+            System.Diagnostics.Debug.WriteLine($"NativeWebViewHost: NSURL creation failed for '{url}'");
+            ObjC.SendVoid(nsUrlString, ObjC.Sel("release"));
+            return;
+        }
+
         // Create NSURLRequest
         var request = ObjC.SendIntPtr_IntPtr(
             ObjC.objc_getClass("NSURLRequest"), ObjC.Sel("requestWithURL:"), nsUrl);
 
+        if (request == IntPtr.Zero)
+        {
+            System.Diagnostics.Debug.WriteLine("NativeWebViewHost: NSURLRequest creation failed");
+            ObjC.SendVoid(nsUrlString, ObjC.Sel("release"));
+            return;
+        }
+
         // Load request
         ObjC.SendVoid_IntPtr(_macWebView, ObjC.Sel("loadRequest:"), request);
 
-        // Release temporary objects (NSURL and NSURLRequest are autoreleased by class methods,
-        // but NSString from alloc/init needs release)
+        // Release NSString (NSURL and NSURLRequest are autoreleased by class methods)
         ObjC.SendVoid(nsUrlString, ObjC.Sel("release"));
     }
 
@@ -103,6 +134,11 @@ public partial class NativeWebViewHost
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern IntPtr SendIntPtr_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
 
+        // objc_msgSend: (bool) -> IntPtr [numberWithBool:]
+        [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
+        public static extern IntPtr SendIntPtr_Bool(IntPtr receiver, IntPtr selector,
+            [MarshalAs(UnmanagedType.I1)] bool arg1);
+
         // objc_msgSend: (CGRect, IntPtr) -> IntPtr [initWithFrame:configuration:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern IntPtr SendIntPtr_CGRect_IntPtr(IntPtr receiver, IntPtr selector,
@@ -116,9 +152,24 @@ public partial class NativeWebViewHost
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern void SendVoid_IntPtr(IntPtr receiver, IntPtr selector, IntPtr arg1);
 
+        // objc_msgSend: (IntPtr, IntPtr) -> void [setValue:forKey:]
+        [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
+        public static extern void SendVoid_IntPtr_IntPtr(IntPtr receiver, IntPtr selector,
+            IntPtr arg1, IntPtr arg2);
+
         // objc_msgSend: (ulong) -> void [setAutoresizingMask:]
         [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
         public static extern void SendVoid_ULong(IntPtr receiver, IntPtr selector, ulong arg1);
+
+        // objc_msgSend: (bool) -> void [setInspectable:]
+        [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
+        public static extern void SendVoid_Bool(IntPtr receiver, IntPtr selector,
+            [MarshalAs(UnmanagedType.I1)] bool arg1);
+
+        // objc_msgSend: (IntPtr) -> bool [respondsToSelector:]
+        [DllImport("libobjc.dylib", EntryPoint = "objc_msgSend")]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool SendBool(IntPtr receiver, IntPtr selector, IntPtr arg1);
 
         public static IntPtr CreateNSString(string str)
         {
