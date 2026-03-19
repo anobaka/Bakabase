@@ -16,7 +16,7 @@
     <StackPanel VerticalAlignment="Center">
         <StackPanel Margin="50">
             <TextBlock
-                x:Name="Title"
+                x:Name="ErrorTitle"
                 Margin="0,0,0,30"
                 HorizontalAlignment="Left"
                 FontSize="32"

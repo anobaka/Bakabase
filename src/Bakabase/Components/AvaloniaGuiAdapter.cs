@@ -1,9 +1,7 @@
-using System.Diagnostics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media.Imaging;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Bakabase.Infrastructures.Components.Gui;
 using Bakabase.Infrastructures.Components.SystemService;
@@ -93,7 +91,7 @@ public class AvaloniaGuiAdapter : GuiAdapter
     {
         _errorWindow ??= new ErrorWindow();
         _errorWindow.Title = title;
-        _errorWindow.FindControl<TextBlock>("Title")!.Text = title;
+        _errorWindow.FindControl<TextBlock>("ErrorTitle")!.Text = title;
         _errorWindow.FindControl<TextBox>("StackTrace")!.Text = message;
         _errorWindow.Show();
 
@@ -116,7 +114,7 @@ public class AvaloniaGuiAdapter : GuiAdapter
     }
 
     [GuiContextInterceptor]
-    public override async void ShowMainWebView(string url, string title, Func<Task> onClosing)
+    public override void ShowMainWebView(string url, string title, Func<Task> onClosing)
     {
         _mainWindow ??= new MainWindow();
 
@@ -137,9 +135,6 @@ public class AvaloniaGuiAdapter : GuiAdapter
         catch (Exception)
         {
             _mainWindow.Close();
-            // Unlike WPF WebView2, Avalonia.WebView bundles its own runtime,
-            // so a missing runtime dialog is not needed.
-            // If WebView fails to initialize, show a generic error.
             ShowFatalErrorWindow(
                 "Failed to initialize WebView. Please check that your system supports the required web runtime.",
                 "WebView Error");
@@ -229,8 +224,6 @@ public class AvaloniaGuiAdapter : GuiAdapter
     [GuiContextInterceptor]
     public override bool ShowConfirmDialog(string message, string caption)
     {
-        // In Avalonia, MessageBox is not built-in. Use a simple modal dialog approach.
-        // For simplicity, we'll use a task-based approach with a custom dialog.
         var tcs = new TaskCompletionSource<bool>();
 
         Dispatcher.UIThread.InvokeAsync(async () =>
@@ -241,31 +234,54 @@ public class AvaloniaGuiAdapter : GuiAdapter
                 SizeToContent = SizeToContent.WidthAndHeight,
                 WindowStartupLocation = WindowStartupLocation.CenterScreen,
                 CanResize = false,
-                Topmost = true,
-                Content = new StackPanel
+                Topmost = true
+            };
+
+            var okButton = new Button
+            {
+                Content = "OK",
+                Width = 80,
+                Height = 30,
+                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+            okButton.Click += (_, _) =>
+            {
+                tcs.TrySetResult(true);
+                dialog.Close();
+            };
+
+            var cancelButton = new Button
+            {
+                Content = "Cancel",
+                Width = 80,
+                Height = 30,
+                HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
+            };
+            cancelButton.Click += (_, _) =>
+            {
+                tcs.TrySetResult(false);
+                dialog.Close();
+            };
+
+            dialog.Content = new StackPanel
+            {
+                Margin = new Avalonia.Thickness(20),
+                Children =
                 {
-                    Margin = new Avalonia.Thickness(20),
-                    Children =
+                    new TextBlock
                     {
-                        new TextBlock
-                        {
-                            Text = message,
-                            FontSize = 14,
-                            Margin = new Avalonia.Thickness(0, 0, 0, 20),
-                            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                            MaxWidth = 400
-                        },
-                        new StackPanel
-                        {
-                            Orientation = Avalonia.Layout.Orientation.Horizontal,
-                            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
-                            Spacing = 20,
-                            Children =
-                            {
-                                CreateDialogButton("OK", true, dialog, tcs),
-                                CreateDialogButton("Cancel", false, dialog, tcs)
-                            }
-                        }
+                        Text = message,
+                        FontSize = 14,
+                        Margin = new Avalonia.Thickness(0, 0, 0, 20),
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                        MaxWidth = 400
+                    },
+                    new StackPanel
+                    {
+                        Orientation = Avalonia.Layout.Orientation.Horizontal,
+                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+                        Spacing = 20,
+                        Children = { okButton, cancelButton }
                     }
                 }
             };
@@ -286,24 +302,6 @@ public class AvaloniaGuiAdapter : GuiAdapter
         });
 
         return tcs.Task.GetAwaiter().GetResult();
-    }
-
-    private static Button CreateDialogButton(string text, bool result, Window dialog,
-        TaskCompletionSource<bool> tcs)
-    {
-        var button = new Button
-        {
-            Content = text,
-            Width = 80,
-            Height = 30,
-            HorizontalContentAlignment = Avalonia.Layout.HorizontalAlignment.Center
-        };
-        button.Click += (_, _) =>
-        {
-            tcs.TrySetResult(result);
-            dialog.Close();
-        };
-        return button;
     }
 
     [GuiContextInterceptor]
