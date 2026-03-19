@@ -116,10 +116,9 @@ public class AvaloniaGuiAdapter : GuiAdapter
     [GuiContextInterceptor]
     public override void ShowMainWebView(string url, string title, Func<Task> onClosing)
     {
-        _mainWindow ??= new MainWindow();
-
         try
         {
+            _mainWindow ??= new MainWindow();
             _mainWindow.Show();
             _mainWindow.Title = title;
 
@@ -132,11 +131,12 @@ public class AvaloniaGuiAdapter : GuiAdapter
                 await onClosing();
             };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            _mainWindow.Close();
+            try { _mainWindow?.Close(); } catch { /* ignore */ }
+            _mainWindow = null;
             ShowFatalErrorWindow(
-                "Failed to initialize WebView. Please check that your system supports the required web runtime.",
+                $"Failed to initialize WebView: {ex.Message}\n\n{ex}",
                 "WebView Error");
         }
     }
