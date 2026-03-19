@@ -31,6 +31,17 @@
         <AvaloniaResource Include="Assets\tray-running.ico" />
     </ItemGroup>
 
+    <!-- Copy favicon.png to output for macOS Dock icon -->
+    <ItemGroup>
+        <None Include="Assets\favicon.png" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <!-- macOS app bundle configuration -->
+    <ItemGroup Condition="$([MSBuild]::IsOSPlatform('OSX'))">
+        <Content Include="Info.plist" CopyToOutputDirectory="PreserveNewest" />
+        <Content Include="Assets\app.icns" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
         <OutputType>Exe</OutputType>
     </PropertyGroup>

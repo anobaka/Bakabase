@@ -9,10 +9,26 @@ public partial class NativeWebViewHost
     private IntPtr _macWebView;
     private IntPtr _macConfig;
 
+    private static bool _macIconSet;
+
     private IPlatformHandle CreateMacOS(IPlatformHandle parent)
     {
         // Ensure WebKit framework is loaded
         ObjC.dlopen("/System/Library/Frameworks/WebKit.framework/WebKit", ObjC.RTLD_NOW);
+
+        // Set the Dock icon on first creation (macOS needs this for non-bundled apps)
+        if (!_macIconSet)
+        {
+            _macIconSet = true;
+            try
+            {
+                SetMacOSDockIcon();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[NativeWebViewHost] Failed to set Dock icon: {ex.Message}");
+            }
+        }
 
         // Create WKWebViewConfiguration
         _macConfig = ObjC.SendIntPtr(
@@ -89,6 +105,44 @@ public partial class NativeWebViewHost
 
         // Release NSString (NSURL and NSURLRequest are autoreleased by class methods)
         ObjC.SendVoid(nsUrlString, ObjC.Sel("release"));
+    }
+
+    private static void SetMacOSDockIcon()
+    {
+        // Try to find favicon.png relative to the executable
+        var exeDir = AppContext.BaseDirectory;
+        var iconPath = System.IO.Path.Combine(exeDir, "Assets", "favicon.png");
+        if (!System.IO.File.Exists(iconPath))
+            iconPath = System.IO.Path.Combine(exeDir, "favicon.png");
+        if (!System.IO.File.Exists(iconPath))
+        {
+            // Try relative to working directory
+            iconPath = System.IO.Path.Combine("Assets", "favicon.png");
+        }
+
+        if (!System.IO.File.Exists(iconPath))
+        {
+            Console.WriteLine($"[NativeWebViewHost] Icon file not found, tried Assets/favicon.png");
+            return;
+        }
+
+        var nsStringPath = ObjC.CreateNSString(iconPath);
+        var nsImage = ObjC.SendIntPtr_IntPtr(
+            ObjC.SendIntPtr(ObjC.objc_getClass("NSImage"), ObjC.Sel("alloc")),
+            ObjC.Sel("initWithContentsOfFile:"), nsStringPath);
+
+        if (nsImage != IntPtr.Zero)
+        {
+            var nsApp = ObjC.SendIntPtr(ObjC.objc_getClass("NSApplication"), ObjC.Sel("sharedApplication"));
+            ObjC.SendVoid_IntPtr(nsApp, ObjC.Sel("setApplicationIconImage:"), nsImage);
+            Console.WriteLine($"[NativeWebViewHost] Dock icon set from {iconPath}");
+        }
+        else
+        {
+            Console.WriteLine($"[NativeWebViewHost] Failed to create NSImage from {iconPath}");
+        }
+
+        ObjC.SendVoid(nsStringPath, ObjC.Sel("release"));
     }
 
     private void DestroyMacOS()
