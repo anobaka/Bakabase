@@ -1,4 +1,5 @@
 import type {
+  PropertyType,
   PropertyValueScope,
   ResourceCacheType,
   ResourceTag,
@@ -15,6 +16,7 @@ type Value = {
 
 export type Property = {
   name?: string;
+  type: PropertyType;
   dbValueType: StandardValueType;
   bizValueType: StandardValueType;
   values?: Value[];
