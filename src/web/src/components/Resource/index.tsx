@@ -24,6 +24,7 @@ import { AiOutlineSync } from "react-icons/ai";
 import moment from "moment";
 
 import StandardValueRenderer from "../StandardValue/ValueRenderer";
+import { convertFromApiValue } from "@/components/StandardValue/helpers";
 
 import "./index.css";
 
@@ -36,6 +37,7 @@ import { useBakabaseContext } from "@/components/ContextProvider/BakabaseContext
 import { Button, Chip, Link, Tooltip } from "@/components/bakaui";
 import {
   PropertyPool,
+  PropertyType,
   ResourceAdditionalItem,
   ResourceProperty,
   ResourceTag,
@@ -304,6 +306,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
 
               let bizValue: any | undefined;
               let bizValueType: StandardValueType | undefined;
+              let propertyType: PropertyType | undefined;
 
               try {
                 switch (dpk.pool) {
@@ -376,8 +379,10 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   case PropertyPool.Custom:
                     const property = resource.properties?.[dpk.pool as PropertyPool]?.[dpk.id];
 
-                    bizValue = property?.values?.find((x) => x.bizValue)?.bizValue;
+                    const rawBizValue = property?.values?.find((x) => x.bizValue)?.bizValue;
                     bizValueType = property?.bizValueType;
+                    propertyType = property?.type;
+                    bizValue = bizValueType != undefined ? convertFromApiValue(rawBizValue, bizValueType) : rawBizValue;
                     break;
                 }
               } catch (error) {
@@ -399,7 +404,7 @@ const Resource = React.forwardRef((props: Props, ref) => {
                   style={style}
                   variant={"flat"}
                 >
-                  <StandardValueRenderer type={bizValueType} value={bizValue} variant="light" />
+                  <StandardValueRenderer type={bizValueType} value={bizValue} variant="light" propertyType={propertyType} />
                 </Chip>,
               ];
             })}

@@ -1,6 +1,8 @@
-import type dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 import type { Duration } from "dayjs/plugin/duration";
 import type { LinkValue, TagValue } from "@/components/StandardValue/models";
+
+import dj from "dayjs";
 
 import StringValueRenderer from "./Renderers/StringValueRenderer";
 import NumberValueRenderer from "./Renderers/NumberValueRenderer";
@@ -67,6 +69,9 @@ const StandardValueRenderer = (props: Props) => {
     case StandardValueType.Boolean:
       return <BooleanValueRenderer value={value as boolean} variant={variant} />;
     case StandardValueType.DateTime: {
+      const dayjsValue: Dayjs | undefined = value == undefined ? undefined
+        : dj.isDayjs(value) ? value
+        : dj(typeof value === 'string' || typeof value === 'number' ? value : undefined);
       return (
         <DateTimeValueRenderer
           as={
@@ -77,7 +82,7 @@ const StandardValueRenderer = (props: Props) => {
               ? "YYYY-MM-DD HH:mm:ss"
               : "YYYY-MM-DD"
           }
-          value={value as dayjs.Dayjs}
+          value={dayjsValue}
           variant={variant}
         />
       );
