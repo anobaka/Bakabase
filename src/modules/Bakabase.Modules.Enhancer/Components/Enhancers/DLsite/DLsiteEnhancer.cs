@@ -82,7 +82,19 @@ public class DLsiteEnhancer : AbstractKeywordEnhancer<DLsiteEnhancerTarget, DLsi
                     $"Downloading cover image {index + 1}/{detail.CoverUrls.Length}",
                     new { Url = coverUrl, Index = index });
 
-                var imageData = await _client.HttpClient.GetByteArrayAsync(coverUrl, ct);
+                byte[] imageData;
+                try
+                {
+                    imageData = await _client.HttpClient.GetByteArrayAsync(coverUrl, ct);
+                }
+                catch (HttpRequestException ex)
+                {
+                    Logger.LogWarning(ex, "Failed to download cover image {Index} from {Url}", index + 1, coverUrl);
+                    logCollector.LogWarning(EnhancementLogEvent.HttpResponse,
+                        $"Failed to download cover image {index + 1}/{detail.CoverUrls.Length}: {ex.Message}",
+                        new { Url = coverUrl, Index = index, Error = ex.Message });
+                    continue;
+                }
 
                 logCollector.LogInfo(EnhancementLogEvent.HttpResponse,
                     $"Cover image {index + 1} downloaded ({imageData.Length} bytes)",
