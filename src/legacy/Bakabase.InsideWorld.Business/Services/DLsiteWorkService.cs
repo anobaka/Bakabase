@@ -12,6 +12,7 @@ using Bakabase.InsideWorld.Business.Components.Configurations.Models.Domain;
 using Bakabase.InsideWorld.Business.Components.Dependency.Implementations.LocaleEmulator;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite;
 using Bakabase.Modules.ThirdParty.ThirdParties.DLsite.Models;
+using Bakabase.Infrastructures.Components.Configurations.App;
 using Bootstrap.Components.Configuration.Abstractions;
 using Bootstrap.Components.Orm;
 using Bootstrap.Models.ResponseModels;
@@ -24,6 +25,7 @@ public class DLsiteWorkService(
     FullMemoryCacheResourceService<BakabaseDbContext, DLsiteWorkDbModel, int> orm,
     DLsiteClient dlsiteClient,
     IBOptions<DLsiteOptions> dlsiteOptions,
+    IBOptions<AppOptions> appOptions,
     DLsiteArchiveExtractor archiveExtractor,
     LocaleEmulatorService localeEmulatorService,
     ILogger<DLsiteWorkService> logger)
@@ -257,13 +259,17 @@ public class DLsiteWorkService(
                     if (string.IsNullOrEmpty(work.Workno)) continue;
                     if (allWorks.ContainsKey(work.Workno)) continue;
 
+                    // DLsite API returns dates in JST (Asia/Tokyo)
+                    var jst = TimeZoneInfo.FindSystemTimeZoneById("Asia/Tokyo");
+                    var userTz = appOptions.Value.EffectiveTimeZone;
+
                     // SalesDate = work release date (from work detail's sales_date or regist_date)
                     DateTime? salesDate = null;
                     var salesDateSource = work.SalesDate ?? work.RegistDate;
                     if (salesDateSource != null &&
                         DateTime.TryParse(salesDateSource, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedSalesDate))
                     {
-                        salesDate = parsedSalesDate;
+                        salesDate = ConvertFromJst(parsedSalesDate, jst, userTz);
                     }
 
                     // PurchasedAt = when the user bought it (from sales API)
@@ -271,7 +277,7 @@ public class DLsiteWorkService(
                     if (purchaseDateMap.TryGetValue(work.Workno, out var purchaseDateStr) &&
                         DateTime.TryParse(purchaseDateStr, null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedPurchaseDate))
                     {
-                        purchasedAt = parsedPurchaseDate;
+                        purchasedAt = ConvertFromJst(parsedPurchaseDate, jst, userTz);
                     }
 
                     var dbModel = new DLsiteWorkDbModel
@@ -895,6 +901,23 @@ public class DLsiteWorkService(
         work.UseLocaleEmulator = useLocaleEmulator;
         work.UpdatedAt = DateTime.Now;
         await orm.Update(work);
+    }
+
+    /// <summary>
+    /// Converts a parsed DateTime from JST to the user's configured timezone.
+    /// If the parsed value already has a specific Kind (Utc/Local), it is respected;
+    /// otherwise it is assumed to be JST (Unspecified Kind from DLsite API).
+    /// </summary>
+    private static DateTime ConvertFromJst(DateTime parsed, TimeZoneInfo jst, TimeZoneInfo userTz)
+    {
+        if (parsed.Kind == DateTimeKind.Utc)
+        {
+            return TimeZoneInfo.ConvertTimeFromUtc(parsed, userTz);
+        }
+
+        // Treat Unspecified / Local as JST (DLsite is a Japanese service)
+        var utc = TimeZoneInfo.ConvertTimeToUtc(parsed, jst);
+        return TimeZoneInfo.ConvertTimeFromUtc(utc, userTz);
     }
 
 }

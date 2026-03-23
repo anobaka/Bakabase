@@ -126,6 +126,11 @@ namespace Bakabase.Service.Controllers
                     options.AutoListeningPortCount = model.AutoListeningPortCount.Value;
                 }
 
+                if (model.TimeZoneId != null)
+                {
+                    options.TimeZoneId = model.TimeZoneId.Length == 0 ? null : model.TimeZoneId;
+                }
+
             });
 
             if (newUiTheme.HasValue)
