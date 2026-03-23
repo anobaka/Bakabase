@@ -1,0 +1,73 @@
+From 6c5af39ea247c2860cfae3465cce7d33c32e6d34 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Mon, 23 Mar 2026 01:35:22 +0000
+Subject: [PATCH] feat: add TimeZoneId configuration to AppOptions
+
+Add IANA timezone support with system default fallback.
+EffectiveTimeZone property resolves the configured ID or falls back to local.
+
+https://claude.ai/code/session_01GkFjexwniREu9StGqE9yTY
+---
+ .../AppOptionsPatchRequestModel.cs            |  5 ++++
+ .../Configurations/App/AppOptions.cs          | 29 +++++++++++++++++++
+ 2 files changed, 34 insertions(+)
+
+diff --git a/Bakabase.Infrastructures/Components/App/Models/RequestModels/AppOptionsPatchRequestModel.cs b/Bakabase.Infrastructures/Components/App/Models/RequestModels/AppOptionsPatchRequestModel.cs
+index ca79846..87e124e 100644
+--- a/Bakabase.Infrastructures/Components/App/Models/RequestModels/AppOptionsPatchRequestModel.cs
++++ b/Bakabase.Infrastructures/Components/App/Models/RequestModels/AppOptionsPatchRequestModel.cs
+@@ -17,5 +17,10 @@ namespace Bakabase.Infrastructures.Components.App.Models.RequestModels
+         /// Maximum degree of parallelism for CPU-intensive operations.
+         /// </summary>
+         public int? MaxParallelism { get; set; }
++
++        /// <summary>
++        /// IANA timezone ID (e.g. "Asia/Tokyo"). Null means no change, empty string resets to system default.
++        /// </summary>
++        public string? TimeZoneId { get; set; }
+     }
+ }
+diff --git a/Bakabase.Infrastructures/Components/Configurations/App/AppOptions.cs b/Bakabase.Infrastructures/Components/Configurations/App/AppOptions.cs
+index 55e4394..673e3de 100644
+--- a/Bakabase.Infrastructures/Components/Configurations/App/AppOptions.cs
++++ b/Bakabase.Infrastructures/Components/Configurations/App/AppOptions.cs
+@@ -40,6 +40,35 @@ namespace Bakabase.Infrastructures.Components.Configurations.App
+         /// </summary>
+         public int EffectiveMaxParallelism => MaxParallelism ?? DefaultMaxParallelism;
+ 
++        /// <summary>
++        /// IANA timezone ID (e.g. "Asia/Tokyo", "America/New_York").
++        /// When null, the system's local timezone is used.
++        /// </summary>
++        public string? TimeZoneId { get; set; }
++
++        /// <summary>
++        /// Gets the effective TimeZoneInfo, resolving from <see cref="TimeZoneId"/> or falling back to system local.
++        /// </summary>
++        public TimeZoneInfo EffectiveTimeZone
++        {
++            get
++            {
++                if (string.IsNullOrEmpty(TimeZoneId))
++                {
++                    return TimeZoneInfo.Local;
++                }
++
++                try
++                {
++                    return TimeZoneInfo.FindSystemTimeZoneById(TimeZoneId);
++                }
++                catch
++                {
++                    return TimeZoneInfo.Local;
++                }
++            }
++        }
++
+         public bool IsNotInitialized() => Version == AppConstants.InitialVersion;
+     }
+ }
+\ No newline at end of file
+-- 
+2.43.0
+
